@@ -2002,6 +2002,8 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
  */
 export function showSupplierPaymentModal(invoice) {
 
+    const allModals = document.querySelectorAll('.modal-container');
+
     // Force close ALL other modals first
     allModals.forEach(modal => {
         if (modal.id !== 'supplier-payment-modal') {
