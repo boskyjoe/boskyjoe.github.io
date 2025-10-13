@@ -2107,9 +2107,11 @@ export function getInvoiceDataFromGridById(rowId) {
 export function initializeModals() {
     document.addEventListener('click', (e) => {
         if (e.target.closest('.modal-close-trigger')) {
+            
             const modalToClose = e.target.closest('.modal-container');
             if (!modalToClose) return;
 
+            console.log("Close button ; InitialzieModels:", modalToClose.id);
             // This now correctly closes EITHER modal
             if (modalToClose.id === 'supplier-payment-modal') {
                 closeSupplierPaymentModal();
