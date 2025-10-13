@@ -2133,7 +2133,12 @@ export function initializeModals() {
             // When Escape is pressed, try to close ALL possible modals.
 
             // 1. Close the Payment Modal
-            closePaymentModal(); // This function already has the correct logic.
+            closeSupplierPaymentModal();
+            closePaymentModal();
+            closeMemberModal();
+            closeConsignmentRequestModal();
+            closeReportActivityModal();
+            closeRecordSalePaymentModal();
 
             // 2. Also close the Custom Modal (for success/error/confirm)
             const customModal = document.getElementById('custom-modal');
