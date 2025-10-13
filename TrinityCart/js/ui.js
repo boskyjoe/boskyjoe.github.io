@@ -2001,31 +2001,71 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
  * @param {object} invoice - The purchase invoice data.
  */
 export function showSupplierPaymentModal(invoice) {
-    const paymentModal = document.getElementById('supplier-payment-modal');
-    if (!paymentModal) return;
 
+    // Debug: log what's currently focused
+
+    console.log('=== MODAL DEBUG START ===');
+    
+
+    const allModals = document.querySelectorAll('.modal-container');
+    allModals.forEach(modal => {
+        const isVisible = modal.classList.contains('visible') || modal.style.display === 'flex';
+        console.log(`Modal ${modal.id}: visible=${isVisible}, display=${modal.style.display}`);
+    });
+
+    // Force close ALL other modals first
+    allModals.forEach(modal => {
+        if (modal.id !== 'supplier-payment-modal') {
+            modal.classList.remove('visible');
+            modal.style.display = 'none';
+            console.log(`Force closed modal: ${modal.id}`);
+        }
+    });
+
+    const paymentModal = document.getElementById('supplier-payment-modal');
+    if (!paymentModal) {
+        console.error('supplier-payment-modal not found!');
+        return;
+    }
+
+     // Debug: Check initial state
+   // Verify we're opening the right modal
+    console.log('Opening modal ID:', paymentModal.id);
+    console.log('Modal HTML preview:', paymentModal.innerHTML.substring(0, 200));
+
+
+    // Hide loading overlay to prevent z-index conflicts
+    const loader = document.getElementById('loading-overlay');
+    if (loader) loader.classList.add('hidden');
+
+    // Get references to the form and its elements
     const form = document.getElementById('supplier-record-payment-form');
     const title = document.getElementById('supplier-payment-modal-title');
     const invoiceIdInput = document.getElementById('supplier-payment-invoice-id');
     const supplierIdInput = document.getElementById('supplier-payment-supplier-id');
     const dateInput = document.getElementById('supplier-payment-date-input');
     const amountInput = document.getElementById('supplier-payment-amount-input');
-    const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol');
+    const currencySymbolSpan = document.getElementById('supplier-payment-amount-currency-symbol'); // Corrected ID
     const modeSelect = document.getElementById('supplier-payment-mode-select');
+    
 
-    // Reset form and populate data
+
+    // 1. Reset the form to its default state
     form.reset();
     invoiceIdInput.value = invoice.id;
     supplierIdInput.value = invoice.supplierId;
+
     title.textContent = `Record Payment for Supplier Invoice: ${invoice.invoiceId}`;
     dateInput.valueAsDate = new Date();
     amountInput.value = (invoice.balanceDue || 0).toFixed(2);
 
-    // Set currency symbol
     const currencySymbol = masterData.systemSetups?.systemCurrency || '$';
     if (currencySymbolSpan) currencySymbolSpan.textContent = currencySymbol;
 
-    // Populate payment modes
+    // Debug: Check select before populating
+    console.log('Select element before populate:', modeSelect);
+    console.log('Select innerHTML before:', modeSelect.innerHTML);
+
     modeSelect.innerHTML = '<option value="">Select a mode...</option>';
     masterData.paymentModes.forEach(mode => {
         if (mode.isActive) {
@@ -2036,18 +2076,33 @@ export function showSupplierPaymentModal(invoice) {
         }
     });
 
-    // Show modal with animation
-    paymentModal.style.display = 'flex';
+    // Debug: Check select after populating
+    console.log('Select innerHTML after:', modeSelect.innerHTML);
+    console.log('Select options count:', modeSelect.options.length);
+
+    paymentModal.classList.remove('hidden');
+
+    
     setTimeout(() => {
         paymentModal.classList.add('visible');
         
-        // Focus first input for accessibility
+        // Debug: Check final state
+       console.log('Supplier modal should now be visible');
+        
         setTimeout(() => {
+            const visibleModals = document.querySelectorAll('.modal-container.visible');
+            console.log('All visible modals after open:', Array.from(visibleModals).map(m => m.id));
+            
             const focusTarget = document.getElementById('supplier-payment-amount-input');
             if (focusTarget) focusTarget.focus();
-        }, 50);
+            console.log('Focus set to:', document.activeElement);
+        }, 100);
+        
+        console.log('=== MODAL DEBUG END ===');
     }, 10);
 }
+
+
 
 /**
  * [RENAMED] Closes the supplier payment modal.
