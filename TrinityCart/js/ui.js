@@ -1340,6 +1340,7 @@ let unsubscribeProductsListener = null;
 
 const productsGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
         { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
