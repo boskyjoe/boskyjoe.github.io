@@ -555,6 +555,8 @@ function setupGlobalClickHandler() {
         const target = e.target;
         const user = appState.currentUser;
 
+        console.log('[Click Handler] Current user:', user);
+        
         // Authentication
         if (target.closest('#login-button')) return EventHandlers.auth.login();
         if (target.closest('#logout-button')) return EventHandlers.auth.logout();
