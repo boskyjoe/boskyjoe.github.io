@@ -158,6 +158,7 @@ let isSuppliersGridInitialized = false;
 let unsubscribeSuppliersListener = null;
 
 const suppliersGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "supplierId", headerName: "ID", width: 150 },
         { field: "supplierName", headerName: "Name", flex: 2, editable: true, minWidth: 150 },
@@ -417,6 +418,7 @@ let isCategoriesGridInitialized = false;
 let unsubscribeCategoriesListener = null;
 
 const categoriesGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "categoryId", headerName: "ID", width: 150 },
         { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
@@ -522,6 +524,7 @@ let isSaleTypesGridInitialized = false;
 let unsubscribeSaleTypesListener = null;
 
 const saleTypesGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "saleTypeId", headerName: "ID", width: 150 },
         { field: "saleTypeName", headerName: "Sale Type Name", flex: 1, editable: true },
@@ -605,6 +608,7 @@ let unsubscribePaymentModesListener = null;
 
 
 const paymentModesGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "paymentTypeId", headerName: "ID", width: 150 },
         { field: "paymentMode", headerName: "Payment Mode", flex: 1, editable: true },
@@ -685,6 +689,7 @@ let unsubscribeSeasonsListener = null;
 
 
 const seasonsGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "seasonId", headerName: "ID", width: 180 },
         { field: "seasonName", headerName: "Season Name", flex: 2, editable: true },
@@ -785,6 +790,7 @@ let unsubscribeSalesEventsListener = null;
 
 
 const salesEventsGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "eventId", headerName: "ID", width: 180 },
         { field: "eventName", headerName: "Event Name", flex: 2, editable: true },
@@ -924,6 +930,7 @@ export async function showSalesEventsView() {
 
 
 const usersGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { field: "displayName", headerName: "Name", flex: 2 },
         { field: "email", headerName: "Email", flex: 2 },
@@ -1053,6 +1060,7 @@ function resetTeamDetailView() {
 // 2. Define the AG-Grid options for the MASTER grid (All Teams)
 const churchTeamsGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "teamName", headerName: "Team Name", flex: 1, editable: true },
         {
@@ -1114,6 +1122,7 @@ const churchTeamsGridOptions = {
 // 3. Define the AG-Grid options for the DETAIL grid (Team Members)
 const teamMembersGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "name", headerName: "Name", flex: 1 },
         { field: "email", headerName: "Email", flex: 1 },
@@ -1530,6 +1539,7 @@ let unsubscribePaymentsListener = null;
 // Grid for the main list of invoices
 const purchaseInvoicesGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
@@ -1595,6 +1605,7 @@ const purchaseInvoicesGridOptions = {
 const purchasePaymentsGridOptions = {
 
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         {
             headerName: "Supplier Invoice #",
@@ -2227,6 +2238,7 @@ const availableProductsGridOptions = {
     context: {
         currentCatalogueItemIds: currentCatalogueItemIds // Initialize with the empty Set
     },
+    theme: 'legacy',
     columnDefs: [
         { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
         {
@@ -2276,7 +2288,7 @@ const availableProductsGridOptions = {
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
     getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
-
+    theme: 'legacy',
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
         { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
@@ -2412,6 +2424,7 @@ export function resetCatalogueForm() {
 // Define its options
 const existingCataloguesGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
         { field: "seasonName", headerName: "Season", flex: 1 },
@@ -2526,6 +2539,7 @@ let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detai
 // MASTER GRID: All Consignment Orders
 const consignmentOrdersGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     pagination: true,
     paginationPageSize: 100, // You can adjust this default value if you like
     paginationPageSizeSelector: [25, 50, 100],
@@ -2567,6 +2581,7 @@ const consignmentOrdersGridOptions = {
 // DETAIL GRID 1: Fulfillment (for Pending orders)
 const fulfillmentItemsGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
@@ -2584,6 +2599,7 @@ const fulfillmentItemsGridOptions = {
 // DETAIL GRID 2: Items on Hand (for Active orders)
 const consignmentItemsGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
@@ -2994,6 +3010,7 @@ export function resetConsignmentRequestModal() {
 // [NEW] Grid for the Product Selection step in the Request Modal
 const requestProductsGridOptions = {
     getRowId: params => params.data.productId,
+    theme: 'legacy',
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         {
@@ -3228,6 +3245,7 @@ export function closeReportActivityModal() {
 // 2. Add the new grid options object
 const consignmentActivityGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
@@ -3305,6 +3323,7 @@ const consignmentActivityGridOptions = {
 // [NEW] Grid for the "Payment History" panel
 const consignmentPaymentsGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     pagination: true,
     paginationPageSize: 100,
     paginationPageSizeSelector: [10, 50, 100, 200],
@@ -3443,6 +3462,7 @@ let unsubscribeSalesHistoryListener = null;
 // Grid for the "Shopping Cart"
 const salesCartGridOptions = {
     getRowId: params => params.data.productId,
+    theme: 'legacy',
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1 },
         {
@@ -3522,6 +3542,7 @@ const salesCartGridOptions = {
 // Grid for the "Add Product" modal
 const addProductModalGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
         { field: "inventoryCount", headerName: "Stock", width: 100 },
@@ -3541,6 +3562,7 @@ const addProductModalGridOptions = {
 // Grid for the "Sales History"
 const salesHistoryGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     pagination: true,
     paginationPageSize: 50, // A reasonable default for a history grid
     paginationPageSizeSelector: [25, 50, 100],
@@ -3854,6 +3876,7 @@ let salePaymentItemsGridApi = null;
 // [NEW] Grid for the items inside the "Record Sale Payment" modal
 const salePaymentItemsGridOptions = {
     // No getRowId needed as we won't be updating rows directly
+    theme: 'legacy',
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1 },
         { field: "quantity", headerName: "Qty", width: 80 },
@@ -3972,6 +3995,7 @@ let salePaymentHistoryGridApi = null;
 // [NEW] Grid for the payment history inside the "Manage Sale Payments" modal
 const salePaymentHistoryGridOptions = {
     getRowId: params => params.data.id,
+    theme: 'legacy',
     columnDefs: [
         { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
         { 
