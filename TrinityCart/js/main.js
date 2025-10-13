@@ -911,8 +911,8 @@ async function handleUsersGrid(button, docId, user) {
 
 async function handleProductsCatalogueGrid(button, docId, user) {
 
-    const user = appState.currentUser;
-    if (!user) return;
+    
+    if (!user) user = appState.currentUser;
 
   if (button.classList.contains('btn-deactivate')) {
     const confirmed = await showModal('confirm', 'Confirm Deactivation', 'Are you sure you want to deactivate this product?');
