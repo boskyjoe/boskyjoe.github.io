@@ -1055,6 +1055,7 @@ function resetTeamDetailView() {
 
     // 4. Detach the listener for the members sub-collection to prevent memory leaks.
     if (unsubscribeTeamMembersListener) {
+        console.log("[ui.js] Detaching team members listener in resetTeamDetailView");
         unsubscribeTeamMembersListener();
         unsubscribeTeamMembersListener = null;
     }
@@ -1246,18 +1247,21 @@ export function showChurchTeamsView() {
     document.getElementById('team-churchName-input').value = appState.ChurchName;
 
     // Reset detail view
-    document.getElementById('selected-team-name').textContent = '...';
-    document.getElementById('add-member-btn').disabled = true;
-    if (teamMembersGridApi) teamMembersGridApi.setGridOption('rowData', []);
-    selectedTeamId = null;
+    //document.getElementById('selected-team-name').textContent = '...';
+    //document.getElementById('add-member-btn').disabled = true;
+    //if (teamMembersGridApi) teamMembersGridApi.setGridOption('rowData', []);
+    //selectedTeamId = null;
 
+    // Reset detail view ONCE when entering the view
+    resetTeamDetailView();
+
+    // Attach the real-time listener for the master grid
     // Attach the real-time listener for the master grid
     const db = firebase.firestore();
     unsubscribeChurchTeamsListener = db.collection(CHURCH_TEAMS_COLLECTION_PATH)
         .orderBy('teamName')
         .onSnapshot(snapshot => {
             const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // We can add logic here to find the team lead name and count members later
             if (churchTeamsGridApi) {
                 churchTeamsGridApi.setGridOption('rowData', teams);
             }
