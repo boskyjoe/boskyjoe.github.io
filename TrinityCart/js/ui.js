@@ -2427,7 +2427,10 @@ const existingCataloguesGridOptions = {
     columnDefs: [
         { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
         { field: "seasonName", headerName: "Season", flex: 1 },
-        { field: "isActive", headerName: "Status", width: 100, cellRenderer: p => p.value ? 'Active' : 'Inactive' },
+        { field: "isActive", headerName: "Status", width: 100, cellRenderer: p => p.value ? 
+                '<span class="text-green-600 font-semibold">Active</span>' : 
+                '<span class="text-red-600 font-semibold">Inactive</span>'
+        },
         {
             headerName: "Actions", width: 100, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
@@ -3382,7 +3385,7 @@ const consignmentPaymentsGridOptions = {
                     buttons += `<button class="action-btn-icon action-btn-verify-payment" data-id="${data.id}" title="Verify Payment">${verifyIcon}</button>`;
                     
                     // Admin/Finance can also cancel any pending payment (not just their own)
-                    buttons += `<button class="action-btn-icon action-btn-delete action-btn-cancel-payment" data-id="${data.id}" title="Cancel Payment Record">${cancelIcon}</button>`;
+                    buttons += `<button class="action-btn-icon action-btn-delete action-btn-cancel-payment text-red-500 hover:text-red-700 hover:bg-red-100" data-id="${data.id}" title="Cancel Payment Record">${cancelIcon}</button>`;
                 }
 
                 // ADMIN/FINANCE PERMISSIONS for Verified Payments (Future enhancement)
@@ -3598,8 +3601,8 @@ const salesHistoryGridOptions = {
             width: 100,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M2.25 8.25h15.5a2.25 2.25 0 0 1 2.25 2.25v6a2.25 2.25 0 0 1-2.25 2.25H4.5A2.25 2.25 0 0 1 2.25 16.5v-6a2.25 2.25 0 0 1 2.25-2.25Z" /><path d="M1.5 8.25a.75.75 0 0 1 .75-.75h15.5a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1-.75-.75v-.5ZM16 12.5a.75.75 0 0 0 0-1.5h-1a.75.75 0 0 0 0 1.5h1Z" /></svg>`;
-                return `<button class="action-btn-icon hover:text-blue-600 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>`;
+                const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-green-600"><path d="M10.75 10.818v2.614A3.13 3.13 0 0011.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 00-1.138-.432zM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 00-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.202.592.037.051.08.102.128.152z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-6a.75.75 0 01.75.75v.316a3.78 3.78 0 011.653.713c.426.33.744.74.925 1.2a.75.75 0 01-1.395.55 1.35 1.35 0 00-.447-.563 2.187 2.187 0 00-.736-.363V9.3c.698.093 1.383.32 1.959.696.787.514 1.29 1.27 1.29 2.13 0 .86-.504 1.616-1.29 2.13-.576.377-1.261.603-1.959.696v.299a.75.75 0 11-1.5 0v-.3c-.697-.092-1.382-.318-1.958-.695C5.896 13.744 5.25 12.845 5.25 11.25a.75.75 0 011.5 0c0 .855.606 1.606 1.5 1.93v-2.613a3.78 3.78 0 01-1.653-.713C5.17 8.524 4.75 7.77 4.75 6.91c0-.86.42-1.615 1.097-2.054a3.78 3.78 0 011.653-.713V3.75A.75.75 0 0110 4z" clip-rule="evenodd" /></svg>`;
+                return `<button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>`;
             }
         },
         { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
