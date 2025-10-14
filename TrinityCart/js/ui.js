@@ -1085,13 +1085,33 @@ const churchTeamsGridOptions = {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
                 const docId = params.data.id;
-                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg>`; // Your edit icon SVG
-                const statusIcon = params.data.isActive
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
-                return `
-                    <button class="action-btn-icon action-btn-toggle-team-status" data-id="${docId}" title="${params.data.isActive ? 'Deactivate' : 'Activate'}">${statusIcon}</button>
-                `;
+                const isActive = params.data.isActive;
+
+                // Standard deactivate icon (minus in circle)
+                const deactivateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`;
+                
+                // Standard activate icon (plus in circle)
+                const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>`;
+
+                // Determine which icon, class, and tooltip to use
+                let icon, buttonClass, tooltip;
+
+                if (isActive) {
+                    icon = deactivateIcon;
+                    buttonClass = 'btn-deactivate';
+                    tooltip = 'Deactivate Team';
+                } else {
+                    icon = activateIcon;
+                    buttonClass = 'btn-activate';
+                    tooltip = 'Activate Team';
+                }
+
+                return `<button 
+                            class="action-btn-icon ${buttonClass} action-btn-toggle-team-status" 
+                            data-id="${docId}" 
+                            title="${tooltip}">
+                                ${icon}
+                        </button>`;
             }
         }
     ],
@@ -4275,4 +4295,3 @@ export function getSalesHistoryDataById(invoiceId) {
     const rowNode = salesHistoryGridApi.getRowNode(invoiceId);
     return rowNode ? rowNode.data : null;
 }
-
