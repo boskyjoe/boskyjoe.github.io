@@ -3357,7 +3357,13 @@ const consignmentPaymentsGridOptions = {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
                 const data = params.data;
-                if (!data) return '';
+                if (!data || !appState.currentUser) return '';
+
+                const currentUser = appState.currentUser;
+                const userRole = currentUser.role;
+
+                // Check if user has admin or finance permissions
+                const hasAdminAccess = ['admin', 'finance'].includes(userRole);
 
                 // Define the icons
                 const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg>`;
@@ -3368,11 +3374,22 @@ const consignmentPaymentsGridOptions = {
                 // Show Edit/Cancel for pending payments, if the user is the one who submitted it
                 if (data.paymentStatus === 'Pending Verification' && data.submittedBy === appState.currentUser.email) {
                     buttons += `<button class="action-btn-icon action-btn-edit-payment" data-id="${data.id}" title="Edit Payment Record">${editIcon}</button>`;
+                }
+
+               // ADMIN/FINANCE PERMISSIONS for Pending Payments
+                if (data.paymentStatus === 'Pending Verification' && hasAdminAccess) {
+                    // Admin/Finance can verify payments
+                    buttons += `<button class="action-btn-icon action-btn-verify-payment" data-id="${data.id}" title="Verify Payment">${verifyIcon}</button>`;
+                    
+                    // Admin/Finance can also cancel any pending payment (not just their own)
                     buttons += `<button class="action-btn-icon action-btn-delete action-btn-cancel-payment" data-id="${data.id}" title="Cancel Payment Record">${cancelIcon}</button>`;
                 }
 
-                if (data.paymentStatus === 'Pending Verification' && appState.currentUser.role === 'admin') {
-                    buttons += `<button class="action-btn-icon action-btn-verify-payment" data-id="${data.id}" title="Verify Payment">${verifyIcon}</button>`;
+                // ADMIN/FINANCE PERMISSIONS for Verified Payments (Future enhancement)
+                if (data.paymentStatus === 'Verified' && hasAdminAccess) {
+                    // Future: Add ability to void verified payments
+                    // const voidIcon = `<svg>...</svg>`;
+                    // buttons += `<button class="action-btn-icon action-btn-void-payment" data-id="${data.id}" title="Void Payment">${voidIcon}</button>`;
                 }
                 return buttons;
             }
