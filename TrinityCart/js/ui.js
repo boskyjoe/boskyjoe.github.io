@@ -1127,19 +1127,31 @@ const churchTeamsGridOptions = {
     },
     onRowSelected: event => {
         const selectedNode = event.node;
+        
+        // IMPROVED LOGIC: Only handle selection events, ignore deselection
         if (selectedNode.isSelected()) {
+            console.log('[churchTeamsGrid] Team selected:', selectedNode.data.teamName);
+            
             // A team has been selected in the master grid
             const teamData = selectedNode.data;
             selectedTeamId = teamData.id;
+            
+            // Update the UI immediately
             document.getElementById('selected-team-name').textContent = teamData.teamName;
-            document.getElementById('add-member-btn').disabled = false; // Enable the "Add Member" button
-            loadMembersForTeam(teamData.id); // Load the members for this team
-        } else {
-            // --- A ROW WAS UNCHECKED (DESELECTED) ---
-            // This is the new logic that fixes the bug.
-            // We will call a helper function to reset the detail panel.
-            resetTeamDetailView();
+            document.getElementById('add-member-btn').disabled = false;
+            
+            // Clean up any existing member listener before loading new team
+            if (unsubscribeTeamMembersListener) {
+                console.log('[churchTeamsGrid] Cleaning up previous member listener');
+                unsubscribeTeamMembersListener();
+                unsubscribeTeamMembersListener = null;
+            }
+            
+            // Load the members for the newly selected team
+            loadMembersForTeam(teamData.id);
         }
+        // REMOVED: The else clause that called resetTeamDetailView()
+        // This was causing the interference with loading new team members
     }
 };
 
