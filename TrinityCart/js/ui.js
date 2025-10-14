@@ -3601,7 +3601,10 @@ const salesHistoryGridOptions = {
             width: 100,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-green-600"><path d="M10.75 10.818v2.614A3.13 3.13 0 0011.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 00-1.138-.432zM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 00-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.202.592.037.051.08.102.128.152z" /><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-6a.75.75 0 01.75.75v.316a3.78 3.78 0 011.653.713c.426.33.744.74.925 1.2a.75.75 0 01-1.395.55 1.35 1.35 0 00-.447-.563 2.187 2.187 0 00-.736-.363V9.3c.698.093 1.383.32 1.959.696.787.514 1.29 1.27 1.29 2.13 0 .86-.504 1.616-1.29 2.13-.576.377-1.261.603-1.959.696v.299a.75.75 0 11-1.5 0v-.3c-.697-.092-1.382-.318-1.958-.695C5.896 13.744 5.25 12.845 5.25 11.25a.75.75 0 011.5 0c0 .855.606 1.606 1.5 1.93v-2.613a3.78 3.78 0 01-1.653-.713C5.17 8.524 4.75 7.77 4.75 6.91c0-.86.42-1.615 1.097-2.054a3.78 3.78 0 011.653-.713V3.75A.75.75 0 0110 4z" clip-rule="evenodd" /></svg>`;
+                const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-green-600">
+                                    <path fill-rule="evenodd" d="M1 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4zm12 4a1 1 0 1 0-2 0v1H9a1 1 0 1 0 0 2h2v1a1 1 0 1 0 2 0v-1h2a1 1 0 1 0 0-2h-2V8z" clip-rule="evenodd"/>
+                                    <circle cx="7" cy="8" r="1.5" stroke="white" stroke-width="0.5" fill="none"/>
+                                    </svg>`;
                 return `<button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>`;
             }
         },
