@@ -4275,3 +4275,4 @@ export function getSalesHistoryDataById(invoiceId) {
     const rowNode = salesHistoryGridApi.getRowNode(invoiceId);
     return rowNode ? rowNode.data : null;
 }
+
