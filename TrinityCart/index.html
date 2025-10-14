@@ -690,12 +690,15 @@
                                                         <label for="payment-amount-input" class="form-label">Amount Paid
                                                             <span class="text-red-500">*</span></label>
 
-                                                            <div class="flex items-center gap-2">
-                                                                <span id="consignment-payment-amount-currency-symbol" class="text-gray-700 font-medium"></span>
-                                                                <input type="number" id="payment-amount-input" class="form-input flex-1" required step="0.01" min="0.01" placeholder="0.00">
-                                                            </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span id="consignment-payment-amount-currency-symbol"
+                                                                class="text-gray-700 font-medium"></span>
+                                                            <input type="number" id="payment-amount-input"
+                                                                class="form-input flex-1" required step="0.01"
+                                                                min="0.01" placeholder="0.00">
+                                                        </div>
                                                     </div>
-                                        
+
                                                     <div>
                                                         <label for="payment-mode-select" class="form-label">Payment Mode
                                                             <span class="text-red-500">*</span></label>
@@ -974,7 +977,6 @@
 
 
 
-
                 <!-- View: Admin Modules (Navigation Hub) -->
                 <div id="admin-modules-view" class="view">
                     <h2 class="text-2xl font-semibold mb-6">Admin Modules - Master Data</h2>
@@ -1013,8 +1015,6 @@
                             </div>
                         </a>
 
-
-
                         <!-- Card: Banks -->
                         <a href="#" class="master-data-card" data-view-id="banks-view">
                             <div class="icon-container bg-yellow-100 text-yellow-600">
@@ -1046,7 +1046,6 @@
                         </a>
 
                         <!-- Card: Sales Season -->
-
                         <a href="#" class="master-data-card" data-view-id="seasons-view">
                             <div class="icon-container bg-indigo-100 text-indigo-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -1061,7 +1060,7 @@
                             </div>
                         </a>
 
-                        <!-- NEW Card: Sales Events -->
+                        <!-- Card: Sales Events -->
                         <a href="#" class="master-data-card" data-view-id="sales-events-view">
                             <div class="icon-container bg-orange-100 text-orange-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -1090,15 +1089,14 @@
                                 <p class="text-sm text-gray-500 mt-1">Manage different church teams</p>
                             </div>
                         </a>
-                        <!-- NEW Card: User Management -->
+
+                        <!-- Card: User Management -->
                         <a href="#" class="master-data-card" data-view-id="users-view">
                             <div class="icon-container bg-pink-100 text-pink-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-2.438c.155-.155.293-.31.428-.472M6.938 19.28a9.38 9.38 0 0 1-2.625-.372 9.337 9.337 0 0 1-4.121-2.438c-.155-.155-.293-.31-.428-.472M19.5 12c0 .434-.023.863-.068 1.285c-.045.422-.09.834-.14 1.235c-.05.402-.102.792-.158 1.172a6.321 6.321 0 0 1-.224.803a6.321 6.321 0 0 1-.41 1.053a6.321 6.321 0 0 1-.598.933a6.321 6.321 0 0 1-.78 1.053a6.321 6.321 0 0 1-1.053.78a6.321 6.321 0 0 1-1.235.598a6.321 6.321 0 0 1-1.172.41a6.321 6.321 0 0 1-1.053.224a6.321 6.321 0 0 1-.803-.158a6.321 6.321 0 0 1-.472.14a6.321 6.321 0 0 1-.428.068a9.38 9.38 0 0 1-1.285-.068a6.321 6.321 0 0 1-.428-.14a6.321 6.321 0 0 1-.472-.158a6.321 6.321 0 0 1-.803-.224a6.321 6.321 0 0 1-1.053-.41a6.321 6.321 0 0 1-1.235-.598a6.321 6.321 0 0 1-1.172-.78a6.321 6.321 0 0 1-1.053-1.053a6.321 6.321 0 0 1-.78-1.172a6.321 6.321 0 0 1-.598-1.235a6.321 6.321 0 0 1-.41-1.053a6.321 6.321 0 0 1-.224-.803a6.321 6.321 0 0 1-.158-.472a6.321 6.321 0 0 1-.14-.428a6.321 6.321 0 0 1-.068-.472A9.38 9.38 0 0 1 4.5 12c0-.434.023-.863.068-1.285c.045-.422.09-.834.14-1.235c.05-.402.102-.792.158-1.172a6.321 6.321 0 0 1 .224-.803a6.321 6.321 0 0 1 .41-1.053a6.321 6.321 0 0 1 .598-.933a6.321 6.321 0 0 1 .78-1.053a6.321 6.321 0 0 1 1.053-.78a6.321 6.321 0 0 1 1.235-.598a6.321 6.321 0 0 1 1.172-.41a6.321 6.321 0 0 1 1.053-.224a6.321 6.321 0 0 1 .803-.158a6.321 6.321 0 0 1 .472-.14a6.321 6.321 0 0 1 .428-.068a9.38 9.38 0 0 1 1.285.068c.422.045.834.09 1.235.14c.402.05.792.102 1.172.158c.375.05.74.11.105.172c.315.06.62.128.915.205c.295.077.58.16.855.25c.275.09.54.188.795.293c.255.105.5.218.735.338c.235.12.46.248.675.383c.215.135.42.278.615.428c.195.15.38.308.555.473c.175.165.34.338.5.508c.16.17.31.348.45.533c.14.185.27.378.39.578c.12.2.23.408.33.623c.1.215.19.438.27.668c.08.23.15.468.21.713c.06.245.11.498.15.758c.04.26.07.528.09.803c.02.275.03.558.03.853Z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                                        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                                 </svg>
                             </div>
                             <div>
@@ -1109,42 +1107,6 @@
 
                     </div>
                 </div>
-
-
-                <!-- View: Manage Product Categories -->
-                <div id="categories-view" class="view space-y-8">
-                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-
-                    <!-- Card 1: Add New Category Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Category</h3>
-                        </div>
-                        <div class="p-6">
-                            <form id="add-category-form" class="flex items-end space-x-4">
-                                <div class="flex-grow">
-                                    <label for="categoryName-input" class="form-label">Category Name</label>
-                                    <input type="text" id="categoryName-input" placeholder="e.g., Snacks"
-                                        class="form-input w-full" required>
-                                </div>
-                                <button type="submit"
-                                    class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add
-                                    Category</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: Existing Categories Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Categories</h3>
-                        </div>
-                        <div class="p-2">
-                            <div id="categories-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                        </div>
-                    </div>
-                </div>
-
 
 
 
@@ -1526,7 +1488,8 @@
 
                             <div class="md:col-span-3">
                                 <label for="supplier-payment-notes-input" class="form-label">Notes (Optional)</label>
-                                <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2" placeholder="e.g., Paid in person, part of check #123..."></textarea>
+                                <textarea id="supplier-payment-notes-input" class="form-input w-full" rows="2"
+                                    placeholder="e.g., Paid in person, part of check #123..."></textarea>
                             </div>
                         </div>
 
