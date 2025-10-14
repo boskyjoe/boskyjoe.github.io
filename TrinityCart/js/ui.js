@@ -2615,12 +2615,24 @@ const consignmentOrdersGridOptions = {
     onGridReady: params => { consignmentOrdersGridApi = params.api; },
     onRowSelected: event => {
         const selectedNode = event.node;
+        
+        // IMPROVED LOGIC: Only handle selection events, ignore deselection
         if (selectedNode && selectedNode.isSelected()) {
+            console.log('[consignmentOrdersGrid] Order selected:', selectedNode.data.consignmentId);
+            
+            // Set the selected consignment ID
             appState.selectedConsignmentId = selectedNode.data.id;
-            renderConsignmentDetail(selectedNode ? selectedNode.data : null);
-        } else {
-            hideConsignmentDetailPanel();
+            
+            // Clean up any existing detail listeners before loading new order
+            console.log('[consignmentOrdersGrid] Cleaning up previous detail listeners');
+            unsubscribeConsignmentDetailsListeners.forEach(unsub => unsub());
+            unsubscribeConsignmentDetailsListeners = [];
+            
+            // Render the details for the newly selected order
+            renderConsignmentDetail(selectedNode.data);
         }
+        // REMOVED: The else clause that called hideConsignmentDetailPanel()
+        // This was causing interference when switching between orders
     }
 };
 
