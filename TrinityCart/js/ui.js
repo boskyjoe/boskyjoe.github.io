@@ -1584,7 +1584,7 @@ const purchaseInvoicesGridOptions = {
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
         { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
-        { field: "purchaseDate", headerName: "Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 100 },
+        { field: "purchaseDate", headerName: "Purchase Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 150 },
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => formatCurrency(p.value)  },
         { field: "balanceDue", headerName: "Balance", valueFormatter: p => formatCurrency(p.value) },
         {
