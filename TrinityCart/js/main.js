@@ -106,6 +106,11 @@ import {
 } from './api.js';
 
 
+import {
+    showReportsHubView,
+} from './ui.js';
+
+
 
 
 // --- FIREBASE INITIALIZATION ---
