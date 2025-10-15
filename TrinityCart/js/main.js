@@ -508,7 +508,15 @@ const EventHandlers = {
         'purchases-view': showPurchasesView,
         'church-teams-view': showChurchTeamsView,
         'consignment-view': showConsignmentView,
-        'sales-view': showSalesView
+        'sales-view': showSalesView,
+        // ADD THESE NEW REPORT VIEWS:
+        'reports-hub-view': showReportsHubView,
+        'sales-reports-view': showSalesReportsView,
+        'inventory-reports-view': showInventoryReportsView,
+        'financial-reports-view': showFinancialReportsView,
+        'team-reports-view': showTeamReportsView,
+        'operations-reports-view': showOperationsReportsView,
+        'executive-dashboard-view': showExecutiveDashboardView
     },
 
     // Grid action handlers
@@ -1036,7 +1044,27 @@ function handleStandaloneButtons(target, event) {
         }
     }
 
+    // Handle report card clicks
+    if (target.closest('.report-card')) {
+        const reportCard = target.closest('.report-card');
+        const reportId = reportCard.dataset.reportId;
+        if (reportId) {
+            handleReportClick(reportId);
+            return true;
+        }
+    }
+
+
+
+
     return false;
+}
+
+// Add this new function
+function handleReportClick(reportId) {
+    console.log(`Report clicked: ${reportId}`);
+    // For now, just show an alert - we'll build actual reports later
+    alert(`Opening ${reportId} report - Coming Soon!`);
 }
 
 function handleConsignmentNext() {
