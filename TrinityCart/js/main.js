@@ -108,6 +108,12 @@ import {
 
 import {
     showReportsHubView,
+    showSalesReportsView,
+    showInventoryReportsView,
+    showFinancialReportsView,
+    showTeamReportsView,
+    showOperationsReportsView,
+    showExecutiveDashboardView,
 } from './ui.js';
 
 
