@@ -1110,6 +1110,137 @@
 
 
 
+                <!-- View: Reports Hub (Navigation Hub) -->
+                <div id="reports-hub-view" class="view">
+                    <h2 class="text-2xl font-semibold mb-6">Reports & Analytics</h2>
+                    <p class="text-gray-600 mb-8 -mt-4">Generate insights and reports from your business data.</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+                        <!-- Sales Performance Reports -->
+                        <a href="#" class="master-data-card" data-view-id="sales-reports-view">
+                            <div class="icon-container bg-green-100 text-green-600">
+                                <svg>📊 Sales Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Sales Performance</h3>
+                                <p class="text-sm text-gray-500 mt-1">Revenue, trends & customer analytics</p>
+                            </div>
+                        </a>
+
+                        <!-- Inventory Reports -->
+                        <a href="#" class="master-data-card" data-view-id="inventory-reports-view">
+                            <div class="icon-container bg-blue-100 text-blue-600">
+                                <svg>📦 Inventory Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Inventory Analysis</h3>
+                                <p class="text-sm text-gray-500 mt-1">Stock levels, turnover & optimization</p>
+                            </div>
+                        </a>
+
+                        <!-- Financial Reports -->
+                        <a href="#" class="master-data-card" data-view-id="financial-reports-view">
+                            <div class="icon-container bg-purple-100 text-purple-600">
+                                <svg>💰 Finance Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Financial Reports</h3>
+                                <p class="text-sm text-gray-500 mt-1">P&L, cash flow & profitability</p>
+                            </div>
+                        </a>
+
+                        <!-- Team & Consignment Reports -->
+                        <a href="#" class="master-data-card" data-view-id="team-reports-view">
+                            <div class="icon-container bg-orange-100 text-orange-600">
+                                <svg>👥 Team Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Team Performance</h3>
+                                <p class="text-sm text-gray-500 mt-1">Consignment analytics & team metrics</p>
+                            </div>
+                        </a>
+
+                        <!-- Operational Reports -->
+                        <a href="#" class="master-data-card" data-view-id="operations-reports-view">
+                            <div class="icon-container bg-indigo-100 text-indigo-600">
+                                <svg>⚙️ Operations Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Operations</h3>
+                                <p class="text-sm text-gray-500 mt-1">Efficiency metrics & process analytics</p>
+                            </div>
+                        </a>
+
+                        <!-- Executive Dashboard -->
+                        <a href="#" class="master-data-card" data-view-id="executive-dashboard-view">
+                            <div class="icon-container bg-red-100 text-red-600">
+                                <svg>📈 Dashboard Icon</svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">Executive Dashboard</h3>
+                                <p class="text-sm text-gray-500 mt-1">Key metrics & business overview</p>
+                            </div>
+                        </a>
+
+                    </div>
+                </div>
+
+
+
+
+
+                <div id="sales-reports-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="reports-hub-view">&larr; Back to Reports</a>
+                    
+                    <h2 class="text-2xl font-semibold mb-6">Sales Performance Reports</h2>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Daily Sales Summary -->
+                        <div class="report-card" data-report-id="daily-sales">
+                            <h3>Daily Sales Summary</h3>
+                            <p>Today's revenue, transactions & top products</p>
+                            <div class="report-preview">$2,450 • 23 transactions</div>
+                        </div>
+
+                        <!-- Sales Trends -->
+                        <div class="report-card" data-report-id="sales-trends">
+                            <h3>Sales Trends</h3>
+                            <p>Weekly & monthly revenue comparisons</p>
+                            <div class="report-preview">↗️ +15% vs last month</div>
+                        </div>
+
+                        <!-- Product Performance -->
+                        <div class="report-card" data-report-id="product-performance">
+                            <h3>Product Performance</h3>
+                            <p>Best & worst performing items</p>
+                            <div class="report-preview">Top: Christmas Cake</div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+
+                <div class="report-card bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Report Title</h3>
+                        <div class="text-sm text-gray-500">Last updated: 2 mins ago</div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Report description and key insights</p>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="text-2xl font-bold text-blue-600">$12,450</div>
+                        <div class="text-sm text-gray-500">Key metric preview</div>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <span class="text-xs text-green-600">↗️ +12% vs last period</span>
+                        <button class="text-blue-600 text-sm font-semibold">View Details →</button>
+                    </div>
+                </div>
+
+
+
                 <!-- View: Manage Sale Types -->
                 <div id="sale-types-view" class="view space-y-8">
                     <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
