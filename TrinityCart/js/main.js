@@ -106,16 +106,6 @@ import {
 } from './api.js';
 
 
-import {
-    showReportsHubView,
-    showSalesReportsView,
-    showInventoryReportsView,
-    showFinancialReportsView,
-    showTeamReportsView,
-    showOperationsReportsView,
-    showExecutiveDashboardView,
-} from './ui.js';
-
 import { 
     showReportsHubView, 
     showSalesReportsView, 
@@ -1065,7 +1055,7 @@ function handleStandaloneButtons(target, event) {
         }
     }
 
-    // Handle report card clicks
+    // Handle report card clicks with optimization tracking
     if (target.closest('.report-card')) {
         const reportCard = target.closest('.report-card');
         const reportId = reportCard.dataset.reportId;
