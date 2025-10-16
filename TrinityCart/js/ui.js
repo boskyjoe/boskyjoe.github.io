@@ -4336,35 +4336,6 @@ export function getSalesHistoryDataById(invoiceId) {
 
 
 //Add these report view functions
-
-export function showReportsHubView() {
-    showView('reports-hub-view');
-}
-
-export function showSalesReportsView() {
-    showView('sales-reports-view');
-}
-
-export function showInventoryReportsView() {
-    showView('inventory-reports-view');
-}
-
-export function showFinancialReportsView() {
-    showView('financial-reports-view');
-}
-
-export function showTeamReportsView() {
-    showView('team-reports-view');
-}
-
-export function showOperationsReportsView() {
-    showView('operations-reports-view');
-}
-
-export function showExecutiveDashboardView() {
-    showView('executive-dashboard-view');
-}
-
 /**
  * Displays the main Reports Hub view with categorized report cards.
  * 
