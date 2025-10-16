@@ -39,6 +39,14 @@ import {
     CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH
 } from './config.js';
 
+import { 
+    calculateDirectSalesMetricsOptimized, 
+    calculateConsignmentMetricsOptimized, 
+    generateBusinessSummaryOptimized,
+    getDailyDashboardOptimized,
+    REPORT_CONFIGS 
+} from './reports.js';
+
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
@@ -4356,3 +4364,672 @@ export function showOperationsReportsView() {
 export function showExecutiveDashboardView() {
     showView('executive-dashboard-view');
 }
+
+/**
+ * Displays the main Reports Hub view with categorized report cards.
+ * 
+ * Shows the central navigation page for all reporting functionality,
+ * organized by business domain (sales, inventory, financial, etc.).
+ * This view serves as the entry point to all reporting capabilities.
+ * 
+ * @since 1.0.0
+ */
+export function showReportsHubView() {
+    console.log("[ui.js] Displaying Reports Hub view");
+    showView('reports-hub-view');
+    
+    // No grid initialization needed - just static navigation cards
+    // All report cards use click handlers in main.js handleStandaloneButtons
+}
+
+/**
+ * Displays the Sales Performance Reports view with interactive report cards.
+ * 
+ * Shows sales-focused reports including direct sales analysis, consignment
+ * performance, store comparisons, and customer insights. Uses optimized
+ * data loading to minimize Firestore usage.
+ * 
+ * @since 1.0.0
+ */
+export function showSalesReportsView() {
+    console.log("[ui.js] Displaying Sales Reports view");
+    showView('sales-reports-view');
+    
+    // Pre-load today's metrics for immediate display (uses cache when possible)
+    loadTodaysMetricsForCards();
+}
+
+/**
+ * Displays the Inventory Analysis Reports view.
+ * 
+ * Shows inventory-focused reports including stock levels, turnover analysis,
+ * reorder recommendations, and product performance insights.
+ * 
+ * @since 1.0.0
+ */
+export function showInventoryReportsView() {
+    console.log("[ui.js] Displaying Inventory Reports view");
+    showView('inventory-reports-view');
+    
+    // Use masterData cache for immediate inventory insights (no additional reads)
+    displayInventoryInsights();
+}
+
+/**
+ * Displays the Financial Reports view with cash flow and profitability analysis.
+ * 
+ * Shows financial-focused reports including outstanding balances, profit analysis,
+ * cash flow summaries, and payment collection efficiency metrics.
+ * 
+ * @since 1.0.0
+ */
+export function showFinancialReportsView() {
+    console.log("[ui.js] Displaying Financial Reports view");
+    showView('financial-reports-view');
+    
+    // Load essential financial metrics with caching
+    loadFinancialSummary();
+}
+
+/**
+ * Displays the Team Performance Reports view for consignment analytics.
+ * 
+ * Shows team-focused reports including consignment performance, settlement
+ * analysis, team rankings, and product suitability for consignment sales.
+ * 
+ * @since 1.0.0
+ */
+export function showTeamReportsView() {
+    console.log("[ui.js] Displaying Team Performance Reports view");
+    showView('team-reports-view');
+    
+    // Use masterData.teams cache for immediate team list (no reads)
+    displayTeamPerformancePreview();
+}
+
+/**
+ * Displays the Operations Reports view with efficiency and process metrics.
+ * 
+ * Shows operational reports including user activity, process efficiency,
+ * peak hour analysis, and system utilization metrics.
+ * 
+ * @since 1.0.0
+ */
+export function showOperationsReportsView() {
+    console.log("[ui.js] Displaying Operations Reports view");
+    showView('operations-reports-view');
+    
+    // Generate operational insights from existing state and masterData
+    displayOperationalInsights();
+}
+
+/**
+ * Displays the Executive Dashboard with high-level KPIs and business overview.
+ * 
+ * Shows executive-level dashboard with key performance indicators, business
+ * health metrics, trend analysis, and strategic insights. Optimized for
+ * minimal data reads with maximum business value.
+ * 
+ * @since 1.0.0
+ */
+export function showExecutiveDashboardView() {
+    console.log("[ui.js] Displaying Executive Dashboard view");
+    showView('executive-dashboard-view');
+    
+    // Load comprehensive business summary with intelligent caching
+    loadExecutiveDashboard();
+}
+
+/**
+ * Pre-loads and displays today's key metrics in the sales report cards.
+ * 
+ * Updates the preview values shown on sales report cards with real data
+ * from today's transactions. Uses caching to minimize Firestore reads
+ * and provides immediate visual feedback to users.
+ * 
+ * OPTIMIZATION: Uses cached daily dashboard data when available
+ * FALLBACK: Shows placeholder values if data unavailable
+ * 
+ * @private
+ * @since 1.0.0
+ */
+async function loadTodaysMetricsForCards() {
+    try {
+        console.log("[ui.js] Loading today's metrics for sales report cards");
+        
+        // Use the ultra-optimized daily dashboard function
+        const todayData = await getDailyDashboardOptimized();
+        
+        // Update store performance card
+        const storeCard = document.querySelector('[data-report-id="store-performance"]');
+        if (storeCard) {
+            const valueElement = storeCard.querySelector('.text-xl.font-bold');
+            const subtitleElement = storeCard.querySelector('.text-sm.text-gray-500');
+            
+            if (valueElement) {
+                valueElement.textContent = todayData.todayRevenue;
+            }
+            if (subtitleElement) {
+                subtitleElement.textContent = `${todayData.todayTransactions} transactions today`;
+            }
+        }
+        
+        // Update customer analytics card  
+        const customerCard = document.querySelector('[data-report-id="direct-customer-analytics"]');
+        if (customerCard) {
+            const valueElement = customerCard.querySelector('.text-xl.font-bold');
+            if (valueElement) {
+                valueElement.textContent = todayData.todayCustomers.toString();
+            }
+        }
+        
+        console.log(`[ui.js] Sales cards updated with today's data (${todayData.metadata.firestoreReadsUsed} reads)`);
+        
+    } catch (error) {
+        console.warn('[ui.js] Could not load today\'s metrics:', error);
+        // Graceful degradation - cards show placeholder values
+    }
+}
+
+/**
+ * Displays inventory insights using masterData cache (zero additional reads).
+ * 
+ * Leverages the existing masterData.products cache to generate immediate
+ * inventory insights without any Firestore queries. Perfect for free tier
+ * optimization while still providing valuable business intelligence.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function displayInventoryInsights() {
+    try {
+        console.log("[ui.js] Generating inventory insights from masterData cache");
+        
+        if (!masterData.products || masterData.products.length === 0) {
+            console.warn("[ui.js] No product data available in masterData cache");
+            return;
+        }
+        
+        // CLIENT-SIDE INVENTORY ANALYSIS using cached data (0 Firestore reads)
+        let totalInventoryValue = 0;
+        let lowStockItems = 0;
+        let outOfStockItems = 0;
+        let totalItems = masterData.products.length;
+        
+        masterData.products.forEach(product => {
+            const stock = product.inventoryCount || 0;
+            const unitPrice = product.unitPrice || 0;
+            
+            totalInventoryValue += stock * unitPrice;
+            
+            if (stock === 0) {
+                outOfStockItems++;
+            } else if (stock < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD) {
+                lowStockItems++;
+            }
+        });
+        
+        // Update inventory report cards with calculated values
+        const stockCard = document.querySelector('[data-report-id="stock-status"]');
+        if (stockCard) {
+            const valueElement = stockCard.querySelector('.text-2xl.font-bold');
+            const subtitleElement = stockCard.querySelector('.text-sm.text-gray-500');
+            
+            if (valueElement) {
+                valueElement.textContent = lowStockItems.toString();
+            }
+            if (subtitleElement) {
+                subtitleElement.textContent = `${outOfStockItems} out of stock`;
+            }
+        }
+        
+        console.log(`[ui.js] Inventory insights updated: ${totalItems} products, ${lowStockItems} low stock, ${formatCurrency(totalInventoryValue)} total value`);
+        
+    } catch (error) {
+        console.warn('[ui.js] Error displaying inventory insights:', error);
+    }
+}
+
+/**
+ * Loads and displays financial summary with outstanding balance analysis.
+ * 
+ * Combines recent transaction data with cached insights to provide financial
+ * overview. Uses intelligent sampling to minimize reads while maximizing
+ * the accuracy of financial reporting.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+async function loadFinancialSummary() {
+    try {
+        console.log("[ui.js] Loading financial summary with optimization");
+        
+        // Use business summary with minimal detail to reduce reads
+        const financialData = await generateBusinessSummaryOptimized(7, { 
+            useCache: true, 
+            detailedAnalysis: false 
+        });
+        
+        // Update outstanding balances card
+        const balancesCard = document.querySelector('[data-report-id="outstanding-balances"]');
+        if (balancesCard) {
+            const valueElement = balancesCard.querySelector('.text-2xl.font-bold');
+            const subtitleElement = balancesCard.querySelector('.text-xs');
+            
+            if (valueElement) {
+                valueElement.textContent = financialData.executiveSummary.formattedOutstanding;
+            }
+            
+            // Add insight about collection urgency
+            if (subtitleElement && financialData.executiveSummary.totalOutstanding > 0) {
+                const urgencyLevel = financialData.executiveSummary.totalOutstanding > 2000 
+                    ? 'High priority collections needed' 
+                    : 'Normal collection activity';
+                subtitleElement.textContent = urgencyLevel;
+            }
+        }
+        
+        console.log(`[ui.js] Financial summary loaded (${financialData.metadata.totalFirestoreReads} reads)`);
+        
+    } catch (error) {
+        console.warn('[ui.js] Error loading financial summary:', error);
+        // Show placeholder values in case of error
+    }
+}
+
+/**
+ * Displays team performance preview using masterData teams cache.
+ * 
+ * Provides immediate team insights using the cached team data without
+ * additional Firestore queries. Shows active team count and basic
+ * team information for quick reference.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function displayTeamPerformancePreview() {
+    try {
+        if (!masterData.teams || masterData.teams.length === 0) {
+            console.warn("[ui.js] No team data available in masterData cache");
+            return;
+        }
+        
+        // Analyze team data from cache (0 additional reads)
+        const activeTeams = masterData.teams.filter(team => team.isActive);
+        const teamsWithLeads = activeTeams.filter(team => team.teamLeadName && team.teamLeadName !== 'Not Assigned');
+        
+        console.log(`[ui.js] Team analysis: ${activeTeams.length} active teams, ${teamsWithLeads.length} with assigned leads`);
+        
+        // Update team performance preview displays
+        // This would update any team-related preview cards in the UI
+        
+    } catch (error) {
+        console.warn('[ui.js] Error displaying team performance preview:', error);
+    }
+}
+
+/**
+ * Displays operational insights derived from current app state and masterData.
+ * 
+ * Generates operational metrics using data already available in memory,
+ * including user activity patterns, system utilization, and process
+ * efficiency indicators without requiring additional database queries.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function displayOperationalInsights() {
+    try {
+        console.log("[ui.js] Generating operational insights from cached data");
+        
+        // Use current app state and masterData for immediate insights
+        const insights = {
+            totalProductsCatalogued: masterData.products?.length || 0,
+            totalSuppliers: masterData.suppliers?.length || 0,
+            totalCategories: masterData.categories?.length || 0,
+            totalActiveTeams: masterData.teams?.filter(t => t.isActive).length || 0,
+            currentUser: appState.currentUser?.role || 'Unknown',
+            lastDataUpdate: masterData.lastUpdated || 'Unknown'
+        };
+        
+        console.log("[ui.js] Operational insights generated:", insights);
+        
+        // Update operational report cards with these insights
+        // This provides immediate value without any database calls
+        
+    } catch (error) {
+        console.warn('[ui.js] Error generating operational insights:', error);
+    }
+}
+
+/**
+ * Loads and displays executive dashboard with comprehensive business overview.
+ * 
+ * Creates high-level executive summary using optimized data retrieval and
+ * intelligent caching. Focuses on KPIs most relevant to business leadership
+ * while maintaining strict control over Firestore read usage.
+ * 
+ * EXECUTIVE FOCUS:
+ * - Total business performance across all channels
+ * - Key trends and growth indicators  
+ * - Critical alerts and recommendations
+ * - Strategic insights for decision making
+ * 
+ * @private
+ * @since 1.0.0
+ */
+async function loadExecutiveDashboard() {
+    try {
+        console.log("[ui.js] Loading executive dashboard with optimization");
+        
+        // Use cached business summary to minimize reads
+        const executiveData = await generateBusinessSummaryOptimized(30, { 
+            useCache: true, 
+            detailedAnalysis: false  // Executive level - high level only
+        });
+        
+        console.log(`[ui.js] Executive dashboard loaded using ${executiveData.metadata.totalFirestoreReads} Firestore reads`);
+        
+        // Update executive dashboard elements
+        updateExecutiveDashboardDisplay(executiveData);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading executive dashboard:', error);
+        
+        // Fallback: Show basic metrics from masterData cache
+        displayBasicExecutiveMetrics();
+    }
+}
+
+/**
+ * Updates executive dashboard display elements with calculated business data.
+ * 
+ * Takes the optimized business summary data and updates specific DOM elements
+ * in the executive dashboard view. Handles currency formatting, trend indicators,
+ * and visual styling for executive presentation.
+ * 
+ * @param {Object} executiveData - Processed business summary from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateExecutiveDashboardDisplay(executiveData) {
+    try {
+        // Update main revenue metric
+        const totalRevenueElement = document.querySelector('#executive-total-revenue');
+        if (totalRevenueElement) {
+            totalRevenueElement.textContent = executiveData.executiveSummary.formattedTotalRevenue;
+        }
+        
+        // Update channel mix display
+        const channelMixElement = document.querySelector('#executive-channel-mix');
+        if (channelMixElement) {
+            channelMixElement.innerHTML = `
+                <div class="flex justify-between">
+                    <span>Direct Sales:</span>
+                    <span class="font-semibold">${executiveData.executiveSummary.channelMix.directPercentage}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Consignment:</span>
+                    <span class="font-semibold">${executiveData.executiveSummary.channelMix.consignmentPercentage}%</span>
+                </div>
+            `;
+        }
+        
+        // Update performance highlights
+        const highlightsElement = document.querySelector('#executive-highlights');
+        if (highlightsElement) {
+            highlightsElement.innerHTML = `
+                <div class="space-y-2">
+                    <div><strong>Top Store:</strong> ${executiveData.performanceHighlights.topStore}</div>
+                    <div><strong>Top Team:</strong> ${executiveData.performanceHighlights.topTeam}</div>
+                    <div><strong>Best Product:</strong> ${executiveData.performanceHighlights.bestProduct}</div>
+                </div>
+            `;
+        }
+        
+        // Display business insights
+        const insightsElement = document.querySelector('#executive-insights');
+        if (insightsElement && executiveData.businessInsights) {
+            const insightsHTML = executiveData.businessInsights.map(insight => `
+                <div class="alert alert-${insight.priority} p-3 rounded border-l-4">
+                    <div class="font-semibold">${insight.type.replace('-', ' ').toUpperCase()}</div>
+                    <div class="text-sm">${insight.message}</div>
+                </div>
+            `).join('');
+            
+            insightsElement.innerHTML = insightsHTML;
+        }
+        
+        console.log("[ui.js] Executive dashboard display updated successfully");
+        
+    } catch (error) {
+        console.warn('[ui.js] Error updating executive dashboard display:', error);
+    }
+}
+
+/**
+ * Fallback function to display basic executive metrics from cached data only.
+ * 
+ * Used when optimized data loading fails - provides essential business metrics
+ * using only masterData cache and current app state. Zero Firestore reads.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function displayBasicExecutiveMetrics() {
+    console.log("[ui.js] Displaying basic executive metrics from cache only");
+    
+    try {
+        // Generate basic insights from masterData (0 Firestore reads)
+        const basicMetrics = {
+            totalProducts: masterData.products?.length || 0,
+            activeProducts: masterData.products?.filter(p => p.isActive).length || 0,
+            totalSuppliers: masterData.suppliers?.length || 0,
+            activeTeams: masterData.teams?.filter(t => t.isActive).length || 0,
+            currentUser: appState.currentUser?.displayName || 'Unknown User',
+            currentRole: appState.currentUser?.role || 'Unknown Role'
+        };
+        
+        // Calculate total inventory value from cached product data
+        let totalInventoryValue = 0;
+        if (masterData.products) {
+            masterData.products.forEach(product => {
+                totalInventoryValue += (product.inventoryCount || 0) * (product.unitPrice || 0);
+            });
+        }
+        
+        // Update executive dashboard with basic metrics
+        const basicMetricsElement = document.querySelector('#executive-basic-metrics');
+        if (basicMetricsElement) {
+            basicMetricsElement.innerHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-4 bg-blue-50 rounded">
+                        <div class="text-2xl font-bold text-blue-600">${basicMetrics.activeProducts}</div>
+                        <div class="text-sm text-gray-600">Active Products</div>
+                    </div>
+                    <div class="text-center p-4 bg-green-50 rounded">
+                        <div class="text-2xl font-bold text-green-600">${basicMetrics.totalSuppliers}</div>
+                        <div class="text-sm text-gray-600">Suppliers</div>
+                    </div>
+                    <div class="text-center p-4 bg-orange-50 rounded">
+                        <div class="text-2xl font-bold text-orange-600">${basicMetrics.activeTeams}</div>
+                        <div class="text-sm text-gray-600">Active Teams</div>
+                    </div>
+                    <div class="text-center p-4 bg-purple-50 rounded">
+                        <div class="text-2xl font-bold text-purple-600">${formatCurrency(totalInventoryValue)}</div>
+                        <div class="text-sm text-gray-600">Inventory Value</div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 p-4 bg-gray-50 rounded">
+                    <h4 class="font-semibold mb-2">System Status</h4>
+                    <div class="text-sm space-y-1">
+                        <div>Current User: <span class="font-medium">${basicMetrics.currentUser}</span> (${basicMetrics.currentRole})</div>
+                        <div>Data Source: <span class="font-medium">Cached Data Only</span> - No database reads used</div>
+                        <div>Last Updated: <span class="font-medium">${new Date().toLocaleTimeString()}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        console.log(`[ui.js] Basic executive metrics displayed (0 Firestore reads used)`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error displaying basic executive metrics:', error);
+    }
+}
+
+/**
+ * Handles individual report card clicks and loads detailed report data.
+ * 
+ * When users click on specific report cards, this function determines the
+ * appropriate data loading strategy, manages caching, and displays detailed
+ * report results. Optimized to minimize Firestore usage through intelligent
+ * data loading and caching strategies.
+ * 
+ * @param {string} reportId - Unique identifier of the clicked report
+ * @param {HTMLElement} cardElement - DOM element of the clicked report card
+ * 
+ * @since 1.0.0
+ */
+export async function handleReportCardClick(reportId, cardElement) {
+    try {
+        console.log(`[ui.js] Loading detailed report: ${reportId}`);
+        
+        // Show loading state on the card
+        showReportCardLoading(cardElement);
+        
+        let reportData;
+        let firestoreReadsUsed = 0;
+        
+        switch (reportId) {
+            case 'daily-sales':
+                reportData = await getDailyDashboardOptimized();
+                firestoreReadsUsed = reportData.metadata.firestoreReadsUsed;
+                displayDailySalesReport(reportData);
+                break;
+                
+            case 'store-performance':
+                const storeData = await calculateDirectSalesMetricsOptimized(
+                    createDateRange(7).startDate, 
+                    createDateRange(7).endDate
+                );
+                firestoreReadsUsed = storeData.metadata.firestoreReadsUsed;
+                displayStorePerformanceReport(storeData);
+                break;
+                
+            case 'stock-status':
+                // Use masterData only (0 reads)
+                displayInventoryInsights();
+                firestoreReadsUsed = 0;
+                break;
+                
+            case 'outstanding-balances':
+                const financialData = await generateBusinessSummaryOptimized(30, { useCache: true });
+                firestoreReadsUsed = financialData.metadata.totalFirestoreReads;
+                displayOutstandingBalancesReport(financialData);
+                break;
+                
+            default:
+                console.log(`[ui.js] Report ${reportId} not yet implemented`);
+                showModal('info', 'Coming Soon', `The ${reportId} report is being developed and will be available in the next update.`);
+                firestoreReadsUsed = 0;
+        }
+        
+        // Hide loading state
+        hideReportCardLoading(cardElement);
+        
+        console.log(`[ui.js] Report ${reportId} loaded using ${firestoreReadsUsed} Firestore reads`);
+        
+    } catch (error) {
+        console.error(`[ui.js] Error loading report ${reportId}:`, error);
+        hideReportCardLoading(cardElement);
+        showModal('error', 'Report Error', `Could not load the ${reportId} report. Please try again later.`);
+    }
+}
+
+/**
+ * Shows loading indicator on report card while data is being fetched.
+ * 
+ * @param {HTMLElement} cardElement - Report card DOM element
+ * @private
+ * @since 1.0.0
+ */
+function showReportCardLoading(cardElement) {
+    if (!cardElement) return;
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'report-loading absolute inset-0 flex items-center justify-center bg-white bg-opacity-90';
+    spinner.innerHTML = '<div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>';
+    
+    cardElement.style.position = 'relative';
+    cardElement.appendChild(spinner);
+}
+
+/**
+ * Removes loading indicator from report card.
+ * 
+ * @param {HTMLElement} cardElement - Report card DOM element  
+ * @private
+ * @since 1.0.0
+ */
+function hideReportCardLoading(cardElement) {
+    if (!cardElement) return;
+    
+    const spinner = cardElement.querySelector('.report-loading');
+    if (spinner) {
+        spinner.remove();
+    }
+}
+
+/**
+ * Displays detailed daily sales report in a modal or dedicated view.
+ * 
+ * @param {Object} reportData - Daily sales data from getDailyDashboardOptimized
+ * @private
+ * @since 1.0.0
+ */
+function displayDailySalesReport(reportData) {
+    // Implementation will show detailed breakdown of today's sales
+    // This could be a modal with charts or a full-page detailed view
+    showModal('info', 'Daily Sales Report', 
+        `Today's Revenue: ${reportData.todayRevenue}\n` +
+        `Transactions: ${reportData.todayTransactions}\n` +
+        `Customers: ${reportData.todayCustomers}\n` +
+        `Top Store: ${reportData.topPerformingStore}`
+    );
+}
+
+/**
+ * Displays store performance comparison report.
+ * 
+ * @param {Object} storeData - Store performance data 
+ * @private
+ * @since 1.0.0
+ */
+function displayStorePerformanceReport(storeData) {
+    // Create detailed store comparison view
+    const storeComparison = storeData.storeBreakdown.map(store => 
+        `${store.storeName}: ${store.formattedRevenue} (${store.revenuePercentage}%)`
+    ).join('\n');
+    
+    showModal('info', 'Store Performance (Last 7 Days)', 
+        `Total Revenue: ${storeData.summary.formattedTotalRevenue}\n\n` +
+        `Store Breakdown:\n${storeComparison}`
+    );
+}
+
+/**
+ * Displays outstanding balances report with aging analysis.
+ * 
+ * @param {Object} financialData - Financial summary data
+ * @private  
+ * @since 1.0.0
+ */
+function displayOutstandingBalancesReport(financialData) {
+    showModal('info', 'Outstanding Balances', 
+        `Total Outstanding: ${financialData.executiveSummary.formattedOutstanding}\n` +
+        `Requires immediate attention for cash flow management.`
+    );
+}
+
