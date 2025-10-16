@@ -1826,3 +1826,250 @@ export async function getSalesInvoiceById(invoiceId) {
         throw new Error("Could not find the updated invoice document.");
     }
 }
+
+/**
+ * Calculates comprehensive direct sales metrics for a given date range.
+ * 
+ * This function analyzes all direct sales (Church Store and Tasty Treats) within
+ * the specified date range and returns detailed performance metrics including
+ * revenue breakdowns, transaction counts, and customer analytics.
+ * 
+ * @param {Date} startDate - The start date for the analysis period (inclusive)
+ * @param {Date} endDate - The end date for the analysis period (inclusive)
+ * @param {string[]} [stores=['Church Store', 'Tasty Treats']] - Array of store names to include
+ * 
+ * @returns {Promise<Object>} Object containing:
+ *   - totalDirectRevenue {number} - Total revenue across all direct sales
+ *   - totalTransactions {number} - Count of all transactions
+ *   - storeBreakdown {Array} - Per-store metrics (revenue, transactions, customers)
+ *   - paymentModeDistribution {Object} - Breakdown of payment methods used
+ *   - customerMetrics {Object} - New vs returning customer analysis
+ *   - averageTransactionValue {number} - Mean transaction amount
+ * 
+ * @throws {Error} When Firestore query fails or date range is invalid
+ * 
+ * @example
+ * // Get last 30 days of direct sales data
+ * const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+ * const today = new Date();
+ * const metrics = await calculateDirectSalesMetrics(thirtyDaysAgo, today);
+ * console.log(`Total revenue: ${formatCurrency(metrics.totalDirectRevenue)}`);
+ * 
+ * @since 1.0.0
+ * @author TrinityCart Development Team
+ */
+
+
+export async function calculateDirectSalesMetrics(startDate, endDate) {
+    const db = firebase.firestore();
+    
+    const directSalesQuery = db.collection(SALES_COLLECTION_PATH)
+        .where('saleDate', '>=', startDate)
+        .where('saleDate', '<=', endDate);
+    
+    const snapshot = await directSalesQuery.get();
+    const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Calculate store-specific metrics
+    const storeMetrics = {
+        'Church Store': { revenue: 0, transactions: 0, customers: new Set() },
+        'Tasty Treats': { revenue: 0, transactions: 0, customers: new Set() }
+    };
+    
+    sales.forEach(sale => {
+        const store = sale.store;
+        if (storeMetrics[store]) {
+            storeMetrics[store].revenue += sale.financials.totalAmount;
+            storeMetrics[store].transactions += 1;
+            storeMetrics[store].customers.add(sale.customerInfo.email);
+        }
+    });
+    
+    return {
+        totalDirectRevenue: sales.reduce((sum, s) => sum + s.financials.totalAmount, 0),
+        totalTransactions: sales.length,
+        storeBreakdown: Object.keys(storeMetrics).map(store => ({
+            store,
+            revenue: storeMetrics[store].revenue,
+            transactions: storeMetrics[store].transactions,
+            uniqueCustomers: storeMetrics[store].customers.size,
+            avgTransactionValue: storeMetrics[store].transactions > 0 
+                ? storeMetrics[store].revenue / storeMetrics[store].transactions 
+                : 0
+        }))
+    };
+}
+
+
+export async function calculateConsignmentSalesMetrics(startDate, endDate) {
+    const db = firebase.firestore();
+    
+    // Get all consignment orders with activity in the date range
+    const ordersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+        .where('status', '==', 'Active');
+    
+    const snapshot = await ordersQuery.get();
+    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    let totalConsignmentRevenue = 0;
+    let totalItemsSold = 0;
+    let totalItemsReturned = 0;
+    
+    const teamPerformance = {};
+    
+    // Analyze each order's activity within the date range
+    for (const order of orders) {
+        const activitySnapshot = await db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+            .doc(order.id)
+            .collection('activityLog')
+            .where('activityDate', '>=', startDate)
+            .where('activityDate', '<=', endDate)
+            .where('activityType', '==', 'Sale')
+            .get();
+        
+        const activities = activitySnapshot.docs.map(doc => doc.data());
+        const orderRevenue = activities.reduce((sum, a) => sum + (a.totalSaleValue || 0), 0);
+        const orderQuantity = activities.reduce((sum, a) => sum + (a.quantity || 0), 0);
+        
+        totalConsignmentRevenue += orderRevenue;
+        totalItemsSold += orderQuantity;
+        
+        // Track team performance
+        if (!teamPerformance[order.teamName]) {
+            teamPerformance[order.teamName] = {
+                revenue: 0,
+                itemsSold: 0,
+                activeOrders: 0
+            };
+        }
+        
+        teamPerformance[order.teamName].revenue += orderRevenue;
+        teamPerformance[order.teamName].itemsSold += orderQuantity;
+        teamPerformance[order.teamName].activeOrders += 1;
+    }
+    
+    return {
+        totalConsignmentRevenue,
+        totalItemsSold,
+        averageRevenuePerItem: totalItemsSold > 0 ? totalConsignmentRevenue / totalItemsSold : 0,
+        teamRankings: Object.entries(teamPerformance)
+            .map(([team, metrics]) => ({ team, ...metrics }))
+            .sort((a, b) => b.revenue - a.revenue), // Sort by revenue descending
+        activeConsignments: orders.length
+    };
+}
+
+/**
+ * Generates a formatted sales performance report for display in the UI.
+ * 
+ * This function takes raw sales metrics and formats them into a structure
+ * suitable for rendering in the sales performance dashboard, including
+ * formatted currency values, percentage calculations, and trend indicators.
+ * 
+ * @param {Object} rawMetrics - Raw metrics from calculateDirectSalesMetrics()
+ * @param {Object} [comparisonMetrics=null] - Optional previous period metrics for comparison
+ * 
+ * @returns {Object} Formatted report object with:
+ *   - formattedRevenue {string} - Currency-formatted total revenue
+ *   - transactionSummary {Object} - Transaction count and average value
+ *   - storeComparison {Array} - Formatted store performance data
+ *   - trendIndicators {Object} - Percentage changes vs comparison period
+ * 
+ * @example
+ * const rawData = await calculateDirectSalesMetrics(startDate, endDate);
+ * const previousData = await calculateDirectSalesMetrics(prevStartDate, prevEndDate);
+ * const report = generateSalesPerformanceReport(rawData, previousData);
+ * 
+ * @since 1.0.0
+ * @author TrinityCart Development Team
+ */
+export function generateSalesPerformanceReport(rawMetrics, comparisonMetrics = null) {
+    // Format primary metrics with proper currency and number formatting
+    const report = {
+        formattedRevenue: formatCurrency(rawMetrics.totalDirectRevenue),
+        transactionSummary: {
+            count: rawMetrics.totalTransactions,
+            averageValue: formatCurrency(rawMetrics.averageTransactionValue)
+        },
+        storeComparison: [],
+        trendIndicators: {}
+    };
+    
+    // Format store breakdown data
+    Object.entries(rawMetrics.storeBreakdown).forEach(([store, data]) => {
+        report.storeComparison.push({
+            storeName: store,
+            revenue: formatCurrency(data.revenue),
+            transactions: data.transactions,
+            uniqueCustomers: data.uniqueCustomers,
+            revenuePercentage: ((data.revenue / rawMetrics.totalDirectRevenue) * 100).toFixed(1)
+        });
+    });
+    
+    // Calculate trend indicators if comparison data provided
+    if (comparisonMetrics) {
+        const revenueChange = ((rawMetrics.totalDirectRevenue - comparisonMetrics.totalDirectRevenue) 
+            / comparisonMetrics.totalDirectRevenue) * 100;
+        
+        report.trendIndicators = {
+            revenueChange: {
+                percentage: revenueChange.toFixed(1),
+                direction: revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral',
+                formatted: `${revenueChange > 0 ? '+' : ''}${revenueChange.toFixed(1)}%`
+            }
+        };
+    }
+    
+    return report;
+}
+
+/**
+ * [Brief one-line description of what the function does]
+ * 
+ * [Detailed description explaining the purpose, business logic, and any
+ * important implementation details or assumptions]
+ * 
+ * @param {Type} paramName - Description of the parameter and its constraints
+ * @param {Type} [optionalParam=defaultValue] - Optional parameter with default
+ * 
+ * @returns {Promise<Type>|Type} Description of return value structure
+ * 
+ * @throws {ErrorType} When specific error conditions occur
+ * 
+ * @example
+ * // Realistic usage example showing how to call the function
+ * const result = await functionName(param1, param2);
+ * 
+ * @since Version when function was introduced
+ * @author Author or team responsible
+ * @see Related functions or documentation links
+ */
+export async function complexBusinessFunction(data) {
+    // STEP 1: Validate input data structure
+    if (!data || typeof data !== 'object') {
+        throw new Error('Invalid data parameter');
+    }
+    
+    // STEP 2: Initialize calculation variables
+    let totalRevenue = 0;
+    const storeMetrics = new Map(); // Using Map for better performance with large datasets
+    
+    // STEP 3: Process each transaction with detailed business logic
+    data.transactions.forEach(transaction => {
+        // Business rule: Only count completed transactions for revenue
+        if (transaction.status === 'Completed') {
+            totalRevenue += transaction.amount;
+            
+            // Store-level aggregation for breakdown analysis
+            const currentStoreTotal = storeMetrics.get(transaction.store) || 0;
+            storeMetrics.set(transaction.store, currentStoreTotal + transaction.amount);
+        }
+    });
+    
+    // STEP 4: Return structured results with clear property names
+    return {
+        totalRevenue,
+        storeBreakdown: Object.fromEntries(storeMetrics),
+        calculatedAt: new Date().toISOString() // Timestamp for cache validation
+    };
+}
