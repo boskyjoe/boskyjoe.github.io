@@ -64,6 +64,75 @@ export const REPORT_CONFIGS = {
 };
 
 /**
+ * Creates a standardized date range object for report queries.
+ * 
+ * Generates proper start/end dates for database queries, ensuring consistent
+ * time boundaries (start at midnight, end at 23:59:59) and providing
+ * human-readable labels for UI display.
+ * 
+ * @param {number} daysBack - Number of days to go back from reference date (0 = today only)
+ * @param {Date} [referenceDate=new Date()] - Base date to calculate range from
+ * 
+ * @returns {Object} Standardized date range object
+ * 
+ * @since 1.0.0
+ */
+export function createDateRange(daysBack, referenceDate = new Date()) {
+    // Input validation
+    if (typeof daysBack !== 'number' || daysBack < 0) {
+        throw new Error('daysBack must be a non-negative number');
+    }
+    
+    if (!(referenceDate instanceof Date) || isNaN(referenceDate.getTime())) {
+        throw new Error('referenceDate must be a valid Date object');
+    }
+    
+    // Calculate end date (end of reference day)
+    const endDate = new Date(referenceDate);
+    endDate.setHours(23, 59, 59, 999);
+    
+    // Calculate start date (beginning of period)
+    const startDate = new Date(referenceDate);
+    startDate.setDate(startDate.getDate() - daysBack);
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Generate appropriate human-readable label
+    let periodLabel;
+    switch (daysBack) {
+        case 0:
+            periodLabel = 'Today';
+            break;
+        case 1:
+            periodLabel = 'Yesterday';
+            break;
+        case 7:
+            periodLabel = 'Last 7 Days';
+            break;
+        case 30:
+            periodLabel = 'Last 30 Days';
+            break;
+        case 90:
+            periodLabel = 'Last 90 Days';
+            break;
+        case 365:
+            periodLabel = 'Last Year';
+            break;
+        default:
+            periodLabel = `Last ${daysBack} Days`;
+    }
+    
+    const dayCount = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    return {
+        startDate,
+        endDate,
+        periodLabel,
+        dayCount
+    };
+}
+
+
+/**
  * Intelligent cache manager for report data with size and freshness controls.
  * 
  * Implements localStorage-based caching with automatic expiration and size
