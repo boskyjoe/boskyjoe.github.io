@@ -44,6 +44,7 @@ import {
     calculateConsignmentMetricsOptimized, 
     generateBusinessSummaryOptimized,
     getDailyDashboardOptimized,
+    createDateRange,
     REPORT_CONFIGS 
 } from './reports.js';
 
