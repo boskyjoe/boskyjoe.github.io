@@ -116,6 +116,16 @@ import {
     showExecutiveDashboardView,
 } from './ui.js';
 
+import { 
+    showReportsHubView, 
+    showSalesReportsView, 
+    showInventoryReportsView, 
+    showFinancialReportsView,
+    showTeamReportsView, 
+    showOperationsReportsView, 
+    showExecutiveDashboardView,
+    handleReportCardClick 
+} from './ui.js';
 
 
 
@@ -1059,8 +1069,10 @@ function handleStandaloneButtons(target, event) {
     if (target.closest('.report-card')) {
         const reportCard = target.closest('.report-card');
         const reportId = reportCard.dataset.reportId;
+        
         if (reportId) {
-            handleReportClick(reportId);
+            console.log(`[main.js] Report card clicked: ${reportId}`);
+            handleReportCardClick(reportId, reportCard);
             return true;
         }
     }
