@@ -2675,14 +2675,26 @@ const consignmentOrdersGridOptions = {
             valueFormatter: p => formatCurrency(p.value || 0)
         }
     ],
-    rowSelection: { mode: 'singleRow' },
-    onGridReady: params => { consignmentOrdersGridApi = params.api; },
+    rowSelection: { 
+        mode: 'singleRow',
+        enableSelectionWithoutKeys: true, // Allow click-to-select
+        headerCheckbox: false // No header checkbox for single row mode
+    },
+    onGridReady: params => { 
+        consignmentOrdersGridApi = params.api;
+        console.log('[consignmentGrid] Grid ready, selection mode:', params.api.getGridOption('rowSelection'));
+    },
     onRowSelected: event => {
+        console.log('[consignmentGrid] onRowSelected fired');
+        console.log('[consignmentGrid] Event details:', event);
+        console.log('[consignmentGrid] Node:', event.node);
+        console.log('[consignmentGrid] Is selected:', event.node?.isSelected());
+        console.log('[consignmentGrid] Node data:', event.node?.data);
         const selectedNode = event.node;
         
         // IMPROVED LOGIC: Only handle selection events, ignore deselection
         if (selectedNode && selectedNode.isSelected()) {
-            console.log('[consignmentOrdersGrid] Order selected:', selectedNode.data.consignmentId);
+            console.log('[consignmentGrid] ✅ Order SELECTED:', selectedNode.data.consignmentId);
             
             // Set the selected consignment ID
             appState.selectedConsignmentId = selectedNode.data.id;
@@ -2694,9 +2706,25 @@ const consignmentOrdersGridOptions = {
             
             // Render the details for the newly selected order
             renderConsignmentDetail(selectedNode.data);
+        } else {
+            console.log('[consignmentGrid] ❌ Order DESELECTED or invalid node');
+            appState.selectedConsignmentId = null;
+            hideConsignmentDetailPanel();
         }
         // REMOVED: The else clause that called hideConsignmentDetailPanel()
         // This was causing interference when switching between orders
+    },
+    // ADD: Listen to selection changes as alternative
+    onSelectionChanged: (event) => {
+        console.log('[consignmentGrid] onSelectionChanged fired');
+        const selectedRows = event.api.getSelectedRows();
+        console.log('[consignmentGrid] Selected rows count:', selectedRows.length);
+        console.log('[consignmentGrid] Selected rows:', selectedRows);
+        
+        if (selectedRows.length === 0) {
+            console.log('[consignmentGrid] No rows selected - hiding details');
+            hideConsignmentDetailPanel();
+        }
     }
 };
 
