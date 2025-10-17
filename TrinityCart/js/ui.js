@@ -75,6 +75,45 @@ const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team
 
 
 /**
+ * Forces all select dropdowns on the page to close their option lists.
+ * 
+ * Solves the "stuck dropdown overlay" issue that blocks interactions.
+ * This can happen when DOM changes while a select is open.
+ * 
+ * @since 1.0.0
+ */
+function forceCloseAllDropdowns() {
+    // Method 1: Blur all select elements
+    document.querySelectorAll('select').forEach(select => {
+        if (select === document.activeElement) {
+            select.blur();
+        }
+    });
+    
+    // Method 2: Click elsewhere to force close
+    const body = document.body;
+    const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 1,
+        clientY: 1
+    });
+    body.dispatchEvent(clickEvent);
+    
+    // Method 3: Focus a dummy element (most reliable)
+    const dummy = document.createElement('input');
+    dummy.style.position = 'absolute';
+    dummy.style.left = '-9999px';
+    dummy.style.opacity = '0';
+    document.body.appendChild(dummy);
+    dummy.focus();
+    dummy.blur();
+    document.body.removeChild(dummy);
+    
+    console.log('[ui.js] Forced all dropdowns to close');
+}
+
+/**
  * [NEW] Displays the global loading spinner overlay.
  */
 export function showLoader() {
@@ -3902,6 +3941,9 @@ export function showSalesView() {
         // Default the sale date to today. This will now work.
         document.getElementById('sale-date').valueAsDate = new Date();
 
+        // Force close all dropdowns to prevent overlay issues
+        forceCloseAllDropdowns();
+
         if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
         calculateSalesTotals();
         //document.getElementById('sale-pay-now-container').classList.add('hidden');
@@ -3972,12 +4014,21 @@ export function getSalesCartItems() {
  */
 export function removeItemFromCart(productId) {
     if (!salesCartGridApi) return;
+
+    // Force close any stuck dropdowns BEFORE grid operation
+    forceCloseAllDropdowns();
+
     const rowNode = salesCartGridApi.getRowNode(productId);
     if (rowNode) {
         salesCartGridApi.applyTransaction({ remove: [rowNode.data] });
         // After removing, immediately recalculate the totals.
         calculateSalesTotals();
     }
+
+    // Force close dropdowns again after grid update
+    setTimeout(() => {
+        forceCloseAllDropdowns();
+    }, 100);
 }
 
 let salePaymentItemsGridApi = null;
