@@ -1073,7 +1073,13 @@ export async function getStoreTransactionDetails(startDate, endDate, useCache = 
                 customerInfo: data.customerInfo || { name: 'Unknown', email: 'unknown@example.com' },
                 
                 // Financial details
-                financials: data.financials || { totalAmount: 0 },
+                // Enhanced financial details
+                financials: {
+                    totalAmount: data.financials?.totalAmount || 0,
+                    amountTendered: data.financials?.amountTendered || data.totalAmountPaid || 0, // Amount actually received
+                    changeDue: data.financials?.changeDue || 0
+                },
+
                 paymentStatus: data.paymentStatus || 'Unknown',
                 balanceDue: data.balanceDue || 0,
                 totalAmountPaid: data.totalAmountPaid || 0,
@@ -1085,12 +1091,23 @@ export async function getStoreTransactionDetails(startDate, endDate, useCache = 
                 // Audit information
                 audit: data.audit || { createdBy: 'System', createdOn: new Date() },
                 
-                // Calculated fields for grid display
+                // CALCULATED FIELDS FOR GRID DISPLAY (ADD THESE)
                 formattedAmount: formatCurrency(data.financials?.totalAmount || 0),
-                formattedBalanceDue: data.balanceDue > 0 ? formatCurrency(data.balanceDue) : '',
-                paymentCompletionPercentage: data.financials?.totalAmount > 0 
+                formattedAmountReceived: formatCurrency(data.financials?.amountTendered || data.totalAmountPaid || 0), // NEW
+                formattedBalanceDue: (data.balanceDue || 0) > 0 ? formatCurrency(data.balanceDue) : '',
+                paymentCompletionPercentage: (data.financials?.totalAmount || 0) > 0 
                     ? ((data.totalAmountPaid || 0) / data.financials.totalAmount) * 100 
-                    : 0
+                    : 0,
+                
+                // ADDITIONAL CALCULATED FIELDS FOR ENHANCED DISPLAY
+                paymentEfficiency: (data.financials?.totalAmount || 0) > 0
+                    ? Math.round(((data.totalAmountPaid || 0) / data.financials.totalAmount) * 100)
+                    : 0,
+                
+                // Visual indicators
+                hasOutstandingBalance: (data.balanceDue || 0) > 0,
+                isFullyPaid: data.paymentStatus === 'Paid',
+                isOverpaid: (data.financials?.amountTendered || 0) > (data.financials?.totalAmount || 0)
             };
         });
         
