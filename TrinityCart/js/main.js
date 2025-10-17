@@ -1113,10 +1113,19 @@ function handleConsignmentNext() {
 function handleAddToCart(target) {
     console.log('[main.js] handleAddToCart called');
     console.log('[main.js] Target:', target);
-    console.log('[main.js] Dataset ID:', target.dataset.id);
+    
+    // FIX: Find the actual button element if we clicked on the SVG inside it
+    const buttonElement = target.closest('button[data-id]') || target;
+    console.log('[main.js] Button element:', buttonElement);
+    console.log('[main.js] Button dataset:', buttonElement.dataset);
 
-    const productId = target.dataset.id;
+    const productId = buttonElement.dataset?.id;
     console.log('[main.js] Product ID:', productId);
+
+    if (!productId) {
+        console.error('[main.js] No product ID found on button element');
+        return;
+    }
 
     const product = masterData.products.find(p => p.id === productId);
     console.log('[main.js] Found product:', product);
@@ -1127,19 +1136,21 @@ function handleAddToCart(target) {
             productName: product.itemName,
             quantity: 1,
             unitPrice: product.sellingPrice || 0,
-            discountPercentage: 0,  // ADD THESE DEFAULTS
-            taxPercentage: 0        // ADD THESE DEFAULTS
+            discountPercentage: 0,
+            taxPercentage: 0
         };
         
         console.log('[main.js] Adding item to cart:', newItem);
         addItemToCart(newItem);
-        console.log('[main.js] Item added, closing modal');
+        console.log('[main.js] Item added successfully');
     } else {
         console.error('[main.js] Product not found for ID:', productId);
+        alert('Product not found. Please try again.');
     }
 
     closeAddProductModal();
 }
+
 
 // ============================================================================
 // TAB HANDLERS
