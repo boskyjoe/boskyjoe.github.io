@@ -1014,7 +1014,21 @@ function handleStandaloneButtons(target, event) {
         '#cancel-payment-edit-btn': () => resetPaymentForm(),
         '#add-product-to-cart-btn': () => showAddProductModal(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
-        '.action-btn-remove-from-cart': () => removeItemFromCart(target.dataset.id)
+        '.action-btn-remove-from-cart': () => {
+            console.log('[main.js] Remove from cart clicked');
+            
+            // Find the button element (in case SVG was clicked)
+            const buttonElement = target.closest('button[data-id]') || target;
+            const productId = buttonElement.dataset?.id;
+            
+            console.log('[main.js] Product ID to remove:', productId);
+            
+            if (productId) {
+                removeItemFromCart(productId);
+            } else {
+                console.error('[main.js] No product ID found for removal');
+            }
+        }
     };
 
     // Check modal close triggers for all modals
