@@ -1180,42 +1180,49 @@ const churchTeamsGridOptions = {
         }
     ],
     rowSelection: {
-        mode: 'singleRow'
+        mode: 'singleRow',
+        enableSelectionWithoutKeys: true,
+        headerCheckbox: false
     },
-    onGridReady: params => { churchTeamsGridApi = params.api; },
+    onGridReady: params => { 
+        churchTeamsGridApi = params.api;
+        console.log('[churchTeamsGrid] Grid ready');
+    },
     onCellValueChanged: params => {
         // Handle inline editing of the team name
         document.dispatchEvent(new CustomEvent('updateChurchTeam', {
             detail: { teamId: params.data.id, updatedData: { teamName: params.newValue } }
         }));
     },
-    onRowSelected: event => {
-        const selectedNode = event.node;
+    onSelectionChanged: (event) => {
+        console.log('[churchTeamsGrid] Selection changed');
         
-        // IMPROVED LOGIC: Only handle selection events, ignore deselection
-        if (selectedNode.isSelected()) {
-            console.log('[churchTeamsGrid] Team selected:', selectedNode.data.teamName);
+        const selectedRows = event.api.getSelectedRows();
+        console.log('[churchTeamsGrid] Selected teams:', selectedRows.length);
+        
+        if (selectedRows.length > 0) {
+            // Team is selected
+            const teamData = selectedRows[0];
+            console.log('[churchTeamsGrid] ✅ Team selected:', teamData.teamName);
             
-            // A team has been selected in the master grid
-            const teamData = selectedNode.data;
             selectedTeamId = teamData.id;
-            
-            // Update the UI immediately
             document.getElementById('selected-team-name').textContent = teamData.teamName;
             document.getElementById('add-member-btn').disabled = false;
             
-            // Clean up any existing member listener before loading new team
+            // Clean up previous member listener before loading new team
             if (unsubscribeTeamMembersListener) {
                 console.log('[churchTeamsGrid] Cleaning up previous member listener');
                 unsubscribeTeamMembersListener();
                 unsubscribeTeamMembersListener = null;
             }
             
-            // Load the members for the newly selected team
+            // Load members for the selected team
             loadMembersForTeam(teamData.id);
+        } else {
+            // No team selected (user unchecked)
+            console.log('[churchTeamsGrid] ❌ No team selected - resetting detail view');
+            resetTeamDetailView();
         }
-        // REMOVED: The else clause that called resetTeamDetailView()
-        // This was causing the interference with loading new team members
     }
 };
 
