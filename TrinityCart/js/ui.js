@@ -5127,7 +5127,9 @@ const storePerformanceDetailGridOptions = {
         resizable: true,
         sortable: true,
         filter: true,
-        // REMOVED: floatingFilter (Enterprise feature)
+        wrapText: true,        // Enable text wrapping for all columns
+        autoHeight: true,      // Auto-adjust row height for wrapped content
+        cellStyle: { lineHeight: '1.4' } // Better readability with line spacing
     },
     
     columnDefs: [
@@ -5171,7 +5173,8 @@ const storePerformanceDetailGridOptions = {
             headerName: "Invoice ID", 
             width: 180,
             filter: 'agTextColumnFilter', // Community filter
-            pinned: 'left'
+            pinned: 'left',
+            wrapText: false
         },
         { 
             field: "store", 
@@ -5188,19 +5191,30 @@ const storePerformanceDetailGridOptions = {
                 return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">${store}</span>`;
             }
         },
-        { 
-            field: "customerInfo.name", 
-            headerName: "Customer", 
-            flex: 1,
-            minWidth: 150,
-            filter: 'agTextColumnFilter'
-        },
-        { 
-            field: "customerInfo.email", 
-            headerName: "Email", 
-            flex: 1,
+        {
+            // COMBINED CUSTOMER COLUMN with name, email, and phone
+            headerName: "Customer Details", 
+            flex: 2,
             minWidth: 200,
-            filter: 'agTextColumnFilter'
+            filter: 'agTextColumnFilter',
+            wrapText: true, // Enable wrapping for multi-line customer info
+            autoHeight: true,
+            cellRenderer: params => {
+                const customer = params.data.customerInfo || {};
+                const name = customer.name || 'Unknown Customer';
+                const email = customer.email || 'No email';
+                const phone = customer.phone || 'No phone';
+                
+                return `
+                    <div class="py-1">
+                        <div class="font-semibold text-gray-900">${name}</div>
+                        <div class="text-sm text-gray-600">${email}</div>
+                        <div class="text-xs text-gray-500">${phone}</div>
+                    </div>
+                `;
+            },
+            // Use customer name for sorting and filtering
+            valueGetter: params => params.data.customerInfo?.name || 'Unknown'
         },
         { 
             field: "financials.totalAmount", 
@@ -5209,6 +5223,8 @@ const storePerformanceDetailGridOptions = {
             valueFormatter: p => formatCurrency(p.value || 0),
             filter: 'agNumberColumnFilter', // Community filter
             cellClass: 'text-right font-semibold',
+            wrapText: false, // Currency amounts don't need wrapping
+            autoHeight: false,
             cellStyle: params => {
                 const amount = params.value || 0;
                 if (amount > 200) return { backgroundColor: '#f0f9ff', fontWeight: 'bold' };
@@ -5222,6 +5238,8 @@ const storePerformanceDetailGridOptions = {
             width: 140,
             filter: 'agNumberColumnFilter',
             cellClass: 'text-right font-bold',
+            wrapText: false,
+            autoHeight: false,
             cellStyle: params => {
                 if (params.data.isOverpaid) return { backgroundColor: '#f0fdf4', color: '#166534' }; // Green for overpayment
                 if (params.data.isFullyPaid) return { backgroundColor: '#f0fdf4', color: '#166534' }; // Green for full payment
@@ -5234,6 +5252,8 @@ const storePerformanceDetailGridOptions = {
             headerName: "Payment Status", 
             width: 140,
             filter: 'agTextColumnFilter', // Changed from agSetColumnFilter
+            wrapText: false,
+            autoHeight: false,
             cellRenderer: params => {
                 const status = params.value;
                 let colorClass, bgClass;
@@ -5259,6 +5279,8 @@ const storePerformanceDetailGridOptions = {
             field: "balanceDue", 
             headerName: "Balance Due", 
             width: 120,
+            wrapText: false,
+            autoHeight: false,
             valueFormatter: p => p.value > 0 ? formatCurrency(p.value) : '',
             filter: 'agNumberColumnFilter',
             cellClass: 'text-right',
@@ -5268,6 +5290,8 @@ const storePerformanceDetailGridOptions = {
             field: "audit.createdBy",
             headerName: "Created By", 
             width: 150,
+            wrapText: true, // Allow wrapping for long names
+            autoHeight: true,
             filter: 'agTextColumnFilter'
         },
         {
@@ -5275,7 +5299,9 @@ const storePerformanceDetailGridOptions = {
             width: 120,
             valueGetter: params => params.data.lineItems?.length || 0,
             filter: 'agNumberColumnFilter',
-            cellClass: 'text-center'
+            cellClass: 'text-center',
+            wrapText: true, // Allow wrapping for long names
+            autoHeight: true
         }
     ],
     
