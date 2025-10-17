@@ -113,6 +113,18 @@ function forceCloseAllDropdowns() {
     console.log('[ui.js] Forced all dropdowns to close');
 }
 
+
+/**
+ * Debug function to identify what element is blocking clicks
+ */
+function debugClickBlocking(x, y) {
+    const elementAtPoint = document.elementFromPoint(x, y);
+    console.log('Element at click point:', elementAtPoint);
+    console.log('Element computed z-index:', window.getComputedStyle(elementAtPoint).zIndex);
+    console.log('Element pointer-events:', window.getComputedStyle(elementAtPoint).pointerEvents);
+}
+
+
 /**
  * [NEW] Displays the global loading spinner overlay.
  */
@@ -3936,13 +3948,19 @@ export function showSalesView() {
     setTimeout(() => {
 
         // 2. Reset the "New Sale" form to its default state.
-        document.getElementById('new-sale-form').reset();
+        const form = document.getElementById('new-sale-form');
+        if (form) {
+            form.reset();
+            
+            // Force close any lingering dropdowns
+            form.querySelectorAll('select').forEach(select => {
+                select.blur();
+                select.selectedIndex = 0;
+            });
+        }
 
         // Default the sale date to today. This will now work.
         document.getElementById('sale-date').valueAsDate = new Date();
-
-        // Force close all dropdowns to prevent overlay issues
-        forceCloseAllDropdowns();
 
         if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
         calculateSalesTotals();
@@ -4013,6 +4031,10 @@ export function getSalesCartItems() {
  * @param {string} productId - The ID of the product to remove.
  */
 export function removeItemFromCart(productId) {
+
+    // FORCE CLOSE DROPDOWNS before grid operation
+    document.querySelectorAll('select').forEach(select => select.blur());
+
     if (!salesCartGridApi) return;
 
     // Force close any stuck dropdowns BEFORE grid operation
@@ -4025,9 +4047,15 @@ export function removeItemFromCart(productId) {
         calculateSalesTotals();
     }
 
-    // Force close dropdowns again after grid update
+    // FORCE CLOSE DROPDOWNS after grid operation  
     setTimeout(() => {
-        forceCloseAllDropdowns();
+        document.querySelectorAll('select').forEach(select => select.blur());
+        
+        // Click somewhere neutral to clear any stuck overlays
+        const neutralArea = document.querySelector('main');
+        if (neutralArea) {
+            neutralArea.click();
+        }
     }, 100);
 }
 
