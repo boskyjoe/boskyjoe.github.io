@@ -5204,7 +5204,7 @@ const storePerformanceDetailGridOptions = {
         },
         { 
             field: "financials.totalAmount", 
-            headerName: "Amount", 
+            headerName: "Invoice Amount", 
             width: 120,
             valueFormatter: p => formatCurrency(p.value || 0),
             filter: 'agNumberColumnFilter', // Community filter
@@ -5214,6 +5214,19 @@ const storePerformanceDetailGridOptions = {
                 if (amount > 200) return { backgroundColor: '#f0f9ff', fontWeight: 'bold' };
                 if (amount < 20) return { backgroundColor: '#fef3c7' };
                 return null;
+            }
+        },
+        { 
+            field: "formattedAmountReceived", // Use the pre-formatted field
+            headerName: "Amount Received", 
+            width: 140,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            cellStyle: params => {
+                if (params.data.isOverpaid) return { backgroundColor: '#f0fdf4', color: '#166534' }; // Green for overpayment
+                if (params.data.isFullyPaid) return { backgroundColor: '#f0fdf4', color: '#166534' }; // Green for full payment
+                if (params.data.paymentCompletionPercentage > 0) return { backgroundColor: '#fefce8', color: '#ca8a04' }; // Yellow for partial
+                return { backgroundColor: '#fef2f2', color: '#dc2626' }; // Red for no payment
             }
         },
         { 
@@ -5380,17 +5393,19 @@ export async function showStorePerformanceDetailView(daysBack = 30) {
  * @private
  */
 function updateStorePerformanceSummaryCards(salesData) {
-    console.log('[ui.js] Updating summary cards with enhanced revenue tracking');
+    console.log('[ui.js] Updating summary cards with revenue vs collected analysis');
     console.log('[ui.js] Sales data received:', salesData);
     
-    // Calculate actual revenue collected vs potential revenue
+    // Calculate ACTUAL revenue metrics (invoiced vs collected)
     const totalInvoiced = salesData.summary.totalRevenue;
-    const totalCollected = totalInvoiced - (salesData.paymentAnalysis?.totalOutstanding || 0);
+    const totalOutstanding = salesData.paymentAnalysis?.totalOutstanding || 0;
+    const totalCollected = totalInvoiced - totalOutstanding;
     const collectionRate = totalInvoiced > 0 ? (totalCollected / totalInvoiced) * 100 : 0;
     
-    console.log('[ui.js] Revenue analysis:');
-    console.log('  - Total Invoiced:', formatCurrency(totalInvoiced));
-    console.log('  - Total Collected:', formatCurrency(totalCollected));
+    console.log('[ui.js] Enhanced revenue analysis:');
+    console.log('  - Total Invoiced (Potential):', formatCurrency(totalInvoiced));
+    console.log('  - Total Collected (Actual):', formatCurrency(totalCollected));
+    console.log('  - Outstanding:', formatCurrency(totalOutstanding));
     console.log('  - Collection Rate:', collectionRate.toFixed(1) + '%');
     
     // Update Total Invoiced card
@@ -5399,66 +5414,95 @@ function updateStorePerformanceSummaryCards(salesData) {
         totalInvoicedElement.textContent = formatCurrency(totalInvoiced);
     }
     
-    // Update Revenue Collected card
+    // Update Revenue Collected card (ACTUAL money received)
     const revenueCollectedElement = document.getElementById('revenue-collected-display');
     if (revenueCollectedElement) {
         revenueCollectedElement.textContent = formatCurrency(totalCollected);
     }
     
-    // Update collection rate
+    // Update collection rate display
     const collectionRateElement = document.getElementById('collection-rate-display');
     if (collectionRateElement) {
-        const rateText = `${collectionRate.toFixed(1)}% collected`;
-        const rateColor = collectionRate > 80 ? 'text-green-600' : collectionRate > 60 ? 'text-yellow-600' : 'text-red-600';
-        collectionRateElement.innerHTML = `<span class="${rateColor}">${rateText}</span>`;
+        const rateColor = collectionRate >= 90 ? 'text-green-600' : 
+                         collectionRate >= 70 ? 'text-yellow-600' : 'text-red-600';
+        collectionRateElement.innerHTML = `<span class="${rateColor}">${collectionRate.toFixed(1)}% collected</span>`;
     }
     
-    // Update store-specific cards with both invoiced and collected amounts
+    // Store-specific analysis with ACTUAL collected amounts
     const churchStoreData = salesData.storeBreakdown.find(store => store.storeName === 'Church Store');
     const tastyTreatsData = salesData.storeBreakdown.find(store => store.storeName === 'Tasty Treats');
     
     if (churchStoreData) {
         console.log('[ui.js] Church Store data:', churchStoreData);
         
+        // Calculate actual collected amount for Church Store
+        const churchInvoiced = churchStoreData.revenue;
+        const churchOutstanding = calculateStoreOutstanding(salesData, 'Church Store');
+        const churchCollected = churchInvoiced - churchOutstanding;
+        
+        console.log('[ui.js] Church Store: Invoiced:', formatCurrency(churchInvoiced), 'Collected:', formatCurrency(churchCollected));
+        
         const churchRevenueElement = document.getElementById('church-store-revenue');
         const churchBreakdownElement = document.getElementById('church-store-breakdown');
         
         if (churchRevenueElement) {
-            // Show the invoiced amount as the main number
-            churchRevenueElement.textContent = formatCurrency(churchStoreData.revenue);
+            // Show collected amount as the main number (actual revenue)
+            churchRevenueElement.textContent = formatCurrency(churchCollected);
         }
         if (churchBreakdownElement) {
-            // Show both invoiced and collected in the breakdown
-            const churchCollected = churchStoreData.revenue - (churchStoreData.outstanding || 0);
-            churchBreakdownElement.textContent = `${formatCurrency(churchCollected)} collected | ${churchStoreData.revenuePercentage}%`;
+            churchBreakdownElement.textContent = `${formatCurrency(churchInvoiced)} invoiced | ${formatCurrency(churchCollected)} collected`;
         }
-    } else {
-        console.warn('[ui.js] No Church Store data found');
-        const churchRevenueElement = document.getElementById('church-store-revenue');
-        if (churchRevenueElement) churchRevenueElement.textContent = '₹0.00';
     }
     
     if (tastyTreatsData) {
         console.log('[ui.js] Tasty Treats data:', tastyTreatsData);
         
+        // Calculate actual collected amount for Tasty Treats
+        const tastyInvoiced = tastyTreatsData.revenue;
+        const tastyOutstanding = calculateStoreOutstanding(salesData, 'Tasty Treats');
+        const tastyCollected = tastyInvoiced - tastyOutstanding;
+        
+        console.log('[ui.js] Tasty Treats: Invoiced:', formatCurrency(tastyInvoiced), 'Collected:', formatCurrency(tastyCollected));
+        
         const tastyRevenueElement = document.getElementById('tasty-treats-revenue');
         const tastyBreakdownElement = document.getElementById('tasty-treats-breakdown');
         
         if (tastyRevenueElement) {
-            tastyRevenueElement.textContent = formatCurrency(tastyTreatsData.revenue);
+            // Show collected amount as the main number (actual revenue)
+            tastyRevenueElement.textContent = formatCurrency(tastyCollected);
         }
         if (tastyBreakdownElement) {
-            const tastyCollected = tastyTreatsData.revenue - (tastyTreatsData.outstanding || 0);
-            tastyBreakdownElement.textContent = `${formatCurrency(tastyCollected)} collected | ${tastyTreatsData.revenuePercentage}%`;
+            tastyBreakdownElement.textContent = `${formatCurrency(tastyInvoiced)} invoiced | ${formatCurrency(tastyCollected)} collected`;
         }
-    } else {
-        console.warn('[ui.js] No Tasty Treats data found');
-        const tastyRevenueElement = document.getElementById('tasty-treats-revenue');
-        if (tastyRevenueElement) tastyRevenueElement.textContent = '₹0.00';
     }
     
     updateSummaryCardsLoading(false);
 }
+
+/**
+ * Helper function to calculate outstanding amount for a specific store.
+ * 
+ * @param {Object} salesData - Complete sales data
+ * @param {string} storeName - Name of store to calculate for
+ * @returns {number} Outstanding amount for the store
+ * @private
+ */
+function calculateStoreOutstanding(salesData, storeName) {
+    // This would need to be calculated from the transaction details
+    // For now, we'll distribute the total outstanding proportionally
+    const storeData = salesData.storeBreakdown.find(s => s.storeName === storeName);
+    if (!storeData) return 0;
+    
+    const totalRevenue = salesData.summary.totalRevenue;
+    const totalOutstanding = salesData.paymentAnalysis?.totalOutstanding || 0;
+    
+    if (totalRevenue === 0) return 0;
+    
+    // Proportional distribution of outstanding amount
+    const storePercentage = storeData.revenue / totalRevenue;
+    return totalOutstanding * storePercentage;
+}
+
 
 /**
  * Shows/hides loading state on summary cards.
