@@ -45,6 +45,9 @@ import {
     generateBusinessSummaryOptimized,
     getDailyDashboardOptimized,
     createDateRange,
+    getStoreTransactionDetails,        
+    generateStoreComparisonReport,     
+    refreshStorePerformanceData,       
     REPORT_CONFIGS 
 } from './reports.js';
 
@@ -5005,3 +5008,581 @@ function displayOutstandingBalancesReport(financialData) {
     );
 }
 
+
+/**
+ * Grid configuration for detailed store performance analysis.
+ * 
+ * Shows transaction-level data for both Church Store and Tasty Treats
+ * with comprehensive filtering, sorting, and export capabilities.
+ * Optimized for business analysis and external data export.
+ */
+let storePerformanceDetailGridApi = null;
+let isStorePerformanceDetailGridInitialized = false;
+
+const storePerformanceDetailGridOptions = {
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true, // Add floating filters for better UX
+    },
+    
+    columnDefs: [
+        { 
+            field: "saleDate", 
+            headerName: "Date", 
+            width: 120,
+            valueFormatter: p => p.value ? p.value.toLocaleDateString() : '',
+            filter: 'agDateColumnFilter',
+            sort: 'desc' // Default sort by newest first
+        },
+        { 
+            field: "saleId", 
+            headerName: "Invoice ID", 
+            width: 180,
+            filter: 'agTextColumnFilter',
+            pinned: 'left' // Keep visible when scrolling
+        },
+        { 
+            field: "store", 
+            headerName: "Store", 
+            width: 150,
+            filter: 'agSetColumnFilter', // Dropdown filter for store selection
+            cellRenderer: params => {
+                const store = params.value;
+                const color = store === 'Church Store' ? 'purple' : store === 'Tasty Treats' ? 'orange' : 'gray';
+                return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-${color}-100 text-${color}-800">${store}</span>`;
+            }
+        },
+        { 
+            field: "customerInfo.name", 
+            headerName: "Customer", 
+            flex: 1,
+            minWidth: 150,
+            filter: 'agTextColumnFilter'
+        },
+        { 
+            field: "customerInfo.email", 
+            headerName: "Email", 
+            flex: 1,
+            minWidth: 200,
+            filter: 'agTextColumnFilter'
+        },
+        { 
+            field: "financials.totalAmount", 
+            headerName: "Amount", 
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-semibold',
+            // Add conditional formatting for high-value transactions
+            cellStyle: params => {
+                const amount = params.value || 0;
+                if (amount > 200) return { backgroundColor: '#f0f9ff', fontWeight: 'bold' }; // Light blue for high value
+                if (amount < 20) return { backgroundColor: '#fef3c7' }; // Light yellow for low value
+                return null;
+            }
+        },
+        { 
+            field: "paymentStatus", 
+            headerName: "Payment Status", 
+            width: 140,
+            filter: 'agSetColumnFilter',
+            cellRenderer: params => {
+                const status = params.value;
+                let colorClass, bgClass;
+                
+                switch (status) {
+                    case 'Paid':
+                        colorClass = 'text-green-700';
+                        bgClass = 'bg-green-100';
+                        break;
+                    case 'Partially Paid':
+                        colorClass = 'text-yellow-700';
+                        bgClass = 'bg-yellow-100';
+                        break;
+                    default:
+                        colorClass = 'text-red-700';
+                        bgClass = 'bg-red-100';
+                }
+                
+                return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full ${bgClass} ${colorClass}">${status}</span>`;
+            }
+        },
+        { 
+            field: "balanceDue", 
+            headerName: "Balance Due", 
+            width: 120,
+            valueFormatter: p => p.value > 0 ? formatCurrency(p.value) : '',
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right',
+            cellStyle: params => params.value > 0 ? { color: '#dc2626', fontWeight: 'bold' } : null
+        },
+        {
+            field: "audit.createdBy",
+            headerName: "Created By", 
+            width: 150,
+            filter: 'agTextColumnFilter'
+        },
+        {
+            headerName: "Line Items Count",
+            width: 120,
+            valueGetter: params => params.data.lineItems?.length || 0,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center'
+        }
+    ],
+    
+    // Enable advanced features
+    enableRangeSelection: true,
+    enableCharts: true,
+    
+    // Add status bar to show selection and filtering info
+    statusBar: {
+        statusPanels: [
+            { statusPanel: 'agTotalAndFilteredRowCountComponent' },
+            { statusPanel: 'agSelectedRowCountComponent' },
+            { statusPanel: 'agAggregationComponent' }
+        ]
+    },
+    
+    onGridReady: params => {
+        console.log("[ui.js] Store Performance Detail Grid ready");
+        storePerformanceDetailGridApi = params.api;
+        
+        // Set up auto-resize
+        params.api.sizeColumnsToFit();
+        
+        // Enable CSV/Excel export
+        params.api.setGridOption('suppressExcelExport', false);
+        params.api.setGridOption('suppressCsvExport', false);
+    },
+    
+    // Add selection changed event for advanced features
+    onSelectionChanged: (event) => {
+        const selectedRows = event.api.getSelectedRows();
+        console.log(`[Store Report] ${selectedRows.length} rows selected`);
+        
+        // Could enable bulk operations on selected transactions
+        updateExportButtonState(selectedRows.length);
+    }
+};
+
+/**
+ * Initializes the store performance detail grid.
+ * 
+ * Sets up the detailed transaction grid for store performance analysis
+ * with all necessary event handlers and optimization features.
+ * 
+ * @since 1.0.0
+ */
+export function initializeStorePerformanceDetailGrid() {
+    if (isStorePerformanceDetailGridInitialized) {
+        console.log("[ui.js] Store performance detail grid already initialized");
+        return;
+    }
+    
+    const gridDiv = document.getElementById('store-performance-detail-grid');
+    if (gridDiv) {
+        console.log("[ui.js] Initializing Store Performance Detail Grid");
+        createGrid(gridDiv, storePerformanceDetailGridOptions);
+        isStorePerformanceDetailGridInitialized = true;
+    } else {
+        console.error("[ui.js] Could not find store-performance-detail-grid element");
+    }
+}
+
+/**
+ * Displays the store performance detail view with comprehensive transaction analysis.
+ * 
+ * Loads detailed transaction data for both Church Store and Tasty Treats,
+ * providing summary statistics, filtering capabilities, and export options.
+ * Uses optimized queries and caching to minimize Firestore usage.
+ * 
+ * @param {number} [daysBack=30] - Number of days to analyze (default: 30 days)
+ * 
+ * @since 1.0.0
+ */
+export async function showStorePerformanceDetailView(daysBack = 30) {
+    try {
+        console.log(`[ui.js] Displaying Store Performance Detail view for ${daysBack} days`);
+        
+        // Show the view and initialize grid
+        showView('store-performance-detail-view');
+        initializeStorePerformanceDetailGrid();
+        
+        // Set the period selector to match
+        const periodSelector = document.getElementById('store-report-period');
+        if (periodSelector) {
+            periodSelector.value = daysBack.toString();
+        }
+        
+        // Load data with optimization tracking
+        await loadStorePerformanceDetailData(daysBack);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing store performance detail view:', error);
+        showModal('error', 'Report Error', 'Could not load store performance data. Please try again.');
+    }
+}
+
+/**
+ * Loads and displays comprehensive store performance data in the detail grid.
+ * 
+ * Fetches transaction data using optimized queries, updates summary cards,
+ * populates the detail grid, and tracks Firestore usage for free tier monitoring.
+ * 
+ * @param {number} daysBack - Number of days to analyze
+ * 
+ * @since 1.0.0
+ */
+async function loadStorePerformanceDetailData(daysBack) {
+    if (!storePerformanceDetailGridApi) {
+        console.error("[ui.js] Store performance detail grid not ready");
+        return;
+    }
+    
+    try {
+        console.log(`[ui.js] Loading store performance data for ${daysBack} days`);
+        
+        // Show loading state
+        storePerformanceDetailGridApi.setGridOption('loading', true);
+        updateSummaryCardsLoading(true);
+        
+        // Get optimized sales data
+        const dateRange = createDateRange(daysBack);
+        const salesData = await calculateDirectSalesMetricsOptimized(
+            dateRange.startDate, 
+            dateRange.endDate, 
+            true // Use caching
+        );
+        
+        // Update summary cards with aggregated data
+        updateStorePerformanceSummaryCards(salesData);
+        
+        // Get detailed transaction data for the grid
+        const detailData = await getStoreTransactionDetails(dateRange.startDate, dateRange.endDate);
+        
+        // Populate the grid with transaction details
+        storePerformanceDetailGridApi.setGridOption('rowData', detailData.transactions);
+        storePerformanceDetailGridApi.setGridOption('loading', false);
+        
+        // Update Firestore usage display
+        updateFirestoreUsageDisplay(
+            salesData.metadata.firestoreReadsUsed + detailData.metadata.firestoreReadsUsed,
+            salesData.metadata.firestoreReadsUsed === 0 ? 'Cached' : 'Fresh'
+        );
+        
+        console.log(`[ui.js] Store performance data loaded using ${salesData.metadata.firestoreReadsUsed + detailData.metadata.firestoreReadsUsed} total Firestore reads`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading store performance detail data:', error);
+        storePerformanceDetailGridApi.setGridOption('loading', false);
+        updateSummaryCardsLoading(false);
+        showModal('error', 'Data Loading Error', 'Could not load store performance data. Please try again.');
+    }
+}
+
+/**
+ * Updates the summary cards above the store performance grid with calculated metrics.
+ * 
+ * @param {Object} salesData - Processed sales data from reports module
+ * @private
+ */
+function updateStorePerformanceSummaryCards(salesData) {
+    // Update total revenue card
+    const totalRevenueElement = document.getElementById('total-revenue-display');
+    if (totalRevenueElement) {
+        totalRevenueElement.textContent = salesData.summary.formattedTotalRevenue;
+    }
+    
+    // Update total transactions card
+    const totalTransactionsElement = document.getElementById('total-transactions-display');
+    if (totalTransactionsElement) {
+        totalTransactionsElement.textContent = salesData.summary.totalTransactions.toString();
+    }
+    
+    // Update store-specific cards
+    const churchStoreData = salesData.storeBreakdown.find(store => store.storeName === 'Church Store');
+    const tastyTreatsData = salesData.storeBreakdown.find(store => store.storeName === 'Tasty Treats');
+    
+    if (churchStoreData) {
+        const churchRevenueElement = document.getElementById('church-store-revenue');
+        const churchPercentageElement = document.getElementById('church-store-percentage');
+        
+        if (churchRevenueElement) churchRevenueElement.textContent = churchStoreData.formattedRevenue;
+        if (churchPercentageElement) churchPercentageElement.textContent = `${churchStoreData.revenuePercentage}% of total`;
+    }
+    
+    if (tastyTreatsData) {
+        const tastyRevenueElement = document.getElementById('tasty-treats-revenue');
+        const tastyPercentageElement = document.getElementById('tasty-treats-percentage');
+        
+        if (tastyRevenueElement) tastyRevenueElement.textContent = tastyTreatsData.formattedRevenue;
+        if (tastyPercentageElement) tastyPercentageElement.textContent = `${tastyTreatsData.revenuePercentage}% of total`;
+    }
+    
+    updateSummaryCardsLoading(false);
+}
+
+/**
+ * Shows/hides loading state on summary cards.
+ * 
+ * @param {boolean} isLoading - Whether to show loading state
+ * @private
+ */
+function updateSummaryCardsLoading(isLoading) {
+    const elements = [
+        'total-revenue-display',
+        'total-transactions-display', 
+        'church-store-revenue',
+        'tasty-treats-revenue'
+    ];
+    
+    elements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = isLoading ? 'Loading...' : element.textContent;
+        }
+    });
+}
+
+/**
+ * Updates the Firestore usage display to help users monitor free tier usage.
+ * 
+ * @param {number} readsUsed - Number of document reads consumed
+ * @param {string} cacheStatus - Cache hit status ('Cached', 'Fresh', 'Expired')
+ * @private
+ */
+function updateFirestoreUsageDisplay(readsUsed, cacheStatus) {
+    const readsElement = document.getElementById('reads-count');
+    const cacheElement = document.getElementById('cache-status');
+    
+    if (readsElement) {
+        readsElement.textContent = readsUsed.toString();
+        // Add visual indicator for high usage
+        if (readsUsed > 50) {
+            readsElement.className = 'text-red-600 font-bold';
+        } else if (readsUsed > 20) {
+            readsElement.className = 'text-yellow-600 font-semibold';
+        } else {
+            readsElement.className = 'text-green-600';
+        }
+    }
+    
+    if (cacheElement) {
+        cacheElement.textContent = cacheStatus;
+        cacheElement.className = cacheStatus === 'Cached' ? 'text-green-600' : 'text-blue-600';
+    }
+}
+
+/**
+ * Updates export button states based on data availability and selection.
+ * 
+ * @param {number} selectedRowCount - Number of currently selected rows
+ * @private
+ */
+function updateExportButtonState(selectedRowCount) {
+    const exportButtons = document.querySelectorAll('#export-store-csv, #export-store-excel');
+    
+    exportButtons.forEach(button => {
+        if (selectedRowCount > 0) {
+            button.textContent = button.textContent.replace('Export', `Export ${selectedRowCount} Selected`);
+        } else {
+            button.textContent = button.textContent.replace(/Export \d+ Selected/, 'Export All');
+        }
+    });
+}
+
+
+/**
+ * Exports store performance data to CSV format.
+ * 
+ * Generates a CSV file with current grid data including applied filters
+ * and user selections. Includes summary information in the file header.
+ * 
+ * @since 1.0.0
+ */
+export function exportStorePerformanceCsv() {
+    if (!storePerformanceDetailGridApi) {
+        console.error('[ui.js] Cannot export: Store performance grid not available');
+        return;
+    }
+    
+    try {
+        const selectedRows = storePerformanceDetailGridApi.getSelectedRows();
+        const exportAll = selectedRows.length === 0;
+        
+        const fileName = `Store_Performance_${new Date().toISOString().split('T')[0]}`;
+        
+        storePerformanceDetailGridApi.exportDataAsCsv({
+            fileName: fileName + '.csv',
+            onlySelected: !exportAll,
+            columnSeparator: ',',
+            suppressQuotes: false,
+            customHeader: `Store Performance Report - Generated ${new Date().toLocaleString()}\n` +
+                         `Report Period: ${document.getElementById('store-report-period').selectedOptions[0].text}\n` +
+                         `Records: ${exportAll ? 'All' : selectedRows.length + ' Selected'}\n\n`
+        });
+        
+        console.log(`[ui.js] Exported store performance data: ${exportAll ? 'all rows' : selectedRows.length + ' selected rows'}`);
+        
+        // Show success feedback
+        showModal('success', 'Export Successful', 
+            `Store performance data exported to ${fileName}.csv\n\n` +
+            `Records exported: ${exportAll ? 'All filtered data' : selectedRows.length + ' selected rows'}`
+        );
+        
+    } catch (error) {
+        console.error('[ui.js] Error exporting store performance CSV:', error);
+        showModal('error', 'Export Failed', 'Could not export the data. Please try again.');
+    }
+}
+
+/**
+ * Exports store performance data to Excel format with enhanced formatting.
+ * 
+ * @since 1.0.0
+ */
+export function exportStorePerformanceExcel() {
+    if (!storePerformanceDetailGridApi) {
+        console.error('[ui.js] Cannot export: Store performance grid not available');
+        return;
+    }
+    
+    try {
+        const selectedRows = storePerformanceDetailGridApi.getSelectedRows();
+        const exportAll = selectedRows.length === 0;
+        
+        const fileName = `Store_Performance_${new Date().toISOString().split('T')[0]}`;
+        
+        storePerformanceDetailGridApi.exportDataAsExcel({
+            fileName: fileName + '.xlsx',
+            sheetName: 'Store Performance',
+            onlySelected: !exportAll,
+            // Add custom header with report metadata
+            customHeader: [
+                [
+                    { data: { value: 'TrinityCart Store Performance Report', type: 'String' }, mergeAcross: 5 }
+                ],
+                [
+                    { data: { value: `Generated: ${new Date().toLocaleString()}`, type: 'String' } }
+                ],
+                [
+                    { data: { value: `Period: ${document.getElementById('store-report-period').selectedOptions[0].text}`, type: 'String' } }
+                ],
+                [] // Empty row for spacing
+            ]
+        });
+        
+        console.log(`[ui.js] Exported store performance Excel: ${exportAll ? 'all rows' : selectedRows.length + ' selected rows'}`);
+        
+        showModal('success', 'Excel Export Successful', 
+            `Store performance data exported to ${fileName}.xlsx with formatting and headers.`
+        );
+        
+    } catch (error) {
+        console.error('[ui.js] Error exporting store performance Excel:', error);
+        showModal('error', 'Excel Export Failed', 'Could not export to Excel format. CSV export may still work.');
+    }
+}
+
+
+/**
+ * Loads comprehensive store performance data and populates both summary cards and detail grid.
+ * 
+ * Executes optimized queries to fetch store performance metrics and individual
+ * transaction details. Updates all UI elements including summary cards, grid data,
+ * and usage tracking displays. Designed for minimal Firestore consumption.
+ * 
+ * @param {number} daysBack - Number of days to analyze
+ * 
+ * @since 1.0.0
+ */
+async function loadStorePerformanceDetailData(daysBack) {
+    if (!storePerformanceDetailGridApi) {
+        console.error("[ui.js] Store performance detail grid not ready");
+        return;
+    }
+    
+    try {
+        console.log(`[ui.js] Loading comprehensive store performance data for ${daysBack} days`);
+        
+        // Show loading states across all UI elements
+        storePerformanceDetailGridApi.setGridOption('loading', true);
+        updateSummaryCardsLoading(true);
+        
+        const startTime = Date.now();
+        
+        // Get both summary metrics and detailed transaction data
+        const dateRange = createDateRange(daysBack);
+        
+        // Execute optimized data loading in parallel
+        const [salesMetrics, transactionDetails] = await Promise.all([
+            calculateDirectSalesMetricsOptimized(dateRange.startDate, dateRange.endDate, true),
+            getStoreTransactionDetails(dateRange.startDate, dateRange.endDate, true)
+        ]);
+        
+        const loadTime = Date.now() - startTime;
+        
+        // Update summary cards with aggregated metrics
+        updateStorePerformanceSummaryCards(salesMetrics);
+        
+        // Populate the detail grid with transaction data
+        storePerformanceDetailGridApi.setGridOption('rowData', transactionDetails.transactions);
+        storePerformanceDetailGridApi.setGridOption('loading', false);
+        
+        // Auto-resize columns for optimal display
+        setTimeout(() => {
+            storePerformanceDetailGridApi.sizeColumnsToFit();
+        }, 100);
+        
+        // Update Firestore usage tracking display
+        const totalReads = salesMetrics.metadata.firestoreReadsUsed + transactionDetails.metadata.firestoreReadsUsed;
+        updateFirestoreUsageDisplay(
+            totalReads,
+            totalReads === 0 ? 'Cached' : 'Fresh'
+        );
+        
+        // Log successful completion with performance metrics
+        console.log(`[ui.js] Store performance data loaded successfully:`);
+        console.log(`  - Total Firestore reads: ${totalReads}`);
+        console.log(`  - Transactions loaded: ${transactionDetails.transactions.length}`);
+        console.log(`  - Load time: ${loadTime}ms`);
+        console.log(`  - Total revenue: ${salesMetrics.summary.formattedTotalRevenue}`);
+        
+        // Show data freshness indicator to user
+        const dataFreshnessElement = document.getElementById('data-freshness-indicator');
+        if (dataFreshnessElement) {
+            const freshnessText = totalReads === 0 
+                ? `📊 Cached data (updated within ${REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES} minutes)` 
+                : `🔄 Fresh data (just loaded)`;
+            dataFreshnessElement.textContent = freshnessText;
+        }
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading store performance detail data:', error);
+        
+        // Clean up loading states
+        if (storePerformanceDetailGridApi) {
+            storePerformanceDetailGridApi.setGridOption('loading', false);
+            storePerformanceDetailGridApi.showNoRowsOverlay();
+        }
+        updateSummaryCardsLoading(false);
+        
+        // Show user-friendly error message
+        showModal('error', 'Data Loading Failed', 
+            `Could not load store performance data.\n\n` +
+            `This might be due to:\n` +
+            `• Network connectivity issues\n` +
+            `• Temporary database unavailability\n` +
+            `• Free tier quota exceeded\n\n` +
+            `Please try again in a few minutes.`
+        );
+    }
+}
