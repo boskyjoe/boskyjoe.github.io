@@ -4859,8 +4859,7 @@ function displayBasicExecutiveMetrics() {
  * 
  * When users click on specific report cards, this function determines the
  * appropriate data loading strategy, manages caching, and displays detailed
- * report results. Optimized to minimize Firestore usage through intelligent
- * data loading and caching strategies.
+ * report results. Updated to navigate to dedicated grid views instead of modals.
  * 
  * @param {string} reportId - Unique identifier of the clicked report
  * @param {HTMLElement} cardElement - DOM element of the clicked report card
@@ -4874,23 +4873,20 @@ export async function handleReportCardClick(reportId, cardElement) {
         // Show loading state on the card
         showReportCardLoading(cardElement);
         
-        let reportData;
         let firestoreReadsUsed = 0;
         
         switch (reportId) {
-            case 'daily-sales':
-                reportData = await getDailyDashboardOptimized();
-                firestoreReadsUsed = reportData.metadata.firestoreReadsUsed;
-                displayDailySalesReport(reportData);
+            case 'store-performance':
+                console.log('[ui.js] Navigating to store performance detail grid');
+                // Navigate to detailed grid view instead of modal
+                showStorePerformanceDetailView(7); // 7 days default
+                firestoreReadsUsed = 0; // Navigation doesn't use reads
                 break;
                 
-            case 'store-performance':
-                const storeData = await calculateDirectSalesMetricsOptimized(
-                    createDateRange(7).startDate, 
-                    createDateRange(7).endDate
-                );
-                firestoreReadsUsed = storeData.metadata.firestoreReadsUsed;
-                displayStorePerformanceReport(storeData);
+            case 'daily-sales':
+                const reportData = await getDailyDashboardOptimized();
+                firestoreReadsUsed = reportData.metadata.firestoreReadsUsed;
+                displayDailySalesReport(reportData);
                 break;
                 
             case 'stock-status':
@@ -4914,7 +4910,7 @@ export async function handleReportCardClick(reportId, cardElement) {
         // Hide loading state
         hideReportCardLoading(cardElement);
         
-        console.log(`[ui.js] Report ${reportId} loaded using ${firestoreReadsUsed} Firestore reads`);
+        console.log(`[ui.js] Report ${reportId} processed using ${firestoreReadsUsed} Firestore reads`);
         
     } catch (error) {
         console.error(`[ui.js] Error loading report ${reportId}:`, error);
