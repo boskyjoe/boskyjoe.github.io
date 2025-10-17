@@ -5330,8 +5330,10 @@ export async function showStorePerformanceDetailView(daysBack = 30) {
     try {
         console.log(`[ui.js] Displaying Store Performance Detail view for ${daysBack} days`);
         
-        // Show the view and initialize grid
+        // Navigate to the detail view first
         showView('store-performance-detail-view');
+        
+        // Initialize the grid
         initializeStorePerformanceDetailGrid();
         
         // Set the period selector to match
@@ -5340,12 +5342,33 @@ export async function showStorePerformanceDetailView(daysBack = 30) {
             periodSelector.value = daysBack.toString();
         }
         
-        // Load data with optimization tracking
-        await loadStorePerformanceDetailData(daysBack);
+        // WAIT FOR GRID TO BE READY before loading data
+        const waitForGrid = setInterval(() => {
+            if (storePerformanceDetailGridApi) {
+                clearInterval(waitForGrid);
+                console.log('[ui.js] Grid is ready, now loading data');
+                
+                // Now it's safe to load data
+                loadStorePerformanceDetailData(daysBack);
+            } else {
+                console.log('[ui.js] Waiting for store performance grid to initialize...');
+            }
+        }, 50); // Check every 50ms
+        
+        // Fallback: If grid doesn't initialize within 5 seconds, show error
+        setTimeout(() => {
+            if (!storePerformanceDetailGridApi) {
+                clearInterval(waitForGrid);
+                console.error('[ui.js] Store performance grid failed to initialize within 5 seconds');
+                showModal('error', 'Grid Initialization Failed', 
+                    'The report grid could not be initialized. Please try refreshing the page.'
+                );
+            }
+        }, 5000);
         
     } catch (error) {
         console.error('[ui.js] Error showing store performance detail view:', error);
-        showModal('error', 'Report Error', 'Could not load store performance data. Please try again.');
+        showModal('error', 'View Error', 'Could not load store performance detail view.');
     }
 }
 
