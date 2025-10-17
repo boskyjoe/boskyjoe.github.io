@@ -4979,15 +4979,10 @@ function displayDailySalesReport(reportData) {
  * @since 1.0.0
  */
 function displayStorePerformanceReport(storeData) {
-    // Create detailed store comparison view
-    const storeComparison = storeData.storeBreakdown.map(store => 
-        `${store.storeName}: ${store.formattedRevenue} (${store.revenuePercentage}%)`
-    ).join('\n');
+    console.log('[ui.js] Navigating to store performance detail grid view');
     
-    showModal('info', 'Store Performance (Last 7 Days)', 
-        `Total Revenue: ${storeData.summary.formattedTotalRevenue}\n\n` +
-        `Store Breakdown:\n${storeComparison}`
-    );
+    // Navigate to the detailed grid view
+    showStorePerformanceDetailView(7); // Use 7 days to match the data
 }
 
 /**
@@ -5006,11 +5001,12 @@ function displayOutstandingBalancesReport(financialData) {
 
 
 /**
- * Grid configuration for detailed store performance analysis.
+ * Community-compatible grid configuration for store performance analysis.
  * 
- * Shows transaction-level data for both Church Store and Tasty Treats
- * with comprehensive filtering, sorting, and export capabilities.
- * Optimized for business analysis and external data export.
+ * Removed Enterprise-only features (range selection, charts, status bar, set filters)
+ * and optimized for ag-Grid Community edition capabilities.
+ * 
+ * @since 1.0.0
  */
 let storePerformanceDetailGridApi = null;
 let isStorePerformanceDetailGridInitialized = false;
@@ -5025,7 +5021,7 @@ const storePerformanceDetailGridOptions = {
         resizable: true,
         sortable: true,
         filter: true,
-        floatingFilter: true, // Add floating filters for better UX
+        // REMOVED: floatingFilter (Enterprise feature)
     },
     
     columnDefs: [
@@ -5034,25 +5030,29 @@ const storePerformanceDetailGridOptions = {
             headerName: "Date", 
             width: 120,
             valueFormatter: p => p.value ? p.value.toLocaleDateString() : '',
-            filter: 'agDateColumnFilter',
-            sort: 'desc' // Default sort by newest first
+            filter: 'agDateColumnFilter', // Community filter
+            sort: 'desc'
         },
         { 
             field: "saleId", 
             headerName: "Invoice ID", 
             width: 180,
-            filter: 'agTextColumnFilter',
-            pinned: 'left' // Keep visible when scrolling
+            filter: 'agTextColumnFilter', // Community filter
+            pinned: 'left'
         },
         { 
             field: "store", 
             headerName: "Store", 
             width: 150,
-            filter: 'agSetColumnFilter', // Dropdown filter for store selection
+            filter: 'agTextColumnFilter', // Changed from agSetColumnFilter (Enterprise)
             cellRenderer: params => {
                 const store = params.value;
-                const color = store === 'Church Store' ? 'purple' : store === 'Tasty Treats' ? 'orange' : 'gray';
-                return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-${color}-100 text-${color}-800">${store}</span>`;
+                if (store === 'Church Store') {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">${store}</span>`;
+                } else if (store === 'Tasty Treats') {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">${store}</span>`;
+                }
+                return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">${store}</span>`;
             }
         },
         { 
@@ -5074,13 +5074,12 @@ const storePerformanceDetailGridOptions = {
             headerName: "Amount", 
             width: 120,
             valueFormatter: p => formatCurrency(p.value || 0),
-            filter: 'agNumberColumnFilter',
+            filter: 'agNumberColumnFilter', // Community filter
             cellClass: 'text-right font-semibold',
-            // Add conditional formatting for high-value transactions
             cellStyle: params => {
                 const amount = params.value || 0;
-                if (amount > 200) return { backgroundColor: '#f0f9ff', fontWeight: 'bold' }; // Light blue for high value
-                if (amount < 20) return { backgroundColor: '#fef3c7' }; // Light yellow for low value
+                if (amount > 200) return { backgroundColor: '#f0f9ff', fontWeight: 'bold' };
+                if (amount < 20) return { backgroundColor: '#fef3c7' };
                 return null;
             }
         },
@@ -5088,7 +5087,7 @@ const storePerformanceDetailGridOptions = {
             field: "paymentStatus", 
             headerName: "Payment Status", 
             width: 140,
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter', // Changed from agSetColumnFilter
             cellRenderer: params => {
                 const status = params.value;
                 let colorClass, bgClass;
@@ -5126,7 +5125,7 @@ const storePerformanceDetailGridOptions = {
             filter: 'agTextColumnFilter'
         },
         {
-            headerName: "Line Items Count",
+            headerName: "Items Count",
             width: 120,
             valueGetter: params => params.data.lineItems?.length || 0,
             filter: 'agNumberColumnFilter',
@@ -5134,37 +5133,27 @@ const storePerformanceDetailGridOptions = {
         }
     ],
     
-    // Enable advanced features
-    enableRangeSelection: true,
-    enableCharts: true,
-    
-    // Add status bar to show selection and filtering info
-    statusBar: {
-        statusPanels: [
-            { statusPanel: 'agTotalAndFilteredRowCountComponent' },
-            { statusPanel: 'agSelectedRowCountComponent' },
-            { statusPanel: 'agAggregationComponent' }
-        ]
-    },
+    // Community-compatible features only:
+    rowSelection: { mode: 'multiRow' }, // ✅ Community feature for export selection
     
     onGridReady: params => {
-        console.log("[ui.js] Store Performance Detail Grid ready");
+        console.log("[ui.js] Store Performance Detail Grid ready (Community version)");
         storePerformanceDetailGridApi = params.api;
         
-        // Set up auto-resize
-        params.api.sizeColumnsToFit();
+        // Auto-resize columns
+        setTimeout(() => {
+            params.api.sizeColumnsToFit();
+        }, 100);
         
-        // Enable CSV/Excel export
-        params.api.setGridOption('suppressExcelExport', false);
+        // Enable CSV export (Community feature)
         params.api.setGridOption('suppressCsvExport', false);
+        // Note: Excel export may not be available in Community - we'll handle this gracefully
     },
     
-    // Add selection changed event for advanced features
+    // Selection handler for export functionality
     onSelectionChanged: (event) => {
         const selectedRows = event.api.getSelectedRows();
-        console.log(`[Store Report] ${selectedRows.length} rows selected`);
-        
-        // Could enable bulk operations on selected transactions
+        console.log(`[Store Report] ${selectedRows.length} rows selected for export`);
         updateExportButtonState(selectedRows.length);
     }
 };
@@ -5396,39 +5385,36 @@ export function exportStorePerformanceExcel() {
     }
     
     try {
+        // Check if Excel export is available in Community version
+        const hasExcelExport = typeof storePerformanceDetailGridApi.exportDataAsExcel === 'function';
+        
+        if (!hasExcelExport) {
+            showModal('info', 'Excel Export Not Available', 
+                'Excel export requires ag-Grid Enterprise. Please use CSV export instead.'
+            );
+            return;
+        }
+        
         const selectedRows = storePerformanceDetailGridApi.getSelectedRows();
         const exportAll = selectedRows.length === 0;
-        
         const fileName = `Store_Performance_${new Date().toISOString().split('T')[0]}`;
         
         storePerformanceDetailGridApi.exportDataAsExcel({
             fileName: fileName + '.xlsx',
             sheetName: 'Store Performance',
-            onlySelected: !exportAll,
-            // Add custom header with report metadata
-            customHeader: [
-                [
-                    { data: { value: 'TrinityCart Store Performance Report', type: 'String' }, mergeAcross: 5 }
-                ],
-                [
-                    { data: { value: `Generated: ${new Date().toLocaleString()}`, type: 'String' } }
-                ],
-                [
-                    { data: { value: `Period: ${document.getElementById('store-report-period').selectedOptions[0].text}`, type: 'String' } }
-                ],
-                [] // Empty row for spacing
-            ]
+            onlySelected: !exportAll
         });
         
-        console.log(`[ui.js] Exported store performance Excel: ${exportAll ? 'all rows' : selectedRows.length + ' selected rows'}`);
-        
         showModal('success', 'Excel Export Successful', 
-            `Store performance data exported to ${fileName}.xlsx with formatting and headers.`
+            `Store performance data exported to ${fileName}.xlsx`
         );
         
     } catch (error) {
-        console.error('[ui.js] Error exporting store performance Excel:', error);
-        showModal('error', 'Excel Export Failed', 'Could not export to Excel format. CSV export may still work.');
+        console.error('[ui.js] Excel export failed, falling back to CSV:', error);
+        showModal('info', 'Using CSV Export', 
+            'Excel export is not available in Community version. Exporting as CSV instead.'
+        );
+        exportStorePerformanceCsv(); // Fallback to CSV
     }
 }
 
