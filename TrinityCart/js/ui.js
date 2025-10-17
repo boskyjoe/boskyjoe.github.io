@@ -5135,7 +5135,34 @@ const storePerformanceDetailGridOptions = {
             field: "saleDate", 
             headerName: "Date", 
             width: 120,
-            valueFormatter: p => p.value ? p.value.toLocaleDateString() : '',
+            valueFormatter: params => {
+                const value = params.value;
+                if (!value) return '';
+                
+                // Handle different date formats
+                let date;
+                if (value.toDate && typeof value.toDate === 'function') {
+                    // Firestore Timestamp
+                    date = value.toDate();
+                } else if (value instanceof Date) {
+                    // JavaScript Date
+                    date = value;
+                } else if (typeof value === 'string') {
+                    // Date string
+                    date = new Date(value);
+                } else {
+                    console.warn('[Grid] Invalid date value:', value);
+                    return 'Invalid Date';
+                }
+                
+                // Validate the date is valid
+                if (isNaN(date.getTime())) {
+                    console.warn('[Grid] Invalid date object:', value);
+                    return 'Invalid Date';
+                }
+                
+                return date.toLocaleDateString();
+            },
             filter: 'agDateColumnFilter', // Community filter
             sort: 'desc'
         },
