@@ -3638,135 +3638,30 @@ const salesCartGridOptions = {
  * 
  * @since 1.0.0
  */
+
+
+
 const addProductModalGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
-    
     defaultColDef: {
         resizable: true,
         sortable: true
     },
-    
     columnDefs: [
-        { 
-            field: "itemName", 
-            headerName: "Product Name", 
-            flex: 2, 
-            filter: 'agTextColumnFilter',
-            minWidth: 200
-        },
-        { 
-            field: "inventoryCount", 
-            headerName: "Stock Available", 
-            width: 120,
-            cellClass: 'text-center font-semibold',
-            cellStyle: params => {
-                const stock = params.value || 0;
-                if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' }; // Red for no stock
-                if (stock < 10) return { backgroundColor: '#fef3c7', color: '#d97706' }; // Yellow for low stock
-                return { backgroundColor: '#f0f9ff', color: '#1e40af' }; // Blue for good stock
-            }
-        },
+        { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "inventoryCount", headerName: "Stock", width: 100 },
         {
-            field: "sellingPrice",
-            headerName: "Price",
-            width: 100,
-            valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right font-medium'
-        },
-        {
-            field: "quantityToAdd",
-            headerName: "Qty to Add",
-            width: 120,
-            editable: true,
-            cellClass: 'text-center',
-            cellEditor: 'agNumberCellEditor',
-            cellEditorParams: {
-                min: 0,
-                max: 999, // Will be dynamically set based on stock
-                precision: 0 // Whole numbers only
-            },
-            valueParser: params => {
-                const qty = parseInt(params.newValue) || 0;
-                const maxStock = params.data.inventoryCount || 0;
-                
-                // Validate quantity doesn't exceed stock
-                if (qty > maxStock) {
-                    console.warn(`[AddProduct] Quantity ${qty} exceeds stock ${maxStock} for ${params.data.itemName}`);
-                    return maxStock; // Cap at available stock
-                }
-                
-                return Math.max(0, qty); // Ensure non-negative
-            },
-            cellStyle: params => {
-                const qty = params.value || 0;
-                const stock = params.data.inventoryCount || 0;
-                
-                if (qty > stock) return { backgroundColor: '#fee2e2', color: '#dc2626' }; // Red for over-stock
-                if (qty > 0) return { backgroundColor: '#f0fdf4', color: '#166534', fontWeight: 'bold' }; // Green for valid qty
-                return null;
-            }
-        },
-        {
-            headerName: "Add to Cart",
-            width: 100,
+            headerName: "Add",
+            width: 80,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
-                const stock = params.data.inventoryCount || 0;
-                const qtyToAdd = params.data.quantityToAdd || 0;
-                
-                // Disable button if no stock or no quantity specified
-                const isDisabled = stock === 0 || qtyToAdd === 0;
-                const buttonClass = isDisabled 
-                    ? 'action-btn-icon opacity-50 cursor-not-allowed' 
-                    : 'action-btn-icon action-btn-add-to-cart hover:bg-green-100';
-                
-                const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
-                    <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" />
-                </svg>`;
-                
-                const tooltip = isDisabled 
-                    ? (stock === 0 ? 'Out of Stock' : 'Enter quantity first')
-                    : `Add ${qtyToAdd} to cart`;
-                
-                const disabledAttr = isDisabled ? 'disabled' : '';
-                
-                return `<button 
-                    class="${buttonClass}" 
-                    data-id="${params.data.id}" 
-                    title="${tooltip}"
-                    ${disabledAttr}>
-                        ${addIcon}
-                    </button>`;
+                const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
+                return `<button class="action-btn-icon action-btn-add-to-cart" data-id="${params.data.id}" title="Add to Cart">${addIcon}</button>`;
             }
         }
     ],
-    
-    // Initialize quantity column with default values
-    onGridReady: params => { 
-        addProductModalGridApi = params.api;
-        
-        // Set default quantities to 0 for all products
-        setTimeout(() => {
-            params.api.forEachNode(node => {
-                node.setDataValue('quantityToAdd', 0);
-            });
-        }, 100);
-    },
-    
-    // Handle quantity changes and update button states
-    onCellValueChanged: (params) => {
-        if (params.colDef.field === 'quantityToAdd') {
-            console.log(`[AddProduct] Quantity changed for ${params.data.itemName}: ${params.newValue}`);
-            
-            // Refresh the Add button for this row to update its state
-            params.api.refreshCells({
-                rowNodes: [params.node],
-                columns: ['Add to Cart'], // Refresh the Add column
-                force: true
-            });
-        }
-    }
+    onGridReady: params => { addProductModalGridApi = params.api; }
 };
 
 // Grid for the "Sales History"
