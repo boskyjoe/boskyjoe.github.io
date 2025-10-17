@@ -92,3 +92,33 @@
 .modal-close-trigger {
     cursor: pointer;
 }
+
+
+#sale-payment-type,
+#sale-payment-mode {
+    position: relative !important;
+    z-index: 10000 !important;
+}
+
+/* Ensure dropdown options appear above other content */
+#sale-payment-type:focus,
+#sale-payment-mode:focus {
+    z-index: 10001 !important;
+}
+
+/* Fix the payment container stacking */
+#sale-pay-now-container {
+    position: relative;
+    z-index: 100;
+}
+
+/* Prevent grid or other elements from overlaying the payment form */
+.ag-theme-alpine {
+    z-index: 1 !important;
+}
+
+/* Ensure main content doesn't interfere */
+main {
+    position: relative;
+    z-index: 1;
+}
