@@ -3951,12 +3951,6 @@ export function showSalesView() {
         const form = document.getElementById('new-sale-form');
         if (form) {
             form.reset();
-            
-            // Force close any lingering dropdowns
-            form.querySelectorAll('select').forEach(select => {
-                select.blur();
-                select.selectedIndex = 0;
-            });
         }
 
         // Default the sale date to today. This will now work.
@@ -4032,13 +4026,8 @@ export function getSalesCartItems() {
  */
 export function removeItemFromCart(productId) {
 
-    // FORCE CLOSE DROPDOWNS before grid operation
-    document.querySelectorAll('select').forEach(select => select.blur());
-
     if (!salesCartGridApi) return;
 
-    // Force close any stuck dropdowns BEFORE grid operation
-    forceCloseAllDropdowns();
 
     const rowNode = salesCartGridApi.getRowNode(productId);
     if (rowNode) {
@@ -4046,17 +4035,6 @@ export function removeItemFromCart(productId) {
         // After removing, immediately recalculate the totals.
         calculateSalesTotals();
     }
-
-    // FORCE CLOSE DROPDOWNS after grid operation  
-    setTimeout(() => {
-        document.querySelectorAll('select').forEach(select => select.blur());
-        
-        // Click somewhere neutral to clear any stuck overlays
-        const neutralArea = document.querySelector('main');
-        if (neutralArea) {
-            neutralArea.click();
-        }
-    }, 100);
 }
 
 let salePaymentItemsGridApi = null;
