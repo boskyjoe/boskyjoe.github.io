@@ -945,3 +945,479 @@ export function estimateFirestoreReads(daysBack, includeDetailed = false) {
         recommendation: estimatedReads > 100 ? 'Consider using cache or reducing date range' : 'Safe for free tier'
     };
 }
+
+
+/**
+ * Retrieves detailed transaction data for store performance grid display.
+ * 
+ * Fetches individual transaction records for both Church Store and Tasty Treats
+ * within the specified date range. Returns data optimized for ag-Grid display
+ * with all necessary fields for filtering, sorting, and export functionality.
+ * 
+ * OPTIMIZATION FEATURES:
+ * - Single query with intelligent limits
+ * - Cached results for repeated requests
+ * - Minimal data transformation
+ * - Ready for immediate grid display
+ * 
+ * @param {Date} startDate - Start of analysis period
+ * @param {Date} endDate - End of analysis period  
+ * @param {boolean} [useCache=true] - Whether to use cached results
+ * 
+ * @returns {Promise<Object>} Transaction detail data:
+ *   - transactions {Array} - Array of transaction objects ready for grid
+ *   - summary {Object} - Quick summary statistics  
+ *   - metadata {Object} - Query execution details and Firestore usage
+ * 
+ * @throws {Error} When date parameters invalid or query fails
+ * 
+ * @example
+ * // Get last 30 days of transaction details
+ * const dateRange = createDateRange(30);
+ * const detailData = await getStoreTransactionDetails(
+ *   dateRange.startDate, 
+ *   dateRange.endDate
+ * );
+ * 
+ * // Populate grid
+ * gridApi.setGridOption('rowData', detailData.transactions);
+ * console.log(`Loaded ${detailData.transactions.length} transactions using ${detailData.metadata.firestoreReadsUsed} reads`);
+ * 
+ * @since 1.0.0
+ */
+export async function getStoreTransactionDetails(startDate, endDate, useCache = true) {
+    // Input validation
+    if (!(startDate instanceof Date) || !(endDate instanceof Date)) {
+        throw new Error('getStoreTransactionDetails requires valid Date objects');
+    }
+    
+    if (startDate > endDate) {
+        throw new Error('Start date cannot be after end date');
+    }
+
+    // Generate cache key for transaction details
+    const cacheKey = `store_transactions_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`;
+    
+    // Check cache first to minimize Firestore reads
+    if (useCache) {
+        const cachedResult = ReportCache.getCachedReport(cacheKey);
+        if (cachedResult) {
+            console.log(`[Reports] Using cached store transaction details - 0 Firestore reads`);
+            return cachedResult;
+        }
+    }
+
+    const db = firebase.firestore();
+    let totalReads = 0;
+
+    try {
+        console.log(`[Reports] Fetching store transaction details from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+        
+        // OPTIMIZED QUERY: Get detailed transactions with store filter
+        const transactionQuery = db.collection(SALES_COLLECTION_PATH)
+            .where('saleDate', '>=', startDate)
+            .where('saleDate', '<=', endDate)
+            .where('store', 'in', [REPORT_CONFIGS.STORE_TYPES.CHURCH, REPORT_CONFIGS.STORE_TYPES.TASTY_TREATS])
+            .orderBy('saleDate', 'desc')
+            .limit(REPORT_CONFIGS.QUERY_LIMITS.MAX_SALES_PER_QUERY); // Prevent excessive reads
+        
+        const snapshot = await transactionQuery.get();
+        totalReads = snapshot.size;
+        
+        console.log(`[Reports] Retrieved ${totalReads} transaction documents`);
+        
+        // Transform Firestore documents to grid-ready objects
+        const transactions = snapshot.docs.map(doc => {
+            const data = doc.data();
+            
+            return {
+                // Core transaction identifiers
+                id: doc.id,
+                saleId: data.saleId,
+                saleDate: data.saleDate?.toDate ? data.saleDate.toDate() : new Date(data.saleDate),
+                
+                // Store and customer information
+                store: data.store,
+                customerInfo: data.customerInfo || { name: 'Unknown', email: 'unknown@example.com' },
+                
+                // Financial details
+                financials: data.financials || { totalAmount: 0 },
+                paymentStatus: data.paymentStatus || 'Unknown',
+                balanceDue: data.balanceDue || 0,
+                totalAmountPaid: data.totalAmountPaid || 0,
+                
+                // Line items summary (for grid display)
+                lineItems: data.lineItems || [],
+                itemCount: (data.lineItems || []).length,
+                
+                // Audit information
+                audit: data.audit || { createdBy: 'System', createdOn: new Date() },
+                
+                // Calculated fields for grid display
+                formattedAmount: formatCurrency(data.financials?.totalAmount || 0),
+                formattedBalanceDue: data.balanceDue > 0 ? formatCurrency(data.balanceDue) : '',
+                paymentCompletionPercentage: data.financials?.totalAmount > 0 
+                    ? ((data.totalAmountPaid || 0) / data.financials.totalAmount) * 100 
+                    : 0
+            };
+        });
+        
+        // CLIENT-SIDE SUMMARY CALCULATIONS (no additional queries)
+        const summary = {
+            totalTransactions: transactions.length,
+            totalRevenue: transactions.reduce((sum, t) => sum + (t.financials.totalAmount || 0), 0),
+            
+            // Store breakdown
+            storeStats: {
+                'Church Store': {
+                    transactions: transactions.filter(t => t.store === 'Church Store').length,
+                    revenue: transactions
+                        .filter(t => t.store === 'Church Store')
+                        .reduce((sum, t) => sum + (t.financials.totalAmount || 0), 0)
+                },
+                'Tasty Treats': {
+                    transactions: transactions.filter(t => t.store === 'Tasty Treats').length,
+                    revenue: transactions
+                        .filter(t => t.store === 'Tasty Treats')
+                        .reduce((sum, t) => sum + (t.financials.totalAmount || 0), 0)
+                }
+            },
+            
+            // Payment status breakdown
+            paymentStatusBreakdown: {
+                paid: transactions.filter(t => t.paymentStatus === 'Paid').length,
+                partiallyPaid: transactions.filter(t => t.paymentStatus === 'Partially Paid').length,
+                unpaid: transactions.filter(t => t.paymentStatus === 'Unpaid').length
+            },
+            
+            // Outstanding balance total
+            totalOutstanding: transactions.reduce((sum, t) => sum + (t.balanceDue || 0), 0)
+        };
+        
+        const result = {
+            transactions,
+            summary: {
+                ...summary,
+                formattedTotalRevenue: formatCurrency(summary.totalRevenue),
+                formattedTotalOutstanding: formatCurrency(summary.totalOutstanding),
+                averageTransactionValue: summary.totalTransactions > 0 
+                    ? summary.totalRevenue / summary.totalTransactions 
+                    : 0,
+                collectionRate: summary.totalTransactions > 0
+                    ? (summary.paymentStatusBreakdown.paid / summary.totalTransactions) * 100
+                    : 0
+            },
+            
+            metadata: {
+                queriedAt: new Date().toISOString(),
+                firestoreReadsUsed: totalReads,
+                transactionCount: transactions.length,
+                dateRange: {
+                    start: startDate.toLocaleDateString(),
+                    end: endDate.toLocaleDateString()
+                },
+                cacheKey,
+                optimizationLevel: 'high'
+            }
+        };
+        
+        // Cache results for subsequent requests (CRITICAL for free tier)
+        if (useCache && totalReads > 0) {
+            ReportCache.setCachedReport(cacheKey, result);
+            console.log(`[Reports] Cached store transaction details for ${REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES} minutes`);
+        }
+        
+        console.log(`[Reports] Store transaction details completed using ${totalReads} Firestore reads`);
+        return result;
+        
+    } catch (error) {
+        console.error(`[Reports] Failed to get store transaction details after ${totalReads} reads:`, error);
+        throw new Error(`Store transaction details query failed: ${error.message}`);
+    }
+}
+
+/**
+ * Generates store comparison summary with key performance indicators.
+ * 
+ * Creates a comprehensive comparison between Church Store and Tasty Treats
+ * performance including revenue, transaction counts, customer metrics, and
+ * operational insights. Uses cached data when possible to minimize reads.
+ * 
+ * @param {number} [daysBack=30] - Analysis period in days
+ * @param {Object} [options={}] - Analysis options
+ * @param {boolean} [options.includeCustomerAnalysis=true] - Include customer breakdown
+ * @param {boolean} [options.includeProductMix=false] - Include product analysis (more reads)
+ * 
+ * @returns {Promise<Object>} Store comparison analytics
+ * 
+ * @since 1.0.0
+ */
+export async function generateStoreComparisonReport(daysBack = 30, options = {}) {
+    const { includeCustomerAnalysis = true, includeProductMix = false } = options;
+    
+    try {
+        console.log(`[Reports] Generating store comparison for ${daysBack} days`);
+        
+        // Use the optimized direct sales function
+        const dateRange = createDateRange(daysBack);
+        const salesData = await calculateDirectSalesMetricsOptimized(
+            dateRange.startDate,
+            dateRange.endDate,
+            true // Use cache
+        );
+        
+        // Extract store-specific insights
+        const churchStoreData = salesData.storeBreakdown.find(s => s.storeName === 'Church Store') || {
+            storeName: 'Church Store',
+            revenue: 0,
+            transactions: 0,
+            uniqueCustomers: 0,
+            revenuePercentage: 0,
+            averageTransactionValue: 0
+        };
+        
+        const tastyTreatsData = salesData.storeBreakdown.find(s => s.storeName === 'Tasty Treats') || {
+            storeName: 'Tasty Treats',
+            revenue: 0,
+            transactions: 0,
+            uniqueCustomers: 0,
+            revenuePercentage: 0,
+            averageTransactionValue: 0
+        };
+        
+        // Generate comparative insights
+        const comparison = {
+            revenueComparison: {
+                churchStoreRevenue: churchStoreData.revenue,
+                tastyTreatsRevenue: tastyTreatsData.revenue,
+                revenueGap: Math.abs(churchStoreData.revenue - tastyTreatsData.revenue),
+                leadingStore: churchStoreData.revenue > tastyTreatsData.revenue ? 'Church Store' : 'Tasty Treats',
+                revenueRatio: tastyTreatsData.revenue > 0 
+                    ? (churchStoreData.revenue / tastyTreatsData.revenue).toFixed(2)
+                    : 'N/A'
+            },
+            
+            efficiencyMetrics: {
+                churchStoreAvgTransaction: churchStoreData.averageTransactionValue,
+                tastyTreatsAvgTransaction: tastyTreatsData.averageTransactionValue,
+                moreEfficientStore: churchStoreData.averageTransactionValue > tastyTreatsData.averageTransactionValue 
+                    ? 'Church Store' 
+                    : 'Tasty Treats',
+                efficiencyGap: Math.abs(churchStoreData.averageTransactionValue - tastyTreatsData.averageTransactionValue)
+            },
+            
+            customerMetrics: includeCustomerAnalysis ? {
+                churchStoreCustomers: churchStoreData.uniqueCustomers,
+                tastyTreatsCustomers: tastyTreatsData.uniqueCustomers,
+                totalUniqueCustomers: salesData.summary.uniqueCustomers,
+                crossStoreCustomers: Math.max(0, 
+                    (churchStoreData.uniqueCustomers + tastyTreatsData.uniqueCustomers) - salesData.summary.uniqueCustomers
+                )
+            } : null
+        };
+        
+        const storeComparisonReport = {
+            summary: {
+                reportPeriod: dateRange.periodLabel,
+                totalBusinessRevenue: salesData.summary.totalRevenue,
+                formattedTotalRevenue: salesData.summary.formattedTotalRevenue,
+                totalTransactions: salesData.summary.totalTransactions,
+                analyzedDateRange: {
+                    start: dateRange.startDate.toLocaleDateString(),
+                    end: dateRange.endDate.toLocaleDateString(),
+                    days: dateRange.dayCount
+                }
+            },
+            
+            storePerformance: {
+                churchStore: {
+                    ...churchStoreData,
+                    formattedRevenue: formatCurrency(churchStoreData.revenue),
+                    formattedAvgTransaction: formatCurrency(churchStoreData.averageTransactionValue),
+                    performanceRating: churchStoreData.revenuePercentage > 60 ? 'High' : 
+                                      churchStoreData.revenuePercentage > 40 ? 'Medium' : 'Low'
+                },
+                tastyTreats: {
+                    ...tastyTreatsData,
+                    formattedRevenue: formatCurrency(tastyTreatsData.revenue),
+                    formattedAvgTransaction: formatCurrency(tastyTreatsData.averageTransactionValue),
+                    performanceRating: tastyTreatsData.revenuePercentage > 60 ? 'High' : 
+                                      tastyTreatsData.revenuePercentage > 40 ? 'Medium' : 'Low'
+                }
+            },
+            
+            comparativeAnalysis: comparison,
+            
+            recommendations: generateStoreRecommendations(comparison, salesData),
+            
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                firestoreReadsUsed: salesData.metadata.firestoreReadsUsed,
+                dataFreshness: salesData.metadata.firestoreReadsUsed === 0 ? 'Cached' : 'Fresh',
+                analysisDepth: includeProductMix ? 'Detailed' : 'Standard'
+            }
+        };
+        
+        console.log(`[Reports] Store comparison report generated using ${salesData.metadata.firestoreReadsUsed} Firestore reads`);
+        return storeComparisonReport;
+        
+    } catch (error) {
+        console.error('[Reports] Error generating store comparison report:', error);
+        throw new Error(`Store comparison report failed: ${error.message}`);
+    }
+}
+
+/**
+ * Generates business recommendations based on store performance analysis.
+ * 
+ * Analyzes store comparison data and generates actionable insights and
+ * recommendations for improving business performance. Uses performance
+ * thresholds and business rules to provide strategic guidance.
+ * 
+ * @param {Object} comparison - Comparative analysis data between stores
+ * @param {Object} salesData - Overall sales performance data
+ * 
+ * @returns {Array} Array of recommendation objects with priority and actions
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function generateStoreRecommendations(comparison, salesData) {
+    const recommendations = [];
+    
+    // Revenue performance recommendations
+    if (comparison.revenueComparison.revenueGap > 2000) {
+        const leadingStore = comparison.revenueComparison.leadingStore;
+        const laggingStore = leadingStore === 'Church Store' ? 'Tasty Treats' : 'Church Store';
+        
+        recommendations.push({
+            category: 'Revenue Optimization',
+            priority: 'High',
+            title: `Significant Revenue Gap Between Stores`,
+            insight: `${leadingStore} generates ${formatCurrency(comparison.revenueComparison.revenueGap)} more revenue than ${laggingStore}`,
+            recommendations: [
+                `Analyze ${leadingStore}'s successful strategies and apply to ${laggingStore}`,
+                `Consider marketing initiatives specifically for ${laggingStore}`,
+                `Review product mix and pricing strategy for ${laggingStore}`
+            ],
+            impact: 'High',
+            effort: 'Medium'
+        });
+    }
+    
+    // Transaction efficiency recommendations
+    if (comparison.efficiencyMetrics.efficiencyGap > 20) {
+        const moreEfficient = comparison.efficiencyMetrics.moreEfficientStore;
+        const lessEfficient = moreEfficient === 'Church Store' ? 'Tasty Treats' : 'Church Store';
+        
+        recommendations.push({
+            category: 'Transaction Efficiency',
+            priority: 'Medium',
+            title: `Transaction Value Optimization Opportunity`,
+            insight: `${moreEfficient} has ${formatCurrency(comparison.efficiencyMetrics.efficiencyGap)} higher average transaction value`,
+            recommendations: [
+                `Train ${lessEfficient} staff on upselling techniques`,
+                `Review product bundling opportunities for ${lessEfficient}`,
+                `Consider promotional strategies to increase basket size`
+            ],
+            impact: 'Medium',
+            effort: 'Low'
+        });
+    }
+    
+    // Customer base recommendations
+    if (comparison.customerMetrics && comparison.customerMetrics.crossStoreCustomers === 0) {
+        recommendations.push({
+            category: 'Customer Acquisition',
+            priority: 'Medium',
+            title: 'No Cross-Store Customers Identified',
+            insight: 'Customers appear to shop exclusively at one store location',
+            recommendations: [
+                'Implement cross-store promotions to encourage customers to try both locations',
+                'Create loyalty program that rewards shopping at multiple locations',
+                'Share popular products between stores to increase cross-shopping'
+            ],
+            impact: 'Medium',
+            effort: 'Medium'
+        });
+    }
+    
+    // Performance celebration (positive reinforcement)
+    if (salesData.summary.totalRevenue > 5000) {
+        recommendations.push({
+            category: 'Performance Recognition',
+            priority: 'Info',
+            title: 'Strong Overall Performance',
+            insight: `Total revenue of ${salesData.summary.formattedTotalRevenue} indicates healthy business operations`,
+            recommendations: [
+                'Continue current successful strategies',
+                'Document best practices for consistency',
+                'Consider expansion opportunities given strong performance'
+            ],
+            impact: 'High',
+            effort: 'Low'
+        });
+    }
+    
+    return recommendations;
+}
+
+/**
+ * Refreshes store performance data and updates all display elements.
+ * 
+ * Triggers a fresh data load, bypassing cache if needed, and updates
+ * both summary cards and detailed grid with the latest transaction data.
+ * Provides user feedback on data freshness and Firestore usage.
+ * 
+ * @param {number} daysBack - Number of days to analyze
+ * @param {boolean} [bypassCache=false] - Force fresh data load
+ * 
+ * @returns {Promise<void>}
+ * 
+ * @since 1.0.0
+ */
+export async function refreshStorePerformanceData(daysBack, bypassCache = false) {
+    try {
+        console.log(`[Reports] Refreshing store performance data (bypass cache: ${bypassCache})`);
+        
+        // Show loading indicators
+        if (storePerformanceDetailGridApi) {
+            storePerformanceDetailGridApi.setGridOption('loading', true);
+        }
+        updateSummaryCardsLoading(true);
+        
+        // Clear cache if forced refresh
+        if (bypassCache) {
+            const dateRange = createDateRange(daysBack);
+            const cacheKey = `direct_sales_${dateRange.startDate.toISOString().split('T')[0]}_${dateRange.endDate.toISOString().split('T')[0]}`;
+            localStorage.removeItem(REPORT_CONFIGS.CACHE_SETTINGS.STORAGE_KEY_PREFIX + cacheKey);
+            console.log(`[Reports] Cache cleared for forced refresh`);
+        }
+        
+        // Reload data with fresh queries
+        await loadStorePerformanceDetailData(daysBack);
+        
+        // Show success feedback
+        const currentTime = new Date().toLocaleTimeString();
+        showModal('success', 'Data Refreshed', 
+            `Store performance data has been refreshed successfully.\n\n` +
+            `Last updated: ${currentTime}\n` +
+            `Cache status: ${bypassCache ? 'Fresh data loaded' : 'Using optimized caching'}`
+        );
+        
+    } catch (error) {
+        console.error('[Reports] Error refreshing store performance data:', error);
+        
+        // Hide loading states on error
+        if (storePerformanceDetailGridApi) {
+            storePerformanceDetailGridApi.setGridOption('loading', false);
+        }
+        updateSummaryCardsLoading(false);
+        
+        showModal('error', 'Refresh Failed', 
+            `Could not refresh store performance data.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Please try again or check your internet connection.`
+        );
+    }
+}
