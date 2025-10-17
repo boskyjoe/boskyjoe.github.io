@@ -1530,6 +1530,154 @@
                     </div>
                 </div>
 
+
+                <!-- ======================= -->
+                <!--  STORE PERFORMANCE DETAIL -->
+                <!-- ======================= -->
+
+                <div id="store-performance-detail-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="sales-reports-view">&larr; Back to Sales Reports</a>
+                    
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-semibold mb-2">Store Performance Analysis</h2>
+                            <p class="text-gray-600">Detailed transaction data for Church Store and Tasty Treats</p>
+                        </div>
+                        
+                        <!-- Date Range Selector -->
+                        <div class="flex items-center space-x-3">
+                            <label for="store-report-period" class="text-sm font-medium text-gray-700">Time Period:</label>
+                            <select id="store-report-period" class="form-input">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                            </select>
+                            <button id="refresh-store-report" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                Refresh Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Statistics Cards -->
+                    <div id="store-summary-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Will be populated by JavaScript -->
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Total Revenue</p>
+                                    <p id="total-revenue-display" class="text-2xl font-bold text-gray-900">Loading...</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="revenue-trend" class="mt-2 text-sm text-gray-500">Calculating trend...</div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Transactions</p>
+                                    <p id="total-transactions-display" class="text-2xl font-bold text-gray-900">Loading...</p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="transactions-trend" class="mt-2 text-sm text-gray-500">Calculating trend...</div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Church Store</p>
+                                    <p id="church-store-revenue" class="text-2xl font-bold text-purple-700">Loading...</p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="church-store-percentage" class="mt-2 text-sm text-gray-500">% of total</div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Tasty Treats</p>
+                                    <p id="tasty-treats-revenue" class="text-2xl font-bold text-orange-700">Loading...</p>
+                                </div>
+                                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="tasty-treats-percentage" class="mt-2 text-sm text-gray-500">% of total</div>
+                        </div>
+                    </div>
+
+                    <!-- Export Controls -->
+                    <div class="bg-white p-4 rounded-lg shadow-md">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm font-medium text-gray-700">Export Options:</span>
+                                <div class="text-xs text-gray-500" id="firestore-usage-display">
+                                    Firestore reads: <span id="reads-count">0</span> | Cache status: <span id="cache-status">Fresh</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-3">
+                                <button id="export-store-csv" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                                    </svg>
+                                    <span>Export CSV</span>
+                                </button>
+                                
+                                <button id="export-store-excel" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span>Export Excel</span>
+                                </button>
+                                
+                                <button id="print-store-report" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                    </svg>
+                                    <span>Print Report</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Data Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="p-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Transaction Details</h3>
+                            <p class="text-sm text-gray-600">All direct sales transactions with filtering and export capabilities</p>
+                        </div>
+                        <div class="p-2">
+                            <div id="store-performance-detail-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+
+
+
+
+
+
+
+
             </main>
         </div>
     </div>
@@ -1956,154 +2104,6 @@
             <div id="modal-buttons" class="mt-6 flex justify-end space-x-3"></div>
         </div>
     </div>
-
-
-
-    <!-- ======================= -->
-    <!--  STORE PERFORMANCE DETAIL -->
-    <!-- ======================= -->
-    <div id="store-performance-detail-view" class="view space-y-8">
-        <a href="#" class="back-link" data-view-id="sales-reports-view">&larr; Back to Sales Reports</a>
-        
-        <div class="flex justify-between items-center">
-            <div>
-                <h2 class="text-2xl font-semibold mb-2">Store Performance Analysis</h2>
-                <p class="text-gray-600">Detailed transaction data for Church Store and Tasty Treats</p>
-            </div>
-            
-            <!-- Date Range Selector -->
-            <div class="flex items-center space-x-3">
-                <label for="store-report-period" class="text-sm font-medium text-gray-700">Time Period:</label>
-                <select id="store-report-period" class="form-input">
-                    <option value="7">Last 7 Days</option>
-                    <option value="30" selected>Last 30 Days</option>
-                    <option value="90">Last 90 Days</option>
-                </select>
-                <button id="refresh-store-report" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Refresh Data
-                </button>
-            </div>
-        </div>
-
-        <!-- Summary Statistics Cards -->
-        <div id="store-summary-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Will be populated by JavaScript -->
-            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Total Revenue</p>
-                        <p id="total-revenue-display" class="text-2xl font-bold text-gray-900">Loading...</p>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
-                    </div>
-                </div>
-                <div id="revenue-trend" class="mt-2 text-sm text-gray-500">Calculating trend...</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Transactions</p>
-                        <p id="total-transactions-display" class="text-2xl font-bold text-gray-900">Loading...</p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                </div>
-                <div id="transactions-trend" class="mt-2 text-sm text-gray-500">Calculating trend...</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Church Store</p>
-                        <p id="church-store-revenue" class="text-2xl font-bold text-purple-700">Loading...</p>
-                    </div>
-                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                    </div>
-                </div>
-                <div id="church-store-percentage" class="mt-2 text-sm text-gray-500">% of total</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Tasty Treats</p>
-                        <p id="tasty-treats-revenue" class="text-2xl font-bold text-orange-700">Loading...</p>
-                    </div>
-                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    </div>
-                </div>
-                <div id="tasty-treats-percentage" class="mt-2 text-sm text-gray-500">% of total</div>
-            </div>
-        </div>
-
-        <!-- Export Controls -->
-        <div class="bg-white p-4 rounded-lg shadow-md">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm font-medium text-gray-700">Export Options:</span>
-                    <div class="text-xs text-gray-500" id="firestore-usage-display">
-                        Firestore reads: <span id="reads-count">0</span> | Cache status: <span id="cache-status">Fresh</span>
-                    </div>
-                </div>
-                
-                <div class="flex space-x-3">
-                    <button id="export-store-csv" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                        </svg>
-                        <span>Export CSV</span>
-                    </button>
-                    
-                    <button id="export-store-excel" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Export Excel</span>
-                    </button>
-                    
-                    <button id="print-store-report" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        <span>Print Report</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Data Grid -->
-        <div class="bg-white rounded-lg shadow-lg">
-            <div class="p-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-800">Transaction Details</h3>
-                <p class="text-sm text-gray-600">All direct sales transactions with filtering and export capabilities</p>
-            </div>
-            <div class="p-2">
-                <div id="store-performance-detail-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
-            </div>
-        </div>
-    </div>
-
-
-
-
-
-
-
-
-
 
 
 
