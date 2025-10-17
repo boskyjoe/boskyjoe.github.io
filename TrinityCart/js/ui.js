@@ -5231,62 +5231,6 @@ export async function showStorePerformanceDetailView(daysBack = 30) {
     }
 }
 
-/**
- * Loads and displays comprehensive store performance data in the detail grid.
- * 
- * Fetches transaction data using optimized queries, updates summary cards,
- * populates the detail grid, and tracks Firestore usage for free tier monitoring.
- * 
- * @param {number} daysBack - Number of days to analyze
- * 
- * @since 1.0.0
- */
-async function loadStorePerformanceDetailData(daysBack) {
-    if (!storePerformanceDetailGridApi) {
-        console.error("[ui.js] Store performance detail grid not ready");
-        return;
-    }
-    
-    try {
-        console.log(`[ui.js] Loading store performance data for ${daysBack} days`);
-        
-        // Show loading state
-        storePerformanceDetailGridApi.setGridOption('loading', true);
-        updateSummaryCardsLoading(true);
-        
-        // Get optimized sales data
-        const dateRange = createDateRange(daysBack);
-        const salesData = await calculateDirectSalesMetricsOptimized(
-            dateRange.startDate, 
-            dateRange.endDate, 
-            true // Use caching
-        );
-        
-        // Update summary cards with aggregated data
-        updateStorePerformanceSummaryCards(salesData);
-        
-        // Get detailed transaction data for the grid
-        const detailData = await getStoreTransactionDetails(dateRange.startDate, dateRange.endDate);
-        
-        // Populate the grid with transaction details
-        storePerformanceDetailGridApi.setGridOption('rowData', detailData.transactions);
-        storePerformanceDetailGridApi.setGridOption('loading', false);
-        
-        // Update Firestore usage display
-        updateFirestoreUsageDisplay(
-            salesData.metadata.firestoreReadsUsed + detailData.metadata.firestoreReadsUsed,
-            salesData.metadata.firestoreReadsUsed === 0 ? 'Cached' : 'Fresh'
-        );
-        
-        console.log(`[ui.js] Store performance data loaded using ${salesData.metadata.firestoreReadsUsed + detailData.metadata.firestoreReadsUsed} total Firestore reads`);
-        
-    } catch (error) {
-        console.error('[ui.js] Error loading store performance detail data:', error);
-        storePerformanceDetailGridApi.setGridOption('loading', false);
-        updateSummaryCardsLoading(false);
-        showModal('error', 'Data Loading Error', 'Could not load store performance data. Please try again.');
-    }
-}
 
 /**
  * Updates the summary cards above the store performance grid with calculated metrics.
