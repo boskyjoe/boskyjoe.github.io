@@ -5380,36 +5380,81 @@ export async function showStorePerformanceDetailView(daysBack = 30) {
  * @private
  */
 function updateStorePerformanceSummaryCards(salesData) {
+    console.log('[ui.js] Updating summary cards with data:', salesData);
+    
+    // Debug: Check the structure of salesData
+    console.log('[ui.js] Summary data:', salesData.summary);
+    console.log('[ui.js] Store breakdown:', salesData.storeBreakdown);
+    
     // Update total revenue card
     const totalRevenueElement = document.getElementById('total-revenue-display');
     if (totalRevenueElement) {
+        console.log('[ui.js] Setting total revenue to:', salesData.summary.formattedTotalRevenue);
         totalRevenueElement.textContent = salesData.summary.formattedTotalRevenue;
+    } else {
+        console.error('[ui.js] Could not find total-revenue-display element');
     }
     
     // Update total transactions card
     const totalTransactionsElement = document.getElementById('total-transactions-display');
     if (totalTransactionsElement) {
+        console.log('[ui.js] Setting total transactions to:', salesData.summary.totalTransactions);
         totalTransactionsElement.textContent = salesData.summary.totalTransactions.toString();
+    } else {
+        console.error('[ui.js] Could not find total-transactions-display element');
     }
     
-    // Update store-specific cards
-    const churchStoreData = salesData.storeBreakdown.find(store => store.storeName === 'Church Store');
-    const tastyTreatsData = salesData.storeBreakdown.find(store => store.storeName === 'Tasty Treats');
+    // Debug store breakdown data
+    console.log('[ui.js] Looking for Church Store data...');
+    const churchStoreData = salesData.storeBreakdown.find(store => {
+        console.log('[ui.js] Checking store:', store.storeName);
+        return store.storeName === 'Church Store';
+    });
+    console.log('[ui.js] Church Store data found:', churchStoreData);
     
+    console.log('[ui.js] Looking for Tasty Treats data...');
+    const tastyTreatsData = salesData.storeBreakdown.find(store => {
+        console.log('[ui.js] Checking store:', store.storeName);
+        return store.storeName === 'Tasty Treats';
+    });
+    console.log('[ui.js] Tasty Treats data found:', tastyTreatsData);
+    
+    // Update Church Store card
     if (churchStoreData) {
         const churchRevenueElement = document.getElementById('church-store-revenue');
         const churchPercentageElement = document.getElementById('church-store-percentage');
         
-        if (churchRevenueElement) churchRevenueElement.textContent = churchStoreData.formattedRevenue;
-        if (churchPercentageElement) churchPercentageElement.textContent = `${churchStoreData.revenuePercentage}% of total`;
+        if (churchRevenueElement) {
+            console.log('[ui.js] Setting Church Store revenue to:', churchStoreData.formattedRevenue);
+            churchRevenueElement.textContent = churchStoreData.formattedRevenue;
+        }
+        if (churchPercentageElement) {
+            console.log('[ui.js] Setting Church Store percentage to:', churchStoreData.revenuePercentage + '%');
+            churchPercentageElement.textContent = `${churchStoreData.revenuePercentage}% of total`;
+        }
+    } else {
+        console.warn('[ui.js] No Church Store data found in breakdown');
+        const churchRevenueElement = document.getElementById('church-store-revenue');
+        if (churchRevenueElement) churchRevenueElement.textContent = '₹0.00';
     }
     
+    // Update Tasty Treats card
     if (tastyTreatsData) {
         const tastyRevenueElement = document.getElementById('tasty-treats-revenue');
         const tastyPercentageElement = document.getElementById('tasty-treats-percentage');
         
-        if (tastyRevenueElement) tastyRevenueElement.textContent = tastyTreatsData.formattedRevenue;
-        if (tastyPercentageElement) tastyPercentageElement.textContent = `${tastyTreatsData.revenuePercentage}% of total`;
+        if (tastyRevenueElement) {
+            console.log('[ui.js] Setting Tasty Treats revenue to:', tastyTreatsData.formattedRevenue);
+            tastyRevenueElement.textContent = tastyTreatsData.formattedRevenue;
+        }
+        if (tastyPercentageElement) {
+            console.log('[ui.js] Setting Tasty Treats percentage to:', tastyTreatsData.revenuePercentage + '%');
+            tastyPercentageElement.textContent = `${tastyTreatsData.revenuePercentage}% of total`;
+        }
+    } else {
+        console.warn('[ui.js] No Tasty Treats data found in breakdown');
+        const tastyRevenueElement = document.getElementById('tasty-treats-revenue');
+        if (tastyRevenueElement) tastyRevenueElement.textContent = '₹0.00';
     }
     
     updateSummaryCardsLoading(false);
