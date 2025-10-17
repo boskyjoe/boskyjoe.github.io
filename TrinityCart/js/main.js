@@ -1068,19 +1068,6 @@ function handleStandaloneButtons(target, event) {
         }
     }
 
-    // Add export button handlers
-    if (target.closest('#export-store-csv')) {
-        exportStorePerformanceCsv();
-        return true;
-    }
-    if (target.closest('#export-store-excel')) {
-        exportStorePerformanceExcel();
-        return true;
-    }
-
-
-    // Handle store performance detail navigation
-
     // Handle export button clicks
     if (target.closest('#export-store-csv')) {
         console.log('[main.js] Exporting store performance CSV');
@@ -1103,17 +1090,7 @@ function handleStandaloneButtons(target, event) {
         return true;
     }
 
-    // Handle period selector changes
-    const periodSelector = document.getElementById('store-report-period');
-    if (periodSelector && target === periodSelector) {
-        const newPeriod = parseInt(event.target.value);
-        console.log(`[main.js] Store report period changed to ${newPeriod} days`);
-        loadStorePerformanceDetailData(newPeriod);
-        return true;
-    }
-
-
-
+   
 
     return false;
 }
@@ -1134,18 +1111,33 @@ function handleConsignmentNext() {
 }
 
 function handleAddToCart(target) {
+    console.log('[main.js] handleAddToCart called');
+    console.log('[main.js] Target:', target);
+    console.log('[main.js] Dataset ID:', target.dataset.id);
+
     const productId = target.dataset.id;
+    console.log('[main.js] Product ID:', productId);
+
     const product = masterData.products.find(p => p.id === productId);
+    console.log('[main.js] Found product:', product);
 
     if (product) {
         const newItem = {
             productId: product.id,
             productName: product.itemName,
             quantity: 1,
-            unitPrice: product.sellingPrice || 0
+            unitPrice: product.sellingPrice || 0,
+            discountPercentage: 0,  // ADD THESE DEFAULTS
+            taxPercentage: 0        // ADD THESE DEFAULTS
         };
+        
+        console.log('[main.js] Adding item to cart:', newItem);
         addItemToCart(newItem);
+        console.log('[main.js] Item added, closing modal');
+    } else {
+        console.error('[main.js] Product not found for ID:', productId);
     }
+
     closeAddProductModal();
 }
 
@@ -2142,6 +2134,20 @@ function setupInputListeners() {
 
     // Activity type selection
     setupActivityTypeListener();
+
+
+    // Handle period selector changes
+    const periodSelector = document.getElementById('store-report-period');
+    if (periodSelector) {
+        periodSelector.addEventListener('change', (e) => {
+            const newPeriod = parseInt(e.target.value);
+            console.log(`[main.js] Store report period changed to ${newPeriod} days`);
+            loadStorePerformanceDetailData(newPeriod);
+        });
+    }
+
+
+
 }
 
 function setupAdminTeamListener() {
