@@ -527,7 +527,8 @@ const EventHandlers = {
         'financial-reports-view': showFinancialReportsView,
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
-        'executive-dashboard-view': showExecutiveDashboardView
+        'executive-dashboard-view': showExecutiveDashboardView,
+        'store-performance-detail-view': () => showStorePerformanceDetailView()
     },
 
     // Grid action handlers
@@ -1065,6 +1066,60 @@ function handleStandaloneButtons(target, event) {
             handleReportCardClick(reportId, reportCard);
             return true;
         }
+        if (reportId === 'store-performance') {
+            // Navigate to detailed grid view
+            showStorePerformanceDetailView();
+            return true;
+        }
+    }
+
+    // Add export button handlers
+    if (target.closest('#export-store-csv')) {
+        exportStorePerformanceCsv();
+        return true;
+    }
+    if (target.closest('#export-store-excel')) {
+        exportStorePerformanceExcel();
+        return true;
+    }
+
+
+    // Handle store performance detail navigation
+    if (target.closest('[data-report-id="store-performance"]')) {
+        console.log('[main.js] Navigating to store performance detail view');
+        showStorePerformanceDetailView(30); // Default 30 days
+        return true;
+    }
+
+    // Handle export button clicks
+    if (target.closest('#export-store-csv')) {
+        console.log('[main.js] Exporting store performance CSV');
+        exportStorePerformanceCsv();
+        return true;
+    }
+
+    if (target.closest('#export-store-excel')) {
+        console.log('[main.js] Exporting store performance Excel');
+        exportStorePerformanceExcel();
+        return true;
+    }
+
+    // Handle refresh button click
+    if (target.closest('#refresh-store-report')) {
+        const periodSelector = document.getElementById('store-report-period');
+        const daysBack = parseInt(periodSelector?.value || '30');
+        console.log(`[main.js] Refreshing store report for ${daysBack} days`);
+        refreshStorePerformanceData(daysBack, true); // Force fresh data
+        return true;
+    }
+
+    // Handle period selector changes
+    const periodSelector = document.getElementById('store-report-period');
+    if (periodSelector && target === periodSelector) {
+        const newPeriod = parseInt(event.target.value);
+        console.log(`[main.js] Store report period changed to ${newPeriod} days`);
+        loadStorePerformanceDetailData(newPeriod);
+        return true;
     }
 
 
