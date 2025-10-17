@@ -1043,11 +1043,30 @@ export async function getStoreTransactionDetails(startDate, endDate, useCache = 
         const transactions = snapshot.docs.map(doc => {
             const data = doc.data();
             
+            // ENSURE PROPER DATE OBJECT CONVERSION
+            let saleDate;
+            if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
+                // Firestore Timestamp
+                saleDate = data.saleDate.toDate();
+            } else if (data.saleDate instanceof Date) {
+                // Already a Date object
+                saleDate = data.saleDate;
+            } else {
+                // Fallback: try to create Date from whatever we have
+                saleDate = new Date(data.saleDate);
+                
+                // Validate the conversion worked
+                if (isNaN(saleDate.getTime())) {
+                    console.warn(`[Reports] Invalid saleDate for transaction ${doc.id}:`, data.saleDate);
+                    saleDate = new Date(); // Fallback to current date
+                }
+            }
+
             return {
                 // Core transaction identifiers
                 id: doc.id,
                 saleId: data.saleId,
-                saleDate: data.saleDate?.toDate ? data.saleDate.toDate() : new Date(data.saleDate),
+                saleDate: saleDate,
                 
                 // Store and customer information
                 store: data.store,
