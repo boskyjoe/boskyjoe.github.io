@@ -1110,47 +1110,69 @@ function handleConsignmentNext() {
     showConsignmentRequestStep2(catalogueId);
 }
 
+
+
 function handleAddToCart(target) {
     console.log('[main.js] handleAddToCart called');
-    console.log('[main.js] Target:', target);
     
-    // FIX: Find the actual button element if we clicked on the SVG inside it
+    // Find the button element (in case SVG was clicked)
     const buttonElement = target.closest('button[data-id]') || target;
-    console.log('[main.js] Button element:', buttonElement);
-    console.log('[main.js] Button dataset:', buttonElement.dataset);
-
     const productId = buttonElement.dataset?.id;
-    console.log('[main.js] Product ID:', productId);
-
+    
     if (!productId) {
-        console.error('[main.js] No product ID found on button element');
+        console.error('[main.js] No product ID found');
         return;
     }
 
-    const product = masterData.products.find(p => p.id === productId);
-    console.log('[main.js] Found product:', product);
+    console.log('[main.js] Product ID:', productId);
 
-    if (product) {
-        const newItem = {
-            productId: product.id,
-            productName: product.itemName,
-            quantity: 1,
-            unitPrice: product.sellingPrice || 0,
-            discountPercentage: 0,
-            taxPercentage: 0
-        };
-        
-        console.log('[main.js] Adding item to cart:', newItem);
-        addItemToCart(newItem);
-        console.log('[main.js] Item added successfully');
-    } else {
-        console.error('[main.js] Product not found for ID:', productId);
-        alert('Product not found. Please try again.');
+    // Get the product data from the grid (includes quantity)
+    let productRowData = null;
+    addProductModalGridApi.forEachNode(node => {
+        if (node.data.id === productId) {
+            productRowData = node.data;
+        }
+    });
+
+    if (!productRowData) {
+        console.error('[main.js] Product row data not found');
+        return;
     }
 
+    const quantityToAdd = productRowData.quantityToAdd || 0;
+    const availableStock = productRowData.inventoryCount || 0;
+
+    // Validation
+    if (quantityToAdd <= 0) {
+        showModal('error', 'Invalid Quantity', 'Please enter a quantity greater than 0.');
+        return;
+    }
+
+    if (quantityToAdd > availableStock) {
+        showModal('error', 'Insufficient Stock', 
+            `Only ${availableStock} units available for "${productRowData.itemName}". Please reduce the quantity.`);
+        return;
+    }
+
+    // Create cart item with specified quantity
+    const newItem = {
+        productId: productRowData.id,
+        productName: productRowData.itemName,
+        quantity: quantityToAdd,
+        unitPrice: productRowData.sellingPrice || 0,
+        discountPercentage: 0,
+        taxPercentage: 0
+    };
+    
+    console.log('[main.js] Adding item to cart:', newItem);
+    addItemToCart(newItem);
+    
+    // Show success feedback
+    showModal('success', 'Added to Cart', 
+        `${quantityToAdd} × ${productRowData.itemName} added to cart successfully.`);
+    
     closeAddProductModal();
 }
-
 
 // ============================================================================
 // TAB HANDLERS
