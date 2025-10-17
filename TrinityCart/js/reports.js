@@ -53,6 +53,11 @@ export const REPORT_CONFIGS = {
         CONSIGNMENT: '#06B6D4'
     },
 
+    STORE_TYPES: {
+        CHURCH: 'Church Store',
+        TASTY_TREATS: 'Tasty Treats'
+    },
+
     /**
      * Query limits to prevent excessive reads
      */
@@ -60,6 +65,14 @@ export const REPORT_CONFIGS = {
         MAX_SALES_PER_QUERY: 100,       // Limit sales queries
         MAX_ACTIVITIES_PER_ORDER: 50,   // Limit activity log reads
         BATCH_SIZE: 25                  // Process in smaller batches
+    },
+
+    // ADD THIS MISSING SECTION:
+    PERFORMANCE_THRESHOLDS: {
+        LOW_STOCK_THRESHOLD: 10,
+        HIGH_MARGIN_THRESHOLD: 30,
+        GOOD_SELLTHROUGH_RATE: 75,
+        SLOW_MOVING_DAYS: 30
     }
 };
 
