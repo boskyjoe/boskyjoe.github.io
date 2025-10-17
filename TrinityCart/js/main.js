@@ -1111,7 +1111,6 @@ function handleConsignmentNext() {
 }
 
 
-
 function handleAddToCart(target) {
     console.log('[main.js] handleAddToCart called');
     
@@ -1124,53 +1123,25 @@ function handleAddToCart(target) {
         return;
     }
 
-    console.log('[main.js] Product ID:', productId);
+    const product = masterData.products.find(p => p.id === productId);
+    console.log('[main.js] Found product:', product);
 
-    // Get the product data from the grid (includes quantity)
-    let productRowData = null;
-    addProductModalGridApi.forEachNode(node => {
-        if (node.data.id === productId) {
-            productRowData = node.data;
-        }
-    });
-
-    if (!productRowData) {
-        console.error('[main.js] Product row data not found');
-        return;
+    if (product) {
+        const newItem = {
+            productId: product.id,
+            productName: product.itemName,
+            quantity: 1, // Simple default quantity
+            unitPrice: product.sellingPrice || 0,
+            discountPercentage: 0,
+            taxPercentage: 0
+        };
+        
+        console.log('[main.js] Adding item to cart:', newItem);
+        addItemToCart(newItem);
+    } else {
+        console.error('[main.js] Product not found for ID:', productId);
     }
 
-    const quantityToAdd = productRowData.quantityToAdd || 0;
-    const availableStock = productRowData.inventoryCount || 0;
-
-    // Validation
-    if (quantityToAdd <= 0) {
-        showModal('error', 'Invalid Quantity', 'Please enter a quantity greater than 0.');
-        return;
-    }
-
-    if (quantityToAdd > availableStock) {
-        showModal('error', 'Insufficient Stock', 
-            `Only ${availableStock} units available for "${productRowData.itemName}". Please reduce the quantity.`);
-        return;
-    }
-
-    // Create cart item with specified quantity
-    const newItem = {
-        productId: productRowData.id,
-        productName: productRowData.itemName,
-        quantity: quantityToAdd,
-        unitPrice: productRowData.sellingPrice || 0,
-        discountPercentage: 0,
-        taxPercentage: 0
-    };
-    
-    console.log('[main.js] Adding item to cart:', newItem);
-    addItemToCart(newItem);
-    
-    // Show success feedback
-    showModal('success', 'Added to Cart', 
-        `${quantityToAdd} × ${productRowData.itemName} added to cart successfully.`);
-    
     closeAddProductModal();
 }
 
