@@ -1063,12 +1063,7 @@ function handleStandaloneButtons(target, event) {
         
         if (reportId) {
             console.log(`[main.js] Report card clicked: ${reportId}`);
-            handleReportCardClick(reportId, reportCard);
-            return true;
-        }
-        if (reportId === 'store-performance') {
-            // Navigate to detailed grid view
-            showStorePerformanceDetailView();
+            handleReportCardClick(reportId, reportCard); // This calls ui.js function
             return true;
         }
     }
@@ -1085,11 +1080,6 @@ function handleStandaloneButtons(target, event) {
 
 
     // Handle store performance detail navigation
-    if (target.closest('[data-report-id="store-performance"]')) {
-        console.log('[main.js] Navigating to store performance detail view');
-        showStorePerformanceDetailView(30); // Default 30 days
-        return true;
-    }
 
     // Handle export button clicks
     if (target.closest('#export-store-csv')) {
