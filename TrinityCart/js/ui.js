@@ -6459,4 +6459,235 @@ export async function showCustomerInsightsDetailView(daysBack = 90) {
     }
 }
 
+/**
+ * Loads and displays comprehensive customer insights data.
+ * 
+ * Fetches customer analytics, populates summary cards, loyalty segments,
+ * store preference analysis, and the top customers grid with detailed metrics.
+ * 
+ * @param {number} daysBack - Number of days to analyze
+ * @private
+ * @since 1.0.0
+ */
+async function loadCustomerInsightsData(daysBack) {
+    try {
+        console.log(`[ui.js] Loading customer insights data for ${daysBack} days`);
+        
+        // Show loading states
+        updateCustomerInsightsSummaryCardsLoading(true);
+        if (customerInsightsGridApi) {
+            customerInsightsGridApi.setGridOption('loading', true);
+        }
+        
+        // Get comprehensive customer analytics
+        const customerData = await calculateCustomerInsights(daysBack, true, true);
+        
+        console.log('[ui.js] Customer insights data loaded:', customerData);
+        
+        // Update summary cards
+        updateCustomerInsightsSummaryCards(customerData);
+        
+        // Update loyalty segments display
+        updateLoyaltySegmentsDisplay(customerData);
+        
+        // Update store preference charts
+        updateStorePreferenceDisplay(customerData);
+        
+        // Populate top customers grid
+        if (customerInsightsGridApi) {
+            customerInsightsGridApi.setGridOption('rowData', customerData.topCustomers);
+            customerInsightsGridApi.setGridOption('loading', false);
+        }
+        
+        // Update purchase patterns
+        updatePurchasePatternsDisplay(customerData);
+        
+        console.log(`[ui.js] Customer insights loaded using ${customerData.metadata.firestoreReadsUsed} Firestore reads`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading customer insights data:', error);
+        updateCustomerInsightsSummaryCardsLoading(false);
+        if (customerInsightsGridApi) {
+            customerInsightsGridApi.setGridOption('loading', false);
+            customerInsightsGridApi.showNoRowsOverlay();
+        }
+        showModal('error', 'Data Loading Error', 'Could not load customer insights. Please try again.');
+    }
+}
+
+/**
+ * Updates customer insights summary cards with analytics data.
+ * 
+ * @param {Object} customerData - Customer analytics from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateCustomerInsightsSummaryCards(customerData) {
+    console.log('[ui.js] Updating customer insights summary cards');
+    
+    // Total Customers Card
+    const totalCustomersElement = document.getElementById('total-customers-display');
+    if (totalCustomersElement) {
+        totalCustomersElement.textContent = customerData.customerSummary.totalUniqueCustomers.toString();
+    }
+    
+    const customersGrowthElement = document.getElementById('customers-growth');
+    if (customersGrowthElement) {
+        customersGrowthElement.textContent = `${customerData.customerSummary.totalOrders} total orders`;
+    }
+    
+    // Repeat Customers Card
+    const repeatCustomersElement = document.getElementById('repeat-customers-display');
+    if (repeatCustomersElement) {
+        const repeatCount = customerData.loyaltySegments.vip.count + customerData.loyaltySegments.regular.count;
+        repeatCustomersElement.textContent = repeatCount.toString();
+    }
+    
+    const loyaltyRateElement = document.getElementById('loyalty-rate');
+    if (loyaltyRateElement) {
+        const retentionRate = customerData.customerSummary.customerRetentionRate.toFixed(1);
+        loyaltyRateElement.textContent = `${retentionRate}% retention rate`;
+    }
+    
+    // Average Customer Value Card
+    const avgValueElement = document.getElementById('avg-customer-value-display');
+    if (avgValueElement) {
+        avgValueElement.textContent = customerData.customerSummary.formattedAverageCustomerValue;
+    }
+    
+    const valueTrendElement = document.getElementById('customer-value-trend');
+    if (valueTrendElement) {
+        valueTrendElement.textContent = `${customerData.customerSummary.averageOrdersPerCustomer.toFixed(1)} orders/customer`;
+    }
+    
+    // Store Preference Card
+    const preferredStoreElement = document.getElementById('preferred-store-display');
+    if (preferredStoreElement) {
+        preferredStoreElement.textContent = customerData.storePreferences.mostPopularStore;
+    }
+    
+    const storeBreakdownElement = document.getElementById('store-preference-breakdown');
+    if (storeBreakdownElement) {
+        const bothStoresPercentage = customerData.storePreferences.bothStores.percentage.toFixed(0);
+        storeBreakdownElement.textContent = `${bothStoresPercentage}% shop at both stores`;
+    }
+    
+    updateCustomerInsightsSummaryCardsLoading(false);
+}
+
+/**
+ * Updates loyalty segments display with customer counts and revenue.
+ * 
+ * @param {Object} customerData - Customer analytics data
+ * @private
+ * @since 1.0.0
+ */
+function updateLoyaltySegmentsDisplay(customerData) {
+    // VIP Customers
+    const vipCountElement = document.getElementById('vip-customers-count');
+    const vipRevenueElement = document.getElementById('vip-revenue-contribution');
+    
+    if (vipCountElement) vipCountElement.textContent = customerData.loyaltySegments.vip.count.toString();
+    if (vipRevenueElement) {
+        vipRevenueElement.textContent = `${customerData.loyaltySegments.vip.formattedRevenue} (${customerData.loyaltySegments.vip.revenueContribution.toFixed(0)}%)`;
+    }
+    
+    // Regular Customers
+    const regularCountElement = document.getElementById('regular-customers-count');
+    const regularRevenueElement = document.getElementById('regular-revenue-contribution');
+    
+    if (regularCountElement) regularCountElement.textContent = customerData.loyaltySegments.regular.count.toString();
+    if (regularRevenueElement) {
+        regularRevenueElement.textContent = `${customerData.loyaltySegments.regular.formattedRevenue} (${customerData.loyaltySegments.regular.revenueContribution.toFixed(0)}%)`;
+    }
+    
+    // New Customers
+    const newCountElement = document.getElementById('new-customers-count');
+    const newRevenueElement = document.getElementById('new-revenue-contribution');
+    
+    if (newCountElement) newCountElement.textContent = customerData.loyaltySegments.new.count.toString();
+    if (newRevenueElement) {
+        newRevenueElement.textContent = `${customerData.loyaltySegments.new.formattedRevenue} (${customerData.loyaltySegments.new.revenueContribution.toFixed(0)}%)`;
+    }
+}
+
+/**
+ * Updates store preference visual charts.
+ * 
+ * @param {Object} customerData - Customer analytics data
+ * @private
+ * @since 1.0.0
+ */
+function updateStorePreferenceDisplay(customerData) {
+    const preferences = customerData.storePreferences;
+    
+    // Church Store Only
+    const churchBarElement = document.getElementById('church-only-bar');
+    const churchPercentageElement = document.getElementById('church-only-percentage');
+    
+    if (churchBarElement) churchBarElement.style.width = `${preferences.churchStoreOnly.percentage}%`;
+    if (churchPercentageElement) churchPercentageElement.textContent = `${preferences.churchStoreOnly.percentage.toFixed(0)}%`;
+    
+    // Tasty Treats Only
+    const tastyBarElement = document.getElementById('tasty-only-bar');
+    const tastyPercentageElement = document.getElementById('tasty-only-percentage');
+    
+    if (tastyBarElement) tastyBarElement.style.width = `${preferences.tastyTreatsOnly.percentage}%`;
+    if (tastyPercentageElement) tastyPercentageElement.textContent = `${preferences.tastyTreatsOnly.percentage.toFixed(0)}%`;
+    
+    // Both Stores
+    const bothBarElement = document.getElementById('both-stores-bar');
+    const bothPercentageElement = document.getElementById('both-stores-percentage');
+    
+    if (bothBarElement) bothBarElement.style.width = `${preferences.bothStores.percentage}%`;
+    if (bothPercentageElement) bothPercentageElement.textContent = `${preferences.bothStores.percentage.toFixed(0)}%`;
+}
+
+/**
+ * Updates purchase patterns analysis display.
+ * 
+ * @param {Object} customerData - Customer analytics data
+ * @private
+ * @since 1.0.0
+ */
+function updatePurchasePatternsDisplay(customerData) {
+    const avgOrdersElement = document.getElementById('avg-orders-per-customer');
+    if (avgOrdersElement) {
+        avgOrdersElement.textContent = customerData.purchasePatterns.averageOrdersPerCustomer.toFixed(1);
+    }
+    
+    const avgDaysElement = document.getElementById('avg-days-between-purchases');
+    if (avgDaysElement) {
+        avgDaysElement.textContent = customerData.purchasePatterns.averageDaysBetweenPurchases.toString();
+    }
+    
+    const lifetimeValueElement = document.getElementById('customer-lifetime-value');
+    if (lifetimeValueElement) {
+        lifetimeValueElement.textContent = customerData.customerSummary.formattedAverageCustomerValue;
+    }
+}
+
+/**
+ * Shows/hides loading state on customer insights summary cards.
+ * 
+ * @param {boolean} isLoading - Whether to show loading state
+ * @private
+ * @since 1.0.0
+ */
+function updateCustomerInsightsSummaryCardsLoading(isLoading) {
+    const elements = [
+        'total-customers-display',
+        'repeat-customers-display',
+        'avg-customer-value-display',
+        'preferred-store-display'
+    ];
+    
+    elements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = isLoading ? 'Loading...' : element.textContent;
+        }
+    });
+}
+
 
