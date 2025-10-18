@@ -2109,3 +2109,348 @@ function calculateAveragePurchaseInterval(customers) {
 }
 
 
+/**
+ * Calculates comprehensive inventory analysis using masterData cache and sales history.
+ * 
+ * Provides complete inventory insights including stock levels, valuation, turnover
+ * analysis, reorder recommendations, and product performance metrics. Optimized
+ * to use cached masterData when possible to minimize Firestore reads.
+ * 
+ * OPTIMIZATION: Uses masterData.products cache for immediate inventory analysis
+ * with minimal additional queries for enhanced insights.
+ * 
+ * @param {boolean} [includePerformanceAnalysis=true] - Include sales performance data
+ * @param {number} [performanceAnalysisDays=30] - Days to analyze for product performance
+ * @param {boolean} [useCache=true] - Enable caching for performance data
+ * 
+ * @returns {Promise<Object>} Comprehensive inventory analysis:
+ *   - inventorySummary {Object} - High-level inventory metrics and alerts
+ *   - stockStatusBreakdown {Object} - Products categorized by stock levels
+ *   - inventoryValuation {Object} - Total value at cost and selling prices
+ *   - reorderRecommendations {Array} - Products needing immediate attention
+ *   - productPerformance {Array} - Sales performance integrated with inventory
+ *   - turnoverAnalysis {Object} - Inventory velocity and movement patterns
+ * 
+ * @example
+ * // Get complete inventory analysis
+ * const inventoryData = await calculateInventoryAnalysis(true, 30);
+ * console.log(`${inventoryData.reorderRecommendations.length} products need reordering`);
+ * console.log(`Total inventory value: ${inventoryData.inventoryValuation.formattedTotalValue}`);
+ * 
+ * @since 1.0.0
+ */
+export async function calculateInventoryAnalysis(includePerformanceAnalysis = true, performanceAnalysisDays = 30, useCache = true) {
+    try {
+        console.log(`[Reports] Calculating inventory analysis (performance analysis: ${includePerformanceAnalysis})`);
+        
+        // Generate cache key
+        const cacheKey = `inventory_analysis_${includePerformanceAnalysis ? 'with' : 'without'}_performance_${performanceAnalysisDays}days`;
+        
+        // Check cache first
+        if (useCache) {
+            const cachedResult = ReportCache.getCachedReport(cacheKey);
+            if (cachedResult) {
+                console.log(`[Reports] Using cached inventory analysis - 0 additional Firestore reads`);
+                return cachedResult;
+            }
+        }
+
+        // START WITH MASTER DATA (0 additional reads for basic inventory)
+        if (!masterData.products || masterData.products.length === 0) {
+            throw new Error('No product data available in masterData cache. Please ensure products are loaded.');
+        }
+        
+        console.log(`[Reports] Analyzing ${masterData.products.length} products from masterData cache`);
+        
+        let totalFirestoreReads = 0;
+        let productPerformanceData = null;
+        
+        // Get sales performance data if requested (this may use Firestore reads)
+        if (includePerformanceAnalysis) {
+            const dateRange = createDateRange(performanceAnalysisDays);
+            const salesData = await calculateDirectSalesMetricsOptimized(
+                dateRange.startDate,
+                dateRange.endDate,
+                useCache
+            );
+            
+            productPerformanceData = salesData.productPerformance || [];
+            totalFirestoreReads = salesData.metadata.firestoreReadsUsed;
+            console.log(`[Reports] Product performance data loaded using ${totalFirestoreReads} reads`);
+        }
+        
+        // ANALYZE INVENTORY using cached masterData
+        const inventoryAnalysis = {
+            totalProducts: masterData.products.length,
+            activeProducts: 0,
+            inactiveProducts: 0,
+            
+            // Stock level categorization
+            stockCategories: {
+                outOfStock: [],
+                lowStock: [],
+                adequateStock: [],
+                overStock: []
+            },
+            
+            // Valuation analysis
+            valuationMetrics: {
+                totalCostValue: 0,
+                totalSellingValue: 0,
+                potentialProfit: 0,
+                averageMargin: 0
+            },
+            
+            // Category-wise breakdown
+            categoryAnalysis: new Map(),
+            
+            // Product performance integration
+            performanceIntegration: new Map()
+        };
+        
+        // MAIN PROCESSING: Analyze each product
+        masterData.products.forEach(product => {
+            const stock = product.inventoryCount || 0;
+            const unitCost = product.unitPrice || 0;
+            const sellingPrice = product.sellingPrice || unitCost * 1.2; // Default 20% margin if not set
+            const isActive = product.isActive !== false; // Default to active
+            const category = product.categoryId || 'uncategorized';
+            
+            // Count active/inactive products
+            if (isActive) {
+                inventoryAnalysis.activeProducts += 1;
+            } else {
+                inventoryAnalysis.inactiveProducts += 1;
+            }
+            
+            // Stock level categorization
+            if (stock === 0) {
+                inventoryAnalysis.stockCategories.outOfStock.push({
+                    ...product,
+                    urgency: 'critical',
+                    recommendedAction: 'Immediate reorder needed'
+                });
+            } else if (stock < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD) {
+                inventoryAnalysis.stockCategories.lowStock.push({
+                    ...product,
+                    urgency: stock < 5 ? 'high' : 'medium',
+                    recommendedAction: `Consider reordering (${stock} remaining)`
+                });
+            } else if (stock < 50) {
+                inventoryAnalysis.stockCategories.adequateStock.push(product);
+            } else {
+                inventoryAnalysis.stockCategories.overStock.push({
+                    ...product,
+                    potentialIssue: 'High inventory levels - monitor for slow movement'
+                });
+            }
+            
+            // Valuation calculations
+            const itemCostValue = stock * unitCost;
+            const itemSellingValue = stock * sellingPrice;
+            const itemPotentialProfit = itemSellingValue - itemCostValue;
+            
+            inventoryAnalysis.valuationMetrics.totalCostValue += itemCostValue;
+            inventoryAnalysis.valuationMetrics.totalSellingValue += itemSellingValue;
+            inventoryAnalysis.valuationMetrics.potentialProfit += itemPotentialProfit;
+            
+            // Category-wise analysis
+            if (!inventoryAnalysis.categoryAnalysis.has(category)) {
+                inventoryAnalysis.categoryAnalysis.set(category, {
+                    productCount: 0,
+                    totalStock: 0,
+                    totalValue: 0,
+                    lowStockCount: 0
+                });
+            }
+            
+            const categoryData = inventoryAnalysis.categoryAnalysis.get(category);
+            categoryData.productCount += 1;
+            categoryData.totalStock += stock;
+            categoryData.totalValue += itemCostValue;
+            if (stock < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD) {
+                categoryData.lowStockCount += 1;
+            }
+            
+            // Integrate with sales performance data if available
+            if (productPerformanceData) {
+                const performanceInfo = productPerformanceData.find(perf => perf.productId === product.id);
+                if (performanceInfo) {
+                    inventoryAnalysis.performanceIntegration.set(product.id, {
+                        ...product,
+                        salesQuantity: performanceInfo.totalQuantity,
+                        salesRevenue: performanceInfo.totalRevenue,
+                        turnoverRate: stock > 0 ? performanceInfo.totalQuantity / stock : 0,
+                        daysOfStock: performanceInfo.totalQuantity > 0 
+                            ? Math.round((stock * performanceAnalysisDays) / performanceInfo.totalQuantity)
+                            : 999, // High number for slow-moving items
+                        velocityCategory: determineVelocityCategory(performanceInfo.totalQuantity, stock, performanceAnalysisDays)
+                    });
+                }
+            }
+        });
+        
+        // Calculate overall margin percentage
+        inventoryAnalysis.valuationMetrics.averageMargin = inventoryAnalysis.valuationMetrics.totalCostValue > 0
+            ? ((inventoryAnalysis.valuationMetrics.potentialProfit / inventoryAnalysis.valuationMetrics.totalCostValue) * 100)
+            : 0;
+        
+        // Generate reorder recommendations (combine out of stock + low stock)
+        const reorderRecommendations = [
+            ...inventoryAnalysis.stockCategories.outOfStock,
+            ...inventoryAnalysis.stockCategories.lowStock.filter(item => item.urgency === 'high')
+        ].map(product => ({
+            productId: product.id,
+            productName: product.itemName,
+            currentStock: product.inventoryCount || 0,
+            recommendedOrderQuantity: calculateRecommendedOrderQuantity(product),
+            urgencyLevel: product.urgency || 'medium',
+            estimatedCost: formatCurrency(calculateRecommendedOrderQuantity(product) * (product.unitPrice || 0)),
+            supplier: getProductSupplier(product.id), // Would need supplier lookup
+            lastPurchaseDate: 'N/A' // Would need purchase history lookup
+        }));
+        
+        // Prepare final results
+        const finalResults = {
+            inventorySummary: {
+                totalProducts: inventoryAnalysis.totalProducts,
+                activeProducts: inventoryAnalysis.activeProducts,
+                inactiveProducts: inventoryAnalysis.inactiveProducts,
+                outOfStockCount: inventoryAnalysis.stockCategories.outOfStock.length,
+                lowStockCount: inventoryAnalysis.stockCategories.lowStock.length,
+                adequateStockCount: inventoryAnalysis.stockCategories.adequateStock.length,
+                overStockCount: inventoryAnalysis.stockCategories.overStock.length,
+                stockHealthScore: calculateStockHealthScore(inventoryAnalysis)
+            },
+            
+            inventoryValuation: {
+                totalCostValue: inventoryAnalysis.valuationMetrics.totalCostValue,
+                formattedCostValue: formatCurrency(inventoryAnalysis.valuationMetrics.totalCostValue),
+                totalSellingValue: inventoryAnalysis.valuationMetrics.totalSellingValue,
+                formattedSellingValue: formatCurrency(inventoryAnalysis.valuationMetrics.totalSellingValue),
+                potentialProfit: inventoryAnalysis.valuationMetrics.potentialProfit,
+                formattedPotentialProfit: formatCurrency(inventoryAnalysis.valuationMetrics.potentialProfit),
+                averageMarginPercentage: inventoryAnalysis.valuationMetrics.averageMargin
+            },
+            
+            stockStatusBreakdown: {
+                outOfStock: inventoryAnalysis.stockCategories.outOfStock,
+                lowStock: inventoryAnalysis.stockCategories.lowStock,
+                adequateStock: inventoryAnalysis.stockCategories.adequateStock,
+                overStock: inventoryAnalysis.stockCategories.overStock
+            },
+            
+            reorderRecommendations,
+            
+            // Product performance integration (if available)
+            productPerformanceInsights: includePerformanceAnalysis ? 
+                Array.from(inventoryAnalysis.performanceIntegration.values()) : null,
+            
+            metadata: {
+                calculatedAt: new Date().toISOString(),
+                firestoreReadsUsed: totalFirestoreReads,
+                dataSource: 'masterData.products cache + optional sales data',
+                productsAnalyzed: inventoryAnalysis.totalProducts,
+                includesPerformanceData: includePerformanceAnalysis,
+                cacheKey
+            }
+        };
+        
+        // Cache the results
+        if (useCache) {
+            ReportCache.setCachedReport(cacheKey, finalResults);
+        }
+        
+        console.log(`[Reports] Inventory analysis completed using ${totalFirestoreReads} Firestore reads`);
+        console.log(`[Reports] Key results: ${finalResults.reorderRecommendations.length} items need reordering, ${formatCurrency(finalResults.inventoryValuation.totalCostValue)} total value`);
+        
+        return finalResults;
+        
+    } catch (error) {
+        console.error('[Reports] Error calculating inventory analysis:', error);
+        throw new Error(`Inventory analysis failed: ${error.message}`);
+    }
+}
+
+/**
+ * Determines product velocity category based on sales and stock levels.
+ * 
+ * @param {number} salesQuantity - Quantity sold in analysis period
+ * @param {number} currentStock - Current inventory level
+ * @param {number} analysisDays - Period length in days
+ * @returns {string} Velocity category ('fast', 'medium', 'slow', 'dead')
+ * @private
+ * @since 1.0.0
+ */
+function determineVelocityCategory(salesQuantity, currentStock, analysisDays) {
+    if (salesQuantity === 0) return 'dead'; // No sales at all
+    
+    const dailySalesRate = salesQuantity / analysisDays;
+    const daysOfStock = currentStock / dailySalesRate;
+    
+    if (daysOfStock < 15) return 'fast';      // Will run out in 2 weeks
+    if (daysOfStock < 45) return 'medium';    // Will run out in 6 weeks  
+    if (daysOfStock < 90) return 'slow';      // Will run out in 3 months
+    return 'very-slow'; // Takes more than 3 months to sell current stock
+}
+
+/**
+ * Calculates recommended order quantity based on sales velocity and current stock.
+ * 
+ * @param {Object} product - Product information with current stock
+ * @returns {number} Recommended quantity to order
+ * @private
+ * @since 1.0.0
+ */
+function calculateRecommendedOrderQuantity(product) {
+    const currentStock = product.inventoryCount || 0;
+    
+    // Simple reorder logic - can be enhanced based on sales history
+    if (currentStock === 0) {
+        return Math.max(20, product.typicalOrderQuantity || 20); // Emergency reorder
+    } else if (currentStock < 5) {
+        return Math.max(15, product.typicalOrderQuantity || 15); // High priority reorder
+    } else {
+        return Math.max(10, product.typicalOrderQuantity || 10); // Standard reorder
+    }
+}
+
+/**
+ * Calculates overall stock health score based on inventory distribution.
+ * 
+ * @param {Object} inventoryAnalysis - Complete inventory analysis data
+ * @returns {number} Health score from 0-100 (100 = perfect stock levels)
+ * @private
+ * @since 1.0.0
+ */
+function calculateStockHealthScore(inventoryAnalysis) {
+    const total = inventoryAnalysis.totalProducts;
+    if (total === 0) return 0;
+    
+    const outOfStockPenalty = (inventoryAnalysis.stockCategories.outOfStock.length / total) * 40; // 40 point penalty
+    const lowStockPenalty = (inventoryAnalysis.stockCategories.lowStock.length / total) * 20;     // 20 point penalty
+    const overStockPenalty = (inventoryAnalysis.stockCategories.overStock.length / total) * 10;   // 10 point penalty
+    
+    return Math.max(0, 100 - outOfStockPenalty - lowStockPenalty - overStockPenalty);
+}
+
+/**
+ * Gets the primary supplier for a product (simplified lookup).
+ * 
+ * @param {string} productId - Product identifier
+ * @returns {string} Supplier name or 'Unknown'
+ * @private
+ * @since 1.0.0
+ */
+function getProductSupplier(productId) {
+    // This would require additional logic to lookup supplier from purchase history
+    // For now, return placeholder - can be enhanced later
+    return 'Multiple Suppliers'; // Simplified for initial implementation
+}
+
+
+
+
+
+
+
