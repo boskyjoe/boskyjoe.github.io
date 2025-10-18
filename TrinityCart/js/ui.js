@@ -4623,6 +4623,15 @@ async function loadTodaysMetricsForCards() {
             createDateRange(7).endDate, 
             true
         );
+
+        // Also get 14-day data for trend comparison
+        const fourteenDaysData = await calculateDirectSalesMetricsOptimized(
+            createDateRange(14).startDate,
+            createDateRange(7).endDate, // Previous 7 days (8-14 days ago)
+            true
+        );
+        
+
         console.log("[ui.js] 7-day sales data:", sevenDaysData);
         console.log("[ui.js] Store breakdown:", sevenDaysData.storeBreakdown);
         
@@ -4667,7 +4676,66 @@ async function loadTodaysMetricsForCards() {
         } else {
             console.error("[ui.js] Store performance card not found in DOM!");
         }
+
+        // UPDATE SALES TRENDS CARD (NEW)
+        const trendsCard = document.querySelector('[data-report-id="direct-sales-trends"]');
+        if (trendsCard) {
+            const growthElement = trendsCard.querySelector('#trends-growth-preview');
+            const directionElement = trendsCard.querySelector('#trends-direction-preview');
+            
+            // Calculate simple growth rate (current 7 days vs previous 7 days)
+            const currentRevenue = sevenDaysData.summary.totalRevenue;
+            const previousRevenue = fourteenDaysData.summary.totalRevenue;
+            
+            let growthRate = 0;
+            if (previousRevenue > 0) {
+                growthRate = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+            }
+            
+            console.log("[ui.js] Trends calculation: Current:", formatCurrency(currentRevenue), "Previous:", formatCurrency(previousRevenue), "Growth:", growthRate.toFixed(1) + '%');
+            
+            if (growthElement) {
+                const growthText = growthRate >= 0 ? `+${growthRate.toFixed(1)}%` : `${growthRate.toFixed(1)}%`;
+                growthElement.textContent = growthText;
+                
+                // Color coding based on growth
+                if (growthRate > 10) {
+                    growthElement.className = 'text-xl font-bold text-green-600';
+                } else if (growthRate > 0) {
+                    growthElement.className = 'text-xl font-bold text-green-500';
+                } else if (growthRate > -10) {
+                    growthElement.className = 'text-xl font-bold text-yellow-600';
+                } else {
+                    growthElement.className = 'text-xl font-bold text-red-600';
+                }
+            }
+            
+            if (directionElement) {
+                let trendIcon, trendText, trendColor;
+                
+                if (growthRate > 5) {
+                    trendIcon = '📈';
+                    trendText = 'Strong upward trend';
+                    trendColor = 'text-green-600';
+                } else if (growthRate > 0) {
+                    trendIcon = '📊';
+                    trendText = 'Positive growth';
+                    trendColor = 'text-green-500';
+                } else if (growthRate > -5) {
+                    trendIcon = '➡️';
+                    trendText = 'Stable performance';
+                    trendColor = 'text-gray-600';
+                } else {
+                    trendIcon = '📉';
+                    trendText = 'Declining trend';
+                    trendColor = 'text-red-600';
+                }
+                
+                directionElement.innerHTML = `<span class="${trendColor}">${trendIcon} ${trendText}</span>`;
+            }
+        }
         
+
         // Update customer analytics card  
         const customerCard = document.querySelector('[data-report-id="direct-customer-analytics"]');
         if (customerCard) {
@@ -4677,6 +4745,12 @@ async function loadTodaysMetricsForCards() {
                 valueElement.textContent = sevenDaysData.summary.uniqueCustomers?.toString() || '0';
             }
         }
+
+
+
+
+
+
         
         console.log(`[ui.js] Sales cards update completed`);
         
