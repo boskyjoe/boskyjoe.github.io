@@ -2108,7 +2108,6 @@ function calculateAveragePurchaseInterval(customers) {
     return intervalCount > 0 ? Math.round(totalIntervals / intervalCount) : 0;
 }
 
-
 /**
  * Calculates comprehensive inventory analysis using masterData cache and sales history.
  * 
@@ -2447,10 +2446,3 @@ function getProductSupplier(productId) {
     // For now, return placeholder - can be enhanced later
     return 'Multiple Suppliers'; // Simplified for initial implementation
 }
-
-
-
-
-
-
-
