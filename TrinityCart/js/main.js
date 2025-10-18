@@ -531,7 +531,8 @@ const EventHandlers = {
         'executive-dashboard-view': showExecutiveDashboardView,
         'store-performance-detail-view': () => showStorePerformanceDetailView(),
         'sales-trends-detail-view': () => showSalesTrendsDetailView(),
-        'customer-insights-detail-view': () => showCustomerInsightsDetailView()
+        'customer-insights-detail-view': () => showCustomerInsightsDetailView(),
+        'stock-status-detail-view': () => showStockStatusDetailView(),
     },
 
     // Grid action handlers
@@ -1107,7 +1108,21 @@ function handleStandaloneButtons(target, event) {
         return true;
     }
 
+    // Export button handlers for inventory
+    if (target.closest('#export-inventory-csv')) {
+        exportInventoryCSV();
+        return true;
+    }
+
+    if (target.closest('#export-reorder-list')) {
+        exportReorderList();
+        return true;
+    }
+
    
+
+
+
 
     return false;
 }
