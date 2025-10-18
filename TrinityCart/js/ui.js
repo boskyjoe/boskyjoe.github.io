@@ -873,6 +873,9 @@ let unsubscribeSalesEventsListener = null;
 
 const salesEventsGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "eventId", headerName: "ID", width: 180 },
         { field: "eventName", headerName: "Event Name", flex: 2, editable: true },
@@ -5086,6 +5089,12 @@ export async function handleReportCardClick(reportId, cardElement) {
                 firestoreReadsUsed = financialData.metadata.totalFirestoreReads;
                 displayOutstandingBalancesReport(financialData);
                 break;
+
+            case 'direct-sales-trends':
+                console.log('[ui.js] Navigating to sales trends detail view');
+                showSalesTrendsDetailView(30); // Default 30 days
+                firestoreReadsUsed = 0; // Navigation doesn't use reads
+                break;
                 
             default:
                 console.log(`[ui.js] Report ${reportId} not yet implemented`);
@@ -5862,4 +5871,311 @@ async function loadStorePerformanceDetailData(daysBack) {
             `Please try again in a few minutes.`
         );
     }
+}
+
+
+
+/**
+ * Displays the sales trends analysis view with comprehensive trend data.
+ * 
+ * Shows revenue patterns, growth analysis, period comparisons, and visual
+ * charts for sales performance over time. Uses optimized data loading
+ * with intelligent caching to minimize Firestore usage.
+ * 
+ * @param {number} [daysBack=30] - Number of days to analyze
+ * @since 1.0.0
+ */
+export async function showSalesTrendsDetailView(daysBack = 30) {
+    try {
+        console.log(`[ui.js] Displaying Sales Trends Detail view for ${daysBack} days`);
+        
+        // Navigate to trends view
+        showView('sales-trends-detail-view');
+        
+        // Set period selector
+        const periodSelector = document.getElementById('trends-period-selector');
+        if (periodSelector) {
+            periodSelector.value = daysBack.toString();
+        }
+        
+        // Load trends data
+        await loadSalesTrendsData(daysBack);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing sales trends view:', error);
+        showModal('error', 'View Error', 'Could not load sales trends analysis.');
+    }
+}
+
+/**
+ * Loads and displays sales trends data with charts and analysis.
+ * 
+ * @param {number} daysBack - Number of days to analyze
+ * @private
+ * @since 1.0.0
+ */
+async function loadSalesTrendsData(daysBack) {
+    try {
+        console.log(`[ui.js] Loading sales trends data for ${daysBack} days`);
+        
+        // Show loading states
+        updateTrendsSummaryCardsLoading(true);
+        
+        // Get comprehensive trends analysis
+        const trendsData = await calculateSalesTrends(daysBack, true, true);
+        
+        console.log('[ui.js] Trends data loaded:', trendsData);
+        
+        // Update summary cards
+        updateTrendsSummaryCards(trendsData);
+        
+        // Update comparison table
+        updatePeriodComparisonTable(trendsData);
+        
+        // Update charts (placeholder for now)
+        updateTrendsCharts(trendsData);
+        
+        // Update export info
+        const dataPointsElement = document.getElementById('trends-data-points');
+        if (dataPointsElement) {
+            dataPointsElement.textContent = trendsData.dailyBreakdown?.length || 0;
+        }
+        
+        const cacheStatusElement = document.getElementById('trends-cache-status');
+        if (cacheStatusElement) {
+            cacheStatusElement.textContent = trendsData.metadata.totalFirestoreReads === 0 ? 'Cached' : 'Fresh';
+        }
+        
+        console.log(`[ui.js] Sales trends loaded using ${trendsData.metadata.totalFirestoreReads} Firestore reads`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading sales trends data:', error);
+        updateTrendsSummaryCardsLoading(false);
+        showModal('error', 'Data Loading Error', 'Could not load sales trends data. Please try again.');
+    }
+}
+
+/**
+ * Updates trend summary cards with calculated metrics.
+ * 
+ * @param {Object} trendsData - Processed trends data from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateTrendsSummaryCards(trendsData) {
+    console.log('[ui.js] Updating trends summary cards');
+    
+    // Revenue Growth Card
+    const growthElement = document.getElementById('revenue-growth-display');
+    const growthComparisonElement = document.getElementById('growth-comparison');
+    
+    if (growthElement && trendsData.trendAnalysis) {
+        const growth = trendsData.trendAnalysis.revenueGrowthRate;
+        const growthText = growth > 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
+        const growthColor = growth > 0 ? 'text-green-700' : growth < 0 ? 'text-red-700' : 'text-gray-700';
+        
+        growthElement.textContent = growthText;
+        growthElement.className = `text-2xl font-bold ${growthColor}`;
+        
+        if (growthComparisonElement) {
+            growthComparisonElement.textContent = `vs previous ${trendsData.currentPeriod.dateRange.dayCount} days`;
+        }
+    }
+    
+    // Daily Average Card
+    const dailyAvgElement = document.getElementById('daily-average-display');
+    const dailyTrendElement = document.getElementById('daily-trend');
+    
+    if (dailyAvgElement && trendsData.currentPeriod) {
+        const dailyAvg = trendsData.currentPeriod.summary.dailyAverages?.formattedRevenue || '₹0.00';
+        dailyAvgElement.textContent = dailyAvg;
+        
+        if (dailyTrendElement) {
+            dailyTrendElement.textContent = `${trendsData.currentPeriod.summary.dailyAverages?.transactions || 0} transactions/day`;
+        }
+    }
+    
+    // Peak Day Card
+    const peakDayElement = document.getElementById('peak-day-display');
+    const peakAmountElement = document.getElementById('peak-day-amount');
+    
+    if (peakDayElement && trendsData.peakPerformance?.bestDay) {
+        const bestDay = trendsData.peakPerformance.bestDay;
+        peakDayElement.textContent = new Date(bestDay.date).toLocaleDateString('en-US', { weekday: 'short' });
+        
+        if (peakAmountElement) {
+            peakAmountElement.textContent = bestDay.formattedRevenue;
+        }
+    }
+    
+    // Trend Direction Card
+    const trendDirectionElement = document.getElementById('trend-direction-display');
+    const trendIndicatorElement = document.getElementById('trend-indicator');
+    
+    if (trendDirectionElement && trendsData.trendAnalysis) {
+        const direction = trendsData.trendAnalysis.direction;
+        let directionIcon, directionColor;
+        
+        switch (direction) {
+            case 'up':
+                directionIcon = '📈';
+                directionColor = 'text-green-700';
+                break;
+            case 'down':
+                directionIcon = '📉';
+                directionColor = 'text-red-700';
+                break;
+            default:
+                directionIcon = '➡️';
+                directionColor = 'text-gray-700';
+        }
+        
+        trendDirectionElement.textContent = directionIcon;
+        trendDirectionElement.className = `text-2xl font-bold ${directionColor}`;
+        
+        if (trendIndicatorElement) {
+            trendIndicatorElement.textContent = `${direction} trend (${trendsData.trendAnalysis.significance} significance)`;
+        }
+    }
+    
+    updateTrendsSummaryCardsLoading(false);
+}
+
+/**
+ * Updates the period comparison table with current vs previous metrics.
+ * 
+ * @param {Object} trendsData - Trends analysis data
+ * @private
+ * @since 1.0.0
+ */
+function updatePeriodComparisonTable(trendsData) {
+    const tableBody = document.getElementById('comparison-table-body');
+    if (!tableBody) return;
+    
+    const current = trendsData.currentPeriod.summary;
+    const previous = trendsData.previousPeriod?.summary;
+    
+    if (!previous) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No comparison data available</td></tr>';
+        return;
+    }
+    
+    const comparisons = [
+        {
+            metric: 'Total Revenue',
+            current: current.formattedTotalRevenue,
+            previous: previous.formattedTotalRevenue,
+            change: trendsData.trendAnalysis.revenueGrowthRate
+        },
+        {
+            metric: 'Transactions',
+            current: current.totalTransactions.toString(),
+            previous: previous.totalTransactions.toString(),
+            change: trendsData.trendAnalysis.transactionGrowthRate
+        },
+        {
+            metric: 'Unique Customers',
+            current: current.uniqueCustomers.toString(),
+            previous: previous.uniqueCustomers.toString(),
+            change: trendsData.trendAnalysis.customerGrowthRate
+        },
+        {
+            metric: 'Avg Transaction',
+            current: current.formattedAverageTransaction,
+            previous: previous.formattedAverageTransaction,
+            change: previous.averageTransactionValue > 0 
+                ? ((current.averageTransactionValue - previous.averageTransactionValue) / previous.averageTransactionValue) * 100 
+                : 0
+        }
+    ];
+    
+    const tableHTML = comparisons.map(comp => {
+        const changeClass = comp.change > 0 ? 'text-green-600' : comp.change < 0 ? 'text-red-600' : 'text-gray-600';
+        const changeIcon = comp.change > 0 ? '↗️' : comp.change < 0 ? '↘️' : '➡️';
+        const changeText = `${changeIcon} ${comp.change >= 0 ? '+' : ''}${comp.change.toFixed(1)}%`;
+        
+        return `
+            <tr class="border-b border-gray-100">
+                <td class="py-3 px-4 font-medium">${comp.metric}</td>
+                <td class="py-3 px-4 text-right font-semibold">${comp.current}</td>
+                <td class="py-3 px-4 text-right">${comp.previous}</td>
+                <td class="py-3 px-4 text-right ${changeClass} font-semibold">${changeText}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    tableBody.innerHTML = tableHTML;
+}
+
+/**
+ * Updates chart placeholders with trend visualization data.
+ * 
+ * @param {Object} trendsData - Chart data from trends analysis
+ * @private
+ * @since 1.0.0
+ */
+function updateTrendsCharts(trendsData) {
+    // For now, show simple text-based charts
+    // Later we can integrate Chart.js or similar library
+    
+    const revenueChartElement = document.getElementById('revenue-trend-chart');
+    if (revenueChartElement && trendsData.dailyBreakdown) {
+        revenueChartElement.innerHTML = `
+            <div class="space-y-2">
+                <h4 class="font-semibold">Daily Revenue Pattern (Last ${trendsData.dailyBreakdown.length} Days)</h4>
+                ${trendsData.dailyBreakdown.slice(-7).map(day => `
+                    <div class="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
+                        <span class="text-sm">${day.date}</span>
+                        <span class="font-semibold">${formatCurrency(day.revenue)}</span>
+                        <span class="text-xs text-gray-500">${day.transactions} txn</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    const storeChartElement = document.getElementById('store-comparison-chart');
+    if (storeChartElement && trendsData.currentPeriod.storeBreakdown) {
+        const stores = trendsData.currentPeriod.storeBreakdown;
+        storeChartElement.innerHTML = `
+            <div class="space-y-4">
+                ${stores.map(store => `
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="font-semibold">${store.storeName}</span>
+                            <span>${store.formattedRevenue}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full ${store.storeName === 'Church Store' ? 'bg-purple-500' : 'bg-orange-500'}" 
+                                 style="width: ${store.revenuePercentage}%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500">${store.revenuePercentage}% of total | ${store.transactions} transactions</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Shows/hides loading state on trends summary cards.
+ * 
+ * @param {boolean} isLoading - Whether to show loading state
+ * @private
+ * @since 1.0.0
+ */
+function updateTrendsSummaryCardsLoading(isLoading) {
+    const elements = [
+        'revenue-growth-display',
+        'daily-average-display',
+        'peak-day-display',
+        'trend-direction-display'
+    ];
+    
+    elements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = isLoading ? 'Loading...' : element.textContent;
+        }
+    });
 }
