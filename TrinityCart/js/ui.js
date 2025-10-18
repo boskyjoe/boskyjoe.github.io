@@ -222,6 +222,9 @@ let unsubscribeSuppliersListener = null;
 
 const suppliersGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "supplierId", headerName: "ID", width: 150 },
         { field: "supplierName", headerName: "Name", flex: 2, editable: true, minWidth: 150 },
@@ -486,6 +489,9 @@ let unsubscribeCategoriesListener = null;
 
 const categoriesGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "categoryId", headerName: "ID", width: 150 },
         { field: "categoryName", headerName: "Category Name", flex: 1, editable: true },
@@ -592,6 +598,9 @@ let unsubscribeSaleTypesListener = null;
 
 const saleTypesGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "saleTypeId", headerName: "ID", width: 150 },
         { field: "saleTypeName", headerName: "Sale Type Name", flex: 1, editable: true },
@@ -676,6 +685,9 @@ let unsubscribePaymentModesListener = null;
 
 const paymentModesGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "paymentTypeId", headerName: "ID", width: 150 },
         { field: "paymentMode", headerName: "Payment Mode", flex: 1, editable: true },
@@ -757,6 +769,9 @@ let unsubscribeSeasonsListener = null;
 
 const seasonsGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "seasonId", headerName: "ID", width: 180 },
         { field: "seasonName", headerName: "Season Name", flex: 2, editable: true },
@@ -998,6 +1013,9 @@ export async function showSalesEventsView() {
 
 const usersGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "displayName", headerName: "Name", flex: 2 },
         { field: "email", headerName: "Email", flex: 2 },
@@ -1129,6 +1147,9 @@ function resetTeamDetailView() {
 const churchTeamsGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "teamName", headerName: "Team Name", flex: 1, editable: true },
         {
@@ -1230,6 +1251,9 @@ const churchTeamsGridOptions = {
 const teamMembersGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "name", headerName: "Name", flex: 1 },
         { field: "email", headerName: "Email", flex: 1 },
