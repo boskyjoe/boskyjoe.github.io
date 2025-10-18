@@ -4477,6 +4477,7 @@ export function showSalesReportsView() {
     showView('sales-reports-view');
     
     // Pre-load today's metrics for immediate display (uses cache when possible)
+    console.log("[ui.js] About to call loadTodaysMetricsForCards");
     loadTodaysMetricsForCards();
 }
 
@@ -4576,39 +4577,88 @@ export function showExecutiveDashboardView() {
  */
 async function loadTodaysMetricsForCards() {
     try {
-        console.log("[ui.js] Loading today's metrics for sales report cards");
+        console.log("[ui.js] === LOADING TODAY'S METRICS FOR CARDS ===");
         
         // Use the ultra-optimized daily dashboard function
         const todayData = await getDailyDashboardOptimized();
+        console.log("[ui.js] Today's data received:", todayData);
         
-        // Update store performance card
+        // Also get 7-day data for store performance preview
+        const sevenDaysData = await calculateDirectSalesMetricsOptimized(
+            createDateRange(7).startDate, 
+            createDateRange(7).endDate, 
+            true
+        );
+        console.log("[ui.js] 7-day sales data:", sevenDaysData);
+        console.log("[ui.js] Store breakdown:", sevenDaysData.storeBreakdown);
+        
+        // Update store performance card with 7-day data
         const storeCard = document.querySelector('[data-report-id="store-performance"]');
+        console.log("[ui.js] Store performance card found:", storeCard);
+        
         if (storeCard) {
             const valueElement = storeCard.querySelector('.text-xl.font-bold');
             const subtitleElement = storeCard.querySelector('.text-sm.text-gray-500');
             
-            if (valueElement) {
-                valueElement.textContent = todayData.todayRevenue;
+            console.log("[ui.js] Value element:", valueElement);
+            console.log("[ui.js] Subtitle element:", subtitleElement);
+            
+            if (valueElement && sevenDaysData.summary) {
+                const displayValue = sevenDaysData.summary.formattedTotalRevenue || '₹0.00';
+                console.log("[ui.js] Setting store card value to:", displayValue);
+                valueElement.textContent = displayValue;
             }
-            if (subtitleElement) {
-                subtitleElement.textContent = `${todayData.todayTransactions} transactions today`;
+            
+            if (subtitleElement && sevenDaysData.storeBreakdown && sevenDaysData.storeBreakdown.length > 0) {
+                const churchStore = sevenDaysData.storeBreakdown.find(s => s.storeName === 'Church Store');
+                const tastyTreats = sevenDaysData.storeBreakdown.find(s => s.storeName === 'Tasty Treats');
+                
+                console.log("[ui.js] Church Store data:", churchStore);
+                console.log("[ui.js] Tasty Treats data:", tastyTreats);
+                
+                let breakdownText = '';
+                if (churchStore && tastyTreats) {
+                    breakdownText = `Church: ${churchStore.formattedRevenue} | TT: ${tastyTreats.formattedRevenue}`;
+                } else if (churchStore) {
+                    breakdownText = `Church Store: ${churchStore.formattedRevenue}`;
+                } else if (tastyTreats) {
+                    breakdownText = `Tasty Treats: ${tastyTreats.formattedRevenue}`;
+                } else {
+                    breakdownText = `${sevenDaysData.summary.totalTransactions} transactions`;
+                }
+                
+                console.log("[ui.js] Setting subtitle to:", breakdownText);
+                subtitleElement.textContent = breakdownText;
             }
+        } else {
+            console.error("[ui.js] Store performance card not found in DOM!");
         }
         
         // Update customer analytics card  
         const customerCard = document.querySelector('[data-report-id="direct-customer-analytics"]');
         if (customerCard) {
             const valueElement = customerCard.querySelector('.text-xl.font-bold');
-            if (valueElement) {
-                valueElement.textContent = todayData.todayCustomers.toString();
+            if (valueElement && sevenDaysData.summary) {
+                console.log("[ui.js] Setting customer count to:", sevenDaysData.summary.uniqueCustomers);
+                valueElement.textContent = sevenDaysData.summary.uniqueCustomers?.toString() || '0';
             }
         }
         
-        console.log(`[ui.js] Sales cards updated with today's data (${todayData.metadata.firestoreReadsUsed} reads)`);
+        console.log(`[ui.js] Sales cards update completed`);
         
     } catch (error) {
-        console.warn('[ui.js] Could not load today\'s metrics:', error);
-        // Graceful degradation - cards show placeholder values
+        console.error('[ui.js] Error loading today\'s metrics for cards:', error);
+        console.error('[ui.js] Error details:', error.message);
+        console.error('[ui.js] Error stack:', error.stack);
+        
+        // Show placeholder values on error
+        const storeCard = document.querySelector('[data-report-id="store-performance"]');
+        if (storeCard) {
+            const valueElement = storeCard.querySelector('.text-xl.font-bold');
+            if (valueElement) {
+                valueElement.textContent = 'No Data';
+            }
+        }
     }
 }
 
