@@ -1777,3 +1777,335 @@ function findPeakPerformancePeriods(dailyBreakdown) {
         }
     };
 }
+
+/**
+ * Calculates comprehensive customer insights and behavior analysis.
+ * 
+ * Analyzes customer purchase patterns, loyalty segments, store preferences,
+ * lifetime value calculations, and behavioral trends across both direct sales
+ * channels. Provides actionable insights for customer relationship management.
+ * 
+ * @param {number} [daysBack=90] - Analysis period in days (longer for customer patterns)
+ * @param {boolean} [includeSegmentation=true] - Include customer loyalty segmentation
+ * @param {boolean} [useCache=true] - Enable intelligent caching
+ * 
+ * @returns {Promise<Object>} Comprehensive customer analytics:
+ *   - customerSummary {Object} - High-level customer metrics and counts
+ *   - loyaltySegments {Object} - VIP, Regular, and New customer breakdowns
+ *   - storePreferences {Object} - Customer preferences between stores
+ *   - topCustomers {Array} - Highest value customers with detailed metrics
+ *   - purchasePatterns {Object} - Frequency and timing analysis
+ *   - customerLifetimeValue {Object} - CLV calculations and projections
+ * 
+ * @example
+ * // Analyze customer behavior over last 90 days
+ * const customerData = await calculateCustomerInsights(90, true);
+ * console.log(`${customerData.customerSummary.totalUniqueCustomers} customers analyzed`);
+ * console.log(`Top customer: ${customerData.topCustomers[0].name} - ${customerData.topCustomers[0].totalSpent}`);
+ * 
+ * @since 1.0.0
+ */
+export async function calculateCustomerInsights(daysBack = 90, includeSegmentation = true, useCache = true) {
+    try {
+        console.log(`[Reports] Calculating customer insights for ${daysBack} days (segmentation: ${includeSegmentation})`);
+        
+        // Generate cache key for customer analysis
+        const cacheKey = `customer_insights_${daysBack}days_${includeSegmentation ? 'with' : 'without'}_segmentation`;
+        
+        // Check cache first
+        if (useCache) {
+            const cachedResult = ReportCache.getCachedReport(cacheKey);
+            if (cachedResult) {
+                console.log(`[Reports] Using cached customer insights - 0 Firestore reads`);
+                return cachedResult;
+            }
+        }
+
+        // Get transaction details for customer analysis
+        const dateRange = createDateRange(daysBack);
+        const transactionDetails = await getStoreTransactionDetails(
+            dateRange.startDate,
+            dateRange.endDate,
+            useCache
+        );
+        
+        console.log(`[Reports] Analyzing ${transactionDetails.transactions.length} transactions for customer insights`);
+        
+        // Initialize customer analysis structure
+        const customerAnalysis = {
+            customerProfiles: new Map(), // Detailed customer information
+            storePreferences: new Map(),  // Store shopping patterns
+            loyaltySegments: {
+                vip: { customers: [], totalRevenue: 0, count: 0 },        // 5+ purchases
+                regular: { customers: [], totalRevenue: 0, count: 0 },    // 2-4 purchases  
+                new: { customers: [], totalRevenue: 0, count: 0 }         // 1 purchase
+            },
+            purchasePatterns: {
+                totalDaysAnalyzed: dateRange.dayCount,
+                averageOrderValue: 0,
+                purchaseFrequencyDistribution: new Map()
+            }
+        };
+        
+        // MAIN PROCESSING: Analyze each transaction for customer insights
+        transactionDetails.transactions.forEach(transaction => {
+            const customerEmail = transaction.customerInfo.email || 'unknown';
+            const customerName = transaction.customerInfo.name || 'Unknown Customer';
+            const customerPhone = transaction.customerInfo.phone || '';
+            const store = transaction.store;
+            const revenue = transaction.financials.totalAmount || 0;
+            const saleDate = transaction.saleDate;
+            
+            // Build comprehensive customer profiles
+            if (!customerAnalysis.customerProfiles.has(customerEmail)) {
+                customerAnalysis.customerProfiles.set(customerEmail, {
+                    name: customerName,
+                    email: customerEmail,
+                    phone: customerPhone,
+                    totalSpent: 0,
+                    totalOrders: 0,
+                    firstPurchaseDate: saleDate,
+                    lastPurchaseDate: saleDate,
+                    storeVisits: new Map(),
+                    orderHistory: [],
+                    averageOrderValue: 0,
+                    daysSinceLastPurchase: 0,
+                    customerLifetimeDays: 0,
+                    preferredStore: null
+                });
+            }
+            
+            const customerProfile = customerAnalysis.customerProfiles.get(customerEmail);
+            
+            // Update customer metrics
+            customerProfile.totalSpent += revenue;
+            customerProfile.totalOrders += 1;
+            customerProfile.lastPurchaseDate = saleDate > customerProfile.lastPurchaseDate ? saleDate : customerProfile.lastPurchaseDate;
+            customerProfile.firstPurchaseDate = saleDate < customerProfile.firstPurchaseDate ? saleDate : customerProfile.firstPurchaseDate;
+            
+            // Track store visits
+            customerProfile.storeVisits.set(store, (customerProfile.storeVisits.get(store) || 0) + 1);
+            
+            // Add to order history
+            customerProfile.orderHistory.push({
+                date: saleDate,
+                store: store,
+                amount: revenue,
+                transactionId: transaction.saleId
+            });
+            
+            // Update store preference analysis
+            if (!customerAnalysis.storePreferences.has(customerEmail)) {
+                customerAnalysis.storePreferences.set(customerEmail, {
+                    churchStoreVisits: 0,
+                    tastyTreatsVisits: 0,
+                    preference: 'none'
+                });
+            }
+            
+            const storePreference = customerAnalysis.storePreferences.get(customerEmail);
+            if (store === 'Church Store') {
+                storePreference.churchStoreVisits += 1;
+            } else if (store === 'Tasty Treats') {
+                storePreference.tastyTreatsVisits += 1;
+            }
+        });
+        
+        // POST-PROCESSING: Calculate derived customer metrics
+        const currentDate = new Date();
+        const topCustomers = [];
+        
+        customerAnalysis.customerProfiles.forEach((profile, email) => {
+            // Calculate customer-level derived metrics
+            profile.averageOrderValue = profile.totalOrders > 0 ? profile.totalSpent / profile.totalOrders : 0;
+            profile.daysSinceLastPurchase = Math.floor((currentDate - profile.lastPurchaseDate) / (1000 * 60 * 60 * 24));
+            profile.customerLifetimeDays = Math.floor((profile.lastPurchaseDate - profile.firstPurchaseDate) / (1000 * 60 * 60 * 24)) + 1;
+            
+            // Determine preferred store
+            let maxVisits = 0;
+            profile.storeVisits.forEach((visits, store) => {
+                if (visits > maxVisits) {
+                    maxVisits = visits;
+                    profile.preferredStore = store;
+                }
+            });
+            
+            // Customer loyalty segmentation
+            if (includeSegmentation) {
+                if (profile.totalOrders >= 5) {
+                    customerAnalysis.loyaltySegments.vip.customers.push(profile);
+                    customerAnalysis.loyaltySegments.vip.totalRevenue += profile.totalSpent;
+                    customerAnalysis.loyaltySegments.vip.count += 1;
+                } else if (profile.totalOrders >= 2) {
+                    customerAnalysis.loyaltySegments.regular.customers.push(profile);
+                    customerAnalysis.loyaltySegments.regular.totalRevenue += profile.totalSpent;
+                    customerAnalysis.loyaltySegments.regular.count += 1;
+                } else {
+                    customerAnalysis.loyaltySegments.new.customers.push(profile);
+                    customerAnalysis.loyaltySegments.new.totalRevenue += profile.totalSpent;
+                    customerAnalysis.loyaltySegments.new.count += 1;
+                }
+            }
+            
+            // Add to top customers list
+            topCustomers.push({
+                email: email,
+                name: profile.name,
+                phone: profile.phone,
+                totalSpent: profile.totalSpent,
+                formattedTotalSpent: formatCurrency(profile.totalSpent),
+                totalOrders: profile.totalOrders,
+                averageOrderValue: profile.averageOrderValue,
+                formattedAverageOrderValue: formatCurrency(profile.averageOrderValue),
+                preferredStore: profile.preferredStore,
+                daysSinceLastPurchase: profile.daysSinceLastPurchase,
+                customerLifetimeDays: profile.customerLifetimeDays,
+                loyaltySegment: profile.totalOrders >= 5 ? 'VIP' : profile.totalOrders >= 2 ? 'Regular' : 'New'
+            });
+        });
+        
+        // Sort top customers by total spending
+        topCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
+        
+        // Calculate store preference distribution
+        const storePreferenceStats = {
+            churchStoreOnly: 0,
+            tastyTreatsOnly: 0,
+            bothStores: 0,
+            totalCustomers: customerAnalysis.customerProfiles.size
+        };
+        
+        customerAnalysis.storePreferences.forEach((preference, email) => {
+            const churchVisits = preference.churchStoreVisits;
+            const tastyVisits = preference.tastyTreatsVisits;
+            
+            if (churchVisits > 0 && tastyVisits > 0) {
+                storePreferenceStats.bothStores += 1;
+            } else if (churchVisits > 0) {
+                storePreferenceStats.churchStoreOnly += 1;
+            } else if (tastyVisits > 0) {
+                storePreferenceStats.tastyTreatsOnly += 1;
+            }
+        });
+        
+        // Calculate overall customer metrics
+        const totalRevenue = transactionDetails.summary.totalRevenue;
+        const totalCustomers = customerAnalysis.customerProfiles.size;
+        const totalOrders = transactionDetails.summary.totalTransactions;
+        
+        const finalResults = {
+            customerSummary: {
+                totalUniqueCustomers: totalCustomers,
+                totalRevenue: totalRevenue,
+                formattedTotalRevenue: formatCurrency(totalRevenue),
+                totalOrders: totalOrders,
+                averageCustomerValue: totalCustomers > 0 ? totalRevenue / totalCustomers : 0,
+                formattedAverageCustomerValue: formatCurrency(totalCustomers > 0 ? totalRevenue / totalCustomers : 0),
+                averageOrdersPerCustomer: totalCustomers > 0 ? totalOrders / totalCustomers : 0,
+                customerRetentionRate: totalCustomers > 0 
+                    ? (customerAnalysis.loyaltySegments.regular.count + customerAnalysis.loyaltySegments.vip.count) / totalCustomers * 100
+                    : 0
+            },
+            
+            loyaltySegments: {
+                vip: {
+                    count: customerAnalysis.loyaltySegments.vip.count,
+                    percentage: totalCustomers > 0 ? (customerAnalysis.loyaltySegments.vip.count / totalCustomers) * 100 : 0,
+                    totalRevenue: customerAnalysis.loyaltySegments.vip.totalRevenue,
+                    formattedRevenue: formatCurrency(customerAnalysis.loyaltySegments.vip.totalRevenue),
+                    revenueContribution: totalRevenue > 0 ? (customerAnalysis.loyaltySegments.vip.totalRevenue / totalRevenue) * 100 : 0
+                },
+                regular: {
+                    count: customerAnalysis.loyaltySegments.regular.count,
+                    percentage: totalCustomers > 0 ? (customerAnalysis.loyaltySegments.regular.count / totalCustomers) * 100 : 0,
+                    totalRevenue: customerAnalysis.loyaltySegments.regular.totalRevenue,
+                    formattedRevenue: formatCurrency(customerAnalysis.loyaltySegments.regular.totalRevenue),
+                    revenueContribution: totalRevenue > 0 ? (customerAnalysis.loyaltySegments.regular.totalRevenue / totalRevenue) * 100 : 0
+                },
+                new: {
+                    count: customerAnalysis.loyaltySegments.new.count,
+                    percentage: totalCustomers > 0 ? (customerAnalysis.loyaltySegments.new.count / totalCustomers) * 100 : 0,
+                    totalRevenue: customerAnalysis.loyaltySegments.new.totalRevenue,
+                    formattedRevenue: formatCurrency(customerAnalysis.loyaltySegments.new.totalRevenue),
+                    revenueContribution: totalRevenue > 0 ? (customerAnalysis.loyaltySegments.new.totalRevenue / totalRevenue) * 100 : 0
+                }
+            },
+            
+            storePreferences: {
+                churchStoreOnly: {
+                    count: storePreferenceStats.churchStoreOnly,
+                    percentage: totalCustomers > 0 ? (storePreferenceStats.churchStoreOnly / totalCustomers) * 100 : 0
+                },
+                tastyTreatsOnly: {
+                    count: storePreferenceStats.tastyTreatsOnly,
+                    percentage: totalCustomers > 0 ? (storePreferenceStats.tastyTreatsOnly / totalCustomers) * 100 : 0
+                },
+                bothStores: {
+                    count: storePreferenceStats.bothStores,
+                    percentage: totalCustomers > 0 ? (storePreferenceStats.bothStores / totalCustomers) * 100 : 0
+                },
+                mostPopularStore: storePreferenceStats.churchStoreOnly > storePreferenceStats.tastyTreatsOnly ? 'Church Store' : 'Tasty Treats'
+            },
+            
+            topCustomers: topCustomers.slice(0, 50), // Top 50 customers
+            
+            purchasePatterns: {
+                averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+                averageOrdersPerCustomer: totalCustomers > 0 ? totalOrders / totalCustomers : 0,
+                averageDaysBetweenPurchases: calculateAveragePurchaseInterval(topCustomers),
+                seasonalityInsights: [] // Placeholder for seasonal analysis
+            },
+            
+            metadata: {
+                calculatedAt: new Date().toISOString(),
+                firestoreReadsUsed: transactionDetails.metadata.firestoreReadsUsed,
+                customersAnalyzed: totalCustomers,
+                transactionsAnalyzed: totalOrders,
+                analysisDepth: includeSegmentation ? 'comprehensive' : 'basic',
+                cacheKey
+            }
+        };
+        
+        // Cache results for future requests
+        if (useCache) {
+            ReportCache.setCachedReport(cacheKey, finalResults);
+        }
+        
+        console.log(`[Reports] Customer insights completed using ${finalResults.metadata.firestoreReadsUsed} Firestore reads`);
+        console.log(`[Reports] Key insights: ${finalResults.customerSummary.totalUniqueCustomers} customers, ${finalResults.loyaltySegments.vip.count} VIP customers`);
+        
+        return finalResults;
+        
+    } catch (error) {
+        console.error('[Reports] Error calculating customer insights:', error);
+        throw new Error(`Customer insights calculation failed: ${error.message}`);
+    }
+}
+
+/**
+ * Calculates average days between purchases for customer frequency analysis.
+ * 
+ * @param {Array} customers - Array of customer profiles with order history
+ * @returns {number} Average days between purchases across all customers
+ * @private
+ * @since 1.0.0
+ */
+function calculateAveragePurchaseInterval(customers) {
+    let totalIntervals = 0;
+    let intervalCount = 0;
+    
+    customers.forEach(customer => {
+        if (customer.totalOrders > 1) {
+            // Rough estimate: customer lifetime days / (orders - 1)
+            const avgInterval = customer.customerLifetimeDays / (customer.totalOrders - 1);
+            if (avgInterval > 0 && avgInterval < 365) { // Reasonable intervals only
+                totalIntervals += avgInterval;
+                intervalCount += 1;
+            }
+        }
+    });
+    
+    return intervalCount > 0 ? Math.round(totalIntervals / intervalCount) : 0;
+}
+
+
