@@ -1650,6 +1650,9 @@ let unsubscribePaymentsListener = null;
 const purchaseInvoicesGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
@@ -1719,6 +1722,9 @@ const purchaseInvoicesGridOptions = {
 const purchasePaymentsGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         {
             headerName: "Supplier Invoice #",
