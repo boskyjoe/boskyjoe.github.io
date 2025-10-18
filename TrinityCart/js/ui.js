@@ -5175,6 +5175,30 @@ export async function handleReportCardClick(reportId, cardElement) {
             case 'direct-customer-analytics':
                 showCustomerInsightsDetailView(90); // 90 days for customer patterns
                 break;
+
+            case 'stock-status':
+                console.log('[ui.js] Navigating to stock status detail view');
+                showStockStatusDetailView();
+                firestoreReadsUsed = 0;
+                break;
+
+            case 'inventory-valuation':
+                console.log('[ui.js] Showing inventory valuation analysis');
+                showInventoryValuationAnalysis();
+                firestoreReadsUsed = 0;
+                break;
+
+            case 'product-performance':
+                console.log('[ui.js] Showing product performance analysis');
+                showProductPerformanceAnalysis();
+                firestoreReadsUsed = 0;
+                break;
+
+            case 'reorder-recommendations':
+                console.log('[ui.js] Showing reorder recommendations');
+                showReorderRecommendations();
+                firestoreReadsUsed = 0;
+                break;
                 
             default:
                 console.log(`[ui.js] Report ${reportId} not yet implemented`);
@@ -6690,4 +6714,621 @@ function updateCustomerInsightsSummaryCardsLoading(isLoading) {
     });
 }
 
+/**
+ * Displays the inventory reports hub with category navigation.
+ * 
+ * Shows inventory-focused report categories including stock status,
+ * valuation analysis, performance metrics, and reorder recommendations.
+ * 
+ * @since 1.0.0
+ */
+export function showInventoryReportsView() {
+    console.log("[ui.js] Displaying Inventory Reports view");
+    showView('inventory-reports-view');
+    
+    // Pre-load inventory insights from masterData cache (0 reads)
+    loadInventoryReportPreviews();
+}
+
+/**
+ * Displays the detailed stock status analysis view.
+ * 
+ * Shows comprehensive inventory grid with stock levels, reorder alerts,
+ * valuation metrics, and export capabilities for inventory management.
+ * 
+ * @since 1.0.0
+ */
+export async function showStockStatusDetailView() {
+    try {
+        console.log("[ui.js] Displaying Stock Status Detail view");
+        
+        // Navigate to stock status view
+        showView('stock-status-detail-view');
+        
+        // Initialize the stock status grid
+        initializeStockStatusGrid();
+        
+        // Wait for grid to be ready before loading data
+        const waitForGrid = setInterval(() => {
+            if (stockStatusGridApi) {
+                clearInterval(waitForGrid);
+                loadStockStatusData();
+            }
+        }, 50);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing stock status detail view:', error);
+        showModal('error', 'View Error', 'Could not load stock status analysis.');
+    }
+}
+
+/**
+ * Pre-loads inventory report preview data using masterData cache.
+ * 
+ * Updates inventory report cards with immediate insights from cached
+ * product data without requiring additional Firestore queries.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+function loadInventoryReportPreviews() {
+    try {
+        console.log("[ui.js] Loading inventory report previews from masterData cache");
+        
+        if (!masterData.products || masterData.products.length === 0) {
+            console.warn("[ui.js] No product data available in masterData cache");
+            return;
+        }
+        
+        // Calculate inventory insights from cached data (0 Firestore reads)
+        let totalProducts = masterData.products.length;
+        let lowStockItems = 0;
+        let outOfStockItems = 0;
+        let totalInventoryValue = 0;
+        let highestValueProduct = null;
+        let highestValue = 0;
+        
+        masterData.products.forEach(product => {
+            const stock = product.inventoryCount || 0;
+            const unitCost = product.unitPrice || 0;
+            const itemValue = stock * unitCost;
+            
+            totalInventoryValue += itemValue;
+            
+            // Track highest value product
+            if (itemValue > highestValue) {
+                highestValue = itemValue;
+                highestValueProduct = product.itemName;
+            }
+            
+            // Stock level analysis
+            if (stock === 0) {
+                outOfStockItems++;
+            } else if (stock < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD) {
+                lowStockItems++;
+            }
+        });
+        
+        // Update Stock Status card
+        const stockCard = document.querySelector('[data-report-id="stock-status"]');
+        if (stockCard) {
+            const valueElement = stockCard.querySelector('#low-stock-count-preview');
+            const indicatorElement = stockCard.querySelector('#stock-status-indicator');
+            
+            if (valueElement) {
+                valueElement.textContent = lowStockItems.toString();
+                
+                // Color coding based on urgency
+                if (lowStockItems > 10) {
+                    valueElement.className = 'text-2xl font-bold text-red-600';
+                } else if (lowStockItems > 5) {
+                    valueElement.className = 'text-2xl font-bold text-yellow-600';
+                } else {
+                    valueElement.className = 'text-2xl font-bold text-blue-600';
+                }
+            }
+            
+            if (indicatorElement) {
+                if (outOfStockItems > 0) {
+                    indicatorElement.innerHTML = `<span class="text-red-600">⚠️ ${outOfStockItems} out of stock</span>`;
+                } else if (lowStockItems > 5) {
+                    indicatorElement.innerHTML = `<span class="text-yellow-600">⚠️ Reorder needed</span>`;
+                } else {
+                    indicatorElement.innerHTML = `<span class="text-green-600">✅ Stock levels good</span>`;
+                }
+            }
+        }
+        
+        // Update Inventory Valuation card
+        const valuationCard = document.querySelector('[data-report-id="inventory-valuation"]');
+        if (valuationCard) {
+            const valueElement = valuationCard.querySelector('#inventory-value-preview');
+            const profitElement = valuationCard.querySelector('#inventory-profit-potential');
+            
+            if (valueElement) {
+                valueElement.textContent = formatCurrency(totalInventoryValue);
+            }
+            
+            if (profitElement) {
+                const sellingValue = masterData.products.reduce((sum, product) => {
+                    const stock = product.inventoryCount || 0;
+                    const sellingPrice = product.sellingPrice || (product.unitPrice * 1.2);
+                    return sum + (stock * sellingPrice);
+                }, 0);
+                
+                const potentialProfit = sellingValue - totalInventoryValue;
+                profitElement.innerHTML = `<span class="text-green-600">💰 ${formatCurrency(potentialProfit)} potential profit</span>`;
+            }
+        }
+        
+        // Update Product Performance card
+        const productCard = document.querySelector('[data-report-id="product-performance"]');
+        if (productCard) {
+            const valueElement = productCard.querySelector('#top-product-preview');
+            const indicatorElement = productCard.querySelector('#product-performance-indicator');
+            
+            if (valueElement && highestValueProduct) {
+                valueElement.textContent = highestValueProduct;
+            }
+            
+            if (indicatorElement) {
+                indicatorElement.innerHTML = `<span class="text-green-600">📊 ${totalProducts} products analyzed</span>`;
+            }
+        }
+        
+        // Update Reorder Recommendations card
+        const reorderCard = document.querySelector('[data-report-id="reorder-recommendations"]');
+        if (reorderCard) {
+            const countElement = reorderCard.querySelector('#reorder-needed-count');
+            const urgencyElement = reorderCard.querySelector('#reorder-urgency');
+            
+            const urgentReorders = outOfStockItems + lowStockItems;
+            
+            if (countElement) {
+                countElement.textContent = urgentReorders.toString();
+                
+                // Color based on urgency
+                if (urgentReorders > 10) {
+                    countElement.className = 'text-2xl font-bold text-red-600';
+                } else if (urgentReorders > 5) {
+                    countElement.className = 'text-2xl font-bold text-yellow-600';
+                } else {
+                    countElement.className = 'text-2xl font-bold text-green-600';
+                }
+            }
+            
+            if (urgencyElement) {
+                if (outOfStockItems > 0) {
+                    urgencyElement.innerHTML = `<span class="text-red-600">⚠️ ${outOfStockItems} critical alerts</span>`;
+                } else if (urgentReorders > 0) {
+                    urgencyElement.innerHTML = `<span class="text-yellow-600">⚠️ Monitoring needed</span>`;
+                } else {
+                    urgencyElement.innerHTML = `<span class="text-green-600">✅ All stock levels good</span>`;
+                }
+            }
+        }
+        
+        console.log(`[ui.js] Inventory previews updated: ${totalProducts} products, ${lowStockItems} low stock, ${formatCurrency(totalInventoryValue)} total value`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading inventory report previews:', error);
+    }
+}
+
+/**
+ * Stock Status Grid configuration for detailed inventory analysis.
+ * 
+ * Shows all products with current stock levels, valuation, reorder recommendations,
+ * and integrated sales performance data when available.
+ * 
+ * @since 1.0.0
+ */
+let stockStatusGridApi = null;
+let isStockStatusGridInitialized = false;
+
+const stockStatusGridOptions = {
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        wrapText: true,
+        autoHeight: true
+    },
+    
+    columnDefs: [
+        {
+            field: "itemName",
+            headerName: "Product Name",
+            flex: 2,
+            minWidth: 200,
+            filter: 'agTextColumnFilter',
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            field: "categoryName",
+            headerName: "Category",
+            width: 120,
+            filter: 'agTextColumnFilter',
+            valueGetter: params => {
+                // Lookup category name from masterData
+                const categoryId = params.data.categoryId;
+                const category = masterData.categories.find(cat => cat.id === categoryId);
+                return category ? category.categoryName : 'Unknown';
+            }
+        },
+        {
+            field: "inventoryCount",
+            headerName: "Current Stock",
+            width: 120,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center font-bold',
+            cellStyle: params => {
+                const stock = params.value || 0;
+                if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' }; // Red for out of stock
+                if (stock < 10) return { backgroundColor: '#fef3c7', color: '#d97706' }; // Yellow for low stock
+                if (stock < 25) return { backgroundColor: '#f0f9ff', color: '#1e40af' }; // Blue for moderate stock
+                return { backgroundColor: '#f0fdf4', color: '#166534' }; // Green for good stock
+            },
+            sort: 'asc' // Show lowest stock first
+        },
+        {
+            headerName: "Stock Status",
+            width: 120,
+            cellRenderer: params => {
+                const stock = params.data.inventoryCount || 0;
+                
+                if (stock === 0) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">OUT OF STOCK</span>`;
+                } else if (stock < 5) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">CRITICAL</span>`;
+                } else if (stock < 10) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">LOW</span>`;
+                } else if (stock < 25) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">MODERATE</span>`;
+                } else {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">GOOD</span>`;
+                }
+            },
+            filter: 'agTextColumnFilter'
+        },
+        {
+            field: "unitPrice",
+            headerName: "Unit Cost",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right'
+        },
+        {
+            headerName: "Inventory Value",
+            width: 140,
+            valueGetter: params => (params.data.inventoryCount || 0) * (params.data.unitPrice || 0),
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-semibold',
+            cellStyle: { backgroundColor: '#f8fafc' }
+        },
+        {
+            field: "sellingPrice",
+            headerName: "Selling Price",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right'
+        },
+        {
+            headerName: "Potential Value",
+            width: 140,
+            valueGetter: params => (params.data.inventoryCount || 0) * (params.data.sellingPrice || 0),
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            cellStyle: { backgroundColor: '#f0f9ff', color: '#1e40af' }
+        },
+        {
+            headerName: "Margin %",
+            width: 100,
+            valueGetter: params => {
+                const cost = params.data.unitPrice || 0;
+                const selling = params.data.sellingPrice || 0;
+                return cost > 0 ? ((selling - cost) / cost) * 100 : 0;
+            },
+            valueFormatter: p => `${p.value.toFixed(1)}%`,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center font-semibold',
+            cellStyle: params => {
+                const margin = params.value;
+                if (margin > 30) return { color: '#166534' }; // Green for high margin
+                if (margin > 15) return { color: '#059669' }; // Medium green
+                if (margin > 5) return { color: '#d97706' };  // Yellow for low margin
+                return { color: '#dc2626' }; // Red for very low/negative margin
+            }
+        },
+        {
+            headerName: "Reorder Action",
+            width: 140,
+            cellRenderer: params => {
+                const stock = params.data.inventoryCount || 0;
+                
+                if (stock === 0) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">URGENT REORDER</span>`;
+                } else if (stock < 5) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700">REORDER SOON</span>`;
+                } else if (stock < 10) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">MONITOR</span>`;
+                } else {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">SUFFICIENT</span>`;
+                }
+            }
+        }
+    ],
+    
+    // Row styling based on stock levels
+    rowClassRules: {
+        'bg-red-50': params => (params.data.inventoryCount || 0) === 0,          // Out of stock
+        'bg-yellow-50': params => (params.data.inventoryCount || 0) < 5,         // Critical low
+        'bg-orange-50': params => (params.data.inventoryCount || 0) < 10,        // Low stock
+    },
+    
+    onGridReady: params => {
+        console.log("[ui.js] Stock Status Grid ready");
+        stockStatusGridApi = params.api;
+        
+        // Enable CSV export
+        params.api.setGridOption('suppressCsvExport', false);
+        
+        // Auto-size columns
+        setTimeout(() => {
+            params.api.sizeColumnsToFit();
+        }, 100);
+    }
+};
+
+/**
+ * Initializes the stock status analysis grid.
+ * 
+ * @since 1.0.0
+ */
+export function initializeStockStatusGrid() {
+    if (isStockStatusGridInitialized) return;
+    
+    const gridDiv = document.getElementById('stock-status-grid');
+    if (gridDiv) {
+        console.log("[ui.js] Initializing Stock Status Grid");
+        createGrid(gridDiv, stockStatusGridOptions);
+        isStockStatusGridInitialized = true;
+    }
+}
+
+/**
+ * Loads comprehensive stock status data and populates all display elements.
+ * 
+ * Integrates masterData inventory with sales performance analysis to provide
+ * complete inventory insights including reorder recommendations and valuation.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+async function loadStockStatusData() {
+    try {
+        console.log("[ui.js] Loading comprehensive stock status data");
+        
+        // Show loading states
+        updateInventorySummaryCardsLoading(true);
+        if (stockStatusGridApi) {
+            stockStatusGridApi.setGridOption('loading', true);
+        }
+        
+        // Get comprehensive inventory analysis
+        const inventoryData = await calculateInventoryAnalysis(true, 30, true);
+        
+        console.log('[ui.js] Inventory analysis data loaded:', inventoryData);
+        
+        // Update summary cards
+        updateInventorySummaryCards(inventoryData);
+        
+        // Prepare grid data with enhanced information
+        const gridData = masterData.products.map(product => {
+            const performanceInfo = inventoryData.productPerformanceInsights?.find(perf => perf.productId === product.id);
+            
+            return {
+                ...product,
+                // Add performance insights if available
+                salesQuantity: performanceInfo?.salesQuantity || 0,
+                turnoverRate: performanceInfo?.turnoverRate || 0,
+                daysOfStock: performanceInfo?.daysOfStock || 999,
+                velocityCategory: performanceInfo?.velocityCategory || 'unknown',
+                
+                // Reorder recommendations
+                urgencyLevel: product.inventoryCount === 0 ? 'critical' : 
+                             product.inventoryCount < 5 ? 'high' :
+                             product.inventoryCount < 10 ? 'medium' : 'low',
+                
+                recommendedOrderQuantity: calculateRecommendedOrderQuantity(product),
+                
+                // Enhanced display fields
+                inventoryValue: (product.inventoryCount || 0) * (product.unitPrice || 0),
+                potentialValue: (product.inventoryCount || 0) * (product.sellingPrice || 0)
+            };
+        });
+        
+        // Populate the grid with enhanced data
+        if (stockStatusGridApi) {
+            stockStatusGridApi.setGridOption('rowData', gridData);
+            stockStatusGridApi.setGridOption('loading', false);
+        }
+        
+        console.log(`[ui.js] Stock status data loaded using ${inventoryData.metadata.firestoreReadsUsed} Firestore reads`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading stock status data:', error);
+        updateInventorySummaryCardsLoading(false);
+        if (stockStatusGridApi) {
+            stockStatusGridApi.setGridOption('loading', false);
+            stockStatusGridApi.showNoRowsOverlay();
+        }
+        showModal('error', 'Data Loading Error', 'Could not load stock status data. Please try again.');
+    }
+}
+
+/**
+ * Updates inventory summary cards with calculated metrics.
+ * 
+ * @param {Object} inventoryData - Inventory analysis from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateInventorySummaryCards(inventoryData) {
+    console.log('[ui.js] Updating inventory summary cards');
+    
+    // Total Products
+    const totalProductsElement = document.getElementById('total-products-count');
+    if (totalProductsElement) {
+        totalProductsElement.textContent = inventoryData.inventorySummary.totalProducts.toString();
+    }
+    
+    const productsBreakdownElement = document.getElementById('products-breakdown');
+    if (productsBreakdownElement) {
+        productsBreakdownElement.textContent = `${inventoryData.inventorySummary.activeProducts} active products`;
+    }
+    
+    // Low Stock Alert
+    const lowStockElement = document.getElementById('low-stock-count');
+    if (lowStockElement) {
+        lowStockElement.textContent = inventoryData.inventorySummary.lowStockCount.toString();
+    }
+    
+    const lowStockUrgencyElement = document.getElementById('low-stock-urgency');
+    if (lowStockUrgencyElement) {
+        const outOfStock = inventoryData.inventorySummary.outOfStockCount;
+        if (outOfStock > 0) {
+            lowStockUrgencyElement.innerHTML = `<span class="text-red-600">${outOfStock} out of stock</span>`;
+        } else {
+            lowStockUrgencyElement.textContent = 'items below threshold';
+        }
+    }
+    
+    // Out of Stock
+    const outOfStockElement = document.getElementById('out-of-stock-count');
+    if (outOfStockElement) {
+        outOfStockElement.textContent = inventoryData.inventorySummary.outOfStockCount.toString();
+    }
+    
+    // Total Value
+    const totalValueElement = document.getElementById('total-inventory-value');
+    if (totalValueElement) {
+        totalValueElement.textContent = inventoryData.inventoryValuation.formattedCostValue;
+    }
+    
+    const valueBreakdownElement = document.getElementById('inventory-value-breakdown');
+    if (valueBreakdownElement) {
+        valueBreakdownElement.textContent = `${inventoryData.inventoryValuation.formattedSellingValue} potential selling value`;
+    }
+    
+    updateInventorySummaryCardsLoading(false);
+}
+
+/**
+ * Shows/hides loading state on inventory summary cards.
+ * 
+ * @param {boolean} isLoading - Whether to show loading state
+ * @private
+ * @since 1.0.0
+ */
+function updateInventorySummaryCardsLoading(isLoading) {
+    const elements = [
+        'total-products-count',
+        'low-stock-count', 
+        'out-of-stock-count',
+        'total-inventory-value'
+    ];
+    
+    elements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = isLoading ? 'Loading...' : element.textContent;
+        }
+    });
+}
+
+/**
+ * Export inventory data to CSV format with reorder recommendations.
+ * 
+ * @since 1.0.0
+ */
+export function exportInventoryCSV() {
+    if (!stockStatusGridApi) {
+        console.error('[ui.js] Cannot export: Stock status grid not available');
+        return;
+    }
+    
+    try {
+        const fileName = `Inventory_Analysis_${new Date().toISOString().split('T')[0]}`;
+        
+        stockStatusGridApi.exportDataAsCsv({
+            fileName: fileName + '.csv',
+            columnSeparator: ',',
+            suppressQuotes: false,
+            customHeader: `TrinityCart Inventory Analysis Report - Generated ${new Date().toLocaleString()}\n` +
+                         `Report includes current stock levels, valuations, and reorder recommendations\n\n`
+        });
+        
+        showModal('success', 'Inventory Export Successful', 
+            `Inventory analysis exported to ${fileName}.csv with reorder recommendations.`
+        );
+        
+    } catch (error) {
+        console.error('[ui.js] Error exporting inventory CSV:', error);
+        showModal('error', 'Export Failed', 'Could not export inventory data. Please try again.');
+    }
+}
+
+/**
+ * Export critical reorder list for immediate action.
+ * 
+ * @since 1.0.0
+ */
+export function exportReorderList() {
+    if (!stockStatusGridApi) {
+        console.error('[ui.js] Cannot export: Stock status grid not available');
+        return;
+    }
+    
+    try {
+        // Filter to show only items needing reorder
+        stockStatusGridApi.setFilterModel({
+            inventoryCount: {
+                type: 'lessThan',
+                filter: 10,
+                filterTo: null
+            }
+        });
+        
+        const fileName = `Reorder_List_${new Date().toISOString().split('T')[0]}`;
+        
+        stockStatusGridApi.exportDataAsCsv({
+            fileName: fileName + '.csv',
+            columnSeparator: ',',
+            customHeader: `URGENT: TrinityCart Reorder List - Generated ${new Date().toLocaleString()}\n` +
+                         `Items below minimum stock threshold requiring immediate attention\n\n`
+        });
+        
+        // Reset filter after export
+        stockStatusGridApi.setFilterModel(null);
+        
+        showModal('success', 'Reorder List Exported', 
+            `Critical reorder list exported to ${fileName}.csv. Please review immediately for stock replenishment.`
+        );
+        
+    } catch (error) {
+        console.error('[ui.js] Error exporting reorder list:', error);
+        showModal('error', 'Export Failed', 'Could not export reorder list. Please try again.');
+    }
+}
 
