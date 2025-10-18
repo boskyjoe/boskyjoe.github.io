@@ -114,7 +114,8 @@ import {
     showTeamReportsView, 
     showOperationsReportsView, 
     showExecutiveDashboardView,
-    handleReportCardClick 
+    handleReportCardClick,
+    showSalesTrendsDetailView
 } from './ui.js';
 
 
