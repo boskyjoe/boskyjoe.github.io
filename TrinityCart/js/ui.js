@@ -4517,22 +4517,6 @@ export function showSalesReportsView() {
 }
 
 /**
- * Displays the Inventory Analysis Reports view.
- * 
- * Shows inventory-focused reports including stock levels, turnover analysis,
- * reorder recommendations, and product performance insights.
- * 
- * @since 1.0.0
- */
-export function showInventoryReportsView() {
-    console.log("[ui.js] Displaying Inventory Reports view");
-    showView('inventory-reports-view');
-    
-    // Use masterData cache for immediate inventory insights (no additional reads)
-    displayInventoryInsights();
-}
-
-/**
  * Displays the Financial Reports view with cash flow and profitability analysis.
  * 
  * Shows financial-focused reports including outstanding balances, profit analysis,
