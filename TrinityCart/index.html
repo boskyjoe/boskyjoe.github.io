@@ -276,7 +276,7 @@
 
                 <!-- View: Manage Products -->
                 <div id="products-view" class="view space-y-8">
-                    <h2 class="text-2xl font-semibold mb-4">Product Management</h2>
+                    <!--<h2 class="text-2xl font-semibold mb-4">Product Management</h2>-->
 
                     <!-- Card 1: Add New Product Form -->
                     <div class="bg-white rounded-lg shadow-lg">
@@ -446,8 +446,7 @@
                 <!-- View: Purchase Management (Form-over-Grid Layout) -->
 
                 <div id="purchases-view" class="view space-y-8">
-                    <h2 class="text-2xl font-semibold mb-4">Purchase Management</h2>
-
+                    <!--<h2 class="text-2xl font-semibold mb-4">Purchase Management</h2>-->
                     <!-- Card 1: Purchase Invoice Form (The "Editor") -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
@@ -1572,13 +1571,13 @@
                                     </svg>
                                 </div>
                             </div>
-                            <p class="text-gray-600 mb-4">Weekly & monthly revenue trends</p>
+                            <p class="text-gray-600 mb-4">Revenue growth and daily patterns</p>
                             <div class="bg-gray-50 p-3 rounded mb-4">
-                                <div class="text-xl font-bold text-green-600">Coming Soon</div>
-                                <div class="text-sm text-gray-500">Trend Analysis</div>
+                                <div class="text-xl font-bold text-green-600" id="trends-growth-preview">Loading...</div>
+                                <div class="text-sm text-gray-500">Growth vs Previous Period</div>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-xs text-blue-600">🚧 In Development</span>
+                                <span class="text-xs text-green-600" id="trends-direction-preview">📈 Calculating trends...</span>
                                 <span class="text-blue-600 text-sm font-semibold">View Details →</span>
                             </div>
                         </div>
@@ -1851,7 +1850,7 @@
                         <div class="bg-white p-6 rounded-lg shadow-lg">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-lg font-semibold text-gray-800">Daily Revenue Trend</h3>
-                                <div class="text-sm text-gray-500" id="chart-data-points">Loading...</div>
+                                <div class="text-sm text-gray-500" id="chart-data-points"> </div>
                             </div>
                             <div id="revenue-trend-chart" style="height: 300px; width: 100%;">
                                 <!-- Chart will be rendered here -->
