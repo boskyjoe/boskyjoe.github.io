@@ -48,6 +48,7 @@ import {
     getStoreTransactionDetails,        
     generateStoreComparisonReport,     
     refreshStorePerformanceData,       
+    calculateSalesTrends,
     REPORT_CONFIGS 
 } from './reports.js';
 
