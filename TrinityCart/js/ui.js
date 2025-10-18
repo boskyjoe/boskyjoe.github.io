@@ -49,6 +49,7 @@ import {
     generateStoreComparisonReport,     
     refreshStorePerformanceData,       
     calculateSalesTrends,
+    calculateCustomerInsights,
     REPORT_CONFIGS 
 } from './reports.js';
 
@@ -5170,6 +5171,10 @@ export async function handleReportCardClick(reportId, cardElement) {
                 showSalesTrendsDetailView(30); // Default 30 days
                 firestoreReadsUsed = 0; // Navigation doesn't use reads
                 break;
+
+            case 'direct-customer-analytics':
+                showCustomerInsightsDetailView(90); // 90 days for customer patterns
+                break;
                 
             default:
                 console.log(`[ui.js] Report ${reportId} not yet implemented`);
@@ -6254,3 +6259,204 @@ function updateTrendsSummaryCardsLoading(isLoading) {
         }
     });
 }
+
+
+/**
+ * Grid configuration for customer insights analysis display.
+ * 
+ * Shows detailed customer information including spending patterns, loyalty
+ * segments, store preferences, and purchase history for comprehensive
+ * customer relationship management insights.
+ * 
+ * @since 1.0.0
+ */
+let customerInsightsGridApi = null;
+let isCustomerInsightsGridInitialized = false;
+
+const customerInsightsGridOptions = {
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 25,
+    paginationPageSizeSelector: [25, 50, 100],
+    
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        wrapText: true,
+        autoHeight: true
+    },
+    
+    columnDefs: [
+        {
+            field: "name",
+            headerName: "Customer Name", 
+            flex: 1,
+            minWidth: 150,
+            filter: 'agTextColumnFilter',
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            headerName: "Contact Information",
+            flex: 1,
+            minWidth: 200,
+            filter: 'agTextColumnFilter',
+            cellRenderer: params => {
+                const email = params.data.email || 'No email';
+                const phone = params.data.phone || 'No phone';
+                
+                return `
+                    <div class="py-1">
+                        <div class="text-sm text-gray-900">${email}</div>
+                        <div class="text-xs text-gray-500">${phone}</div>
+                    </div>
+                `;
+            },
+            valueGetter: params => params.data.email // For filtering and sorting
+        },
+        {
+            field: "totalSpent",
+            headerName: "Total Spent",
+            width: 130,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            sort: 'desc' // Sort by highest spenders first
+        },
+        {
+            field: "totalOrders",
+            headerName: "Orders",
+            width: 90,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center font-semibold'
+        },
+        {
+            field: "averageOrderValue",
+            headerName: "Avg Order",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right'
+        },
+        {
+            field: "loyaltySegment",
+            headerName: "Segment",
+            width: 100,
+            filter: 'agTextColumnFilter',
+            cellRenderer: params => {
+                const segment = params.value;
+                let bgColor, textColor;
+                
+                switch (segment) {
+                    case 'VIP':
+                        bgColor = 'bg-yellow-100';
+                        textColor = 'text-yellow-800';
+                        break;
+                    case 'Regular':
+                        bgColor = 'bg-blue-100';
+                        textColor = 'text-blue-800';
+                        break;
+                    default:
+                        bgColor = 'bg-gray-100';
+                        textColor = 'text-gray-800';
+                }
+                
+                return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full ${bgColor} ${textColor}">${segment}</span>`;
+            }
+        },
+        {
+            field: "preferredStore",
+            headerName: "Preferred Store",
+            width: 130,
+            filter: 'agTextColumnFilter',
+            cellRenderer: params => {
+                const store = params.value;
+                if (store === 'Church Store') {
+                    return `<span class="text-purple-700 font-semibold">Church Store</span>`;
+                } else if (store === 'Tasty Treats') {
+                    return `<span class="text-orange-700 font-semibold">Tasty Treats</span>`;
+                }
+                return `<span class="text-gray-500">Mixed</span>`;
+            }
+        },
+        {
+            field: "daysSinceLastPurchase",
+            headerName: "Last Purchase",
+            width: 120,
+            valueFormatter: params => {
+                const days = params.value || 0;
+                if (days === 0) return 'Today';
+                if (days === 1) return 'Yesterday';
+                return `${days} days ago`;
+            },
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center',
+            cellStyle: params => {
+                const days = params.value || 0;
+                if (days > 60) return { color: '#dc2626' }; // Red for long absence
+                if (days > 30) return { color: '#d97706' }; // Yellow for moderate absence
+                return { color: '#059669' }; // Green for recent customers
+            }
+        }
+    ],
+    
+    onGridReady: params => {
+        console.log("[ui.js] Customer Insights Grid ready");
+        customerInsightsGridApi = params.api;
+        
+        // Enable CSV export
+        params.api.setGridOption('suppressCsvExport', false);
+    }
+};
+
+/**
+ * Initializes the customer insights analysis grid.
+ * 
+ * @since 1.0.0
+ */
+export function initializeCustomerInsightsGrid() {
+    if (isCustomerInsightsGridInitialized) return;
+    
+    const gridDiv = document.getElementById('customer-insights-grid');
+    if (gridDiv) {
+        console.log("[ui.js] Initializing Customer Insights Grid");
+        createGrid(gridDiv, customerInsightsGridOptions);
+        isCustomerInsightsGridInitialized = true;
+    }
+}
+
+/**
+ * Displays the customer insights analysis view.
+ * 
+ * @param {number} [daysBack=90] - Analysis period (longer for customer patterns)
+ * @since 1.0.0
+ */
+export async function showCustomerInsightsDetailView(daysBack = 90) {
+    try {
+        console.log(`[ui.js] Displaying Customer Insights view for ${daysBack} days`);
+        
+        showView('customer-insights-detail-view');
+        initializeCustomerInsightsGrid();
+        
+        // Set period selector
+        const periodSelector = document.getElementById('customer-analysis-period');
+        if (periodSelector) {
+            periodSelector.value = daysBack.toString();
+        }
+        
+        // Wait for grid to be ready before loading data
+        const waitForGrid = setInterval(() => {
+            if (customerInsightsGridApi) {
+                clearInterval(waitForGrid);
+                loadCustomerInsightsData(daysBack);
+            }
+        }, 50);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing customer insights view:', error);
+        showModal('error', 'View Error', 'Could not load customer insights analysis.');
+    }
+}
+
+
