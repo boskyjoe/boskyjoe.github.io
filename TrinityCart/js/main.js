@@ -528,7 +528,8 @@ const EventHandlers = {
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
         'executive-dashboard-view': showExecutiveDashboardView,
-        'store-performance-detail-view': () => showStorePerformanceDetailView()
+        'store-performance-detail-view': () => showStorePerformanceDetailView(),
+        'sales-trends-detail-view': () => showSalesTrendsDetailView()
     },
 
     // Grid action handlers
