@@ -115,7 +115,7 @@ import {
     showOperationsReportsView, 
     showExecutiveDashboardView,
     handleReportCardClick,
-    showSalesTrendsDetailView
+    showSalesTrendsDetailView,showCustomerInsightsDetailView
 } from './ui.js';
 
 
@@ -530,7 +530,8 @@ const EventHandlers = {
         'operations-reports-view': showOperationsReportsView,
         'executive-dashboard-view': showExecutiveDashboardView,
         'store-performance-detail-view': () => showStorePerformanceDetailView(),
-        'sales-trends-detail-view': () => showSalesTrendsDetailView()
+        'sales-trends-detail-view': () => showSalesTrendsDetailView(),
+        'customer-insights-detail-view': () => showCustomerInsightsDetailView()
     },
 
     // Grid action handlers
