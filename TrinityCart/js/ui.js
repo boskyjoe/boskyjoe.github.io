@@ -5183,6 +5183,15 @@ export async function handleReportCardClick(reportId, cardElement) {
                 showReorderRecommendations();
                 firestoreReadsUsed = 0;
                 break;
+
+            case 'inventory-turnover':
+                showInventoryTurnoverAnalysis();
+                firestoreReadsUsed = 0;
+                break;
+            case 'abc-analysis':
+                showABCAnalysis();
+                firestoreReadsUsed = 0;
+                break;
                 
             default:
                 console.log(`[ui.js] Report ${reportId} not yet implemented`);
@@ -7091,73 +7100,48 @@ export function initializeStockStatusGrid() {
 }
 
 /**
- * Loads comprehensive stock status data and populates all display elements.
+ * Displays inventory valuation analysis with cost vs selling price breakdown.
  * 
- * Integrates masterData inventory with sales performance analysis to provide
- * complete inventory insights including reorder recommendations and valuation.
+ * Shows detailed inventory valuation using masterData cache with potential
+ * profit analysis and margin calculations for financial planning.
  * 
- * @private
  * @since 1.0.0
  */
-async function loadStockStatusData() {
+export async function showInventoryValuationAnalysis() {
     try {
-        console.log("[ui.js] Loading comprehensive stock status data");
+        console.log("[ui.js] Displaying inventory valuation analysis");
         
-        // Show loading states
-        updateInventorySummaryCardsLoading(true);
-        if (stockStatusGridApi) {
-            stockStatusGridApi.setGridOption('loading', true);
-        }
+        // Get inventory analysis data
+        const inventoryData = await calculateInventoryAnalysis(false, 30, true); // No performance data needed
         
-        // Get comprehensive inventory analysis
-        const inventoryData = await calculateInventoryAnalysis(true, 30, true);
-        
-        console.log('[ui.js] Inventory analysis data loaded:', inventoryData);
-        
-        // Update summary cards
-        updateInventorySummaryCards(inventoryData);
-        
-        // Prepare grid data with enhanced information
-        const gridData = masterData.products.map(product => {
-            const performanceInfo = inventoryData.productPerformanceInsights?.find(perf => perf.productId === product.id);
+        // Create detailed valuation breakdown
+        const valuationBreakdown = `
+            📊 INVENTORY VALUATION ANALYSIS
             
-            return {
-                ...product,
-                // Add performance insights if available
-                salesQuantity: performanceInfo?.salesQuantity || 0,
-                turnoverRate: performanceInfo?.turnoverRate || 0,
-                daysOfStock: performanceInfo?.daysOfStock || 999,
-                velocityCategory: performanceInfo?.velocityCategory || 'unknown',
-                
-                // Reorder recommendations
-                urgencyLevel: product.inventoryCount === 0 ? 'critical' : 
-                             product.inventoryCount < 5 ? 'high' :
-                             product.inventoryCount < 10 ? 'medium' : 'low',
-                
-                recommendedOrderQuantity: calculateRecommendedOrderQuantity(product),
-                
-                // Enhanced display fields
-                inventoryValue: (product.inventoryCount || 0) * (product.unitPrice || 0),
-                potentialValue: (product.inventoryCount || 0) * (product.sellingPrice || 0)
-            };
-        });
+            💰 Financial Summary:
+            • Total Cost Value: ${inventoryData.inventoryValuation.formattedCostValue}
+            • Total Selling Value: ${inventoryData.inventoryValuation.formattedSellingValue}  
+            • Potential Profit: ${inventoryData.inventoryValuation.formattedPotentialProfit}
+            • Average Margin: ${inventoryData.inventoryValuation.averageMarginPercentage.toFixed(1)}%
+            
+            📦 Stock Distribution:
+            • Total Products: ${inventoryData.inventorySummary.totalProducts}
+            • Out of Stock: ${inventoryData.inventorySummary.outOfStockCount}
+            • Low Stock: ${inventoryData.inventorySummary.lowStockCount}
+            • Adequate Stock: ${inventoryData.inventorySummary.adequateStockCount}
+            
+            💡 Key Insights:
+            • Stock Health Score: ${inventoryData.inventorySummary.stockHealthScore.toFixed(0)}/100
+            • Reorder Items: ${inventoryData.reorderRecommendations.length}
+            
+            Firestore Reads Used: ${inventoryData.metadata.firestoreReadsUsed}
+        `;
         
-        // Populate the grid with enhanced data
-        if (stockStatusGridApi) {
-            stockStatusGridApi.setGridOption('rowData', gridData);
-            stockStatusGridApi.setGridOption('loading', false);
-        }
-        
-        console.log(`[ui.js] Stock status data loaded using ${inventoryData.metadata.firestoreReadsUsed} Firestore reads`);
+        showModal('info', 'Inventory Valuation Analysis', valuationBreakdown);
         
     } catch (error) {
-        console.error('[ui.js] Error loading stock status data:', error);
-        updateInventorySummaryCardsLoading(false);
-        if (stockStatusGridApi) {
-            stockStatusGridApi.setGridOption('loading', false);
-            stockStatusGridApi.showNoRowsOverlay();
-        }
-        showModal('error', 'Data Loading Error', 'Could not load stock status data. Please try again.');
+        console.error('[ui.js] Error showing inventory valuation:', error);
+        showModal('error', 'Analysis Error', 'Could not load inventory valuation analysis.');
     }
 }
 
@@ -7316,3 +7300,155 @@ export function exportReorderList() {
     }
 }
 
+
+/**
+ * Displays product performance analysis integrated with inventory data.
+ * 
+ * Shows which products are performing well in sales relative to their
+ * inventory levels, identifying fast-moving vs slow-moving products.
+ * 
+ * @since 1.0.0
+ */
+export async function showProductPerformanceAnalysis() {
+    try {
+        console.log("[ui.js] Displaying product performance analysis");
+        
+        // Get inventory analysis with sales performance integration
+        const inventoryData = await calculateInventoryAnalysis(true, 30, true); // Include performance data
+        
+        if (!inventoryData.productPerformanceInsights || inventoryData.productPerformanceInsights.length === 0) {
+            showModal('info', 'Product Performance Analysis', 
+                'No sales performance data available for the analysis period.\n\n' +
+                'This report requires recent sales transactions to analyze product velocity and turnover rates.\n\n' +
+                'Please create some sales transactions first, then try this report again.'
+            );
+            return;
+        }
+        
+        // Show top performing products
+        const topPerformers = inventoryData.productPerformanceInsights
+            .filter(product => product.salesQuantity > 0)
+            .sort((a, b) => b.turnoverRate - a.turnoverRate)
+            .slice(0, 10);
+        
+        const performanceBreakdown = `
+            🏆 TOP PERFORMING PRODUCTS (Last 30 Days)
+            
+            ${topPerformers.map((product, index) => 
+                `${index + 1}. ${product.itemName}
+                   • Current Stock: ${product.inventoryCount}
+                   • Sold: ${product.salesQuantity} units  
+                   • Turnover Rate: ${(product.turnoverRate * 100).toFixed(1)}%
+                   • Days of Stock: ${product.daysOfStock} days
+                   • Velocity: ${product.velocityCategory.toUpperCase()}
+                `
+            ).join('\n')}
+            
+            📊 Performance Categories:
+            • Fast Moving: ${topPerformers.filter(p => p.velocityCategory === 'fast').length} products
+            • Medium Moving: ${topPerformers.filter(p => p.velocityCategory === 'medium').length} products  
+            • Slow Moving: ${topPerformers.filter(p => p.velocityCategory === 'slow').length} products
+            
+            Firestore Reads: ${inventoryData.metadata.firestoreReadsUsed}
+        `;
+        
+        showModal('info', 'Product Performance Analysis', performanceBreakdown);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing product performance analysis:', error);
+        showModal('error', 'Analysis Error', 'Could not load product performance analysis.');
+    }
+}
+
+/**
+ * Displays reorder recommendations with urgency levels and cost estimates.
+ * 
+ * Shows products that need immediate reordering based on current stock levels
+ * and sales velocity, with estimated costs and supplier information.
+ * 
+ * @since 1.0.0
+ */
+export async function showReorderRecommendations() {
+    try {
+        console.log("[ui.js] Displaying reorder recommendations");
+        
+        // Get inventory analysis focused on reorder needs
+        const inventoryData = await calculateInventoryAnalysis(true, 30, true);
+        
+        const reorderList = inventoryData.reorderRecommendations;
+        
+        if (reorderList.length === 0) {
+            showModal('success', 'No Reorders Needed', 
+                '✅ Congratulations! All products have adequate stock levels.\n\n' +
+                'No immediate reorder actions are required at this time.\n\n' +
+                'Continue monitoring stock levels regularly for optimal inventory management.'
+            );
+            return;
+        }
+        
+        // Categorize by urgency
+        const criticalItems = reorderList.filter(item => item.urgencyLevel === 'critical');
+        const highUrgencyItems = reorderList.filter(item => item.urgencyLevel === 'high');
+        const mediumUrgencyItems = reorderList.filter(item => item.urgencyLevel === 'medium');
+        
+        const totalEstimatedCost = reorderList.reduce((sum, item) => {
+            // Extract numeric value from formatted cost
+            const costValue = parseFloat(item.estimatedCost.replace(/[₹$,]/g, '')) || 0;
+            return sum + costValue;
+        }, 0);
+        
+        const reorderBreakdown = `
+            ⚠️ REORDER RECOMMENDATIONS
+            
+            🚨 CRITICAL (Out of Stock): ${criticalItems.length} items
+            ${criticalItems.map(item => `• ${item.productName} - URGENT REORDER`).join('\n')}
+            
+            ⚡ HIGH PRIORITY (Very Low Stock): ${highUrgencyItems.length} items  
+            ${highUrgencyItems.map(item => `• ${item.productName} - ${item.currentStock} remaining`).join('\n')}
+            
+            📋 MONITOR (Low Stock): ${mediumUrgencyItems.length} items
+            ${mediumUrgencyItems.slice(0, 5).map(item => `• ${item.productName} - ${item.currentStock} remaining`).join('\n')}
+            ${mediumUrgencyItems.length > 5 ? `   ... and ${mediumUrgencyItems.length - 5} more items` : ''}
+            
+            💰 Estimated Reorder Cost: ${formatCurrency(totalEstimatedCost)}
+            
+            📤 Use "Export Reorder List" button for complete details with supplier information.
+            
+            Firestore Reads: ${inventoryData.metadata.firestoreReadsUsed}
+        `;
+        
+        showModal('warning', 'Inventory Reorder Alert', reorderBreakdown);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing reorder recommendations:', error);
+        showModal('error', 'Analysis Error', 'Could not load reorder recommendations.');
+    }
+}
+
+
+/**
+ * Placeholder function for inventory turnover analysis.
+ * 
+ * @since 1.0.0
+ */
+export async function showInventoryTurnoverAnalysis() {
+    showModal('info', 'Inventory Turnover Analysis', 
+        'This report will show how quickly inventory moves and identify fast vs slow-moving products.\n\n' +
+        'Coming in the next update with enhanced sales velocity integration.'
+    );
+}
+
+/**
+ * Placeholder function for ABC analysis.
+ * 
+ * @since 1.0.0
+ */
+export async function showABCAnalysis() {
+    showModal('info', 'ABC Classification Analysis', 
+        'This report will classify products by revenue contribution:\n\n' +
+        '• A-Items: High revenue contributors (80% of revenue)\n' +
+        '• B-Items: Medium revenue contributors (15% of revenue)\n' +
+        '• C-Items: Low revenue contributors (5% of revenue)\n\n' +
+        'Coming in the next update with advanced product classification.'
+    );
+}
