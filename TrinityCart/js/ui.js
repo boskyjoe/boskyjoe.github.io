@@ -7756,79 +7756,69 @@ async function loadInventoryValuationData() {
  * @since 1.0.0
  */
 function updateValuationSummaryCards(valuationData) {
-    console.log('[ui.js] Updating valuation summary cards');
-    console.log('[ui.js] Valuation data structure:', valuationData);
+    console.log('[ui.js] Updating comprehensive financial summary cards');
     
-    // Check if we have the enhanced valuation structure
-    const valuation = valuationData.accurateInventoryValuation || valuationData.inventoryValuation;
-    
-    if (!valuation) {
-        console.error('[ui.js] No valuation data found in:', valuationData);
+    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis;
+    if (!financialAnalysis) {
+        console.error('[ui.js] No comprehensive financial analysis data found');
         updateValuationSummaryCardsLoading(false);
         return;
     }
     
-    console.log('[ui.js] Using valuation data:', valuation);
+    console.log('[ui.js] Financial analysis data:', financialAnalysis);
     
-    // Total Investment (using correct property names)
-    const investmentElement = document.getElementById('total-cost-value-display');
-    if (investmentElement) {
-        const investmentValue = valuation.formattedInvestmentValue || valuation.formattedCostValue || '₹0.00';
-        console.log('[ui.js] Setting investment to:', investmentValue);
-        investmentElement.textContent = investmentValue;
+    // METRIC 1: Total Historical Spending (using your existing element ID)
+    const totalSpendingElement = document.getElementById('total-cost-value-display');
+    if (totalSpendingElement) {
+        totalSpendingElement.textContent = financialAnalysis.formattedTotalSpending;
+        console.log('[ui.js] Set Total Spending to:', financialAnalysis.formattedTotalSpending);
     }
     
     const investmentBreakdownElement = document.getElementById('investment-breakdown');
     if (investmentBreakdownElement) {
-        const methodology = valuationData.metadata?.costingMethodology?.method || 'standard';
-        investmentBreakdownElement.textContent = `Using ${methodology} costing method`;
+        investmentBreakdownElement.textContent = `All purchase invoices (${financialAnalysis.formattedTotalSpending})`;
     }
     
-    // Potential Revenue (using correct property names)
-    const revenueElement = document.getElementById('total-selling-value-display');
-    if (revenueElement) {
-        const revenueValue = valuation.formattedRevenueValue || valuation.formattedSellingValue || '₹0.00';
-        console.log('[ui.js] Setting revenue to:', revenueValue);
-        revenueElement.textContent = revenueValue;
+    // METRIC 2: Current Investment (using your existing element ID)
+    const currentInvestmentElement = document.getElementById('total-selling-value-display');
+    if (currentInvestmentElement) {
+        currentInvestmentElement.textContent = financialAnalysis.formattedCurrentInvestment;
+        console.log('[ui.js] Set Current Investment to:', financialAnalysis.formattedCurrentInvestment);
     }
     
     const revenueNoteElement = document.getElementById('revenue-potential-note');
     if (revenueNoteElement) {
-        const catalogueCount = valuationData.metadata?.costingMethodology?.cataloguesAnalyzed || 0;
-        revenueNoteElement.textContent = `From ${catalogueCount} active catalogues`;
+        revenueNoteElement.textContent = `Value of stock on hand`;
     }
     
-    // Potential Profit (using correct property names)
-    const profitElement = document.getElementById('potential-profit-display');
-    if (profitElement) {
-        const profitValue = valuation.formattedPotentialProfit || '₹0.00';
-        console.log('[ui.js] Setting profit to:', profitValue);
-        profitElement.textContent = profitValue;
+    // METRIC 3: Revenue Potential (using your existing element ID)
+    const revenuePotentialElement = document.getElementById('potential-profit-display');
+    if (revenuePotentialElement) {
+        revenuePotentialElement.textContent = financialAnalysis.formattedRevenuePotential;
+        console.log('[ui.js] Set Revenue Potential to:', financialAnalysis.formattedRevenuePotential);
     }
     
-    const marginElement = document.getElementById('profit-margin-display');
-    if (marginElement) {
-        const margin = valuation.averageBusinessMargin || valuation.averageMarginPercentage || 0;
-        marginElement.textContent = `${margin.toFixed(1)}% avg margin`;
+    const profitMarginElement = document.getElementById('profit-margin-display');
+    if (profitMarginElement) {
+        const margin = financialAnalysis.currentStockMargin;
+        profitMarginElement.textContent = `${margin.toFixed(1)}% potential margin`;
     }
     
-    // ROI Potential (using correct property names)
-    const roiElement = document.getElementById('roi-percentage-display');
-    if (roiElement) {
-        const roi = valuation.roiPotential || 0;
-        console.log('[ui.js] Setting ROI to:', roi.toFixed(1) + '%');
-        roiElement.textContent = `${roi.toFixed(1)}%`;
+    // METRIC 4: Inventory Turnover (using your existing element ID)
+    const turnoverElement = document.getElementById('roi-percentage-display');
+    if (turnoverElement) {
+        turnoverElement.textContent = financialAnalysis.formattedTurnoverValue;
+        console.log('[ui.js] Set Inventory Turnover to:', financialAnalysis.formattedTurnoverValue);
     }
     
     const roiExplanationElement = document.getElementById('roi-explanation');
     if (roiExplanationElement) {
-        const dataQuality = valuationData.inventorySummary?.dataQualityScore || 0;
-        roiExplanationElement.textContent = `Based on ${dataQuality.toFixed(0)}% data coverage`;
+        const turnoverPercentage = financialAnalysis.inventoryTurnoverPercentage;
+        roiExplanationElement.textContent = `${turnoverPercentage.toFixed(1)}% of spending converted to sales`;
     }
     
     updateValuationSummaryCardsLoading(false);
-    
-    console.log('[ui.js] Valuation summary cards updated successfully');
+    console.log('[ui.js] All four comprehensive financial metrics updated');
 }
 
 
