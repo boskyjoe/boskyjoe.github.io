@@ -7757,70 +7757,85 @@ async function loadInventoryValuationData() {
  */
 function updateValuationSummaryCards(valuationData) {
     console.log('[ui.js] Updating comprehensive financial summary cards');
+    console.log('[ui.js] Received data keys:', Object.keys(valuationData));
     
-    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis;
+    // Try to find the financial data in any of the possible structures
+    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || 
+                            valuationData.accurateInventoryValuation ||
+                            valuationData.inventoryValuation ||
+                            null;
+    
     if (!financialAnalysis) {
-        console.error('[ui.js] No comprehensive financial analysis data found');
+        console.error('[ui.js] No financial analysis data found in any expected structure');
+        console.error('[ui.js] Available data:', valuationData);
+        
+        // Set error messages on cards
+        const errorElements = [
+            'total-cost-value-display',
+            'total-selling-value-display', 
+            'potential-profit-display',
+            'roi-percentage-display'
+        ];
+        
+        errorElements.forEach(elementId => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = 'Data Error';
+                element.className = 'text-2xl font-bold text-red-500';
+            }
+        });
+        
         updateValuationSummaryCardsLoading(false);
         return;
     }
     
-    console.log('[ui.js] Financial analysis data:', financialAnalysis);
+    console.log('[ui.js] Using financial analysis:', financialAnalysis);
     
-    // METRIC 1: Total Historical Spending (using your existing element ID)
+    // METRIC 1: Total Historical Spending
     const totalSpendingElement = document.getElementById('total-cost-value-display');
     if (totalSpendingElement) {
-        totalSpendingElement.textContent = financialAnalysis.formattedTotalSpending;
-        console.log('[ui.js] Set Total Spending to:', financialAnalysis.formattedTotalSpending);
+        const totalSpending = financialAnalysis.formattedTotalSpending || 
+                            financialAnalysis.formattedInvestmentValue || 
+                            financialAnalysis.formattedCostValue || 
+                            '₹0.00';
+        totalSpendingElement.textContent = totalSpending;
+        console.log('[ui.js] Set Total Spending to:', totalSpending);
     }
     
-    const investmentBreakdownElement = document.getElementById('investment-breakdown');
-    if (investmentBreakdownElement) {
-        investmentBreakdownElement.textContent = `All purchase invoices (${financialAnalysis.formattedTotalSpending})`;
-    }
-    
-    // METRIC 2: Current Investment (using your existing element ID)
+    // METRIC 2: Current Investment  
     const currentInvestmentElement = document.getElementById('total-selling-value-display');
     if (currentInvestmentElement) {
-        currentInvestmentElement.textContent = financialAnalysis.formattedCurrentInvestment;
-        console.log('[ui.js] Set Current Investment to:', financialAnalysis.formattedCurrentInvestment);
+        const currentInvestment = financialAnalysis.formattedCurrentInvestment ||
+                                 financialAnalysis.formattedRevenueValue ||
+                                 financialAnalysis.formattedSellingValue ||
+                                 '₹0.00';
+        currentInvestmentElement.textContent = currentInvestment;
+        console.log('[ui.js] Set Current Investment to:', currentInvestment);
     }
     
-    const revenueNoteElement = document.getElementById('revenue-potential-note');
-    if (revenueNoteElement) {
-        revenueNoteElement.textContent = `Value of stock on hand`;
-    }
-    
-    // METRIC 3: Revenue Potential (using your existing element ID)
+    // METRIC 3: Revenue Potential
     const revenuePotentialElement = document.getElementById('potential-profit-display');
     if (revenuePotentialElement) {
-        revenuePotentialElement.textContent = financialAnalysis.formattedRevenuePotential;
-        console.log('[ui.js] Set Revenue Potential to:', financialAnalysis.formattedRevenuePotential);
+        const revenuePotential = financialAnalysis.formattedRevenuePotential ||
+                               financialAnalysis.formattedPotentialProfit ||
+                               '₹0.00';
+        revenuePotentialElement.textContent = revenuePotential;
+        console.log('[ui.js] Set Revenue Potential to:', revenuePotential);
     }
     
-    const profitMarginElement = document.getElementById('profit-margin-display');
-    if (profitMarginElement) {
-        const margin = financialAnalysis.currentStockMargin;
-        profitMarginElement.textContent = `${margin.toFixed(1)}% potential margin`;
-    }
-    
-    // METRIC 4: Inventory Turnover (using your existing element ID)
+    // METRIC 4: Inventory Turnover
     const turnoverElement = document.getElementById('roi-percentage-display');
     if (turnoverElement) {
-        turnoverElement.textContent = financialAnalysis.formattedTurnoverValue;
-        console.log('[ui.js] Set Inventory Turnover to:', financialAnalysis.formattedTurnoverValue);
-    }
-    
-    const roiExplanationElement = document.getElementById('roi-explanation');
-    if (roiExplanationElement) {
-        const turnoverPercentage = financialAnalysis.inventoryTurnoverPercentage;
-        roiExplanationElement.textContent = `${turnoverPercentage.toFixed(1)}% of spending converted to sales`;
+        const turnoverValue = financialAnalysis.formattedTurnoverValue ||
+                            financialAnalysis.roiPotential + '%' ||
+                            '₹0.00';
+        turnoverElement.textContent = turnoverValue;
+        console.log('[ui.js] Set Inventory Turnover to:', turnoverValue);
     }
     
     updateValuationSummaryCardsLoading(false);
-    console.log('[ui.js] All four comprehensive financial metrics updated');
+    console.log('[ui.js] Financial summary cards updated with flexible data structure handling');
 }
-
 
 /**
  * Updates charts and visual elements for inventory valuation.
