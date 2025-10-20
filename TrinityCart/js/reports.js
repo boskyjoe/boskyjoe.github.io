@@ -18,7 +18,8 @@
 
 import { 
     SALES_COLLECTION_PATH, 
-    CONSIGNMENT_ORDERS_COLLECTION_PATH
+    CONSIGNMENT_ORDERS_COLLECTION_PATH,
+    PURCHASE_INVOICES_COLLECTION_PATH
 } from './config.js';
 import { formatCurrency } from './ui.js';
 import { masterData } from './masterData.js';
