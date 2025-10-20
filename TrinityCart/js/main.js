@@ -533,6 +533,8 @@ const EventHandlers = {
         'sales-trends-detail-view': () => showSalesTrendsDetailView(),
         'customer-insights-detail-view': () => showCustomerInsightsDetailView(),
         'stock-status-detail-view': () => showStockStatusDetailView(),
+        'inventory-valuation-detail-view': () => showInventoryValuationDetailView(),
+        
     },
 
     // Grid action handlers
