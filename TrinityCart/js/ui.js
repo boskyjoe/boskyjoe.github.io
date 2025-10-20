@@ -7101,49 +7101,16 @@ export function initializeStockStatusGrid() {
 }
 
 /**
- * Displays inventory valuation analysis with cost vs selling price breakdown.
+ * Displays comprehensive inventory valuation analysis page.
  * 
- * Shows detailed inventory valuation using masterData cache with potential
- * profit analysis and margin calculations for financial planning.
+ * Shows detailed financial analysis with charts, category breakdowns,
+ * and professional visualization instead of simple modal popup.
  * 
  * @since 1.0.0
  */
 export async function showInventoryValuationAnalysis() {
-    try {
-        console.log("[ui.js] Displaying inventory valuation analysis");
-        
-        // Get inventory analysis data
-        const inventoryData = await calculateInventoryAnalysis(false, 30, true); // No performance data needed
-        
-        // Create detailed valuation breakdown
-        const valuationBreakdown = `
-            📊 INVENTORY VALUATION ANALYSIS
-            
-            💰 Financial Summary:
-            • Total Cost Value: ${inventoryData.inventoryValuation.formattedCostValue}
-            • Total Selling Value: ${inventoryData.inventoryValuation.formattedSellingValue}  
-            • Potential Profit: ${inventoryData.inventoryValuation.formattedPotentialProfit}
-            • Average Margin: ${inventoryData.inventoryValuation.averageMarginPercentage.toFixed(1)}%
-            
-            📦 Stock Distribution:
-            • Total Products: ${inventoryData.inventorySummary.totalProducts}
-            • Out of Stock: ${inventoryData.inventorySummary.outOfStockCount}
-            • Low Stock: ${inventoryData.inventorySummary.lowStockCount}
-            • Adequate Stock: ${inventoryData.inventorySummary.adequateStockCount}
-            
-            💡 Key Insights:
-            • Stock Health Score: ${inventoryData.inventorySummary.stockHealthScore.toFixed(0)}/100
-            • Reorder Items: ${inventoryData.reorderRecommendations.length}
-            
-            Firestore Reads Used: ${inventoryData.metadata.firestoreReadsUsed}
-        `;
-        
-        showModal('info', 'Inventory Valuation Analysis', valuationBreakdown);
-        
-    } catch (error) {
-        console.error('[ui.js] Error showing inventory valuation:', error);
-        showModal('error', 'Analysis Error', 'Could not load inventory valuation analysis.');
-    }
+    console.log("[ui.js] Navigating to comprehensive inventory valuation analysis");
+    showInventoryValuationDetailView();
 }
 
 /**
@@ -7452,4 +7419,472 @@ export async function showABCAnalysis() {
         '• C-Items: Low revenue contributors (5% of revenue)\n\n' +
         'Coming in the next update with advanced product classification.'
     );
+}
+
+/**
+ * Grid configuration for detailed inventory valuation analysis.
+ * 
+ * Shows individual product valuations with purchase costs, selling prices,
+ * profit margins, and investment analysis for comprehensive financial planning.
+ * 
+ * @since 1.0.0
+ */
+let inventoryValuationGridApi = null;
+let isInventoryValuationGridInitialized = false;
+
+const inventoryValuationGridOptions = {
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        wrapText: true,
+        autoHeight: true
+    },
+    
+    columnDefs: [
+        {
+            field: "itemName",
+            headerName: "Product Name",
+            flex: 2,
+            minWidth: 200,
+            filter: 'agTextColumnFilter',
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            field: "categoryName",
+            headerName: "Category",
+            width: 120,
+            filter: 'agTextColumnFilter',
+            valueGetter: params => {
+                const categoryId = params.data.categoryId;
+                const category = masterData.categories.find(cat => cat.id === categoryId);
+                return category ? category.categoryName : 'Unknown';
+            }
+        },
+        {
+            field: "inventoryCount",
+            headerName: "Stock Qty",
+            width: 100,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center font-bold',
+            cellStyle: params => {
+                const stock = params.value || 0;
+                if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
+                if (stock < 10) return { backgroundColor: '#fef3c7', color: '#d97706' };
+                return { backgroundColor: '#f0fdf4', color: '#166534' };
+            }
+        },
+        {
+            field: "unitPrice",
+            headerName: "Unit Cost",
+            width: 110,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-medium',
+            cellStyle: { backgroundColor: '#fef2f2' } // Light red background for costs
+        },
+        {
+            field: "sellingPrice", 
+            headerName: "Selling Price",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-medium',
+            cellStyle: { backgroundColor: '#f0fdf4' } // Light green background for selling prices
+        },
+        {
+            headerName: "Unit Margin",
+            width: 110,
+            valueGetter: params => {
+                const cost = params.data.unitPrice || 0;
+                const selling = params.data.sellingPrice || 0;
+                return cost > 0 ? ((selling - cost) / cost) * 100 : 0;
+            },
+            valueFormatter: p => `${p.value.toFixed(1)}%`,
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-center font-bold',
+            cellStyle: params => {
+                const margin = params.value;
+                if (margin > 40) return { backgroundColor: '#dcfce7', color: '#166534' }; // Dark green for high margin
+                if (margin > 25) return { backgroundColor: '#f0fdf4', color: '#059669' }; // Light green for good margin
+                if (margin > 10) return { backgroundColor: '#fefce8', color: '#d97706' }; // Yellow for low margin
+                return { backgroundColor: '#fee2e2', color: '#dc2626' }; // Red for very low/negative margin
+            }
+        },
+        {
+            headerName: "Total Investment",
+            width: 140,
+            valueGetter: params => (params.data.inventoryCount || 0) * (params.data.unitPrice || 0),
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            cellStyle: { backgroundColor: '#fef2f2', fontWeight: 'bold' }
+        },
+        {
+            headerName: "Potential Revenue", 
+            width: 150,
+            valueGetter: params => (params.data.inventoryCount || 0) * (params.data.sellingPrice || 0),
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            cellStyle: { backgroundColor: '#f0fdf4', fontWeight: 'bold' }
+        },
+        {
+            headerName: "Potential Profit",
+            width: 140,
+            valueGetter: params => {
+                const stock = params.data.inventoryCount || 0;
+                const cost = params.data.unitPrice || 0;
+                const selling = params.data.sellingPrice || 0;
+                return stock * (selling - cost);
+            },
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right font-bold',
+            cellStyle: params => {
+                const profit = params.value || 0;
+                if (profit > 1000) return { backgroundColor: '#dcfce7', color: '#166534', fontWeight: 'bold' }; // High profit
+                if (profit > 500) return { backgroundColor: '#f0fdf4', color: '#059669' }; // Good profit
+                if (profit > 0) return { backgroundColor: '#fefce8', color: '#d97706' }; // Low profit
+                return { backgroundColor: '#fee2e2', color: '#dc2626' }; // Loss/no profit
+            }
+        },
+        {
+            headerName: "Data Quality",
+            width: 120,
+            cellRenderer: params => {
+                const hasCost = (params.data.unitPrice || 0) > 0;
+                const hasSelling = (params.data.sellingPrice || 0) > 0;
+                const hasStock = (params.data.inventoryCount || 0) > 0;
+                
+                if (hasCost && hasSelling && hasStock) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">COMPLETE</span>`;
+                } else if (hasCost && hasSelling) {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">NO STOCK</span>`;
+                } else {
+                    return `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">INCOMPLETE</span>`;
+                }
+            }
+        }
+    ],
+    
+    // Sort by potential profit (highest first) to show most valuable inventory
+    sortingOrder: ['desc'],
+    
+    onGridReady: params => {
+        console.log("[ui.js] Inventory Valuation Grid ready");
+        inventoryValuationGridApi = params.api;
+        
+        // Enable CSV export
+        params.api.setGridOption('suppressCsvExport', false);
+        
+        // Auto-size columns
+        setTimeout(() => {
+            params.api.sizeColumnsToFit();
+        }, 100);
+    }
+};
+
+/**
+ * Initializes the inventory valuation analysis grid.
+ * 
+ * @since 1.0.0
+ */
+export function initializeInventoryValuationGrid() {
+    if (isInventoryValuationGridInitialized) return;
+    
+    const gridDiv = document.getElementById('inventory-valuation-grid');
+    if (gridDiv) {
+        console.log("[ui.js] Initializing Inventory Valuation Grid");
+        createGrid(gridDiv, inventoryValuationGridOptions);
+        isInventoryValuationGridInitialized = true;
+    }
+}
+
+/**
+ * Displays the comprehensive inventory valuation analysis view.
+ * 
+ * Shows detailed financial analysis with charts, category breakdowns,
+ * and actionable insights for inventory investment optimization.
+ * 
+ * @since 1.0.0
+ */
+export async function showInventoryValuationDetailView() {
+    try {
+        console.log("[ui.js] Displaying Inventory Valuation Detail view with professional visualization");
+        
+        // Navigate to valuation detail view
+        showView('inventory-valuation-detail-view');
+        
+        // Initialize the valuation grid
+        initializeInventoryValuationGrid();
+        
+        // Wait for grid to be ready before loading data
+        const waitForGrid = setInterval(() => {
+            if (inventoryValuationGridApi) {
+                clearInterval(waitForGrid);
+                loadInventoryValuationData();
+            }
+        }, 50);
+        
+    } catch (error) {
+        console.error('[ui.js] Error showing inventory valuation detail view:', error);
+        showModal('error', 'View Error', 'Could not load inventory valuation analysis.');
+    }
+}
+
+
+/**
+ * Loads comprehensive inventory valuation data and updates all visualizations.
+ * 
+ * @private
+ * @since 1.0.0
+ */
+async function loadInventoryValuationData() {
+    try {
+        console.log("[ui.js] Loading comprehensive inventory valuation data");
+        
+        // Show loading states
+        updateValuationSummaryCardsLoading(true);
+        if (inventoryValuationGridApi) {
+            inventoryValuationGridApi.setGridOption('loading', true);
+        }
+        
+        // Get comprehensive inventory analysis
+        const valuationData = await calculateInventoryAnalysis(false, 30, true); // Don't need performance for valuation
+        
+        console.log('[ui.js] Valuation data loaded:', valuationData);
+        
+        // Update executive summary cards
+        updateValuationSummaryCards(valuationData);
+        
+        // Update charts and visualizations
+        updateValuationCharts(valuationData);
+        
+        // Update category breakdown table
+        updateCategoryValuationTable(valuationData);
+        
+        // Populate detailed grid with product-level data
+        if (inventoryValuationGridApi) {
+            inventoryValuationGridApi.setGridOption('rowData', masterData.products);
+            inventoryValuationGridApi.setGridOption('loading', false);
+        }
+        
+        // Update data quality metrics
+        updateDataQualityDisplay(valuationData);
+        
+        console.log(`[ui.js] Inventory valuation loaded using ${valuationData.metadata.firestoreReadsUsed} Firestore reads`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading inventory valuation data:', error);
+        updateValuationSummaryCardsLoading(false);
+        if (inventoryValuationGridApi) {
+            inventoryValuationGridApi.setGridOption('loading', false);
+        }
+        showModal('error', 'Data Loading Error', 'Could not load inventory valuation data. Please try again.');
+    }
+}
+
+
+/**
+ * Updates valuation summary cards with financial metrics.
+ * 
+ * @param {Object} valuationData - Valuation data from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateValuationSummaryCards(valuationData) {
+    const valuation = valuationData.inventoryValuation;
+    
+    // Total Investment
+    const investmentElement = document.getElementById('total-cost-value-display');
+    if (investmentElement) {
+        investmentElement.textContent = valuation.formattedCostValue;
+    }
+    
+    // Potential Revenue
+    const revenueElement = document.getElementById('total-selling-value-display');
+    if (revenueElement) {
+        revenueElement.textContent = valuation.formattedSellingValue;
+    }
+    
+    // Potential Profit
+    const profitElement = document.getElementById('potential-profit-display');
+    if (profitElement) {
+        profitElement.textContent = valuation.formattedPotentialProfit;
+    }
+    
+    const marginElement = document.getElementById('profit-margin-display');
+    if (marginElement) {
+        marginElement.textContent = `${valuation.averageMarginPercentage.toFixed(1)}% avg margin`;
+    }
+    
+    // ROI Percentage
+    const roiElement = document.getElementById('roi-percentage-display');
+    if (roiElement) {
+        const roi = valuation.totalCostValue > 0 
+            ? (valuation.potentialProfit / valuation.totalCostValue) * 100 
+            : 0;
+        roiElement.textContent = `${roi.toFixed(1)}%`;
+    }
+    
+    updateValuationSummaryCardsLoading(false);
+}
+
+/**
+ * Updates charts and visual elements for inventory valuation.
+ * 
+ * @param {Object} valuationData - Valuation analysis data
+ * @private
+ * @since 1.0.0
+ */
+function updateValuationCharts(valuationData) {
+    const valuation = valuationData.inventoryValuation;
+    
+    // Update investment vs revenue visualization
+    const investmentCircle = document.getElementById('investment-circle');
+    const revenueCircle = document.getElementById('revenue-circle');
+    const profitDifference = document.getElementById('profit-difference');
+    
+    if (investmentCircle) investmentCircle.textContent = formatCurrency(valuation.totalCostValue, true); // Short format
+    if (revenueCircle) revenueCircle.textContent = formatCurrency(valuation.totalSellingValue, true);
+    if (profitDifference) profitDifference.textContent = `${valuation.formattedPotentialProfit} Potential Profit`;
+    
+    // Update category breakdown visualization
+    updateCategoryBreakdownVisualization(valuationData.categoryBreakdown);
+}
+
+
+/**
+ * Updates category breakdown with visual bars and percentages.
+ * 
+ * @param {Array} categoryBreakdown - Category analysis data
+ * @private
+ * @since 1.0.0
+ */
+function updateCategoryBreakdownVisualization(categoryBreakdown) {
+    const categoryListElement = document.getElementById('category-breakdown-list');
+    if (!categoryListElement || !categoryBreakdown) return;
+    
+    // Find total value for percentage calculations
+    const totalValue = categoryBreakdown.reduce((sum, cat) => sum + cat.totalCostValue, 0);
+    
+    const categoryHTML = categoryBreakdown.map(category => {
+        const percentage = totalValue > 0 ? (category.totalCostValue / totalValue) * 100 : 0;
+        
+        return `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                    <div class="font-semibold text-gray-800">${category.categoryName}</div>
+                    <div class="text-sm text-gray-600">${category.productCount} products</div>
+                </div>
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                    <div class="text-right">
+                        <div class="font-bold text-blue-600">${category.formattedCostValue}</div>
+                        <div class="text-xs text-gray-500">${percentage.toFixed(1)}% of total</div>
+                    </div>
+                    <div class="w-16 bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    categoryListElement.innerHTML = categoryHTML;
+}
+
+
+/**
+ * Updates category valuation table with financial breakdown.
+ * 
+ * @param {Object} valuationData - Complete valuation analysis
+ * @private
+ * @since 1.0.0
+ */
+function updateCategoryValuationTable(valuationData) {
+    const tableBody = document.getElementById('category-valuation-table');
+    if (!tableBody || !valuationData.categoryBreakdown) return;
+    
+    const tableHTML = valuationData.categoryBreakdown.map(category => {
+        const profit = category.totalSellingValue - category.totalCostValue;
+        const profitClass = profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-gray-600';
+        
+        return `
+            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                <td class="py-3 px-4 font-medium">${category.categoryName}</td>
+                <td class="py-3 px-4 text-right">${category.productCount}</td>
+                <td class="py-3 px-4 text-right font-medium">${category.totalStock}</td>
+                <td class="py-3 px-4 text-right font-bold text-red-600">${category.formattedCostValue}</td>
+                <td class="py-3 px-4 text-right font-bold text-green-600">${category.formattedSellingValue}</td>
+                <td class="py-3 px-4 text-right font-bold ${profitClass}">${formatCurrency(profit)}</td>
+                <td class="py-3 px-4 text-right font-semibold">${category.categoryMargin.toFixed(1)}%</td>
+            </tr>
+        `;
+    }).join('');
+    
+    tableBody.innerHTML = tableHTML;
+}
+
+
+/**
+ * Updates data quality and coverage information display.
+ * 
+ * @param {Object} valuationData - Valuation analysis with metadata
+ * @private
+ * @since 1.0.0
+ */
+function updateDataQualityDisplay(valuationData) {
+    // Products with complete pricing
+    const withPricingElement = document.getElementById('products-with-pricing');
+    if (withPricingElement) {
+        withPricingElement.textContent = valuationData.inventorySummary.productsWithCompletePricing.toString();
+    }
+    
+    const completenessElement = document.getElementById('pricing-completeness-percentage');
+    if (completenessElement) {
+        completenessElement.textContent = `${valuationData.inventoryValuation.pricingCompleteness.toFixed(1)}% coverage`;
+    }
+    
+    // Products missing pricing
+    const missingPricingElement = document.getElementById('products-missing-pricing');
+    if (missingPricingElement) {
+        missingPricingElement.textContent = valuationData.inventorySummary.productsMissingPricing.toString();
+    }
+    
+    // Firestore usage
+    const readsElement = document.getElementById('firestore-reads-used');
+    if (readsElement) {
+        readsElement.textContent = valuationData.metadata.firestoreReadsUsed.toString();
+    }
+}
+
+
+/**
+ * Shows/hides loading state on valuation summary cards.
+ * 
+ * @param {boolean} isLoading - Whether to show loading state
+ * @private
+ * @since 1.0.0
+ */
+function updateValuationSummaryCardsLoading(isLoading) {
+    const elements = [
+        'total-cost-value-display',
+        'total-selling-value-display',
+        'potential-profit-display',
+        'roi-percentage-display'
+    ];
+    
+    elements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = isLoading ? 'Loading...' : element.textContent;
+        }
+    });
 }
