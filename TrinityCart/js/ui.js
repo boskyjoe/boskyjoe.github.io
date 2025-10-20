@@ -7639,9 +7639,8 @@ export async function showInventoryValuationDetailView() {
     }
 }
 
-
 /**
- * Loads comprehensive inventory valuation data and updates all visualizations.
+ * Loads comprehensive inventory valuation data with enhanced error handling.
  * 
  * @private
  * @since 1.0.0
@@ -7657,37 +7656,94 @@ async function loadInventoryValuationData() {
         }
         
         // Get comprehensive inventory analysis
-        const valuationData = await calculateInventoryAnalysis(false, 30, true); // Don't need performance for valuation
+        console.log("[ui.js] Calling calculateInventoryAnalysis...");
+        const valuationData = await calculateInventoryAnalysis(false, 30, true);
         
-        console.log('[ui.js] Valuation data loaded:', valuationData);
+        console.log('[ui.js] ===== VALUATION DATA RECEIVED =====');
+        console.log('Type:', typeof valuationData);
+        console.log('Is null/undefined:', valuationData == null);
+        console.log('Keys:', valuationData ? Object.keys(valuationData) : 'NO KEYS');
         
-        // Update executive summary cards
-        updateValuationSummaryCards(valuationData);
-        
-        // Update charts and visualizations
-        updateValuationCharts(valuationData);
-        
-        // Update category breakdown table
-        updateCategoryValuationTable(valuationData);
-        
-        // Populate detailed grid with product-level data
-        if (inventoryValuationGridApi) {
-            inventoryValuationGridApi.setGridOption('rowData', masterData.products);
-            inventoryValuationGridApi.setGridOption('loading', false);
+        if (valuationData?.inventorySummary) {
+            console.log('inventorySummary keys:', Object.keys(valuationData.inventorySummary));
         }
         
-        // Update data quality metrics
-        updateDataQualityDisplay(valuationData);
+        if (valuationData?.accurateInventoryValuation) {
+            console.log('accurateInventoryValuation keys:', Object.keys(valuationData.accurateInventoryValuation));
+        }
+        console.log('===== END VALUATION DATA DEBUG =====');
         
-        console.log(`[ui.js] Inventory valuation loaded using ${valuationData.metadata.firestoreReadsUsed} Firestore reads`);
+        // Validate data structure before proceeding
+        if (!valuationData) {
+            throw new Error('No valuation data returned from calculateInventoryAnalysis');
+        }
+        
+        // Update components with error handling
+        try {
+            updateValuationSummaryCards(valuationData);
+        } catch (cardError) {
+            console.error('[ui.js] Error updating summary cards:', cardError);
+        }
+        
+        try {
+            updateValuationCharts(valuationData);
+        } catch (chartError) {
+            console.error('[ui.js] Error updating charts:', chartError);
+        }
+        
+        try {
+            updateCategoryValuationTable(valuationData);
+        } catch (tableError) {
+            console.error('[ui.js] Error updating category table:', tableError);
+        }
+        
+        // Populate grid with basic product data (safest approach)
+        if (inventoryValuationGridApi) {
+            try {
+                // Use masterData.products as fallback if enhanced data not available
+                const gridData = valuationData.enhancedProductDetails || masterData.products;
+                inventoryValuationGridApi.setGridOption('rowData', gridData);
+                inventoryValuationGridApi.setGridOption('loading', false);
+                console.log('[ui.js] Grid populated with', gridData.length, 'products');
+            } catch (gridError) {
+                console.error('[ui.js] Error populating grid:', gridError);
+                inventoryValuationGridApi.setGridOption('loading', false);
+            }
+        }
+        
+        // Update data quality display with error handling
+        try {
+            updateDataQualityDisplay(valuationData);
+        } catch (qualityError) {
+            console.error('[ui.js] Error updating data quality display:', qualityError);
+        }
+        
+        const readsUsed = valuationData?.metadata?.firestoreReadsUsed || 0;
+        console.log(`[ui.js] Inventory valuation loaded using ${readsUsed} Firestore reads`);
         
     } catch (error) {
         console.error('[ui.js] Error loading inventory valuation data:', error);
+        console.error('[ui.js] Error stack:', error.stack);
+        
+        // Clean up loading states
         updateValuationSummaryCardsLoading(false);
         if (inventoryValuationGridApi) {
             inventoryValuationGridApi.setGridOption('loading', false);
+            inventoryValuationGridApi.showNoRowsOverlay();
         }
-        showModal('error', 'Data Loading Error', 'Could not load inventory valuation data. Please try again.');
+        
+        showModal('error', 'Data Loading Error', 
+            `Could not load inventory valuation data.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `This might be due to:\n` +
+            `• No purchase invoice data available\n` +
+            `• No active sales catalogues found\n` +
+            `• Network connectivity issues\n\n` +
+            `Please ensure you have:\n` +
+            `1. Created some purchase invoices\n` +
+            `2. Created at least one active sales catalogue\n` +
+            `3. Added products to the sales catalogue`
+        );
     }
 }
 
@@ -7862,7 +7918,7 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
 
 
 /**
- * Updates category valuation table with financial breakdown.
+ * Updates category valuation table with safe error handling.
  * 
  * @param {Object} valuationData - Complete valuation analysis
  * @private
@@ -7870,58 +7926,120 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
  */
 function updateCategoryValuationTable(valuationData) {
     const tableBody = document.getElementById('category-valuation-table');
-    if (!tableBody || !valuationData.categoryBreakdown) return;
+    if (!tableBody) {
+        console.warn('[ui.js] Category valuation table element not found');
+        return;
+    }
     
-    const tableHTML = valuationData.categoryBreakdown.map(category => {
-        const profit = category.totalSellingValue - category.totalCostValue;
-        const profitClass = profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-gray-600';
+    try {
+        const categoryBreakdown = valuationData?.categoryBreakdown;
         
-        return `
-            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                <td class="py-3 px-4 font-medium">${category.categoryName}</td>
-                <td class="py-3 px-4 text-right">${category.productCount}</td>
-                <td class="py-3 px-4 text-right font-medium">${category.totalStock}</td>
-                <td class="py-3 px-4 text-right font-bold text-red-600">${category.formattedCostValue}</td>
-                <td class="py-3 px-4 text-right font-bold text-green-600">${category.formattedSellingValue}</td>
-                <td class="py-3 px-4 text-right font-bold ${profitClass}">${formatCurrency(profit)}</td>
-                <td class="py-3 px-4 text-right font-semibold">${category.categoryMargin.toFixed(1)}%</td>
-            </tr>
-        `;
-    }).join('');
-    
-    tableBody.innerHTML = tableHTML;
+        if (!categoryBreakdown || categoryBreakdown.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">No category data available</td></tr>';
+            return;
+        }
+        
+        const tableHTML = categoryBreakdown.map(category => {
+            const investment = category.totalInvestment || 0;
+            const revenue = category.totalRevenuePotential || 0;
+            const profit = revenue - investment;
+            const profitClass = profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-gray-600';
+            
+            return `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 font-medium">${category.categoryName || 'Unknown'}</td>
+                    <td class="py-3 px-4 text-right">${category.productCount || 0}</td>
+                    <td class="py-3 px-4 text-right font-medium">${category.totalStock || 0}</td>
+                    <td class="py-3 px-4 text-right font-bold text-red-600">${category.formattedInvestment || formatCurrency(investment)}</td>
+                    <td class="py-3 px-4 text-right font-bold text-green-600">${category.formattedRevenuePotential || formatCurrency(revenue)}</td>
+                    <td class="py-3 px-4 text-right font-bold ${profitClass}">${formatCurrency(profit)}</td>
+                    <td class="py-3 px-4 text-right font-semibold">${(category.categoryMargin || 0).toFixed(1)}%</td>
+                </tr>
+            `;
+        }).join('');
+        
+        tableBody.innerHTML = tableHTML;
+        console.log('[ui.js] Category table updated with', categoryBreakdown.length, 'categories');
+        
+    } catch (error) {
+        console.error('[ui.js] Error updating category valuation table:', error);
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-red-500">Error loading category data</td></tr>';
+    }
 }
 
 
 /**
- * Updates data quality and coverage information display.
+ * Updates data quality and coverage information display with error handling.
  * 
  * @param {Object} valuationData - Valuation analysis with metadata
  * @private
  * @since 1.0.0
  */
 function updateDataQualityDisplay(valuationData) {
-    // Products with complete pricing
-    const withPricingElement = document.getElementById('products-with-pricing');
-    if (withPricingElement) {
-        withPricingElement.textContent = valuationData.inventorySummary.productsWithCompletePricing.toString();
-    }
-    
-    const completenessElement = document.getElementById('pricing-completeness-percentage');
-    if (completenessElement) {
-        completenessElement.textContent = `${valuationData.inventoryValuation.pricingCompleteness.toFixed(1)}% coverage`;
-    }
-    
-    // Products missing pricing
-    const missingPricingElement = document.getElementById('products-missing-pricing');
-    if (missingPricingElement) {
-        missingPricingElement.textContent = valuationData.inventorySummary.productsMissingPricing.toString();
-    }
-    
-    // Firestore usage
-    const readsElement = document.getElementById('firestore-reads-used');
-    if (readsElement) {
-        readsElement.textContent = valuationData.metadata.firestoreReadsUsed.toString();
+    try {
+        console.log('[ui.js] Updating data quality display');
+        
+        const summary = valuationData?.inventorySummary;
+        const valuation = valuationData?.accurateInventoryValuation || valuationData?.inventoryValuation;
+        const metadata = valuationData?.metadata;
+        
+        // Products with complete pricing (safe access)
+        const withPricingElement = document.getElementById('products-with-pricing');
+        if (withPricingElement) {
+            const withPricingCount = summary?.productsWithCompleteData || summary?.productsWithCompletePricing || 0;
+            withPricingElement.textContent = withPricingCount.toString();
+        }
+        
+        const completenessElement = document.getElementById('pricing-completeness-percentage');
+        if (completenessElement) {
+            const totalProducts = summary?.totalProducts || 1;
+            const completeData = summary?.productsWithCompleteData || summary?.productsWithCompletePricing || 0;
+            const coverage = (completeData / totalProducts) * 100;
+            completenessElement.textContent = `${coverage.toFixed(1)}% coverage`;
+        }
+        
+        // Products missing pricing (safe access)
+        const missingPricingElement = document.getElementById('products-missing-pricing');
+        if (missingPricingElement) {
+            const totalProducts = summary?.totalProducts || 0;
+            const completeData = summary?.productsWithCompleteData || 0;
+            const missingData = Math.max(0, totalProducts - completeData);
+            missingPricingElement.textContent = missingData.toString();
+        }
+        
+        // Firestore usage (safe access)
+        const readsElement = document.getElementById('firestore-reads-used');
+        if (readsElement) {
+            const readsUsed = metadata?.firestoreReadsUsed || 0;
+            readsElement.textContent = readsUsed.toString();
+            
+            // Color coding based on read usage
+            if (readsUsed > 100) {
+                readsElement.className = 'text-2xl font-bold text-red-700';
+            } else if (readsUsed > 50) {
+                readsElement.className = 'text-2xl font-bold text-yellow-700';
+            } else {
+                readsElement.className = 'text-2xl font-bold text-blue-700';
+            }
+        }
+        
+        console.log('[ui.js] Data quality display updated successfully');
+        
+    } catch (error) {
+        console.error('[ui.js] Error updating data quality display:', error);
+        
+        // Set safe fallback values
+        const elements = [
+            { id: 'products-with-pricing', value: '0' },
+            { id: 'pricing-completeness-percentage', value: '0% coverage' },
+            { id: 'products-missing-pricing', value: 'Unknown' },
+            { id: 'firestore-reads-used', value: '0' }
+        ];
+        
+        elements.forEach(({ id, value }) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
     }
 }
 
