@@ -7695,69 +7695,129 @@ async function loadInventoryValuationData() {
 /**
  * Updates valuation summary cards with financial metrics.
  * 
- * @param {Object} valuationData - Valuation data from reports module
+ * @param {Object} valuationData - Enhanced valuation data from reports module
  * @private
  * @since 1.0.0
  */
 function updateValuationSummaryCards(valuationData) {
-    const valuation = valuationData.inventoryValuation;
+    console.log('[ui.js] Updating valuation summary cards');
+    console.log('[ui.js] Valuation data structure:', valuationData);
     
-    // Total Investment
+    // Check if we have the enhanced valuation structure
+    const valuation = valuationData.accurateInventoryValuation || valuationData.inventoryValuation;
+    
+    if (!valuation) {
+        console.error('[ui.js] No valuation data found in:', valuationData);
+        updateValuationSummaryCardsLoading(false);
+        return;
+    }
+    
+    console.log('[ui.js] Using valuation data:', valuation);
+    
+    // Total Investment (using correct property names)
     const investmentElement = document.getElementById('total-cost-value-display');
     if (investmentElement) {
-        investmentElement.textContent = valuation.formattedCostValue;
+        const investmentValue = valuation.formattedInvestmentValue || valuation.formattedCostValue || '₹0.00';
+        console.log('[ui.js] Setting investment to:', investmentValue);
+        investmentElement.textContent = investmentValue;
     }
     
-    // Potential Revenue
+    const investmentBreakdownElement = document.getElementById('investment-breakdown');
+    if (investmentBreakdownElement) {
+        const methodology = valuationData.metadata?.costingMethodology?.method || 'standard';
+        investmentBreakdownElement.textContent = `Using ${methodology} costing method`;
+    }
+    
+    // Potential Revenue (using correct property names)
     const revenueElement = document.getElementById('total-selling-value-display');
     if (revenueElement) {
-        revenueElement.textContent = valuation.formattedSellingValue;
+        const revenueValue = valuation.formattedRevenueValue || valuation.formattedSellingValue || '₹0.00';
+        console.log('[ui.js] Setting revenue to:', revenueValue);
+        revenueElement.textContent = revenueValue;
     }
     
-    // Potential Profit
+    const revenueNoteElement = document.getElementById('revenue-potential-note');
+    if (revenueNoteElement) {
+        const catalogueCount = valuationData.metadata?.costingMethodology?.cataloguesAnalyzed || 0;
+        revenueNoteElement.textContent = `From ${catalogueCount} active catalogues`;
+    }
+    
+    // Potential Profit (using correct property names)
     const profitElement = document.getElementById('potential-profit-display');
     if (profitElement) {
-        profitElement.textContent = valuation.formattedPotentialProfit;
+        const profitValue = valuation.formattedPotentialProfit || '₹0.00';
+        console.log('[ui.js] Setting profit to:', profitValue);
+        profitElement.textContent = profitValue;
     }
     
     const marginElement = document.getElementById('profit-margin-display');
     if (marginElement) {
-        marginElement.textContent = `${valuation.averageMarginPercentage.toFixed(1)}% avg margin`;
+        const margin = valuation.averageBusinessMargin || valuation.averageMarginPercentage || 0;
+        marginElement.textContent = `${margin.toFixed(1)}% avg margin`;
     }
     
-    // ROI Percentage
+    // ROI Potential (using correct property names)
     const roiElement = document.getElementById('roi-percentage-display');
     if (roiElement) {
-        const roi = valuation.totalCostValue > 0 
-            ? (valuation.potentialProfit / valuation.totalCostValue) * 100 
-            : 0;
+        const roi = valuation.roiPotential || 0;
+        console.log('[ui.js] Setting ROI to:', roi.toFixed(1) + '%');
         roiElement.textContent = `${roi.toFixed(1)}%`;
     }
     
+    const roiExplanationElement = document.getElementById('roi-explanation');
+    if (roiExplanationElement) {
+        const dataQuality = valuationData.inventorySummary?.dataQualityScore || 0;
+        roiExplanationElement.textContent = `Based on ${dataQuality.toFixed(0)}% data coverage`;
+    }
+    
     updateValuationSummaryCardsLoading(false);
+    
+    console.log('[ui.js] Valuation summary cards updated successfully');
 }
+
 
 /**
  * Updates charts and visual elements for inventory valuation.
  * 
- * @param {Object} valuationData - Valuation analysis data
+ * @param {Object} valuationData - Enhanced valuation analysis data
  * @private
  * @since 1.0.0
  */
 function updateValuationCharts(valuationData) {
-    const valuation = valuationData.inventoryValuation;
+    console.log('[ui.js] Updating valuation charts and visualizations');
     
-    // Update investment vs revenue visualization
+    const valuation = valuationData.accurateInventoryValuation || valuationData.inventoryValuation;
+    
+    if (!valuation) {
+        console.error('[ui.js] No valuation data available for charts');
+        return;
+    }
+    
+    // Update investment vs revenue visualization circles
     const investmentCircle = document.getElementById('investment-circle');
     const revenueCircle = document.getElementById('revenue-circle');
     const profitDifference = document.getElementById('profit-difference');
     
-    if (investmentCircle) investmentCircle.textContent = formatCurrency(valuation.totalCostValue, true); // Short format
-    if (revenueCircle) revenueCircle.textContent = formatCurrency(valuation.totalSellingValue, true);
-    if (profitDifference) profitDifference.textContent = `${valuation.formattedPotentialProfit} Potential Profit`;
+    if (investmentCircle) {
+        const investmentValue = valuation.totalInvestmentValue || 0;
+        investmentCircle.textContent = formatCurrency(investmentValue).replace(/[₹$]/g, '').trim();
+    }
     
-    // Update category breakdown visualization
-    updateCategoryBreakdownVisualization(valuationData.categoryBreakdown);
+    if (revenueCircle) {
+        const revenueValue = valuation.totalRevenueValue || valuation.totalSellingValue || 0;
+        revenueCircle.textContent = formatCurrency(revenueValue).replace(/[₹$]/g, '').trim();
+    }
+    
+    if (profitDifference) {
+        const profitValue = valuation.formattedPotentialProfit || '₹0';
+        profitDifference.textContent = `${profitValue} Potential Profit`;
+    }
+    
+    // Update category breakdown visualization  
+    const categoryData = valuationData.categoryBreakdown || [];
+    updateCategoryBreakdownVisualization(categoryData);
+    
+    console.log('[ui.js] Charts updated successfully');
 }
 
 
