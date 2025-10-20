@@ -25,6 +25,8 @@ import {
 import { formatCurrency } from './ui.js';
 import { masterData } from './masterData.js';
 
+import {getCurrentSellingPricesFromHistory} from './api.js';
+
 /**
  * Report configuration optimized for minimal database usage
  */
