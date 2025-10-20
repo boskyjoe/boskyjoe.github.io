@@ -7877,6 +7877,7 @@ function updateValuationCharts(valuationData) {
 }
 
 
+
 /**
  * Updates category breakdown with visual bars and percentages.
  * 
@@ -7886,23 +7887,54 @@ function updateValuationCharts(valuationData) {
  */
 function updateCategoryBreakdownVisualization(categoryBreakdown) {
     const categoryListElement = document.getElementById('category-breakdown-list');
-    if (!categoryListElement || !categoryBreakdown) return;
+    if (!categoryListElement) {
+        console.error('[ui.js] Category breakdown list element not found');
+        return;
+    }
     
-    // Find total value for percentage calculations
-    const totalValue = categoryBreakdown.reduce((sum, cat) => sum + cat.totalCostValue, 0);
+    console.log('[ui.js] ===== CATEGORY BREAKDOWN DEBUG =====');
+    console.log('categoryBreakdown type:', typeof categoryBreakdown);
+    console.log('categoryBreakdown is array:', Array.isArray(categoryBreakdown));
+    console.log('categoryBreakdown length:', categoryBreakdown?.length);
+    console.log('categoryBreakdown data:', categoryBreakdown);
+    
+    if (categoryBreakdown && categoryBreakdown.length > 0) {
+        console.log('First category structure:', categoryBreakdown[0]);
+        console.log('First category keys:', Object.keys(categoryBreakdown[0]));
+    }
+    console.log('===== END CATEGORY BREAKDOWN DEBUG =====');
+    
+    if (!categoryBreakdown || !Array.isArray(categoryBreakdown) || categoryBreakdown.length === 0) {
+        categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category data available</div>';
+        return;
+    }
+    
+    // Find total value for percentage calculations - FIX THE PROPERTY NAME
+    const totalValue = categoryBreakdown.reduce((sum, cat) => {
+        // Check what property name is actually available
+        const categoryValue = cat.totalCostValue || cat.totalInvestment || 0;
+        console.log(`[ui.js] Category ${cat.categoryName}: value=${categoryValue} (from ${cat.totalCostValue ? 'totalCostValue' : cat.totalInvestment ? 'totalInvestment' : 'unknown'})`);
+        return sum + categoryValue;
+    }, 0);
+    
+    console.log(`[ui.js] Total value for percentage calculation: ${formatCurrency(totalValue)}`);
     
     const categoryHTML = categoryBreakdown.map(category => {
-        const percentage = totalValue > 0 ? (category.totalCostValue / totalValue) * 100 : 0;
+        // Use the correct property name based on what's available
+        const categoryValue = category.totalCostValue || category.totalInvestment || 0;
+        const percentage = totalValue > 0 ? (categoryValue / totalValue) * 100 : 0;
+        
+        console.log(`[ui.js] Rendering category ${category.categoryName}: value=${formatCurrency(categoryValue)}, percentage=${percentage.toFixed(1)}%`);
         
         return `
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div class="flex-1">
-                    <div class="font-semibold text-gray-800">${category.categoryName}</div>
-                    <div class="text-sm text-gray-600">${category.productCount} products</div>
+                    <div class="font-semibold text-gray-800">${category.categoryName || 'Unknown Category'}</div>
+                    <div class="text-sm text-gray-600">${category.productCount || 0} products</div>
                 </div>
                 <div class="flex items-center space-x-3 flex-shrink-0">
                     <div class="text-right">
-                        <div class="font-bold text-blue-600">${category.formattedCostValue}</div>
+                        <div class="font-bold text-blue-600">${category.formattedCostValue || category.formattedInvestment || formatCurrency(categoryValue)}</div>
                         <div class="text-xs text-gray-500">${percentage.toFixed(1)}% of total</div>
                     </div>
                     <div class="w-16 bg-gray-200 rounded-full h-2">
@@ -7914,8 +7946,8 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
     }).join('');
     
     categoryListElement.innerHTML = categoryHTML;
+    console.log(`[ui.js] Category breakdown visualization updated with ${categoryBreakdown.length} categories`);
 }
-
 
 /**
  * Updates category valuation table with safe error handling.
@@ -7932,6 +7964,11 @@ function updateCategoryValuationTable(valuationData) {
     }
     
     try {
+        console.log('[ui.js] ===== CATEGORY TABLE DEBUG =====');
+        console.log('valuationData keys:', Object.keys(valuationData));
+        console.log('categoryBreakdown:', valuationData?.categoryBreakdown);
+        console.log('===== END CATEGORY TABLE DEBUG =====');
+        
         const categoryBreakdown = valuationData?.categoryBreakdown;
         
         if (!categoryBreakdown || categoryBreakdown.length === 0) {
@@ -7940,10 +7977,14 @@ function updateCategoryValuationTable(valuationData) {
         }
         
         const tableHTML = categoryBreakdown.map(category => {
-            const investment = category.totalInvestment || 0;
-            const revenue = category.totalRevenuePotential || 0;
+            // Use flexible property access for backward compatibility
+            const investment = category.totalInvestment || category.totalCostValue || 0;
+            const revenue = category.totalRevenuePotential || category.totalSellingValue || 0;
             const profit = revenue - investment;
             const profitClass = profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-gray-600';
+            const margin = category.categoryMargin || 0;
+            
+            console.log(`[ui.js] Table row for ${category.categoryName}: Investment=${formatCurrency(investment)}, Revenue=${formatCurrency(revenue)}`);
             
             return `
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
@@ -7953,7 +7994,7 @@ function updateCategoryValuationTable(valuationData) {
                     <td class="py-3 px-4 text-right font-bold text-red-600">${category.formattedInvestment || formatCurrency(investment)}</td>
                     <td class="py-3 px-4 text-right font-bold text-green-600">${category.formattedRevenuePotential || formatCurrency(revenue)}</td>
                     <td class="py-3 px-4 text-right font-bold ${profitClass}">${formatCurrency(profit)}</td>
-                    <td class="py-3 px-4 text-right font-semibold">${(category.categoryMargin || 0).toFixed(1)}%</td>
+                    <td class="py-3 px-4 text-right font-semibold">${margin.toFixed(1)}%</td>
                 </tr>
             `;
         }).join('');
