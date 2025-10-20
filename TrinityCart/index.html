@@ -2415,26 +2415,45 @@
 
                     <!-- Executive Summary Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+    
+                        <!-- METRIC 1: Total Historical Spending -->
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Total Investment</p>
-                                    <p id="total-cost-value-display" class="text-2xl font-bold text-blue-700">Loading...</p>
+                                    <p class="text-sm font-medium text-gray-600">Total Spending</p>
+                                    <p id="total-cost-value-display" class="text-2xl font-bold text-red-700">Loading...</p>
                                 </div>
-                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
                             </div>
-                            <div id="investment-breakdown" class="mt-2 text-sm text-gray-500">Money invested in inventory</div>
+                            <div id="investment-breakdown" class="mt-2 text-sm text-gray-500">All purchase invoices (₹354,635)</div>
                         </div>
 
+                        <!-- METRIC 2: Current Inventory Investment -->
+                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Current Investment</p>
+                                    <p id="total-selling-value-display" class="text-2xl font-bold text-blue-700">Loading...</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="revenue-potential-note" class="mt-2 text-sm text-gray-500">Value of stock on hand</div>
+                        </div>
+
+                        <!-- METRIC 3: Revenue Potential -->
                         <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Potential Revenue</p>
-                                    <p id="total-selling-value-display" class="text-2xl font-bold text-green-700">Loading...</p>
+                                    <p class="text-sm font-medium text-gray-600">Revenue Potential</p>
+                                    <p id="potential-profit-display" class="text-2xl font-bold text-green-700">Loading...</p>
                                 </div>
                                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2442,37 +2461,23 @@
                                     </svg>
                                 </div>
                             </div>
-                            <div id="revenue-potential-note" class="mt-2 text-sm text-gray-500">If all inventory sold</div>
+                            <div id="profit-margin-display" class="mt-2 text-sm text-gray-500">If all inventory sold</div>
                         </div>
 
+                        <!-- METRIC 4: Inventory Turnover -->
                         <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Potential Profit</p>
-                                    <p id="potential-profit-display" class="text-2xl font-bold text-purple-700">Loading...</p>
+                                    <p class="text-sm font-medium text-gray-600">Inventory Turnover</p>
+                                    <p id="roi-percentage-display" class="text-2xl font-bold text-purple-700">Loading...</p>
                                 </div>
-                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <div class="w-12 h-12 bg-purple-100 rounded-round flex items-center justify-center">
                                     <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
                                 </div>
                             </div>
-                            <div id="profit-margin-display" class="mt-2 text-sm text-gray-500">Overall margin percentage</div>
-                        </div>
-
-                        <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-600">ROI Potential</p>
-                                    <p id="roi-percentage-display" class="text-2xl font-bold text-orange-700">Loading...</p>
-                                </div>
-                                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div id="roi-explanation" class="mt-2 text-sm text-gray-500">Return on inventory investment</div>
+                            <div id="roi-explanation" class="mt-2 text-sm text-gray-500">Converted to sales</div>
                         </div>
                     </div>
 
