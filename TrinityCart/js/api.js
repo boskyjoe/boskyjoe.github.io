@@ -1284,24 +1284,23 @@ export async function updateSalesCatalogue(docId, updatedData, user) {
 
 
 /**
- * [ENHANCED] Adds a product to a sales catalogue with price history tracking.
+ * [ENHANCED] Adds item to catalogue with intelligent price history management.
  * 
- * Adds the item to the catalogue's items sub-collection AND creates a price
- * history record in the product's priceHistory sub-collection for accurate
- * pricing audit trail and optimized reporting.
+ * Adds item to catalogue AND creates price history with full backward compatibility.
+ * Handles both new catalogues and existing catalogues seamlessly.
  * 
  * @param {string} catalogueId - The Firestore document ID of the parent catalogue.
  * @param {object} itemData - The complete data for the item to be added.
  * 
- * @since 1.0.0 (Enhanced with price history integration)
+ * @since 1.0.0 (Enhanced with intelligent price history management)
  */
 export async function addItemToCatalogue(catalogueId, itemData) {
     const db = firebase.firestore();
     
     try {
-        console.log(`[API] Adding item to catalogue ${catalogueId} with price history tracking`);
+        console.log(`[API] Adding item to catalogue ${catalogueId} with intelligent price history management`);
         
-        // 1. Add item to catalogue (existing functionality)
+        // 1. Add item to catalogue items sub-collection (existing functionality)
         const itemRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
@@ -1310,7 +1309,7 @@ export async function addItemToCatalogue(catalogueId, itemData) {
         await itemRef.set(itemData);
         console.log(`[API] ✅ Item added to catalogue: ${itemData.productName}`);
         
-        // 2. ENHANCED: Get catalogue information for price history
+        // 2. Get catalogue information for price history
         const catalogueDoc = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).get();
         
         if (!catalogueDoc.exists) {
@@ -1319,30 +1318,61 @@ export async function addItemToCatalogue(catalogueId, itemData) {
         
         const catalogueData = catalogueDoc.data();
         
-        // 3. ENHANCED: Create price history record if catalogue is active
+        // 3. ENHANCED: Always try to create price history (handles all scenarios)
         if (catalogueData.isActive) {
             console.log(`[API] Creating price history for ${itemData.productName} (catalogue is active)`);
             
-            await createProductPriceHistory(itemData.productId, {
-                salesCatalogueId: catalogueId,
-                salesCatalogueName: catalogueData.catalogueName,
-                unitSellingPrice: itemData.sellingPrice,
-                isActive: true
-            }, { email: catalogueData.audit?.createdBy || 'system' }); // Use catalogue creator or system
-            
-            console.log(`[API] ✅ Price history created: ${itemData.productName} -> ₹${itemData.sellingPrice}`);
+            try {
+                // Check if price history already exists (avoid duplicates)
+                const existingPriceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
+                    .doc(itemData.productId)
+                    .collection('priceHistory')
+                    .where('salesCatalogueId', '==', catalogueId)
+                    .where('isActive', '==', true)
+                    .limit(1);
+                
+                const existingSnapshot = await existingPriceHistoryQuery.get();
+                
+                if (existingSnapshot.empty) {
+                    // No existing price history - create new one
+                    await createProductPriceHistory(itemData.productId, {
+                        salesCatalogueId: catalogueId,
+                        salesCatalogueName: catalogueData.catalogueName,
+                        unitSellingPrice: itemData.sellingPrice,
+                        isActive: true
+                    }, { email: catalogueData.audit?.updatedBy || catalogueData.audit?.createdBy || 'system' });
+                    
+                    console.log(`[API] ✅ New price history created: ${itemData.productName} -> ₹${itemData.sellingPrice}`);
+                } else {
+                    // Price history exists - update the price
+                    const existingDoc = existingSnapshot.docs[0];
+                    await existingDoc.ref.update({
+                        unitSellingPrice: itemData.sellingPrice,
+                        updatedBy: catalogueData.audit?.updatedBy || 'system',
+                        updatedDate: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    console.log(`[API] ✅ Existing price history updated: ${itemData.productName} -> ₹${itemData.sellingPrice}`);
+                }
+                
+            } catch (priceHistoryError) {
+                console.error(`[API] Error managing price history for ${itemData.productName}:`, priceHistoryError);
+                console.warn(`[API] Item added to catalogue but price history operation failed`);
+                // Don't fail the entire operation - catalogue item was added successfully
+            }
         } else {
             console.log(`[API] ℹ️ Catalogue is inactive, price history will be created when catalogue is activated`);
         }
         
-        console.log(`[API] ✅ ENHANCED item addition completed with price history integration`);
+        console.log(`[API] ✅ ENHANCED item addition completed`);
         return itemRef;
         
     } catch (error) {
-        console.error(`[API] Error in enhanced add item to catalogue:`, error);
+        console.error(`[API] Error in enhanced addItemToCatalogue:`, error);
         throw new Error(`Enhanced add item to catalogue failed: ${error.message}`);
     }
 }
+
 
 /**
  * [ENHANCED] Removes product from catalogue with price history deactivation.
@@ -2870,34 +2900,37 @@ export async function batchCreatePriceHistory(salesCatalogueId, salesCatalogueNa
 }
 
 /**
- * Updates an existing price history record when catalogue item price is modified.
+ * [ENHANCED] Updates or creates product price history record with backward compatibility.
  * 
- * Used when users override catalogue item prices or when catalogue items
- * are updated. Maintains audit trail of price changes while keeping the
- * pricing history current and accurate.
+ * Updates existing price history record OR creates a new one if none exists.
+ * This provides full backward compatibility for products added to catalogues
+ * before the price history system was implemented.
  * 
- * @param {string} productId - Product document ID  
+ * BACKWARD COMPATIBILITY:
+ * - If price history exists: Updates the existing record
+ * - If no price history exists: Creates a new price history record
+ * - Handles transition from old system to new system seamlessly
+ * 
+ * @param {string} productId - Product document ID
  * @param {string} salesCatalogueId - Sales catalogue ID containing the item
  * @param {number} newSellingPrice - Updated selling price
  * @param {Object} user - Currently authenticated user
  * 
- * @returns {Promise<boolean>} True if price history was updated, false if not found
+ * @returns {Promise<Object>} Operation result:
+ *   - updated: boolean - Whether existing record was updated
+ *   - created: boolean - Whether new record was created
+ *   - priceHistoryId: string - ID of the price history record
  * 
- * @throws {Error} When parameters invalid or update fails
+ * @throws {Error} When parameters invalid or operation fails
  * 
  * @example
- * // Update price history when catalogue item price is overridden
- * const updated = await updateProductPriceHistoryPrice(
- *   'PROD123', 
- *   'SC-2024-001', 
- *   28.75, 
- *   currentUser
- * );
+ * // This will either update existing or create new price history
+ * const result = await updateProductPriceHistoryPrice('PROD123', 'SC-2024-001', 28.75, user);
  * 
- * if (updated) {
- *   console.log('Price history updated successfully');
- * } else {
- *   console.log('No price history record found to update');
+ * if (result.created) {
+ *   console.log('New price history record created for backward compatibility');
+ * } else if (result.updated) {
+ *   console.log('Existing price history record updated');
  * }
  * 
  * @since 1.0.0
@@ -2911,44 +2944,92 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
     if (typeof newSellingPrice !== 'number' || newSellingPrice < 0) {
         throw new Error('updateProductPriceHistoryPrice requires a valid positive selling price');
     }
+    
+    if (!user || !user.email) {
+        throw new Error('updateProductPriceHistoryPrice requires a valid user object');
+    }
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
     try {
-        console.log(`[API] Updating price history for product ${productId} in catalogue ${salesCatalogueId} to ₹${newSellingPrice}`);
+        console.log(`[API] Updating/creating price history for product ${productId} in catalogue ${salesCatalogueId} to ₹${newSellingPrice}`);
         
-        // Find the specific price history record to update
+        // 1. Try to find existing active price history record
         const priceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
             .doc(productId)
             .collection('priceHistory')
             .where('salesCatalogueId', '==', salesCatalogueId)
             .where('isActive', '==', true)
-            .limit(1); // Should only be one active record per catalogue
+            .limit(1);
         
         const priceHistorySnapshot = await priceHistoryQuery.get();
         
-        if (priceHistorySnapshot.empty) {
-            console.warn(`[API] No active price history found for product ${productId} in catalogue ${salesCatalogueId}`);
-            return false;
+        if (!priceHistorySnapshot.empty) {
+            // CASE 1: Price history exists - UPDATE existing record
+            const existingPriceDoc = priceHistorySnapshot.docs[0];
+            const existingData = existingPriceDoc.data();
+            
+            console.log(`[API] Found existing price history record, updating from ₹${existingData.unitSellingPrice} to ₹${newSellingPrice}`);
+            
+            await existingPriceDoc.ref.update({
+                unitSellingPrice: newSellingPrice,
+                updatedBy: user.email,
+                updatedDate: now
+            });
+            
+            console.log(`[API] ✅ Existing price history updated successfully`);
+            
+            return {
+                updated: true,
+                created: false,
+                priceHistoryId: existingPriceDoc.id,
+                previousPrice: existingData.unitSellingPrice,
+                newPrice: newSellingPrice,
+                operation: 'updated'
+            };
+            
+        } else {
+            // CASE 2: No price history exists - CREATE new record (BACKWARD COMPATIBILITY)
+            console.log(`[API] No price history found, creating new record for backward compatibility`);
+            
+            // Get catalogue information for the new price history record
+            const catalogueDoc = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(salesCatalogueId).get();
+            
+            if (!catalogueDoc.exists) {
+                throw new Error(`Catalogue ${salesCatalogueId} not found for price history creation`);
+            }
+            
+            const catalogueData = catalogueDoc.data();
+            
+            // Create new price history record
+            const priceHistoryRef = await createProductPriceHistory(productId, {
+                salesCatalogueId: salesCatalogueId,
+                salesCatalogueName: catalogueData.catalogueName,
+                unitSellingPrice: newSellingPrice,
+                isActive: catalogueData.isActive !== false // Inherit catalogue's active status
+            }, user);
+            
+            console.log(`[API] ✅ New price history record created for backward compatibility`);
+            
+            return {
+                updated: false,
+                created: true,
+                priceHistoryId: priceHistoryRef.id,
+                previousPrice: null,
+                newPrice: newSellingPrice,
+                operation: 'created',
+                backwardCompatibility: true
+            };
         }
         
-        // Update the price history record
-        const priceHistoryDoc = priceHistorySnapshot.docs[0];
-        await priceHistoryDoc.ref.update({
-            unitSellingPrice: newSellingPrice,
-            updatedBy: user.email,
-            updatedDate: now
-        });
-        
-        console.log(`[API] ✅ Price history updated successfully: ${productId} -> ₹${newSellingPrice}`);
-        return true;
-        
     } catch (error) {
-        console.error(`[API] Error updating price history for product ${productId}:`, error);
-        throw new Error(`Failed to update price history: ${error.message}`);
+        console.error(`[API] Error in updateProductPriceHistoryPrice for ${productId}:`, error);
+        throw new Error(`Price history update/create failed: ${error.message}`);
     }
 }
+
+
 
 /**
  * Removes (deactivates) price history records when product is removed from catalogue.
