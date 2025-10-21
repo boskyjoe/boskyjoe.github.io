@@ -7170,6 +7170,149 @@ function updateInventorySummaryCards(inventoryData) {
     updateInventorySummaryCardsLoading(false);
 }
 
+
+
+/**
+ * Updates detailed data source attribution and cache information display.
+ * 
+ * Shows users exactly what data sources were used, when the report was generated,
+ * cache status, and data freshness indicators for transparency and reliability.
+ * 
+ * @param {Object} valuationData - Complete valuation analysis with metadata
+ * @private
+ * @since 1.0.0
+ */
+function updateDataSourceAttribution(valuationData) {
+    try {
+        console.log('[ui.js] Updating data source attribution and cache information');
+        
+        const metadata = valuationData.metadata || {};
+        const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || {};
+        const actualRevenueData = valuationData.actualRevenueInsights || {};
+        
+        // Update main data sources breakdown
+        const dataSourcesElement = document.getElementById('data-sources-breakdown');
+        if (dataSourcesElement) {
+            const purchaseInvoices = metadata.purchaseInvoicesAnalyzed || 0;
+            const directPayments = actualRevenueData.metadata?.directPaymentsAnalyzed || 0;
+            const consignmentPayments = actualRevenueData.metadata?.consignmentPaymentsAnalyzed || 0;
+            const donations = actualRevenueData.metadata?.donationRecordsAnalyzed || 0;
+            
+            dataSourcesElement.innerHTML = `
+                <div>📋 ${purchaseInvoices} Purchase Invoices</div>
+                <div>🏪 ${directPayments} Direct Sales Payments</div>
+                <div>👥 ${consignmentPayments} Consignment Payments</div>
+                <div>🎁 ${donations} Donation Records</div>
+            `;
+        }
+        
+        // Update report timestamp
+        const reportTimestamp = new Date(metadata.calculatedAt || Date.now());
+        const timestampElements = [
+            'report-timestamp',
+            'detailed-report-timestamp'
+        ];
+        
+        timestampElements.forEach(elementId => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = reportTimestamp.toLocaleString();
+            }
+        });
+        
+        // Update cache status and timing
+        const cacheTimestampElement = document.getElementById('cache-timestamp');
+        const lastCacheUpdateElement = document.getElementById('last-cache-update');
+        const cacheExpiryElement = document.getElementById('cache-expiry-display');
+        
+        const cacheAge = metadata.firestoreReadsUsed === 0 ? 'CACHED' : 'FRESH';
+        const cacheExpiryTime = new Date(reportTimestamp.getTime() + (REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES * 60 * 1000));
+        
+        if (cacheTimestampElement) {
+            if (cacheAge === 'CACHED') {
+                cacheTimestampElement.textContent = `Cache: Using cached data (${REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES} min cache)`;
+                cacheTimestampElement.className = 'text-xs text-green-600';
+            } else {
+                cacheTimestampElement.textContent = `Cache: Fresh data loaded`;
+                cacheTimestampElement.className = 'text-xs text-blue-600';
+            }
+        }
+        
+        if (lastCacheUpdateElement) {
+            lastCacheUpdateElement.textContent = reportTimestamp.toLocaleTimeString();
+        }
+        
+        if (cacheExpiryElement) {
+            cacheExpiryElement.textContent = cacheExpiryTime.toLocaleTimeString();
+        }
+        
+        // Update investment data sources
+        const investmentSourcesElement = document.getElementById('investment-data-sources');
+        if (investmentSourcesElement) {
+            const pricingInsights = valuationData.pricingSystemInsights || {};
+            
+            investmentSourcesElement.innerHTML = `
+                <div>• <strong>Purchase History:</strong> Latest costs from ${purchaseInvoices} purchase invoices</div>
+                <div>• <strong>Current Stock Levels:</strong> Real-time from product inventory</div>
+                <div>• <strong>Cost Accuracy:</strong> ${metadata.dataAccuracy || 'Standard'}</div>
+                <div>• <strong>Supplier Coverage:</strong> ${financialAnalysis.supplierFinancialAnalysis?.totalSuppliersUsed || 0} suppliers analyzed</div>
+            `;
+        }
+        
+        // Update revenue data sources
+        const revenueSourcesElement = document.getElementById('revenue-data-sources');
+        if (revenueSourcesElement) {
+            const priceHistory = pricingInsights.priceHistoryUsage || 0;
+            const fallback = pricingInsights.fallbackPriceUsage || 0;
+            
+            revenueSourcesElement.innerHTML = `
+                <div>• <strong>Price History:</strong> ${priceHistory} products from active catalogues</div>
+                <div>• <strong>Fallback Pricing:</strong> ${fallback} products from product master</div>
+                <div>• <strong>Actual Sales Revenue:</strong> Verified payments from all channels</div>
+                <div>• <strong>Revenue Accuracy:</strong> ${pricingInsights.dataAccuracyLevel || 'Medium'} (${pricingInsights.pricingCoverage?.toFixed(1) || 0}% coverage)</div>
+            `;
+        }
+        
+        // Update data freshness score
+        const dataFreshnessElement = document.getElementById('data-freshness-score');
+        if (dataFreshnessElement) {
+            const freshnessScore = cacheAge === 'FRESH' ? 100 : Math.max(0, 100 - ((Date.now() - reportTimestamp.getTime()) / (1000 * 60 * REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES)) * 100);
+            dataFreshnessElement.textContent = `${freshnessScore.toFixed(0)}%`;
+            
+            // Color coding
+            if (freshnessScore > 80) {
+                dataFreshnessElement.className = 'text-2xl font-bold text-green-700';
+            } else if (freshnessScore > 50) {
+                dataFreshnessElement.className = 'text-2xl font-bold text-yellow-700';
+            } else {
+                dataFreshnessElement.className = 'text-2xl font-bold text-red-700';
+            }
+        }
+        
+        // Update cache efficiency display
+        const cacheEfficiencyElement = document.getElementById('cache-efficiency-display');
+        if (cacheEfficiencyElement) {
+            const efficiency = metadata.firestoreReadsUsed === 0 ? 'Optimal (0 reads)' : `${metadata.firestoreReadsUsed} reads used`;
+            cacheEfficiencyElement.textContent = efficiency;
+        }
+        
+        // Update analysis scope
+        const analysisScopeElement = document.getElementById('analysis-scope-display');
+        if (analysisScopeElement) {
+            analysisScopeElement.textContent = metadata.analysisScope || 'Full inventory analysis with actual revenue';
+        }
+        
+        console.log('[ui.js] ✅ Data source attribution and cache information updated');
+        
+    } catch (error) {
+        console.error('[ui.js] Error updating data source attribution:', error);
+    }
+}
+
+
+
+
+
 /**
  * Shows/hides loading state on inventory summary cards.
  * 
@@ -7829,6 +7972,13 @@ async function loadInventoryValuationData() {
             updateDataQualityDisplay(valuationData);
         } catch (qualityError) {
             console.error('[ui.js] Error updating data quality display:', qualityError);
+        }
+
+        // ADD THIS: Update data source attribution and cache information
+        try {
+            updateDataSourceAttribution(valuationData);
+        } catch (attributionError) {
+            console.error('[ui.js] Error updating data source attribution:', attributionError);
         }
         
         const readsUsed = valuationData?.metadata?.firestoreReadsUsed || 0;
