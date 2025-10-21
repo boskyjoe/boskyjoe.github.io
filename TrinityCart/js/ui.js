@@ -7767,24 +7767,6 @@ function updateValuationSummaryCards(valuationData) {
     
     if (!financialAnalysis) {
         console.error('[ui.js] No financial analysis data found in any expected structure');
-        console.error('[ui.js] Available data:', valuationData);
-        
-        // Set error messages on cards
-        const errorElements = [
-            'total-cost-value-display',
-            'total-selling-value-display', 
-            'potential-profit-display',
-            'roi-percentage-display'
-        ];
-        
-        errorElements.forEach(elementId => {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.textContent = 'Data Error';
-                element.className = 'text-2xl font-bold text-red-500';
-            }
-        });
-        
         updateValuationSummaryCardsLoading(false);
         return;
     }
@@ -7823,18 +7805,50 @@ function updateValuationSummaryCards(valuationData) {
         console.log('[ui.js] Set Revenue Potential to:', revenuePotential);
     }
     
-    // METRIC 4: Inventory Turnover
+    // METRIC 4: Inventory Turnover (WITH PROPER FORMATTING)
     const turnoverElement = document.getElementById('roi-percentage-display');
     if (turnoverElement) {
-        const turnoverValue = financialAnalysis.formattedTurnoverValue ||
-                            financialAnalysis.roiPotential + '%' ||
-                            '₹0.00';
-        turnoverElement.textContent = turnoverValue;
-        console.log('[ui.js] Set Inventory Turnover to:', turnoverValue);
+        // Get the raw turnover value
+        const rawTurnoverValue = financialAnalysis.inventoryTurnoverValue || 0;
+        const rawTurnoverPercentage = financialAnalysis.inventoryTurnoverPercentage || 0;
+        
+        console.log('[ui.js] Raw turnover data:', {
+            turnoverValue: rawTurnoverValue,
+            turnoverPercentage: rawTurnoverPercentage,
+            formattedTurnoverValue: financialAnalysis.formattedTurnoverValue
+        });
+        
+        // DECISION: Show turnover value (₹amount) or percentage?
+        if (financialAnalysis.formattedTurnoverValue) {
+            // Show as currency amount (₹269,635)
+            turnoverElement.textContent = financialAnalysis.formattedTurnoverValue;
+            console.log('[ui.js] Set Inventory Turnover (amount) to:', financialAnalysis.formattedTurnoverValue);
+        } else {
+            // Show as formatted percentage with 2 decimals
+            const formattedPercentage = rawTurnoverPercentage.toFixed(2) + '%';
+            turnoverElement.textContent = formattedPercentage;
+            console.log('[ui.js] Set Inventory Turnover (percentage) to:', formattedPercentage);
+        }
+    }
+    
+    // Update the explanation text with proper formatting
+    const roiExplanationElement = document.getElementById('roi-explanation');
+    if (roiExplanationElement) {
+        const turnoverPercentage = financialAnalysis.inventoryTurnoverPercentage || 0;
+        const formattedPercentage = turnoverPercentage.toFixed(2); // 2 decimal places
+        
+        // Handle negative percentages with better messaging
+        if (turnoverPercentage < 0) {
+            roiExplanationElement.textContent = `Investment exceeds historical spending`;
+            roiExplanationElement.className = 'mt-2 text-sm text-red-600'; // Red for negative
+        } else {
+            roiExplanationElement.textContent = `${formattedPercentage}% of spending converted to sales`;
+            roiExplanationElement.className = 'mt-2 text-sm text-green-600'; // Green for positive
+        }
     }
     
     updateValuationSummaryCardsLoading(false);
-    console.log('[ui.js] Financial summary cards updated with flexible data structure handling');
+    console.log('[ui.js] All financial metrics updated with proper formatting');
 }
 
 /**
