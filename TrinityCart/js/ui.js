@@ -2389,6 +2389,9 @@ let currentCatalogueItemIds = new Set(); // Using a Set for very fast lookups
 // 2. Define the AG-Grid options for the LEFT grid (Available Products)
 const availableProductsGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     context: {
         currentCatalogueItemIds: currentCatalogueItemIds // Initialize with the empty Set
     },
