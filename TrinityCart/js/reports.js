@@ -2160,27 +2160,29 @@ function getLatestPurchaseCost(productId) {
 }
 
 
-
 /**
- * [ENHANCED] Calculates comprehensive inventory financial analysis with complete business metrics.
+ * Calculates comprehensive inventory financial analysis with all four business metrics.
  * 
- * Provides four key financial metrics:
+ * Provides complete financial view:
  * 1. Total Historical Spending - All money spent on purchases
- * 2. Current Inventory Investment - Value of stock currently on hand
+ * 2. Current Inventory Investment - Value of stock currently on hand  
  * 3. Revenue Potential - Earnings possible from selling remaining inventory
  * 4. Inventory Turnover Value - Investment converted to sales
+ * 
+ * PRICING STRATEGY:
+ * - Investment: Latest purchase prices from invoices + fallback to product.unitPrice
+ * - Revenue: Price history from catalogues + fallback to product.sellingPrice
  * 
  * @param {boolean} [includePerformanceAnalysis=true] - Include sales velocity
  * @param {number} [performanceAnalysisDays=30] - Performance analysis period  
  * @param {boolean} [useCache=true] - Enable caching
  * 
  * @returns {Promise<Object>} Comprehensive inventory financial analysis
- * 
  * @since 1.0.0
  */
 export async function calculateInventoryAnalysis(includePerformanceAnalysis = true, performanceAnalysisDays = 30, useCache = true) {
     try {
-        console.log(`[Reports] Calculating COMPREHENSIVE inventory financial analysis with all business metrics`);
+        console.log(`[Reports] 🚀 Starting COMPREHENSIVE inventory financial analysis`);
         
         // Generate cache key
         const cacheKey = `comprehensive_inventory_analysis_${includePerformanceAnalysis ? 'with' : 'without'}_performance_${performanceAnalysisDays}days`;
@@ -2189,11 +2191,12 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         if (useCache) {
             const cachedResult = ReportCache.getCachedReport(cacheKey);
             if (cachedResult) {
-                console.log(`[Reports] Using cached comprehensive inventory analysis - 0 Firestore reads`);
+                console.log(`[Reports] ✅ Using cached comprehensive inventory analysis - 0 Firestore reads`);
                 return cachedResult;
             }
         }
 
+        // Validate masterData
         if (!masterData.products || masterData.products.length === 0) {
             throw new Error('No product data available in masterData cache');
         }
@@ -2201,37 +2204,50 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         const db = firebase.firestore();
         let totalFirestoreReads = 0;
         
-        console.log(`[Reports] Phase 1: Calculating TOTAL HISTORICAL SPENDING from all purchase invoices...`);
+        // ===================================================================
+        // PHASE 1: CALCULATE TOTAL HISTORICAL SPENDING (All Purchase Invoices)
+        // ===================================================================
+        console.log(`[Reports] 📋 Phase 1: Calculating TOTAL HISTORICAL SPENDING...`);
         
-        // PHASE 1: Get ALL purchase invoice totals for TOTAL SPENDING calculation
         const allPurchaseInvoicesQuery = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
             .orderBy('purchaseDate', 'desc');
         
         const allInvoicesSnapshot = await allPurchaseInvoicesQuery.get();
         totalFirestoreReads += allInvoicesSnapshot.size;
         
-        console.log(`[Reports] Retrieved ${allInvoicesSnapshot.size} purchase invoices for total spending calculation`);
+        console.log(`[Reports] Retrieved ${allInvoicesSnapshot.size} purchase invoices`);
         
-        // Calculate TOTAL HISTORICAL SPENDING
+        // Track spending and build purchase history
         let totalHistoricalSpending = 0;
         const supplierSpendingBreakdown = new Map();
-        const productPurchaseHistory = new Map(); // For current investment calculation
+        const productPurchaseHistory = new Map();
+        const invoiceBreakdown = []; // For debugging
         
-        allInvoicesSnapshot.docs.forEach(doc => {
+        allInvoicesSnapshot.docs.forEach((doc, index) => {
             const invoiceData = doc.data();
             const invoiceTotal = invoiceData.invoiceTotal || 0;
+            const invoiceId = invoiceData.invoiceId || doc.id;
             const supplierName = invoiceData.supplierName || 'Unknown Supplier';
             const invoiceDate = invoiceData.purchaseDate;
             
-            // Add to total historical spending
+            // Track for debugging
+            invoiceBreakdown.push({
+                index: index + 1,
+                invoiceId: invoiceId,
+                supplierName: supplierName,
+                invoiceTotal: invoiceTotal,
+                formattedTotal: formatCurrency(invoiceTotal)
+            });
+            
+            // Add to total spending
             totalHistoricalSpending += invoiceTotal;
             
-            // Track spending by supplier
+            // Track supplier spending
             supplierSpendingBreakdown.set(supplierName, 
                 (supplierSpendingBreakdown.get(supplierName) || 0) + invoiceTotal
             );
             
-            // Build product purchase history for current investment calculation
+            // Build product purchase history
             if (invoiceData.lineItems && Array.isArray(invoiceData.lineItems)) {
                 invoiceData.lineItems.forEach(lineItem => {
                     const productId = lineItem.masterProductId;
@@ -2243,7 +2259,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                     }
                     
                     productPurchaseHistory.get(productId).push({
-                        invoiceId: invoiceData.invoiceId,
+                        invoiceId: invoiceId,
                         invoiceDate: invoiceDate,
                         supplierName: supplierName,
                         unitCost: unitCost,
@@ -2253,72 +2269,83 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 });
             }
         });
-
         
+        // Log spending breakdown
+        console.log(`[Reports] 📊 TOTAL SPENDING BREAKDOWN:`);
+        invoiceBreakdown.forEach(invoice => {
+            console.log(`  ${invoice.index}. ${invoice.invoiceId}: ${invoice.formattedTotal} (${invoice.supplierName})`);
+        });
+        console.log(`  TOTAL CALCULATED: ${formatCurrency(totalHistoricalSpending)}`);
+        console.log(`  YOUR EXPECTED: ₹354,635 (₹96,900 + ₹257,735)`);
+        console.log(`  DIFFERENCE: ${formatCurrency(Math.abs(totalHistoricalSpending - 354635))}`);
         
-        console.log(`[Reports] ✅ TOTAL HISTORICAL SPENDING: ${formatCurrency(totalHistoricalSpending)}`);
-        console.log(`[Reports] Spending across ${supplierSpendingBreakdown.size} suppliers`);
-        
-        // PHASE 2: Get current selling prices using price history + fallback
-        console.log(`[Reports] Phase 2: Getting current selling prices for revenue potential...`);
+        // ===================================================================
+        // PHASE 2: GET CURRENT SELLING PRICES (Price History + Fallback)
+        // ===================================================================
+        console.log(`[Reports] 💰 Phase 2: Getting current selling prices...`);
         
         const activeProductIds = masterData.products.filter(p => p.isActive).map(p => p.id);
         const priceHistoryResults = await getCurrentSellingPricesFromHistory(activeProductIds, true);
         totalFirestoreReads += activeProductIds.length; // Approximate reads
         
-        // Build final selling prices with fallback
+        // Build final selling prices with fallback strategy
         const finalSellingPrices = new Map();
         let priceHistoryUsed = 0;
         let fallbackPriceUsed = 0;
+        let noPricingAvailable = 0;
         
         masterData.products.forEach(product => {
             const productId = product.id;
             const priceHistoryInfo = priceHistoryResults.get(productId);
             
             if (priceHistoryInfo && priceHistoryInfo.sellingPrice > 0) {
+                // PRIMARY: Use price history
                 finalSellingPrices.set(productId, {
                     sellingPrice: priceHistoryInfo.sellingPrice,
-                    source: 'price_history'
+                    source: 'price_history',
+                    catalogueSource: priceHistoryInfo.selectedCatalogueSource
                 });
                 priceHistoryUsed++;
             } else if (product.sellingPrice && product.sellingPrice > 0) {
+                // FALLBACK: Use product catalogue selling price
                 finalSellingPrices.set(productId, {
                     sellingPrice: product.sellingPrice,
-                    source: 'product_catalogue_fallback'
+                    source: 'product_catalogue_fallback',
+                    catalogueSource: 'Product Master Record'
                 });
                 fallbackPriceUsed++;
+            } else {
+                noPricingAvailable++;
             }
         });
         
-        console.log(`[Reports] Current pricing: ${priceHistoryUsed} from price history, ${fallbackPriceUsed} from fallback`);
+        console.log(`[Reports] 📈 PRICING SOURCE SUMMARY:`);
+        console.log(`  - Price History: ${priceHistoryUsed} products (${((priceHistoryUsed / masterData.products.length) * 100).toFixed(1)}%)`);
+        console.log(`  - Fallback: ${fallbackPriceUsed} products (${((fallbackPriceUsed / masterData.products.length) * 100).toFixed(1)}%)`);
+        console.log(`  - No Pricing: ${noPricingAvailable} products (${((noPricingAvailable / masterData.products.length) * 100).toFixed(1)}%)`);
         
-        // PHASE 3: Calculate ALL FOUR BUSINESS METRICS
-        console.log(`[Reports] Phase 3: Calculating comprehensive business metrics...`);
+        // ===================================================================
+        // PHASE 3: CALCULATE ALL FOUR BUSINESS METRICS
+        // ===================================================================
+        console.log(`[Reports] 📊 Phase 3: Calculating all four business metrics...`);
         
         const businessMetrics = {
-            // METRIC 1: Total Historical Spending (all purchase invoices)
             totalHistoricalSpending: totalHistoricalSpending,
-            
-            // METRIC 2: Current Inventory Investment (current stock × latest unit costs)
             currentInventoryInvestment: 0,
-            
-            // METRIC 3: Revenue Potential (current stock × current selling prices)
             totalRevenuePotential: 0,
-            
-            // METRIC 4: Inventory Turnover Value (spending - current investment)
             inventoryTurnoverValue: 0,
-            
-            // Supporting metrics
             productsIncludedInValuation: 0,
             totalCurrentStock: 0,
             averageInventoryTurnover: 0
         };
         
-        // Enhanced category analysis with all metrics
         const categoryAnalysis = new Map();
+        let debugCurrentInvestment = 0;
         
-        // Calculate metrics for each product
-        masterData.products.forEach(product => {
+        // DETAILED PRODUCT-BY-PRODUCT ANALYSIS
+        console.log(`[Reports] 🔍 DETAILED CURRENT INVESTMENT CALCULATION:`);
+        
+        masterData.products.forEach((product, index) => {
             const stock = product.inventoryCount || 0;
             const productId = product.id;
             const productName = product.itemName;
@@ -2327,45 +2354,56 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             // Get latest purchase cost for CURRENT INVESTMENT
             const purchaseHistory = productPurchaseHistory.get(productId);
             let latestUnitCost = 0;
+            let costSource = 'none';
+            
             if (purchaseHistory && purchaseHistory.length > 0) {
                 // Sort by date and get most recent
                 const sortedHistory = purchaseHistory.sort((a, b) => b.invoiceDate - a.invoiceDate);
                 latestUnitCost = sortedHistory[0].unitCost;
+                costSource = `invoice_${sortedHistory[0].invoiceId}`;
             } else {
                 // Fallback to product master unit price
                 latestUnitCost = product.unitPrice || 0;
+                costSource = 'product_master_fallback';
             }
             
-            // Get current selling price for REVENUE POTENTIAL
+            // Get current selling price
             const priceInfo = finalSellingPrices.get(productId);
             const currentSellingPrice = priceInfo ? priceInfo.sellingPrice : 0;
+            const priceSource = priceInfo ? priceInfo.source : 'none';
             
             // Calculate individual product metrics
-            const productCurrentInvestment = stock * latestUnitCost;     // What we have invested in current stock
-            const productRevenuePotential = stock * currentSellingPrice; // What we could earn
+            const productCurrentInvestment = stock * latestUnitCost;
+            const productRevenuePotential = stock * currentSellingPrice;
             
+            // Add to business totals
             businessMetrics.currentInventoryInvestment += productCurrentInvestment;
             businessMetrics.totalRevenuePotential += productRevenuePotential;
             businessMetrics.totalCurrentStock += stock;
+            debugCurrentInvestment += productCurrentInvestment;
             
+            // Count complete data products
             if (latestUnitCost > 0 && currentSellingPrice > 0 && stock > 0) {
                 businessMetrics.productsIncludedInValuation += 1;
             }
             
-            console.log(`[Reports] ${productName}:`);
-            console.log(`  - Current Stock: ${stock} units`);
-            console.log(`  - Latest Unit Cost: ₹${latestUnitCost}`);
-            console.log(`  - Current Selling Price: ₹${currentSellingPrice} (${priceInfo?.source || 'none'})`);
-            console.log(`  - Current Investment: ₹${productCurrentInvestment.toFixed(2)}`);
-            console.log(`  - Revenue Potential: ₹${productRevenuePotential.toFixed(2)}`);
+            // Detailed logging for debugging
+            if (productCurrentInvestment > 0 || stock > 0) { // Only log products with stock or investment
+                console.log(`[Reports] ${index + 1}. ${productName}:`);
+                console.log(`    Stock: ${stock} units`);
+                console.log(`    Latest Cost: ₹${latestUnitCost} (${costSource})`);
+                console.log(`    Selling Price: ₹${currentSellingPrice} (${priceSource})`);
+                console.log(`    Current Investment: ₹${productCurrentInvestment.toFixed(2)}`);
+                console.log(`    Revenue Potential: ₹${productRevenuePotential.toFixed(2)}`);
+            }
             
-            // Category-wise breakdown
+            // Category analysis
             if (!categoryAnalysis.has(categoryId)) {
                 categoryAnalysis.set(categoryId, {
                     productCount: 0,
                     totalStock: 0,
-                    totalInvestment: 0,           // Current investment in this category
-                    totalRevenuePotential: 0,     // Revenue potential for this category
+                    totalInvestment: 0,
+                    totalRevenuePotential: 0,
                     totalProfit: 0,
                     productsWithCompleteData: 0
                 });
@@ -2383,22 +2421,25 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             }
         });
         
-        // METRIC 4: Calculate Inventory Turnover Value
+        // CALCULATE METRIC 4: Inventory Turnover
         businessMetrics.inventoryTurnoverValue = businessMetrics.totalHistoricalSpending - businessMetrics.currentInventoryInvestment;
-        
-        // Calculate average turnover percentage
         businessMetrics.averageInventoryTurnover = businessMetrics.totalHistoricalSpending > 0
             ? (businessMetrics.inventoryTurnoverValue / businessMetrics.totalHistoricalSpending) * 100
             : 0;
         
-        console.log(`[Reports] ===== COMPREHENSIVE BUSINESS METRICS =====`);
-        console.log(`  1. Total Historical Spending: ${formatCurrency(businessMetrics.totalHistoricalSpending)}`);
-        console.log(`  2. Current Inventory Investment: ${formatCurrency(businessMetrics.currentInventoryInvestment)}`);
-        console.log(`  3. Revenue Potential: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
-        console.log(`  4. Inventory Turnover Value: ${formatCurrency(businessMetrics.inventoryTurnoverValue)} (${businessMetrics.averageInventoryTurnover.toFixed(1)}%)`);
-        console.log(`===============================================`);
+        // ===================================================================
+        // FINAL BUSINESS METRICS SUMMARY
+        // ===================================================================
+        console.log(`[Reports] 💼 COMPREHENSIVE BUSINESS METRICS:`);
+        console.log(`  1️⃣ TOTAL HISTORICAL SPENDING: ${formatCurrency(businessMetrics.totalHistoricalSpending)}`);
+        console.log(`  2️⃣ CURRENT INVENTORY INVESTMENT: ${formatCurrency(businessMetrics.currentInventoryInvestment)}`);
+        console.log(`     → Your Expected: ₹428,370`);
+        console.log(`     → Difference: ${formatCurrency(Math.abs(businessMetrics.currentInventoryInvestment - 428370))}`);
+        console.log(`  3️⃣ REVENUE POTENTIAL: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
+        console.log(`  4️⃣ INVENTORY TURNOVER: ${formatCurrency(businessMetrics.inventoryTurnoverValue)} (${businessMetrics.averageInventoryTurnover.toFixed(2)}%)`);
+        console.log(`  📊 PRODUCTS IN VALUATION: ${businessMetrics.productsIncludedInValuation} out of ${masterData.products.length}`);
         
-        // Convert supplier spending to array
+        // Process supplier spending
         const supplierSpendingArray = Array.from(supplierSpendingBreakdown.entries()).map(([supplier, amount]) => ({
             supplierName: supplier,
             totalSpent: amount,
@@ -2406,20 +2447,21 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             percentage: (amount / totalHistoricalSpending) * 100
         })).sort((a, b) => b.totalSpent - a.totalSpent);
         
-        // Convert category analysis with enhanced financial metrics
+        console.log(`[Reports] 🏢 SUPPLIER SPENDING BREAKDOWN:`);
+        supplierSpendingArray.forEach(supplier => {
+            console.log(`  - ${supplier.supplierName}: ${supplier.formattedSpent} (${supplier.percentage.toFixed(1)}%)`);
+        });
+        
+        // Process category breakdown
         const categoryBreakdown = Array.from(categoryAnalysis.entries()).map(([categoryId, data]) => {
             const categoryName = masterData.categories.find(cat => cat.id === categoryId)?.categoryName || 'Unknown Category';
-            const categoryMargin = data.totalInvestment > 0 
-                ? (data.totalProfit / data.totalInvestment) * 100 
-                : 0;
+            const categoryMargin = data.totalInvestment > 0 ? (data.totalProfit / data.totalInvestment) * 100 : 0;
             
             return {
                 categoryId,
                 categoryName,
                 productCount: data.productCount,
                 totalStock: data.totalStock,
-                
-                // Financial metrics for this category
                 totalInvestment: data.totalInvestment,
                 formattedInvestment: formatCurrency(data.totalInvestment),
                 totalRevenuePotential: data.totalRevenuePotential,
@@ -2427,24 +2469,32 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 totalProfit: data.totalProfit,
                 formattedProfit: formatCurrency(data.totalProfit),
                 categoryMargin: categoryMargin,
-                
-                // Percentage of total business
                 investmentPercentage: businessMetrics.currentInventoryInvestment > 0
                     ? (data.totalInvestment / businessMetrics.currentInventoryInvestment) * 100
                     : 0
             };
-        }).sort((a, b) => b.totalInvestment - a.totalInvestment); // Sort by current investment
+        }).sort((a, b) => b.totalInvestment - a.totalInvestment);
         
+        console.log(`[Reports] 📂 CATEGORY BREAKDOWN:`);
+        categoryBreakdown.forEach(category => {
+            console.log(`  ${category.categoryName}: ${category.formattedInvestment} (${category.investmentPercentage.toFixed(1)}%)`);
+        });
+        
+        // ===================================================================
+        // ASSEMBLE FINAL RESULTS
+        // ===================================================================
         const finalResults = {
-            // Enhanced inventory summary with ALL business metrics
             inventorySummary: {
                 totalProducts: masterData.products.length,
                 productsWithCompleteData: businessMetrics.productsIncludedInValuation,
                 outOfStockCount: masterData.products.filter(p => (p.inventoryCount || 0) === 0).length,
-                lowStockCount: masterData.products.filter(p => (p.inventoryCount || 0) < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD).length
+                lowStockCount: masterData.products.filter(p => (p.inventoryCount || 0) < REPORT_CONFIGS.PERFORMANCE_THRESHOLDS.LOW_STOCK_THRESHOLD).length,
+                
+                // Data quality metrics
+                pricingCoverage: ((priceHistoryUsed + fallbackPriceUsed) / masterData.products.length) * 100,
+                dataQualityScore: (businessMetrics.productsIncludedInValuation / masterData.products.length) * 100
             },
             
-            // COMPREHENSIVE FINANCIAL ANALYSIS (All 4 metrics)
             comprehensiveFinancialAnalysis: {
                 // METRIC 1: Total Historical Spending
                 totalHistoricalSpending: businessMetrics.totalHistoricalSpending,
@@ -2458,82 +2508,60 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 totalRevenuePotential: businessMetrics.totalRevenuePotential,
                 formattedRevenuePotential: formatCurrency(businessMetrics.totalRevenuePotential),
                 
-                // METRIC 4: Inventory Turnover Value
+                // METRIC 4: Inventory Turnover
                 inventoryTurnoverValue: businessMetrics.inventoryTurnoverValue,
                 formattedTurnoverValue: formatCurrency(businessMetrics.inventoryTurnoverValue),
                 inventoryTurnoverPercentage: businessMetrics.averageInventoryTurnover,
                 
-                // Derived business insights
+                // Derived metrics
                 potentialProfitFromCurrentStock: businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment,
                 formattedPotentialProfit: formatCurrency(businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment),
-                
                 currentStockMargin: businessMetrics.currentInventoryInvestment > 0
                     ? ((businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment) / businessMetrics.currentInventoryInvestment) * 100
                     : 0,
                 
-                // Business efficiency metrics
-                inventoryEfficiency: {
-                    stockTurnoverRate: businessMetrics.averageInventoryTurnover,
-                    cashConversionRate: businessMetrics.totalHistoricalSpending > 0
-                        ? (businessMetrics.inventoryTurnoverValue / businessMetrics.totalHistoricalSpending) * 100
-                        : 0,
-                    inventoryVelocity: businessMetrics.totalCurrentStock > 0 && performanceAnalysisDays > 0
-                        ? 'Requires sales data integration' // Would need sales velocity calculation
-                        : 'Not calculated'
-                }
+                // Include product count for UI
+                productsIncludedInValuation: businessMetrics.productsIncludedInValuation
             },
             
-            // Enhanced category breakdown
             categoryBreakdown,
             
-            // Supplier spending analysis
             supplierFinancialAnalysis: {
                 totalSuppliersUsed: supplierSpendingArray.length,
                 supplierSpendingDistribution: supplierSpendingArray,
-                topSupplierBySpending: supplierSpendingArray[0] || null,
-                supplierDiversification: supplierSpendingArray.length > 1 ? 'Diversified' : 'Single Supplier Dependent'
+                topSupplierBySpending: supplierSpendingArray[0] || null
             },
             
-            // Data quality and pricing insights
             pricingSystemInsights: {
                 priceHistoryUsage: priceHistoryUsed,
                 fallbackPriceUsage: fallbackPriceUsed,
-                pricingCoverage: ((priceHistoryUsed + fallbackPriceUsed) / masterData.products.length) * 100,
-                systemMigrationProgress: priceHistoryUsed > 0 ? 'Active' : 'Not Started',
-                dataAccuracyLevel: priceHistoryUsed > fallbackPriceUsed ? 'High' : 'Medium'
+                noPricingCount: noPricingAvailable,
+                systemMigrationProgress: priceHistoryUsed > 0 ? 'Active' : 'Not Started'
             },
             
             metadata: {
                 calculatedAt: new Date().toISOString(),
                 firestoreReadsUsed: totalFirestoreReads,
-                analysisScope: 'Complete business inventory financial analysis',
                 purchaseInvoicesAnalyzed: allInvoicesSnapshot.size,
-                dataAccuracy: 'Business-comprehensive with historical spending + current investment',
-                calculationMethod: 'Historical spending from all invoices + current stock valuation + price history/fallback pricing',
+                productsAnalyzed: masterData.products.length,
+                dataAccuracy: 'Comprehensive with purchase invoices + price history/fallback',
                 cacheKey
             }
         };
         
-        // Cache the comprehensive results
+        // Cache results
         if (useCache) {
             ReportCache.setCachedReport(cacheKey, finalResults);
         }
         
-        console.log(`[Reports] ✅ COMPREHENSIVE inventory analysis completed using ${totalFirestoreReads} Firestore reads`);
-        console.log(`[Reports] FINAL BUSINESS SUMMARY:`);
-        console.log(`  📋 Historical Spending: ${finalResults.comprehensiveFinancialAnalysis.formattedTotalSpending} (all purchases)`);
-        console.log(`  📦 Current Investment: ${finalResults.comprehensiveFinancialAnalysis.formattedCurrentInvestment} (stock on hand)`);
-        console.log(`  💰 Revenue Potential: ${finalResults.comprehensiveFinancialAnalysis.formattedRevenuePotential} (if sold all)`);
-        console.log(`  🔄 Inventory Turnover: ${finalResults.comprehensiveFinancialAnalysis.formattedTurnoverValue} (${finalResults.comprehensiveFinancialAnalysis.inventoryTurnoverPercentage.toFixed(1)}%)`);
-        
+        console.log(`[Reports] ✅ COMPREHENSIVE analysis completed using ${totalFirestoreReads} Firestore reads`);
         return finalResults;
         
     } catch (error) {
-        console.error('[Reports] Error in comprehensive inventory analysis:', error);
+        console.error('[Reports] ❌ Error in comprehensive inventory analysis:', error);
         throw new Error(`Comprehensive inventory analysis failed: ${error.message}`);
     }
 }
-
 
 /**
  * Generates pricing system recommendations based on data source usage.
