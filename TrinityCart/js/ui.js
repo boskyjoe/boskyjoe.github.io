@@ -7747,11 +7747,10 @@ async function loadInventoryValuationData() {
     }
 }
 
-
 /**
- * Updates valuation summary cards with financial metrics.
+ * Updates charts and visual elements for inventory valuation.
  * 
- * @param {Object} valuationData - Enhanced valuation data from reports module
+ * @param {Object} valuationData - Enhanced valuation analysis data with comprehensive metrics
  * @private
  * @since 1.0.0
  */
@@ -7834,81 +7833,6 @@ function updateValuationCharts(valuationData) {
     console.log('[ui.js] Charts and visualizations updated successfully');
 }
 
-/**
- * Updates charts and visual elements for inventory valuation.
- * 
- * @param {Object} valuationData - Enhanced valuation analysis data
- * @private
- * @since 1.0.0
- */
-function updateValuationCharts(valuationData) {
-    console.log('[ui.js] Updating valuation charts and visualizations');
-    console.log('[ui.js] Available data keys:', Object.keys(valuationData));
-    
-    // Try to find financial data in the new comprehensive structure
-    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || 
-                            valuationData.accurateInventoryValuation ||
-                            valuationData.inventoryValuation ||
-                            null;
-    
-    if (!financialAnalysis) {
-        console.error('[ui.js] No financial analysis data available for charts');
-        console.error('[ui.js] Available data structure:', valuationData);
-        return;
-    }
-    
-    console.log('[ui.js] Using financial analysis for charts:', financialAnalysis);
-    
-    // Update investment vs revenue visualization circles
-    const investmentCircle = document.getElementById('investment-circle');
-    const revenueCircle = document.getElementById('revenue-circle');
-    const profitDifference = document.getElementById('profit-difference');
-    
-    if (investmentCircle) {
-        // Use current investment (stock on hand) for the investment circle
-        const currentInvestment = financialAnalysis.currentInventoryInvestment || 
-                                 financialAnalysis.totalInvestmentValue || 0;
-        investmentCircle.textContent = formatCurrency(currentInvestment).replace(/[₹$]/g, '').trim();
-        console.log('[ui.js] Investment circle set to:', formatCurrency(currentInvestment));
-    }
-    
-    if (revenueCircle) {
-        // Use revenue potential for the revenue circle
-        const revenuePotential = financialAnalysis.totalRevenuePotential || 
-                               financialAnalysis.totalRevenueValue || 
-                               financialAnalysis.totalSellingValue || 0;
-        revenueCircle.textContent = formatCurrency(revenuePotential).replace(/[₹$]/g, '').trim();
-        console.log('[ui.js] Revenue circle set to:', formatCurrency(revenuePotential));
-    }
-    
-    if (profitDifference) {
-        // Calculate potential profit from current stock
-        const currentInvestment = financialAnalysis.currentInventoryInvestment || 0;
-        const revenuePotential = financialAnalysis.totalRevenuePotential || 0;
-        const potentialProfit = revenuePotential - currentInvestment;
-        
-        profitDifference.textContent = `${formatCurrency(potentialProfit)} Potential Profit`;
-        console.log('[ui.js] Profit difference set to:', formatCurrency(potentialProfit));
-    }
-    
-    // Update category breakdown visualization using the new structure
-    const categoryData = valuationData.categoryBreakdown || [];
-    console.log('[ui.js] Category data for visualization:', categoryData);
-    
-    if (categoryData && categoryData.length > 0) {
-        updateCategoryBreakdownVisualization(categoryData);
-    } else {
-        console.warn('[ui.js] No category breakdown data available for visualization');
-        
-        // Show placeholder in category list
-        const categoryListElement = document.getElementById('category-breakdown-list');
-        if (categoryListElement) {
-            categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category data available</div>';
-        }
-    }
-    
-    console.log('[ui.js] Charts and visualizations updated successfully');
-}
 
 
 
