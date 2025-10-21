@@ -2444,6 +2444,9 @@ const availableProductsGridOptions = {
 // 3. Define the AG-Grid options for the RIGHT grid (Catalogue Items)
 const catalogueItemsGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
