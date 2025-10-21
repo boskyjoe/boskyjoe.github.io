@@ -1568,7 +1568,7 @@ const productsGridOptions = {
         }
     ],
     defaultColDef: {
-        sortable: true, filter: true, resizable: true,
+        sortable: true, filter: true, resizable: true,wrapText: true, autoHeight: true,
     },
     rowData: [],
     rowClassRules: {
