@@ -296,7 +296,7 @@
                                 <div>
                                     <label for="itemCategory-select" class="form-label">Category</label>
                                     <select id="itemCategory-select" class="form-input w-full" required>
-                                        <option value="">Select a category...</option>
+                                        <option value="" disabled selected>Select a category...</option>
                                         <!-- Options will be populated by JS -->
                                     </select>
                                 </div>
@@ -379,7 +379,7 @@
                                 <div>
                                     <label for="catalogue-season-select" class="form-label">Sales Season</label>
                                     <select id="catalogue-season-select" class="form-input w-full" required>
-                                        <option value="">Select a season...</option>
+                                        <option value="" disabled selected>Select a season...</option>
                                         <!-- Options will be populated by JS -->
                                     </select>
                                 </div>
@@ -466,7 +466,9 @@
                                     </div>
                                     <div class="md:col-span-2">
                                         <label for="purchase-supplier" class="form-label">Supplier</label>
-                                        <select id="purchase-supplier" class="form-input w-full" required></select>
+                                        <select id="purchase-supplier" class="form-input w-full" required>
+                                            <option value="" disabled selected>Select a supplier...</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label for="supplier-invoice-no" class="form-label">Supplier Invoice #</label>
@@ -702,7 +704,9 @@
                                                         <label for="payment-mode-select" class="form-label">Payment Mode
                                                             <span class="text-red-500">*</span></label>
                                                         <select id="payment-mode-select" class="form-input w-full"
-                                                            required></select>
+                                                            required>
+                                                        <option value="" disabled selected>Select a Payment Mode...</option>
+                                                    </select>
                                                     </div>
                                                     <div>
                                                         <label for="payment-date-input" class="form-label">Payment Date
@@ -797,7 +801,9 @@
                                 <div>
                                     <label for="sale-store-select" class="form-label">Sell From Store <span
                                             class="text-red-500">*</span></label>
-                                    <select id="sale-store-select" class="form-input w-full" required></select>
+                                    <select id="sale-store-select" class="form-input w-full" required>
+                                        <option value="" disabled selected>Select a Store...</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label for="sale-customer-name" class="form-label">Customer Name <span
@@ -886,7 +892,7 @@
                                                 <label for="sale-payment-mode" class="form-label">Payment Mode <span
                                                         class="text-red-500">*</span></label>
                                                 <select id="sale-payment-mode" class="form-input w-full"
-                                                    required></select>
+                                                    required><option value="" disabled selected>Select a Payment Mode...</option></select>
                                             </div>
                                             <div>
                                                 <label for="sale-amount-received" class="form-label">Amount Received
@@ -2738,7 +2744,7 @@
                                 <label for="supplier-payment-mode-select"
                                     class="block text-sm font-medium text-gray-700 mb-1">Payment Mode</label>
                                 <select id="supplier-payment-mode-select" class="form-input w-full" required>
-                                    <option value="">Select a mode...</option>
+                                    <option value="" disabled selected>Select a mode...</option>
                                 </select>
                             </div>
 
@@ -2852,7 +2858,7 @@
                             <label for="admin-select-member" class="form-label">Select Team Lead <span
                                     class="text-red-500">*</span></label>
                             <select id="admin-select-member" class="form-input w-full" disabled>
-                                <option value="">Select a team first</option>
+                                <option value="" disabled selected>Select a team first</option>
                             </select>
                         </div>
                     </div>
@@ -2867,11 +2873,11 @@
                     <div>
                         <label for="request-catalogue-select" class="form-label">Sales Catalogue <span
                                 class="text-red-500">*</span></label>
-                        <select id="request-catalogue-select" class="form-input w-full" required></select>
+                        <select id="request-catalogue-select" class="form-input w-full" required><option value="" disabled selected>Select a Sales Catalogue...</option></select>
                     </div>
                     <div>
                         <label for="request-event-select" class="form-label">Sales Event (Optional)</label>
-                        <select id="request-event-select" class="form-input w-full"></select>
+                        <select id="request-event-select" class="form-input w-full"><option value="" disabled selected>Select a Sales Event...</option></select>
                     </div>
 
                 </div>
@@ -2913,7 +2919,7 @@
                         <label for="activity-product-select" class="form-label">Product<span
                                 class="text-red-500">*</span></label>
                         <select id="activity-product-select" class="form-input w-full" required>
-                            <option value="">Select a product...</option>
+                            <option value="" disabled selected>Select a product...</option>
                             <!-- Options will be populated by JS -->
                         </select>
                     </div>
@@ -3034,7 +3040,7 @@
                                     <div>
                                         <label for="record-sale-mode" class="form-label">Payment Mode <span
                                                 class="text-red-500">*</span></label>
-                                        <select id="record-sale-mode" class="form-input w-full" required></select>
+                                        <select id="record-sale-mode" class="form-input w-full" required><option value="" disabled selected>Select a Payment Mode...</option></select>
                                     </div>
                                     <div>
                                         <label for="record-sale-ref" class="form-label">Reference # <span
