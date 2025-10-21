@@ -2294,8 +2294,11 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         let fallbackPriceUsed = 0;
         let noPricingAvailable = 0;
         
-        masterData.products.forEach(product => {
+        console.log(`[Reports] 🔍 BUILDING SELLING PRICES MAP...`);
+        
+        masterData.products.forEach((product, index) => {
             const productId = product.id;
+            const productName = product.itemName;
             const priceHistoryInfo = priceHistoryResults.get(productId);
             
             if (priceHistoryInfo && priceHistoryInfo.sellingPrice > 0) {
@@ -2306,6 +2309,9 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                     catalogueSource: priceHistoryInfo.selectedCatalogueSource
                 });
                 priceHistoryUsed++;
+                
+                console.log(`[Reports] ${index + 1}. ${productName}: ₹${priceHistoryInfo.sellingPrice} (PRICE HISTORY from ${priceHistoryInfo.selectedCatalogueSource})`);
+                
             } else if (product.sellingPrice && product.sellingPrice > 0) {
                 // FALLBACK: Use product catalogue selling price
                 finalSellingPrices.set(productId, {
@@ -2314,8 +2320,12 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                     catalogueSource: 'Product Master Record'
                 });
                 fallbackPriceUsed++;
+                
+                console.log(`[Reports] ${index + 1}. ${productName}: ₹${product.sellingPrice} (FALLBACK from product master)`);
+                
             } else {
                 noPricingAvailable++;
+                console.log(`[Reports] ${index + 1}. ${productName}: NO PRICING AVAILABLE (excluded from revenue potential)`);
             }
         });
         
@@ -2325,7 +2335,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         console.log(`  - No Pricing: ${noPricingAvailable} products (${((noPricingAvailable / masterData.products.length) * 100).toFixed(1)}%)`);
         
         // ===================================================================
-        // PHASE 3: CALCULATE ALL FOUR BUSINESS METRICS
+        // PHASE 3: CALCULATE ALL FOUR BUSINESS METRICS WITH DETAILED LOGGING
         // ===================================================================
         console.log(`[Reports] 📊 Phase 3: Calculating all four business metrics...`);
         
@@ -2340,10 +2350,14 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         };
         
         const categoryAnalysis = new Map();
-        let debugCurrentInvestment = 0;
         
-        // DETAILED PRODUCT-BY-PRODUCT ANALYSIS
-        console.log(`[Reports] 🔍 DETAILED CURRENT INVESTMENT CALCULATION:`);
+        // DETAILED REVENUE POTENTIAL CALCULATION
+        console.log(`[Reports] 💰 DETAILED REVENUE POTENTIAL CALCULATION:`);
+        console.log(`[Reports] Format: [#] ProductName | Stock × Price = Revenue (Source)`);
+        console.log(`[Reports] ${'='.repeat(100)}`);
+        
+        let runningRevenuePotential = 0;
+        let productsContributingToRevenue = 0;
         
         masterData.products.forEach((product, index) => {
             const stock = product.inventoryCount || 0;
@@ -2357,20 +2371,25 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             let costSource = 'none';
             
             if (purchaseHistory && purchaseHistory.length > 0) {
-                // Sort by date and get most recent
                 const sortedHistory = purchaseHistory.sort((a, b) => b.invoiceDate - a.invoiceDate);
                 latestUnitCost = sortedHistory[0].unitCost;
-                costSource = `invoice_${sortedHistory[0].invoiceId}`;
+                costSource = `Invoice-${sortedHistory[0].invoiceId}`;
             } else {
-                // Fallback to product master unit price
                 latestUnitCost = product.unitPrice || 0;
-                costSource = 'product_master_fallback';
+                costSource = 'Product-Master';
             }
             
-            // Get current selling price
+            // Get current selling price for REVENUE POTENTIAL (DETAILED)
             const priceInfo = finalSellingPrices.get(productId);
-            const currentSellingPrice = priceInfo ? priceInfo.sellingPrice : 0;
-            const priceSource = priceInfo ? priceInfo.source : 'none';
+            let currentSellingPrice = 0;
+            let priceSource = 'NO_PRICE';
+            let catalogueSource = 'N/A';
+            
+            if (priceInfo) {
+                currentSellingPrice = priceInfo.sellingPrice;
+                priceSource = priceInfo.source.toUpperCase();
+                catalogueSource = priceInfo.catalogueSource;
+            }
             
             // Calculate individual product metrics
             const productCurrentInvestment = stock * latestUnitCost;
@@ -2380,24 +2399,46 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             businessMetrics.currentInventoryInvestment += productCurrentInvestment;
             businessMetrics.totalRevenuePotential += productRevenuePotential;
             businessMetrics.totalCurrentStock += stock;
-            debugCurrentInvestment += productCurrentInvestment;
+            runningRevenuePotential += productRevenuePotential;
+            
+            // Count products contributing to revenue
+            if (productRevenuePotential > 0) {
+                productsContributingToRevenue++;
+            }
             
             // Count complete data products
             if (latestUnitCost > 0 && currentSellingPrice > 0 && stock > 0) {
                 businessMetrics.productsIncludedInValuation += 1;
             }
             
-            // Detailed logging for debugging
-            if (productCurrentInvestment > 0 || stock > 0) { // Only log products with stock or investment
-                console.log(`[Reports] ${index + 1}. ${productName}:`);
-                console.log(`    Stock: ${stock} units`);
-                console.log(`    Latest Cost: ₹${latestUnitCost} (${costSource})`);
-                console.log(`    Selling Price: ₹${currentSellingPrice} (${priceSource})`);
-                console.log(`    Current Investment: ₹${productCurrentInvestment.toFixed(2)}`);
-                console.log(`    Revenue Potential: ₹${productRevenuePotential.toFixed(2)}`);
+            // DETAILED REVENUE POTENTIAL LOGGING FOR EVERY PRODUCT
+            if (stock > 0 || currentSellingPrice > 0) {
+                const paddedIndex = (index + 1).toString().padStart(3, ' ');
+                const paddedName = productName.padEnd(30, ' ');
+                const paddedStock = stock.toString().padStart(4, ' ');
+                const paddedPrice = `₹${currentSellingPrice.toFixed(2)}`.padStart(10, ' ');
+                const paddedRevenue = `₹${productRevenuePotential.toFixed(2)}`.padStart(12, ' ');
+                const paddedSource = `(${priceSource})`.padEnd(30, ' ');
+                
+                console.log(`[Reports] [${paddedIndex}] ${paddedName} | ${paddedStock} × ${paddedPrice} = ${paddedRevenue} ${paddedSource}`);
+                
+                // Extra details for high-value products
+                if (productRevenuePotential > 5000) {
+                    console.log(`[Reports]      🎯 HIGH REVENUE PRODUCT:`);
+                    console.log(`[Reports]      📦 Current Stock: ${stock} units`);
+                    console.log(`[Reports]      💲 Unit Selling Price: ₹${currentSellingPrice}`);
+                    console.log(`[Reports]      📋 Price Source: ${priceSource}`);
+                    if (priceSource === 'PRICE_HISTORY') {
+                        console.log(`[Reports]      🏪 From Catalogue: ${catalogueSource}`);
+                    } else if (priceSource === 'PRODUCT_CATALOGUE_FALLBACK') {
+                        console.log(`[Reports]      📝 From Product Master: ₹${product.sellingPrice}`);
+                    }
+                    console.log(`[Reports]      💰 Contributes: ₹${productRevenuePotential.toFixed(2)} to total revenue potential`);
+                    console.log(`[Reports]      ${'─'.repeat(50)}`);
+                }
             }
             
-            // Category analysis
+            // Category analysis (existing logic)
             if (!categoryAnalysis.has(categoryId)) {
                 categoryAnalysis.set(categoryId, {
                     productCount: 0,
@@ -2420,6 +2461,46 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 categoryData.productsWithCompleteData += 1;
             }
         });
+        
+        // REVENUE POTENTIAL VERIFICATION
+        console.log(`[Reports] ${'='.repeat(100)}`);
+        console.log(`[Reports] 💰 REVENUE POTENTIAL VERIFICATION:`);
+        console.log(`  📊 businessMetrics.totalRevenuePotential: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
+        console.log(`  🔍 runningRevenuePotential (manual sum): ${formatCurrency(runningRevenuePotential)}`);
+        console.log(`  ✅ Calculations Match: ${businessMetrics.totalRevenuePotential === runningRevenuePotential ? 'YES' : 'NO'}`);
+        console.log(`  📈 Products Contributing to Revenue: ${productsContributingToRevenue} out of ${masterData.products.length}`);
+        console.log(`  📦 Products with Complete Data: ${businessMetrics.productsIncludedInValuation}`);
+        
+        // Show products with highest revenue potential
+        const highRevenueProducts = [];
+        finalSellingPrices.forEach((priceInfo, productId) => {
+            const product = masterData.products.find(p => p.id === productId);
+            if (product && product.inventoryCount > 0) {
+                const revenue = product.inventoryCount * priceInfo.sellingPrice;
+                if (revenue > 1000) {
+                    highRevenueProducts.push({
+                        name: product.itemName,
+                        stock: product.inventoryCount,
+                        price: priceInfo.sellingPrice,
+                        source: priceInfo.source,
+                        catalogueSource: priceInfo.catalogueSource,
+                        revenue: revenue
+                    });
+                }
+            }
+        });
+        
+        highRevenueProducts.sort((a, b) => b.revenue - a.revenue);
+        
+        if (highRevenueProducts.length > 0) {
+            console.log(`[Reports] 🏆 TOP REVENUE POTENTIAL PRODUCTS:`);
+            highRevenueProducts.slice(0, 10).forEach((product, i) => {
+                console.log(`  ${i + 1}. ${product.name}: ${product.stock} × ₹${product.price} = ₹${product.revenue.toFixed(2)} (${product.source})`);
+                if (product.catalogueSource !== 'Product Master Record') {
+                    console.log(`     Source: ${product.catalogueSource}`);
+                }
+            });
+        }
         
         // CALCULATE METRIC 4: Inventory Turnover
         businessMetrics.inventoryTurnoverValue = businessMetrics.totalHistoricalSpending - businessMetrics.currentInventoryInvestment;
@@ -2477,7 +2558,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         
         console.log(`[Reports] 📂 CATEGORY BREAKDOWN:`);
         categoryBreakdown.forEach(category => {
-            console.log(`  ${category.categoryName}: ${category.formattedInvestment} (${category.investmentPercentage.toFixed(1)}%)`);
+            console.log(`  ${category.categoryName}: Investment ${category.formattedInvestment} → Revenue ${category.formattedRevenuePotential} (${category.investmentPercentage.toFixed(1)}%)`);
         });
         
         // ===================================================================
