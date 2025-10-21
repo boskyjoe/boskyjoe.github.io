@@ -1542,6 +1542,13 @@ const productsGridOptions = {
             valueParser: p => parseFloat(p.newValue)
         },
         {
+            field: "sellingPrice",
+            headerName: "Selling Price",
+            flex: 1,
+            editable: false,
+            valueParser: p => parseFloat(p.newValue)
+        },
+        {
             field: "isActive", headerName: "Status", width: 120,
             cellRenderer: p => p.value ?
                 '<span class="text-green-600 font-semibold">Active</span>' :
@@ -2784,6 +2791,9 @@ const consignmentOrdersGridOptions = {
 const fulfillmentItemsGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 100, // You can adjust this default value if you like
+    paginationPageSizeSelector: [25, 50, 100],
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
         { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
