@@ -1489,6 +1489,9 @@ let unsubscribeProductsListener = null;
 
 const productsGridOptions = {
     getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     theme: 'legacy',
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
