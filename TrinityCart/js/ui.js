@@ -7755,100 +7755,83 @@ async function loadInventoryValuationData() {
  * @private
  * @since 1.0.0
  */
-function updateValuationSummaryCards(valuationData) {
-    console.log('[ui.js] Updating comprehensive financial summary cards');
-    console.log('[ui.js] Received data keys:', Object.keys(valuationData));
+function updateValuationCharts(valuationData) {
+    console.log('[ui.js] Updating valuation charts and visualizations');
+    console.log('[ui.js] Available data keys:', Object.keys(valuationData));
     
-    // Try to find the financial data in any of the possible structures
+    // Try to find financial data in the new comprehensive structure
     const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || 
                             valuationData.accurateInventoryValuation ||
                             valuationData.inventoryValuation ||
                             null;
     
     if (!financialAnalysis) {
-        console.error('[ui.js] No financial analysis data found in any expected structure');
-        updateValuationSummaryCardsLoading(false);
+        console.error('[ui.js] No financial analysis data available for charts');
+        console.error('[ui.js] Available data structure:', valuationData);
+        
+        // Set error placeholders
+        const investmentCircle = document.getElementById('investment-circle');
+        const revenueCircle = document.getElementById('revenue-circle');
+        const profitDifference = document.getElementById('profit-difference');
+        
+        if (investmentCircle) investmentCircle.textContent = 'Error';
+        if (revenueCircle) revenueCircle.textContent = 'Error';
+        if (profitDifference) profitDifference.textContent = 'Data Error - Check Console';
+        
         return;
     }
     
-    console.log('[ui.js] Using financial analysis:', financialAnalysis);
+    console.log('[ui.js] Using financial analysis for charts:', financialAnalysis);
     
-    // METRIC 1: Total Historical Spending
-    const totalSpendingElement = document.getElementById('total-cost-value-display');
-    if (totalSpendingElement) {
-        const totalSpending = financialAnalysis.formattedTotalSpending || 
-                            financialAnalysis.formattedInvestmentValue || 
-                            financialAnalysis.formattedCostValue || 
-                            '₹0.00';
-        totalSpendingElement.textContent = totalSpending;
-        console.log('[ui.js] Set Total Spending to:', totalSpending);
+    // Update investment vs revenue visualization circles
+    const investmentCircle = document.getElementById('investment-circle');
+    const revenueCircle = document.getElementById('revenue-circle');
+    const profitDifference = document.getElementById('profit-difference');
+    
+    if (investmentCircle) {
+        // Use current investment (stock on hand) for the investment circle
+        const currentInvestment = financialAnalysis.currentInventoryInvestment || 
+                                 financialAnalysis.totalInvestmentValue || 0;
+        investmentCircle.textContent = formatCurrency(currentInvestment).replace(/[₹$]/g, '').trim();
+        console.log('[ui.js] Investment circle set to:', formatCurrency(currentInvestment));
     }
     
-    // METRIC 2: Current Investment  
-    const currentInvestmentElement = document.getElementById('total-selling-value-display');
-    if (currentInvestmentElement) {
-        const currentInvestment = financialAnalysis.formattedCurrentInvestment ||
-                                 financialAnalysis.formattedRevenueValue ||
-                                 financialAnalysis.formattedSellingValue ||
-                                 '₹0.00';
-        currentInvestmentElement.textContent = currentInvestment;
-        console.log('[ui.js] Set Current Investment to:', currentInvestment);
+    if (revenueCircle) {
+        // Use revenue potential for the revenue circle
+        const revenuePotential = financialAnalysis.totalRevenuePotential || 
+                               financialAnalysis.totalRevenueValue || 
+                               financialAnalysis.totalSellingValue || 0;
+        revenueCircle.textContent = formatCurrency(revenuePotential).replace(/[₹$]/g, '').trim();
+        console.log('[ui.js] Revenue circle set to:', formatCurrency(revenuePotential));
     }
     
-    // METRIC 3: Revenue Potential
-    const revenuePotentialElement = document.getElementById('potential-profit-display');
-    if (revenuePotentialElement) {
-        const revenuePotential = financialAnalysis.formattedRevenuePotential ||
-                               financialAnalysis.formattedPotentialProfit ||
-                               '₹0.00';
-        revenuePotentialElement.textContent = revenuePotential;
-        console.log('[ui.js] Set Revenue Potential to:', revenuePotential);
-    }
-    
-    // METRIC 4: Inventory Turnover (WITH PROPER FORMATTING)
-    const turnoverElement = document.getElementById('roi-percentage-display');
-    if (turnoverElement) {
-        // Get the raw turnover value
-        const rawTurnoverValue = financialAnalysis.inventoryTurnoverValue || 0;
-        const rawTurnoverPercentage = financialAnalysis.inventoryTurnoverPercentage || 0;
+    if (profitDifference) {
+        // Calculate potential profit from current stock
+        const currentInvestment = financialAnalysis.currentInventoryInvestment || 0;
+        const revenuePotential = financialAnalysis.totalRevenuePotential || 0;
+        const potentialProfit = revenuePotential - currentInvestment;
         
-        console.log('[ui.js] Raw turnover data:', {
-            turnoverValue: rawTurnoverValue,
-            turnoverPercentage: rawTurnoverPercentage,
-            formattedTurnoverValue: financialAnalysis.formattedTurnoverValue
-        });
+        profitDifference.textContent = `${formatCurrency(potentialProfit)} Potential Profit`;
+        console.log('[ui.js] Profit difference set to:', formatCurrency(potentialProfit));
+    }
+    
+    // Update category breakdown visualization using the new structure
+    const categoryData = valuationData.categoryBreakdown || [];
+    console.log('[ui.js] Category data for visualization:', categoryData);
+    
+    if (categoryData && categoryData.length > 0) {
+        updateCategoryBreakdownVisualization(categoryData);
+    } else {
+        console.warn('[ui.js] No category breakdown data available for visualization');
         
-        // DECISION: Show turnover value (₹amount) or percentage?
-        if (financialAnalysis.formattedTurnoverValue) {
-            // Show as currency amount (₹269,635)
-            turnoverElement.textContent = financialAnalysis.formattedTurnoverValue;
-            console.log('[ui.js] Set Inventory Turnover (amount) to:', financialAnalysis.formattedTurnoverValue);
-        } else {
-            // Show as formatted percentage with 2 decimals
-            const formattedPercentage = rawTurnoverPercentage.toFixed(2) + '%';
-            turnoverElement.textContent = formattedPercentage;
-            console.log('[ui.js] Set Inventory Turnover (percentage) to:', formattedPercentage);
+        // Show placeholder in category list
+        const categoryListElement = document.getElementById('category-breakdown-list');
+        if (categoryListElement) {
+            categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category data available for visualization</div>';
         }
     }
     
-    // Update the explanation text with proper formatting
-    const roiExplanationElement = document.getElementById('roi-explanation');
-    if (roiExplanationElement) {
-        const turnoverPercentage = financialAnalysis.inventoryTurnoverPercentage || 0;
-        const formattedPercentage = turnoverPercentage.toFixed(2); // 2 decimal places
-        
-        // Handle negative percentages with better messaging
-        if (turnoverPercentage < 0) {
-            roiExplanationElement.textContent = `Investment exceeds historical spending`;
-            roiExplanationElement.className = 'mt-2 text-sm text-red-600'; // Red for negative
-        } else {
-            roiExplanationElement.textContent = `${formattedPercentage}% of spending converted to sales`;
-            roiExplanationElement.className = 'mt-2 text-sm text-green-600'; // Green for positive
-        }
-    }
-    
-    updateValuationSummaryCardsLoading(false);
-    console.log('[ui.js] All financial metrics updated with proper formatting');
+    console.log('[ui.js] Charts and visualizations updated successfully');
 }
 
 /**
@@ -7860,13 +7843,21 @@ function updateValuationSummaryCards(valuationData) {
  */
 function updateValuationCharts(valuationData) {
     console.log('[ui.js] Updating valuation charts and visualizations');
+    console.log('[ui.js] Available data keys:', Object.keys(valuationData));
     
-    const valuation = valuationData.accurateInventoryValuation || valuationData.inventoryValuation;
+    // Try to find financial data in the new comprehensive structure
+    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || 
+                            valuationData.accurateInventoryValuation ||
+                            valuationData.inventoryValuation ||
+                            null;
     
-    if (!valuation) {
-        console.error('[ui.js] No valuation data available for charts');
+    if (!financialAnalysis) {
+        console.error('[ui.js] No financial analysis data available for charts');
+        console.error('[ui.js] Available data structure:', valuationData);
         return;
     }
+    
+    console.log('[ui.js] Using financial analysis for charts:', financialAnalysis);
     
     // Update investment vs revenue visualization circles
     const investmentCircle = document.getElementById('investment-circle');
@@ -7874,25 +7865,49 @@ function updateValuationCharts(valuationData) {
     const profitDifference = document.getElementById('profit-difference');
     
     if (investmentCircle) {
-        const investmentValue = valuation.totalInvestmentValue || 0;
-        investmentCircle.textContent = formatCurrency(investmentValue).replace(/[₹$]/g, '').trim();
+        // Use current investment (stock on hand) for the investment circle
+        const currentInvestment = financialAnalysis.currentInventoryInvestment || 
+                                 financialAnalysis.totalInvestmentValue || 0;
+        investmentCircle.textContent = formatCurrency(currentInvestment).replace(/[₹$]/g, '').trim();
+        console.log('[ui.js] Investment circle set to:', formatCurrency(currentInvestment));
     }
     
     if (revenueCircle) {
-        const revenueValue = valuation.totalRevenueValue || valuation.totalSellingValue || 0;
-        revenueCircle.textContent = formatCurrency(revenueValue).replace(/[₹$]/g, '').trim();
+        // Use revenue potential for the revenue circle
+        const revenuePotential = financialAnalysis.totalRevenuePotential || 
+                               financialAnalysis.totalRevenueValue || 
+                               financialAnalysis.totalSellingValue || 0;
+        revenueCircle.textContent = formatCurrency(revenuePotential).replace(/[₹$]/g, '').trim();
+        console.log('[ui.js] Revenue circle set to:', formatCurrency(revenuePotential));
     }
     
     if (profitDifference) {
-        const profitValue = valuation.formattedPotentialProfit || '₹0';
-        profitDifference.textContent = `${profitValue} Potential Profit`;
+        // Calculate potential profit from current stock
+        const currentInvestment = financialAnalysis.currentInventoryInvestment || 0;
+        const revenuePotential = financialAnalysis.totalRevenuePotential || 0;
+        const potentialProfit = revenuePotential - currentInvestment;
+        
+        profitDifference.textContent = `${formatCurrency(potentialProfit)} Potential Profit`;
+        console.log('[ui.js] Profit difference set to:', formatCurrency(potentialProfit));
     }
     
-    // Update category breakdown visualization  
+    // Update category breakdown visualization using the new structure
     const categoryData = valuationData.categoryBreakdown || [];
-    updateCategoryBreakdownVisualization(categoryData);
+    console.log('[ui.js] Category data for visualization:', categoryData);
     
-    console.log('[ui.js] Charts updated successfully');
+    if (categoryData && categoryData.length > 0) {
+        updateCategoryBreakdownVisualization(categoryData);
+    } else {
+        console.warn('[ui.js] No category breakdown data available for visualization');
+        
+        // Show placeholder in category list
+        const categoryListElement = document.getElementById('category-breakdown-list');
+        if (categoryListElement) {
+            categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category data available</div>';
+        }
+    }
+    
+    console.log('[ui.js] Charts and visualizations updated successfully');
 }
 
 
@@ -7911,39 +7926,50 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
         return;
     }
     
-    console.log('[ui.js] ===== CATEGORY BREAKDOWN DEBUG =====');
+    console.log('[ui.js] ===== CATEGORY BREAKDOWN VISUALIZATION DEBUG =====');
     console.log('categoryBreakdown type:', typeof categoryBreakdown);
     console.log('categoryBreakdown is array:', Array.isArray(categoryBreakdown));
     console.log('categoryBreakdown length:', categoryBreakdown?.length);
-    console.log('categoryBreakdown data:', categoryBreakdown);
     
     if (categoryBreakdown && categoryBreakdown.length > 0) {
         console.log('First category structure:', categoryBreakdown[0]);
         console.log('First category keys:', Object.keys(categoryBreakdown[0]));
+        console.log('Property values check:');
+        console.log('  - totalInvestment:', categoryBreakdown[0].totalInvestment);
+        console.log('  - totalCostValue:', categoryBreakdown[0].totalCostValue);
+        console.log('  - formattedInvestment:', categoryBreakdown[0].formattedInvestment);
     }
-    console.log('===== END CATEGORY BREAKDOWN DEBUG =====');
+    console.log('===== END CATEGORY DEBUG =====');
     
     if (!categoryBreakdown || !Array.isArray(categoryBreakdown) || categoryBreakdown.length === 0) {
         categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category data available</div>';
         return;
     }
     
-    // Find total value for percentage calculations - FIX THE PROPERTY NAME
+    // Find total value for percentage calculations - USE CORRECT PROPERTY
     const totalValue = categoryBreakdown.reduce((sum, cat) => {
-        // Check what property name is actually available
-        const categoryValue = cat.totalCostValue || cat.totalInvestment || 0;
-        console.log(`[ui.js] Category ${cat.categoryName}: value=${categoryValue} (from ${cat.totalCostValue ? 'totalCostValue' : cat.totalInvestment ? 'totalInvestment' : 'unknown'})`);
+        // Use the property that actually exists in the enhanced structure
+        const categoryValue = cat.totalInvestment || cat.totalCostValue || 0;
+        console.log(`[ui.js] Category ${cat.categoryName}: adding ${formatCurrency(categoryValue)} to total`);
         return sum + categoryValue;
     }, 0);
     
     console.log(`[ui.js] Total value for percentage calculation: ${formatCurrency(totalValue)}`);
     
+    if (totalValue === 0) {
+        categoryListElement.innerHTML = '<div class="text-center text-gray-500 py-8">No category investment data available</div>';
+        return;
+    }
+    
     const categoryHTML = categoryBreakdown.map(category => {
-        // Use the correct property name based on what's available
-        const categoryValue = category.totalCostValue || category.totalInvestment || 0;
+        // Use the correct property name from enhanced structure
+        const categoryValue = category.totalInvestment || category.totalCostValue || 0;
         const percentage = totalValue > 0 ? (categoryValue / totalValue) * 100 : 0;
         
-        console.log(`[ui.js] Rendering category ${category.categoryName}: value=${formatCurrency(categoryValue)}, percentage=${percentage.toFixed(1)}%`);
+        console.log(`[ui.js] Rendering category ${category.categoryName}:`);
+        console.log(`  - Value: ${formatCurrency(categoryValue)}`);
+        console.log(`  - Percentage: ${percentage.toFixed(1)}%`);
+        console.log(`  - Formatted: ${category.formattedInvestment || 'Not available'}`);
         
         return `
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -7953,11 +7979,11 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
                 </div>
                 <div class="flex items-center space-x-3 flex-shrink-0">
                     <div class="text-right">
-                        <div class="font-bold text-blue-600">${category.formattedCostValue || category.formattedInvestment || formatCurrency(categoryValue)}</div>
+                        <div class="font-bold text-blue-600">${category.formattedInvestment || formatCurrency(categoryValue)}</div>
                         <div class="text-xs text-gray-500">${percentage.toFixed(1)}% of total</div>
                     </div>
                     <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+                        <div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
                     </div>
                 </div>
             </div>
@@ -7967,6 +7993,8 @@ function updateCategoryBreakdownVisualization(categoryBreakdown) {
     categoryListElement.innerHTML = categoryHTML;
     console.log(`[ui.js] Category breakdown visualization updated with ${categoryBreakdown.length} categories`);
 }
+
+
 
 /**
  * Updates category valuation table with safe error handling.
