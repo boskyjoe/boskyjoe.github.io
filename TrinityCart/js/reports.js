@@ -2216,7 +2216,6 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         let totalHistoricalSpending = 0;
         const supplierSpendingBreakdown = new Map();
         const productPurchaseHistory = new Map(); // For current investment calculation
-        let runningTotal = 0;
         
         allInvoicesSnapshot.docs.forEach(doc => {
             const invoiceData = doc.data();
@@ -2226,16 +2225,6 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             
             // Add to total historical spending
             totalHistoricalSpending += invoiceTotal;
-
-            runningTotal += invoiceTotal;
-
-            console.log(`Invoice ${index + 1}:`);
-            console.log(`  ID: ${invoiceId}`);
-            console.log(`  Supplier: ${supplierName}`);
-            console.log(`  Amount: ${formatCurrency(invoiceTotal)}`);
-            console.log(`  Running Total: ${formatCurrency(runningTotal)}`);
-            console.log(`  ---`);
-
             
             // Track spending by supplier
             supplierSpendingBreakdown.set(supplierName, 
@@ -2265,12 +2254,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             }
         });
 
-        console.log(`[Reports] FINAL TOTALS:`);
-        console.log(`  Calculated Total: ${formatCurrency(totalHistoricalSpending)}`);
-        console.log(`  Expected Total: ₹354,635`);
-        console.log(`  Difference: ${formatCurrency(totalHistoricalSpending - 354635)}`);
-        console.log(`  Number of invoices: ${allInvoicesSnapshot.size}`);
-        console.log(`=====================================`);
+        
         
         console.log(`[Reports] ✅ TOTAL HISTORICAL SPENDING: ${formatCurrency(totalHistoricalSpending)}`);
         console.log(`[Reports] Spending across ${supplierSpendingBreakdown.size} suppliers`);
