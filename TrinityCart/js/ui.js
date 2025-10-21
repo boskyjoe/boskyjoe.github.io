@@ -7639,6 +7639,119 @@ export async function showInventoryValuationDetailView() {
     }
 }
 
+
+/**
+ * Updates valuation summary cards with comprehensive financial metrics.
+ * 
+ * Maps the four business metrics to your existing HTML elements:
+ * - Total Spending -> total-cost-value-display
+ * - Current Investment -> total-selling-value-display  
+ * - Revenue Potential -> potential-profit-display
+ * - Inventory Turnover -> roi-percentage-display
+ * 
+ * @param {Object} valuationData - Enhanced valuation data from reports module
+ * @private
+ * @since 1.0.0
+ */
+function updateValuationSummaryCards(valuationData) {
+    console.log('[ui.js] Updating comprehensive financial summary cards');
+    console.log('[ui.js] Received data keys:', Object.keys(valuationData));
+    
+    // Try to find the financial data in any of the possible structures
+    const financialAnalysis = valuationData.comprehensiveFinancialAnalysis || 
+                            valuationData.accurateInventoryValuation ||
+                            valuationData.inventoryValuation ||
+                            null;
+    
+    if (!financialAnalysis) {
+        console.error('[ui.js] No financial analysis data found in any expected structure');
+        console.error('[ui.js] Available data:', valuationData);
+        updateValuationSummaryCardsLoading(false);
+        return;
+    }
+    
+    console.log('[ui.js] Using financial analysis:', financialAnalysis);
+    console.log('[ui.js] Available financial properties:', Object.keys(financialAnalysis));
+    
+    // METRIC 1: Total Historical Spending -> total-cost-value-display
+    const totalSpendingElement = document.getElementById('total-cost-value-display');
+    if (totalSpendingElement) {
+        const totalSpending = financialAnalysis.formattedTotalSpending || 
+                            financialAnalysis.formattedInvestmentValue || 
+                            formatCurrency(financialAnalysis.totalHistoricalSpending || 0);
+        totalSpendingElement.textContent = totalSpending;
+        console.log('[ui.js] ✅ METRIC 1 - Total Spending:', totalSpending);
+    }
+    
+    // Update investment breakdown subtitle
+    const investmentBreakdownElement = document.getElementById('investment-breakdown');
+    if (investmentBreakdownElement) {
+        const invoiceCount = valuationData.metadata?.purchaseInvoicesAnalyzed || 'unknown';
+        investmentBreakdownElement.textContent = `All purchase invoices (${invoiceCount} invoices analyzed)`;
+    }
+    
+    // METRIC 2: Current Investment -> total-selling-value-display  
+    const currentInvestmentElement = document.getElementById('total-selling-value-display');
+    if (currentInvestmentElement) {
+        const currentInvestment = financialAnalysis.formattedCurrentInvestment ||
+                                 formatCurrency(financialAnalysis.currentInventoryInvestment || 0);
+        currentInvestmentElement.textContent = currentInvestment;
+        console.log('[ui.js] ✅ METRIC 2 - Current Investment:', currentInvestment);
+    }
+    
+    // Update current investment subtitle
+    const revenueNoteElement = document.getElementById('revenue-potential-note');
+    if (revenueNoteElement) {
+        const productsIncluded = financialAnalysis.productsIncludedInValuation || 0;
+        revenueNoteElement.textContent = `Value of current stock (${productsIncluded} products)`;
+    }
+    
+    // METRIC 3: Revenue Potential -> potential-profit-display
+    const revenuePotentialElement = document.getElementById('potential-profit-display');
+    if (revenuePotentialElement) {
+        const revenuePotential = financialAnalysis.formattedRevenuePotential ||
+                               formatCurrency(financialAnalysis.totalRevenuePotential || 0);
+        revenuePotentialElement.textContent = revenuePotential;
+        console.log('[ui.js] ✅ METRIC 3 - Revenue Potential:', revenuePotential);
+    }
+    
+    // Update revenue potential subtitle
+    const profitMarginElement = document.getElementById('profit-margin-display');
+    if (profitMarginElement) {
+        const margin = financialAnalysis.currentStockMargin || 0;
+        profitMarginElement.textContent = `${margin.toFixed(2)}% potential margin on current stock`;
+    }
+    
+    // METRIC 4: Inventory Turnover -> roi-percentage-display
+    const turnoverElement = document.getElementById('roi-percentage-display');
+    if (turnoverElement) {
+        // Show turnover VALUE (₹amount) not percentage for clarity
+        const turnoverValue = financialAnalysis.formattedTurnoverValue ||
+                            formatCurrency(financialAnalysis.inventoryTurnoverValue || 0);
+        turnoverElement.textContent = turnoverValue;
+        console.log('[ui.js] ✅ METRIC 4 - Inventory Turnover Value:', turnoverValue);
+    }
+    
+    // Update turnover explanation with proper formatting
+    const roiExplanationElement = document.getElementById('roi-explanation');
+    if (roiExplanationElement) {
+        const turnoverPercentage = financialAnalysis.inventoryTurnoverPercentage || 0;
+        const formattedPercentage = Math.abs(turnoverPercentage).toFixed(2); // Remove negative sign, 2 decimals
+        
+        if (turnoverPercentage >= 0) {
+            roiExplanationElement.textContent = `${formattedPercentage}% successfully converted to sales`;
+            roiExplanationElement.className = 'mt-2 text-sm text-green-600'; // Green for positive
+        } else {
+            roiExplanationElement.textContent = `Current stock value higher than historical average`;
+            roiExplanationElement.className = 'mt-2 text-sm text-blue-600'; // Blue for info
+        }
+    }
+    
+    updateValuationSummaryCardsLoading(false);
+    console.log('[ui.js] ✅ All four comprehensive financial metrics updated successfully');
+}
+
+
 /**
  * Loads comprehensive inventory valuation data with enhanced error handling.
  * 
