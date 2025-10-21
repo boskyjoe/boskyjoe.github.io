@@ -2403,10 +2403,19 @@
                             <p class="text-gray-600">Complete financial analysis of current inventory investment and potential returns</p>
                         </div>
                         
-                        <div class="flex items-center space-x-3">
-                            <div class="text-sm text-gray-500">
-                                Data Source: <span class="font-semibold">Purchase Invoices + Sales Catalogues</span>
+                        <div class="text-right">
+                            <!-- Enhanced Data Source Info -->
+                            <div class="text-sm text-gray-500 mb-2">
+                                <div class="font-semibold">Data Sources:</div>
+                                <div id="data-sources-breakdown">Loading data sources...</div>
                             </div>
+                            
+                            <!-- Report Timestamp & Cache Status -->
+                            <div class="text-xs text-gray-400 mb-3">
+                                <div id="report-timestamp">Report generated: Loading...</div>
+                                <div id="cache-timestamp">Cache status: Checking...</div>
+                            </div>
+                            
                             <button id="refresh-valuation-analysis" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                                 Refresh Analysis
                             </button>
@@ -2588,37 +2597,73 @@
 
                     <!-- Data Quality & Coverage Info -->
                     <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Quality & Coverage</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Quality & Report Attribution</h3>
+                        
+                        <!-- Data Quality Metrics -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                             <div class="text-center p-4 bg-green-50 rounded-lg">
                                 <div class="text-2xl font-bold text-green-700" id="products-with-pricing">0</div>
                                 <div class="text-sm text-gray-600">Products with Complete Pricing</div>
                                 <div id="pricing-completeness-percentage" class="text-xs text-green-600 mt-1">0% coverage</div>
                             </div>
                             
-                            <div class="text-center p-4 bg-yellow-50 rounded-lg">
-                                <div class="text-2xl font-bold text-yellow-700" id="products-missing-pricing">0</div>
-                                <div class="text-sm text-gray-600">Products Missing Pricing Data</div>
-                                <div class="text-xs text-yellow-600 mt-1">Excluded from valuation</div>
-                            </div>
-                            
                             <div class="text-center p-4 bg-blue-50 rounded-lg">
                                 <div class="text-2xl font-bold text-blue-700" id="firestore-reads-used">0</div>
                                 <div class="text-sm text-gray-600">Firestore Reads Used</div>
-                                <div class="text-xs text-blue-600 mt-1">Optimization tracking</div>
+                                <div id="cache-efficiency-display" class="text-xs text-blue-600 mt-1">Cache efficiency</div>
+                            </div>
+                            
+                            <div class="text-center p-4 bg-purple-50 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-700" id="data-freshness-score">0%</div>
+                                <div class="text-sm text-gray-600">Data Freshness Score</div>
+                                <div id="last-cache-update" class="text-xs text-purple-600 mt-1">Cache timestamp</div>
                             </div>
                         </div>
                         
-                        <!-- Data Sources Information -->
-                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                            <h4 class="font-semibold text-gray-800 mb-2">Calculation Methodology</h4>
-                            <div class="text-sm text-gray-600 space-y-1">
-                                <div>• <strong>Cost Values:</strong> Based on actual purchase prices from supplier invoices</div>
-                                <div>• <strong>Selling Values:</strong> Based on current pricing in active sales catalogues</div>
-                                <div>• <strong>Profit Calculations:</strong> Difference between catalogue selling price and invoice purchase cost</div>
-                                <div>• <strong>Margin Percentages:</strong> (Profit ÷ Cost) × 100 for realistic business margins</div>
+                        <!-- Detailed Data Sources Information -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-800 mb-3">Detailed Data Sources & Methodology</h4>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Investment Calculation Sources -->
+                                <div>
+                                    <h5 class="font-medium text-gray-700 mb-2">💰 Investment Calculations:</h5>
+                                    <div class="text-sm text-gray-600 space-y-1" id="investment-data-sources">
+                                        <div>Loading investment sources...</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Revenue Calculation Sources -->
+                                <div>
+                                    <h5 class="font-medium text-gray-700 mb-2">📈 Revenue Calculations:</h5>
+                                    <div class="text-sm text-gray-600 space-y-1" id="revenue-data-sources">
+                                        <div>Loading revenue sources...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Report Generation Details -->
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <div class="flex justify-between items-center text-xs text-gray-500">
+                                    <div>
+                                        <span class="font-medium">Report Generated:</span>
+                                        <span id="detailed-report-timestamp">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium">Analysis Scope:</span>
+                                        <span id="analysis-scope-display">Full inventory analysis</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium">Cache Valid Until:</span>
+                                        <span id="cache-expiry-display">Loading...</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+
+
                     </div>
                 </div>
 
