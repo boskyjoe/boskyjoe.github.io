@@ -20,7 +20,8 @@ import {
     SALES_COLLECTION_PATH, 
     CONSIGNMENT_ORDERS_COLLECTION_PATH,
     PURCHASE_INVOICES_COLLECTION_PATH,
-    SALES_CATALOGUES_COLLECTION_PATH
+    SALES_CATALOGUES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,
+    CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH
 } from './config.js';
 import { formatCurrency } from './ui.js';
 import { masterData } from './masterData.js';
@@ -2160,32 +2161,35 @@ function getLatestPurchaseCost(productId) {
 }
 
 
+
 /**
- * Calculates comprehensive inventory financial analysis with all four business metrics.
+ * Calculates comprehensive inventory financial analysis with ACTUAL sales revenue.
  * 
- * Provides complete financial view:
+ * Provides four accurate business metrics:
  * 1. Total Historical Spending - All money spent on purchases
  * 2. Current Inventory Investment - Value of stock currently on hand  
  * 3. Revenue Potential - Earnings possible from selling remaining inventory
- * 4. Inventory Turnover Value - Investment converted to sales
+ * 4. Actual Sales Revenue - Real cash received from all sales channels
  * 
- * PRICING STRATEGY:
- * - Investment: Latest purchase prices from invoices + fallback to product.unitPrice
- * - Revenue: Price history from catalogues + fallback to product.sellingPrice
+ * ENHANCED WITH ACTUAL REVENUE:
+ * - Uses salesPaymentsLedger for direct sales revenue
+ * - Uses consignmentPaymentsLedger for team sales revenue  
+ * - Uses donations collection for additional revenue
+ * - Provides true business performance vs theoretical calculations
  * 
  * @param {boolean} [includePerformanceAnalysis=true] - Include sales velocity
  * @param {number} [performanceAnalysisDays=30] - Performance analysis period  
  * @param {boolean} [useCache=true] - Enable caching
  * 
- * @returns {Promise<Object>} Comprehensive inventory financial analysis
+ * @returns {Promise<Object>} Comprehensive inventory financial analysis with actual revenue
  * @since 1.0.0
  */
 export async function calculateInventoryAnalysis(includePerformanceAnalysis = true, performanceAnalysisDays = 30, useCache = true) {
     try {
-        console.log(`[Reports] 🚀 Starting COMPREHENSIVE inventory financial analysis`);
+        console.log(`[Reports] 🚀 Starting COMPREHENSIVE inventory financial analysis with ACTUAL sales revenue`);
         
         // Generate cache key
-        const cacheKey = `comprehensive_inventory_analysis_${includePerformanceAnalysis ? 'with' : 'without'}_performance_${performanceAnalysisDays}days`;
+        const cacheKey = `comprehensive_inventory_with_actual_revenue_${includePerformanceAnalysis ? 'with' : 'without'}_performance_${performanceAnalysisDays}days`;
         
         // Check cache first
         if (useCache) {
@@ -2221,7 +2225,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         let totalHistoricalSpending = 0;
         const supplierSpendingBreakdown = new Map();
         const productPurchaseHistory = new Map();
-        const invoiceBreakdown = []; // For debugging
+        const invoiceBreakdown = [];
         
         allInvoicesSnapshot.docs.forEach((doc, index) => {
             const invoiceData = doc.data();
@@ -2270,19 +2274,33 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             }
         });
         
-        // Log spending breakdown
         console.log(`[Reports] 📊 TOTAL SPENDING BREAKDOWN:`);
         invoiceBreakdown.forEach(invoice => {
             console.log(`  ${invoice.index}. ${invoice.invoiceId}: ${invoice.formattedTotal} (${invoice.supplierName})`);
         });
         console.log(`  TOTAL CALCULATED: ${formatCurrency(totalHistoricalSpending)}`);
-        console.log(`  YOUR EXPECTED: ₹354,635 (₹96,900 + ₹257,735)`);
-        console.log(`  DIFFERENCE: ${formatCurrency(Math.abs(totalHistoricalSpending - 354635))}`);
         
         // ===================================================================
-        // PHASE 2: GET CURRENT SELLING PRICES (Price History + Fallback)
+        // PHASE 2: CALCULATE ACTUAL SALES REVENUE (All Payment Sources)
         // ===================================================================
-        console.log(`[Reports] 💰 Phase 2: Getting current selling prices...`);
+        console.log(`[Reports] 💰 Phase 2: Calculating ACTUAL SALES REVENUE from all sources...`);
+        
+        // Get actual sales revenue from all payment ledgers
+        const actualRevenueData = await calculateActualSalesRevenue(null, null, useCache);
+        totalFirestoreReads += actualRevenueData.metadata.firestoreReadsUsed;
+        
+        const actualSalesRevenue = actualRevenueData.actualRevenueMetrics.totalActualRevenue;
+        
+        console.log(`[Reports] 💰 ACTUAL SALES REVENUE BREAKDOWN:`);
+        console.log(`  🏪 Direct Store Sales: ${formatCurrency(actualRevenueData.actualRevenueMetrics.directSalesRevenue)}`);
+        console.log(`  👥 Consignment Sales: ${formatCurrency(actualRevenueData.actualRevenueMetrics.consignmentSalesRevenue)}`);
+        console.log(`  🎁 Donations: ${formatCurrency(actualRevenueData.actualRevenueMetrics.donationsRevenue)}`);
+        console.log(`  💰 TOTAL ACTUAL REVENUE: ${formatCurrency(actualSalesRevenue)}`);
+        
+        // ===================================================================
+        // PHASE 3: GET CURRENT SELLING PRICES (Price History + Fallback)
+        // ===================================================================
+        console.log(`[Reports] 📈 Phase 3: Getting current selling prices for revenue potential...`);
         
         const activeProductIds = masterData.products.filter(p => p.isActive).map(p => p.id);
         const priceHistoryResults = await getCurrentSellingPricesFromHistory(activeProductIds, true);
@@ -2302,7 +2320,6 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             const priceHistoryInfo = priceHistoryResults.get(productId);
             
             if (priceHistoryInfo && priceHistoryInfo.sellingPrice > 0) {
-                // PRIMARY: Use price history
                 finalSellingPrices.set(productId, {
                     sellingPrice: priceHistoryInfo.sellingPrice,
                     source: 'price_history',
@@ -2313,7 +2330,6 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 console.log(`[Reports] ${index + 1}. ${productName}: ₹${priceHistoryInfo.sellingPrice} (PRICE HISTORY from ${priceHistoryInfo.selectedCatalogueSource})`);
                 
             } else if (product.sellingPrice && product.sellingPrice > 0) {
-                // FALLBACK: Use product catalogue selling price
                 finalSellingPrices.set(productId, {
                     sellingPrice: product.sellingPrice,
                     source: 'product_catalogue_fallback',
@@ -2330,34 +2346,30 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         });
         
         console.log(`[Reports] 📈 PRICING SOURCE SUMMARY:`);
-        console.log(`  - Price History: ${priceHistoryUsed} products (${((priceHistoryUsed / masterData.products.length) * 100).toFixed(1)}%)`);
-        console.log(`  - Fallback: ${fallbackPriceUsed} products (${((fallbackPriceUsed / masterData.products.length) * 100).toFixed(1)}%)`);
-        console.log(`  - No Pricing: ${noPricingAvailable} products (${((noPricingAvailable / masterData.products.length) * 100).toFixed(1)}%)`);
+        console.log(`  - Price History: ${priceHistoryUsed} products`);
+        console.log(`  - Fallback: ${fallbackPriceUsed} products`);
+        console.log(`  - No Pricing: ${noPricingAvailable} products`);
         
         // ===================================================================
-        // PHASE 3: CALCULATE ALL FOUR BUSINESS METRICS WITH DETAILED LOGGING
+        // PHASE 4: CALCULATE ALL FOUR BUSINESS METRICS WITH ACTUAL REVENUE
         // ===================================================================
-        console.log(`[Reports] 📊 Phase 3: Calculating all four business metrics...`);
+        console.log(`[Reports] 📊 Phase 4: Calculating business metrics with ACTUAL revenue...`);
         
         const businessMetrics = {
             totalHistoricalSpending: totalHistoricalSpending,
             currentInventoryInvestment: 0,
             totalRevenuePotential: 0,
-            inventoryTurnoverValue: 0,
+            actualSalesRevenue: actualSalesRevenue, // REAL sales revenue
             productsIncludedInValuation: 0,
-            totalCurrentStock: 0,
-            averageInventoryTurnover: 0
+            totalCurrentStock: 0
         };
         
         const categoryAnalysis = new Map();
         
-        // DETAILED REVENUE POTENTIAL CALCULATION
-        console.log(`[Reports] 💰 DETAILED REVENUE POTENTIAL CALCULATION:`);
-        console.log(`[Reports] Format: [#] ProductName | Stock × Price = Revenue (Source)`);
-        console.log(`[Reports] ${'='.repeat(100)}`);
-        
-        let runningRevenuePotential = 0;
-        let productsContributingToRevenue = 0;
+        // DETAILED CURRENT INVESTMENT AND REVENUE POTENTIAL CALCULATION
+        console.log(`[Reports] 💰 DETAILED PRODUCT ANALYSIS:`);
+        console.log(`[Reports] Format: [#] Product | Stock | Cost | Investment | Price | Revenue | Source`);
+        console.log(`[Reports] ${'='.repeat(120)}`);
         
         masterData.products.forEach((product, index) => {
             const stock = product.inventoryCount || 0;
@@ -2368,7 +2380,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             // Get latest purchase cost for CURRENT INVESTMENT
             const purchaseHistory = productPurchaseHistory.get(productId);
             let latestUnitCost = 0;
-            let costSource = 'none';
+            let costSource = 'Product-Master';
             
             if (purchaseHistory && purchaseHistory.length > 0) {
                 const sortedHistory = purchaseHistory.sort((a, b) => b.invoiceDate - a.invoiceDate);
@@ -2379,16 +2391,14 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 costSource = 'Product-Master';
             }
             
-            // Get current selling price for REVENUE POTENTIAL (DETAILED)
+            // Get current selling price for REVENUE POTENTIAL
             const priceInfo = finalSellingPrices.get(productId);
             let currentSellingPrice = 0;
             let priceSource = 'NO_PRICE';
-            let catalogueSource = 'N/A';
             
             if (priceInfo) {
                 currentSellingPrice = priceInfo.sellingPrice;
                 priceSource = priceInfo.source.toUpperCase();
-                catalogueSource = priceInfo.catalogueSource;
             }
             
             // Calculate individual product metrics
@@ -2399,46 +2409,27 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             businessMetrics.currentInventoryInvestment += productCurrentInvestment;
             businessMetrics.totalRevenuePotential += productRevenuePotential;
             businessMetrics.totalCurrentStock += stock;
-            runningRevenuePotential += productRevenuePotential;
-            
-            // Count products contributing to revenue
-            if (productRevenuePotential > 0) {
-                productsContributingToRevenue++;
-            }
             
             // Count complete data products
             if (latestUnitCost > 0 && currentSellingPrice > 0 && stock > 0) {
                 businessMetrics.productsIncludedInValuation += 1;
             }
             
-            // DETAILED REVENUE POTENTIAL LOGGING FOR EVERY PRODUCT
+            // DETAILED LOGGING FOR EVERY PRODUCT WITH STOCK OR PRICING
             if (stock > 0 || currentSellingPrice > 0) {
                 const paddedIndex = (index + 1).toString().padStart(3, ' ');
-                const paddedName = productName.padEnd(30, ' ');
+                const paddedName = productName.substring(0, 20).padEnd(20, ' ');
                 const paddedStock = stock.toString().padStart(4, ' ');
-                const paddedPrice = `₹${currentSellingPrice.toFixed(2)}`.padStart(10, ' ');
-                const paddedRevenue = `₹${productRevenuePotential.toFixed(2)}`.padStart(12, ' ');
-                const paddedSource = `(${priceSource})`.padEnd(30, ' ');
+                const paddedCost = `₹${latestUnitCost.toFixed(2)}`.padStart(8, ' ');
+                const paddedInvestment = `₹${productCurrentInvestment.toFixed(0)}`.padStart(10, ' ');
+                const paddedPrice = `₹${currentSellingPrice.toFixed(2)}`.padStart(8, ' ');
+                const paddedRevenue = `₹${productRevenuePotential.toFixed(0)}`.padStart(10, ' ');
+                const paddedSource = priceSource.padEnd(12, ' ');
                 
-                console.log(`[Reports] [${paddedIndex}] ${paddedName} | ${paddedStock} × ${paddedPrice} = ${paddedRevenue} ${paddedSource}`);
-                
-                // Extra details for high-value products
-                if (productRevenuePotential > 5000) {
-                    console.log(`[Reports]      🎯 HIGH REVENUE PRODUCT:`);
-                    console.log(`[Reports]      📦 Current Stock: ${stock} units`);
-                    console.log(`[Reports]      💲 Unit Selling Price: ₹${currentSellingPrice}`);
-                    console.log(`[Reports]      📋 Price Source: ${priceSource}`);
-                    if (priceSource === 'PRICE_HISTORY') {
-                        console.log(`[Reports]      🏪 From Catalogue: ${catalogueSource}`);
-                    } else if (priceSource === 'PRODUCT_CATALOGUE_FALLBACK') {
-                        console.log(`[Reports]      📝 From Product Master: ₹${product.sellingPrice}`);
-                    }
-                    console.log(`[Reports]      💰 Contributes: ₹${productRevenuePotential.toFixed(2)} to total revenue potential`);
-                    console.log(`[Reports]      ${'─'.repeat(50)}`);
-                }
+                console.log(`[Reports] [${paddedIndex}] ${paddedName} | ${paddedStock} | ${paddedCost} | ${paddedInvestment} | ${paddedPrice} | ${paddedRevenue} | ${paddedSource}`);
             }
             
-            // Category analysis (existing logic)
+            // Category analysis
             if (!categoryAnalysis.has(categoryId)) {
                 categoryAnalysis.set(categoryId, {
                     productCount: 0,
@@ -2462,65 +2453,45 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             }
         });
         
-        // REVENUE POTENTIAL VERIFICATION
-        console.log(`[Reports] ${'='.repeat(100)}`);
-        console.log(`[Reports] 💰 REVENUE POTENTIAL VERIFICATION:`);
-        console.log(`  📊 businessMetrics.totalRevenuePotential: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
-        console.log(`  🔍 runningRevenuePotential (manual sum): ${formatCurrency(runningRevenuePotential)}`);
-        console.log(`  ✅ Calculations Match: ${businessMetrics.totalRevenuePotential === runningRevenuePotential ? 'YES' : 'NO'}`);
-        console.log(`  📈 Products Contributing to Revenue: ${productsContributingToRevenue} out of ${masterData.products.length}`);
-        console.log(`  📦 Products with Complete Data: ${businessMetrics.productsIncludedInValuation}`);
-        
-        // Show products with highest revenue potential
-        const highRevenueProducts = [];
-        finalSellingPrices.forEach((priceInfo, productId) => {
-            const product = masterData.products.find(p => p.id === productId);
-            if (product && product.inventoryCount > 0) {
-                const revenue = product.inventoryCount * priceInfo.sellingPrice;
-                if (revenue > 1000) {
-                    highRevenueProducts.push({
-                        name: product.itemName,
-                        stock: product.inventoryCount,
-                        price: priceInfo.sellingPrice,
-                        source: priceInfo.source,
-                        catalogueSource: priceInfo.catalogueSource,
-                        revenue: revenue
-                    });
-                }
-            }
-        });
-        
-        highRevenueProducts.sort((a, b) => b.revenue - a.revenue);
-        
-        if (highRevenueProducts.length > 0) {
-            console.log(`[Reports] 🏆 TOP REVENUE POTENTIAL PRODUCTS:`);
-            highRevenueProducts.slice(0, 10).forEach((product, i) => {
-                console.log(`  ${i + 1}. ${product.name}: ${product.stock} × ₹${product.price} = ₹${product.revenue.toFixed(2)} (${product.source})`);
-                if (product.catalogueSource !== 'Product Master Record') {
-                    console.log(`     Source: ${product.catalogueSource}`);
-                }
-            });
-        }
-        
-        // CALCULATE METRIC 4: Inventory Turnover
-        businessMetrics.inventoryTurnoverValue = businessMetrics.totalHistoricalSpending - businessMetrics.currentInventoryInvestment;
-        businessMetrics.averageInventoryTurnover = businessMetrics.totalHistoricalSpending > 0
-            ? (businessMetrics.inventoryTurnoverValue / businessMetrics.totalHistoricalSpending) * 100
-            : 0;
-        
         // ===================================================================
-        // FINAL BUSINESS METRICS SUMMARY
+        // PHASE 5: CALCULATE BUSINESS EFFICIENCY METRICS
         // ===================================================================
-        console.log(`[Reports] 💼 COMPREHENSIVE BUSINESS METRICS:`);
-        console.log(`  1️⃣ TOTAL HISTORICAL SPENDING: ${formatCurrency(businessMetrics.totalHistoricalSpending)}`);
+        console.log(`[Reports] 📈 Phase 5: Calculating business efficiency metrics...`);
+        
+        const businessEfficiencyMetrics = {
+            // TRUE inventory turnover = actual cash received from sales
+            actualInventoryTurnover: actualSalesRevenue,
+            
+            // Business performance ratios
+            cashConversionRate: totalHistoricalSpending > 0
+                ? (actualSalesRevenue / totalHistoricalSpending) * 100
+                : 0,
+            
+            inventoryROI: totalHistoricalSpending > 0
+                ? ((actualSalesRevenue - totalHistoricalSpending) / totalHistoricalSpending) * 100
+                : 0,
+            
+            revenueRealizationRate: businessMetrics.totalRevenuePotential > 0
+                ? (actualSalesRevenue / businessMetrics.totalRevenuePotential) * 100
+                : 0,
+            
+            remainingInventoryRate: totalHistoricalSpending > 0
+                ? (businessMetrics.currentInventoryInvestment / totalHistoricalSpending) * 100
+                : 0
+        };
+        
+        console.log(`[Reports] 💼 COMPREHENSIVE BUSINESS METRICS (WITH ACTUAL REVENUE):`);
+        console.log(`  1️⃣ TOTAL HISTORICAL SPENDING: ${formatCurrency(totalHistoricalSpending)}`);
         console.log(`  2️⃣ CURRENT INVENTORY INVESTMENT: ${formatCurrency(businessMetrics.currentInventoryInvestment)}`);
         console.log(`     → Your Expected: ₹428,370`);
         console.log(`     → Difference: ${formatCurrency(Math.abs(businessMetrics.currentInventoryInvestment - 428370))}`);
         console.log(`  3️⃣ REVENUE POTENTIAL: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
-        console.log(`  4️⃣ INVENTORY TURNOVER: ${formatCurrency(businessMetrics.inventoryTurnoverValue)} (${businessMetrics.averageInventoryTurnover.toFixed(2)}%)`);
-        console.log(`  📊 PRODUCTS IN VALUATION: ${businessMetrics.productsIncludedInValuation} out of ${masterData.products.length}`);
+        console.log(`  4️⃣ ACTUAL SALES REVENUE: ${formatCurrency(actualSalesRevenue)} (REAL cash received)`);
+        console.log(`  📊 CASH CONVERSION RATE: ${businessEfficiencyMetrics.cashConversionRate.toFixed(2)}% (actual revenue / spending)`);
+        console.log(`  📈 INVENTORY ROI: ${businessEfficiencyMetrics.inventoryROI.toFixed(2)}% (profit from inventory investment)`);
+        console.log(`  📦 PRODUCTS IN VALUATION: ${businessMetrics.productsIncludedInValuation} out of ${masterData.products.length}`);
         
-        // Process supplier spending
+        // Process supplier spending analysis
         const supplierSpendingArray = Array.from(supplierSpendingBreakdown.entries()).map(([supplier, amount]) => ({
             supplierName: supplier,
             totalSpent: amount,
@@ -2533,7 +2504,7 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             console.log(`  - ${supplier.supplierName}: ${supplier.formattedSpent} (${supplier.percentage.toFixed(1)}%)`);
         });
         
-        // Process category breakdown
+        // Process category breakdown with enhanced metrics
         const categoryBreakdown = Array.from(categoryAnalysis.entries()).map(([categoryId, data]) => {
             const categoryName = masterData.categories.find(cat => cat.id === categoryId)?.categoryName || 'Unknown Category';
             const categoryMargin = data.totalInvestment > 0 ? (data.totalProfit / data.totalInvestment) * 100 : 0;
@@ -2552,17 +2523,18 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 categoryMargin: categoryMargin,
                 investmentPercentage: businessMetrics.currentInventoryInvestment > 0
                     ? (data.totalInvestment / businessMetrics.currentInventoryInvestment) * 100
-                    : 0
+                    : 0,
+                productsWithCompleteData: data.productsWithCompleteData
             };
         }).sort((a, b) => b.totalInvestment - a.totalInvestment);
         
         console.log(`[Reports] 📂 CATEGORY BREAKDOWN:`);
         categoryBreakdown.forEach(category => {
-            console.log(`  ${category.categoryName}: Investment ${category.formattedInvestment} → Revenue ${category.formattedRevenuePotential} (${category.investmentPercentage.toFixed(1)}%)`);
+            console.log(`  ${category.categoryName}: Investment ${category.formattedInvestment} → Revenue Potential ${category.formattedRevenuePotential}`);
         });
         
         // ===================================================================
-        // ASSEMBLE FINAL RESULTS
+        // ASSEMBLE FINAL COMPREHENSIVE RESULTS
         // ===================================================================
         const finalResults = {
             inventorySummary: {
@@ -2578,8 +2550,8 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             
             comprehensiveFinancialAnalysis: {
                 // METRIC 1: Total Historical Spending
-                totalHistoricalSpending: businessMetrics.totalHistoricalSpending,
-                formattedTotalSpending: formatCurrency(businessMetrics.totalHistoricalSpending),
+                totalHistoricalSpending: totalHistoricalSpending,
+                formattedTotalSpending: formatCurrency(totalHistoricalSpending),
                 
                 // METRIC 2: Current Inventory Investment  
                 currentInventoryInvestment: businessMetrics.currentInventoryInvestment,
@@ -2589,19 +2561,46 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 totalRevenuePotential: businessMetrics.totalRevenuePotential,
                 formattedRevenuePotential: formatCurrency(businessMetrics.totalRevenuePotential),
                 
-                // METRIC 4: Inventory Turnover
-                inventoryTurnoverValue: businessMetrics.inventoryTurnoverValue,
-                formattedTurnoverValue: formatCurrency(businessMetrics.inventoryTurnoverValue),
-                inventoryTurnoverPercentage: businessMetrics.averageInventoryTurnover,
+                // METRIC 4: ACTUAL Sales Revenue (Real Business Performance)
+                actualSalesRevenue: actualSalesRevenue,
+                formattedActualSalesRevenue: formatCurrency(actualSalesRevenue),
                 
-                // Derived metrics
-                potentialProfitFromCurrentStock: businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment,
-                formattedPotentialProfit: formatCurrency(businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment),
-                currentStockMargin: businessMetrics.currentInventoryInvestment > 0
-                    ? ((businessMetrics.totalRevenuePotential - businessMetrics.currentInventoryInvestment) / businessMetrics.currentInventoryInvestment) * 100
-                    : 0,
+                // For backward compatibility (UI expects these fields)
+                inventoryTurnoverValue: actualSalesRevenue, // Now shows actual sales revenue
+                formattedTurnoverValue: formatCurrency(actualSalesRevenue),
+                inventoryTurnoverPercentage: businessEfficiencyMetrics.cashConversionRate, // Actual conversion rate
                 
-                // Include product count for UI
+                // Enhanced business insights
+                businessPerformance: {
+                    cashConversionRate: businessEfficiencyMetrics.cashConversionRate,
+                    inventoryROI: businessEfficiencyMetrics.inventoryROI,
+                    revenueRealizationRate: businessEfficiencyMetrics.revenueRealizationRate,
+                    
+                    // Business health indicators
+                    profitFromInventory: actualSalesRevenue - totalHistoricalSpending,
+                    formattedProfitFromInventory: formatCurrency(actualSalesRevenue - totalHistoricalSpending),
+                    
+                    inventoryEfficiency: businessEfficiencyMetrics.cashConversionRate > 80 ? 'Excellent' :
+                                        businessEfficiencyMetrics.cashConversionRate > 60 ? 'Good' :
+                                        businessEfficiencyMetrics.cashConversionRate > 40 ? 'Fair' : 'Needs Improvement'
+                },
+                
+                // Revenue channel analysis
+                revenueChannelBreakdown: {
+                    directSalesRevenue: actualRevenueData.actualRevenueMetrics.directSalesRevenue,
+                    formattedDirectSales: formatCurrency(actualRevenueData.actualRevenueMetrics.directSalesRevenue),
+                    consignmentSalesRevenue: actualRevenueData.actualRevenueMetrics.consignmentSalesRevenue,
+                    formattedConsignmentSales: formatCurrency(actualRevenueData.actualRevenueMetrics.consignmentSalesRevenue),
+                    donationsRevenue: actualRevenueData.actualRevenueMetrics.donationsRevenue,
+                    formattedDonations: formatCurrency(actualRevenueData.actualRevenueMetrics.donationsRevenue),
+                    
+                    channelPerformance: {
+                        directSalesPercentage: actualRevenueData.actualRevenueMetrics.directSalesPercentage,
+                        consignmentSalesPercentage: actualRevenueData.actualRevenueMetrics.consignmentSalesPercentage,
+                        donationsPercentage: actualRevenueData.actualRevenueMetrics.donationsPercentage
+                    }
+                },
+                
                 productsIncludedInValuation: businessMetrics.productsIncludedInValuation
             },
             
@@ -2612,6 +2611,9 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 supplierSpendingDistribution: supplierSpendingArray,
                 topSupplierBySpending: supplierSpendingArray[0] || null
             },
+            
+            // Enhanced actual revenue insights
+            actualRevenueInsights: actualRevenueData,
             
             pricingSystemInsights: {
                 priceHistoryUsage: priceHistoryUsed,
@@ -2625,7 +2627,8 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
                 firestoreReadsUsed: totalFirestoreReads,
                 purchaseInvoicesAnalyzed: allInvoicesSnapshot.size,
                 productsAnalyzed: masterData.products.length,
-                dataAccuracy: 'Comprehensive with purchase invoices + price history/fallback',
+                includesActualSalesRevenue: true,
+                dataAccuracy: 'Business-comprehensive with actual payment data from all channels',
                 cacheKey
             }
         };
@@ -2635,7 +2638,14 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
             ReportCache.setCachedReport(cacheKey, finalResults);
         }
         
-        console.log(`[Reports] ✅ COMPREHENSIVE analysis completed using ${totalFirestoreReads} Firestore reads`);
+        console.log(`[Reports] ✅ COMPREHENSIVE inventory analysis completed using ${totalFirestoreReads} Firestore reads`);
+        console.log(`[Reports] 🎯 FINAL BUSINESS SUMMARY:`);
+        console.log(`  💰 Money Invested: ${formatCurrency(totalHistoricalSpending)}`);
+        console.log(`  💰 Money Received: ${formatCurrency(actualSalesRevenue)} (${businessEfficiencyMetrics.cashConversionRate.toFixed(2)}% conversion)`);
+        console.log(`  📦 Money in Stock: ${formatCurrency(businessMetrics.currentInventoryInvestment)}`);
+        console.log(`  📈 Potential Revenue: ${formatCurrency(businessMetrics.totalRevenuePotential)}`);
+        console.log(`  🎯 Business Profit: ${formatCurrency(actualSalesRevenue - totalHistoricalSpending)} (${businessEfficiencyMetrics.inventoryROI.toFixed(2)}% ROI)`);
+        
         return finalResults;
         
     } catch (error) {
@@ -2643,6 +2653,287 @@ export async function calculateInventoryAnalysis(includePerformanceAnalysis = tr
         throw new Error(`Comprehensive inventory analysis failed: ${error.message}`);
     }
 }
+
+
+
+
+
+/**
+ * Calculates actual sales revenue from all payment sources across the business.
+ * 
+ * Aggregates real cash received from:
+ * - Direct store sales payments (salesPaymentsLedger)
+ * - Consignment team payments (consignmentPaymentsLedger) 
+ * - Donations and overpayments (donations collection)
+ * 
+ * This provides true revenue performance vs theoretical potential revenue.
+ * 
+ * @param {Date} [startDate=null] - Optional start date filter (null = all time)
+ * @param {Date} [endDate=null] - Optional end date filter (null = all time)
+ * @param {boolean} [useCache=true] - Enable intelligent caching
+ * 
+ * @returns {Promise<Object>} Actual sales revenue analysis:
+ *   - totalActualRevenue: Total cash received across all channels
+ *   - directSalesRevenue: Cash from direct store sales
+ *   - consignmentRevenue: Cash from consignment team payments
+ *   - donationRevenue: Additional donations and overpayments
+ *   - revenueBreakdown: Detailed breakdown by source and payment method
+ *   - collectionEfficiency: Percentage of invoiced amount actually collected
+ * 
+ * @throws {Error} When database queries fail
+ * 
+ * @example
+ * // Get total actual revenue (all time)
+ * const actualRevenue = await calculateActualSalesRevenue();
+ * console.log(`True revenue: ${actualRevenue.formattedTotalRevenue}`);
+ * 
+ * // Get revenue for specific period
+ * const monthlyRevenue = await calculateActualSalesRevenue(startDate, endDate);
+ * 
+ * @since 1.0.0
+ */
+export async function calculateActualSalesRevenue(startDate = null, endDate = null, useCache = true) {
+    try {
+        console.log(`[Reports] 💰 Calculating ACTUAL SALES REVENUE from all payment sources`);
+        
+        // Generate cache key
+        const cacheKey = startDate && endDate 
+            ? `actual_sales_revenue_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`
+            : 'actual_sales_revenue_all_time';
+        
+        // Check cache first
+        if (useCache) {
+            const cachedResult = ReportCache.getCachedReport(cacheKey);
+            if (cachedResult) {
+                console.log(`[Reports] Using cached actual sales revenue - 0 Firestore reads`);
+                return cachedResult;
+            }
+        }
+
+        const db = firebase.firestore();
+        let totalFirestoreReads = 0;
+        
+        // ===================================================================
+        // PHASE 1: DIRECT STORE SALES REVENUE (salesPaymentsLedger)
+        // ===================================================================
+        console.log(`[Reports] 🏪 Phase 1: Calculating direct store sales revenue...`);
+        
+        let directSalesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('status', '==', 'Verified'); // Only count verified payments
+        
+        // Apply date filters if provided
+        if (startDate) {
+            directSalesPaymentsQuery = directSalesPaymentsQuery.where('paymentDate', '>=', startDate);
+        }
+        if (endDate) {
+            directSalesPaymentsQuery = directSalesPaymentsQuery.where('paymentDate', '<=', endDate);
+        }
+        
+        const directPaymentsSnapshot = await directSalesPaymentsQuery.get();
+        totalFirestoreReads += directPaymentsSnapshot.size;
+        
+        let directSalesRevenue = 0;
+        let directSalesDonations = 0;
+        const directPaymentBreakdown = [];
+        
+        directPaymentsSnapshot.docs.forEach(doc => {
+            const paymentData = doc.data();
+            const amountPaid = paymentData.amountPaid || 0;
+            const donationAmount = paymentData.donationAmount || 0;
+            const totalCollected = paymentData.totalCollected || amountPaid;
+            
+            directSalesRevenue += amountPaid; // Actual payment toward invoice
+            directSalesDonations += donationAmount; // Extra donations from overpayments
+            
+            directPaymentBreakdown.push({
+                paymentId: paymentData.paymentId,
+                invoiceId: paymentData.invoiceId,
+                amountPaid: amountPaid,
+                donationAmount: donationAmount,
+                paymentMode: paymentData.paymentMode,
+                paymentDate: paymentData.paymentDate
+            });
+        });
+        
+        console.log(`[Reports] 🏪 Direct Store Sales:`);
+        console.log(`  Payments Processed: ${directPaymentsSnapshot.size}`);
+        console.log(`  Revenue from Payments: ${formatCurrency(directSalesRevenue)}`);
+        console.log(`  Donations from Overpayments: ${formatCurrency(directSalesDonations)}`);
+        console.log(`  Total Direct Cash Collected: ${formatCurrency(directSalesRevenue + directSalesDonations)}`);
+        
+        // ===================================================================
+        // PHASE 2: CONSIGNMENT SALES REVENUE (consignmentPaymentsLedger)
+        // ===================================================================
+        console.log(`[Reports] 👥 Phase 2: Calculating consignment sales revenue...`);
+        
+        let consignmentPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('paymentStatus', '==', 'Verified'); // Only count verified payments
+        
+        // Apply date filters if provided
+        if (startDate) {
+            consignmentPaymentsQuery = consignmentPaymentsQuery.where('paymentDate', '>=', startDate);
+        }
+        if (endDate) {
+            consignmentPaymentsQuery = consignmentPaymentsQuery.where('paymentDate', '<=', endDate);
+        }
+        
+        const consignmentPaymentsSnapshot = await consignmentPaymentsQuery.get();
+        totalFirestoreReads += consignmentPaymentsSnapshot.size;
+        
+        let consignmentSalesRevenue = 0;
+        const consignmentPaymentBreakdown = [];
+        const teamRevenueBreakdown = new Map();
+        
+        consignmentPaymentsSnapshot.docs.forEach(doc => {
+            const paymentData = doc.data();
+            const amountPaid = paymentData.amountPaid || 0;
+            const teamName = paymentData.teamName || 'Unknown Team';
+            
+            consignmentSalesRevenue += amountPaid;
+            
+            // Track by team
+            teamRevenueBreakdown.set(teamName, (teamRevenueBreakdown.get(teamName) || 0) + amountPaid);
+            
+            consignmentPaymentBreakdown.push({
+                paymentId: paymentData.paymentId,
+                orderId: paymentData.orderId,
+                teamName: teamName,
+                amountPaid: amountPaid,
+                paymentMode: paymentData.paymentMode,
+                paymentDate: paymentData.paymentDate
+            });
+        });
+        
+        console.log(`[Reports] 👥 Consignment Sales:`);
+        console.log(`  Payments Processed: ${consignmentPaymentsSnapshot.size}`);
+        console.log(`  Revenue from Team Payments: ${formatCurrency(consignmentSalesRevenue)}`);
+        
+        // Log team breakdown
+        const teamRevenueArray = Array.from(teamRevenueBreakdown.entries()).map(([team, amount]) => ({
+            teamName: team,
+            revenue: amount,
+            formattedRevenue: formatCurrency(amount)
+        })).sort((a, b) => b.revenue - a.revenue);
+        
+        console.log(`[Reports] 📊 Revenue by Team:`);
+        teamRevenueArray.forEach(team => {
+            console.log(`    ${team.teamName}: ${team.formattedRevenue}`);
+        });
+        
+        // ===================================================================
+        // PHASE 3: DONATIONS AND EXTRA REVENUE (donations collection)
+        // ===================================================================
+        console.log(`[Reports] 🎁 Phase 3: Calculating donations and extra revenue...`);
+        
+        let donationsQuery = db.collection(DONATIONS_COLLECTION_PATH);
+        
+        // Apply date filters if provided
+        if (startDate) {
+            donationsQuery = donationsQuery.where('donationDate', '>=', startDate);
+        }
+        if (endDate) {
+            donationsQuery = donationsQuery.where('donationDate', '<=', endDate);
+        }
+        
+        const donationsSnapshot = await donationsQuery.get();
+        totalFirestoreReads += donationsSnapshot.size;
+        
+        let totalDonations = 0;
+        const donationBreakdown = [];
+        
+        donationsSnapshot.docs.forEach(doc => {
+            const donationData = doc.data();
+            const donationAmount = donationData.amount || 0;
+            
+            totalDonations += donationAmount;
+            
+            donationBreakdown.push({
+                donationId: doc.id,
+                amount: donationAmount,
+                source: donationData.source,
+                donationDate: donationData.donationDate,
+                customerName: donationData.customerName
+            });
+        });
+        
+        console.log(`[Reports] 🎁 Donations and Extra Revenue:`);
+        console.log(`  Donation Records: ${donationsSnapshot.size}`);
+        console.log(`  Total Donations: ${formatCurrency(totalDonations)}`);
+        
+        // ===================================================================
+        // PHASE 4: CALCULATE ACTUAL BUSINESS REVENUE
+        // ===================================================================
+        const actualRevenueMetrics = {
+            directSalesRevenue: directSalesRevenue,
+            consignmentSalesRevenue: consignmentSalesRevenue,
+            donationsRevenue: totalDonations,
+            totalActualRevenue: directSalesRevenue + consignmentSalesRevenue + totalDonations,
+            
+            // Channel breakdown
+            directSalesPercentage: 0,
+            consignmentSalesPercentage: 0,
+            donationsPercentage: 0
+        };
+        
+        // Calculate channel percentages
+        if (actualRevenueMetrics.totalActualRevenue > 0) {
+            actualRevenueMetrics.directSalesPercentage = (directSalesRevenue / actualRevenueMetrics.totalActualRevenue) * 100;
+            actualRevenueMetrics.consignmentSalesPercentage = (consignmentSalesRevenue / actualRevenueMetrics.totalActualRevenue) * 100;
+            actualRevenueMetrics.donationsPercentage = (totalDonations / actualRevenueMetrics.totalActualRevenue) * 100;
+        }
+        
+        console.log(`[Reports] 🎯 ACTUAL BUSINESS REVENUE SUMMARY:`);
+        console.log(`  💰 TOTAL ACTUAL REVENUE: ${formatCurrency(actualRevenueMetrics.totalActualRevenue)}`);
+        console.log(`    🏪 Direct Store Sales: ${formatCurrency(directSalesRevenue)} (${actualRevenueMetrics.directSalesPercentage.toFixed(1)}%)`);
+        console.log(`    👥 Consignment Sales: ${formatCurrency(consignmentSalesRevenue)} (${actualRevenueMetrics.consignmentSalesPercentage.toFixed(1)}%)`);
+        console.log(`    🎁 Donations: ${formatCurrency(totalDonations)} (${actualRevenueMetrics.donationsPercentage.toFixed(1)}%)`);
+        
+        const result = {
+            actualRevenueMetrics,
+            
+            revenueBreakdown: {
+                directSalesPayments: directPaymentBreakdown,
+                consignmentPayments: consignmentPaymentBreakdown,
+                donations: donationBreakdown,
+                teamRevenueDistribution: teamRevenueArray
+            },
+            
+            businessInsights: {
+                totalCashReceived: actualRevenueMetrics.totalActualRevenue,
+                formattedTotalCashReceived: formatCurrency(actualRevenueMetrics.totalActualRevenue),
+                primaryRevenueChannel: actualRevenueMetrics.directSalesRevenue > actualRevenueMetrics.consignmentSalesRevenue ? 'Direct Sales' : 'Consignment Sales',
+                donationImpact: actualRevenueMetrics.donationsPercentage > 5 ? 'Significant' : 'Minimal'
+            },
+            
+            metadata: {
+                calculatedAt: new Date().toISOString(),
+                firestoreReadsUsed: totalFirestoreReads,
+                directPaymentsAnalyzed: directPaymentsSnapshot.size,
+                consignmentPaymentsAnalyzed: consignmentPaymentsSnapshot.size,
+                donationRecordsAnalyzed: donationsSnapshot.size,
+                dateRange: startDate && endDate ? {
+                    start: startDate.toLocaleDateString(),
+                    end: endDate.toLocaleDateString()
+                } : 'All time',
+                cacheKey
+            }
+        };
+        
+        // Cache the results
+        if (useCache) {
+            ReportCache.setCachedReport(cacheKey, result);
+        }
+        
+        console.log(`[Reports] ✅ Actual sales revenue calculated using ${totalFirestoreReads} Firestore reads`);
+        return result;
+        
+    } catch (error) {
+        console.error('[Reports] Error calculating actual sales revenue:', error);
+        throw new Error(`Actual sales revenue calculation failed: ${error.message}`);
+    }
+}
+
+
 
 /**
  * Generates pricing system recommendations based on data source usage.
