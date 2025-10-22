@@ -1493,9 +1493,42 @@ const productsGridOptions = {
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
     theme: 'legacy',
+    
+    // ENHANCED: Better default column configuration
+    defaultColDef: {
+        sortable: true, 
+        filter: true, 
+        resizable: true,
+        wrapText: true, 
+        autoHeight: true,
+        filterParams: {
+            buttons: ['reset'] // Add reset button to filters
+        }
+    },
+    
     columnDefs: [
-        { field: "itemId", headerName: "ID", width: 150 },
-        { field: "itemName", headerName: "Item Name", flex: 2, editable: true, filter: 'agTextColumnFilter' },
+        { 
+            field: "itemId", 
+            headerName: "ID", 
+            width: 150,
+            filter: 'agTextColumnFilter', // Explicit Community filter
+            filterParams: {
+                filterOptions: ['contains', 'startsWith', 'endsWith'],
+                suppressAndOrCondition: true
+            }
+        },
+        { 
+            field: "itemName", 
+            headerName: "Item Name", 
+            flex: 2, 
+            editable: true,
+            filter: 'agTextColumnFilter', // Explicit Community filter
+            filterParams: {
+                filterOptions: ['contains', 'startsWith', 'endsWith'],
+                suppressAndOrCondition: true,
+                caseSensitive: false // Make search case-insensitive
+            }
+        },
         {
             field: "categoryId",
             headerName: "Category",
@@ -1511,10 +1544,21 @@ const productsGridOptions = {
                     }
                 };
             },
-            filter: 'agTextColumnFilter',
             editable: true,
-            // This formatter converts the ID to a Name for display in the grid
+            // ENHANCED: Custom filter for category names
+            filter: 'agTextColumnFilter',
+            filterParams: {
+                filterOptions: ['contains', 'equals'],
+                suppressAndOrCondition: true,
+                caseSensitive: false
+            },
+            // This formatter converts the ID to a Name for display AND filtering
             valueFormatter: params => {
+                const category = masterData.categories.find(c => c.id === params.value);
+                return category ? category.categoryName : params.value;
+            },
+            // CRITICAL: This ensures filtering works on category NAMES, not IDs
+            valueGetter: params => {
                 const category = masterData.categories.find(c => c.id === params.value);
                 return category ? category.categoryName : params.value;
             }
@@ -1523,9 +1567,13 @@ const productsGridOptions = {
             field: "inventoryCount",
             headerName: "Stock On Hand",
             width: 150,
-            editable: false, // This field is system-managed
-            // Style it to look read-only and important
-            cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold', 'text-align': 'center' }
+            editable: false,
+            cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold', 'text-align': 'center' },
+            filter: 'agNumberColumnFilter', // Explicit Community filter
+            filterParams: {
+                filterOptions: ['equals', 'greaterThan', 'lessThan'],
+                suppressAndOrCondition: true
+            }
         },
         {
             field: "unitPrice",
@@ -1533,14 +1581,24 @@ const productsGridOptions = {
             flex: 1,
             editable: true,
             valueFormatter: p => (typeof p.value === 'number') ? formatCurrency(p.value) : '',
-            valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
+            valueParser: p => parseFloat(p.newValue),
+            filter: 'agNumberColumnFilter',
+            filterParams: {
+                filterOptions: ['equals', 'greaterThan', 'lessThan'],
+                suppressAndOrCondition: true
+            }
         },
         {
             field: "unitMarginPercentage",
             headerName: "Margin %",
             flex: 1,
             editable: true,
-            valueParser: p => parseFloat(p.newValue)
+            valueParser: p => parseFloat(p.newValue),
+            filter: 'agNumberColumnFilter',
+            filterParams: {
+                filterOptions: ['equals', 'greaterThan', 'lessThan'],
+                suppressAndOrCondition: true
+            }
         },
         {
             field: "sellingPrice",
@@ -1548,16 +1606,33 @@ const productsGridOptions = {
             flex: 1,
             editable: false,
             valueFormatter: p => (typeof p.value === 'number') ? formatCurrency(p.value) : '',
-            valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
+            filter: 'agNumberColumnFilter',
+            filterParams: {
+                filterOptions: ['equals', 'greaterThan', 'lessThan'],
+                suppressAndOrCondition: true
+            }
         },
         {
-            field: "isActive", headerName: "Status", width: 120,
+            field: "isActive", 
+            headerName: "Status", 
+            width: 120,
             cellRenderer: p => p.value ?
                 '<span class="text-green-600 font-semibold">Active</span>' :
-                '<span class="text-red-600 font-semibold">Inactive</span>'
+                '<span class="text-red-600 font-semibold">Inactive</span>',
+            filter: 'agTextColumnFilter',
+            filterParams: {
+                filterOptions: ['equals'],
+                suppressAndOrCondition: true
+            },
+            // CRITICAL: Filter on the text value, not boolean
+            valueGetter: params => params.value ? 'Active' : 'Inactive'
         },
         {
-            headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
+            headerName: "Actions", 
+            width: 120, 
+            cellClass: 'flex items-center justify-center',
+            filter: false, // Actions column shouldn't be filterable
+            sortable: false,
             cellRenderer: params => {
                 const icon = params.data.isActive
                     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" /></svg>`
@@ -1565,21 +1640,20 @@ const productsGridOptions = {
                 const buttonClass = params.data.isActive ? 'btn-deactivate' : 'btn-activate';
                 const tooltip = params.data.isActive ? 'Deactivate Product' : 'Activate Product';
                 return `<button class="${buttonClass}" data-id="${params.data.id}" title="${tooltip}">${icon}</button>`;
-
             }
         }
     ],
-    defaultColDef: {
-        sortable: true, filter: true, resizable: true,wrapText: true, autoHeight: true,
-    },
+    
     rowData: [],
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
     },
+    
     onGridReady: (params) => {
         console.log("[ui.js] Products Grid is now ready.");
         productsGridApi = params.api;
     },
+    
     onCellValueChanged: (params) => {
         const docId = params.data.id;
         const field = params.colDef.field;
