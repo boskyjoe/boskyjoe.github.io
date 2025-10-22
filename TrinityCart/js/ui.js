@@ -2284,6 +2284,21 @@ export function showBulkAddProductsModal() {
 }
 
 
+/**
+ * Closes the bulk add products modal
+ */
+export function closeBulkAddProductsModal() {
+    const modal = document.getElementById('bulk-add-products-modal');
+    if (!modal) return;
+
+    modal.classList.remove('visible');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        resetBulkSelectionState();
+    }, 300);
+}
+
+
 
 /**
  * Initializes the bulk add products grid (follows existing pattern)
