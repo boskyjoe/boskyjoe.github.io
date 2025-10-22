@@ -1512,6 +1512,7 @@ const productsGridOptions = {
                 };
             },
             editable: true,
+            filter: 'agTextColumnFilter',
             // This formatter converts the ID to a Name for display in the grid
             valueFormatter: params => {
                 const category = masterData.categories.find(c => c.id === params.value);
