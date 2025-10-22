@@ -1031,7 +1031,7 @@ function handleStandaloneButtons(target, event) {
         '#bulk-add-products-btn': () => showBulkAddProductsModal(),
         '#bulk-add-to-invoice-btn': () => handleBulkAddToInvoice(),
         '#bulk-select-all': () => handleBulkSelectAll(),
-        '#bulk-clear-selection': () => handleBulkClearSelection(),
+        '#bulk-clear-selection': () => handleBulkClearSelection(), 
         '#bulk-select-with-prices': () => handleBulkSelectWithPrices(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
         '.action-btn-remove-from-cart': () => {
@@ -1162,25 +1162,21 @@ function handleStandaloneButtons(target, event) {
  */
 async function handleBulkAddToInvoice() {
     try {
-        console.log('[main.js] Handling bulk add to invoice');
-        
-        // ✅ CORRECT: Call ui.js function to get selected products
+        // ✅ CORRECT: Call ui.js to get data (ui.js handles grid)
         const selectedProducts = getBulkSelectedProducts();
         
         if (selectedProducts.length === 0) {
-            showModal('warning', 'No Selection', 'Please select at least one product to add to the invoice.');
+            await showModal('warning', 'No Selection', 'Please select at least one product to add.');
             return;
         }
 
-        console.log(`[main.js] Adding ${selectedProducts.length} products to invoice`);
-
-        // ✅ CORRECT: Use ui.js functions for DOM manipulation
-        addBulkLineItems(selectedProducts); // This will be in ui.js
+        // ✅ CORRECT: Call ui.js to add line items (ui.js handles DOM)
+        addBulkLineItems(selectedProducts);
         
-        // ✅ CORRECT: Use existing ui.js function for calculation
+        // ✅ CORRECT: Call ui.js to calculate (ui.js handles calculations)
         calculateAllTotals();
 
-        // Close modal and show success  
+        // ✅ CORRECT: Call ui.js to close modal
         closeBulkAddProductsModal();
         
         await showModal('success', 'Products Added', 
@@ -1188,10 +1184,9 @@ async function handleBulkAddToInvoice() {
 
     } catch (error) {
         console.error('[main.js] Error in bulk add handler:', error);
-        await showModal('error', 'Add Failed', 'Failed to add products to invoice. Please try again.');
+        await showModal('error', 'Add Failed', 'Failed to add products to invoice.');
     }
 }
-
 
 /**
  * Handles selecting all visible products
@@ -1245,61 +1240,6 @@ function addLineItemWithData(productData) {
     
     console.log(`[BulkAdd] Added line item for ${productData.productName}`);
 }
-
-
-/**
- * Sets up search and filter functionality for bulk add modal
- */
-function setupBulkProductSearchListeners() {
-    const searchInput = document.getElementById('bulk-product-search');
-    const categoryFilter = document.getElementById('bulk-category-filter');
-
-    // Text search
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            if (!bulkAddProductsGridApi) return;
-            
-            const searchTerm = e.target.value.toLowerCase().trim();
-            
-            if (searchTerm === '') {
-                bulkAddProductsGridApi.setQuickFilter('');
-            } else {
-                bulkAddProductsGridApi.setQuickFilter(searchTerm);
-            }
-            
-            updateBulkSearchResults();
-        });
-    }
-
-    // Category filter
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', (e) => {
-            if (!bulkAddProductsGridApi) return;
-            
-            const categoryId = e.target.value;
-            
-            if (categoryId === '') {
-                // Clear category filter
-                const currentFilter = bulkAddProductsGridApi.getFilterModel();
-                if (currentFilter && currentFilter.categoryId) {
-                    delete currentFilter.categoryId;
-                    bulkAddProductsGridApi.setFilterModel(currentFilter);
-                }
-            } else {
-                // Apply category filter
-                const filterModel = bulkAddProductsGridApi.getFilterModel() || {};
-                filterModel.categoryId = {
-                    type: 'equals',
-                    filter: categoryId
-                };
-                bulkAddProductsGridApi.setFilterModel(filterModel);
-            }
-            
-            updateBulkSearchResults();
-        });
-    }
-}
-
 
 /**
  * Updates the search results display
@@ -2430,9 +2370,6 @@ function setupInputListeners() {
 
     // Setup calculation listeners for the product catalogue modal
     setupProductCatalogueCalculationListeners();
-
-    // Setup bulk product modal search
-    setupBulkProductSearchListeners();
 
 }
 
