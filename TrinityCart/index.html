@@ -571,7 +571,7 @@
                                 </div>
                                 <div>
                                     <h3 class="text-lg font-bold text-gray-900">Add Multiple Products to Purchase Invoice</h3>
-                                    <p class="text-sm text-gray-600">Select products to purchase and set quantities</p>
+                                    <p class="text-sm text-gray-600">Select products and set quantities - use column filters to search</p>
                                 </div>
                             </div>
                             <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
@@ -581,55 +581,26 @@
                             </button>
                         </div>
 
-                        <!-- Search and Filter Bar -->
-                        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                                <!-- Search Input -->
-                                <div class="md:col-span-5">
-                                    <div class="relative">
-                                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                        </svg>
-                                        <input type="text" 
-                                            id="bulk-product-search" 
-                                            placeholder="Search products..."
-                                            class="form-input w-full pl-10 pr-10 text-sm">
-                                        <button id="clear-bulk-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
-                                    </div>
+                        <!-- SIMPLIFIED: Quick Actions Bar (No Search) -->
+                        <div class="px-6 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                            <div class="flex justify-between items-center">
+                                <div class="text-sm text-gray-600">
+                                    💡 <strong>Tip:</strong> Use the search boxes below each column header to filter products
                                 </div>
                                 
-                                <!-- Category Filter -->
-                                <div class="md:col-span-3">
-                                    <select id="bulk-category-filter" class="form-input w-full text-sm">
-                                        <option value="">All Categories</option>
-                                        <!-- Options populated by JS -->
-                                    </select>
-                                </div>
-                                
-                                <!-- Quick Action Buttons -->
-                                <div class="md:col-span-4 flex justify-end space-x-2">
+                                <div class="flex space-x-2">
                                     <button id="bulk-select-all" type="button" 
-                                        class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 text-xs font-semibold flex items-center space-x-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                        <span>Select All</span>
+                                        class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs font-semibold">
+                                        Select All Visible
                                     </button>
                                     
                                     <button id="bulk-clear-selection" type="button"
-                                        class="bg-gray-600 text-white px-3 py-2 rounded hover:bg-gray-700 text-xs font-semibold flex items-center space-x-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                        <span>Clear All</span>
+                                        class="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 text-xs font-semibold">
+                                        Clear Selection
                                     </button>
                                     
                                     <button id="bulk-select-with-prices" type="button"
-                                        class="bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-700 text-xs font-semibold">
+                                        class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-xs font-semibold">
                                         Select Items with Prices
                                     </button>
                                 </div>
@@ -641,7 +612,7 @@
                             <div id="bulk-add-products-grid" class="ag-theme-alpine h-full w-full"></div>
                         </div>
 
-                        <!-- Modal Footer with Selection Summary -->
+                        <!-- Modal Footer -->
                         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
                             <div class="flex items-center space-x-4">
                                 <div class="text-sm">
