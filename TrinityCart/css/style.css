@@ -122,3 +122,18 @@ main {
     position: relative;
     z-index: 1;
 }
+
+#bulk-add-products-modal .ag-theme-alpine {
+    height: 500px !important;
+    min-height: 500px !important;
+    width: 100% !important;
+}
+
+#bulk-add-products-modal .modal-container {
+    max-height: 90vh !important;
+}
+
+#bulk-add-products-modal .flex-1 {
+    min-height: 400px !important;
+    overflow-y: auto !important;
+}
