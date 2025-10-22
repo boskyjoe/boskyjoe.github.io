@@ -2082,6 +2082,59 @@ const bulkAddProductsGridOptions = {
 };
 
 /**
+ * Loads products data into the bulk add grid
+ */
+function loadBulkProductsData() {
+    if (!bulkAddProductsGridApi) {
+        console.warn('[ui.js] Bulk grid API not ready, cannot load data');
+        return;
+    }
+
+    console.log('[ui.js] Loading products data into bulk add grid');
+
+    try {
+        // Get active products from masterData (already cached, no Firestore reads)
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        
+        console.log(`[ui.js] Found ${activeProducts.length} active products for bulk add`);
+
+        // Set loading state
+        bulkAddProductsGridApi.setGridOption('loading', true);
+
+        // Load products into grid
+        bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+        
+        // Clear loading state
+        bulkAddProductsGridApi.setGridOption('loading', false);
+
+        // Update total count display
+        updateBulkProductsTotalCount(activeProducts.length);
+
+    } catch (error) {
+        console.error('[ui.js] Error loading bulk products data:', error);
+        if (bulkAddProductsGridApi) {
+            bulkAddProductsGridApi.setGridOption('loading', false);
+            bulkAddProductsGridApi.showNoRowsOverlay();
+        }
+    }
+}
+
+/**
+ * Updates the total products count display
+ */
+function updateBulkProductsTotalCount(totalCount) {
+    // Update any count displays in the modal
+    const countElements = document.querySelectorAll('#bulk-add-products-modal .text-gray-600');
+    countElements.forEach(element => {
+        if (element.textContent.includes('products')) {
+            element.innerHTML = `<span class="font-semibold" id="bulk-selection-count">0</span> selected of ${totalCount} products`;
+        }
+    });
+}
+
+
+
+/**
  * Shows the bulk add products modal and initializes grid
  */
 export function showBulkAddProductsModal() {
@@ -2099,9 +2152,20 @@ export function showBulkAddProductsModal() {
     // Reset selection state
     resetBulkSelectionState();
     
-    // Populate dropdowns and load data
+    // Populate dropdowns
     populateBulkCategoryFilter();
-    loadBulkProductsData();
+    
+    // ✅ REPLACE loadBulkProductsData() with this inline code:
+    if (bulkAddProductsGridApi) {
+        bulkAddProductsGridApi.setGridOption('loading', true);
+        
+        // Load active products from masterData cache
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+        
+        bulkAddProductsGridApi.setGridOption('loading', false);
+        console.log(`[ui.js] Loaded ${activeProducts.length} active products into bulk grid`);
+    }
 
     // Show modal
     modal.style.display = 'flex';
