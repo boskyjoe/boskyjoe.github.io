@@ -710,9 +710,7 @@ async function handleAvailableProductsGrid(button, docId) {
 
     try {
         const costPrice = await getLatestPurchasePrice(productId);
-        if (costPrice === null) {
-            return alert('This product cannot be added because it has no purchase history. Please create a purchase invoice for it first.');
-        }
+        
 
         const productMaster = masterData.products.find(p => p.id === productId);
         const margin = productMaster.unitMarginPercentage || 0;
