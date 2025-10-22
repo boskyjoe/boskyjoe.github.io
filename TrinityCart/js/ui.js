@@ -1632,6 +1632,104 @@ export function initializeProductsGrid() {
 
 
 
+/**
+ * Shows the Add Product to Catalogue modal (different from sales add-product-modal)
+ */
+export function showAddProductToCatalogueModal() {
+    const modal = document.getElementById('add-product-to-catalogue-modal');
+    if (!modal) {
+        console.error('Add product to catalogue modal not found');
+        return;
+    }
+
+    // Reset the form
+    const form = document.getElementById('add-product-to-catalogue-form');
+    if (form) form.reset();
+
+    // Clear calculated selling price
+    const sellingPriceDisplay = document.getElementById('catalogue-sellingPrice-display');
+    if (sellingPriceDisplay) sellingPriceDisplay.value = '';
+
+    // Populate category dropdown using masterData cache
+    const categorySelect = document.getElementById('catalogue-itemCategory-select');
+    if (categorySelect) {
+        categorySelect.innerHTML = '<option value="">Select a category...</option>';
+        masterData.categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.categoryName;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    // Show modal with animation
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('visible');
+        
+        // Focus the first input for better UX
+        setTimeout(() => {
+            const firstInput = document.getElementById('catalogue-itemName-input');
+            if (firstInput) firstInput.focus();
+        }, 50);
+    }, 10);
+
+    console.log('[ui.js] Add Product to Catalogue modal opened');
+}
+
+/**
+ * Closes the Add Product to Catalogue modal
+ */
+export function closeAddProductToCatalogueModal() {
+    const modal = document.getElementById('add-product-to-catalogue-modal');
+    if (!modal) return;
+
+    modal.classList.remove('visible');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        console.log('[ui.js] Add Product to Catalogue modal closed');
+    }, 300); // Match CSS transition duration
+}
+
+// Keep existing showProductsView unchanged - just remove the form listeners
+export function showProductsView() {
+    showView('products-view');
+    initializeProductsGrid();
+
+    const waitForGrid = setInterval(() => {
+        if (productsGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time products listener.");
+            const db = firebase.firestore();
+            productsGridApi.setGridOption('loading', true);
+
+            unsubscribeProductsListener = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
+                .orderBy('itemName')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for products.");
+                    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    productsGridApi.setGridOption('rowData', products);
+                    productsGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with products real-time listener:", error);
+                    productsGridApi.setGridOption('loading', false);
+                    productsGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+
+    // No longer setup form calculation listeners here - they're in the modal
+}
+
+
+
+
+
+
+
+
+
 
 
 export function showProductsView() {
@@ -2293,7 +2391,9 @@ export function initializeModals() {
 
             console.log("Close button ; InitialzieModels:", modalToClose.id);
             // This now correctly closes EITHER modal
-            if (modalToClose.id === 'supplier-payment-modal') {
+            if (modalToClose.id === 'add-product-to-catalogue-modal') {
+                closeAddProductToCatalogueModal();
+            } else if (modalToClose.id === 'supplier-payment-modal') {
                 closeSupplierPaymentModal();
             } else if (modalToClose.id === 'member-modal') {
                 closeMemberModal();
@@ -2315,6 +2415,7 @@ export function initializeModals() {
             // When Escape is pressed, try to close ALL possible modals.
 
             // 1. Close the Payment Modal
+            closeAddProductToCatalogueModal();
             closeSupplierPaymentModal();
             closePaymentModal();
             closeMemberModal();
