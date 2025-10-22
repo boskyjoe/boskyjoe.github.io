@@ -1719,46 +1719,6 @@ export function showProductsView() {
         }
     }, 50);
 
-    // No longer setup form calculation listeners here - they're in the modal
-}
-
-
-
-
-
-
-
-
-
-
-
-export function showProductsView() {
-    showView('products-view');
-    initializeProductsGrid();
-
-    const waitForGrid = setInterval(() => {
-        if (productsGridApi) {
-            clearInterval(waitForGrid);
-
-            console.log("[ui.js] Grid is ready. Attaching real-time products listener.");
-            const db = firebase.firestore();
-            productsGridApi.setGridOption('loading', true);
-
-            unsubscribeProductsListener = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
-                .orderBy('itemName')
-                .onSnapshot(snapshot => {
-                    console.log("[Firestore] Received real-time update for products.");
-                    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    productsGridApi.setGridOption('rowData', products);
-                    productsGridApi.setGridOption('loading', false);
-                }, error => {
-                    console.error("Error with products real-time listener:", error);
-                    productsGridApi.setGridOption('loading', false);
-                    productsGridApi.showNoRowsOverlay();
-                });
-        }
-    }, 50);
-
     // This part for the form uses the masterData store.
     const itemCategorySelect = document.getElementById('itemCategory-select');
     itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
@@ -1769,13 +1729,8 @@ export function showProductsView() {
         itemCategorySelect.appendChild(option);
     });
 
-    // Setup form calculation listeners
-    const unitPriceInput = document.getElementById('unitPrice-input');
-    const unitMarginInput = document.getElementById('unitMargin-input');
-    unitPriceInput.addEventListener('input', calculateSellingPrice);
-    unitMarginInput.addEventListener('input', calculateSellingPrice);
+    // No longer setup form calculation listeners here - they're in the modal
 }
-
 
 
 
