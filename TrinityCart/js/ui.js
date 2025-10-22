@@ -2464,6 +2464,12 @@ const availableProductsGridOptions = {
             field: "categoryId",
             headerName: "Category",
             flex: 1,
+            filter: 'agTextColumnFilter', // ← Enable filtering
+            // 🎯 KEY CHANGE: Make filter search category NAMES not IDs
+            filterValueGetter: params => {
+                const category = masterData.categories.find(c => c.id === params.data.categoryId);
+                return category ? category.categoryName : 'Unknown';
+            },
             valueFormatter: params => {
                 const category = masterData.categories.find(c => c.id === params.value);
                 return category ? category.categoryName : 'Unknown';
