@@ -95,6 +95,9 @@ import {
     closeRecordSalePaymentModal, getSalesHistoryDataById,
     getSalePaymentDataFromGridById, switchPaymentModalTab, resetSalePaymentForm,
     refreshSalePaymentModal,
+    showBulkAddProductsModal,        
+    closeBulkAddProductsModal,       
+    getBulkSelectedProducts 
 } from './ui.js';
 
 import {
