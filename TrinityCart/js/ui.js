@@ -2083,78 +2083,6 @@ const bulkAddProductsGridOptions = {
 };
 
 
-/**
- * Sets up search and filter functionality for bulk add modal
- * CORRECTED: All UI interactions handled in ui.js
- */
-function setupBulkProductSearchListeners() {
-    const searchInput = document.getElementById('bulk-product-search');
-    const categoryFilter = document.getElementById('bulk-category-filter');
-    const clearButton = document.getElementById('clear-bulk-search');
-
-    console.log('[ui.js] Setting up bulk product search listeners');
-
-    // Text search functionality
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            if (!bulkAddProductsGridApi) return;
-            
-            const searchTerm = e.target.value.toLowerCase().trim();
-            
-            if (searchTerm === '') {
-                bulkAddProductsGridApi.setQuickFilter('');
-            } else {
-                bulkAddProductsGridApi.setQuickFilter(searchTerm);
-            }
-            
-            console.log(`[ui.js] Applied search filter: "${searchTerm}"`);
-        });
-    }
-
-    // Category filter functionality  
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', (e) => {
-            if (!bulkAddProductsGridApi) return;
-            
-            const categoryId = e.target.value;
-            
-            if (categoryId === '') {
-                // Clear category filter
-                const currentFilter = bulkAddProductsGridApi.getFilterModel();
-                if (currentFilter && currentFilter.categoryId) {
-                    delete currentFilter.categoryId;
-                    bulkAddProductsGridApi.setFilterModel(currentFilter);
-                }
-            } else {
-                // Apply category filter
-                const filterModel = bulkAddProductsGridApi.getFilterModel() || {};
-                filterModel.categoryId = {
-                    type: 'equals',
-                    filter: categoryId
-                };
-                bulkAddProductsGridApi.setFilterModel(filterModel);
-            }
-            
-            const categoryName = masterData.categories.find(c => c.id === categoryId)?.categoryName || 'All Categories';
-            console.log(`[ui.js] Applied category filter: ${categoryName}`);
-        });
-    }
-
-    // Clear search button
-    if (clearButton) {
-        clearButton.addEventListener('click', () => {
-            if (searchInput) searchInput.value = '';
-            if (categoryFilter) categoryFilter.value = '';
-            
-            if (bulkAddProductsGridApi) {
-                bulkAddProductsGridApi.setFilterModel(null);
-                bulkAddProductsGridApi.setQuickFilter('');
-            }
-            
-            console.log('[ui.js] Cleared all bulk product filters');
-        });
-    }
-}
 
 /**
  * Loads products data into the bulk add grid
@@ -2233,9 +2161,6 @@ export function showBulkAddProductsModal() {
     
     // Reset selection state
     resetBulkSelectionState();
-    
-    // Populate dropdowns
-    populateBulkCategoryFilter();
 
     // Show modal first
     modal.style.display = 'flex';
@@ -2247,41 +2172,23 @@ export function showBulkAddProductsModal() {
             if (bulkAddProductsGridApi) {
                 clearInterval(waitForBulkGrid);
                 
-                console.log('[ui.js] Bulk grid is ready, now loading data');
+                console.log('[ui.js] Bulk grid is ready, loading data');
                 
-                try {
-                    // Load data safely
-                    const activeProducts = masterData.products.filter(p => p.isActive);
-                    console.log(`[ui.js] Loading ${activeProducts.length} active products`);
-                    
-                    bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
-                    
-                    // Verify data loaded using correct method
-                    setTimeout(() => {
-                        const displayedRows = bulkAddProductsGridApi.getDisplayedRowCount();
-                        console.log(`[ui.js] ✅ Grid now displays ${displayedRows} rows`);
-                        
-                        if (displayedRows === 0 && activeProducts.length > 0) {
-                            console.error('[ui.js] ❌ Grid has data but shows 0 rows - potential CSS/height issue');
-                        }
-                    }, 100);
-                    
-                    setupBulkProductSearchListeners();
-                    
-                } catch (dataError) {
-                    console.error('[ui.js] Error loading data into bulk grid:', dataError);
-                }
+                // Load data
+                const activeProducts = masterData.products.filter(p => p.isActive);
+                bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+                
+                // Verify data loaded using correct method
+                setTimeout(() => {
+                    const displayedRows = bulkAddProductsGridApi.getDisplayedRowCount();
+                    console.log(`[ui.js] ✅ Grid shows ${displayedRows} rows`);
+                }, 100);
             }
         }, 50);
         
-        // Focus search input
-        setTimeout(() => {
-            const searchInput = document.getElementById('bulk-product-search');
-            if (searchInput) searchInput.focus();
-        }, 300);
-        
     }, 10);
 }
+
 
 
 /**
@@ -2488,23 +2395,6 @@ function resetBulkSelectionState() {
     const categoryFilter = document.getElementById('bulk-category-filter');
     if (categoryFilter) categoryFilter.value = '';
 }
-
-/**
- * Populates the category filter dropdown
- */
-function populateBulkCategoryFilter() {
-    const categorySelect = document.getElementById('bulk-category-filter');
-    if (!categorySelect) return;
-
-    categorySelect.innerHTML = '<option value="">All Categories</option>';
-    masterData.categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.id;
-        option.textContent = category.categoryName;
-        categorySelect.appendChild(option);
-    });
-}
-
 
 
 
