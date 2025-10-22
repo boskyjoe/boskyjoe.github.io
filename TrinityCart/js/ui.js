@@ -1972,27 +1972,22 @@ const bulkAddProductsGridOptions = {
     
     // ✨ KEY: Enable multi-row selection with checkboxes
     rowSelection: {
-        mode: 'multiRow',
-        enableSelectionWithoutKeys: true,
-        headerCheckbox: true // Master checkbox in header
+        mode: 'multiRow',              // Enable multi-row selection
+        enableSelectionWithoutKeys: true, // Click to select without Ctrl/Cmd
+        headerCheckbox: true,          // ✅ NEW: Master checkbox in header
+        checkboxes: true,              // ✅ NEW: Show checkboxes in rows
+        enableClickSelection: true     // Enable click-to-select
     },
     
     columnDefs: [
-        {
-            // Selection checkbox column
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
-            width: 50,
-            pinned: 'left',
-            suppressHeaderMenuButton: true,
-            suppressHeaderFilterButton: true
-        },
+
         {
             field: "itemName",
             headerName: "Product Name",
             flex: 2,
             filter: 'agTextColumnFilter',
-            cellStyle: { fontWeight: 'bold' }
+            cellStyle: { fontWeight: 'bold' },
+            pinned: 'left' // Keep product name visible when scrolling
         },
         {
             field: "categoryId",
@@ -2013,6 +2008,7 @@ const bulkAddProductsGridOptions = {
             headerName: "Current Stock",
             width: 120,
             cellClass: 'text-center font-bold',
+            filter: 'agNumberColumnFilter',
             cellStyle: params => {
                 const stock = params.value || 0;
                 if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
@@ -2024,15 +2020,16 @@ const bulkAddProductsGridOptions = {
             field: "unitPrice",
             headerName: "Last Purchase Price",
             width: 140,
+            filter: 'agNumberColumnFilter',
             valueFormatter: p => p.value ? formatCurrency(p.value) : 'Not set',
             cellStyle: params => {
                 return params.value ? { fontWeight: 'bold' } : { fontStyle: 'italic', color: '#9ca3af' };
             }
         },
         {
-            field: "defaultQty", // ← CORRECTED: Use proper field name
+            field: "defaultQty", // ✅ CORRECTED: Proper field name
             headerName: "Qty to Purchase",
-            width: 120,
+            width: 130,
             editable: true,
             valueGetter: () => 1, // Default quantity
             cellEditor: 'agNumberCellEditor',
@@ -2054,30 +2051,33 @@ const bulkAddProductsGridOptions = {
         resizable: true,
         sortable: true,
         filter: true,
-        floatingFilter: true // Enable search boxes
+        floatingFilter: true // Enable search boxes under headers
     },
     
     onGridReady: params => {
         bulkAddProductsGridApi = params.api;
-        console.log('[BulkAdd] Bulk add products grid ready');
+        console.log('[ui.js] Bulk add products grid ready with new selection syntax');
     },
     
     onSelectionChanged: (event) => {
         updateBulkSelectionDisplay();
+        console.log(`[ui.js] Selection changed: ${event.api.getSelectedRows().length} products selected`);
     },
     
     // Pre-select products that have purchase prices
     onFirstDataRendered: (params) => {
-        // Auto-select products that have purchase history (optional)
-        const nodesToSelect = [];
-        params.api.forEachNode(node => {
-            if (node.data.unitPrice && node.data.unitPrice > 0) {
-                nodesToSelect.push(node);
-            }
-        });
+        console.log('[ui.js] Bulk products grid first data rendered');
         
-        // Uncomment if you want auto-selection:
-        // params.api.setNodesSelected(nodesToSelect.slice(0, 5), true); // Select first 5 with prices
+        // Uncomment if you want to auto-select products with prices:
+        // const nodesToSelect = [];
+        // params.api.forEachNode(node => {
+        //     if (node.data.unitPrice && node.data.unitPrice > 0) {
+        //         nodesToSelect.push(node);
+        //     }
+        // });
+        // if (nodesToSelect.length > 0) {
+        //     params.api.setNodesSelected(nodesToSelect.slice(0, 5), true);
+        // }
     }
 };
 
