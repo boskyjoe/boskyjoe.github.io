@@ -32,7 +32,11 @@ import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
 
-import { showProductsView } from './ui.js';
+import { showProductsView,
+    showAddProductToCatalogueModal,  // ← NEW - Different from existing
+    closeAddProductToCatalogueModal  
+ } from './ui.js';
+
 import { addProduct, updateProduct, setProductStatus } from './api.js';
 
 import { showUsersView, refreshUsersGrid } from './ui.js';
@@ -1019,6 +1023,7 @@ function handleStandaloneButtons(target, event) {
         '#report-activity-btn': () => showReportActivityModal(),
         '#cancel-payment-edit-btn': () => resetPaymentForm(),
         '#add-product-to-cart-btn': () => showAddProductModal(),
+        '#add-new-product-to-catalogue-btn': () => showAddProductToCatalogueModal(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
@@ -1036,6 +1041,12 @@ function handleStandaloneButtons(target, event) {
             }
         }
     };
+
+    // ADD: New modal close trigger (different ID)
+    if (target.closest('#add-product-to-catalogue-modal .modal-close-trigger')) {
+        closeAddProductToCatalogueModal();
+        return true;
+    }
 
     // Check modal close triggers for all modals
     if (target.closest('#supplier-payment-modal .modal-close-trigger')) {
@@ -1221,6 +1232,7 @@ function setupFormSubmissions() {
     const formConfigs = [
         { id: 'add-supplier-form', handler: handleSupplierSubmit },
         { id: 'add-product-form', handler: handleProductSubmit },
+        { id: 'add-product-to-catalogue-form', handler: handleProductCatalogueSubmit },
         { id: 'purchase-invoice-form', handler: handlePurchaseInvoiceSubmit },
         { id: 'record-payment-form', handler: handlePaymentSubmit },
         { id: 'supplier-record-payment-form', handler: handleSupplierPaymentSubmit },
@@ -1348,6 +1360,55 @@ async function handleSupplierSubmit(e) {
         await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
     }
 }
+
+
+// ADD: New form submission handler (different ID)
+async function handleProductCatalogueSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+
+    // Use the NEW element IDs (catalogue- prefixed)
+    const unitPrice = parseFloat(document.getElementById('catalogue-unitPrice-input').value);
+    const unitMarginPercentage = parseFloat(document.getElementById('catalogue-unitMargin-input').value);
+
+    if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
+        return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
+    }
+
+    const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
+
+    const productData = {
+        itemName: document.getElementById('catalogue-itemName-input').value,
+        categoryId: document.getElementById('catalogue-itemCategory-select').value,
+        unitPrice,
+        unitMarginPercentage,
+        sellingPrice,
+        inventoryCount: parseInt(document.getElementById('catalogue-initialStock-input').value, 10) || 0
+    };
+
+    if (!productData.categoryId) {
+        return showModal('error', 'Invalid Input', 'Please select a product category.');
+    }
+
+    if (!productData.itemName.trim()) {
+        return showModal('error', 'Invalid Input', 'Please enter a product name.');
+    }
+
+    try {
+        await addProduct(productData, user);
+        await showModal('success', 'Success', 'Product has been added to the catalogue successfully.');
+        
+        // Close the modal
+        closeAddProductToCatalogueModal();
+        
+    } catch (error) {
+        console.error("Error adding product to catalogue:", error);
+        await showModal('error', 'Error', 'Failed to add the product to catalogue. Please try again.');
+    }
+}
+
+
+
 
 async function handleProductSubmit(e) {
     e.preventDefault();
@@ -2139,6 +2200,8 @@ function setupInputListeners() {
                 calculateAllTotals();
             }
         });
+
+        
     }
 
     // Admin team selection
@@ -2184,9 +2247,43 @@ function setupInputListeners() {
         });
     }
 
+    // Setup calculation listeners for the product catalogue modal
+    setupProductCatalogueCalculationListeners();
 
 
 }
+
+/**
+ * NEW FUNCTION: Sets up price calculation for the catalogue modal
+ */
+function setupProductCatalogueCalculationListeners() {
+    // Use the NEW element IDs (catalogue- prefixed)
+    const unitPriceInput = document.getElementById('catalogue-unitPrice-input');
+    const unitMarginInput = document.getElementById('catalogue-unitMargin-input');
+    const sellingPriceDisplay = document.getElementById('catalogue-sellingPrice-display');
+
+    function calculateCatalogueSellingPrice() {
+        const cost = parseFloat(unitPriceInput?.value) || 0;
+        const margin = parseFloat(unitMarginInput?.value) || 0;
+        
+        if (cost > 0 && margin >= 0) {
+            const sellingPrice = cost * (1 + margin / 100);
+            if (sellingPriceDisplay) {
+                sellingPriceDisplay.value = sellingPrice.toFixed(2);
+            }
+        } else {
+            if (sellingPriceDisplay) {
+                sellingPriceDisplay.value = '';
+            }
+        }
+    }
+
+    // Add event listeners with null checks
+    if (unitPriceInput) unitPriceInput.addEventListener('input', calculateCatalogueSellingPrice);
+    if (unitMarginInput) unitMarginInput.addEventListener('input', calculateCatalogueSellingPrice);
+}
+
+
 
 function setupAdminTeamListener() {
     const adminTeamSelect = document.getElementById('admin-select-team');
