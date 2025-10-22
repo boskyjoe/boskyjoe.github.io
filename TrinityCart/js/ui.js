@@ -1495,7 +1495,7 @@ const productsGridOptions = {
     theme: 'legacy',
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
-        { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
+        { field: "itemName", headerName: "Item Name", flex: 2, editable: true, filter: 'agTextColumnFilter' },
         {
             field: "categoryId",
             headerName: "Category",
@@ -1511,6 +1511,7 @@ const productsGridOptions = {
                     }
                 };
             },
+            filter: 'agTextColumnFilter',
             editable: true,
             // This formatter converts the ID to a Name for display in the grid
             valueFormatter: params => {
