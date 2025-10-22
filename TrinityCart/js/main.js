@@ -1025,6 +1025,10 @@ function handleStandaloneButtons(target, event) {
         '#cancel-payment-edit-btn': () => resetPaymentForm(),
         '#add-product-to-cart-btn': () => showAddProductModal(),
         '#add-new-product-to-catalogue-btn': () => showAddProductToCatalogueModal(),
+        '#bulk-add-products-btn': () => showBulkAddProductsModal(),
+        '#bulk-add-to-invoice-btn': () => handleBulkAddToInvoice(),
+        '#bulk-select-all': () => handleBulkSelectAll(),
+        '#bulk-clear-selection': () => handleBulkClearSelection(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
@@ -1042,6 +1046,12 @@ function handleStandaloneButtons(target, event) {
             }
         }
     };
+
+    // Add modal close trigger
+    if (target.closest('#bulk-add-products-modal .modal-close-trigger')) {
+        closeBulkAddProductsModal();
+        return true;
+    }
 
     // ADD: New modal close trigger (different ID)
     if (target.closest('#add-product-to-catalogue-modal .modal-close-trigger')) {
@@ -1140,6 +1150,168 @@ function handleStandaloneButtons(target, event) {
 
     return false;
 }
+
+/**
+ * Handles bulk adding selected products to the purchase invoice
+ */
+async function handleBulkAddToInvoice() {
+    try {
+        const selectedProducts = getBulkSelectedProducts();
+        
+        if (selectedProducts.length === 0) {
+            showModal('warning', 'No Selection', 'Please select at least one product to add to the invoice.');
+            return;
+        }
+
+        console.log(`[BulkAdd] Adding ${selectedProducts.length} products to invoice`);
+
+        // Add each selected product as a line item
+        selectedProducts.forEach(productData => {
+            addLineItemWithData(productData);
+        });
+
+        // Recalculate totals
+        calculateAllTotals();
+
+        // Close modal and show success
+        closeBulkAddProductsModal();
+        
+        showModal('success', 'Products Added', 
+            `${selectedProducts.length} product${selectedProducts.length > 1 ? 's have' : ' has'} been added to the invoice.`);
+
+        // Scroll to the line items section
+        setTimeout(() => {
+            document.getElementById('purchase-line-items-container').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }, 300);
+
+    } catch (error) {
+        console.error('[BulkAdd] Error adding products to invoice:', error);
+        showModal('error', 'Add Failed', 'Failed to add products to invoice. Please try again.');
+    }
+}
+
+/**
+ * Selects all visible (filtered) products
+ */
+function handleBulkSelectAll() {
+    if (!bulkAddProductsGridApi) return;
+    
+    // Select all nodes that pass the current filter
+    bulkAddProductsGridApi.selectAllFiltered();
+    console.log('[BulkAdd] Selected all visible products');
+}
+
+/**
+ * Clears all product selections
+ */
+function handleBulkClearSelection() {
+    if (!bulkAddProductsGridApi) return;
+    
+    bulkAddProductsGridApi.deselectAll();
+    console.log('[BulkAdd] Cleared all selections');
+}
+
+/**
+ * Adds a line item with pre-filled data (enhanced version of existing addLineItem)
+ */
+function addLineItemWithData(productData) {
+    // Use existing addLineItem() to create the row
+    addLineItem();
+    
+    // Get the newly created row (last row in container)
+    const lineItemsContainer = document.getElementById('purchase-line-items-container');
+    const newRow = lineItemsContainer.lastElementChild;
+    
+    if (!newRow) return;
+    
+    // Populate the row with bulk data
+    newRow.querySelector('[data-field="masterProductId"]').value = productData.masterProductId;
+    newRow.querySelector('[data-field="quantity"]').value = productData.quantity;
+    newRow.querySelector('[data-field="unitPurchasePrice"]').value = productData.unitPurchasePrice;
+    newRow.querySelector('[data-field="discountType"]').value = productData.discountType || 'Percentage';
+    newRow.querySelector('[data-field="discountValue"]').value = productData.discountValue || 0;
+    newRow.querySelector('[data-field="taxPercentage"]').value = productData.taxPercentage || 0;
+    
+    console.log(`[BulkAdd] Added line item for ${productData.productName}`);
+}
+
+
+/**
+ * Sets up search and filter functionality for bulk add modal
+ */
+function setupBulkProductSearchListeners() {
+    const searchInput = document.getElementById('bulk-product-search');
+    const categoryFilter = document.getElementById('bulk-category-filter');
+
+    // Text search
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (!bulkAddProductsGridApi) return;
+            
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                bulkAddProductsGridApi.setQuickFilter('');
+            } else {
+                bulkAddProductsGridApi.setQuickFilter(searchTerm);
+            }
+            
+            updateBulkSearchResults();
+        });
+    }
+
+    // Category filter
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', (e) => {
+            if (!bulkAddProductsGridApi) return;
+            
+            const categoryId = e.target.value;
+            
+            if (categoryId === '') {
+                // Clear category filter
+                const currentFilter = bulkAddProductsGridApi.getFilterModel();
+                if (currentFilter && currentFilter.categoryId) {
+                    delete currentFilter.categoryId;
+                    bulkAddProductsGridApi.setFilterModel(currentFilter);
+                }
+            } else {
+                // Apply category filter
+                const filterModel = bulkAddProductsGridApi.getFilterModel() || {};
+                filterModel.categoryId = {
+                    type: 'equals',
+                    filter: categoryId
+                };
+                bulkAddProductsGridApi.setFilterModel(filterModel);
+            }
+            
+            updateBulkSearchResults();
+        });
+    }
+}
+
+
+/**
+ * Updates the search results display
+ */
+function updateBulkSearchResults() {
+    if (!bulkAddProductsGridApi) return;
+    
+    setTimeout(() => {
+        const displayedCount = bulkAddProductsGridApi.getDisplayedRowCount();
+        const totalCount = bulkAddProductsGridApi.getModel().getRowCount();
+        
+        // Update any result count displays
+        const resultInfo = document.querySelector('#bulk-add-products-modal .text-gray-600');
+        if (resultInfo && displayedCount !== totalCount) {
+            resultInfo.innerHTML = `Showing ${displayedCount} of ${totalCount} products | <span class="font-semibold" id="bulk-selection-count">0</span> selected`;
+        }
+    }, 100);
+}
+
+
 
 // Add this new function
 function handleReportClick(reportId) {
@@ -2251,6 +2423,8 @@ function setupInputListeners() {
     // Setup calculation listeners for the product catalogue modal
     setupProductCatalogueCalculationListeners();
 
+    // Setup bulk product modal search
+    setupBulkProductSearchListeners();
 
 }
 
