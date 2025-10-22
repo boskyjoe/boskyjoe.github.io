@@ -1960,6 +1960,282 @@ export async function loadPaymentsForSelectedInvoice() {
 }
 
 
+
+
+let bulkAddProductsGridApi = null;
+
+const bulkAddProductsGridOptions = {
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 100, // Show more products per page
+    paginationPageSizeSelector: [50, 100, 200],
+    
+    // ✨ KEY: Enable multi-row selection with checkboxes
+    rowSelection: {
+        mode: 'multiRow',
+        enableSelectionWithoutKeys: true,
+        headerCheckbox: true // Master checkbox in header
+    },
+    
+    columnDefs: [
+        {
+            // Selection checkbox column
+            checkboxSelection: true,
+            headerCheckboxSelection: true,
+            width: 50,
+            pinned: 'left',
+            suppressHeaderMenuButton: true,
+            suppressHeaderFilterButton: true
+        },
+        {
+            field: "itemName",
+            headerName: "Product Name",
+            flex: 2,
+            filter: 'agTextColumnFilter',
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            field: "categoryId",
+            headerName: "Category",
+            flex: 1,
+            filter: 'agTextColumnFilter',
+            filterValueGetter: params => {
+                const category = masterData.categories.find(c => c.id === params.data.categoryId);
+                return category ? category.categoryName : 'Unknown';
+            },
+            valueFormatter: params => {
+                const category = masterData.categories.find(c => c.id === params.value);
+                return category ? category.categoryName : 'Unknown';
+            }
+        },
+        {
+            field: "inventoryCount",
+            headerName: "Current Stock",
+            width: 120,
+            cellClass: 'text-center font-bold',
+            cellStyle: params => {
+                const stock = params.value || 0;
+                if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
+                if (stock < 10) return { backgroundColor: '#fef3c7', color: '#d97706' };
+                return { backgroundColor: '#f0fdf4', color: '#166534' };
+            }
+        },
+        {
+            field: "unitPrice",
+            headerName: "Last Purchase Price",
+            width: 140,
+            valueFormatter: p => p.value ? formatCurrency(p.value) : 'Not set',
+            cellStyle: params => {
+                return params.value ? { fontWeight: 'bold' } : { fontStyle: 'italic', color: '#9ca3af' };
+            }
+        },
+        {
+            headerName: "Default Qty",
+            width: 100,
+            editable: true,
+            valueGetter: () => 1, // Default quantity
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: {
+                min: 1,
+                max: 1000,
+                precision: 0
+            },
+            cellStyle: { backgroundColor: '#f0f9ff', textAlign: 'center', fontWeight: 'bold' },
+            tooltipField: 'Quantity to add to invoice'
+        }
+    ],
+    
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true // Enable search boxes
+    },
+    
+    onGridReady: params => {
+        bulkAddProductsGridApi = params.api;
+        console.log('[BulkAdd] Bulk add products grid ready');
+    },
+    
+    onSelectionChanged: (event) => {
+        updateBulkSelectionDisplay();
+    },
+    
+    // Pre-select products that have purchase prices
+    onFirstDataRendered: (params) => {
+        // Auto-select products that have purchase history (optional)
+        const nodesToSelect = [];
+        params.api.forEachNode(node => {
+            if (node.data.unitPrice && node.data.unitPrice > 0) {
+                nodesToSelect.push(node);
+            }
+        });
+        
+        // Uncomment if you want auto-selection:
+        // params.api.setNodesSelected(nodesToSelect.slice(0, 5), true); // Select first 5 with prices
+    }
+};
+
+/**
+ * Shows the bulk add products modal
+ */
+export function showBulkAddProductsModal() {
+    const modal = document.getElementById('bulk-add-products-modal');
+    if (!modal) {
+        console.error('Bulk add products modal not found');
+        return;
+    }
+
+    console.log('[UI] Opening bulk add products modal');
+
+    // Reset selection state
+    resetBulkSelectionState();
+
+    // Populate category filter
+    populateBulkCategoryFilter();
+
+    // Load products into grid
+    if (bulkAddProductsGridApi) {
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+        bulkAddProductsGridApi.deselectAll();
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('visible');
+        
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = document.getElementById('bulk-product-search');
+            if (searchInput) searchInput.focus();
+        }, 50);
+    }, 10);
+}
+
+/**
+ * Closes the bulk add products modal
+ */
+export function closeBulkAddProductsModal() {
+    const modal = document.getElementById('bulk-add-products-modal');
+    if (!modal) return;
+
+    modal.classList.remove('visible');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        resetBulkSelectionState();
+    }, 300);
+}
+
+/**
+ * Gets selected products with their quantities for adding to invoice
+ */
+export function getBulkSelectedProducts() {
+    if (!bulkAddProductsGridApi) {
+        console.error('Bulk add grid API not available');
+        return [];
+    }
+
+    const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
+    const selectedProducts = selectedNodes.map(node => {
+        const product = node.data;
+        const quantity = node.getValue('Default Qty') || 1; // Get quantity from editable column
+        
+        return {
+            masterProductId: product.id,
+            productName: product.itemName,
+            quantity: quantity,
+            unitPurchasePrice: product.unitPrice || 0, // Use last known price as default
+            discountType: 'Percentage',
+            discountValue: 0,
+            taxPercentage: 0
+        };
+    });
+
+    console.log(`[BulkAdd] Returning ${selectedProducts.length} selected products:`, selectedProducts);
+    return selectedProducts;
+}
+
+/**
+ * Updates the selection display and button state
+ */
+function updateBulkSelectionDisplay() {
+    if (!bulkAddProductsGridApi) return;
+
+    const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
+    const count = selectedNodes.length;
+    
+    // Update selection count
+    const countElement = document.getElementById('bulk-selection-count');
+    if (countElement) countElement.textContent = count;
+    
+    // Update selection details
+    const detailsElement = document.getElementById('bulk-selection-details');
+    if (detailsElement) {
+        if (count === 0) {
+            detailsElement.textContent = '';
+        } else {
+            const totalEstimatedValue = selectedNodes.reduce((sum, node) => {
+                const price = node.data.unitPrice || 0;
+                const qty = node.getValue('Default Qty') || 1;
+                return sum + (price * qty);
+            }, 0);
+            
+            detailsElement.textContent = `(Est. value: ${formatCurrency(totalEstimatedValue)})`;
+        }
+    }
+    
+    // Enable/disable add button
+    const addButton = document.getElementById('bulk-add-to-invoice-btn');
+    if (addButton) {
+        addButton.disabled = count === 0;
+        if (count === 0) {
+            addButton.textContent = 'Add Selected to Invoice';
+        } else {
+            addButton.innerHTML = `
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Add ${count} Product${count > 1 ? 's' : ''} to Invoice
+            `;
+        }
+    }
+}
+
+/**
+ * Resets the bulk selection state
+ */
+function resetBulkSelectionState() {
+    updateBulkSelectionDisplay();
+    
+    // Clear search
+    const searchInput = document.getElementById('bulk-product-search');
+    if (searchInput) searchInput.value = '';
+    
+    const categoryFilter = document.getElementById('bulk-category-filter');
+    if (categoryFilter) categoryFilter.value = '';
+}
+
+/**
+ * Populates the category filter dropdown
+ */
+function populateBulkCategoryFilter() {
+    const categorySelect = document.getElementById('bulk-category-filter');
+    if (!categorySelect) return;
+
+    categorySelect.innerHTML = '<option value="">All Categories</option>';
+    masterData.categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.categoryName;
+        categorySelect.appendChild(option);
+    });
+}
+
+
+
+
 // Function to switch between tabs
 export function switchPurchaseTab(tabName) {
     const invoiceTab = document.getElementById('tab-invoices');
@@ -2351,6 +2627,10 @@ export function initializeModals() {
             }
             else if (modalToClose.id === 'record-sale-payment-modal') {
                 closeRecordSalePaymentModal();
+            } else if (modalToClose.id === 'bulk-add-products-modal') {
+                closeBulkAddProductsModal();
+            } else if (modalToClose.id === 'supplier-payment-modal') {
+                closeSupplierPaymentModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -2369,6 +2649,7 @@ export function initializeModals() {
             closeConsignmentRequestModal();
             closeReportActivityModal();
             closeRecordSalePaymentModal();
+            closeBulkAddProductsModal();
 
             // 2. Also close the Custom Modal (for success/error/confirm)
             const customModal = document.getElementById('custom-modal');
