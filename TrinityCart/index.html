@@ -274,79 +274,35 @@
 
                 </div>
 
+
+
+
                 <!-- View: Manage Products -->
                 <div id="products-view" class="view space-y-8">
-                    <!--<h2 class="text-2xl font-semibold mb-4">Product Management</h2>-->
-
-                    <!-- Card 1: Add New Product Form -->
+                    
+                    <!-- Card: Products Grid with Add Button -->
                     <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Product to Catalogue</h3>
-                        </div>
-                        <div class="p-6">
-                            <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <!-- Item Name -->
-                                <div class="md:col-span-2">
-                                    <label for="itemName-input" class="form-label">Item Name</label>
-                                    <input type="text" id="itemName-input"
-                                        placeholder="e.g., Chocolate Truffle Cake (1kg)" class="form-input w-full"
-                                        required>
-                                </div>
-                                <!-- Category Dropdown -->
-                                <div>
-                                    <label for="itemCategory-select" class="form-label">Category</label>
-                                    <select id="itemCategory-select" class="form-input w-full" required>
-                                        <option value="" disabled selected>Select a category...</option>
-                                        <!-- Options will be populated by JS -->
-                                    </select>
-                                </div>
-                                <!-- Unit Price (Cost) -->
-                                <div>
-                                    <label for="unitPrice-input" class="form-label">Unit Price (Cost)</label>
-                                    <input type="number" id="unitPrice-input" placeholder="e.g., 20.00"
-                                        class="form-input w-full" required step="0.01">
-                                </div>
-                                <!-- Unit Margin -->
-                                <div>
-                                    <label for="unitMargin-input" class="form-label">Unit Margin (%)</label>
-                                    <input type="number" id="unitMargin-input" placeholder="e.g., 25"
-                                        class="form-input w-full" required step="1">
-                                </div>
-                                <!-- [NEW] Initial Stock Quantity -->
-                                <div>
-                                    <label for="initialStock-input" class="form-label">Initial Stock Quantity</label>
-                                    <input type="number" id="initialStock-input" placeholder="e.g., 50" value="0"
-                                        class="form-input w-full" required step="1">
-                                </div>
-
-                                <!-- Selling Price (Read-only) -->
-                                <div>
-                                    <label for="sellingPrice-display" class="form-label">Selling Price
-                                        (Auto-calculated)</label>
-                                    <input type="text" id="sellingPrice-display" class="form-input w-full bg-gray-200"
-                                        readonly>
-                                </div>
-                                <!-- Form Actions -->
-                                <div class="md:col-span-3 flex justify-end">
-                                    <button type="submit"
-                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">Add
-                                        Product</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: Existing Products Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Product Catalogue</h3>
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Product Catalogue</h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage your product inventory and pricing</p>
+                            </div>
+                            <button id="add-new-product-to-catalogue-btn" 
+                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold flex items-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                                <span>Add New Product</span>
+                            </button>
                         </div>
                         <div class="p-2">
-                            <div id="products-catalogue-grid" class="ag-theme-alpine"
-                                style="height: 600px; width: 100%;"></div>
+                            <!-- Full-width grid -->
+                            <div id="products-catalogue-grid" class="ag-theme-alpine" style="height: 700px; width: 100%;"></div>
                         </div>
                     </div>
                 </div>
+
+    
 
 
 
@@ -2686,6 +2642,125 @@
             </main>
         </div>
     </div>
+
+
+
+    <!-- =================================== -->
+    <!--   ADD PRODUCT TO CATALOGUE MODAL    -->
+    <!-- =================================== -->
+    <div id="add-product-to-catalogue-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-2xl mx-auto" style="z-index: 51;">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">Add New Product to Catalogue</h3>
+                </div>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="add-product-to-catalogue-form">
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Item Name -->
+                        <div class="md:col-span-2">
+                            <label for="catalogue-itemName-input" class="form-label">
+                                Item Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="catalogue-itemName-input"
+                                placeholder="e.g., Chocolate Truffle Cake (1kg)" 
+                                class="form-input w-full" required>
+                        </div>
+                        
+                        <!-- Category Dropdown -->
+                        <div>
+                            <label for="catalogue-itemCategory-select" class="form-label">
+                                Category <span class="text-red-500">*</span>
+                            </label>
+                            <select id="catalogue-itemCategory-select" class="form-input w-full" required>
+                                <option value="" disabled selected>Select a category...</option>
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        
+                        <!-- Initial Stock Quantity -->
+                        <div>
+                            <label for="catalogue-initialStock-input" class="form-label">
+                                Initial Stock Quantity <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" id="catalogue-initialStock-input" placeholder="50" 
+                                value="0" class="form-input w-full" required step="1" min="0">
+                        </div>
+                        
+                        <!-- Unit Price (Cost) -->
+                        <div>
+                            <label for="catalogue-unitPrice-input" class="form-label">
+                                Unit Price (Cost) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                                <input type="number" id="catalogue-unitPrice-input" placeholder="20.00"
+                                    class="form-input w-full pl-8" required step="0.01" min="0.01">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Latest purchase cost per unit</p>
+                        </div>
+                        
+                        <!-- Unit Margin -->
+                        <div>
+                            <label for="catalogue-unitMargin-input" class="form-label">
+                                Unit Margin (%) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="catalogue-unitMargin-input" placeholder="25"
+                                    class="form-input w-full pr-8" required step="0.1" min="0" max="1000">
+                                <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">%</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Profit margin percentage</p>
+                        </div>
+                        
+                        <!-- Selling Price (Auto-calculated) -->
+                        <div class="md:col-span-2">
+                            <label for="catalogue-sellingPrice-display" class="form-label">
+                                Selling Price <span class="text-sm text-gray-500 font-normal">(Auto-calculated)</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                                <input type="text" id="catalogue-sellingPrice-display" 
+                                    class="form-input w-full pl-8 bg-blue-50 border-blue-200 font-semibold text-blue-700 text-lg" readonly>
+                            </div>
+                            <p class="text-xs text-blue-600 mt-1 font-medium">
+                                💡 Formula: Unit Price × (1 + Margin%) = Final Selling Price
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">
+                        Cancel
+                    </button>
+                    <button type="submit" class="modal-btn modal-btn-primary">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Add Product to Catalogue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
 
     <!-- ======================= -->
