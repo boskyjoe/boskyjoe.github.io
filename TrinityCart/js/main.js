@@ -1241,23 +1241,6 @@ function addLineItemWithData(productData) {
     console.log(`[BulkAdd] Added line item for ${productData.productName}`);
 }
 
-/**
- * Updates the search results display
- */
-function updateBulkSearchResults() {
-    if (!bulkAddProductsGridApi) return;
-    
-    setTimeout(() => {
-        const displayedCount = bulkAddProductsGridApi.getDisplayedRowCount();
-        const totalCount = bulkAddProductsGridApi.getModel().getRowCount();
-        
-        // Update any result count displays
-        const resultInfo = document.querySelector('#bulk-add-products-modal .text-gray-600');
-        if (resultInfo && displayedCount !== totalCount) {
-            resultInfo.innerHTML = `Showing ${displayedCount} of ${totalCount} products | <span class="font-semibold" id="bulk-selection-count">0</span> selected`;
-        }
-    }, 100);
-}
 
 
 
