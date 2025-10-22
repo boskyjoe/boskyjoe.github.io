@@ -1719,15 +1719,7 @@ export function showProductsView() {
         }
     }, 50);
 
-    // This part for the form uses the masterData store.
-    const itemCategorySelect = document.getElementById('itemCategory-select');
-    itemCategorySelect.innerHTML = '<option value="">Select a category...</option>';
-    masterData.categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = cat.categoryName;
-        itemCategorySelect.appendChild(option);
-    });
+    
 
     // No longer setup form calculation listeners here - they're in the modal
 }
