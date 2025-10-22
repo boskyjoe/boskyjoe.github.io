@@ -1513,6 +1513,12 @@ const productsGridOptions = {
             },
             editable: true,
             filter: 'agTextColumnFilter',
+            // This tells the filter to use category names instead of IDs
+            
+            filterValueGetter: params => {
+                const category = masterData.categories.find(c => c.id === params.data.categoryId);
+                return category ? category.categoryName : '';
+            },
             // This formatter converts the ID to a Name for display in the grid
             valueFormatter: params => {
                 const category = masterData.categories.find(c => c.id === params.value);
