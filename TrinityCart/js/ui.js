@@ -1962,6 +1962,7 @@ export async function loadPaymentsForSelectedInvoice() {
 
 
 
+
 let bulkAddProductsGridApi = null;
 
 const bulkAddProductsGridOptions = {
@@ -2081,6 +2082,80 @@ const bulkAddProductsGridOptions = {
     }
 };
 
+
+/**
+ * Sets up search and filter functionality for bulk add modal
+ * CORRECTED: All UI interactions handled in ui.js
+ */
+function setupBulkProductSearchListeners() {
+    const searchInput = document.getElementById('bulk-product-search');
+    const categoryFilter = document.getElementById('bulk-category-filter');
+    const clearButton = document.getElementById('clear-bulk-search');
+
+    console.log('[ui.js] Setting up bulk product search listeners');
+
+    // Text search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (!bulkAddProductsGridApi) return;
+            
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                bulkAddProductsGridApi.setQuickFilter('');
+            } else {
+                bulkAddProductsGridApi.setQuickFilter(searchTerm);
+            }
+            
+            console.log(`[ui.js] Applied search filter: "${searchTerm}"`);
+        });
+    }
+
+    // Category filter functionality  
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', (e) => {
+            if (!bulkAddProductsGridApi) return;
+            
+            const categoryId = e.target.value;
+            
+            if (categoryId === '') {
+                // Clear category filter
+                const currentFilter = bulkAddProductsGridApi.getFilterModel();
+                if (currentFilter && currentFilter.categoryId) {
+                    delete currentFilter.categoryId;
+                    bulkAddProductsGridApi.setFilterModel(currentFilter);
+                }
+            } else {
+                // Apply category filter
+                const filterModel = bulkAddProductsGridApi.getFilterModel() || {};
+                filterModel.categoryId = {
+                    type: 'equals',
+                    filter: categoryId
+                };
+                bulkAddProductsGridApi.setFilterModel(filterModel);
+            }
+            
+            const categoryName = masterData.categories.find(c => c.id === categoryId)?.categoryName || 'All Categories';
+            console.log(`[ui.js] Applied category filter: ${categoryName}`);
+        });
+    }
+
+    // Clear search button
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            if (categoryFilter) categoryFilter.value = '';
+            
+            if (bulkAddProductsGridApi) {
+                bulkAddProductsGridApi.setFilterModel(null);
+                bulkAddProductsGridApi.setQuickFilter('');
+            }
+            
+            console.log('[ui.js] Cleared all bulk product filters');
+        });
+    }
+}
+
 /**
  * Loads products data into the bulk add grid
  */
@@ -2167,6 +2242,8 @@ export function showBulkAddProductsModal() {
         console.log(`[ui.js] Loaded ${activeProducts.length} active products into bulk grid`);
     }
 
+    setupBulkProductSearchListeners();
+    
     // Show modal
     modal.style.display = 'flex';
     setTimeout(() => {
