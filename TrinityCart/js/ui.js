@@ -4395,6 +4395,13 @@ export function renderSidebar(role) {
 
 export function showView(viewId) {
 
+    // Force hide ALL modals when navigating to any view
+    const allModals = document.querySelectorAll('.modal-container');
+    allModals.forEach(modal => {
+        modal.classList.remove('visible');
+        modal.style.display = 'none';
+        console.log(`[ui.js] Force hiding modal: ${modal.id}`);
+    });
 
     // =================================================================
     // --- Close any open modals on navigation ---
