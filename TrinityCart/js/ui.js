@@ -2470,7 +2470,23 @@ const availableProductsGridOptions = {
             }
         },
         {
-            headerName: "Action",
+            field: "inventoryCount",
+            headerName: "Stock",
+            width: 80,
+            cellClass: 'text-center font-bold',
+            cellStyle: params => {
+                const stock = params.value || 0;
+                if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
+                if (stock < 10) return { backgroundColor: '#fef3c7', color: '#d97706' };
+                return { backgroundColor: '#f0fdf4', color: '#166534' };
+            },
+            valueFormatter: params => {
+                const stock = params.value || 0;
+                return stock === 0 ? 'OUT' : stock.toString();
+            }
+        },
+        {
+            headerName: "Add",
             width: 80,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
