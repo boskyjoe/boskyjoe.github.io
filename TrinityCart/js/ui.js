@@ -2030,8 +2030,9 @@ const bulkAddProductsGridOptions = {
             }
         },
         {
-            headerName: "Default Qty",
-            width: 100,
+            field: "defaultQty", // ← CORRECTED: Use proper field name
+            headerName: "Qty to Purchase",
+            width: 120,
             editable: true,
             valueGetter: () => 1, // Default quantity
             cellEditor: 'agNumberCellEditor',
@@ -2040,8 +2041,12 @@ const bulkAddProductsGridOptions = {
                 max: 1000,
                 precision: 0
             },
-            cellStyle: { backgroundColor: '#f0f9ff', textAlign: 'center', fontWeight: 'bold' },
-            tooltipField: 'Quantity to add to invoice'
+            cellStyle: { 
+                backgroundColor: '#f0f9ff', 
+                textAlign: 'center', 
+                fontWeight: 'bold',
+                border: '1px solid #bfdbfe'
+            }
         }
     ],
     
@@ -2077,7 +2082,7 @@ const bulkAddProductsGridOptions = {
 };
 
 /**
- * Shows the bulk add products modal
+ * Shows the bulk add products modal and initializes grid
  */
 export function showBulkAddProductsModal() {
     const modal = document.getElementById('bulk-add-products-modal');
@@ -2086,20 +2091,17 @@ export function showBulkAddProductsModal() {
         return;
     }
 
-    console.log('[UI] Opening bulk add products modal');
+    console.log('[ui.js] Opening bulk add products modal');
 
+    // Initialize grid if first time
+    initializeBulkAddProductsGrid();
+    
     // Reset selection state
     resetBulkSelectionState();
-
-    // Populate category filter
+    
+    // Populate dropdowns and load data
     populateBulkCategoryFilter();
-
-    // Load products into grid
-    if (bulkAddProductsGridApi) {
-        const activeProducts = masterData.products.filter(p => p.isActive);
-        bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
-        bulkAddProductsGridApi.deselectAll();
-    }
+    loadBulkProductsData();
 
     // Show modal
     modal.style.display = 'flex';
@@ -2129,33 +2131,140 @@ export function closeBulkAddProductsModal() {
 }
 
 /**
- * Gets selected products with their quantities for adding to invoice
+ * Initializes the bulk add products grid (follows existing pattern)
+ */
+function initializeBulkAddProductsGrid() {
+    const gridDiv = document.getElementById('bulk-add-products-grid');
+    if (!gridDiv || bulkAddProductsGridApi) return; // Already initialized
+
+    console.log('[ui.js] Initializing bulk add products grid');
+    bulkAddProductsGridApi = createGrid(gridDiv, bulkAddProductsGridOptions);
+}
+
+/**
+ * Gets selected products with quantities (CORRECTED: All grid access in ui.js)
  */
 export function getBulkSelectedProducts() {
     if (!bulkAddProductsGridApi) {
-        console.error('Bulk add grid API not available');
+        console.error('[ui.js] Bulk add grid API not available');
         return [];
     }
 
     const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
     const selectedProducts = selectedNodes.map(node => {
         const product = node.data;
-        const quantity = node.getValue('Default Qty') || 1; // Get quantity from editable column
+        const quantity = parseFloat(node.getValue('defaultQty')) || 1;
         
         return {
             masterProductId: product.id,
             productName: product.itemName,
             quantity: quantity,
-            unitPurchasePrice: product.unitPrice || 0, // Use last known price as default
+            unitPurchasePrice: product.unitPrice || 0,
             discountType: 'Percentage',
             discountValue: 0,
             taxPercentage: 0
         };
     });
 
-    console.log(`[BulkAdd] Returning ${selectedProducts.length} selected products:`, selectedProducts);
+    console.log(`[ui.js] Returning ${selectedProducts.length} selected products`);
     return selectedProducts;
 }
+
+
+/**
+ * Adds bulk line items to the purchase form (CORRECTED: DOM manipulation in ui.js)
+ */
+export function addBulkLineItems(productsArray) {
+    if (!Array.isArray(productsArray) || productsArray.length === 0) {
+        console.warn('[ui.js] No products to add as bulk line items');
+        return;
+    }
+
+    console.log(`[ui.js] Adding ${productsArray.length} bulk line items`);
+
+    // Hide the "no items" message if visible
+    const noItemsMessage = document.getElementById('no-line-items-message');
+    if (noItemsMessage) {
+        noItemsMessage.style.display = 'none';
+    }
+
+    // Add each product as a line item using existing function
+    productsArray.forEach((productData, index) => {
+        console.log(`[ui.js] Adding bulk item ${index + 1}: ${productData.productName}`);
+        
+        // Use existing addLineItem function to create the row
+        addLineItem();
+        
+        // Get the newly created row and populate it
+        const lineItemsContainer = document.getElementById('purchase-line-items-container');
+        const newRow = lineItemsContainer.lastElementChild;
+        
+        if (newRow) {
+            // Populate the row with bulk data
+            newRow.querySelector('[data-field="masterProductId"]').value = productData.masterProductId;
+            newRow.querySelector('[data-field="quantity"]').value = productData.quantity;
+            newRow.querySelector('[data-field="unitPurchasePrice"]').value = productData.unitPurchasePrice;
+            newRow.querySelector('[data-field="discountType"]').value = productData.discountType;
+            newRow.querySelector('[data-field="discountValue"]').value = productData.discountValue;
+            newRow.querySelector('[data-field="taxPercentage"]').value = productData.taxPercentage;
+            
+            console.log(`[ui.js] ✅ Populated bulk line item for ${productData.productName}`);
+        }
+    });
+
+    // Scroll to line items section for user feedback
+    setTimeout(() => {
+        const lineItemsContainer = document.getElementById('purchase-line-items-container');
+        if (lineItemsContainer) {
+            lineItemsContainer.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    }, 100);
+}
+
+/**
+ * Bulk selection operations (CORRECTED: All in ui.js)
+ */
+export function bulkSelectAllVisibleProducts() {
+    if (!bulkAddProductsGridApi) {
+        console.error('[ui.js] Bulk grid API not available for select all');
+        return;
+    }
+    
+    bulkAddProductsGridApi.selectAllFiltered();
+    console.log('[ui.js] Selected all visible products');
+}
+
+export function bulkClearAllSelections() {
+    if (!bulkAddProductsGridApi) {
+        console.error('[ui.js] Bulk grid API not available for clear selection');
+        return;
+    }
+    
+    bulkAddProductsGridApi.deselectAll();
+    console.log('[ui.js] Cleared all product selections');
+}
+
+export function bulkSelectProductsWithPrices() {
+    if (!bulkAddProductsGridApi) {
+        console.error('[ui.js] Bulk grid API not available for smart selection');
+        return;
+    }
+
+    // Select nodes that have purchase prices > 0
+    const nodesToSelect = [];
+    bulkAddProductsGridApi.forEachNode(node => {
+        if (node.data.unitPrice && node.data.unitPrice > 0) {
+            nodesToSelect.push(node);
+        }
+    });
+    
+    bulkAddProductsGridApi.setNodesSelected(nodesToSelect, true);
+    console.log(`[ui.js] Selected ${nodesToSelect.length} products with purchase prices`);
+}
+
 
 /**
  * Updates the selection display and button state
@@ -8753,5 +8862,3 @@ function updateValuationSummaryCardsLoading(isLoading) {
         }
     });
 }
-
-
