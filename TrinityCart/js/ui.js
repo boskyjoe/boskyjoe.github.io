@@ -2165,28 +2165,40 @@ function loadBulkProductsData() {
         return;
     }
 
-    // Get active products and load into grid
-    const activeProducts = masterData.products.filter(p => p.isActive);
-    console.log(`[ui.js] Loading ${activeProducts.length} products:`, activeProducts.slice(0, 2)); // Show first 2 products
-    
-    bulkAddProductsGridApi.setGridOption('loading', true);
-    bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
-    bulkAddProductsGridApi.setGridOption('loading', false);
-    
-    // ✨ ADD THESE FORCE REFRESH LINES:
-    setTimeout(() => {
+    try {
+        // Get active products and load into grid
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        console.log(`[ui.js] Loading ${activeProducts.length} products:`, activeProducts.slice(0, 2));
+        
+        bulkAddProductsGridApi.setGridOption('loading', true);
+        bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+        bulkAddProductsGridApi.setGridOption('loading', false);
+        
+        // ✅ CORRECTED: Use proper method to get row count
+        setTimeout(() => {
+            if (bulkAddProductsGridApi) {
+                bulkAddProductsGridApi.sizeColumnsToFit();
+                
+                // ✅ CORRECTED: Use getDisplayedRowCount() instead of getModel().getRowCount()
+                const displayedRowCount = bulkAddProductsGridApi.getDisplayedRowCount();
+                console.log(`[ui.js] ✅ Grid refreshed - Displayed rows: ${displayedRowCount}`);
+                
+                // Alternative method to count total rows:
+                let totalRows = 0;
+                bulkAddProductsGridApi.forEachNode(() => totalRows++);
+                console.log(`[ui.js] ✅ Total rows in grid: ${totalRows}`);
+            }
+        }, 200);
+        
+        console.log(`[ui.js] Loaded ${activeProducts.length} products into bulk grid`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading bulk products data:', error);
         if (bulkAddProductsGridApi) {
-            bulkAddProductsGridApi.sizeColumnsToFit(); // Force column sizing
-            bulkAddProductsGridApi.refreshCells({ force: true }); // Force cell refresh
-            
-            // Additional debugging
-            const rowCount = bulkAddProductsGridApi.getModel().getRowCount();
-            const displayedRowCount = bulkAddProductsGridApi.getDisplayedRowCount();
-            console.log(`[ui.js] ✅ Grid refreshed - Rows: ${rowCount}, Displayed: ${displayedRowCount}`);
+            bulkAddProductsGridApi.setGridOption('loading', false);
+            bulkAddProductsGridApi.showNoRowsOverlay();
         }
-    }, 200);
-    
-    console.log(`[ui.js] Loaded ${activeProducts.length} products into bulk grid`);
+    }
 }
 
 /**
@@ -2230,36 +2242,39 @@ export function showBulkAddProductsModal() {
     setTimeout(() => {
         modal.classList.add('visible');
         
-        // ✅ CORRECTED: Wait for grid to be ready before loading data
+        // Wait for grid to be ready
         const waitForBulkGrid = setInterval(() => {
             if (bulkAddProductsGridApi) {
                 clearInterval(waitForBulkGrid);
                 
                 console.log('[ui.js] Bulk grid is ready, now loading data');
                 
-                // Now it's safe to load data
-                bulkAddProductsGridApi.setGridOption('loading', true);
-                
-                const activeProducts = masterData.products.filter(p => p.isActive);
-                console.log(`[ui.js] Loading ${activeProducts.length} active products:`, activeProducts.slice(0, 2));
-                
-                bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
-                bulkAddProductsGridApi.setGridOption('loading', false);
-                
-                // Setup search listeners after data is loaded
-                setupBulkProductSearchListeners();
-                
-                // Verify data loaded
-                setTimeout(() => {
-                    const rowCount = bulkAddProductsGridApi.getModel().getRowCount();
-                    console.log(`[ui.js] ✅ Grid now shows ${rowCount} rows`);
-                }, 100);
-            } else {
-                console.log('[ui.js] Waiting for bulk grid to initialize...');
+                try {
+                    // Load data safely
+                    const activeProducts = masterData.products.filter(p => p.isActive);
+                    console.log(`[ui.js] Loading ${activeProducts.length} active products`);
+                    
+                    bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
+                    
+                    // Verify data loaded using correct method
+                    setTimeout(() => {
+                        const displayedRows = bulkAddProductsGridApi.getDisplayedRowCount();
+                        console.log(`[ui.js] ✅ Grid now displays ${displayedRows} rows`);
+                        
+                        if (displayedRows === 0 && activeProducts.length > 0) {
+                            console.error('[ui.js] ❌ Grid has data but shows 0 rows - potential CSS/height issue');
+                        }
+                    }, 100);
+                    
+                    setupBulkProductSearchListeners();
+                    
+                } catch (dataError) {
+                    console.error('[ui.js] Error loading data into bulk grid:', dataError);
+                }
             }
-        }, 50); // Check every 50ms until grid is ready
+        }, 50);
         
-        // Focus search input (delayed until after grid loads)
+        // Focus search input
         setTimeout(() => {
             const searchInput = document.getElementById('bulk-product-search');
             if (searchInput) searchInput.focus();
@@ -2268,19 +2283,7 @@ export function showBulkAddProductsModal() {
     }, 10);
 }
 
-/**
- * Closes the bulk add products modal
- */
-export function closeBulkAddProductsModal() {
-    const modal = document.getElementById('bulk-add-products-modal');
-    if (!modal) return;
 
-    modal.classList.remove('visible');
-    setTimeout(() => {
-        modal.style.display = 'none';
-        resetBulkSelectionState();
-    }, 300);
-}
 
 /**
  * Initializes the bulk add products grid (follows existing pattern)
@@ -2424,8 +2427,8 @@ export function bulkSelectProductsWithPrices() {
 function updateBulkSelectionDisplay() {
     if (!bulkAddProductsGridApi) return;
 
-    const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
-    const count = selectedNodes.length;
+    const selectedRows = bulkAddProductsGridApi.getSelectedRows();
+    const count = selectedRows.length;
     
     // Update selection count
     const countElement = document.getElementById('bulk-selection-count');
@@ -2437,9 +2440,9 @@ function updateBulkSelectionDisplay() {
         if (count === 0) {
             detailsElement.textContent = '';
         } else {
-            const totalEstimatedValue = selectedNodes.reduce((sum, node) => {
-                const price = node.data.unitPrice || 0;
-                const qty = node.getValue('Default Qty') || 1;
+            const totalEstimatedValue = selectedRows.reduce((sum, row) => {
+                const price = row.unitPrice || 0;
+                const qty = 1; // Default qty, you might need to get this from the row
                 return sum + (price * qty);
             }, 0);
             
@@ -2451,16 +2454,9 @@ function updateBulkSelectionDisplay() {
     const addButton = document.getElementById('bulk-add-to-invoice-btn');
     if (addButton) {
         addButton.disabled = count === 0;
-        if (count === 0) {
-            addButton.textContent = 'Add Selected to Invoice';
-        } else {
-            addButton.innerHTML = `
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                </svg>
-                Add ${count} Product${count > 1 ? 's' : ''} to Invoice
-            `;
-        }
+        addButton.innerHTML = count === 0 
+            ? 'Add Selected to Invoice'
+            : `<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Add ${count} Product${count > 1 ? 's' : ''} to Invoice`;
     }
 }
 
