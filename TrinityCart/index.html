@@ -395,19 +395,12 @@
                 </div>
 
 
-
-
-
-
                 <!-- View: Purchase Management (Form-over-Grid Layout) -->
-
                 <div id="purchases-view" class="view space-y-8">
-                    <!--<h2 class="text-2xl font-semibold mb-4">Purchase Management</h2>-->
                     <!-- Card 1: Purchase Invoice Form (The "Editor") -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 id="purchase-form-title" class="text-lg font-semibold text-gray-800">Create New Purchase
-                                Invoice</h3>
+                            <h3 id="purchase-form-title" class="text-lg font-semibold text-gray-800">Create New Purchase Invoice</h3>
                         </div>
 
                         <form id="purchase-invoice-form">
@@ -433,15 +426,54 @@
                                 </div>
                             </div>
 
-                            <!-- Part 2: Line Items Section -->
+                            <!-- Part 2: Line Items Section - ENHANCED WITH BULK ADD -->
                             <div class="p-6">
-                                <h4 class="text-md font-semibold text-gray-700 mb-4">Line Items</h4>
-                                <div id="purchase-line-items-container" class="space-y-4">
-                                    <!-- Initial line item row will be added here -->
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-md font-semibold text-gray-700">Line Items</h4>
+                                    <div class="flex items-center space-x-3">
+                                        <!-- NEW: Bulk Add Button -->
+                                        <button type="button" id="bulk-add-products-btn"
+                                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-semibold text-sm flex items-center space-x-2 shadow-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                            </svg>
+                                            <span>Bulk Add Products</span>
+                                        </button>
+                                        
+                                        <!-- UPDATED: Single Add Button -->
+                                        <button type="button" id="add-line-item-btn"
+                                            class="text-sm font-semibold text-blue-600 hover:text-blue-800 px-3 py-2 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors flex items-center space-x-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                            </svg>
+                                            <span>Add Single Product</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button" id="add-line-item-btn"
-                                    class="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-800">+ Add Another
-                                    Product</button>
+                                
+                                <!-- Line Items Container -->
+                                <div id="purchase-line-items-container" class="space-y-4">
+                                    <!-- Line item rows will be added here -->
+                                </div>
+                                
+                                <!-- ENHANCED: Info section when no items -->
+                                <div id="no-line-items-message" class="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                                    <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m14 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m14 0H8m6 0a2 2 0 01-2 2v-3a2 2 0 012-2h2zm-6-2V9a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2z"/>
+                                    </svg>
+                                    <p class="text-lg font-medium text-gray-600 mb-2">No products added yet</p>
+                                    <p class="text-sm text-gray-500 mb-4">Use "Bulk Add Products" to select multiple items quickly, or "Add Single Product" to add one at a time</p>
+                                    <div class="flex justify-center space-x-3">
+                                        <button type="button" onclick="document.getElementById('bulk-add-products-btn').click()" 
+                                            class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors">
+                                            🛒 Bulk Add Products
+                                        </button>
+                                        <button type="button" onclick="document.getElementById('add-line-item-btn').click()"
+                                            class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors">
+                                            ➕ Add Single Product
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Part 3: Invoice Totals & Discounts -->
@@ -454,38 +486,31 @@
                                     <div class="md:col-span-3 space-y-3">
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-600">Items Subtotal:</span>
-                                            <!-- THE MISSING ELEMENT IS HERE -->
-                                            <span id="purchase-subtotal"
-                                                class="font-semibold text-gray-800">$0.00</span>
+                                            <span id="purchase-subtotal" class="font-semibold text-gray-800">$0.00</span>
                                         </div>
 
                                         <!-- Invoice Level Discount -->
                                         <div class="flex justify-between items-center space-x-2">
-                                            <label for="invoice-discount-type" class="text-gray-600">Invoice
-                                                Discount:</label>
+                                            <label for="invoice-discount-type" class="text-gray-600">Invoice Discount:</label>
                                             <div class="flex items-center space-x-2">
                                                 <select id="invoice-discount-type" class="form-input w-28 text-sm">
                                                     <option value="Percentage">Percent</option>
                                                     <option value="Amount">Amount</option>
                                                 </select>
-                                                <input type="number" id="invoice-discount-value"
-                                                    class="form-input w-24 text-right" placeholder="0">
+                                                <input type="number" id="invoice-discount-value" class="form-input w-24 text-right" placeholder="0">
                                             </div>
                                         </div>
 
                                         <!-- Invoice Level Tax -->
                                         <div class="flex justify-between items-center space-x-2">
-                                            <label for="invoice-tax-percentage" class="text-gray-600">Additional Tax
-                                                (%):</label>
-                                            <input type="number" id="invoice-tax-percentage"
-                                                class="form-input w-24 text-right" placeholder="0">
+                                            <label for="invoice-tax-percentage" class="text-gray-600">Additional Tax (%):</label>
+                                            <input type="number" id="invoice-tax-percentage" class="form-input w-24 text-right" placeholder="0">
                                         </div>
 
                                         <hr>
 
                                         <div class="flex justify-between items-center text-lg">
                                             <span class="font-bold text-gray-800">Total Amount Due:</span>
-                                            <!-- THE OTHER MISSING ELEMENT IS HERE -->
                                             <span id="purchase-grand-total" class="font-bold text-blue-600">$0.00</span>
                                         </div>
                                     </div>
@@ -493,8 +518,7 @@
                             </div>
 
                             <!-- Part 4: Form Actions -->
-                            <div
-                                class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
+                            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
                                 <button type="button" id="cancel-edit-btn"
                                     class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold"
                                     style="display: none;">Cancel Edit</button>
@@ -520,19 +544,134 @@
                         <div class="p-2">
                             <!-- Panel 1: All Invoices Grid -->
                             <div id="panel-invoices" class="tab-panel active">
-                                <div id="purchase-invoices-grid" class="ag-theme-alpine"
-                                    style="height: 500px; width: 100%;"></div>
+                                <div id="purchase-invoices-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
                             </div>
                             <!-- Panel 2: Payments Grid -->
                             <div id="panel-payments" class="tab-panel">
-                                <div id="purchase-payments-grid" class="ag-theme-alpine"
-                                    style="height: 300px; width: 100%;"></div>
+                                <div id="purchase-payments-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- End of Purchase view-->
+                <!-- =================================== -->
+                <!--   BULK ADD PRODUCTS TO INVOICE MODAL -->
+                <!-- =================================== -->
+                <div id="bulk-add-products-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+                    <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-6xl mx-auto max-h-[90vh] flex flex-col" style="z-index: 51;">
+                        
+                        <!-- Modal Header -->
+                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2 2v2.25"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900">Add Multiple Products to Purchase Invoice</h3>
+                                    <p class="text-sm text-gray-600">Select products to purchase and set quantities</p>
+                                </div>
+                            </div>
+                            <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Search and Filter Bar -->
+                        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                                <!-- Search Input -->
+                                <div class="md:col-span-5">
+                                    <div class="relative">
+                                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                        </svg>
+                                        <input type="text" 
+                                            id="bulk-product-search" 
+                                            placeholder="Search products..."
+                                            class="form-input w-full pl-10 pr-10 text-sm">
+                                        <button id="clear-bulk-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Category Filter -->
+                                <div class="md:col-span-3">
+                                    <select id="bulk-category-filter" class="form-input w-full text-sm">
+                                        <option value="">All Categories</option>
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                </div>
+                                
+                                <!-- Quick Action Buttons -->
+                                <div class="md:col-span-4 flex justify-end space-x-2">
+                                    <button id="bulk-select-all" type="button" 
+                                        class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 text-xs font-semibold flex items-center space-x-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        <span>Select All</span>
+                                    </button>
+                                    
+                                    <button id="bulk-clear-selection" type="button"
+                                        class="bg-gray-600 text-white px-3 py-2 rounded hover:bg-gray-700 text-xs font-semibold flex items-center space-x-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                        <span>Clear All</span>
+                                    </button>
+                                    
+                                    <button id="bulk-select-with-prices" type="button"
+                                        class="bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-700 text-xs font-semibold">
+                                        Select Items with Prices
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Products Grid (Scrollable) -->
+                        <div class="flex-1 p-6 overflow-hidden">
+                            <div id="bulk-add-products-grid" class="ag-theme-alpine h-full w-full"></div>
+                        </div>
+
+                        <!-- Modal Footer with Selection Summary -->
+                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+                            <div class="flex items-center space-x-4">
+                                <div class="text-sm">
+                                    <span class="font-semibold text-gray-700" id="bulk-selection-count">0</span>
+                                    <span class="text-gray-600">products selected</span>
+                                </div>
+                                <div class="text-xs text-gray-500" id="bulk-selection-details">
+                                    <!-- Estimated value will show here -->
+                                </div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">
+                                    Cancel
+                                </button>
+                                <button type="button" id="bulk-add-to-invoice-btn" 
+                                    class="modal-btn modal-btn-primary flex items-center space-x-2" disabled>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                    <span>Add Selected to Invoice</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+                
 
 
                 <!-- =================================== -->
@@ -2643,6 +2782,88 @@
         </div>
     </div>
 
+
+    <!-- =================================== -->
+    <!--   BULK ADD PRODUCTS TO INVOICE MODAL -->
+    <!-- =================================== -->
+    <div id="bulk-add-products-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col" style="z-index: 51;">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Add Multiple Products to Invoice</h3>
+                        <p class="text-sm text-gray-600">Select products to add as line items</p>
+                    </div>
+                </div>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" 
+                                id="bulk-product-search" 
+                                placeholder="Search products..."
+                                class="form-input w-full pl-10">
+                        </div>
+                    </div>
+                    <div class="w-48">
+                        <select id="bulk-category-filter" class="form-input w-full">
+                            <option value="">All Categories</option>
+                            <!-- Options populated by JS -->
+                        </select>
+                    </div>
+                    <button id="bulk-select-all" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-semibold">
+                        Select All Visible
+                    </button>
+                    <button id="bulk-clear-selection" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm font-semibold">
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+
+            <!-- Products Grid (Scrollable) -->
+            <div class="flex-1 p-6 overflow-hidden">
+                <div id="bulk-add-products-grid" class="ag-theme-alpine h-full"></div>
+            </div>
+
+            <!-- Modal Footer with Selection Info -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold" id="bulk-selection-count">0</span> products selected
+                    <span class="ml-2" id="bulk-selection-details"></span>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">
+                        Cancel
+                    </button>
+                    <button type="button" id="bulk-add-to-invoice-btn" class="modal-btn modal-btn-primary" disabled>
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Add Selected to Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <!-- =================================== -->
