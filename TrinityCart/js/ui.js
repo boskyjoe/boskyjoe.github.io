@@ -2028,11 +2028,20 @@ const bulkAddProductsGridOptions = {
             }
         },
         {
-            field: "defaultQty", // ✅ CORRECTED: Proper field name
+            field: "defaultQty", // This field stores the edited value
             headerName: "Qty to Purchase",
             width: 130,
             editable: true,
-            valueGetter: () => 1, // Default quantity
+            
+            // ✅ CORRECTED: Initialize with default value
+            cellDataType: 'number',
+            valueGetter: params => params.data.defaultQty || 1, // Get from data
+            valueSetter: params => {
+                // ✅ CORRECTED: Set value back to data
+                params.data.defaultQty = params.newValue;
+                return true; // Indicate successful set
+            },
+            
             cellEditor: 'agNumberCellEditor',
             cellEditorParams: {
                 min: 1,
@@ -2223,29 +2232,51 @@ function initializeBulkAddProductsGrid() {
  */
 export function getBulkSelectedProducts() {
     if (!bulkAddProductsGridApi) {
-        console.error('[ui.js] Bulk add grid API not available');
+        console.error('[ui.js] Bulk grid API not available');
         return [];
     }
 
-    const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
-    const selectedProducts = selectedNodes.map(node => {
-        const product = node.data;
-        const quantity = parseFloat(node.getValue('defaultQty')) || 1;
-        
-        return {
-            masterProductId: product.id,
-            productName: product.itemName,
-            quantity: quantity,
-            unitPurchasePrice: product.unitPrice || 0,
-            discountType: 'Percentage',
-            discountValue: 0,
-            taxPercentage: 0
-        };
-    });
+    console.log('🔍 [DEBUG] Getting bulk selected products...');
 
-    console.log(`[ui.js] Returning ${selectedProducts.length} selected products`);
-    return selectedProducts;
+    try {
+        // Debug both methods
+        const selectedRows = bulkAddProductsGridApi.getSelectedRows();
+        const selectedNodes = bulkAddProductsGridApi.getSelectedNodes();
+        
+        console.log('🔍 [DEBUG] Selected rows count:', selectedRows.length);
+        console.log('🔍 [DEBUG] Selected nodes count:', selectedNodes.length);
+        console.log('🔍 [DEBUG] First selected row:', selectedRows[0]);
+        console.log('🔍 [DEBUG] First selected node data:', selectedNodes[0]?.data);
+
+        // Use the row data method (simpler)
+        const selectedProducts = selectedRows.map((product, index) => {
+            console.log(`🔍 [DEBUG] Product ${index + 1}:`, {
+                id: product.id,
+                name: product.itemName,
+                defaultQty: product.defaultQty,
+                unitPrice: product.unitPrice
+            });
+            
+            return {
+                masterProductId: product.id,
+                productName: product.itemName,
+                quantity: product.defaultQty || 1,
+                unitPurchasePrice: product.unitPrice || 0,
+                discountType: 'Percentage',
+                discountValue: 0,
+                taxPercentage: 0
+            };
+        });
+
+        console.log(`🔍 [DEBUG] Final products array:`, selectedProducts);
+        return selectedProducts;
+        
+    } catch (error) {
+        console.error('❌ [DEBUG] Error in getBulkSelectedProducts:', error);
+        return [];
+    }
 }
+
 
 
 /**
@@ -2308,11 +2339,19 @@ export function bulkSelectAllVisibleProducts() {
     if (!bulkAddProductsGridApi) return;
     
     try {
-        // ✅ NEW v33+ syntax
+        // ✅ CORRECTED: New v33+ syntax
         bulkAddProductsGridApi.selectAll('filtered');
-        console.log('[ui.js] Selected all visible products');
+        console.log('[ui.js] Selected all visible products using v33+ API');
     } catch (error) {
-        console.error('[ui.js] Error selecting all:', error);
+        console.error('[ui.js] Error selecting all visible products:', error);
+        
+        // Fallback for older versions
+        try {
+            bulkAddProductsGridApi.selectAllFiltered();
+            console.log('[ui.js] Selected all using fallback method');
+        } catch (fallbackError) {
+            console.error('[ui.js] Both selection methods failed:', fallbackError);
+        }
     }
 }
 
@@ -2326,36 +2365,46 @@ export function bulkClearAllSelections() {
     console.log('[ui.js] Cleared all product selections');
 }
 
+
 export function bulkSelectProductsWithPrices() {
-    if (!bulkAddProductsGridApi) return;
+    if (!bulkAddProductsGridApi) {
+        console.error('[ui.js] Grid API not available');
+        return;
+    }
 
     try {
-        // ✅ SAFEST: Clear selection first, then select one by one
-        bulkAddProductsGridApi.deselectAll();
+        console.log('[ui.js] 🔍 Starting selection of products with prices');
         
-        let selectedCount = 0;
+        // ✅ CORRECTED: Use getDisplayedRowAtIndex() method (safer)
+        const rowsToSelect = [];
         
-        // Iterate through displayed rows only (safer)
         for (let i = 0; i < bulkAddProductsGridApi.getDisplayedRowCount(); i++) {
             const rowNode = bulkAddProductsGridApi.getDisplayedRowAtIndex(i);
             
             if (rowNode && rowNode.data && rowNode.data.unitPrice && rowNode.data.unitPrice > 0) {
-                rowNode.setSelected(true);
-                selectedCount++;
+                rowsToSelect.push(rowNode);
+                console.log(`[ui.js] 🎯 Will select: ${rowNode.data.itemName} (Price: ${rowNode.data.unitPrice})`);
             }
         }
         
-        console.log(`[ui.js] ✅ Selected ${selectedCount} products with prices`);
+        console.log(`[ui.js] Found ${rowsToSelect.length} products with prices`);
         
-        if (selectedCount === 0) {
-            console.log('[ui.js] No products with prices found in current view');
+        if (rowsToSelect.length > 0) {
+            // Clear existing selection first
+            bulkAddProductsGridApi.deselectAll();
+            
+            // Select the rows with prices
+            bulkAddProductsGridApi.setNodesSelected(rowsToSelect, true);
+            
+            console.log(`[ui.js] ✅ Selected ${rowsToSelect.length} products with purchase prices`);
+        } else {
+            console.log('[ui.js] ℹ️ No products with prices found');
         }
         
     } catch (error) {
         console.error('[ui.js] Error selecting products with prices:', error);
     }
 }
-
 
 /**
  * Updates the selection display and button state
