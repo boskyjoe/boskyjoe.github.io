@@ -2305,13 +2305,15 @@ export function addBulkLineItems(productsArray) {
  * Bulk selection operations (CORRECTED: All in ui.js)
  */
 export function bulkSelectAllVisibleProducts() {
-    if (!bulkAddProductsGridApi) {
-        console.error('[ui.js] Bulk grid API not available for select all');
-        return;
-    }
+    if (!bulkAddProductsGridApi) return;
     
-    bulkAddProductsGridApi.selectAllFiltered();
-    console.log('[ui.js] Selected all visible products');
+    try {
+        // ✅ NEW v33+ syntax
+        bulkAddProductsGridApi.selectAll('filtered');
+        console.log('[ui.js] Selected all visible products');
+    } catch (error) {
+        console.error('[ui.js] Error selecting all:', error);
+    }
 }
 
 export function bulkClearAllSelections() {
@@ -2325,21 +2327,33 @@ export function bulkClearAllSelections() {
 }
 
 export function bulkSelectProductsWithPrices() {
-    if (!bulkAddProductsGridApi) {
-        console.error('[ui.js] Bulk grid API not available for smart selection');
-        return;
-    }
+    if (!bulkAddProductsGridApi) return;
 
-    // Select nodes that have purchase prices > 0
-    const nodesToSelect = [];
-    bulkAddProductsGridApi.forEachNode(node => {
-        if (node.data.unitPrice && node.data.unitPrice > 0) {
-            nodesToSelect.push(node);
+    try {
+        // ✅ SAFEST: Clear selection first, then select one by one
+        bulkAddProductsGridApi.deselectAll();
+        
+        let selectedCount = 0;
+        
+        // Iterate through displayed rows only (safer)
+        for (let i = 0; i < bulkAddProductsGridApi.getDisplayedRowCount(); i++) {
+            const rowNode = bulkAddProductsGridApi.getDisplayedRowAtIndex(i);
+            
+            if (rowNode && rowNode.data && rowNode.data.unitPrice && rowNode.data.unitPrice > 0) {
+                rowNode.setSelected(true);
+                selectedCount++;
+            }
         }
-    });
-    
-    bulkAddProductsGridApi.setNodesSelected(nodesToSelect, true);
-    console.log(`[ui.js] Selected ${nodesToSelect.length} products with purchase prices`);
+        
+        console.log(`[ui.js] ✅ Selected ${selectedCount} products with prices`);
+        
+        if (selectedCount === 0) {
+            console.log('[ui.js] No products with prices found in current view');
+        }
+        
+    } catch (error) {
+        console.error('[ui.js] Error selecting products with prices:', error);
+    }
 }
 
 
