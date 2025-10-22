@@ -8753,3 +8753,5 @@ function updateValuationSummaryCardsLoading(isLoading) {
         }
     });
 }
+
+
