@@ -97,7 +97,7 @@ import {
     refreshSalePaymentModal,
     showBulkAddProductsModal,        
     closeBulkAddProductsModal,       
-    getBulkSelectedProducts 
+    getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices
 } from './ui.js';
 
 import {
@@ -1032,6 +1032,7 @@ function handleStandaloneButtons(target, event) {
         '#bulk-add-to-invoice-btn': () => handleBulkAddToInvoice(),
         '#bulk-select-all': () => handleBulkSelectAll(),
         '#bulk-clear-selection': () => handleBulkClearSelection(),
+        '#bulk-select-with-prices': () => handleBulkSelectWithPrices(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
@@ -1154,11 +1155,16 @@ function handleStandaloneButtons(target, event) {
     return false;
 }
 
+
 /**
  * Handles bulk adding selected products to the purchase invoice
+ * CORRECTED: Delegates grid operations to ui.js
  */
 async function handleBulkAddToInvoice() {
     try {
+        console.log('[main.js] Handling bulk add to invoice');
+        
+        // ✅ CORRECT: Call ui.js function to get selected products
         const selectedProducts = getBulkSelectedProducts();
         
         if (selectedProducts.length === 0) {
@@ -1166,56 +1172,55 @@ async function handleBulkAddToInvoice() {
             return;
         }
 
-        console.log(`[BulkAdd] Adding ${selectedProducts.length} products to invoice`);
+        console.log(`[main.js] Adding ${selectedProducts.length} products to invoice`);
 
-        // Add each selected product as a line item
-        selectedProducts.forEach(productData => {
-            addLineItemWithData(productData);
-        });
-
-        // Recalculate totals
+        // ✅ CORRECT: Use ui.js functions for DOM manipulation
+        addBulkLineItems(selectedProducts); // This will be in ui.js
+        
+        // ✅ CORRECT: Use existing ui.js function for calculation
         calculateAllTotals();
 
-        // Close modal and show success
+        // Close modal and show success  
         closeBulkAddProductsModal();
         
-        showModal('success', 'Products Added', 
+        await showModal('success', 'Products Added', 
             `${selectedProducts.length} product${selectedProducts.length > 1 ? 's have' : ' has'} been added to the invoice.`);
 
-        // Scroll to the line items section
-        setTimeout(() => {
-            document.getElementById('purchase-line-items-container').scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }, 300);
-
     } catch (error) {
-        console.error('[BulkAdd] Error adding products to invoice:', error);
-        showModal('error', 'Add Failed', 'Failed to add products to invoice. Please try again.');
+        console.error('[main.js] Error in bulk add handler:', error);
+        await showModal('error', 'Add Failed', 'Failed to add products to invoice. Please try again.');
     }
 }
 
+
 /**
- * Selects all visible (filtered) products
+ * Handles selecting all visible products
+ * CORRECTED: Delegates to ui.js
  */
 function handleBulkSelectAll() {
-    if (!bulkAddProductsGridApi) return;
-    
-    // Select all nodes that pass the current filter
-    bulkAddProductsGridApi.selectAllFiltered();
-    console.log('[BulkAdd] Selected all visible products');
+    console.log('[main.js] Handle bulk select all');
+    bulkSelectAllVisibleProducts(); // This will be in ui.js
 }
 
 /**
- * Clears all product selections
+ * Handles clearing all selections
+ * CORRECTED: Delegates to ui.js  
  */
 function handleBulkClearSelection() {
-    if (!bulkAddProductsGridApi) return;
-    
-    bulkAddProductsGridApi.deselectAll();
-    console.log('[BulkAdd] Cleared all selections');
+    console.log('[main.js] Handle bulk clear selection');
+    bulkClearAllSelections(); // This will be in ui.js
 }
+
+
+/**
+ * Handles selecting products that have purchase prices
+ * CORRECTED: Delegates to ui.js
+ */
+function handleBulkSelectWithPrices() {
+    console.log('[main.js] Handle bulk select with prices');
+    bulkSelectProductsWithPrices(); // This will be in ui.js
+}
+
 
 /**
  * Adds a line item with pre-filled data (enhanced version of existing addLineItem)
