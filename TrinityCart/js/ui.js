@@ -1546,7 +1546,8 @@ const productsGridOptions = {
             headerName: "Selling Price",
             flex: 1,
             editable: false,
-            valueParser: p => parseFloat(p.newValue)
+            valueFormatter: p => (typeof p.value === 'number') ? formatCurrency(p.value) : '',
+            valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
         },
         {
             field: "isActive", headerName: "Status", width: 120,
