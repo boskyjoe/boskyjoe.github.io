@@ -2333,6 +2333,28 @@ export function addBulkLineItems(productsArray) {
 }
 
 /**
+ * Shows or hides the no-items message based on current line items
+ */
+function updateNoItemsMessageVisibility() {
+    const lineItemsContainer = document.getElementById('purchase-line-items-container');
+    const noItemsMessage = document.getElementById('no-line-items-message');
+    
+    if (!lineItemsContainer || !noItemsMessage) return;
+    
+    const hasLineItems = lineItemsContainer.children.length > 0;
+    
+    if (hasLineItems) {
+        noItemsMessage.style.display = 'none';
+        console.log('[ui.js] Hidden no-items message - line items present');
+    } else {
+        noItemsMessage.style.display = 'block';
+        console.log('[ui.js] Showing no-items message - no line items');
+    }
+}
+
+
+
+/**
  * Bulk selection operations (CORRECTED: All in ui.js)
  */
 export function bulkSelectAllVisibleProducts() {
@@ -2541,6 +2563,13 @@ export function addLineItem() {
     const lineItemsContainer = document.getElementById('purchase-line-items-container');
     if (!lineItemsContainer) return;
 
+    // HIDE: No-items message when adding line items
+    const noItemsMessage = document.getElementById('no-line-items-message');
+    if (noItemsMessage) {
+        noItemsMessage.style.display = 'none';
+        console.log('[ui.js] Hidden no-items message - adding line items');
+    }
+
     const newRow = createLineItemRow(lineItemCounter);
     lineItemsContainer.appendChild(newRow);
 
@@ -2669,7 +2698,15 @@ export function resetPurchaseForm() {
     // Reset line items to a single blank row
     const lineItemsContainer = document.getElementById('purchase-line-items-container');
     lineItemsContainer.innerHTML = '';
-    addLineItem();
+
+    // SHOW: No-items message for create mode
+    const noItemsMessage = document.getElementById('no-line-items-message');
+    if (noItemsMessage) {
+        noItemsMessage.style.display = 'block';
+        console.log('[ui.js] Showing no-items message for create mode');
+    }
+
+    //addLineItem();
     calculateAllTotals();
 }
 
@@ -2680,6 +2717,14 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
     document.getElementById('purchase-form-title').textContent = `Editing Invoice: ${invoiceData.invoiceId}`;
     document.getElementById('purchase-form-submit-btn').textContent = 'Update Invoice';
     document.getElementById('cancel-edit-btn').style.display = 'block';
+
+    // HIDE: No-items message during edit mode
+    const noItemsMessage = document.getElementById('no-line-items-message');
+    if (noItemsMessage) {
+        noItemsMessage.style.display = 'none';
+        console.log('[ui.js] Hidden no-items message for edit mode');
+    }
+
 
     // Populate Header Fields
     document.getElementById('purchase-date').valueAsDate = invoiceData.purchaseDate.toDate();
