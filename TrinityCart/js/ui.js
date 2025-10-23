@@ -1967,7 +1967,7 @@ let bulkAddProductsGridApi = null;
 
 
 const bulkAddProductsGridOptions = {
-    theme: 'legacy',
+    theme: 'alpine',
     pagination: true,
     paginationPageSize: 100, // Show more products per page
     paginationPageSizeSelector: [50, 100, 200],
