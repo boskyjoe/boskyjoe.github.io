@@ -1981,20 +1981,12 @@ const bulkAddProductsGridOptions = {
     },
     
     columnDefs: [
-
-        {
-            field: "itemName",
-            headerName: "Product Name",
-            flex: 2,
-            filter: 'agTextColumnFilter',
-            cellStyle: { fontWeight: 'bold' },
-            pinned: 'left' // Keep product name visible when scrolling
-        },
         {
             field: "categoryId",
             headerName: "Category",
             flex: 1,
             filter: 'agTextColumnFilter',
+            pinned: 'left', // Keep product name visible when scrolling
             filterValueGetter: params => {
                 const category = masterData.categories.find(c => c.id === params.data.categoryId);
                 return category ? category.categoryName : 'Unknown';
@@ -2003,6 +1995,13 @@ const bulkAddProductsGridOptions = {
                 const category = masterData.categories.find(c => c.id === params.value);
                 return category ? category.categoryName : 'Unknown';
             }
+        },
+        {
+            field: "itemName",
+            headerName: "Product Name",
+            flex: 2,
+            filter: 'agTextColumnFilter',
+            cellStyle: { fontWeight: 'bold' },
         },
         {
             field: "inventoryCount",
