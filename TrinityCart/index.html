@@ -3378,6 +3378,47 @@
     </div>
 
 
+    <!-- =================================== -->
+    <!--   GENERIC PROGRESS TOAST SYSTEM     -->
+    <!-- =================================== -->
+    <div id="progress-toast" class="fixed top-4 right-4 z-50 hidden transform translate-x-full opacity-0 transition-all duration-300 ease-out">
+        <div class="bg-white rounded-lg shadow-lg border-l-4 p-4 max-w-sm min-w-[320px]" id="toast-container">
+            <div class="flex items-start space-x-3">
+                <!-- Dynamic Icon Container -->
+                <div class="flex-shrink-0">
+                    <div id="toast-icon-container" class="w-8 h-8 rounded-full flex items-center justify-center">
+                        <svg id="toast-icon" class="w-4 h-4 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <!-- Icon will be updated by JS -->
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900" id="toast-title">Operation in Progress</p>
+                    <p class="text-sm text-gray-600 mt-1" id="toast-message">Please wait...</p>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mt-3 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div id="toast-progress" class="h-2 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                    </div>
+                    
+                    <!-- Progress Info -->
+                    <div class="mt-2 flex justify-between items-center text-xs text-gray-500">
+                        <span id="toast-step">Initializing...</span>
+                        <span><span id="toast-percentage">0</span>% complete</span>
+                    </div>
+                </div>
+                
+                <!-- Optional Close Button -->
+                <button id="toast-close-btn" class="flex-shrink-0 text-gray-400 hover:text-gray-600 hidden p-1 rounded hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
 
 
