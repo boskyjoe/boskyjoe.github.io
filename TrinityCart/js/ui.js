@@ -2059,40 +2059,22 @@ const bulkAddProductsGridOptions = {
     defaultColDef: {
         resizable: true,
         sortable: true,
-        filter: true
+        filter: true,
+        floatingFilter: true, // Enable floating filters by default
+        suppressHeaderMenuButton: true, // Hide menu button (3-dot icon) by default
+        suppressHeaderFilterButton: true // CRITICAL: Hide the filter funnel icon
     },
     
     onGridReady: params => {
         console.log('[DEBUG] Bulk grid ready');
         bulkAddProductsGridApi = params.api;
-        
-        // Force proper initialization
-        setTimeout(() => {
-            params.api.sizeColumnsToFit();
-            params.api.redrawRows();
-        }, 100);
-        console.log('[ui.js] Bulk add products grid ready with new selection syntax');
     },
     
     onSelectionChanged: (event) => {
         updateBulkSelectionDisplay();
         console.log(`[ui.js] Selection changed: ${event.api.getSelectedRows().length} products selected`);
     },
-    // CRITICAL: These handlers force the grid to stay visible
-    onFilterOpened: (params) => {
-        const gridDiv = document.getElementById('bulk-add-products-grid');
-        if (gridDiv) {
-            gridDiv.style.visibility = 'visible';
-            gridDiv.style.opacity = '1';
-        }
-    },
     
-    onFilterChanged: (params) => {
-        // Ensure grid updates properly after filter
-        setTimeout(() => {
-            params.api.redrawRows();
-        }, 0);
-    } ,
     // Pre-select products that have purchase prices
     onFirstDataRendered: (params) => {
         console.log('[DEBUG] First data rendered - rows visible:', params.api.getDisplayedRowCount());
@@ -2108,14 +2090,6 @@ const bulkAddProductsGridOptions = {
         // if (nodesToSelect.length > 0) {
         //     params.api.setNodesSelected(nodesToSelect.slice(0, 5), true);
         // }
-    },
-    // Add modal-specific handler
-    onBodyScroll: (params) => {
-        // Keep grid visible during scroll
-        const gridDiv = document.getElementById('bulk-add-products-grid');
-        if (gridDiv) {
-            gridDiv.style.visibility = 'visible';
-        }
     }
 };
 
