@@ -1985,7 +1985,9 @@ const bulkAddProductsGridOptions = {
             field: "categoryId",
             headerName: "Category",
             flex: 1,
-            filter: false,
+            filter: 'agTextColumnFilter',
+            floatingFilter: true, // Enable floating filter
+            suppressHeaderMenuButton: true,
             pinned: 'left', // Keep product name visible when scrolling
             filterValueGetter: params => {
                 const category = masterData.categories.find(c => c.id === params.data.categoryId);
@@ -2000,7 +2002,9 @@ const bulkAddProductsGridOptions = {
             field: "itemName",
             headerName: "Product Name",
             flex: 2,
-            filter: false,
+            filter: 'agTextColumnFilter',
+            floatingFilter: true, // Enable floating filter
+            suppressHeaderMenuButton: true, // Hide the menu icon
             cellStyle: { fontWeight: 'bold' },
         },
         {
@@ -2009,6 +2013,8 @@ const bulkAddProductsGridOptions = {
             width: 120,
             cellClass: 'text-center font-bold',
             filter: 'agNumberColumnFilter',
+            floatingFilter: true, // Enable floating filter
+            suppressHeaderMenuButton: true, // Hide the menu icon
             cellStyle: params => {
                 const stock = params.value || 0;
                 if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
@@ -2021,6 +2027,8 @@ const bulkAddProductsGridOptions = {
             headerName: "Last Purchase Price",
             width: 140,
             filter: 'agNumberColumnFilter',
+            floatingFilter: true, // Enable floating filter
+            suppressHeaderMenuButton: true,
             valueFormatter: p => p.value ? formatCurrency(p.value) : 'Not set',
             cellStyle: params => {
                 return params.value ? { fontWeight: 'bold' } : { fontStyle: 'italic', color: '#9ca3af' };
@@ -2031,7 +2039,8 @@ const bulkAddProductsGridOptions = {
             headerName: "Qty to Purchase",
             width: 130,
             editable: true,
-            
+            filter: false, // No filter needed for this column
+            floatingFilter: false,
             // ✅ CORRECTED: Initialize with default value
             cellDataType: 'number',
             valueGetter: params => params.data.defaultQty || 1, // Get from data
