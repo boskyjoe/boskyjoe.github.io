@@ -141,3 +141,20 @@ main {
 #bulk-add-products-modal .ag-filter-toolpanel {
     z-index: 1000 !important;
 }
+
+.ag-theme-alpine .ag-root-wrapper {
+    position: relative;
+}
+
+.ag-theme-alpine .ag-body-viewport {
+    position: relative;
+    z-index: 1;
+}
+
+.ag-theme-alpine .ag-floating-filter {
+    z-index: 2;
+}
+
+.ag-theme-alpine .ag-filter {
+    z-index: 10;
+}
