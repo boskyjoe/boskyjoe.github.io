@@ -199,3 +199,33 @@ main {
 #bulk-add-products-modal .ag-floating-filter-button {
     display: none !important;
 }
+
+/* Fix floating filter vertical alignment */
+#bulk-add-products-modal .ag-floating-filter-body {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+}
+
+#bulk-add-products-modal .ag-floating-filter-input {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+}
+
+#bulk-add-products-modal .ag-floating-filter-full-body {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+}
+
+#bulk-add-products-modal .ag-input-field-input {
+    height: 100% !important;
+    padding: 4px 8px !important;
+}
+
+/* Optional: Set a specific height for the floating filter row */
+#bulk-add-products-modal .ag-floating-filter {
+    height: 40px !important;
+    min-height: 40px !important;
+}
