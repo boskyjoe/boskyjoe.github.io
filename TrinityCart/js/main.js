@@ -97,7 +97,7 @@ import {
     refreshSalePaymentModal,
     showBulkAddProductsModal,        
     closeBulkAddProductsModal,       
-    getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices
+    getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility
 } from './ui.js';
 
 import {
@@ -1054,6 +1054,10 @@ function handleStandaloneButtons(target, event) {
         '.remove-line-item-btn': () => {
             target.closest('.grid').remove();
             calculateAllTotals();
+            //ADD: Check if we should show empty message after removal
+            setTimeout(() => {
+                updateNoItemsMessageVisibility(); // This will be a ui.js function
+            }, 50);
         },
         '#cancel-edit-btn': () => resetPurchaseForm(),
         '#payment-modal-close': () => closePaymentModal(),
