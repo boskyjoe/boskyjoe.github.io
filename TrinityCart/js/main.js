@@ -888,7 +888,7 @@ async function handleSalePaymentHistoryGrid(button, docId, user) {
     if (!paymentData) return;
 
     if (confirm(`Are you sure you want to VOID this payment of ${formatCurrency(paymentData.amountPaid)}? This will reverse the transaction and cannot be undone.`)) {
-        showLoader();
+        //showLoader();
         try {
             await voidSalePayment(docId, user);
             alert("Payment successfully voided.");
@@ -901,7 +901,7 @@ async function handleSalePaymentHistoryGrid(button, docId, user) {
             console.error("Error voiding payment:", error);
             alert(`Failed to void payment: ${error.message}`);
         } finally {
-            hideLoader();
+            //hideLoader();
         }
     }
 }
@@ -2024,7 +2024,7 @@ async function handleRecordSalePaymentSubmit(e) {
         return alert("Please enter a Reference # for the payment.");
     }
 
-    showLoader();
+    //showLoader();
 
     try {
         await recordSalePayment(paymentData, user);
@@ -2042,7 +2042,7 @@ async function handleRecordSalePaymentSubmit(e) {
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'Submit Payment';
-        hideLoader();
+        //hideLoader();
     }
 }
 
