@@ -1750,41 +1750,212 @@ async function handleMemberSubmit(e) {
     }
 }
 
+/**
+ * Handles the submission of the Sales Catalogue form for both create and edit operations.
+ * 
+ * This function manages the complete workflow for sales catalogue operations including:
+ * - Input validation and data sanitization
+ * - Catalogue creation with multiple items (create mode)
+ * - Catalogue updates for existing catalogues (edit mode)  
+ * - Real-time progress feedback via toast notifications
+ * - Comprehensive error handling with user-friendly messages
+ * 
+ * BUSINESS WORKFLOW:
+ * CREATE MODE: Validates inputs → Checks draft items → Creates catalogue + items → Updates price history
+ * EDIT MODE: Validates inputs → Updates catalogue metadata → Manages price history status
+ * 
+ * DEPENDENCIES:
+ * - Requires authenticated user (appState.currentUser)
+ * - Uses appState.draftCatalogueItems for create mode
+ * - Calls API functions: createCatalogueWithItems(), updateSalesCatalogue()
+ * - Uses ProgressToast class for user feedback
+ * - Uses masterData.categories for category name lookup
+ * 
+ * UI INTEGRATION:
+ * - Form elements: catalogue-name-input, catalogue-season-select
+ * - Hidden field: sales-catalogue-doc-id (determines edit vs create mode)
+ * - Calls resetCatalogueForm() on success
+ * - Shows success/error modals for final confirmation
+ * 
+ * ERROR HANDLING:
+ * - Validates all required fields with specific error messages
+ * - Handles API errors with detailed user feedback
+ * - Maintains UI state consistency on errors
+ * - Provides actionable error messages for troubleshooting
+ * 
+ * PERFORMANCE CONSIDERATIONS:
+ * - Uses toast progress to indicate long-running operations
+ * - Early validation to prevent unnecessary API calls
+ * - Efficient data preparation (removes tempId from draft items)
+ * - Proper cleanup on both success and error paths
+ * 
+ * @param {Event} e - Form submission event object
+ * 
+ * @throws {Error} When database operations fail or validation errors occur
+ * 
+ * @example
+ * // Triggered automatically by form submission:
+ * // <form id="sales-catalogue-form" onsubmit="handleCatalogueSubmit(event)">
+ * 
+ * // Create mode: Creates new catalogue with draft items from appState
+ * // Edit mode: Updates existing catalogue identified by sales-catalogue-doc-id
+ * 
+ * @since 1.0.0
+ * @see createCatalogueWithItems() - API function for creating catalogues with items
+ * @see updateSalesCatalogue() - API function for updating existing catalogues  
+ * @see ProgressToast - UI class for progress feedback
+ * @see appState.draftCatalogueItems - Temporary storage for catalogue items being created
+ * 
+ * @author TrinityCart Development Team
+ */
+
 async function handleCatalogueSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
+
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
 
     const docId = document.getElementById('sales-catalogue-doc-id').value;
     const isEditMode = !!docId;
-    const seasonSelect = document.getElementById('catalogue-season-select');
-
-    const catalogueData = {
-        catalogueName: document.getElementById('catalogue-name-input').value,
-        seasonId: seasonSelect.value,
-        seasonName: seasonSelect.options[seasonSelect.selectedIndex].text
-    };
+    
+    // ✅ START: Toast progress with appropriate title
+    ProgressToast.show(
+        isEditMode ? 'Updating Sales Catalogue' : 'Creating Sales Catalogue', 
+        'info'
+    );
 
     try {
-        if (isEditMode) {
-            await updateSalesCatalogue(docId, catalogueData, user);
-            alert('Catalogue details have been updated.');
-            resetCatalogueForm();
-        } else {
-            if (appState.draftCatalogueItems.length === 0) {
-                return alert('Please add at least one item to the catalogue before saving.');
-            }
-            const itemsToSave = appState.draftCatalogueItems.map(({ tempId, ...rest }) => rest);
-            await createCatalogueWithItems(catalogueData, itemsToSave, user);
-            alert('New sales catalogue and its items have been saved successfully.');
-            resetCatalogueForm();
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating catalogue data...', 15, 'Step 1 of 6');
+
+        const seasonSelect = document.getElementById('catalogue-season-select');
+        const catalogueName = document.getElementById('catalogue-name-input').value.trim();
+
+        if (!catalogueName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Information', 'Please enter a catalogue name.');
+            return;
         }
+
+        if (!seasonSelect.value) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Information', 'Please select a sales season.');
+            return;
+        }
+
+        const catalogueData = {
+            catalogueName: catalogueName,
+            seasonId: seasonSelect.value,
+            seasonName: seasonSelect.options[seasonSelect.selectedIndex].text
+        };
+
+        console.log(`[main.js] ${isEditMode ? 'Updating' : 'Creating'} catalogue:`, catalogueData.catalogueName);
+
+        if (isEditMode) {
+            // ===== EDIT MODE WORKFLOW =====
+            
+            // Step 2: Prepare Update
+            ProgressToast.updateProgress('Preparing catalogue updates...', 40, 'Step 2 of 4');
+            
+            console.log(`[main.js] Updating existing catalogue: ${docId}`);
+
+            // Step 3: Update Database  
+            ProgressToast.updateProgress('Updating catalogue in database...', 75, 'Step 3 of 4');
+
+            await updateSalesCatalogue(docId, catalogueData, user);
+
+            // Step 4: Success
+            ProgressToast.updateProgress('Catalogue updated successfully!', 100, 'Step 4 of 4');
+            ProgressToast.showSuccess(`"${catalogueData.catalogueName}" has been updated!`);
+
+            setTimeout(async () => {
+                ProgressToast.hide(800);
+                
+                await showModal('success', 'Catalogue Updated', 
+                    `Sales catalogue "${catalogueData.catalogueName}" has been updated successfully.\n\n` +
+                    `Season: ${catalogueData.seasonName}`
+                );
+                
+                resetCatalogueForm();
+                
+            }, 1200);
+
+        } else {
+            // ===== CREATE MODE WORKFLOW =====
+            
+            // Step 2: Validate Items
+            ProgressToast.updateProgress('Checking catalogue items...', 25, 'Step 2 of 6');
+
+            if (appState.draftCatalogueItems.length === 0) {
+                ProgressToast.hide(0);
+                await showModal('error', 'No Items', 'Please add at least one item to the catalogue before saving.');
+                return;
+            }
+
+            const itemCount = appState.draftCatalogueItems.length;
+            console.log(`[main.js] Creating catalogue with ${itemCount} items`);
+
+            // Step 3: Prepare Items Data
+            ProgressToast.updateProgress(`Preparing ${itemCount} catalogue items...`, 45, 'Step 3 of 6');
+
+            const itemsToSave = appState.draftCatalogueItems.map(({ tempId, ...rest }) => rest);
+            
+            // Log items summary
+            const itemsSummary = itemsToSave.slice(0, 3).map(item => item.productName).join(', ');
+            console.log(`[main.js] Items to save: ${itemsSummary}${itemCount > 3 ? ` and ${itemCount - 3} more...` : ''}`);
+
+            // Step 4: Create Catalogue Structure
+            ProgressToast.updateProgress('Creating catalogue structure...', 65, 'Step 4 of 6');
+
+            // Step 5: Save Catalogue and Items  
+            ProgressToast.updateProgress(`Saving catalogue with ${itemCount} items...`, 85, 'Step 5 of 6');
+
+            await createCatalogueWithItems(catalogueData, itemsToSave, user);
+
+            // Step 6: Success
+            ProgressToast.updateProgress('Sales catalogue created successfully!', 100, 'Step 6 of 6');
+            ProgressToast.showSuccess(`"${catalogueData.catalogueName}" created with ${itemCount} items!`);
+
+            setTimeout(async () => {
+                ProgressToast.hide(800);
+                
+                await showModal('success', 'Catalogue Created', 
+                    `Sales catalogue "${catalogueData.catalogueName}" has been created successfully!\n\n` +
+                    `• Season: ${catalogueData.seasonName}\n` +
+                    `• Items: ${itemCount} products added\n` +
+                    `• Status: Active and ready for consignment requests`
+                );
+                
+                resetCatalogueForm();
+                
+            }, 1200);
+        }
+
+        // Reset the form
         e.target.reset();
+
     } catch (error) {
         console.error("Error saving sales catalogue:", error);
-        alert('There was an error saving the catalogue.');
+        
+        // Enhanced error feedback
+        const operation = isEditMode ? 'update' : 'create';
+        const errorMessage = error.message || 'An unexpected error occurred';
+        
+        ProgressToast.showError(`Failed to ${operation} catalogue: ${errorMessage}`);
+        
+        setTimeout(async () => {
+            await showModal('error', `${isEditMode ? 'Update' : 'Creation'} Failed`, 
+                `There was an error ${isEditMode ? 'updating' : 'creating'} the sales catalogue.\n\n` +
+                `Error details: ${errorMessage}\n\n` +
+                `Please try again or contact support if the issue persists.`
+            );
+        }, 2000);
     }
 }
+
 
 async function handleConsignmentRequestSubmit(e) {
     e.preventDefault();
