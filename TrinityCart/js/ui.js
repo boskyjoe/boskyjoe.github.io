@@ -2095,18 +2095,14 @@ const bulkAddProductsGridOptions = {
             const displayedRows = params.api.getDisplayedRowCount();
             console.log('[DEBUG] Rows after filter change:', displayedRows);
             
-            if (displayedRows === 0) {
-                console.error('[DEBUG] ❌ Grid became empty after filter!');
-                
-                // Check if this is due to filter or data loss
-                const allData = [];
-                params.api.forEachNode(node => allData.push(node.data));
-                console.log('[DEBUG] Total data nodes still available:', allData.length);
-                
-                if (allData.length === 0) {
-                    console.error('[DEBUG] ❌ DATA LOST! Attempting to reload...');
-                    const activeProducts = masterData.products.filter(p => p.isActive);
-                    params.api.setGridOption('rowData', activeProducts);
+            // ✅ WORKAROUND: Force grid refresh if it becomes hidden
+            const gridElement = document.getElementById('bulk-add-products-grid');
+            if (gridElement) {
+                const rect = gridElement.getBoundingClientRect();
+                if (rect.height === 0 || rect.width === 0) {
+                    console.log('[DEBUG] Grid has zero dimensions, forcing refresh...');
+                    params.api.refreshCells({ force: true });
+                    params.api.sizeColumnsToFit();
                 }
             }
         }, 100);
@@ -2114,6 +2110,14 @@ const bulkAddProductsGridOptions = {
     
     onFilterOpened: params => {
         console.log('[DEBUG] Filter opened for column:', params.column.getColId());
+        setTimeout(() => {
+            const gridElement = document.getElementById('bulk-add-products-grid');
+            if (gridElement) {
+                gridElement.style.visibility = 'visible';
+                gridElement.style.opacity = '1';
+                gridElement.style.pointerEvents = 'auto';
+            }
+        }, 50);
     }
 };
 
