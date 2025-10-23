@@ -2065,12 +2065,11 @@ const bulkAddProductsGridOptions = {
     onGridReady: params => {
         console.log('[DEBUG] Bulk grid ready');
         bulkAddProductsGridApi = params.api;
-        // Force size calculation
-        params.api.sizeColumnsToFit();
         
-        // Small delay to ensure DOM is ready
+        // Force proper initialization
         setTimeout(() => {
-            params.api.refreshCells({ force: true });
+            params.api.sizeColumnsToFit();
+            params.api.redrawRows();
         }, 100);
         console.log('[ui.js] Bulk add products grid ready with new selection syntax');
     },
@@ -2079,20 +2078,25 @@ const bulkAddProductsGridOptions = {
         updateBulkSelectionDisplay();
         console.log(`[ui.js] Selection changed: ${event.api.getSelectedRows().length} products selected`);
     },
+    // CRITICAL: These handlers force the grid to stay visible
     onFilterOpened: (params) => {
-        // Force a small refresh when filter opens
-        setTimeout(() => {
-            params.api.refreshCells({ force: true });
-        }, 0);
+        const gridDiv = document.getElementById('bulk-add-products-grid');
+        if (gridDiv) {
+            gridDiv.style.visibility = 'visible';
+            gridDiv.style.opacity = '1';
+        }
     },
     
     onFilterChanged: (params) => {
         // Ensure grid updates properly after filter
-        params.api.refreshCells({ force: true });
+        setTimeout(() => {
+            params.api.redrawRows();
+        }, 0);
     } ,
     // Pre-select products that have purchase prices
     onFirstDataRendered: (params) => {
         console.log('[DEBUG] First data rendered - rows visible:', params.api.getDisplayedRowCount());
+        params.api.redrawRows();
         
         // Uncomment if you want to auto-select products with prices:
         // const nodesToSelect = [];
@@ -2104,6 +2108,14 @@ const bulkAddProductsGridOptions = {
         // if (nodesToSelect.length > 0) {
         //     params.api.setNodesSelected(nodesToSelect.slice(0, 5), true);
         // }
+    },
+    // Add modal-specific handler
+    onBodyScroll: (params) => {
+        // Keep grid visible during scroll
+        const gridDiv = document.getElementById('bulk-add-products-grid');
+        if (gridDiv) {
+            gridDiv.style.visibility = 'visible';
+        }
     }
 };
 
