@@ -1483,27 +1483,96 @@ async function handleSupplierPaymentSubmit(e) {
 }
 
 
-// Form submission handlers
+/**
+ * Handles supplier form submission with validation, database save, and progress feedback.
+ * 
+ * Validates supplier information, creates new supplier record in Firestore,
+ * and provides real-time progress updates via toast notifications.
+ * Automatically resets form on successful save.
+ * 
+ * @param {Event} e - Form submission event
+ * @throws {Error} When validation fails or database operation errors
+ * @since 1.0.0
+ * @see addSupplier() - API function for creating supplier records
+ */
 async function handleSupplierSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return alert("You must be logged in.");
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
 
-    const supplierData = {
-        supplierName: document.getElementById('supplierName-input').value,
-        address: document.getElementById('address-input').value,
-        contactNo: document.getElementById('contactNo-input').value,
-        contactEmail: document.getElementById('contactEmail-input').value,
-        creditTerm: document.getElementById('creditTerm-input').value
-    };
+    // ✅ START: Progress toast for supplier creation
+    ProgressToast.show('Adding New Supplier', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating supplier information...', 25, 'Step 1 of 4');
+
+        const supplierName = document.getElementById('supplierName-input').value.trim();
+        const contactEmail = document.getElementById('contactEmail-input').value.trim();
+        
+        if (!supplierName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Information', 'Please enter a supplier name.');
+            return;
+        }
+
+        // Basic email validation if provided
+        if (contactEmail && !contactEmail.includes('@')) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Email', 'Please enter a valid email address.');
+            return;
+        }
+
+        // Step 2: Prepare Supplier Data
+        ProgressToast.updateProgress('Preparing supplier data...', 50, 'Step 2 of 4');
+
+        const supplierData = {
+            supplierName: supplierName,
+            address: document.getElementById('address-input').value.trim(),
+            contactNo: document.getElementById('contactNo-input').value.trim(),
+            contactEmail: contactEmail,
+            creditTerm: document.getElementById('creditTerm-input').value.trim()
+        };
+
+        console.log(`[main.js] Creating supplier: ${supplierData.supplierName}`);
+
+        // Step 3: Save to Database
+        ProgressToast.updateProgress('Saving supplier to database...', 80, 'Step 3 of 4');
+
         await addSupplier(supplierData, user);
-        await showModal('success', 'Success', 'Supplier has been added successfully.');
-        e.target.reset();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Supplier added successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(`"${supplierData.supplierName}" has been added to suppliers!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Supplier Added', 
+                `Supplier "${supplierData.supplierName}" has been added successfully.\n\n` +
+                `You can now create purchase invoices from this supplier.`
+            );
+            
+            // Reset form for next supplier
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error adding supplier:", error);
-        await showModal('error', 'Error', 'Failed to add the supplier. Please try again.');
+        
+        ProgressToast.showError(`Failed to add supplier: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Supplier Failed', 
+                'Failed to add the supplier. Please try again.\n\n' +
+                'If the problem persists, check your internet connection.'
+            );
+        }, 2000);
     }
 }
 
