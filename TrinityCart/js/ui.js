@@ -1988,6 +1988,7 @@ const bulkAddProductsGridOptions = {
             filter: 'agTextColumnFilter',
             floatingFilter: true, // Enable floating filter
             suppressMenu: true,
+            suppressHeaderFilterButton: false,
             pinned: 'left', // Keep product name visible when scrolling
             filterValueGetter: params => {
                 const category = masterData.categories.find(c => c.id === params.data.categoryId);
@@ -2005,6 +2006,7 @@ const bulkAddProductsGridOptions = {
             filter: 'agTextColumnFilter',
             floatingFilter: true, // Enable floating filter
             suppressMenu: true, // Hide the menu icon
+            suppressHeaderFilterButton: false,
             cellStyle: { fontWeight: 'bold' },
         },
         {
@@ -2015,6 +2017,7 @@ const bulkAddProductsGridOptions = {
             filter: 'agNumberColumnFilter',
             floatingFilter: true, // Enable floating filter
             suppressMenu: true, // Hide the menu icon
+            suppressHeaderFilterButton: false,
             cellStyle: params => {
                 const stock = params.value || 0;
                 if (stock === 0) return { backgroundColor: '#fee2e2', color: '#dc2626' };
@@ -2029,6 +2032,7 @@ const bulkAddProductsGridOptions = {
             filter: 'agNumberColumnFilter',
             floatingFilter: true, // Enable floating filter
             suppressMenu: true,
+            suppressHeaderFilterButton: false,
             valueFormatter: p => p.value ? formatCurrency(p.value) : 'Not set',
             cellStyle: params => {
                 return params.value ? { fontWeight: 'bold' } : { fontStyle: 'italic', color: '#9ca3af' };
