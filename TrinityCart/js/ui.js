@@ -2063,8 +2063,14 @@ const bulkAddProductsGridOptions = {
     },
     
     onGridReady: params => {
+        console.log('[DEBUG] Bulk grid ready');
         bulkAddProductsGridApi = params.api;
         console.log('[ui.js] Bulk add products grid ready with new selection syntax');
+        setTimeout(() => {
+            console.log('[DEBUG] Grid ready state:');
+            console.log('  - Row count:', params.api.getDisplayedRowCount());
+            console.log('  - Container size:', params.eGridDiv.getBoundingClientRect());
+        }, 100);
     },
     
     onSelectionChanged: (event) => {
@@ -2074,7 +2080,7 @@ const bulkAddProductsGridOptions = {
     
     // Pre-select products that have purchase prices
     onFirstDataRendered: (params) => {
-        console.log('[ui.js] Bulk products grid first data rendered');
+        console.log('[DEBUG] First data rendered - rows visible:', params.api.getDisplayedRowCount());
         
         // Uncomment if you want to auto-select products with prices:
         // const nodesToSelect = [];
@@ -2086,6 +2092,34 @@ const bulkAddProductsGridOptions = {
         // if (nodesToSelect.length > 0) {
         //     params.api.setNodesSelected(nodesToSelect.slice(0, 5), true);
         // }
+    },
+    onFilterChanged: params => {
+        console.log('[DEBUG] Filter changed event fired');
+        console.log('  - Displayed rows after filter:', params.api.getDisplayedRowCount());
+        console.log('  - Total rows:', params.api.getModel ? params.api.getModel().getRowCount() : 'getModel not available');
+    },
+    
+    onFilterOpened: params => {
+        console.log('[DEBUG] Filter dialog opened for column:', params.column.getColId());
+    },
+    
+    onFilterClosed: params => {
+        console.log('[DEBUG] Filter dialog closed for column:', params.column.getColId());
+        
+        // Check if grid data still exists
+        setTimeout(() => {
+            const rowCount = params.api.getDisplayedRowCount();
+            console.log('[DEBUG] Rows after filter closed:', rowCount);
+            
+            if (rowCount === 0) {
+                console.error('[DEBUG] ❌ GRID WENT EMPTY after filter closed!');
+                console.log('[DEBUG] Attempting to restore data...');
+                
+                // Try to restore data
+                const activeProducts = masterData.products.filter(p => p.isActive);
+                params.api.setGridOption('rowData', activeProducts);
+            }
+        }, 100);
     }
 };
 
