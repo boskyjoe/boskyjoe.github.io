@@ -1973,11 +1973,11 @@ const bulkAddProductsGridOptions = {
     
     // ✨ KEY: Enable multi-row selection with checkboxes
     rowSelection: {
-        mode: 'multiRow',              // Enable multi-row selection
-        enableSelectionWithoutKeys: true, // Click to select without Ctrl/Cmd
-        headerCheckbox: true,          // ✅ NEW: Master checkbox in header
-        checkboxes: true,              // ✅ NEW: Show checkboxes in rows
-        enableClickSelection: true     // Enable click-to-select
+        mode: 'multiRow',
+        enableSelectionWithoutKeys: true,
+        headerCheckbox: true,
+        checkboxes: true,
+        enableClickSelection: true
     },
     
     columnDefs: [
@@ -2059,8 +2059,7 @@ const bulkAddProductsGridOptions = {
     defaultColDef: {
         resizable: true,
         sortable: true,
-        filter: true,
-        floatingFilter: true // Enable search boxes under headers
+        filter: true
     },
     
     onGridReady: params => {
