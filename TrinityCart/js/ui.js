@@ -8978,3 +8978,260 @@ function updateValuationSummaryCardsLoading(isLoading) {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Generic Progress Toast System - Reusable across all operations
+ */
+export class ProgressToast {
+    
+    static THEMES = {
+        success: {
+            borderColor: 'border-green-500',
+            iconBg: 'bg-green-100',
+            iconColor: 'text-green-600',
+            progressColor: 'bg-green-500'
+        },
+        info: {
+            borderColor: 'border-blue-500',
+            iconBg: 'bg-blue-100', 
+            iconColor: 'text-blue-600',
+            progressColor: 'bg-blue-500'
+        },
+        warning: {
+            borderColor: 'border-yellow-500',
+            iconBg: 'bg-yellow-100',
+            iconColor: 'text-yellow-600', 
+            progressColor: 'bg-yellow-500'
+        },
+        error: {
+            borderColor: 'border-red-500',
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600',
+            progressColor: 'bg-red-500'
+        }
+    };
+
+    static ICONS = {
+        loading: `<svg class="animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>`,
+        
+        success: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>`,
+        
+        error: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>`,
+        
+        warning: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>`,
+        
+        save: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+        </svg>`
+    };
+
+    /**
+     * Shows the progress toast with theme
+     * @param {string} title - Toast title
+     * @param {string} theme - Theme: 'success', 'info', 'warning', 'error'  
+     */
+    static show(title, theme = 'info') {
+        const toast = document.getElementById('progress-toast');
+        const container = document.getElementById('toast-container');
+        const iconContainer = document.getElementById('toast-icon-container');
+        const titleElement = document.getElementById('toast-title');
+        
+        if (!toast || !container) {
+            console.error('[Toast] Toast elements not found');
+            return;
+        }
+
+        console.log(`[Toast] Showing ${theme} toast: ${title}`);
+
+        // Apply theme
+        this.applyTheme(theme);
+        
+        // Set title
+        if (titleElement) titleElement.textContent = title;
+        
+        // Reset content
+        this.reset();
+
+        // Show and animate in
+        toast.classList.remove('hidden');
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        }, 50);
+    }
+
+    /**
+     * Updates progress with message and percentage
+     * @param {string} message - Progress message
+     * @param {number} percentage - Progress 0-100
+     * @param {string} stepInfo - Optional step information
+     */
+    static updateProgress(message, percentage = 0, stepInfo = '') {
+        const messageElement = document.getElementById('toast-message');
+        const progressElement = document.getElementById('toast-progress');
+        const percentageElement = document.getElementById('toast-percentage');
+        const stepElement = document.getElementById('toast-step');
+        const iconElement = document.getElementById('toast-icon');
+        
+        // Update content
+        if (messageElement) messageElement.textContent = message;
+        if (percentageElement) percentageElement.textContent = Math.round(percentage);
+        if (stepElement) stepElement.textContent = stepInfo || `${Math.round(percentage)}% complete`;
+        
+        // Update progress bar
+        if (progressElement) {
+            progressElement.style.width = `${Math.min(percentage, 100)}%`;
+        }
+        
+        // Update icon based on progress
+        if (iconElement) {
+            if (percentage >= 100) {
+                iconElement.innerHTML = this.ICONS.success;
+            } else {
+                iconElement.innerHTML = this.ICONS.loading;
+            }
+        }
+        
+        console.log(`[Toast] Progress: ${percentage}% - ${message}`);
+    }
+
+    /**
+     * Shows error state
+     * @param {string} errorMessage - Error message to display
+     * @param {boolean} autoHide - Whether to auto-hide the toast
+     */
+    static showError(errorMessage, autoHide = true) {
+        this.applyTheme('error');
+        
+        const titleElement = document.getElementById('toast-title');
+        const messageElement = document.getElementById('toast-message');
+        const progressElement = document.getElementById('toast-progress');
+        const iconElement = document.getElementById('toast-icon');
+        const closeBtn = document.getElementById('toast-close-btn');
+        
+        if (titleElement) titleElement.textContent = 'Operation Failed';
+        if (messageElement) messageElement.textContent = errorMessage;
+        if (iconElement) iconElement.innerHTML = this.ICONS.error;
+        
+        // Full red progress bar
+        if (progressElement) {
+            progressElement.style.width = '100%';
+        }
+        
+        // Show close button
+        if (closeBtn) {
+            closeBtn.classList.remove('hidden');
+            closeBtn.onclick = () => this.hide(0);
+        }
+        
+        if (autoHide) {
+            this.hide(5000); // Auto-hide after 5 seconds
+        }
+    }
+
+    /**
+     * Shows success completion state
+     * @param {string} successMessage - Success message
+     */
+    static showSuccess(successMessage) {
+        this.applyTheme('success');
+        this.updateProgress(successMessage, 100, 'Completed successfully');
+        
+        const iconElement = document.getElementById('toast-icon');
+        if (iconElement) {
+            iconElement.innerHTML = this.ICONS.success;
+        }
+    }
+
+    /**
+     * Hides the toast with animation
+     * @param {number} delay - Delay before hiding (ms)
+     */
+    static hide(delay = 1500) {
+        const toast = document.getElementById('progress-toast');
+        if (!toast) return;
+
+        setTimeout(() => {
+            console.log('[Toast] Hiding progress toast');
+            
+            toast.style.transform = 'translateX(100%)';
+            toast.style.opacity = '0';
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                this.reset(); // Reset for next use
+            }, 300);
+        }, delay);
+    }
+
+    /**
+     * Applies visual theme to toast
+     * @param {string} theme - Theme name
+     */
+    static applyTheme(theme) {
+        const container = document.getElementById('toast-container');
+        const iconContainer = document.getElementById('toast-icon-container');
+        const progressBar = document.getElementById('toast-progress');
+        
+        if (!container || !iconContainer || !progressBar) return;
+
+        const themeConfig = this.THEMES[theme] || this.THEMES.info;
+        
+        // Reset all theme classes
+        const allBorderClasses = Object.values(this.THEMES).map(t => t.borderColor);
+        const allIconBgClasses = Object.values(this.THEMES).map(t => t.iconBg);  
+        const allIconColorClasses = Object.values(this.THEMES).map(t => t.iconColor);
+        const allProgressClasses = Object.values(this.THEMES).map(t => t.progressColor);
+        
+        container.classList.remove(...allBorderClasses);
+        iconContainer.classList.remove(...allIconBgClasses, ...allIconColorClasses);
+        progressBar.classList.remove(...allProgressClasses);
+        
+        // Apply new theme
+        container.classList.add(themeConfig.borderColor);
+        iconContainer.classList.add(themeConfig.iconBg, themeConfig.iconColor);
+        progressBar.classList.add(themeConfig.progressColor);
+    }
+
+    /**
+     * Resets toast to initial state
+     */
+    static reset() {
+        const elements = {
+            title: document.getElementById('toast-title'),
+            message: document.getElementById('toast-message'),
+            progress: document.getElementById('toast-progress'),
+            percentage: document.getElementById('toast-percentage'),
+            step: document.getElementById('toast-step'),
+            icon: document.getElementById('toast-icon'),
+            closeBtn: document.getElementById('toast-close-btn')
+        };
+        
+        if (elements.progress) elements.progress.style.width = '0%';
+        if (elements.percentage) elements.percentage.textContent = '0';
+        if (elements.step) elements.step.textContent = 'Initializing...';
+        if (elements.icon) elements.icon.innerHTML = this.ICONS.loading;
+        if (elements.closeBtn) elements.closeBtn.classList.add('hidden');
+    }
+}
