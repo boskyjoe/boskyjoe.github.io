@@ -12,7 +12,7 @@ import { appState } from './state.js';
 import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
 
 import { updateUI, showView, showSuppliersView, showLoader, hideLoader, formatCurrency } from './ui.js';
-import { showCategoriesView } from './ui.js';
+import { showCategoriesView,ProgressToast } from './ui.js';
 import { showModal } from './modal.js';
 
 
@@ -202,125 +202,163 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 
-
 async function handleSavePurchaseInvoice() {
     const user = appState.currentUser;
     if (!user) {
         await showModal('error', 'Not Logged In', 'You must be logged in.');
-        return; // This is correct.
-    }
-
-    // 1. Collect Header Data
-    const purchaseDate = document.getElementById('purchase-date').value;
-    const supplierSelect = document.getElementById('purchase-supplier');
-    const supplierId = supplierSelect.value;
-    const supplierName = supplierSelect.options[supplierSelect.selectedIndex].text;
-    const supplierInvoiceNo = document.getElementById('supplier-invoice-no').value;
-
-    if (!purchaseDate || !supplierId) {
-        await showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
         return;
     }
 
-    // 2. Collect Line Item Data
-    const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
-    const lineItems = [];
-    for (const row of lineItemRows) {
-        const masterProductId = row.querySelector('[data-field="masterProductId"]').value;
-        if (!masterProductId) continue;
+    // ✅ START: Show progress toast
+    ProgressToast.show('Saving Purchase Invoice', 'info');
 
-        const productSelect = row.querySelector('.line-item-product');
-        const productName = productSelect.options[productSelect.selectedIndex].text;
-
-        lineItems.push({
-            masterProductId: masterProductId,
-            productName: productName,
-            quantity: parseFloat(row.querySelector('[data-field="quantity"]').value) || 0,
-            unitPurchasePrice: parseFloat(row.querySelector('[data-field="unitPurchasePrice"]').value) || 0,
-            discountType: row.querySelector('[data-field="discountType"]').value,
-            discountValue: parseFloat(row.querySelector('[data-field="discountValue"]').value) || 0,
-            taxPercentage: parseFloat(row.querySelector('[data-field="taxPercentage"]').value) || 0,
-        });
-    }
-
-    if (lineItems.length === 0) {
-        await showModal('error', 'No Items', 'Please add at least one product to the invoice.');
-        return;
-    }
-
-    // 3. Perform Final Calculations
-    let itemsSubtotal = 0, totalItemLevelTax = 0;
-    lineItems.forEach(item => {
-        item.grossPrice = item.quantity * item.unitPurchasePrice;
-        item.discountAmount = item.discountType === 'Percentage' ? item.grossPrice * (item.discountValue / 100) : item.discountValue;
-        item.netPrice = item.grossPrice - item.discountAmount;
-        item.taxAmount = item.netPrice * (item.taxPercentage / 100);
-        item.lineItemTotal = item.netPrice + item.taxAmount;
-        itemsSubtotal += item.netPrice;
-        totalItemLevelTax += item.taxAmount;
-    });
-
-    const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
-    const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
-    const invoiceDiscountAmount = invoiceDiscountType === 'Percentage' ? itemsSubtotal * (invoiceDiscountValue / 100) : invoiceDiscountValue;
-    const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
-    const invoiceTaxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
-    const invoiceLevelTaxAmount = taxableAmountForInvoice * (invoiceTaxPercentage / 100);
-    const totalTaxAmount = totalItemLevelTax + invoiceLevelTaxAmount;
-    const invoiceTotal = taxableAmountForInvoice + totalTaxAmount;
-
-    const productIds = lineItems.map(item => item.masterProductId);
-
-    // 4. Assemble the final invoice object
-    const invoiceData = {
-        purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
-        lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
-        taxableAmountForInvoice, totalItemLevelTax, invoiceTaxPercentage, invoiceLevelTaxAmount,
-        totalTaxAmount, invoiceTotal,
-        productIds: productIds
-    };
-
-
-    const docId = document.getElementById('purchase-invoice-doc-id').value;
-    const isEditMode = !!docId;
-
-    let success = false;
-    let successMessage = '';
-
-
-    // 5. Save to Firestore
     try {
+        // Step 1: Collect Header Data
+        ProgressToast.updateProgress('Validating invoice data...', 15, 'Step 1 of 6');
+        
+        const purchaseDate = document.getElementById('purchase-date').value;
+        const supplierSelect = document.getElementById('purchase-supplier');
+        const supplierId = supplierSelect.value;
+        const supplierName = supplierSelect.options[supplierSelect.selectedIndex].text;
+        const supplierInvoiceNo = document.getElementById('supplier-invoice-no').value;
+
+        if (!purchaseDate || !supplierId) {
+            // ✅ HIDE toast before showing error modal
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
+            return;
+        }
+
+        // Step 2: Collect Line Item Data
+        ProgressToast.updateProgress('Processing line items...', 30, 'Step 2 of 6');
+        
+        const lineItemRows = document.querySelectorAll('#purchase-line-items-container > div');
+        const lineItems = [];
+        for (const row of lineItemRows) {
+            const masterProductId = row.querySelector('[data-field="masterProductId"]').value;
+            if (!masterProductId) continue;
+
+            const productSelect = row.querySelector('.line-item-product');
+            const productName = productSelect.options[productSelect.selectedIndex].text;
+
+            lineItems.push({
+                masterProductId: masterProductId,
+                productName: productName,
+                quantity: parseFloat(row.querySelector('[data-field="quantity"]').value) || 0,
+                unitPurchasePrice: parseFloat(row.querySelector('[data-field="unitPurchasePrice"]').value) || 0,
+                discountType: row.querySelector('[data-field="discountType"]').value,
+                discountValue: parseFloat(row.querySelector('[data-field="discountValue"]').value) || 0,
+                taxPercentage: parseFloat(row.querySelector('[data-field="taxPercentage"]').value) || 0,
+            });
+        }
+
+        if (lineItems.length === 0) {
+            // ✅ HIDE toast before showing error modal
+            ProgressToast.hide(0);
+            await showModal('error', 'No Items', 'Please add at least one product to the invoice.');
+            return;
+        }
+
+        // Step 3: Perform Final Calculations
+        ProgressToast.updateProgress('Calculating totals and taxes...', 45, 'Step 3 of 6');
+        
+        let itemsSubtotal = 0, totalItemLevelTax = 0;
+        lineItems.forEach(item => {
+            item.grossPrice = item.quantity * item.unitPurchasePrice;
+            item.discountAmount = item.discountType === 'Percentage' ? item.grossPrice * (item.discountValue / 100) : item.discountValue;
+            item.netPrice = item.grossPrice - item.discountAmount;
+            item.taxAmount = item.netPrice * (item.taxPercentage / 100);
+            item.lineItemTotal = item.netPrice + item.taxAmount;
+            itemsSubtotal += item.netPrice;
+            totalItemLevelTax += item.taxAmount;
+        });
+
+        const invoiceDiscountType = document.getElementById('invoice-discount-type').value;
+        const invoiceDiscountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
+        const invoiceDiscountAmount = invoiceDiscountType === 'Percentage' ? itemsSubtotal * (invoiceDiscountValue / 100) : invoiceDiscountValue;
+        const taxableAmountForInvoice = itemsSubtotal - invoiceDiscountAmount;
+        const invoiceTaxPercentage = parseFloat(document.getElementById('invoice-tax-percentage').value) || 0;
+        const invoiceLevelTaxAmount = taxableAmountForInvoice * (invoiceTaxPercentage / 100);
+        const totalTaxAmount = totalItemLevelTax + invoiceLevelTaxAmount;
+        const invoiceTotal = taxableAmountForInvoice + totalTaxAmount;
+
+        const productIds = lineItems.map(item => item.masterProductId);
+
+        // Step 4: Assemble the final invoice object
+        ProgressToast.updateProgress('Preparing invoice data...', 60, 'Step 4 of 6');
+        
+        const invoiceData = {
+            purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
+            lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
+            taxableAmountForInvoice, totalItemLevelTax, invoiceTaxPercentage, invoiceLevelTaxAmount,
+            totalTaxAmount, invoiceTotal,
+            productIds: productIds
+        };
+
+        const docId = document.getElementById('purchase-invoice-doc-id').value;
+        const isEditMode = !!docId;
+
+        // Step 5: Save to Firestore
+        ProgressToast.updateProgress(
+            isEditMode ? 'Updating invoice and inventory...' : 'Creating invoice and updating inventory...', 
+            80, 
+            'Step 5 of 6'
+        );
+        
         appState.isLocalUpdateInProgress = true;
+        
+        let successMessage = '';
+        
         if (isEditMode) {
             // UPDATE existing invoice
             await updatePurchaseInvoiceAndInventory(docId, invoiceData, user);
             successMessage = 'Purchase Invoice has been updated and inventory is now correct.';
         } else {
-            console.log("Simulating add new invoice.");
+            console.log("Creating new invoice with inventory update.");
             await createPurchaseInvoiceAndUpdateInventory(invoiceData, user);
-            document.getElementById('purchase-invoice-form').reset();
-            document.getElementById('purchase-line-items-container').innerHTML = '';
-            addLineItem();
-            calculateAllTotals();
-            successMessage = 'Purchase Invoice has been saved successfully. and inventory is now correct.';
+            successMessage = 'Purchase Invoice has been saved successfully and inventory is now correct.';
         }
-        console.log("Database call skipped. Attempting to show modal...");
-        success = true;
+
+        // Step 6: Success Completion
+        ProgressToast.updateProgress('Invoice saved successfully!', 100, 'Step 6 of 6');
+        ProgressToast.showSuccess('Invoice and inventory updated successfully!');
+
+        console.log("Database operation completed successfully.");
+
+        // ✅ ENHANCED: Show completion, then clean up
+        setTimeout(async () => {
+            ProgressToast.hide(500);
+            
+            // Show your existing success modal
+            await showModal('success', 'Invoice Saved', successMessage);
+            
+            // Clean up form for new invoices
+            if (!isEditMode) {
+                resetPurchaseForm();
+            } else {
+                // For edit mode, you might want to stay in edit mode or reset
+                // resetPurchaseForm(); // Uncomment if you want to exit edit mode
+            }
+            
+        }, 1200); // Slightly longer delay to show success state
+
     } catch (error) {
         console.error("Error saving purchase invoice:", error);
-        await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
-        success = false;
+        
+        // ✅ SHOW ERROR in toast instead of immediate modal
+        ProgressToast.showError(
+            error.message || 'An unexpected error occurred while saving the invoice.'
+        );
+        
+        // Also show the traditional error modal after a brief delay
+        setTimeout(async () => {
+            await showModal('error', 'Save Failed', 'There was an error saving the invoice.');
+        }, 2000);
+        
     } finally {
-        if (success) {
-            // We are using .then() to ensure these UI updates run in a new, clean "tick"
-            // of the event loop, completely separate from the database promise chain.
-            console.log("[handleSavePurchaseInvoice]: In Finally");
-            alert(successMessage)
-            resetPurchaseForm();
-        }
+        appState.isLocalUpdateInProgress = false;
     }
 }
-
 
 
 /**
