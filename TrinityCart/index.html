@@ -209,28 +209,28 @@
                             <form id="add-supplier-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <!-- Supplier Name -->
                                 <div class="sm:col-span-1">
-                                    <label for="supplierName-input" class="form-label">Supplier Name</label>
+                                    <label for="supplierName-input" class="form-label">Supplier Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="supplierName-input" placeholder="e.g., Mary's Bakery"
                                         class="form-input w-full" required>
                                 </div>
 
                                 <!-- Contact No -->
                                 <div class="sm:col-span-1">
-                                    <label for="contactNo-input" class="form-label">Contact No</label>
+                                    <label for="contactNo-input" class="form-label">Contact No<span class="text-red-500">*</span></label>
                                     <input type="tel" id="contactNo-input" placeholder="e.g., 555-123-4567"
                                         class="form-input w-full">
                                 </div>
 
                                 <!-- Contact Email -->
                                 <div class="sm:col-span-1">
-                                    <label for="contactEmail-input" class="form-label">Contact Email</label>
+                                    <label for="contactEmail-input" class="form-label">Contact Email<span class="text-red-500">*</span></label>
                                     <input type="email" id="contactEmail-input" placeholder="e.g., mary@bakery.com"
                                         class="form-input w-full">
                                 </div>
 
                                 <!-- Address -->
                                 <div class="sm:col-span-2">
-                                    <label for="address-input" class="form-label">Address</label>
+                                    <label for="address-input" class="form-label">Address<span class="text-red-500">*</span></label>
                                     <textarea id="address-input" class="form-input w-full" rows="3"
                                         placeholder="e.g., 123 Main St, Anytown, USA 12345"></textarea>
                                 </div>
@@ -326,14 +326,14 @@
 
                                 <!-- Catalogue Name -->
                                 <div class="md:col-span-2">
-                                    <label for="catalogue-name-input" class="form-label">Catalogue Name</label>
+                                    <label for="catalogue-name-input" class="form-label">Catalogue Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="catalogue-name-input"
                                         placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full" required>
                                 </div>
 
                                 <!-- Sales Season Dropdown -->
                                 <div>
-                                    <label for="catalogue-season-select" class="form-label">Sales Season</label>
+                                    <label for="catalogue-season-select" class="form-label">Sales Season<span class="text-red-500">*</span></label>
                                     <select id="catalogue-season-select" class="form-input w-full" required>
                                         <option value="" disabled selected>Select a season...</option>
                                         <!-- Options will be populated by JS -->
@@ -410,17 +410,17 @@
                             <div class="p-6 border-b border-gray-200">
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <div>
-                                        <label for="purchase-date" class="form-label">Purchase Date</label>
+                                        <label for="purchase-date" class="form-label">Purchase Date<span class="text-red-500">*</span></label>
                                         <input type="date" id="purchase-date" class="form-input w-full" required>
                                     </div>
                                     <div class="md:col-span-2">
-                                        <label for="purchase-supplier" class="form-label">Supplier</label>
+                                        <label for="purchase-supplier" class="form-label">Supplier<span class="text-red-500">*</span></label>
                                         <select id="purchase-supplier" class="form-input w-full" required>
                                             <option value="" disabled selected>Select a supplier...</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="supplier-invoice-no" class="form-label">Supplier Invoice #</label>
+                                        <label for="supplier-invoice-no" class="form-label">Supplier Invoice #<span class="text-red-500">*</span></label>
                                         <input type="text" id="supplier-invoice-no" class="form-input w-full">
                                     </div>
                                 </div>
@@ -1273,7 +1273,7 @@
                         <div class="p-6">
                             <form id="add-sale-type-form" class="flex items-end space-x-4">
                                 <div class="flex-grow">
-                                    <label for="saleTypeName-input" class="form-label">Sale Type Name</label>
+                                    <label for="saleTypeName-input" class="form-label">Sale Type Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="saleTypeName-input" placeholder="e.g., General Sale"
                                         class="form-input w-full" required>
                                 </div>
@@ -1306,7 +1306,7 @@
                         <div class="p-6">
                             <form id="add-category-form" class="flex items-end space-x-4">
                                 <div class="flex-grow">
-                                    <label for="categoryName-input" class="form-label">Category Name</label>
+                                    <label for="categoryName-input" class="form-label">Category Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="categoryName-input" placeholder="e.g., Cakes"
                                         class="form-input w-full" required>
                                 </div>
@@ -1343,7 +1343,7 @@
                         <div class="p-6">
                             <form id="add-payment-mode-form" class="flex items-end space-x-4">
                                 <div class="flex-grow">
-                                    <label for="paymentModeName-input" class="form-label">Payment Mode Name</label>
+                                    <label for="paymentModeName-input" class="form-label">Payment Mode Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="paymentModeName-input" placeholder="e.g., Bank Transfer"
                                         class="form-input w-full" required>
                                 </div>
@@ -1380,18 +1380,18 @@
                             <form id="add-season-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <!-- Season Name -->
                                 <div class="md:col-span-1">
-                                    <label for="seasonName-input" class="form-label">Season Name</label>
+                                    <label for="seasonName-input" class="form-label">Season Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="seasonName-input" placeholder="e.g., Christmas 2024"
                                         class="form-input w-full" required>
                                 </div>
                                 <!-- Start Date -->
                                 <div>
-                                    <label for="startDate-input" class="form-label">Start Date</label>
+                                    <label for="startDate-input" class="form-label">Start Date<span class="text-red-500">*</span></label>
                                     <input type="date" id="startDate-input" class="form-input w-full" required>
                                 </div>
                                 <!-- End Date -->
                                 <div>
-                                    <label for="endDate-input" class="form-label">End Date</label>
+                                    <label for="endDate-input" class="form-label">End Date<span class="text-red-500">*</span></label>
                                     <input type="date" id="endDate-input" class="form-input w-full" required>
                                 </div>
                                 <!-- Form Actions -->
@@ -1423,13 +1423,13 @@
                     <!-- Card 1: Add New Sales Event Form -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Event</h3>
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Event<span class="text-red-500">*</span></h3>
                         </div>
                         <div class="p-6">
                             <form id="add-event-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <!-- Parent Season Dropdown -->
                                 <div class="md:col-span-1">
-                                    <label for="parentSeason-select" class="form-label">Parent Season</label>
+                                    <label for="parentSeason-select" class="form-label">Parent Season<span class="text-red-500">*</span></label>
                                     <select id="parentSeason-select" class="form-input w-full" required>
                                         <option value="">Select a season...</option>
                                         <!-- Options will be populated by JS -->
@@ -1437,18 +1437,18 @@
                                 </div>
                                 <!-- Event Name -->
                                 <div class="md:col-span-2">
-                                    <label for="eventName-input" class="form-label">Event Name</label>
+                                    <label for="eventName-input" class="form-label">Event Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale"
                                         class="form-input w-full" required>
                                 </div>
                                 <!-- Start Date -->
                                 <div>
-                                    <label for="eventStartDate-input" class="form-label">Event Start Date</label>
+                                    <label for="eventStartDate-input" class="form-label">Event Start Date<span class="text-red-500">*</span></label>
                                     <input type="date" id="eventStartDate-input" class="form-input w-full" required>
                                 </div>
                                 <!-- End Date -->
                                 <div>
-                                    <label for="eventEndDate-input" class="form-label">Event End Date</label>
+                                    <label for="eventEndDate-input" class="form-label">Event End Date<span class="text-red-500">*</span></label>
                                     <input type="date" id="eventEndDate-input" class="form-input w-full" required>
                                 </div>
                                 <!-- Form Actions -->
@@ -1485,19 +1485,19 @@
                     <!-- Card 1: Create New Team Form -->
                     <div class="bg-white rounded-lg shadow-lg">
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Create New Church Team</h3>
+                            <h3 class="text-lg font-semibold text-gray-800">Create New Church Team<span class="text-red-500">*</span></h3>
                         </div>
                         <div class="p-6">
                             <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                                 <!-- Church Name (Read-only) -->
                                 <div>
-                                    <label for="team-churchName-input" class="form-label">Church Name</label>
+                                    <label for="team-churchName-input" class="form-label">Church Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200"
                                         readonly>
                                 </div>
                                 <!-- Team Name -->
                                 <div>
-                                    <label for="team-name-input" class="form-label">Team Name</label>
+                                    <label for="team-name-input" class="form-label">Team Name<span class="text-red-500">*</span></label>
                                     <input type="text" id="team-name-input" placeholder="e.g., Ushering Team"
                                         class="form-input w-full" required>
                                 </div>
