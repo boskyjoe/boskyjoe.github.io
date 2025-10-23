@@ -1985,7 +1985,7 @@ const bulkAddProductsGridOptions = {
             field: "categoryId",
             headerName: "Category",
             flex: 1,
-            filter: 'agTextColumnFilter',
+            filter: false,
             pinned: 'left', // Keep product name visible when scrolling
             filterValueGetter: params => {
                 const category = masterData.categories.find(c => c.id === params.data.categoryId);
@@ -2000,7 +2000,7 @@ const bulkAddProductsGridOptions = {
             field: "itemName",
             headerName: "Product Name",
             flex: 2,
-            filter: 'agTextColumnFilter',
+            filter: false,
             cellStyle: { fontWeight: 'bold' },
         },
         {
@@ -2087,37 +2087,6 @@ const bulkAddProductsGridOptions = {
         // if (nodesToSelect.length > 0) {
         //     params.api.setNodesSelected(nodesToSelect.slice(0, 5), true);
         // }
-    },
-    onFilterChanged: params => {
-        console.log('[DEBUG] Filter changed');
-        
-        setTimeout(() => {
-            const displayedRows = params.api.getDisplayedRowCount();
-            console.log('[DEBUG] Rows after filter change:', displayedRows);
-            
-            // ✅ WORKAROUND: Force grid refresh if it becomes hidden
-            const gridElement = document.getElementById('bulk-add-products-grid');
-            if (gridElement) {
-                const rect = gridElement.getBoundingClientRect();
-                if (rect.height === 0 || rect.width === 0) {
-                    console.log('[DEBUG] Grid has zero dimensions, forcing refresh...');
-                    params.api.refreshCells({ force: true });
-                    params.api.sizeColumnsToFit();
-                }
-            }
-        }, 100);
-    },
-    
-    onFilterOpened: params => {
-        console.log('[DEBUG] Filter opened for column:', params.column.getColId());
-        setTimeout(() => {
-            const gridElement = document.getElementById('bulk-add-products-grid');
-            if (gridElement) {
-                gridElement.style.visibility = 'visible';
-                gridElement.style.opacity = '1';
-                gridElement.style.pointerEvents = 'auto';
-            }
-        }, 50);
     }
 };
 
