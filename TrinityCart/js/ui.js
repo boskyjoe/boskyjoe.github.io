@@ -2334,12 +2334,16 @@ export function addBulkLineItems(productsArray) {
 
 /**
  * Shows or hides the no-items message based on current line items
+ * Called after line items are added or removed
  */
-function updateNoItemsMessageVisibility() {
+export function updateNoItemsMessageVisibility() {
     const lineItemsContainer = document.getElementById('purchase-line-items-container');
     const noItemsMessage = document.getElementById('no-line-items-message');
     
-    if (!lineItemsContainer || !noItemsMessage) return;
+    if (!lineItemsContainer || !noItemsMessage) {
+        console.warn('[ui.js] Line items container or no-items message not found');
+        return;
+    }
     
     const hasLineItems = lineItemsContainer.children.length > 0;
     
