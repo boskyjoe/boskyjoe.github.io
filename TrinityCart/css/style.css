@@ -122,3 +122,22 @@ main {
     position: relative;
     z-index: 1;
 }
+
+
+#bulk-add-products-modal .ag-theme-alpine {
+    height: 500px !important;
+    width: 100% !important;
+}
+
+#bulk-add-products-modal .ag-header-row {
+    background-color: #f8fafc !important;
+}
+
+#bulk-add-products-modal .ag-root-wrapper {
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* Ensure filter popup appears correctly */
+#bulk-add-products-modal .ag-filter-toolpanel {
+    z-index: 1000 !important;
+}
