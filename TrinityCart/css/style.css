@@ -123,27 +123,38 @@ main {
     z-index: 1;
 }
 
-/* Force AG Grid to stay visible in modals */
+
 #bulk-add-products-modal .ag-theme-alpine {
-    position: relative !important;
+    height: 500px !important;
+    width: 100% !important;
+}
+
+#bulk-add-products-modal .ag-header-row {
+    background-color: #f8fafc !important;
 }
 
 #bulk-add-products-modal .ag-root-wrapper {
-    position: relative !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
-#bulk-add-products-modal .ag-body-viewport {
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
+/* Ensure filter popup appears correctly */
+#bulk-add-products-modal .ag-filter-toolpanel {
+    z-index: 1000 !important;
 }
 
-#bulk-add-products-modal .ag-center-cols-container {
-    visibility: visible !important;
-    opacity: 1 !important;
+.ag-theme-alpine .ag-root-wrapper {
+    position: relative;
 }
 
-/* Keep filter visible on top */
-#bulk-add-products-modal .ag-filter {
-    z-index: 100 !important;
+.ag-theme-alpine .ag-body-viewport {
+    position: relative;
+    z-index: 1;
+}
+
+.ag-theme-alpine .ag-floating-filter {
+    z-index: 2;
+}
+
+.ag-theme-alpine .ag-filter {
+    z-index: 10;
 }
