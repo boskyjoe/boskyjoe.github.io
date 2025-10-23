@@ -337,7 +337,7 @@ async function handleSavePurchaseInvoice() {
                 resetPurchaseForm();
             } else {
                 // For edit mode, you might want to stay in edit mode or reset
-                // resetPurchaseForm(); // Uncomment if you want to exit edit mode
+                resetPurchaseForm(); // Uncomment if you want to exit edit mode
             }
             
         }, 1200); // Slightly longer delay to show success state
