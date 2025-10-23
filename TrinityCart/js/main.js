@@ -1512,44 +1512,106 @@ async function handleSupplierSubmit(e) {
 async function handleProductCatalogueSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-
-    // Use the NEW element IDs (catalogue- prefixed)
-    const unitPrice = parseFloat(document.getElementById('catalogue-unitPrice-input').value);
-    const unitMarginPercentage = parseFloat(document.getElementById('catalogue-unitMargin-input').value);
-
-    if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
-        return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
     }
 
-    const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
-
-    const productData = {
-        itemName: document.getElementById('catalogue-itemName-input').value,
-        categoryId: document.getElementById('catalogue-itemCategory-select').value,
-        unitPrice,
-        unitMarginPercentage,
-        sellingPrice,
-        inventoryCount: parseInt(document.getElementById('catalogue-initialStock-input').value, 10) || 0
-    };
-
-    if (!productData.categoryId) {
-        return showModal('error', 'Invalid Input', 'Please select a product category.');
-    }
-
-    if (!productData.itemName.trim()) {
-        return showModal('error', 'Invalid Input', 'Please enter a product name.');
-    }
+    // ✅ START: Toast progress for product creation
+    ProgressToast.show('Adding Product to Catalogue', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating product data...', 20, 'Step 1 of 5');
+
+        const unitPrice = parseFloat(document.getElementById('catalogue-unitPrice-input').value);
+        const unitMarginPercentage = parseFloat(document.getElementById('catalogue-unitMargin-input').value);
+
+        if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
+        }
+
+        const itemName = document.getElementById('catalogue-itemName-input').value.trim();
+        const categoryId = document.getElementById('catalogue-itemCategory-select').value;
+        const initialStock = parseInt(document.getElementById('catalogue-initialStock-input').value, 10) || 0;
+
+        if (!itemName) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Input', 'Please enter a product name.');
+        }
+
+        if (!categoryId) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Input', 'Please select a product category.');
+        }
+
+        // Step 2: Calculate Pricing
+        ProgressToast.updateProgress('Calculating selling price...', 40, 'Step 2 of 5');
+
+        const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
+
+        // Step 3: Prepare Product Data
+        ProgressToast.updateProgress('Preparing product data...', 60, 'Step 3 of 5');
+
+        const productData = {
+            itemName: itemName,
+            categoryId: categoryId,
+            unitPrice,
+            unitMarginPercentage,
+            sellingPrice,
+            inventoryCount: initialStock
+        };
+
+        console.log('[main.js] Product data prepared:', {
+            name: productData.itemName,
+            category: categoryId,
+            cost: formatCurrency(productData.unitPrice),
+            margin: `${productData.unitMarginPercentage}%`,
+            sellingPrice: formatCurrency(productData.sellingPrice),
+            stock: productData.inventoryCount
+        });
+
+        // Step 4: Save to Database
+        ProgressToast.updateProgress('Saving product to catalogue...', 80, 'Step 4 of 5');
+
         await addProduct(productData, user);
-        await showModal('success', 'Success', 'Product has been added to the catalogue successfully.');
-        
-        // Close the modal
-        closeAddProductToCatalogueModal();
-        
+
+        // Step 5: Success Completion
+        ProgressToast.updateProgress('Product added successfully!', 100, 'Step 5 of 5');
+        ProgressToast.showSuccess(`"${itemName}" has been added to the product catalogue!`);
+
+        console.log(`[main.js] ✅ Product "${itemName}" saved successfully`);
+
+        // Show completion briefly, then close modal
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Product Added', 
+                `"${itemName}" has been added to the catalogue successfully.\n\n` +
+                `• Selling Price: ${formatCurrency(sellingPrice)}\n` +
+                `• Initial Stock: ${initialStock} units\n` +
+                `• Category: ${masterData.categories.find(c => c.id === categoryId)?.categoryName || 'Unknown'}`
+            );
+            
+            // Close modal and reset
+            closeAddProductToCatalogueModal();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error adding product to catalogue:", error);
-        await showModal('error', 'Error', 'Failed to add the product to catalogue. Please try again.');
+        
+        // Show error in toast
+        ProgressToast.showError(
+            `Failed to add product: ${error.message || 'An unexpected error occurred.'}`
+        );
+        
+        // Also show traditional error modal after brief delay
+        setTimeout(async () => {
+            await showModal('error', 'Save Failed', 'Failed to add the product to catalogue. Please try again.');
+        }, 2000);
     }
 }
 
