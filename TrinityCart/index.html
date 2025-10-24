@@ -889,6 +889,19 @@
                                     <input type="tel" id="sale-customer-phone" class="form-input w-full"
                                         placeholder="e.g., 555-123-4567" required>
                                 </div>
+                                <!-- ✅ NEW: Manual Voucher Number Field -->
+                                <div>
+                                    <label for="sale-voucher-number" class="form-label">
+                                        Manual Voucher Number <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" id="sale-voucher-number" class="form-input w-full"
+                                        placeholder="e.g., V-001, MAN-2024-001" required 
+                                        pattern="[A-Za-z0-9\-]+" 
+                                        title="Voucher number should contain only letters, numbers, and dashes">
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        💡 Manual voucher for record keeping (e.g., V-001, MAN-2024-001)
+                                    </p>
+                                </div>
                                 <!-- [NEW] Address field, initially hidden -->
                                 <div id="tasty-treats-address-container" class="md:col-span-3 hidden">
                                     <label for="sale-customer-address" class="form-label">Delivery Address <span
