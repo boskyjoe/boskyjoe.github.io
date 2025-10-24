@@ -1685,43 +1685,150 @@ async function handleProductCatalogueSubmit(e) {
 }
 
 
-
-
+/**
+ * Handles product form submission with comprehensive validation and progress feedback.
+ * 
+ * Creates new product records in the product catalogue with automatic selling price
+ * calculation based on cost plus margin. Validates all inputs, saves to Firestore,
+ * and provides real-time progress updates via toast notifications.
+ * 
+ * BUSINESS LOGIC:
+ * - Calculates selling price: Unit Cost × (1 + Margin%)
+ * - Sets initial inventory levels for new products
+ * - Links products to categories for organization
+ * - Creates foundation for purchase invoice line items
+ * 
+ * VALIDATION RULES:
+ * - Product name: Required, non-empty string
+ * - Category: Must select from existing categories
+ * - Unit price: Must be positive number (cost basis)
+ * - Margin: Must be valid percentage (0 or greater)
+ * - Stock: Must be non-negative integer
+ * 
+ * @param {Event} e - Form submission event from add-product-form
+ * @throws {Error} When validation fails or Firestore operations error
+ * @since 1.0.0
+ * @see addProduct() - API function for creating product records
+ * @see masterData.categories - Used for category validation and display
+ */
 async function handleProductSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
 
-    const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
-    const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
-
-    if (isNaN(unitPrice) || isNaN(unitMarginPercentage)) {
-        return showModal('error', 'Invalid Input', 'Unit Price and Unit Margin must be valid numbers.');
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
     }
 
-    const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
-
-    const productData = {
-        itemName: document.getElementById('itemName-input').value,
-        categoryId: document.getElementById('itemCategory-select').value,
-        unitPrice,
-        unitMarginPercentage,
-        sellingPrice,
-        inventoryCount: parseInt(document.getElementById('initialStock-input').value, 10) || 0
-    };
-
-    if (!productData.categoryId) {
-        return showModal('error', 'Invalid Input', 'Please select a product category.');
-    }
+    // ✅ START: Progress toast for product creation
+    ProgressToast.show('Adding Product to Catalogue', 'info');
 
     try {
+        // Step 1: Input Validation - Pricing
+        ProgressToast.updateProgress('Validating pricing information...', 20, 'Step 1 of 5');
+
+        const unitPrice = parseFloat(document.getElementById('unitPrice-input').value);
+        const unitMarginPercentage = parseFloat(document.getElementById('unitMargin-input').value);
+
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Unit Price', 'Unit Price must be a valid number greater than zero.');
+        }
+
+        if (isNaN(unitMarginPercentage) || unitMarginPercentage < 0) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Margin', 'Unit Margin must be a valid percentage (0 or greater).');
+        }
+
+        // Step 2: Input Validation - Product Details
+        ProgressToast.updateProgress('Validating product information...', 35, 'Step 2 of 5');
+
+        const itemName = document.getElementById('itemName-input').value.trim();
+        const categoryId = document.getElementById('itemCategory-select').value;
+        const initialStock = parseInt(document.getElementById('initialStock-input').value, 10) || 0;
+
+        if (!itemName) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Missing Product Name', 'Please enter a product name.');
+        }
+
+        if (!categoryId) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Missing Category', 'Please select a product category.');
+        }
+
+        if (initialStock < 0) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Invalid Stock', 'Initial stock cannot be negative.');
+        }
+
+        // Step 3: Calculate Final Pricing
+        ProgressToast.updateProgress('Calculating selling price...', 55, 'Step 3 of 5');
+
+        const sellingPrice = unitPrice * (1 + unitMarginPercentage / 100);
+        const categoryName = masterData.categories.find(c => c.id === categoryId)?.categoryName || 'Unknown';
+
+        const productData = {
+            itemName: itemName,
+            categoryId: categoryId,
+            unitPrice,
+            unitMarginPercentage,
+            sellingPrice,
+            inventoryCount: initialStock
+        };
+
+        console.log(`[main.js] Creating product: ${itemName}`, {
+            category: categoryName,
+            cost: formatCurrency(unitPrice),
+            margin: `${unitMarginPercentage}%`,
+            sellingPrice: formatCurrency(sellingPrice),
+            stock: initialStock
+        });
+
+        // Step 4: Save to Database
+        ProgressToast.updateProgress('Saving product to catalogue...', 85, 'Step 4 of 5');
+
         await addProduct(productData, user);
-        await showModal('success', 'Success', 'Product has been added successfully.');
-        e.target.reset();
+
+        // Step 5: Success
+        ProgressToast.updateProgress('Product added successfully!', 100, 'Step 5 of 5');
+        ProgressToast.showSuccess(`"${itemName}" has been added to the product catalogue!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Product Added', 
+                `"${itemName}" has been added successfully!\n\n` +
+                `• Category: ${categoryName}\n` +
+                `• Cost: ${formatCurrency(unitPrice)}\n` +
+                `• Margin: ${unitMarginPercentage}%\n` +
+                `• Selling Price: ${formatCurrency(sellingPrice)}\n` +
+                `• Initial Stock: ${initialStock} units`
+            );
+            
+            // Reset form for next product
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error adding product:", error);
-        await showModal('error', 'Error', 'Failed to add the Product. Please try again.');
+        
+        ProgressToast.showError(`Failed to add product: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Product Failed', 
+                'Failed to add the product to catalogue. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection\n' +
+                '• All fields are properly filled\n' +
+                '• Category is selected'
+            );
+        }, 2000);
     }
 }
+
+
 
 function handlePurchaseInvoiceSubmit(e) {
     e.preventDefault();
@@ -2399,56 +2506,354 @@ async function handleSaleTypeSubmit(e) {
     }
 }
 
+/**
+ * Handles sales season form submission with date validation and progress tracking.
+ * 
+ * Creates new sales seasons that serve as parent containers for sales events and
+ * catalogue organization. Validates date ranges, prevents conflicts, and ensures
+ * proper seasonal business cycle management with comprehensive progress feedback.
+ * 
+ * BUSINESS CONTEXT:
+ * - Sales seasons are top-level time periods (Christmas, Easter, Summer, etc.)
+ * - Events and catalogues are organized under seasons
+ * - Enables seasonal reporting and sales cycle analysis
+ * - Critical for consignment planning and inventory management
+ * 
+ * VALIDATION RULES:
+ * - Season name: Required, descriptive identifier
+ * - Date range: Start date must be before or equal to end date
+ * - Duration: Seasons should typically be meaningful periods (weeks/months)
+ * - Business logic: Warns for very short or very long seasons
+ * 
+ * @param {Event} e - Form submission event from add-season-form
+ * @throws {Error} When validation fails, date conflicts occur, or Firestore operations fail
+ * @since 1.0.0
+ * @see addSeason() - API function for creating sales season records
+ * @see masterData.seasons - Used for conflict detection and season management
+ */
 async function handleSeasonSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const seasonName = document.getElementById('seasonName-input').value.trim();
-    const startDate = document.getElementById('startDate-input').value;
-    const endDate = document.getElementById('endDate-input').value;
 
-    if (!user || !seasonName || !startDate || !endDate) return;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
 
-    const seasonData = {
-        seasonName,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate)
-    };
+    // ✅ START: Progress toast for season creation
+    ProgressToast.show('Adding Sales Season', 'info');
 
     try {
+        // Step 1: Basic Field Validation
+        ProgressToast.updateProgress('Validating season information...', 20, 'Step 1 of 5');
+
+        const seasonName = document.getElementById('seasonName-input').value.trim();
+        const startDateInput = document.getElementById('startDate-input').value;
+        const endDateInput = document.getElementById('endDate-input').value;
+
+        if (!seasonName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Season Name', 'Please enter a descriptive season name.');
+            return;
+        }
+
+        if (!startDateInput || !endDateInput) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Dates', 'Please select both start and end dates for the season.');
+            return;
+        }
+
+        // Step 2: Date Validation and Business Logic
+        ProgressToast.updateProgress('Validating season dates...', 40, 'Step 2 of 5');
+
+        const startDate = new Date(startDateInput);
+        const endDate = new Date(endDateInput);
+
+        // Validate date objects
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Dates', 'Please enter valid start and end dates.');
+            return;
+        }
+
+        // Validate date logic
+        if (startDate > endDate) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Date Range', 'Season start date must be before or equal to the end date.');
+            return;
+        }
+
+        // Business logic: Check season duration
+        const seasonDurationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        const seasonDurationWeeks = Math.round(seasonDurationDays / 7);
+
+        console.log(`[main.js] Creating ${seasonDurationDays}-day season: "${seasonName}" (${seasonDurationWeeks} weeks)`);
+
+        // Warn for unusual season lengths
+        if (seasonDurationDays < 7) {
+            const confirmShortSeason = await showModal('confirm', 'Very Short Season', 
+                `This season is only ${seasonDurationDays} day${seasonDurationDays > 1 ? 's' : ''} long. ` +
+                'Sales seasons are typically weeks or months. Continue anyway?'
+            );
+            if (!confirmShortSeason) {
+                ProgressToast.hide(0);
+                return;
+            }
+        } else if (seasonDurationDays > 365) {
+            const confirmLongSeason = await showModal('confirm', 'Very Long Season', 
+                `This season is ${seasonDurationDays} days long (over a year). ` +
+                'Consider breaking it into smaller seasonal periods. Continue anyway?'
+            );
+            if (!confirmLongSeason) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 3: Check for Season Name Conflicts
+        ProgressToast.updateProgress('Checking for duplicate seasons...', 55, 'Step 3 of 5');
+
+        const existingSeason = masterData.seasons.find(s => 
+            s.seasonName.toLowerCase() === seasonName.toLowerCase()
+        );
+
+        if (existingSeason) {
+            const overwriteConfirm = await showModal('confirm', 'Season Name Exists', 
+                `A season named "${existingSeason.seasonName}" already exists. ` +
+                'Do you want to create another season with the same name?'
+            );
+            if (!overwriteConfirm) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 4: Prepare Season Data
+        ProgressToast.updateProgress('Preparing season data...', 70, 'Step 4 of 5');
+
+        const seasonData = {
+            seasonName: seasonName,
+            startDate: startDate,
+            endDate: endDate
+        };
+
+        // Step 5: Save to Database
+        ProgressToast.updateProgress('Saving sales season to database...', 90, 'Step 5 of 5');
+
         await addSeason(seasonData, user);
-        await showModal('success', 'Success', 'Season has been added successfully.');
-        e.target.reset();
+
+        // Success Completion
+        ProgressToast.updateProgress('Sales season created successfully!', 100, 'Completed');
+        ProgressToast.showSuccess(`"${seasonName}" has been added to sales seasons!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Sales Season Added', 
+                `Sales season "${seasonName}" has been created successfully!\n\n` +
+                `• Duration: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}\n` +
+                `• Season Length: ${seasonDurationDays} days (${seasonDurationWeeks} weeks)\n` +
+                `• Status: Active and ready for events\n\n` +
+                `You can now:\n` +
+                `✓ Create sales events within this season\n` +
+                `✓ Build sales catalogues for this season\n` +
+                `✓ Plan consignment campaigns`
+            );
+            
+            // Reset form for next season
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error adding season:", error);
-        await showModal('error', 'Error', 'Failed to add the Season. Please try again.');
+        console.error("Error adding sales season:", error);
+        
+        ProgressToast.showError(`Failed to add sales season: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Season Failed', 
+                'Failed to add the sales season. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Season name is unique and descriptive\n' +
+                '• Date range is valid and reasonable\n' +
+                '• You have permission to create seasons'
+            );
+        }, 2000);
     }
 }
 
+
+/**
+ * Handles sales event form submission with validation, date verification, and progress tracking.
+ * 
+ * Creates new sales events linked to parent seasons for organizing sales activities
+ * and promotional campaigns. Validates date ranges, ensures proper season association,
+ * and provides comprehensive progress feedback during the creation process.
+ * 
+ * BUSINESS CONTEXT:
+ * - Sales events belong to sales seasons (Christmas, Easter, etc.)
+ * - Events define specific time periods within broader seasonal campaigns
+ * - Used for organizing consignment requests and promotional activities
+ * - Supports sales reporting and performance tracking by event
+ * 
+ * VALIDATION RULES:
+ * - Event name: Required, non-empty string
+ * - Parent season: Must select existing season from dropdown
+ * - Date range: Start date must be before or equal to end date
+ * - Date format: Must be valid date inputs
+ * 
+ * @param {Event} e - Form submission event from add-event-form
+ * @throws {Error} When validation fails, date logic errors, or Firestore operations fail
+ * @since 1.0.0
+ * @see addSalesEvent() - API function for creating sales event records
+ * @see masterData.seasons - Used for parent season validation and display
+ */
 async function handleEventSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const eventName = document.getElementById('eventName-input').value.trim();
-    const parentSeasonData = JSON.parse(document.getElementById('parentSeason-select').value);
-    const startDate = document.getElementById('eventStartDate-input').value;
-    const endDate = document.getElementById('eventEndDate-input').value;
 
-    if (!user || !eventName || !parentSeasonData || !startDate || !endDate) return;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
 
-    const eventData = {
-        eventName,
-        seasonId: parentSeasonData.seasonId,
-        seasonName: parentSeasonData.seasonName,
-        eventStartDate: new Date(startDate),
-        eventEndDate: new Date(endDate)
-    };
+    // ✅ START: Progress toast for sales event creation
+    ProgressToast.show('Adding Sales Event', 'info');
 
     try {
+        // Step 1: Basic Field Validation
+        ProgressToast.updateProgress('Validating event information...', 20, 'Step 1 of 5');
+
+        const eventName = document.getElementById('eventName-input').value.trim();
+        const parentSeasonSelect = document.getElementById('parentSeason-select');
+        const startDateInput = document.getElementById('eventStartDate-input').value;
+        const endDateInput = document.getElementById('eventEndDate-input').value;
+
+        if (!eventName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Event Name', 'Please enter a sales event name.');
+            return;
+        }
+
+        if (!parentSeasonSelect.value) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Parent Season', 'Please select a parent season for this event.');
+            return;
+        }
+
+        if (!startDateInput || !endDateInput) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Dates', 'Please select both start and end dates for the event.');
+            return;
+        }
+
+        // Step 2: Date Validation
+        ProgressToast.updateProgress('Validating event dates...', 40, 'Step 2 of 5');
+
+        const startDate = new Date(startDateInput);
+        const endDate = new Date(endDateInput);
+
+        // Validate date objects are valid
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Dates', 'Please enter valid start and end dates.');
+            return;
+        }
+
+        // Validate date logic
+        if (startDate > endDate) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Date Range', 'Event start date must be before or equal to the end date.');
+            return;
+        }
+
+        // Check if dates are too far in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset to start of day
+        
+        if (endDate < today) {
+            const confirmPastEvent = await showModal('confirm', 'Past Event Date', 
+                'The event end date is in the past. Are you sure you want to create this historical event?'
+            );
+            if (!confirmPastEvent) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 3: Process Parent Season Data
+        ProgressToast.updateProgress('Processing parent season information...', 60, 'Step 3 of 5');
+
+        let parentSeasonData;
+        try {
+            parentSeasonData = JSON.parse(parentSeasonSelect.value);
+        } catch (parseError) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Data Error', 'Invalid parent season data. Please refresh the page and try again.');
+            return;
+        }
+
+        if (!parentSeasonData.seasonId || !parentSeasonData.seasonName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Season', 'Parent season data is incomplete. Please select a different season.');
+            return;
+        }
+
+        // Step 4: Prepare Event Data
+        ProgressToast.updateProgress('Preparing event data...', 75, 'Step 4 of 5');
+
+        const eventData = {
+            eventName: eventName,
+            seasonId: parentSeasonData.seasonId,
+            seasonName: parentSeasonData.seasonName,
+            eventStartDate: startDate,
+            eventEndDate: endDate
+        };
+
+        const eventDuration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        console.log(`[main.js] Creating ${eventDuration}-day event: "${eventName}" in season "${parentSeasonData.seasonName}"`);
+
+        // Step 5: Save to Database
+        ProgressToast.updateProgress('Saving sales event to database...', 90, 'Step 5 of 5');
+
         await addSalesEvent(eventData, user);
-        await showModal('success', 'Success', 'Sales Event has been added successfully.');
-        e.target.reset();
+
+        // Success Completion
+        ProgressToast.updateProgress('Sales event created successfully!', 100, 'Completed');
+        ProgressToast.showSuccess(`"${eventName}" has been added to sales events!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Sales Event Added', 
+                `Sales event "${eventName}" has been created successfully!\n\n` +
+                `• Parent Season: ${parentSeasonData.seasonName}\n` +
+                `• Duration: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}\n` +
+                `• Event Length: ${eventDuration} day${eventDuration > 1 ? 's' : ''}\n\n` +
+                `This event is now available for consignment requests and sales tracking.`
+            );
+            
+            // Reset form for next event
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error adding event:", error);
-        await showModal('error', 'Error', 'Failed to add the Sales Event. Please try again.');
+        console.error("Error adding sales event:", error);
+        
+        ProgressToast.showError(`Failed to add sales event: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Event Failed', 
+                'Failed to add the sales event. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Parent season is properly selected\n' +
+                '• Date range is valid\n' +
+                '• You have permission to create events'
+            );
+        }, 2000);
     }
 }
 
