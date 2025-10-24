@@ -4460,15 +4460,18 @@ const salesCartGridOptions = {
 
 const addProductModalGridOptions = {
     getRowId: params => params.data.id,
-    theme: 'alpine',
+    theme: 'legacy',
     columnDefs: [
         { field: "itemName", 
             headerName: "Product Name", 
-            flex: 1, filter: 'agTextColumnFilter', 
-            floatingFilter: true,
-            suppressMenu: true
+            flex: 1, 
+            filter: 'agTextColumnFilter', 
+            floatingFilter: true, // Enable floating filter
+            suppressMenu: true,
+            suppressHeaderFilterButton: true
         },
-        { field: "inventoryCount", headerName: "Stock", width: 100,filter:false },
+        { field: "inventoryCount", headerName: "Stock", width: 100,filter:false,floatingFilter: true, // Enable floating filter
+            suppressMenu: true },
         {
             headerName: "Add",
             width: 80,
