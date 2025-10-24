@@ -2894,7 +2894,6 @@ async function handleMakePaymentSubmit(e) {
 }
 
 
-
 /**
  * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
  * 
@@ -2956,7 +2955,8 @@ async function handleNewSaleSubmit(e) {
         const customerName = document.getElementById('sale-customer-name').value.trim();
         const customerEmail = document.getElementById('sale-customer-email').value.trim();
         const customerPhone = document.getElementById('sale-customer-phone').value.trim();
-        const voucherNumber = document.getElementById('sale-voucher-number').value.trim(); // ✅ NEW FIELD
+        const voucherNumber = document.getElementById('sale-voucher-number').value.trim();
+        const selectedStore = document.getElementById('sale-store-select').value;
 
         // Validate required customer fields
         if (!customerName) {
@@ -2977,7 +2977,13 @@ async function handleNewSaleSubmit(e) {
             return;
         }
 
-        // ✅ VALIDATE: Manual Voucher Number (NEW REQUIRED FIELD)
+        if (!selectedStore) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Store', 'Please select which store location for this sale.');
+            return;
+        }
+
+        // ✅ VALIDATE: Manual Voucher Number
         if (!voucherNumber) {
             ProgressToast.hide(0);
             await showModal('error', 'Missing Voucher Number', 'Please enter a manual voucher number for record keeping.');
@@ -2991,6 +2997,16 @@ async function handleNewSaleSubmit(e) {
                 'Examples: V-001, MAN-2024-001, VOUCHER-123'
             );
             return;
+        }
+
+        // ✅ VALIDATE: Tasty Treats address requirement
+        if (selectedStore === 'Tasty Treats') {
+            const deliveryAddress = document.getElementById('sale-customer-address').value.trim();
+            if (!deliveryAddress) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Missing Delivery Address', 'Delivery address is required for Tasty Treats orders.');
+                return;
+            }
         }
 
         // Step 3: Calculate Line Items
@@ -3038,19 +3054,46 @@ async function handleNewSaleSubmit(e) {
 
         console.log(`[main.js] Sale total calculated: ${formatCurrency(grandTotal)} for voucher ${voucherNumber}`);
 
-        // Step 5: Handle Payment Processing
-        ProgressToast.updateProgress('Processing payment information...', 60, 'Step 5 of 8');
-
+        // Step 5: Handle Payment Processing (CORRECTED FOR PAY LATER)
+        const paymentType = document.getElementById('sale-payment-type').value;
         let initialPaymentData = null;
         let donationAmount = 0;
         let amountReceived = 0;
 
-        if (document.getElementById('sale-payment-type').value === 'Pay Now') {
-            amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+        if (paymentType === 'Pay Now') {
+            // ✅ PAY NOW MODE: Full payment validation
+            ProgressToast.updateProgress('Processing immediate payment...', 60, 'Pay Now Mode');
 
+            amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+            const paymentMode = document.getElementById('sale-payment-mode').value;
+            const paymentRef = document.getElementById('sale-payment-ref').value.trim();
+
+            // Validate payment fields for Pay Now
+            if (!paymentMode) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Missing Payment Mode', 'Please select how the customer is paying.');
+                return;
+            }
+
+            if (amountReceived <= 0) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Invalid Payment Amount', 'Please enter the amount received from the customer.');
+                return;
+            }
+
+            if (!paymentRef) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Missing Payment Reference', 'Please enter a reference number for the payment.');
+                return;
+            }
+
+            // Handle partial payment confirmation
             if (amountReceived < grandTotal) {
-                const proceedPartial = await showModal('confirm', 'Partial Payment', 
-                    'The amount received is less than the total. This will create a partially paid invoice. Do you want to continue?'
+                const proceedPartial = await showModal('confirm', 'Partial Payment Confirmation', 
+                    `Amount received: ${formatCurrency(amountReceived)}\n` +
+                    `Total amount: ${formatCurrency(grandTotal)}\n` +
+                    `Balance due: ${formatCurrency(grandTotal - amountReceived)}\n\n` +
+                    'This will create a partially paid invoice. Continue?'
                 );
                 if (!proceedPartial) {
                     ProgressToast.hide(0);
@@ -3058,25 +3101,42 @@ async function handleNewSaleSubmit(e) {
                 }
             }
 
-            if (!document.getElementById('sale-payment-ref').value.trim()) {
-                ProgressToast.hide(0);
-                await showModal('error', 'Missing Payment Reference', 'Please enter a Reference # for the payment.');
-                return;
-            }
-
+            // Handle overpayment/donation
             if (amountReceived > grandTotal) {
                 donationAmount = amountReceived - grandTotal;
-                console.log(`[main.js] Overpayment detected: ${formatCurrency(donationAmount)} will be recorded as donation`);
+                const confirmDonation = await showModal('confirm', 'Overpayment - Record as Donation?', 
+                    `Amount received: ${formatCurrency(amountReceived)}\n` +
+                    `Total amount: ${formatCurrency(grandTotal)}\n` +
+                    `Overpayment: ${formatCurrency(donationAmount)}\n\n` +
+                    'The extra amount will be recorded as a donation. Continue?'
+                );
+                if (!confirmDonation) {
+                    ProgressToast.hide(0);
+                    return;
+                }
+                
+                console.log(`[main.js] Overpayment confirmed as donation: ${formatCurrency(donationAmount)}`);
             }
 
             const amountToApplyToInvoice = Math.min(amountReceived, grandTotal);
 
             initialPaymentData = {
                 amountPaid: amountToApplyToInvoice,
-                paymentMode: document.getElementById('sale-payment-mode').value,
-                transactionRef: document.getElementById('sale-payment-ref').value,
-                notes: document.getElementById('sale-payment-notes').value
+                paymentMode: paymentMode,
+                transactionRef: paymentRef,
+                notes: document.getElementById('sale-payment-notes').value || ''
             };
+
+        } else {
+            // ✅ PAY LATER MODE: No payment validation needed
+            ProgressToast.updateProgress('Creating invoice for future payment...', 60, 'Pay Later Mode');
+            
+            console.log(`[main.js] Pay Later mode - creating invoice for ${formatCurrency(grandTotal)}`);
+            
+            // No payment data needed - invoice will be created with full balance due
+            initialPaymentData = null;
+            donationAmount = 0;
+            amountReceived = 0;
         }
 
         // Step 6: Prepare Final Sale Data
@@ -3084,13 +3144,13 @@ async function handleNewSaleSubmit(e) {
 
         const saleData = {
             saleDate: new Date(document.getElementById('sale-date').value),
-            store: document.getElementById('sale-store-select').value,
-            manualVoucherNumber: voucherNumber, // ✅ NEW: Include voucher number in sale data
+            store: selectedStore,
+            manualVoucherNumber: voucherNumber,
             customerInfo: {
                 name: customerName,
                 email: customerEmail,
                 phone: customerPhone,
-                address: document.getElementById('sale-store-select').value === 'Tasty Treats'
+                address: selectedStore === 'Tasty Treats'
                     ? document.getElementById('sale-customer-address').value
                     : null
             },
@@ -3104,38 +3164,52 @@ async function handleNewSaleSubmit(e) {
                 totalTax: finalTotalTax,
                 totalAmount: grandTotal,
                 amountTendered: amountReceived,
-                changeDue: 0
+                changeDue: Math.max(0, amountReceived - grandTotal) // Only positive change
             }
         };
 
         // Step 7: Process Transaction
-        ProgressToast.updateProgress('Creating sale and updating inventory...', 90, 'Step 7 of 8');
+        ProgressToast.updateProgress(
+            paymentType === 'Pay Now' ? 'Processing payment and updating inventory...' : 'Creating invoice and updating inventory...', 
+            90, 
+            'Step 7 of 8'
+        );
 
         await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
 
         // Step 8: Success Completion
-        ProgressToast.updateProgress('Sale completed successfully!', 100, 'Step 8 of 8');
-        ProgressToast.showSuccess(`Sale completed for ${customerName} - Voucher ${voucherNumber}!`);
+        ProgressToast.updateProgress('Transaction completed successfully!', 100, 'Step 8 of 8');
+        
+        const successMessage = paymentType === 'Pay Now' 
+            ? `Sale completed for ${customerName} - Voucher ${voucherNumber}!`
+            : `Invoice created for ${customerName} - Voucher ${voucherNumber}!`;
+            
+        ProgressToast.showSuccess(successMessage);
 
         setTimeout(async () => {
             ProgressToast.hide(800);
             
             // Enhanced success message with transaction summary
-            const paymentStatus = amountReceived === 0 ? 'Invoice Created' : 
+            const paymentStatus = paymentType === 'Pay Later' ? 'Invoice Created (Payment Due)' :
                                  amountReceived >= grandTotal ? 'Paid in Full' : 'Partially Paid';
             
-            await showModal('success', 'Sale Completed Successfully', 
+            const transactionType = paymentType === 'Pay Later' ? 'Invoice Created' : 'Sale Completed';
+            
+            await showModal('success', `${transactionType} Successfully`, 
                 `Transaction has been processed successfully!\n\n` +
                 `• Customer: ${customerName}\n` +
                 `• Voucher Number: ${voucherNumber}\n` +
-                `• Store: ${saleData.store}\n` +
+                `• Store: ${selectedStore}\n` +
                 `• Total Amount: ${formatCurrency(grandTotal)}\n` +
+                `• Payment Type: ${paymentType}\n` +
                 `• Payment Status: ${paymentStatus}\n` +
-                `• Items Sold: ${finalLineItems.length} different products\n` +
+                `• Items: ${finalLineItems.length} different products\n` +
                 `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)}\n` : ''}` +
+                `${paymentType === 'Pay Later' ? `• Balance Due: ${formatCurrency(grandTotal)}\n` : ''}` +
                 `\n✓ Inventory updated automatically\n` +
                 `✓ Customer record created\n` +
-                `✓ Financial records updated`
+                `✓ Financial records updated\n` +
+                `${paymentType === 'Pay Later' ? '✓ Invoice ready for future payment collection' : '✓ Transaction completed and closed'}`
             );
             
             // Refresh sales view to show new transaction
@@ -3146,23 +3220,23 @@ async function handleNewSaleSubmit(e) {
     } catch (error) {
         console.error("Error completing sale:", error);
         
-        ProgressToast.showError(`Sale processing failed: ${error.message || 'Transaction error'}`);
+        const errorContext = paymentType === 'Pay Later' ? 'invoice creation' : 'sale processing';
+        ProgressToast.showError(`Transaction failed: ${error.message || `${errorContext} error`}`);
         
         setTimeout(async () => {
-            await showModal('error', 'Sale Processing Failed', 
-                `Sale transaction could not be completed.\n\n` +
+            await showModal('error', 'Transaction Processing Failed', 
+                `${paymentType === 'Pay Later' ? 'Invoice creation' : 'Sale transaction'} could not be completed.\n\n` +
                 `Error: ${error.message}\n\n` +
                 `Common causes:\n` +
                 `• Insufficient inventory for requested quantities\n` +
                 `• Network connection interrupted during processing\n` +
-                `• Invalid customer or payment information\n` +
+                `• Invalid customer or ${paymentType === 'Pay Now' ? 'payment ' : ''}information\n` +
                 `• Database permission or access issues\n\n` +
                 `Please verify all information and try again.`
             );
         }, 2000);
     }
 }
-
 
 
 async function handleRecordSalePaymentSubmit(e) {
@@ -4369,6 +4443,9 @@ function setupRequestCatalogueListener() {
     });
 }
 
+/**
+ * Sets up payment type change listener to manage required fields
+ */
 function setupSalePaymentTypeListener() {
     const salePaymentTypeSelect = document.getElementById('sale-payment-type');
     if (!salePaymentTypeSelect) return;
@@ -4376,7 +4453,40 @@ function setupSalePaymentTypeListener() {
     salePaymentTypeSelect.addEventListener('change', (e) => {
         const payNowContainer = document.getElementById('sale-pay-now-container');
         const showPayNow = e.target.value === 'Pay Now';
+        
+        // Show/hide payment container
         payNowContainer.classList.toggle('hidden', !showPayNow);
+        
+        // ✅ CRITICAL: Update required attributes based on payment type
+        const paymentModeSelect = document.getElementById('sale-payment-mode');
+        const amountReceivedInput = document.getElementById('sale-amount-received');
+        const paymentRefInput = document.getElementById('sale-payment-ref');
+        
+        if (showPayNow) {
+            // Pay Now: Make payment fields required
+            if (paymentModeSelect) paymentModeSelect.required = true;
+            if (amountReceivedInput) amountReceivedInput.required = true;
+            if (paymentRefInput) paymentRefInput.required = true;
+            
+            console.log('[main.js] Payment fields set to required (Pay Now mode)');
+        } else {
+            // Pay Later: Remove required from payment fields  
+            if (paymentModeSelect) paymentModeSelect.required = false;
+            if (amountReceivedInput) amountReceivedInput.required = false;
+            if (paymentRefInput) paymentRefInput.required = false;
+            
+            console.log('[main.js] Payment fields set to optional (Pay Later mode)');
+        }
+
+        // Update payment status display
+        const paymentStatusDisplay = document.getElementById('payment-status-display');
+        if (paymentStatusDisplay) {
+            if (showPayNow) {
+                paymentStatusDisplay.innerHTML = '<span class="text-blue-600">Ready for payment processing</span>';
+            } else {
+                paymentStatusDisplay.innerHTML = '<span class="text-orange-600">Invoice will be created</span>';
+            }
+        }
     });
 }
 
