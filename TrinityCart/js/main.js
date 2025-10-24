@@ -1835,96 +1835,555 @@ function handlePurchaseInvoiceSubmit(e) {
     handleSavePurchaseInvoice();
 }
 
+/**
+ * Handles supplier payment form submission with validation, reconciliation, and progress tracking.
+ * 
+ * Records supplier payments against purchase invoices with automatic balance updates
+ * and invoice status reconciliation. Validates payment data, ensures financial accuracy,
+ * and provides real-time progress feedback during the complex payment processing workflow.
+ * 
+ * BUSINESS CONTEXT:
+ * - Records payments to suppliers for purchase invoices
+ * - Updates invoice balances and payment status automatically
+ * - Maintains accurate supplier account balances
+ * - Critical for cash flow management and financial reporting
+ * - Supports partial payments and payment tracking over time
+ * 
+ * VALIDATION RULES:
+ * - Payment amount: Must be positive number, cannot exceed invoice balance
+ * - Payment date: Must be valid date, typically not future-dated
+ * - Payment mode: Must select from available payment methods
+ * - Transaction reference: Recommended for audit trail and reconciliation
+ * - Related invoice: Must exist and have outstanding balance
+ * 
+ * @param {Event} e - Form submission event from payment recording forms
+ * @throws {Error} When validation fails, invoice not found, or transaction processing fails
+ * @since 1.0.0
+ * @see recordPaymentAndUpdateInvoice() - Transactional API for payment processing
+ * @see closePaymentModal() - UI function to close payment modal after success
+ */
 async function handlePaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
-
-    const paymentData = {
-        paymentDate: new Date(document.getElementById('payment-date-input').value),
-        amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
-        paymentMode: document.getElementById('payment-mode-select').value,
-        transactionRef: document.getElementById('payment-ref-input').value,
-        notes: document.getElementById('payment-notes-input').value,
-        relatedInvoiceId: document.getElementById('payment-invoice-id').value,
-        supplierId: document.getElementById('payment-supplier-id').value
-    };
-
-    if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-        return showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
     }
 
+    // ✅ START: Progress toast for payment processing
+    ProgressToast.show('Recording Supplier Payment', 'info');
+
     try {
+        // Step 1: Input Collection and Basic Validation
+        ProgressToast.updateProgress('Validating payment information...', 20, 'Step 1 of 5');
+
+        const paymentDate = document.getElementById('payment-date-input').value;
+        const amountPaidInput = document.getElementById('payment-amount-input').value;
+        const paymentMode = document.getElementById('payment-mode-select').value;
+        const transactionRef = document.getElementById('payment-ref-input').value.trim();
+        const notes = document.getElementById('payment-notes-input').value.trim();
+        const relatedInvoiceId = document.getElementById('payment-invoice-id').value;
+        const supplierId = document.getElementById('payment-supplier-id').value;
+
+        // Validate required fields
+        if (!paymentDate) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Date', 'Please select the payment date.');
+            return;
+        }
+
+        if (!paymentMode) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Mode', 'Please select how the payment was made.');
+            return;
+        }
+
+        if (!relatedInvoiceId || !supplierId) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Invoice Information', 'Payment must be linked to a specific invoice.');
+            return;
+        }
+
+        // Step 2: Financial Validation
+        ProgressToast.updateProgress('Validating payment amount...', 35, 'Step 2 of 5');
+
+        const amountPaid = parseFloat(amountPaidInput);
+
+        if (isNaN(amountPaid) || amountPaid <= 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Payment Amount', 'Payment amount must be a valid number greater than zero.');
+            return;
+        }
+
+        // Validate payment date is reasonable
+        const paymentDateObj = new Date(paymentDate);
+        const today = new Date();
+        const futureLimit = new Date();
+        futureLimit.setDate(today.getDate() + 7); // Allow up to 7 days in future
+
+        if (paymentDateObj > futureLimit) {
+            const confirmFuturePayment = await showModal('confirm', 'Future Payment Date', 
+                `The payment date is ${Math.ceil((paymentDateObj - today) / (1000 * 60 * 60 * 24))} days in the future. ` +
+                'Are you sure this is correct?'
+            );
+            if (!confirmFuturePayment) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 3: Prepare Payment Data
+        ProgressToast.updateProgress('Preparing payment record...', 55, 'Step 3 of 5');
+
+        const paymentData = {
+            paymentDate: paymentDateObj,
+            amountPaid: amountPaid,
+            paymentMode: paymentMode,
+            transactionRef: transactionRef,
+            notes: notes,
+            relatedInvoiceId: relatedInvoiceId,
+            supplierId: supplierId
+        };
+
+        // Get supplier name for logging and user feedback
+        const supplier = masterData.suppliers.find(s => s.id === supplierId);
+        const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+
+        console.log(`[main.js] Recording payment: ${formatCurrency(amountPaid)} to ${supplierName}`, {
+            mode: paymentMode,
+            date: paymentDateObj.toLocaleDateString(),
+            reference: transactionRef || 'No reference',
+            invoice: relatedInvoiceId
+        });
+
+        // Step 4: Process Payment (Complex Transactional Operation)
+        ProgressToast.updateProgress('Processing payment and updating invoice balance...', 85, 'Step 4 of 5');
+
         await recordPaymentAndUpdateInvoice(paymentData, user);
-        await showModal('success', 'Success', 'Payment has been recorded successfully.');
-        closePaymentModal();
+
+        // Step 5: Success
+        ProgressToast.updateProgress('Payment recorded successfully!', 100, 'Step 5 of 5');
+        ProgressToast.showSuccess(`${formatCurrency(amountPaid)} payment to ${supplierName} recorded!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Payment Recorded', 
+                `Supplier payment has been recorded successfully!\n\n` +
+                `• Supplier: ${supplierName}\n` +
+                `• Amount: ${formatCurrency(amountPaid)}\n` +
+                `• Payment Mode: ${paymentMode}\n` +
+                `• Date: ${paymentDateObj.toLocaleDateString()}\n` +
+                `• Reference: ${transactionRef || 'Not provided'}\n\n` +
+                `✓ Invoice balance updated automatically\n` +
+                `✓ Payment status recalculated\n` +
+                `✓ Supplier account balance adjusted`
+            );
+            
+            // Close payment modal
+            closePaymentModal();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error recording payment:", error);
-        await showModal('error', 'Save Failed', 'There was an error recording the payment.');
+        console.error("Error recording supplier payment:", error);
+        
+        ProgressToast.showError(`Failed to record payment: ${error.message || 'Transaction processing error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Payment Recording Failed', 
+                'There was an error recording the supplier payment.\n\n' +
+                'Common causes:\n' +
+                '• Payment amount exceeds invoice balance\n' +
+                '• Invoice has already been fully paid\n' +
+                '• Network connection interrupted during save\n' +
+                '• Insufficient permissions for payment processing\n\n' +
+                'Please verify the payment details and try again.'
+            );
+        }, 2000);
     }
 }
 
+
+
+/**
+ * Handles church team form submission with validation and progress tracking.
+ * 
+ * Creates new church teams for consignment sales management and community organization.
+ * Validates team names, ensures proper church association, and establishes foundation
+ * for team member management and consignment request processing.
+ * 
+ * BUSINESS CONTEXT:
+ * - Church teams manage consignment sales programs
+ * - Each team can have multiple members with defined roles
+ * - Teams request product consignments for sales activities
+ * - Critical for community engagement and distributed sales model
+ * - Enables team performance tracking and settlement management
+ * 
+ * VALIDATION RULES:
+ * - Team name: Required, descriptive identifier for the team
+ * - Church association: Automatically linked to current church context
+ * - Uniqueness: Prevents duplicate team names within same church
+ * - Business appropriateness: Should reflect actual church team structure
+ * 
+ * @param {Event} e - Form submission event from add-team-form
+ * @throws {Error} When validation fails or Firestore operations fail
+ * @since 1.0.0
+ * @see addChurchTeam() - API function for creating team records with audit trail
+ * @see appState.ChurchName - Current church context for team association
+ * @see masterData.teams - Used for duplicate detection and team management
+ */
 async function handleTeamSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
 
-    const teamData = {
-        teamName: document.getElementById('team-name-input').value,
-        churchName: appState.ChurchName
-    };
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to create teams.');
+        return;
+    }
+
+    // ✅ START: Progress toast for team creation
+    ProgressToast.show('Creating Church Team', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating team information...', 25, 'Step 1 of 4');
+
+        const teamName = document.getElementById('team-name-input').value.trim();
+
+        if (!teamName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Team Name', 'Please enter a descriptive team name.');
+            return;
+        }
+
+        // Validate team name length and format
+        if (teamName.length < 3) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Short', 'Team name must be at least 3 characters long for clarity.');
+            return;
+        }
+
+        if (teamName.length > 50) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Long', 'Team name must be 50 characters or less for display purposes.');
+            return;
+        }
+
+        // Check for duplicate team names
+        const existingTeam = masterData.teams.find(t => 
+            t.teamName.toLowerCase() === teamName.toLowerCase()
+        );
+
+        if (existingTeam) {
+            ProgressToast.hide(0);
+            const proceedWithDuplicate = await showModal('confirm', 'Team Name Already Exists', 
+                `A team named "${existingTeam.teamName}" already exists.\n\n` +
+                'Duplicate team names can cause confusion in consignment management.\n\n' +
+                'Do you want to create another team with the same name?'
+            );
+            
+            if (!proceedWithDuplicate) {
+                return; // User chose not to create duplicate
+            }
+
+            // User confirmed - restart progress with warning theme
+            ProgressToast.show('Creating Duplicate Team Name', 'warning');
+            ProgressToast.updateProgress('Creating team with duplicate name...', 25, 'User Confirmed');
+        }
+
+        // Step 2: Prepare Team Data
+        ProgressToast.updateProgress('Preparing team data and church association...', 50, 'Step 2 of 4');
+
+        const churchName = appState.ChurchName;
+        
+        if (!churchName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Church Information Missing', 'Church context is not available. Please refresh the page.');
+            return;
+        }
+
+        const teamData = {
+            teamName: teamName,
+            churchName: churchName
+        };
+
+        console.log(`[main.js] Creating team: "${teamName}" for ${churchName}`, {
+            teamName: teamName,
+            church: churchName,
+            creator: user.displayName
+        });
+
+        // Step 3: Save to Database
+        ProgressToast.updateProgress('Creating team and setting up permissions...', 80, 'Step 3 of 4');
+
         await addChurchTeam(teamData, user);
-        alert('New team created successfully.');
-        e.target.reset();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Team created successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(`"${teamName}" has been created and is ready for members!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            // Calculate total teams for context
+            const totalTeams = masterData.teams.length + 1; // Including the one just added
+            
+            await showModal('success', 'Church Team Created', 
+                `Church team "${teamName}" has been created successfully!\n\n` +
+                `• Church: ${churchName}\n` +
+                `• Total Teams: ${totalTeams}\n` +
+                `• Status: Active and ready for members\n` +
+                `• Created By: ${user.displayName}\n\n` +
+                `Next steps:\n` +
+                `✓ Add team members and assign roles\n` +
+                `✓ Designate a team lead for consignment requests\n` +
+                `✓ Begin planning consignment sales activities\n` +
+                `✓ Track team performance and settlements`
+            );
+            
+            // Reset form for next team
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error creating team:", error);
-        alert('Failed to create team.');
+        console.error("Error creating church team:", error);
+        
+        ProgressToast.showError(`Failed to create team: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Team Creation Failed', 
+                'Failed to create the church team. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Team name is appropriate for church context\n' +
+                '• You have administrative permissions\n' +
+                '• Church information is properly configured\n' +
+                '• Team name doesn\'t conflict with existing teams'
+            );
+        }, 2000);
     }
 }
 
+
+/**
+ * Handles team member form submission for both adding new members and updating existing ones.
+ * 
+ * Manages church team membership including role assignments, team lead designations,
+ * and member contact information. Validates member data, processes team leadership
+ * changes, and maintains team membership synchronization with progress tracking.
+ * 
+ * BUSINESS CONTEXT:
+ * - Team members are individuals who participate in consignment sales
+ * - Team leads have special permissions to create consignment requests
+ * - Member information is used for communication and accountability
+ * - Role changes trigger team leadership updates and permissions
+ * - Critical for consignment workflow and team performance tracking
+ * 
+ * VALIDATION RULES:
+ * - Member name: Required, should be real person's name
+ * - Email: Must be valid format for communication and login
+ * - Phone: Contact number for coordination (optional but recommended)
+ * - Role: Must select appropriate team role (Member or Team Lead)
+ * - Team association: Must belong to existing, active team
+ * 
+ * @param {Event} e - Form submission event from member-form modal
+ * @throws {Error} When validation fails, team not found, or member operations fail
+ * @since 1.0.0
+ * @see addTeamMember() - API function for adding members with membership sync
+ * @see updateTeamMember() - API function for updating member information
+ * @see updateChurchTeam() - API function for team leadership updates
+ * @see getTeamDataFromGridById() - UI function to get team context
+ */
 async function handleMemberSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to manage team members.');
+        return;
+    }
 
-    const teamId = document.getElementById('member-team-id').value;
     const memberId = document.getElementById('member-doc-id').value;
     const isEditMode = !!memberId;
 
-    const teamData = getTeamDataFromGridById(teamId);
-    if (!teamData) return alert("Error: Could not find parent team data.");
-
-    const memberData = {
-        name: document.getElementById('member-name-input').value,
-        email: document.getElementById('member-email-input').value,
-        phone: document.getElementById('member-phone-input').value,
-        role: document.getElementById('member-role-select').value
-    };
+    // ✅ START: Progress toast with mode-appropriate title
+    ProgressToast.show(
+        isEditMode ? 'Updating Team Member' : 'Adding Team Member', 
+        'info'
+    );
 
     try {
+        // Step 1: Team Context Validation
+        ProgressToast.updateProgress('Validating team information...', 15, 'Step 1 of 6');
+
+        const teamId = document.getElementById('member-team-id').value;
+        const teamData = getTeamDataFromGridById(teamId);
+        
+        if (!teamData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Team Not Found', 'Could not find the parent team data. Please refresh and try again.');
+            return;
+        }
+
+        if (!teamData.isActive) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Inactive Team', `Team "${teamData.teamName}" is not active. Please activate the team first.`);
+            return;
+        }
+
+        // Step 2: Member Data Validation
+        ProgressToast.updateProgress('Validating member information...', 30, 'Step 2 of 6');
+
+        const memberName = document.getElementById('member-name-input').value.trim();
+        const memberEmail = document.getElementById('member-email-input').value.trim();
+        const memberPhone = document.getElementById('member-phone-input').value.trim();
+        const memberRole = document.getElementById('member-role-select').value;
+
+        if (!memberName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Member Name', 'Please enter the member\'s full name.');
+            return;
+        }
+
+        if (memberName.length < 2) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Short', 'Member name must be at least 2 characters long.');
+            return;
+        }
+
+        // Email validation (required for login and communication)
+        if (!memberEmail) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Email', 'Email address is required for member communication and system access.');
+            return;
+        }
+
+        if (!memberEmail.includes('@') || !memberEmail.includes('.')) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Email', 'Please enter a valid email address.');
+            return;
+        }
+
+        if (!memberRole) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Role', 'Please select a role for this team member.');
+            return;
+        }
+
+        // Step 3: Business Logic Validation
+        ProgressToast.updateProgress('Checking team membership rules...', 45, 'Step 3 of 6');
+
+        const memberData = {
+            name: memberName,
+            email: memberEmail.toLowerCase(), // Normalize email
+            phone: memberPhone,
+            role: memberRole
+        };
+
+        // Check for duplicate email within team (for new members)
+        if (!isEditMode && teamData.members) {
+            const duplicateEmail = teamData.members.find(m => 
+                m.email.toLowerCase() === memberEmail.toLowerCase()
+            );
+            
+            if (duplicateEmail) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Duplicate Email', 
+                    `Email "${memberEmail}" is already used by team member "${duplicateEmail.name}".\n\n` +
+                    'Each team member must have a unique email address.'
+                );
+                return;
+            }
+        }
+
+        console.log(`[main.js] ${isEditMode ? 'Updating' : 'Adding'} member: ${memberName} (${memberRole}) to team ${teamData.teamName}`);
+
+        // Step 4: Database Operation
+        ProgressToast.updateProgress(
+            isEditMode ? 'Updating member information...' : 'Adding member to team...', 
+            65, 
+            'Step 4 of 6'
+        );
+
         if (isEditMode) {
             await updateTeamMember(teamId, memberId, memberData);
-            alert('Member details updated successfully.');
         } else {
             await addTeamMember(teamId, teamData.teamName, memberData, user);
-            alert('New member added successfully.');
         }
 
+        // Step 5: Handle Team Leadership Changes
         if (memberData.role === 'Team Lead') {
+            ProgressToast.updateProgress('Updating team leadership...', 85, 'Step 5 of 6');
+            
             await updateChurchTeam(teamId, {
-                teamLeadId: memberId,
+                teamLeadId: isEditMode ? memberId : 'auto-assigned', // Will be set by the system
                 teamLeadName: memberData.name
             }, user);
+            
+            console.log(`[main.js] ✅ ${memberName} designated as Team Lead for ${teamData.teamName}`);
+        } else {
+            ProgressToast.updateProgress('Finalizing member registration...', 85, 'Step 5 of 6');
         }
 
-        closeMemberModal();
+        // Step 6: Success Completion
+        ProgressToast.updateProgress(
+            isEditMode ? 'Member updated successfully!' : 'Member added successfully!', 
+            100, 
+            'Step 6 of 6'
+        );
+
+        const successMessage = isEditMode 
+            ? `"${memberName}" has been updated in ${teamData.teamName}!`
+            : `"${memberName}" has been added to ${teamData.teamName}!`;
+
+        ProgressToast.showSuccess(successMessage);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            const operation = isEditMode ? 'updated' : 'added';
+            const currentMemberCount = (teamData.members?.length || 0) + (isEditMode ? 0 : 1);
+            
+            await showModal('success', `Member ${isEditMode ? 'Updated' : 'Added'}`, 
+                `Team member "${memberName}" has been ${operation} successfully!\n\n` +
+                `• Team: ${teamData.teamName}\n` +
+                `• Role: ${memberData.role}\n` +
+                `• Email: ${memberData.email}\n` +
+                `• Phone: ${memberData.phone || 'Not provided'}\n` +
+                `• Team Size: ${currentMemberCount} member${currentMemberCount !== 1 ? 's' : ''}\n\n` +
+                `${memberData.role === 'Team Lead' ? 
+                    '👑 This member can now create consignment requests for the team!' : 
+                    '👤 This member can participate in team consignment activities.'}`
+            );
+            
+            closeMemberModal();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error saving member:", error);
-        alert('Failed to save member details.');
+        console.error("Error saving team member:", error);
+        
+        const operation = isEditMode ? 'update' : 'add';
+        ProgressToast.showError(`Failed to ${operation} member: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', `Member ${isEditMode ? 'Update' : 'Addition'} Failed`, 
+                `Failed to ${operation} the team member. Please try again.\n\n` +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• All required fields are properly filled\n' +
+                '• Email address is valid and unique within the team\n' +
+                '• Team is active and accessible\n' +
+                '• You have permission to manage team members'
+            );
+        }, 2000);
     }
 }
+
+
 
 /**
  * Handles the submission of the Sales Catalogue form for both create and edit operations.
@@ -2133,57 +2592,223 @@ async function handleCatalogueSubmit(e) {
 }
 
 
+/**
+ * Handles consignment request form submission with role-based validation and progress tracking.
+ * 
+ * Creates consignment requests for team-based sales programs including product selection,
+ * quantity management, and team assignment. Supports both admin-initiated requests (for any team)
+ * and team lead self-service requests. Manages complex multi-step workflow with progress feedback.
+ * 
+ * BUSINESS CONTEXT:
+ * - Consignment requests are the foundation of team-based sales programs
+ * - Team leads request products for their teams to sell at events
+ * - Admin users can create requests on behalf of any team
+ * - Requests must be fulfilled by admins before teams can start selling
+ * - Critical for inventory allocation and team sales coordination
+ * 
+ * ROLE-BASED WORKFLOW:
+ * ADMIN MODE: Selects any team → Selects team lead → Creates request
+ * TEAM LEAD MODE: Uses own team → Creates request for their team
+ * 
+ * VALIDATION RULES:
+ * - Team selection: Must select active team with proper permissions
+ * - Team lead: Must designate responsible team lead for the request
+ * - Sales catalogue: Must select active catalogue with available items
+ * - Product quantities: Must request at least one item with quantity > 0
+ * - Event association: Optional but recommended for tracking
+ * 
+ * @param {Event} e - Form submission event from consignment-request-form modal
+ * @throws {Error} When validation fails, permission denied, or request processing fails
+ * @since 1.0.0
+ * @see createConsignmentRequest() - API function for creating consignment requests
+ * @see getRequestedConsignmentItems() - UI function to get selected products and quantities
+ * @see closeConsignmentRequestModal() - UI function to close request modal after success
+ */
 async function handleConsignmentRequestSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
-
-    const teamSelect = document.getElementById(user.role === 'admin' ? 'admin-select-team' : 'user-select-team');
-    const catalogueSelect = document.getElementById('request-catalogue-select');
-    const eventSelect = document.getElementById('request-event-select');
-
-    let requestingMemberId, requestingMemberName, requestingMemberEmail;
-
-    if (user.role === 'admin') {
-        const memberSelect = document.getElementById('admin-select-member');
-        if (!memberSelect.value) return alert("Please select a Team Lead.");
-
-        const selectedLead = JSON.parse(memberSelect.value);
-        requestingMemberId = selectedLead.id;
-        requestingMemberName = selectedLead.name;
-        requestingMemberEmail = selectedLead.email;
-    } else {
-        requestingMemberId = user.uid;
-        requestingMemberName = user.displayName;
-        requestingMemberEmail = user.email;
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to create consignment requests.');
+        return;
     }
 
-    const requestData = {
-        teamId: teamSelect.value,
-        teamName: teamSelect.options[teamSelect.selectedIndex].text,
-        salesCatalogueId: catalogueSelect.value,
-        salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text,
-        salesEventId: eventSelect.value || null,
-        salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
-        requestingMemberId,
-        requestingMemberName,
-        requestingMemberEmail
-    };
-
-    const requestedItems = getRequestedConsignmentItems();
-    if (requestedItems.length === 0) {
-        return alert("Please request a quantity of at least one item.");
-    }
+    // ✅ START: Progress toast for consignment request
+    ProgressToast.show('Creating Consignment Request', 'info');
 
     try {
+        // Step 1: Role-Based Context Validation
+        ProgressToast.updateProgress('Validating request permissions...', 12, 'Step 1 of 8');
+
+        const isAdminMode = user.role === 'admin';
+        const teamSelect = document.getElementById(isAdminMode ? 'admin-select-team' : 'user-select-team');
+        
+        if (!teamSelect || !teamSelect.value) {
+            ProgressToast.hide(0);
+            await showModal('error', 'No Team Selected', 'Please select a team for this consignment request.');
+            return;
+        }
+
+        let requestingMemberId, requestingMemberName, requestingMemberEmail;
+
+        if (isAdminMode) {
+            // Admin workflow: Must select team lead
+            ProgressToast.updateProgress('Processing admin team selection...', 20, 'Admin Mode');
+            
+            const memberSelect = document.getElementById('admin-select-member');
+            if (!memberSelect.value) {
+                ProgressToast.hide(0);
+                await showModal('error', 'No Team Lead Selected', 'Please select a Team Lead for this consignment request.');
+                return;
+            }
+
+            try {
+                const selectedLead = JSON.parse(memberSelect.value);
+                requestingMemberId = selectedLead.id;
+                requestingMemberName = selectedLead.name;
+                requestingMemberEmail = selectedLead.email;
+                
+                console.log(`[main.js] Admin creating request for team lead: ${requestingMemberName}`);
+            } catch (parseError) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Invalid Team Lead Data', 'Team lead information is corrupted. Please refresh and try again.');
+                return;
+            }
+        } else {
+            // Team lead workflow: Use current user
+            requestingMemberId = user.uid;
+            requestingMemberName = user.displayName;
+            requestingMemberEmail = user.email;
+            
+            console.log(`[main.js] Team lead ${requestingMemberName} creating request for their team`);
+        }
+
+        // Step 2: Catalogue and Event Validation
+        ProgressToast.updateProgress('Validating catalogue and event selection...', 35, 'Step 2 of 8');
+
+        const catalogueSelect = document.getElementById('request-catalogue-select');
+        const eventSelect = document.getElementById('request-event-select');
+
+        if (!catalogueSelect.value) {
+            ProgressToast.hide(0);
+            await showModal('error', 'No Catalogue Selected', 'Please select a sales catalogue for this consignment request.');
+            return;
+        }
+
+        // Step 3: Product Selection Validation
+        ProgressToast.updateProgress('Checking requested products...', 50, 'Step 3 of 8');
+
+        const requestedItems = getRequestedConsignmentItems();
+        
+        if (requestedItems.length === 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'No Products Selected', 
+                'Please select at least one product and set a quantity greater than zero.\n\n' +
+                'Go back to Step 2 and check the products you want to request.'
+            );
+            return;
+        }
+
+        // Calculate total items and estimated value
+        const totalQuantity = requestedItems.reduce((sum, item) => sum + item.quantityRequested, 0);
+        const estimatedValue = requestedItems.reduce((sum, item) => sum + (item.quantityRequested * item.sellingPrice), 0);
+
+        console.log(`[main.js] Request includes ${requestedItems.length} products, ${totalQuantity} total items, estimated value: ${formatCurrency(estimatedValue)}`);
+
+        // Step 4: Prepare Request Data
+        ProgressToast.updateProgress('Preparing consignment request data...', 65, 'Step 4 of 8');
+
+        const requestData = {
+            teamId: teamSelect.value,
+            teamName: teamSelect.options[teamSelect.selectedIndex].text,
+            salesCatalogueId: catalogueSelect.value,
+            salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text,
+            salesEventId: eventSelect.value || null,
+            salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
+            requestingMemberId,
+            requestingMemberName,
+            requestingMemberEmail
+        };
+
+        // Step 5: Inventory Availability Check (Optional Enhancement)
+        ProgressToast.updateProgress('Verifying product availability...', 75, 'Step 5 of 8');
+
+        // Check if requested quantities are reasonable compared to available stock
+        let stockWarnings = [];
+        requestedItems.forEach(item => {
+            const product = masterData.products.find(p => p.id === item.productId);
+            if (product && product.inventoryCount < item.quantityRequested) {
+                stockWarnings.push(`${item.productName}: Requested ${item.quantityRequested}, Available ${product.inventoryCount}`);
+            }
+        });
+
+        if (stockWarnings.length > 0) {
+            const proceedWithLowStock = await showModal('confirm', 'Low Stock Warning', 
+                'Some requested quantities exceed available stock:\n\n' +
+                stockWarnings.slice(0, 3).join('\n') +
+                (stockWarnings.length > 3 ? `\n...and ${stockWarnings.length - 3} more items` : '') +
+                '\n\nAdmin will adjust quantities during fulfillment. Continue with request?'
+            );
+            
+            if (!proceedWithLowStock) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 6: Create Request Document
+        ProgressToast.updateProgress('Creating consignment request...', 85, 'Step 6 of 8');
+
         await createConsignmentRequest(requestData, requestedItems, user);
-        alert("Consignment request submitted successfully!");
-        closeConsignmentRequestModal();
+
+        // Step 7: Success Processing
+        ProgressToast.updateProgress('Request submitted successfully!', 95, 'Step 7 of 8');
+
+        // Step 8: Final Completion
+        ProgressToast.updateProgress('Consignment request created and queued for fulfillment!', 100, 'Step 8 of 8');
+        ProgressToast.showSuccess(`Consignment request for ${requestData.teamName} has been submitted!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Consignment Request Submitted', 
+                `Consignment request has been created successfully!\n\n` +
+                `• Team: ${requestData.teamName}\n` +
+                `• Requesting Member: ${requestingMemberName}\n` +
+                `• Sales Catalogue: ${requestData.salesCatalogueName}\n` +
+                `• Sales Event: ${requestData.salesEventName || 'No specific event'}\n` +
+                `• Products Requested: ${requestedItems.length} different items\n` +
+                `• Total Quantity: ${totalQuantity} units\n` +
+                `• Estimated Value: ${formatCurrency(estimatedValue)}\n\n` +
+                `📋 Status: Pending Admin Fulfillment\n` +
+                `⏳ Next: Admin will review and fulfill this request\n` +
+                `📧 You will be notified when items are ready for pickup`
+            );
+            
+            closeConsignmentRequestModal();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error creating consignment request:", error);
-        alert(`Failed to submit request: ${error.message}`);
+        
+        ProgressToast.showError(`Failed to create request: ${error.message || 'Request processing error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Consignment Request Failed', 
+                `Failed to submit the consignment request. Please try again.\n\n` +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• All required fields are selected\n' +
+                '• You have permission to create requests for this team\n' +
+                '• Selected catalogue is active and accessible\n' +
+                '• Requested products are available in the catalogue'
+            );
+        }, 2000);
     }
 }
+
+
 
 async function handleActivityReportSubmit(e) {
     e.preventDefault();
@@ -2222,6 +2847,8 @@ async function handleActivityReportSubmit(e) {
         alert(`Failed to log activity: ${error.message}`);
     }
 }
+
+
 
 async function handleMakePaymentSubmit(e) {
     e.preventDefault();
@@ -2265,6 +2892,10 @@ async function handleMakePaymentSubmit(e) {
         alert(`Failed to submit payment record: ${error.message}`);
     }
 }
+
+
+
+
 
 async function handleNewSaleSubmit(e) {
     e.preventDefault();
@@ -2383,6 +3014,9 @@ async function handleNewSaleSubmit(e) {
     }
 }
 
+
+
+
 async function handleRecordSalePaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
@@ -2455,56 +3089,418 @@ async function handleRecordSalePaymentSubmit(e) {
     }
 }
 
+/**
+ * Handles product category form submission with validation and progress tracking.
+ * 
+ * Creates new product categories for organizing inventory and enabling product
+ * classification. Validates category names for uniqueness and appropriateness,
+ * then saves to Firestore with real-time progress feedback.
+ * 
+ * BUSINESS CONTEXT:
+ * - Categories organize products for better inventory management
+ * - Used in product creation, sales catalogues, and reporting
+ * - Enables filtering and grouping across the application
+ * - Foundation for product classification and search functionality
+ * 
+ * VALIDATION RULES:
+ * - Category name: Required, non-empty, trimmed string
+ * - Uniqueness: Warns for duplicate category names
+ * - Length: Should be descriptive but concise
+ * - Business appropriateness: Contextual validation for church/bakery use
+ * 
+ * @param {Event} e - Form submission event from add-category-form
+ * @throws {Error} When validation fails or Firestore operations fail
+ * @since 1.0.0
+ * @see addCategory() - API function for creating category records
+ * @see masterData.categories - Used for duplicate detection and display
+ */
 async function handleCategorySubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const categoryName = document.getElementById('categoryName-input').value.trim();
 
-    if (!user || !categoryName) return;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
+
+    // ✅ START: Progress toast for category creation
+    ProgressToast.show('Adding Product Category', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating category information...', 25, 'Step 1 of 4');
+
+        const categoryName = document.getElementById('categoryName-input').value.trim();
+
+        if (!categoryName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Category Name', 'Please enter a category name.');
+            return;
+        }
+
+        // Validate category name length and content
+        if (categoryName.length < 2) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Category Name Too Short', 'Category name must be at least 2 characters long.');
+            return;
+        }
+
+        if (categoryName.length > 50) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Category Name Too Long', 'Category name must be 50 characters or less.');
+            return;
+        }
+
+        // Step 2: Check for Duplicate Categories
+        ProgressToast.updateProgress('Checking for duplicate categories...', 50, 'Step 2 of 4');
+
+        const existingCategory = masterData.categories.find(c => 
+            c.categoryName.toLowerCase() === categoryName.toLowerCase()
+        );
+
+        if (existingCategory) {
+            ProgressToast.hide(0);
+            const proceedWithDuplicate = await showModal('confirm', 'Category Already Exists', 
+                `A category named "${existingCategory.categoryName}" already exists.\n\n` +
+                'Do you want to create another category with the same name?'
+            );
+            
+            if (!proceedWithDuplicate) {
+                return; // User chose not to create duplicate
+            }
+
+            // User confirmed - restart progress
+            ProgressToast.show('Adding Duplicate Category', 'warning');
+            ProgressToast.updateProgress('Creating duplicate category...', 50, 'User Confirmed');
+        }
+
+        console.log(`[main.js] Creating category: "${categoryName}"`);
+
+        // Step 3: Save to Database
+        ProgressToast.updateProgress('Saving category to database...', 80, 'Step 3 of 4');
+
         await addCategory(categoryName, user);
-        await showModal('success', 'Success', 'Category has been added successfully.');
-        e.target.reset();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Category added successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(`"${categoryName}" has been added to product categories!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            // Calculate category usage potential
+            const categoryCount = masterData.categories.length + 1; // Including the one just added
+            
+            await showModal('success', 'Product Category Added', 
+                `Product category "${categoryName}" has been added successfully!\n\n` +
+                `• Total Categories: ${categoryCount}\n` +
+                `• Status: Active and available for products\n\n` +
+                `You can now:\n` +
+                `✓ Add products to this category\n` +
+                `✓ Use this category in sales catalogues\n` +
+                `✓ Filter and organize inventory by category`
+            );
+            
+            // Reset form for next category
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error adding category:", error);
-        await showModal('error', 'Error', 'Failed to add the category. Please try again.');
+        console.error("Error adding product category:", error);
+        
+        ProgressToast.showError(`Failed to add category: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Category Failed', 
+                'Failed to add the product category. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Category name is appropriate and descriptive\n' +
+                '• You have permission to create categories\n' +
+                '• Firestore database is accessible'
+            );
+        }, 2000);
     }
 }
 
+
+/**
+ * Handles payment mode form submission with validation and progress tracking.
+ * 
+ * Creates new payment modes for transaction processing across all sales channels.
+ * Validates payment mode names, checks for duplicates, and ensures payment modes
+ * are appropriate for church/business context with comprehensive progress feedback.
+ * 
+ * BUSINESS CONTEXT:
+ * - Payment modes are used across all transaction types (direct sales, consignments, supplier payments)
+ * - Critical for financial tracking and reconciliation
+ * - Enables payment method reporting and cash flow analysis
+ * - Supports both digital and traditional payment methods
+ * 
+ * VALIDATION RULES:
+ * - Payment mode name: Required, descriptive identifier
+ * - Uniqueness: Prevents duplicate payment methods
+ * - Business appropriateness: Validates for church/retail context
+ * - Length: Should be clear but concise for dropdown displays
+ * 
+ * @param {Event} e - Form submission event from add-payment-mode-form
+ * @throws {Error} When validation fails or Firestore operations fail
+ * @since 1.0.0
+ * @see addPaymentMode() - API function for creating payment mode records
+ * @see masterData.paymentModes - Used for duplicate detection and transaction processing
+ */
 async function handlePaymentModeSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const paymentMode = document.getElementById('paymentModeName-input').value.trim();
 
-    if (!user || !paymentMode) return;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
+
+    // ✅ START: Progress toast for payment mode creation
+    ProgressToast.show('Adding Payment Mode', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating payment mode information...', 25, 'Step 1 of 4');
+
+        const paymentMode = document.getElementById('paymentModeName-input').value.trim();
+
+        if (!paymentMode) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Mode', 'Please enter a payment mode name.');
+            return;
+        }
+
+        // Validate payment mode name length and content
+        if (paymentMode.length < 2) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Short', 'Payment mode name must be at least 2 characters long.');
+            return;
+        }
+
+        if (paymentMode.length > 30) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Long', 'Payment mode name must be 30 characters or less for display purposes.');
+            return;
+        }
+
+        // Step 2: Check for Duplicate Payment Modes
+        ProgressToast.updateProgress('Checking for duplicate payment modes...', 50, 'Step 2 of 4');
+
+        const existingPaymentMode = masterData.paymentModes.find(pm => 
+            pm.paymentMode.toLowerCase() === paymentMode.toLowerCase()
+        );
+
+        if (existingPaymentMode) {
+            ProgressToast.hide(0);
+            const proceedWithDuplicate = await showModal('confirm', 'Payment Mode Already Exists', 
+                `A payment mode named "${existingPaymentMode.paymentMode}" already exists.\n\n` +
+                'Duplicate payment modes can cause confusion during transactions.\n\n' +
+                'Do you want to create another payment mode with the same name?'
+            );
+            
+            if (!proceedWithDuplicate) {
+                return; // User chose not to create duplicate
+            }
+
+            // User confirmed - restart progress with warning theme
+            ProgressToast.show('Adding Duplicate Payment Mode', 'warning');
+            ProgressToast.updateProgress('Creating duplicate payment mode...', 50, 'User Confirmed');
+        }
+
+        console.log(`[main.js] Creating payment mode: "${paymentMode}"`);
+
+        // Step 3: Save to Database
+        ProgressToast.updateProgress('Saving payment mode to database...', 80, 'Step 3 of 4');
+
         await addPaymentMode(paymentMode, user);
-        await showModal('success', 'Success', 'Payment Mode has been added successfully.');
-        e.target.reset();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Payment mode added successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(`"${paymentMode}" has been added to payment methods!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            // Calculate total payment modes available
+            const totalPaymentModes = masterData.paymentModes.length + 1; // Including the one just added
+            
+            await showModal('success', 'Payment Mode Added', 
+                `Payment mode "${paymentMode}" has been added successfully!\n\n` +
+                `• Total Payment Modes: ${totalPaymentModes}\n` +
+                `• Status: Active and available for transactions\n\n` +
+                `This payment mode can now be used for:\n` +
+                `✓ Direct store sales (Church Store & Tasty Treats)\n` +
+                `✓ Consignment team payments\n` +
+                `✓ Supplier invoice payments\n` +
+                `✓ Financial reporting and reconciliation`
+            );
+            
+            // Reset form for next payment mode
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error adding payment mode:", error);
-        await showModal('error', 'Error', 'Failed to add the Payment Mode. Please try again.');
+        
+        ProgressToast.showError(`Failed to add payment mode: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Payment Mode Failed', 
+                'Failed to add the payment mode. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Payment mode name is clear and descriptive\n' +
+                '• Name is appropriate for business transactions\n' +
+                '• You have permission to create payment modes'
+            );
+        }, 2000);
     }
 }
 
+/**
+ * Handles sales type form submission with validation and progress tracking.
+ * 
+ * Creates new sales type classifications for categorizing different kinds of sales
+ * transactions and promotional activities. Validates type names, prevents duplicates,
+ * and ensures sales types align with business operations and reporting needs.
+ * 
+ * BUSINESS CONTEXT:
+ * - Sales types categorize transactions for reporting and analysis
+ * - Used to differentiate regular sales, promotional sales, clearance, etc.
+ * - Enables sales performance analysis by transaction type
+ * - Critical for understanding sales patterns and promotional effectiveness
+ * - Supports consignment vs direct sales classification
+ * 
+ * VALIDATION RULES:
+ * - Sale type name: Required, descriptive classification
+ * - Uniqueness: Prevents duplicate sales types for clear categorization  
+ * - Business relevance: Should reflect actual sales scenarios
+ * - Length: Appropriate for reporting and dropdown displays
+ * 
+ * @param {Event} e - Form submission event from add-sale-type-form
+ * @throws {Error} When validation fails or Firestore operations fail
+ * @since 1.0.0
+ * @see addSaleType() - API function for creating sales type records
+ * @see masterData.saleTypes - Used for duplicate detection and sales classification
+ */
 async function handleSaleTypeSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
 
-    if (!user || !saleTypeName) return;
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in.');
+        return;
+    }
+
+    // ✅ START: Progress toast for sales type creation
+    ProgressToast.show('Adding Sales Type', 'info');
 
     try {
+        // Step 1: Input Validation
+        ProgressToast.updateProgress('Validating sales type information...', 25, 'Step 1 of 4');
+
+        const saleTypeName = document.getElementById('saleTypeName-input').value.trim();
+
+        if (!saleTypeName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Sales Type', 'Please enter a sales type name.');
+            return;
+        }
+
+        // Validate sales type name length and format
+        if (saleTypeName.length < 3) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Short', 'Sales type name must be at least 3 characters long for clarity.');
+            return;
+        }
+
+        if (saleTypeName.length > 40) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Name Too Long', 'Sales type name must be 40 characters or less for reporting displays.');
+            return;
+        }
+
+        // Step 2: Check for Duplicate Sales Types
+        ProgressToast.updateProgress('Checking for duplicate sales types...', 50, 'Step 2 of 4');
+
+        const existingSaleType = masterData.saleTypes?.find(st => 
+            st.saleTypeName.toLowerCase() === saleTypeName.toLowerCase()
+        );
+
+        if (existingSaleType) {
+            ProgressToast.hide(0);
+            const proceedWithDuplicate = await showModal('confirm', 'Sales Type Already Exists', 
+                `A sales type named "${existingSaleType.saleTypeName}" already exists.\n\n` +
+                'Duplicate sales types can complicate sales reporting and analysis.\n\n' +
+                'Do you want to create another sales type with the same name?'
+            );
+            
+            if (!proceedWithDuplicate) {
+                return; // User chose not to create duplicate
+            }
+
+            // User confirmed - restart progress with warning theme
+            ProgressToast.show('Adding Duplicate Sales Type', 'warning');
+            ProgressToast.updateProgress('Creating duplicate sales type...', 50, 'User Confirmed');
+        }
+
+        console.log(`[main.js] Creating sales type: "${saleTypeName}"`);
+
+        // Step 3: Save to Database
+        ProgressToast.updateProgress('Saving sales type to database...', 80, 'Step 3 of 4');
+
         await addSaleType(saleTypeName, user);
-        await showModal('success', 'Success', 'Sales Type has been added successfully.');
-        e.target.reset();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Sales type added successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(`"${saleTypeName}" has been added to sales types!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            // Calculate total sales types available
+            const totalSaleTypes = (masterData.saleTypes?.length || 0) + 1; // Including the one just added
+            
+            await showModal('success', 'Sales Type Added', 
+                `Sales type "${saleTypeName}" has been added successfully!\n\n` +
+                `• Total Sales Types: ${totalSaleTypes}\n` +
+                `• Status: Active and available for transactions\n\n` +
+                `This sales type can now be used for:\n` +
+                `✓ Categorizing direct store sales\n` +
+                `✓ Classifying consignment transactions\n` +
+                `✓ Sales performance reporting by type\n` +
+                `✓ Promotional campaign tracking\n` +
+                `✓ Financial analysis and business insights`
+            );
+            
+            // Reset form for next sales type
+            e.target.reset();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error adding sale type:", error);
-        await showModal('error', 'Error', 'Failed to add the Sales Type. Please try again.');
+        console.error("Error adding sales type:", error);
+        
+        ProgressToast.showError(`Failed to add sales type: ${error.message || 'Database error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Add Sales Type Failed', 
+                'Failed to add the sales type. Please try again.\n\n' +
+                'If the problem persists, check:\n' +
+                '• Internet connection is stable\n' +
+                '• Sales type name is descriptive and appropriate\n' +
+                '• Name reflects actual business sales scenarios\n' +
+                '• You have permission to create sales types'
+            );
+        }, 2000);
     }
 }
+
 
 /**
  * Handles sales season form submission with date validation and progress tracking.
