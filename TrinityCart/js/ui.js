@@ -4461,10 +4461,6 @@ const salesCartGridOptions = {
 const addProductModalGridOptions = {
     getRowId: params => params.data.id,
     theme: 'alpine',
-    defaultColDef: {
-        resizable: true,
-        sortable: true
-    },
     columnDefs: [
         { field: "itemName", 
             headerName: "Product Name", 
@@ -4472,11 +4468,14 @@ const addProductModalGridOptions = {
             floatingFilter: true,
             suppressMenu: true
         },
-        { field: "inventoryCount", headerName: "Stock", width: 100 },
+        { field: "inventoryCount", headerName: "Stock", width: 100,filter:false },
         {
             headerName: "Add",
             width: 80,
             cellClass: 'flex items-center justify-center',
+            floatingFilter: true,
+            suppressMenu: true,
+            filter:false,
             cellRenderer: params => {
                 const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
                 return `<button class="action-btn-icon action-btn-add-to-cart" data-id="${params.data.id}" title="Add to Cart">${addIcon}</button>`;
