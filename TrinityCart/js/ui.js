@@ -4854,30 +4854,38 @@ export function showRecordSalePaymentModal(invoiceData) {
     const modal = document.getElementById('record-sale-payment-modal');
     if (!modal) return;
 
-    const form = document.getElementById('record-sale-payment-form');
-    form.reset();
+    console.log('[ui.js] Opening manage payments modal for invoice:', invoiceData.saleId);
 
-    // 1. Populate hidden input and header (Your existing code is correct)
+    // ✅ ENHANCED: Clear existing grids and reset APIs
+    const existingGrids = modal.querySelectorAll('.ag-root-wrapper');
+    if (existingGrids.length > 0) {
+        console.log(`[ui.js] Removing ${existingGrids.length} existing grid instances`);
+        existingGrids.forEach(grid => grid.remove());
+    }
+
+    // ✅ RESET: Clear grid API references to force reinitialization
+    salePaymentItemsGridApi = null;
+    salePaymentHistoryGridApi = null;
+
+    const form = document.getElementById('record-sale-payment-form');
+    if (form) form.reset();
+
+    // Populate modal data
     document.getElementById('record-sale-invoice-id').value = invoiceData.id;
     document.getElementById('sale-payment-modal-title').textContent = `Manage Payments for Invoice #${invoiceData.saleId}`;
     document.getElementById('payment-modal-customer').textContent = invoiceData.customerInfo.name;
     document.getElementById('payment-modal-date').textContent = invoiceData.saleDate.toDate().toLocaleDateString();
     document.getElementById('payment-modal-store').textContent = invoiceData.store;
 
-    // 2. Populate financial summary (Your existing code is correct)
+    // Populate financial summary
     document.getElementById('payment-modal-total').textContent = formatCurrency(invoiceData.financials.totalAmount);
-    document.getElementById('payment-modal-paid').textContent = formatCurrency(invoiceData.totalAmountPaid);
-    document.getElementById('payment-modal-balance').textContent = formatCurrency(invoiceData.balanceDue);
+    document.getElementById('payment-modal-paid').textContent = formatCurrency(invoiceData.totalAmountPaid || 0);
+    document.getElementById('payment-modal-balance').textContent = formatCurrency(invoiceData.balanceDue || 0);
     
-    // 3. Default payment amount (Your existing code is correct)
+    // Default payment amount
     document.getElementById('record-sale-amount').value = (invoiceData.balanceDue || 0).toFixed(2);
 
-    // 4. Populate the line items grid (Your existing code is correct)
-    if (salePaymentItemsGridApi) {
-        salePaymentItemsGridApi.setGridOption('rowData', invoiceData.lineItems);
-    }
-
-    // 5. Populate Payment Mode dropdown (Your existing code is correct)
+    // Populate Payment Mode dropdown
     const paymentModeSelect = document.getElementById('record-sale-mode');
     paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
     masterData.paymentModes.forEach(mode => {
@@ -4889,32 +4897,100 @@ export function showRecordSalePaymentModal(invoiceData) {
         }
     });
 
-    // --- [NEW] 6. Attach a real-time listener for this invoice's payment history ---
+    // Show modal first, then initialize grids
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('visible');
+        
+        // ✅ CORRECTED: Initialize grids after modal is visible
+        setTimeout(() => {
+            initializePaymentModalGrids(invoiceData);
+        }, 100);
+        
+    }, 10);
+}
+
+/**
+ * ✅ NEW: Separate function to initialize payment modal grids
+ */
+function initializePaymentModalGrids(invoiceData) {
+    const itemsGridDiv = document.getElementById('sale-payment-items-grid');
+    const historyGridDiv = document.getElementById('sale-payment-history-grid');
+
+    if (!itemsGridDiv || !historyGridDiv) {
+        console.error('[ui.js] Payment modal grid containers not found');
+        return;
+    }
+
+    console.log('[ui.js] Initializing payment modal grids');
+
+    // Ensure grid containers are empty
+    itemsGridDiv.innerHTML = '';
+    historyGridDiv.innerHTML = '';
+
+    // Create grids
+    console.log('[ui.js] Creating sale payment items grid');
+    salePaymentItemsGridApi = createGrid(itemsGridDiv, salePaymentItemsGridOptions);
+    
+    console.log('[ui.js] Creating sale payment history grid');
+    salePaymentHistoryGridApi = createGrid(historyGridDiv, salePaymentHistoryGridOptions);
+
+    // Wait for grids to be ready, then load data
+    const waitForPaymentGrids = setInterval(() => {
+        if (salePaymentItemsGridApi && salePaymentHistoryGridApi) {
+            clearInterval(waitForPaymentGrids);
+            
+            console.log('[ui.js] Payment modal grids ready, loading data');
+            
+            // Load invoice items into items grid
+            salePaymentItemsGridApi.setGridOption('rowData', invoiceData.lineItems || []);
+            console.log(`[ui.js] ✅ Loaded ${(invoiceData.lineItems || []).length} invoice line items`);
+
+            // Set up real-time payment history listener
+            setupPaymentHistoryListener(invoiceData);
+            
+            // Switch to default tab
+            switchPaymentModalTab('tab-new-payment');
+        }
+    }, 50);
+}
+
+
+/**
+ * ✅ NEW: Separate function to setup payment history listener
+ */
+function setupPaymentHistoryListener(invoiceData) {
+    const modal = document.getElementById('record-sale-payment-modal');
+    if (!modal || !salePaymentHistoryGridApi) return;
+
+    console.log('[ui.js] Setting up payment history listener');
+
     const db = firebase.firestore();
     const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
         .where('invoiceId', '==', invoiceData.id)
         .orderBy('paymentDate', 'desc');
     
-    if (salePaymentHistoryGridApi) {
-        salePaymentHistoryGridApi.setGridOption('loading', true);
-    }
+    salePaymentHistoryGridApi.setGridOption('loading', true);
     
-    // Store the unsubscribe function on the modal element itself so we can find it later.
+    // Store the unsubscribe function on the modal element
     modal.unsubscribeListener = paymentsQuery.onSnapshot(snapshot => {
         const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        console.log(`[ui.js] Payment history updated: ${payments.length} payments`);
+        
         if (salePaymentHistoryGridApi) {
             salePaymentHistoryGridApi.setGridOption('rowData', payments);
             salePaymentHistoryGridApi.setGridOption('loading', false);
         }
+    }, error => {
+        console.error('[ui.js] Payment history listener error:', error);
+        if (salePaymentHistoryGridApi) {
+            salePaymentHistoryGridApi.setGridOption('loading', false);
+            salePaymentHistoryGridApi.showNoRowsOverlay();
+        }
     });
-    // ---------------------------------------------------------------------------------
-
-    switchPaymentModalTab('tab-new-payment');
-
-    // 7. Show the modal
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('visible'), 10);
 }
+
 
 /**
  * [REFACTORED] Closes the record sale payment modal and cleans up its listener.
@@ -4923,18 +4999,30 @@ export function closeRecordSalePaymentModal() {
     const modal = document.getElementById('record-sale-payment-modal');
     if (!modal) return;
     
-    // --- [NEW] Clean up the listener when the modal closes ---
+    console.log('[ui.js] Closing sale payment modal with enhanced cleanup');
+    
+    // Clean up the listener
     if (modal.unsubscribeListener && typeof modal.unsubscribeListener === 'function') {
-        console.log("Detaching payment history listener.");
+        console.log('[ui.js] Detaching payment history listener');
         modal.unsubscribeListener();
-        delete modal.unsubscribeListener; // Clean up the property from the DOM element
+        delete modal.unsubscribeListener;
     }
-    // --------------------------------------------------------
+
+    // ✅ ENHANCED: Clear grid data to prevent stale data
+    if (salePaymentItemsGridApi) {
+        salePaymentItemsGridApi.setGridOption('rowData', []);
+    }
+    
+    if (salePaymentHistoryGridApi) {
+        salePaymentHistoryGridApi.setGridOption('rowData', []);
+    }
 
     modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; }, 300);
+    setTimeout(() => { 
+        modal.style.display = 'none';
+        console.log('[ui.js] Sale payment modal closed and cleaned up');
+    }, 300);
 }
-
 
 
 let salePaymentHistoryGridApi = null;
