@@ -4478,6 +4478,13 @@ const addProductModalGridOptions = {
             }
         }
     ],
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true,
+        suppressMenu: true // Add to defaultColDef too
+    },
     onGridReady: params => { addProductModalGridApi = params.api; }
 };
 
