@@ -4460,13 +4460,18 @@ const salesCartGridOptions = {
 
 const addProductModalGridOptions = {
     getRowId: params => params.data.id,
-    theme: 'legacy',
+    theme: 'alpine',
     defaultColDef: {
         resizable: true,
         sortable: true
     },
     columnDefs: [
-        { field: "itemName", headerName: "Product Name", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "itemName", 
+            headerName: "Product Name", 
+            flex: 1, filter: 'agTextColumnFilter', 
+            floatingFilter: true,
+            suppressMenu: true
+        },
         { field: "inventoryCount", headerName: "Stock", width: 100 },
         {
             headerName: "Add",
