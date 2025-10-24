@@ -2895,125 +2895,273 @@ async function handleMakePaymentSubmit(e) {
 
 
 
-
-
+/**
+ * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
+ * 
+ * Processes complete sales transactions including cart items, customer information, payment handling,
+ * and inventory updates. Supports both immediate payment and invoice-based sales with automatic
+ * inventory deduction and optional donation processing for overpayments.
+ * 
+ * BUSINESS CONTEXT:
+ * - Direct sales for Church Store and Tasty Treats locations
+ * - Real-time inventory deduction upon sale completion
+ * - Supports partial payments, overpayments (donations), and invoice creation
+ * - Manual voucher numbers for audit trail and record reconciliation
+ * - Critical for daily sales operations and cash flow management
+ * 
+ * PAYMENT MODES:
+ * PAY NOW: Immediate payment processing with change/donation handling
+ * PAY LATER: Creates invoice for future payment collection
+ * 
+ * VALIDATION RULES:
+ * - Customer information: Name, email, phone are required
+ * - Manual voucher: Required for audit trail and manual record keeping
+ * - Cart items: Must have at least one product with valid pricing
+ * - Payment details: Required for Pay Now transactions
+ * - Store-specific: Address required for Tasty Treats deliveries
+ * 
+ * @param {Event} e - Form submission event from new-sale-form
+ * @throws {Error} When validation fails, inventory insufficient, or transaction processing fails
+ * @since 1.0.0
+ * @see createSaleAndUpdateInventory() - Transactional API for sale processing with inventory updates
+ * @see getSalesCartItems() - UI function to retrieve shopping cart contents
+ * @see showSalesView() - UI function to refresh sales view after completion
+ */
 async function handleNewSaleSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
-
-    const rawCartItems = getSalesCartItems();
-    if (rawCartItems.length === 0) {
-        return alert("Please add at least one product to the cart.");
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to process sales.');
+        return;
     }
 
-    // Calculate line items
-    const finalLineItems = [];
-    let itemsSubtotal = 0;
-    let totalItemLevelTax = 0;
-
-    rawCartItems.forEach(item => {
-        const qty = item.quantity || 0;
-        const price = item.unitPrice || 0;
-        const lineDiscPercent = item.discountPercentage || 0;
-        const lineTaxPercent = item.taxPercentage || 0;
-
-        const lineSubtotal = qty * price;
-        const discountAmount = lineSubtotal * (lineDiscPercent / 100);
-        const taxableAmount = lineSubtotal - discountAmount;
-        const taxAmount = taxableAmount * (lineTaxPercent / 100);
-        const lineTotal = taxableAmount + taxAmount;
-
-        finalLineItems.push({
-            ...item,
-            lineSubtotal,
-            discountAmount,
-            taxableAmount,
-            taxAmount,
-            lineTotal
-        });
-
-        itemsSubtotal += taxableAmount;
-        totalItemLevelTax += taxAmount;
-    });
-
-    // Calculate order totals
-    const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
-    const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
-    const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
-    const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
-    const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
-    const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
-    const grandTotal = finalTaxableAmount + finalTotalTax;
-
-    // Handle payment
-    let initialPaymentData = null;
-    let donationAmount = 0;
-    let amountReceived = 0;
-
-    if (document.getElementById('sale-payment-type').value === 'Pay Now') {
-        amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
-
-        if (amountReceived < grandTotal) {
-            if (!confirm("The amount received is less than the total. This will create a partially paid invoice. Do you want to continue?")) {
-                return;
-            }
-        }
-
-        if (!document.getElementById('sale-payment-ref').value) {
-            return alert("Please enter a Reference # for the payment.");
-        }
-
-        if (amountReceived > grandTotal) {
-            donationAmount = amountReceived - grandTotal;
-        }
-
-        const amountToApplyToInvoice = Math.min(amountReceived, grandTotal);
-
-        initialPaymentData = {
-            amountPaid: amountToApplyToInvoice,
-            paymentMode: document.getElementById('sale-payment-mode').value,
-            transactionRef: document.getElementById('sale-payment-ref').value,
-            notes: document.getElementById('sale-payment-notes').value
-        };
-    }
-
-    // Assemble sale data
-    const saleData = {
-        saleDate: new Date(document.getElementById('sale-date').value),
-        store: document.getElementById('sale-store-select').value,
-        customerInfo: {
-            name: document.getElementById('sale-customer-name').value,
-            email: document.getElementById('sale-customer-email').value,
-            phone: document.getElementById('sale-customer-phone').value,
-            address: document.getElementById('sale-store-select').value === 'Tasty Treats'
-                ? document.getElementById('sale-customer-address').value
-                : null
-        },
-        lineItems: finalLineItems,
-        financials: {
-            itemsSubtotal,
-            orderDiscountPercentage: orderDiscPercent,
-            orderDiscountAmount,
-            orderTaxPercentage: orderTaxPercent,
-            orderTaxAmount: orderLevelTaxAmount,
-            totalTax: finalTotalTax,
-            totalAmount: grandTotal,
-            amountTendered: amountReceived,
-            changeDue: 0
-        }
-    };
+    // ✅ START: Progress toast for sale transaction
+    ProgressToast.show('Processing Sale Transaction', 'info');
 
     try {
+        // Step 1: Cart and Basic Validation
+        ProgressToast.updateProgress('Validating shopping cart...', 10, 'Step 1 of 8');
+
+        const rawCartItems = getSalesCartItems();
+        if (rawCartItems.length === 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Empty Cart', 'Please add at least one product to the cart.');
+            return;
+        }
+
+        // Step 2: Customer Information Validation
+        ProgressToast.updateProgress('Validating customer information...', 20, 'Step 2 of 8');
+
+        const customerName = document.getElementById('sale-customer-name').value.trim();
+        const customerEmail = document.getElementById('sale-customer-email').value.trim();
+        const customerPhone = document.getElementById('sale-customer-phone').value.trim();
+        const voucherNumber = document.getElementById('sale-voucher-number').value.trim(); // ✅ NEW FIELD
+
+        // Validate required customer fields
+        if (!customerName) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Customer Name', 'Please enter the customer\'s name.');
+            return;
+        }
+
+        if (!customerEmail || !customerEmail.includes('@')) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Email', 'Please enter a valid customer email address.');
+            return;
+        }
+
+        if (!customerPhone) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Phone', 'Please enter the customer\'s phone number.');
+            return;
+        }
+
+        // ✅ VALIDATE: Manual Voucher Number (NEW REQUIRED FIELD)
+        if (!voucherNumber) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Voucher Number', 'Please enter a manual voucher number for record keeping.');
+            return;
+        }
+
+        if (!/^[A-Za-z0-9\-]+$/.test(voucherNumber)) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Voucher Format', 
+                'Voucher number should contain only letters, numbers, and dashes.\n\n' +
+                'Examples: V-001, MAN-2024-001, VOUCHER-123'
+            );
+            return;
+        }
+
+        // Step 3: Calculate Line Items
+        ProgressToast.updateProgress('Calculating line item totals...', 30, 'Step 3 of 8');
+
+        const finalLineItems = [];
+        let itemsSubtotal = 0;
+        let totalItemLevelTax = 0;
+
+        rawCartItems.forEach(item => {
+            const qty = item.quantity || 0;
+            const price = item.unitPrice || 0;
+            const lineDiscPercent = item.discountPercentage || 0;
+            const lineTaxPercent = item.taxPercentage || 0;
+
+            const lineSubtotal = qty * price;
+            const discountAmount = lineSubtotal * (lineDiscPercent / 100);
+            const taxableAmount = lineSubtotal - discountAmount;
+            const taxAmount = taxableAmount * (lineTaxPercent / 100);
+            const lineTotal = taxableAmount + taxAmount;
+
+            finalLineItems.push({
+                ...item,
+                lineSubtotal,
+                discountAmount,
+                taxableAmount,
+                taxAmount,
+                lineTotal
+            });
+
+            itemsSubtotal += taxableAmount;
+            totalItemLevelTax += taxAmount;
+        });
+
+        // Step 4: Calculate Order Totals
+        ProgressToast.updateProgress('Calculating order totals and taxes...', 45, 'Step 4 of 8');
+
+        const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+        const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
+        const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
+        const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
+        const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
+        const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
+        const grandTotal = finalTaxableAmount + finalTotalTax;
+
+        console.log(`[main.js] Sale total calculated: ${formatCurrency(grandTotal)} for voucher ${voucherNumber}`);
+
+        // Step 5: Handle Payment Processing
+        ProgressToast.updateProgress('Processing payment information...', 60, 'Step 5 of 8');
+
+        let initialPaymentData = null;
+        let donationAmount = 0;
+        let amountReceived = 0;
+
+        if (document.getElementById('sale-payment-type').value === 'Pay Now') {
+            amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
+
+            if (amountReceived < grandTotal) {
+                const proceedPartial = await showModal('confirm', 'Partial Payment', 
+                    'The amount received is less than the total. This will create a partially paid invoice. Do you want to continue?'
+                );
+                if (!proceedPartial) {
+                    ProgressToast.hide(0);
+                    return;
+                }
+            }
+
+            if (!document.getElementById('sale-payment-ref').value.trim()) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Missing Payment Reference', 'Please enter a Reference # for the payment.');
+                return;
+            }
+
+            if (amountReceived > grandTotal) {
+                donationAmount = amountReceived - grandTotal;
+                console.log(`[main.js] Overpayment detected: ${formatCurrency(donationAmount)} will be recorded as donation`);
+            }
+
+            const amountToApplyToInvoice = Math.min(amountReceived, grandTotal);
+
+            initialPaymentData = {
+                amountPaid: amountToApplyToInvoice,
+                paymentMode: document.getElementById('sale-payment-mode').value,
+                transactionRef: document.getElementById('sale-payment-ref').value,
+                notes: document.getElementById('sale-payment-notes').value
+            };
+        }
+
+        // Step 6: Prepare Final Sale Data
+        ProgressToast.updateProgress('Preparing transaction data...', 70, 'Step 6 of 8');
+
+        const saleData = {
+            saleDate: new Date(document.getElementById('sale-date').value),
+            store: document.getElementById('sale-store-select').value,
+            manualVoucherNumber: voucherNumber, // ✅ NEW: Include voucher number in sale data
+            customerInfo: {
+                name: customerName,
+                email: customerEmail,
+                phone: customerPhone,
+                address: document.getElementById('sale-store-select').value === 'Tasty Treats'
+                    ? document.getElementById('sale-customer-address').value
+                    : null
+            },
+            lineItems: finalLineItems,
+            financials: {
+                itemsSubtotal,
+                orderDiscountPercentage: orderDiscPercent,
+                orderDiscountAmount,
+                orderTaxPercentage: orderTaxPercent,
+                orderTaxAmount: orderLevelTaxAmount,
+                totalTax: finalTotalTax,
+                totalAmount: grandTotal,
+                amountTendered: amountReceived,
+                changeDue: 0
+            }
+        };
+
+        // Step 7: Process Transaction
+        ProgressToast.updateProgress('Creating sale and updating inventory...', 90, 'Step 7 of 8');
+
         await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
-        alert("Sale completed successfully!");
-        showSalesView();
+
+        // Step 8: Success Completion
+        ProgressToast.updateProgress('Sale completed successfully!', 100, 'Step 8 of 8');
+        ProgressToast.showSuccess(`Sale completed for ${customerName} - Voucher ${voucherNumber}!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            // Enhanced success message with transaction summary
+            const paymentStatus = amountReceived === 0 ? 'Invoice Created' : 
+                                 amountReceived >= grandTotal ? 'Paid in Full' : 'Partially Paid';
+            
+            await showModal('success', 'Sale Completed Successfully', 
+                `Transaction has been processed successfully!\n\n` +
+                `• Customer: ${customerName}\n` +
+                `• Voucher Number: ${voucherNumber}\n` +
+                `• Store: ${saleData.store}\n` +
+                `• Total Amount: ${formatCurrency(grandTotal)}\n` +
+                `• Payment Status: ${paymentStatus}\n` +
+                `• Items Sold: ${finalLineItems.length} different products\n` +
+                `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)}\n` : ''}` +
+                `\n✓ Inventory updated automatically\n` +
+                `✓ Customer record created\n` +
+                `✓ Financial records updated`
+            );
+            
+            // Refresh sales view to show new transaction
+            showSalesView();
+            
+        }, 1200);
+
     } catch (error) {
         console.error("Error completing sale:", error);
-        alert(`Sale failed: ${error.message}`);
+        
+        ProgressToast.showError(`Sale processing failed: ${error.message || 'Transaction error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Sale Processing Failed', 
+                `Sale transaction could not be completed.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Common causes:\n` +
+                `• Insufficient inventory for requested quantities\n` +
+                `• Network connection interrupted during processing\n` +
+                `• Invalid customer or payment information\n` +
+                `• Database permission or access issues\n\n` +
+                `Please verify all information and try again.`
+            );
+        }, 2000);
     }
 }
-
 
 
 
