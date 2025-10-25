@@ -1529,9 +1529,13 @@ const productsGridOptions = {
             field: "inventoryCount",
             headerName: "Stock On Hand",
             width: 150,
-            editable: true, // This field is system-managed
-            valueFormatter: p => (typeof p.value === 'number'),
-            // Style it to look read-only and important
+            editable: true, // Allow manual editing
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: {
+                min: 0,
+                precision: 0
+            },
+            valueParser: p => parseInt(p.newValue) || 0, 
             cellStyle: { 'background-color': '#f3f4f6', 'font-weight': 'bold', 'text-align': 'center' }
         },
         {
