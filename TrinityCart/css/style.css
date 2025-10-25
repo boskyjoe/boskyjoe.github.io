@@ -111,34 +111,60 @@
     cursor: pointer;
 }
 
+/* ===================================================================== */
+/* CORRECTED Z-INDEX HIERARCHY - FIX MODAL OVERLAY ISSUES */
+/* ===================================================================== */
+
+/* HIGHEST PRIORITY: All modals should be above everything */
+.modal-container {
+    z-index: 10000 !important; /* Highest priority for modals */
+}
+
+.modal-container .bg-white,
+.modal-container > div:last-child {
+    z-index: 10001 !important; /* Modal content above backdrop */
+}
+
+/* MEDIUM PRIORITY: Payment form elements (reduced from previous high values) */
 #sale-payment-type,
 #sale-payment-mode {
     position: relative !important;
-    z-index: 10000 !important;
+    z-index: 200 !important; /* REDUCED from 10000 to 200 */
 }
 
-/* Ensure dropdown options appear above other content */
+/* Dropdown options for payment fields */
 #sale-payment-type:focus,
 #sale-payment-mode:focus {
-    z-index: 10001 !important;
+    z-index: 201 !important; /* REDUCED from 10001 to 201 */
 }
 
-/* Fix the payment container stacking */
+/* Payment container */
 #sale-pay-now-container {
     position: relative;
-    z-index: 100;
+    z-index: 150 !important; /* REDUCED from 100 to 150 but still below modals */
 }
 
-/* Prevent grid or other elements from overlaying the payment form */
+/* Payment input fields */
+#sale-amount-received,
+#sale-payment-ref,
+#sale-payment-notes {
+    position: relative !important;
+    z-index: 180 !important;
+}
+
+/* LOW PRIORITY: Grids and main content */
 .ag-theme-alpine {
     z-index: 1 !important;
 }
 
-/* Ensure main content doesn't interfere */
 main {
     position: relative;
     z-index: 1;
 }
+
+/* ===================================================================== */
+/* BULK ADD PRODUCTS MODAL - EXISTING STYLES */
+/* ===================================================================== */
 
 #bulk-add-products-modal .ag-theme-alpine {
     height: 500px !important;
@@ -175,23 +201,19 @@ main {
     z-index: 10;
 }
 
-/* ADD THESE NEW RULES TO HIDE THE FILTER MENU ICONS */
-/* Hide the 3-dot menu button in header */
+/* BULK MODAL GRID ENHANCEMENTS */
 #bulk-add-products-modal .ag-header-cell-menu-button {
     display: none !important;
 }
 
-/* Hide the filter icon button in header */
 #bulk-add-products-modal .ag-header-icon {
     display: none !important;
 }
 
-/* Alternative: target specifically the filter button */
 #bulk-add-products-modal .ag-icon-filter {
     display: none !important;
 }
 
-/* Keep floating filters visible and functional */
 #bulk-add-products-modal .ag-floating-filter-input {
     display: block !important;
 }
@@ -200,7 +222,6 @@ main {
     display: none !important;
 }
 
-/* Fix floating filter vertical alignment */
 #bulk-add-products-modal .ag-floating-filter-body {
     display: flex !important;
     align-items: center !important;
@@ -224,8 +245,24 @@ main {
     padding: 4px 8px !important;
 }
 
-/* Optional: Set a specific height for the floating filter row */
 #bulk-add-products-modal .ag-floating-filter {
     height: 40px !important;
     min-height: 40px !important;
+}
+
+/* ===================================================================== */
+/* ADD PRODUCT MODAL SPECIFIC FIXES */
+/* ===================================================================== */
+
+/* Ensure add product modal appears above payment fields */
+#add-product-modal {
+    z-index: 10000 !important; /* Same as other modals */
+}
+
+#add-product-modal .bg-white {
+    z-index: 10001 !important; /* Modal content above backdrop */
+}
+
+#add-product-modal .fixed.inset-0.bg-black {
+    z-index: 9999 !important; /* Modal backdrop below content */
 }
