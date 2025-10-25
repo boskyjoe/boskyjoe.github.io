@@ -1418,66 +1418,206 @@ function preventEnterSubmit(e) {
 }
 
 
-// NEW: dedicated handler for the Supplier Payment modal form
+/**
+ * Handles supplier payment form submission with comprehensive validation and progress tracking.
+ * 
+ * Records payments to suppliers for outstanding purchase invoices with automatic balance
+ * reconciliation and invoice status updates. Provides real-time progress feedback during
+ * the complex transactional payment processing workflow that involves multiple database
+ * operations and financial calculations.
+ * 
+ * BUSINESS CONTEXT:
+ * - Records payments to suppliers against outstanding purchase invoices
+ * - Updates supplier account balances and invoice payment status automatically
+ * - Maintains accurate accounts payable tracking for cash flow management
+ * - Critical for supplier relationship management and financial reconciliation
+ * - Supports partial payments with balance tracking over time
+ * 
+ * VALIDATION RULES:
+ * - Payment amount: Must be positive number, typically should not exceed invoice balance
+ * - Payment date: Must be valid date, usually current or recent date
+ * - Payment mode: Must select from configured payment methods
+ * - Transaction reference: Recommended for bank reconciliation and audit trail
+ * - Invoice context: Must link to existing purchase invoice with outstanding balance
+ * 
+ * TRANSACTIONAL OPERATIONS:
+ * - Creates payment record in supplier payments ledger
+ * - Updates purchase invoice balance and payment status
+ * - Maintains referential integrity between payments and invoices
+ * - Provides complete audit trail for financial compliance
+ * 
+ * @param {Event} e - Form submission event from supplier-record-payment-form modal
+ * @throws {Error} When validation fails, invoice not found, or payment processing fails
+ * @since 1.0.0
+ * @see recordPaymentAndUpdateInvoice() - Transactional API for atomic payment processing
+ * @see closeSupplierPaymentModal() - UI function to close payment modal after success
+ * @see loadPaymentsForSelectedInvoice() - UI function to refresh payment history display
+ */
 async function handleSupplierPaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
+    
     if (!user) {
-        await showModal('error', 'Not Logged In', 'You must be logged in to record a payment.');
+        await showModal('error', 'Not Logged In', 'You must be logged in to record supplier payments.');
         return;
     }
+
+    // ✅ START: Progress toast for supplier payment processing
+    ProgressToast.show('Recording Supplier Payment', 'info');
 
     const form = e.target;
     const submitBtn = form.querySelector('button[type="submit"]');
 
-    // Build payment data from the supplier-prefixed inputs
-    const paymentData = {
-        relatedInvoiceId: document.getElementById('supplier-payment-invoice-id').value,
-        supplierId: document.getElementById('supplier-payment-supplier-id').value,
-        paymentDate: new Date(document.getElementById('supplier-payment-date-input').value),
-        amountPaid: parseFloat(document.getElementById('supplier-payment-amount-input').value),
-        paymentMode: document.getElementById('supplier-payment-mode-select').value,
-        transactionRef: document.getElementById('supplier-payment-ref-input').value,
-        notes: document.getElementById('supplier-payment-notes-input').value
-    };
-
-    // Validation
-    if (!paymentData.relatedInvoiceId || !paymentData.supplierId) {
-        await showModal('error', 'Missing Data', 'Invoice or supplier information is missing.');
-        return;
-    }
-
-    if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-        await showModal('error', 'Invalid Amount', 'Payment amount must be greater than zero.');
-        return;
-    }
-
-    if (!paymentData.paymentMode) {
-        await showModal('error', 'Missing Payment Mode', 'Please select a payment mode.');
-        return;
-    }
-
-    // Disable submit button during save
+    // Disable submit button during processing
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+        submitBtn.textContent = 'Processing...';
     }
 
     try {
-        // This calls the transactional API function
-        await recordPaymentAndUpdateInvoice(paymentData, user);
-        await showModal('success', 'Payment Recorded', 'Supplier payment has been recorded successfully.');
-        closeSupplierPaymentModal();
+        // Step 1: Input Collection and Validation
+        ProgressToast.updateProgress('Validating payment information...', 20, 'Step 1 of 5');
 
-        // Refresh payments grid if it's visible
-        if (typeof loadPaymentsForSelectedInvoice === 'function') {
-            await loadPaymentsForSelectedInvoice();
+        const paymentDate = document.getElementById('supplier-payment-date-input').value;
+        const amountPaid = document.getElementById('supplier-payment-amount-input').value;
+        const paymentMode = document.getElementById('supplier-payment-mode-select').value;
+        const transactionRef = document.getElementById('supplier-payment-ref-input').value.trim();
+        const notes = document.getElementById('supplier-payment-notes-input').value.trim();
+        const relatedInvoiceId = document.getElementById('supplier-payment-invoice-id').value;
+        const supplierId = document.getElementById('supplier-payment-supplier-id').value;
+
+        // Validate required fields
+        if (!paymentDate) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Date', 'Please select the payment date.');
+            return;
         }
+
+        if (!relatedInvoiceId || !supplierId) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Invoice Data', 'Invoice or supplier information is missing. Please close and reopen the payment modal.');
+            return;
+        }
+
+        // Step 2: Financial Validation
+        ProgressToast.updateProgress('Validating payment amount and details...', 35, 'Step 2 of 5');
+
+        const paymentAmount = parseFloat(amountPaid);
+
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Payment Amount', 'Payment amount must be a valid number greater than zero.');
+            return;
+        }
+
+        if (!paymentMode) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Mode', 'Please select how the payment was made.');
+            return;
+        }
+
+        // Validate payment date reasonableness
+        const paymentDateObj = new Date(paymentDate);
+        const today = new Date();
+        const futureLimit = new Date();
+        futureLimit.setDate(today.getDate() + 7); // Allow up to 7 days future
+
+        if (paymentDateObj > futureLimit) {
+            const daysFuture = Math.ceil((paymentDateObj - today) / (1000 * 60 * 60 * 24));
+            const confirmFuturePayment = await showModal('confirm', 'Future Payment Date', 
+                `The payment date is ${daysFuture} days in the future. This is unusual for supplier payments. Continue anyway?`
+            );
+            if (!confirmFuturePayment) {
+                ProgressToast.hide(0);
+                return;
+            }
+        }
+
+        // Step 3: Prepare Payment Data
+        ProgressToast.updateProgress('Preparing supplier payment record...', 55, 'Step 3 of 5');
+
+        const paymentData = {
+            relatedInvoiceId: relatedInvoiceId,
+            supplierId: supplierId,
+            paymentDate: paymentDateObj,
+            amountPaid: paymentAmount,
+            paymentMode: paymentMode,
+            transactionRef: transactionRef,
+            notes: notes
+        };
+
+        // Get supplier name for enhanced logging and feedback
+        const supplier = masterData.suppliers.find(s => s.id === supplierId);
+        const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+
+        console.log(`[main.js] Recording supplier payment:`, {
+            supplier: supplierName,
+            amount: formatCurrency(paymentAmount),
+            mode: paymentMode,
+            date: paymentDateObj.toLocaleDateString(),
+            reference: transactionRef || 'No reference provided',
+            invoice: relatedInvoiceId
+        });
+
+        // Step 4: Process Payment Transaction
+        ProgressToast.updateProgress('Recording payment and updating invoice balance...', 85, 'Step 4 of 5');
+
+        // Execute the complex transactional payment processing
+        await recordPaymentAndUpdateInvoice(paymentData, user);
+
+        // Step 5: Success Completion and UI Updates
+        ProgressToast.updateProgress('Payment recorded successfully!', 100, 'Step 5 of 5');
+        ProgressToast.showSuccess(`${formatCurrency(paymentAmount)} payment to ${supplierName} recorded!`);
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Supplier Payment Recorded', 
+                `Supplier payment has been recorded successfully!\n\n` +
+                `• Supplier: ${supplierName}\n` +
+                `• Payment Amount: ${formatCurrency(paymentAmount)}\n` +
+                `• Payment Mode: ${paymentMode}\n` +
+                `• Payment Date: ${paymentDateObj.toLocaleDateString()}\n` +
+                `• Transaction Reference: ${transactionRef || 'Not provided'}\n` +
+                `• Notes: ${notes || 'None'}\n\n` +
+                `✓ Invoice balance updated automatically\n` +
+                `✓ Payment status recalculated\n` +
+                `✓ Supplier account balance adjusted\n` +
+                `✓ Payment history recorded for audit trail`
+            );
+            
+            // Close the payment modal
+            closeSupplierPaymentModal();
+
+            // Refresh payments grid to show the new payment
+            if (typeof loadPaymentsForSelectedInvoice === 'function') {
+                await loadPaymentsForSelectedInvoice();
+                console.log('[main.js] ✅ Payment grid refreshed with new payment record');
+            }
+            
+        }, 1200);
+
     } catch (error) {
         console.error('Error recording supplier payment:', error);
-        await showModal('error', 'Save Failed', error.message || 'Failed to record the payment.');
+        
+        ProgressToast.showError(`Failed to record payment: ${error.message || 'Payment processing error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Supplier Payment Failed', 
+                `Failed to record the supplier payment.\n\n` +
+                `Error details: ${error.message}\n\n` +
+                `Common causes:\n` +
+                `• Payment amount exceeds invoice balance\n` +
+                `• Network connection interrupted during processing\n` +
+                `• Invoice has been modified by another user\n` +
+                `• Insufficient permissions for payment operations\n` +
+                `• Supplier account access restrictions\n\n` +
+                `Please verify the payment details and try again.`
+            );
+        }, 2000);
+        
     } finally {
-        // Always re-enable the button
+        // Always re-enable the submit button
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Save Payment';
@@ -3174,15 +3314,7 @@ async function handleNewSaleSubmit(e) {
                 totalAmount: grandTotal,
                 amountTendered: amountReceived,
                 changeDue: Math.max(0, amountReceived - grandTotal)
-            },
-            // ✅ ENHANCED: Include donation metadata with source
-            donationMetadata: donationAmount > 0 ? {
-                donationAmount: donationAmount,
-                donationSource: donationSource, // ✅ STANDARDIZED SOURCE
-                originalTransactionAmount: grandTotal,
-                customerContribution: amountReceived,
-                voucherReference: voucherNumber
-            } : null
+            }
         };
 
         // Step 7: Process Transaction
