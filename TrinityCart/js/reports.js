@@ -2933,6 +2933,1049 @@ export async function calculateActualSalesRevenue(startDate = null, endDate = nu
     }
 }
 
+/**
+ * COMPREHENSIVE: Analyzes donation patterns by source with advanced business intelligence.
+ * 
+ * Provides deep insights into donation generation across all sales channels,
+ * customer generosity patterns, seasonal trends, and performance optimization
+ * opportunities. Uses enhanced donation records with source attribution for
+ * strategic decision making and donor relationship management.
+ * 
+ * BUSINESS INTELLIGENCE FEATURES:
+ * - Source performance analysis (Church Store vs Tasty Treats vs Consignment)
+ * - Customer donor classification and recognition programs
+ * - Seasonal donation trending and pattern identification
+ * - Store-specific donation generation effectiveness
+ * - Payment method correlation with donation behavior
+ * - Invoice aging impact on donation likelihood
+ * 
+ * OPTIMIZATION FEATURES:
+ * - Intelligent caching with configurable duration
+ * - Client-side aggregation to minimize database queries
+ * - Smart date filtering for period-specific analysis
+ * - Efficient data processing with single-pass calculations
+ * 
+ * @param {Date} [startDate=null] - Analysis start date (null = all time analysis)
+ * @param {Date} [endDate=null] - Analysis end date (null = all time analysis)
+ * @param {boolean} [useCache=true] - Enable intelligent caching system
+ * @param {boolean} [includeCustomerDetails=true] - Include detailed customer donor analysis
+ * 
+ * @returns {Promise<Object>} Comprehensive donation source analysis:
+ *   - donationSummary {Object} - High-level donation metrics and totals
+ *   - sourcePerformance {Array} - Detailed performance by donation source
+ *   - storeEffectiveness {Array} - Store-specific donation generation analysis
+ *   - customerDonorAnalysis {Object} - Customer generosity patterns and classifications
+ *   - seasonalTrends {Array} - Monthly/quarterly donation trending
+ *   - businessInsights {Object} - Strategic recommendations and optimization opportunities
+ *   - benchmarkComparisons {Object} - Performance comparisons and targets
+ * 
+ * @throws {Error} When database queries fail or date parameters invalid
+ * 
+ * @example
+ * // Analyze all-time donation patterns
+ * const allTimeDonations = await analyzeDonationSources();
+ * console.log(`Total donations: ${allTimeDonations.donationSummary.formattedTotal}`);
+ * console.log(`Top source: ${allTimeDonations.sourcePerformance[0].source}`);
+ * 
+ * // Analyze donations for specific period
+ * const monthlyDonations = await analyzeDonationSources(startDate, endDate);
+ * console.log(`Month donations: ${monthlyDonations.donationSummary.formattedTotal}`);
+ * 
+ * @since 1.0.0
+ * @see DONATION_SOURCES - Standardized donation source constants
+ * @see getDonorClassification() - Customer donor recognition levels
+ * @see ReportCache - Intelligent caching system for performance optimization
+ */
+export async function analyzeDonationSources(startDate = null, endDate = null, useCache = true, includeCustomerDetails = true) {
+    try {
+        console.log(`[Reports] 🎁 Starting COMPREHENSIVE donation source analysis`);
+        console.log(`[Reports] Date range: ${startDate ? startDate.toLocaleDateString() : 'All time'} to ${endDate ? endDate.toLocaleDateString() : 'All time'}`);
+        
+        // ===================================================================
+        // PHASE 1: CACHE MANAGEMENT AND VALIDATION
+        // ===================================================================
+        
+        // Input validation
+        if (startDate && !(startDate instanceof Date)) {
+            throw new Error('startDate must be a valid Date object');
+        }
+        if (endDate && !(endDate instanceof Date)) {
+            throw new Error('endDate must be a valid Date object');
+        }
+        if (startDate && endDate && startDate > endDate) {
+            throw new Error('Start date cannot be after end date');
+        }
+        
+        // Generate comprehensive cache key
+        const periodKey = startDate && endDate 
+            ? `${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`
+            : 'all_time';
+        const detailsKey = includeCustomerDetails ? 'with_customer_details' : 'summary_only';
+        const cacheKey = `donation_source_analysis_${periodKey}_${detailsKey}`;
+        
+        // Check cache first for performance optimization
+        if (useCache) {
+            const cachedResult = ReportCache.getCachedReport(cacheKey);
+            if (cachedResult) {
+                console.log(`[Reports] ✅ Using cached donation source analysis - 0 Firestore reads`);
+                console.log(`[Reports] Cached data includes ${cachedResult.donationSummary.donationRecords} donation records`);
+                return cachedResult;
+            }
+        }
+
+        const db = firebase.firestore();
+        let totalFirestoreReads = 0;
+        const queryStartTime = Date.now();
+        
+        // ===================================================================
+        // PHASE 2: DONATION DATA RETRIEVAL
+        // ===================================================================
+        console.log(`[Reports] 🔍 Phase 2: Retrieving donation records with filters...`);
+        
+        // Build optimized donation query
+        let donationsQuery = db.collection(DONATIONS_COLLECTION_PATH)
+            .orderBy('donationDate', 'desc'); // Most recent first
+        
+        // Apply date filters if provided
+        if (startDate) {
+            donationsQuery = donationsQuery.where('donationDate', '>=', startDate);
+            console.log(`[Reports] Applied start date filter: ${startDate.toLocaleDateString()}`);
+        }
+        if (endDate) {
+            donationsQuery = donationsQuery.where('donationDate', '<=', endDate);
+            console.log(`[Reports] Applied end date filter: ${endDate.toLocaleDateString()}`);
+        }
+        
+        // Execute query with read tracking
+        const donationsSnapshot = await donationsQuery.get();
+        totalFirestoreReads = donationsSnapshot.size;
+        const queryExecutionTime = Date.now() - queryStartTime;
+        
+        console.log(`[Reports] ✅ Retrieved ${totalFirestoreReads} donation records in ${queryExecutionTime}ms`);
+        
+        if (totalFirestoreReads === 0) {
+            console.log(`[Reports] ℹ️ No donations found for the specified period`);
+            return {
+                donationSummary: {
+                    totalDonations: 0,
+                    formattedTotal: formatCurrency(0),
+                    donationRecords: 0,
+                    message: 'No donations found for the specified period'
+                },
+                metadata: {
+                    calculatedAt: new Date().toISOString(),
+                    firestoreReadsUsed: 0,
+                    cacheKey
+                }
+            };
+        }
+
+        // ===================================================================
+        // PHASE 3: DATA AGGREGATION AND ANALYSIS
+        // ===================================================================
+        console.log(`[Reports] 📊 Phase 3: Processing donation data with advanced analytics...`);
+        
+        // Initialize comprehensive analysis structures
+        const analysisStructures = {
+            sourceAnalysis: new Map(),      // Donation source performance
+            storeAnalysis: new Map(),       // Store-specific donation generation
+            customerAnalysis: new Map(),    // Customer donor patterns
+            monthlyTrends: new Map(),       // Time-based trending
+            paymentModeAnalysis: new Map(), // Payment method correlation
+            transactionTypeAnalysis: new Map(), // Transaction type breakdown
+            invoiceAgeAnalysis: new Map(),  // Invoice age impact on donations
+            donationSizeAnalysis: {         // Donation amount distribution
+                small: 0,    // < ₹50
+                medium: 0,   // ₹50 - ₹200  
+                large: 0,    // ₹200 - ₹1000
+                major: 0     // > ₹1000
+            }
+        };
+        
+        let totalDonationAmount = 0;
+        let processedRecords = 0;
+        
+        // MAIN PROCESSING LOOP: Single-pass comprehensive analysis
+        donationsSnapshot.docs.forEach(doc => {
+            const donation = doc.data();
+            const amount = Math.abs(donation.amount || 0); // Use absolute value (handle reversals)
+            
+            // Skip zero or negative amounts (reversals handled separately)
+            if (amount <= 0) return;
+            
+            processedRecords++;
+            totalDonationAmount += amount;
+            
+            // Extract enhanced donation context
+            const donationContext = {
+                id: donation.donationId || doc.id,
+                amount: amount,
+                source: donation.source || 'Unknown Source',
+                store: donation.sourceDetails?.store || 'Unknown Store',
+                customerEmail: donation.customerEmail || 'anonymous',
+                customerName: donation.customerName || 'Anonymous Donor',
+                
+                // Enhanced context from sourceDetails
+                systemInvoiceId: donation.sourceDetails?.systemInvoiceId || null,
+                manualVoucherNumber: donation.sourceDetails?.manualVoucherNumber || null,
+                transactionType: donation.sourceDetails?.transactionType || 'unknown',
+                paymentMode: donation.sourceDetails?.paymentMode || 'Unknown',
+                invoiceAge: donation.sourceDetails?.invoiceAge || 0,
+                originalTransactionAmount: donation.sourceDetails?.originalInvoiceAmount || 0,
+                
+                // Date processing
+                donationDate: null,
+                monthKey: 'Unknown'
+            };
+            
+            // Safe date extraction for trending
+            try {
+                if (donation.donationDate?.toDate) {
+                    donationContext.donationDate = donation.donationDate.toDate();
+                    donationContext.monthKey = donationContext.donationDate.toISOString().slice(0, 7); // YYYY-MM
+                } else if (donation.donationDate instanceof Date) {
+                    donationContext.donationDate = donation.donationDate;
+                    donationContext.monthKey = donation.donationDate.toISOString().slice(0, 7);
+                }
+            } catch (dateError) {
+                console.warn('[Reports] Could not process donation date:', dateError);
+            }
+            
+            // === SOURCE ANALYSIS ===
+            if (!analysisStructures.sourceAnalysis.has(donationContext.source)) {
+                analysisStructures.sourceAnalysis.set(donationContext.source, {
+                    totalAmount: 0,
+                    donationCount: 0,
+                    averageDonation: 0,
+                    customers: new Set(),
+                    stores: new Set(),
+                    paymentModes: new Set(),
+                    transactionTypes: new Set(),
+                    invoiceAges: [],
+                    donationAmounts: []
+                });
+            }
+            
+            const sourceData = analysisStructures.sourceAnalysis.get(donationContext.source);
+            sourceData.totalAmount += amount;
+            sourceData.donationCount += 1;
+            sourceData.customers.add(donationContext.customerEmail);
+            if (donationContext.store !== 'Unknown Store') sourceData.stores.add(donationContext.store);
+            if (donationContext.paymentMode !== 'Unknown') sourceData.paymentModes.add(donationContext.paymentMode);
+            if (donationContext.transactionType !== 'unknown') sourceData.transactionTypes.add(donationContext.transactionType);
+            sourceData.invoiceAges.push(donationContext.invoiceAge);
+            sourceData.donationAmounts.push(amount);
+            
+            // === STORE ANALYSIS ===
+            if (donationContext.store !== 'Unknown Store') {
+                if (!analysisStructures.storeAnalysis.has(donationContext.store)) {
+                    analysisStructures.storeAnalysis.set(donationContext.store, {
+                        totalAmount: 0,
+                        donationCount: 0,
+                        averageDonation: 0,
+                        uniqueCustomers: new Set(),
+                        sources: new Set(),
+                        paymentModes: new Set(),
+                        donationAmounts: []
+                    });
+                }
+                
+                const storeData = analysisStructures.storeAnalysis.get(donationContext.store);
+                storeData.totalAmount += amount;
+                storeData.donationCount += 1;
+                storeData.uniqueCustomers.add(donationContext.customerEmail);
+                storeData.sources.add(donationContext.source);
+                storeData.paymentModes.add(donationContext.paymentMode);
+                storeData.donationAmounts.push(amount);
+            }
+            
+            // === CUSTOMER ANALYSIS (if enabled) ===
+            if (includeCustomerDetails && donationContext.customerEmail !== 'anonymous') {
+                if (!analysisStructures.customerAnalysis.has(donationContext.customerEmail)) {
+                    analysisStructures.customerAnalysis.set(donationContext.customerEmail, {
+                        customerName: donationContext.customerName,
+                        customerEmail: donationContext.customerEmail,
+                        totalDonated: 0,
+                        donationCount: 0,
+                        averageDonation: 0,
+                        sources: new Set(),
+                        stores: new Set(),
+                        paymentModes: new Set(),
+                        firstDonationDate: donationContext.donationDate,
+                        lastDonationDate: donationContext.donationDate,
+                        donationHistory: []
+                    });
+                }
+                
+                const customerData = analysisStructures.customerAnalysis.get(donationContext.customerEmail);
+                customerData.totalDonated += amount;
+                customerData.donationCount += 1;
+                customerData.sources.add(donationContext.source);
+                if (donationContext.store !== 'Unknown Store') customerData.stores.add(donationContext.store);
+                customerData.paymentModes.add(donationContext.paymentMode);
+                
+                // Track donation dates
+                if (donationContext.donationDate) {
+                    if (!customerData.firstDonationDate || donationContext.donationDate < customerData.firstDonationDate) {
+                        customerData.firstDonationDate = donationContext.donationDate;
+                    }
+                    if (!customerData.lastDonationDate || donationContext.donationDate > customerData.lastDonationDate) {
+                        customerData.lastDonationDate = donationContext.donationDate;
+                    }
+                }
+                
+                // Add to donation history
+                customerData.donationHistory.push({
+                    amount: amount,
+                    source: donationContext.source,
+                    store: donationContext.store,
+                    date: donationContext.donationDate,
+                    invoiceId: donationContext.systemInvoiceId,
+                    voucherNumber: donationContext.manualVoucherNumber
+                });
+            }
+            
+            // === TEMPORAL ANALYSIS ===
+            if (donationContext.monthKey !== 'Unknown') {
+                analysisStructures.monthlyTrends.set(
+                    donationContext.monthKey, 
+                    (analysisStructures.monthlyTrends.get(donationContext.monthKey) || 0) + amount
+                );
+            }
+            
+            // === PAYMENT MODE ANALYSIS ===
+            if (donationContext.paymentMode !== 'Unknown') {
+                if (!analysisStructures.paymentModeAnalysis.has(donationContext.paymentMode)) {
+                    analysisStructures.paymentModeAnalysis.set(donationContext.paymentMode, {
+                        totalAmount: 0,
+                        donationCount: 0,
+                        averageDonation: 0
+                    });
+                }
+                const paymentModeData = analysisStructures.paymentModeAnalysis.get(donationContext.paymentMode);
+                paymentModeData.totalAmount += amount;
+                paymentModeData.donationCount += 1;
+            }
+            
+            // === TRANSACTION TYPE ANALYSIS ===
+            if (donationContext.transactionType !== 'unknown') {
+                if (!analysisStructures.transactionTypeAnalysis.has(donationContext.transactionType)) {
+                    analysisStructures.transactionTypeAnalysis.set(donationContext.transactionType, {
+                        totalAmount: 0,
+                        donationCount: 0,
+                        description: getTransactionTypeDescription(donationContext.transactionType)
+                    });
+                }
+                const transactionTypeData = analysisStructures.transactionTypeAnalysis.get(donationContext.transactionType);
+                transactionTypeData.totalAmount += amount;
+                transactionTypeData.donationCount += 1;
+            }
+            
+            // === INVOICE AGE ANALYSIS ===
+            const ageCategory = categorizeInvoiceAge(donationContext.invoiceAge);
+            if (!analysisStructures.invoiceAgeAnalysis.has(ageCategory)) {
+                analysisStructures.invoiceAgeAnalysis.set(ageCategory, {
+                    totalAmount: 0,
+                    donationCount: 0,
+                    averageAge: 0,
+                    ages: []
+                });
+            }
+            const ageData = analysisStructures.invoiceAgeAnalysis.get(ageCategory);
+            ageData.totalAmount += amount;
+            ageData.donationCount += 1;
+            ageData.ages.push(donationContext.invoiceAge);
+            
+            // === DONATION SIZE ANALYSIS ===
+            if (amount < 50) {
+                analysisStructures.donationSizeAnalysis.small += 1;
+            } else if (amount < 200) {
+                analysisStructures.donationSizeAnalysis.medium += 1;
+            } else if (amount < 1000) {
+                analysisStructures.donationSizeAnalysis.large += 1;
+            } else {
+                analysisStructures.donationSizeAnalysis.major += 1;
+            }
+        });
+
+        console.log(`[Reports] ✅ Processed ${processedRecords} donation records totaling ${formatCurrency(totalDonationAmount)}`);
+
+        // ===================================================================
+        // PHASE 4: POST-PROCESSING AND CALCULATIONS
+        // ===================================================================
+        console.log(`[Reports] 🧮 Phase 4: Calculating derived metrics and insights...`);
+        
+        // Calculate averages for source analysis
+        analysisStructures.sourceAnalysis.forEach((data, source) => {
+            data.averageDonation = data.donationCount > 0 ? data.totalAmount / data.donationCount : 0;
+            data.medianDonation = calculateMedian(data.donationAmounts);
+            data.averageInvoiceAge = data.invoiceAges.length > 0 
+                ? data.invoiceAges.reduce((sum, age) => sum + age, 0) / data.invoiceAges.length 
+                : 0;
+        });
+        
+        // Calculate averages for store analysis
+        analysisStructures.storeAnalysis.forEach((data, store) => {
+            data.averageDonation = data.donationCount > 0 ? data.totalAmount / data.donationCount : 0;
+            data.medianDonation = calculateMedian(data.donationAmounts);
+            data.donationRate = data.donationCount; // Could be enhanced with transaction correlation
+        });
+        
+        // Calculate averages for customer analysis
+        if (includeCustomerDetails) {
+            analysisStructures.customerAnalysis.forEach((data, email) => {
+                data.averageDonation = data.donationCount > 0 ? data.totalDonated / data.donationCount : 0;
+                
+                // Calculate customer donation span
+                if (data.firstDonationDate && data.lastDonationDate) {
+                    data.donationSpanDays = Math.ceil((data.lastDonationDate - data.firstDonationDate) / (1000 * 60 * 60 * 24));
+                    data.donationFrequency = data.donationSpanDays > 0 ? data.donationCount / (data.donationSpanDays / 30) : 0; // Donations per month
+                } else {
+                    data.donationSpanDays = 0;
+                    data.donationFrequency = 0;
+                }
+            });
+        }
+        
+        // Calculate payment mode averages
+        analysisStructures.paymentModeAnalysis.forEach((data, mode) => {
+            data.averageDonation = data.donationCount > 0 ? data.totalAmount / data.donationCount : 0;
+        });
+        
+        // Calculate invoice age averages
+        analysisStructures.invoiceAgeAnalysis.forEach((data, category) => {
+            data.averageAge = data.ages.length > 0 ? data.ages.reduce((sum, age) => sum + age, 0) / data.ages.length : 0;
+        });
+
+        // ===================================================================
+        // PHASE 5: ASSEMBLE COMPREHENSIVE RESULTS
+        // ===================================================================
+        console.log(`[Reports] 📋 Phase 5: Assembling comprehensive donation analysis results...`);
+        
+        // Build final results with rich business intelligence
+        const comprehensiveResults = {
+            // === HIGH-LEVEL SUMMARY ===
+            donationSummary: {
+                totalDonations: totalDonationAmount,
+                formattedTotal: formatCurrency(totalDonationAmount),
+                donationRecords: processedRecords,
+                averageDonation: processedRecords > 0 ? totalDonationAmount / processedRecords : 0,
+                formattedAverageDonation: formatCurrency(processedRecords > 0 ? totalDonationAmount / processedRecords : 0),
+                medianDonation: calculateMedian(Array.from(analysisStructures.sourceAnalysis.values()).flatMap(s => s.donationAmounts)),
+                
+                // ✅ ENHANCED: Summary insights
+                uniqueSources: analysisStructures.sourceAnalysis.size,
+                uniqueStores: analysisStructures.storeAnalysis.size,
+                uniqueDonors: includeCustomerDetails ? analysisStructures.customerAnalysis.size : 'Not calculated',
+                uniquePaymentModes: analysisStructures.paymentModeAnalysis.size,
+                
+                // Analysis period context
+                analysisDateRange: {
+                    start: startDate?.toLocaleDateString() || 'Beginning of records',
+                    end: endDate?.toLocaleDateString() || 'Latest records',
+                    periodLabel: startDate && endDate ? createDateRange(Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))).periodLabel : 'All Time'
+                }
+            },
+            
+            // === SOURCE PERFORMANCE ANALYSIS ===
+            sourcePerformance: Array.from(analysisStructures.sourceAnalysis.entries()).map(([source, data]) => ({
+                source: source,
+                totalAmount: data.totalAmount,
+                formattedAmount: formatCurrency(data.totalAmount),
+                donationCount: data.donationCount,
+                averageDonation: data.averageDonation,
+                formattedAverageDonation: formatCurrency(data.averageDonation),
+                medianDonation: data.medianDonation,
+                formattedMedianDonation: formatCurrency(data.medianDonation),
+                
+                // ✅ BUSINESS INTELLIGENCE
+                uniqueCustomers: data.customers.size,
+                uniqueStores: data.stores.size,
+                paymentMethodsUsed: data.paymentModes.size,
+                transactionTypesInvolved: data.transactionTypes.size,
+                averageInvoiceAge: Math.round(data.averageInvoiceAge),
+                
+                // Performance metrics
+                percentage: totalDonationAmount > 0 ? (data.totalAmount / totalDonationAmount) * 100 : 0,
+                performanceRating: calculateSourcePerformanceRating(data.totalAmount, data.donationCount, totalDonationAmount),
+                
+                // ✅ STRATEGIC INSIGHTS
+                donationEfficiency: data.customers.size > 0 ? data.totalAmount / data.customers.size : 0, // Average per customer
+                consistencyScore: calculateDonationConsistency(data.donationAmounts)
+            })).sort((a, b) => b.totalAmount - a.totalAmount), // Sort by total amount descending
+            
+            // === STORE EFFECTIVENESS ANALYSIS ===
+            storeEffectiveness: Array.from(analysisStructures.storeAnalysis.entries()).map(([store, data]) => ({
+                store: store,
+                totalAmount: data.totalAmount,
+                formattedAmount: formatCurrency(data.totalAmount),
+                donationCount: data.donationCount,
+                averageDonation: data.averageDonation,
+                formattedAverageDonation: formatCurrency(data.averageDonation),
+                medianDonation: data.medianDonation,
+                formattedMedianDonation: formatCurrency(data.medianDonation),
+                
+                // ✅ STORE-SPECIFIC METRICS
+                uniqueCustomers: data.uniqueCustomers.size,
+                donationSources: data.sources.size,
+                paymentMethodsAccepted: data.paymentModes.size,
+                
+                // Performance metrics
+                percentage: totalDonationAmount > 0 ? (data.totalAmount / totalDonationAmount) * 100 : 0,
+                donationRate: data.donationCount, // Could be enhanced with transaction correlation
+                customerGenerosityRate: data.uniqueCustomers.size > 0 ? data.totalAmount / data.uniqueCustomers.size : 0,
+                
+                // ✅ EFFECTIVENESS RATING
+                effectivenessRating: calculateStoreEffectivenessRating(data.totalAmount, data.donationCount, data.uniqueCustomers.size)
+            })).sort((a, b) => b.totalAmount - a.totalAmount),
+            
+            // === CUSTOMER DONOR ANALYSIS ===
+            customerDonorAnalysis: includeCustomerDetails ? {
+                topDonors: Array.from(analysisStructures.customerAnalysis.entries())
+                    .filter(([email, data]) => email !== 'anonymous' && email !== 'unknown')
+                    .map(([email, data]) => ({
+                        customerName: data.customerName,
+                        customerEmail: data.customerEmail,
+                        totalDonated: data.totalDonated,
+                        formattedTotalDonated: formatCurrency(data.totalDonated),
+                        donationCount: data.donationCount,
+                        averageDonation: data.averageDonation,
+                        formattedAverageDonation: formatCurrency(data.averageDonation),
+                        
+                        // ✅ CUSTOMER INSIGHTS
+                        donationSources: data.sources.size,
+                        storesDonatedAt: data.stores.size,
+                        paymentMethodsUsed: data.paymentModes.size,
+                        donationSpanDays: data.donationSpanDays,
+                        donationFrequency: data.donationFrequency.toFixed(2), // Donations per month
+                        
+                        // ✅ DONOR CLASSIFICATION
+                        donorClassification: getDonorClassification(data.totalDonated),
+                        loyaltyLevel: calculateDonorLoyaltyLevel(data),
+                        
+                        // ✅ RELATIONSHIP INSIGHTS
+                        isMultiStoreDonor: data.stores.size > 1,
+                        isMultiSourceDonor: data.sources.size > 1,
+                        preferredDonationMethod: getMostFrequentPaymentMode(data.paymentModes, data.donationHistory),
+                        
+                        // Recent activity
+                        daysSinceLastDonation: data.lastDonationDate ? 
+                            Math.ceil((new Date() - data.lastDonationDate) / (1000 * 60 * 60 * 24)) : null
+                    }))
+                    .sort((a, b) => b.totalDonated - a.totalDonated)
+                    .slice(0, 50), // Top 50 donors
+                
+                // ✅ DONOR SEGMENTS
+                donorSegmentation: {
+                    totalDonors: analysisStructures.customerAnalysis.size,
+                    majorDonors: Array.from(analysisStructures.customerAnalysis.values()).filter(d => d.totalDonated >= 1000).length,
+                    regularDonors: Array.from(analysisStructures.customerAnalysis.values()).filter(d => d.donationCount >= 3).length,
+                    multiStoreDonors: Array.from(analysisStructures.customerAnalysis.values()).filter(d => d.stores.size > 1).length,
+                    multiSourceDonors: Array.from(analysisStructures.customerAnalysis.values()).filter(d => d.sources.size > 1).length
+                }
+            } : { message: 'Customer details not included in this analysis' },
+            
+            // === TEMPORAL TRENDS ANALYSIS ===
+            seasonalTrends: {
+                monthlyBreakdown: Array.from(analysisStructures.monthlyTrends.entries())
+                    .map(([month, amount]) => ({
+                        month: month,
+                        monthLabel: formatMonthLabel(month),
+                        amount: amount,
+                        formattedAmount: formatCurrency(amount)
+                    }))
+                    .sort((a, b) => a.month.localeCompare(b.month)),
+                
+                // ✅ TREND INSIGHTS
+                bestMonth: Array.from(analysisStructures.monthlyTrends.entries())
+                    .sort((a, b) => b[1] - a[1])[0] || null,
+                worstMonth: Array.from(analysisStructures.monthlyTrends.entries())
+                    .sort((a, b) => a[1] - b[1])[0] || null,
+                trendDirection: calculateTrendDirection(Array.from(analysisStructures.monthlyTrends.values())),
+                seasonalityScore: calculateSeasonalityScore(analysisStructures.monthlyTrends)
+            },
+            
+            // === PAYMENT METHOD CORRELATION ===
+            paymentMethodCorrelation: Array.from(analysisStructures.paymentModeAnalysis.entries()).map(([mode, data]) => ({
+                paymentMode: mode,
+                totalAmount: data.totalAmount,
+                formattedAmount: formatCurrency(data.totalAmount),
+                donationCount: data.donationCount,
+                averageDonation: data.averageDonation,
+                formattedAverageDonation: formatCurrency(data.averageDonation),
+                percentage: totalDonationAmount > 0 ? (data.totalAmount / totalDonationAmount) * 100 : 0,
+                donationPropensity: calculateDonationPropensity(mode, data) // How likely this payment mode is to generate donations
+            })).sort((a, b) => b.totalAmount - a.totalAmount),
+            
+            // === TRANSACTION TYPE BREAKDOWN ===
+            transactionTypeBreakdown: Array.from(analysisStructures.transactionTypeAnalysis.entries()).map(([type, data]) => ({
+                transactionType: type,
+                description: data.description,
+                totalAmount: data.totalAmount,
+                formattedAmount: formatCurrency(data.totalAmount),
+                donationCount: data.donationCount,
+                percentage: totalDonationAmount > 0 ? (data.totalAmount / totalDonationAmount) * 100 : 0
+            })).sort((a, b) => b.totalAmount - a.totalAmount),
+            
+            // === INVOICE AGE IMPACT ANALYSIS ===
+            invoiceAgeImpact: Array.from(analysisStructures.invoiceAgeAnalysis.entries()).map(([category, data]) => ({
+                ageCategory: category,
+                totalAmount: data.totalAmount,
+                formattedAmount: formatCurrency(data.totalAmount),
+                donationCount: data.donationCount,
+                averageAge: Math.round(data.averageAge),
+                percentage: totalDonationAmount > 0 ? (data.totalAmount / totalDonationAmount) * 100 : 0
+            })).sort((a, b) => b.totalAmount - a.totalAmount),
+            
+            // === DONATION SIZE DISTRIBUTION ===
+            donationSizeDistribution: {
+                small: {
+                    count: analysisStructures.donationSizeAnalysis.small,
+                    range: 'Under ₹50',
+                    percentage: processedRecords > 0 ? (analysisStructures.donationSizeAnalysis.small / processedRecords) * 100 : 0
+                },
+                medium: {
+                    count: analysisStructures.donationSizeAnalysis.medium,
+                    range: '₹50 - ₹200',
+                    percentage: processedRecords > 0 ? (analysisStructures.donationSizeAnalysis.medium / processedRecords) * 100 : 0
+                },
+                large: {
+                    count: analysisStructures.donationSizeAnalysis.large,
+                    range: '₹200 - ₹1,000',
+                    percentage: processedRecords > 0 ? (analysisStructures.donationSizeAnalysis.large / processedRecords) * 100 : 0
+                },
+                major: {
+                    count: analysisStructures.donationSizeAnalysis.major,
+                    range: 'Over ₹1,000',
+                    percentage: processedRecords > 0 ? (analysisStructures.donationSizeAnalysis.major / processedRecords) * 100 : 0
+                }
+            },
+            
+            // === STRATEGIC BUSINESS INSIGHTS ===
+            businessInsights: {
+                // Top performers
+                topDonationSource: analysisStructures.sourceAnalysis.size > 0 ? 
+                    Array.from(analysisStructures.sourceAnalysis.entries()).sort((a, b) => b[1].totalAmount - a[1].totalAmount)[0][0] : null,
+                topDonationStore: analysisStructures.storeAnalysis.size > 0 ?
+                    Array.from(analysisStructures.storeAnalysis.entries()).sort((a, b) => b[1].totalAmount - a[1].totalAmount)[0][0] : null,
+                mostGenerousPaymentMode: analysisStructures.paymentModeAnalysis.size > 0 ?
+                    Array.from(analysisStructures.paymentModeAnalysis.entries()).sort((a, b) => b[1].averageDonation - a[1].averageDonation)[0][0] : null,
+                
+                // Performance metrics
+                donationDiversification: analysisStructures.sourceAnalysis.size,
+                averageDonationPerSource: analysisStructures.sourceAnalysis.size > 0 ? totalDonationAmount / analysisStructures.sourceAnalysis.size : 0,
+                donationConcentration: calculateDonationConcentration(analysisStructures.sourceAnalysis),
+                
+                // ✅ STRATEGIC RECOMMENDATIONS
+                recommendations: generateEnhancedDonationRecommendations(
+                    analysisStructures.sourceAnalysis, 
+                    analysisStructures.storeAnalysis, 
+                    totalDonationAmount,
+                    processedRecords
+                ),
+                
+                // ✅ BENCHMARKING
+                benchmarkInsights: {
+                    donationGoalProgress: calculateDonationGoalProgress(totalDonationAmount, startDate, endDate),
+                    performanceVsPrevious: 'Analysis for comparison period needed', // Could be enhanced
+                    industryBenchmark: 'Church/retail donation benchmarking data needed'
+                }
+            },
+            
+            // === EXECUTION METADATA ===
+            metadata: {
+                calculatedAt: new Date().toISOString(),
+                firestoreReadsUsed: totalFirestoreReads,
+                queryExecutionTimeMs: queryExecutionTime,
+                donationRecordsAnalyzed: totalFirestoreReads,
+                recordsProcessed: processedRecords,
+                
+                // Data quality indicators
+                dataQuality: {
+                    recordsWithSource: Array.from(analysisStructures.sourceAnalysis.keys()).filter(s => s !== 'Unknown Source').length,
+                    recordsWithStore: Array.from(analysisStructures.storeAnalysis.keys()).filter(s => s !== 'Unknown Store').length,
+                    recordsWithCustomer: includeCustomerDetails ? analysisStructures.customerAnalysis.size : 'Not calculated',
+                    dataCompletenessScore: calculateDataCompletenessScore(analysisStructures)
+                },
+                
+                // Analysis configuration
+                analysisConfiguration: {
+                    includeCustomerDetails: includeCustomerDetails,
+                    cachingEnabled: useCache,
+                    optimizationLevel: 'comprehensive_donation_intelligence'
+                },
+                
+                // Cache management
+                cacheKey: cacheKey,
+                cacheExpiresAt: new Date(Date.now() + (REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES * 60 * 1000)).toISOString()
+            }
+        };
+
+        // ===================================================================
+        // PHASE 6: CACHE AND COMPLETION
+        // ===================================================================
+        
+        // Cache the comprehensive results
+        if (useCache && totalFirestoreReads > 0) {
+            ReportCache.setCachedReport(cacheKey, comprehensiveResults);
+            console.log(`[Reports] ✅ Cached donation source analysis for ${REPORT_CONFIGS.CACHE_SETTINGS.CACHE_DURATION_MINUTES} minutes`);
+        }
+        
+        // Final success logging
+        console.log(`[Reports] 🎯 DONATION SOURCE ANALYSIS COMPLETED:`);
+        console.log(`  💰 Total Analyzed: ${formatCurrency(totalDonationAmount)} from ${processedRecords} records`);
+        console.log(`  📊 Top Source: ${comprehensiveResults.businessInsights.topDonationSource || 'None'}`);
+        console.log(`  🏪 Top Store: ${comprehensiveResults.businessInsights.topDonationStore || 'None'}`);
+        console.log(`  👥 Unique Donors: ${comprehensiveResults.donationSummary.uniqueDonors}`);
+        console.log(`  🔍 Sources Analyzed: ${comprehensiveResults.donationSummary.uniqueSources}`);
+        console.log(`  📈 Firestore Reads Used: ${totalFirestoreReads}`);
+        console.log(`  ⚡ Query Time: ${queryExecutionTime}ms`);
+        
+        return comprehensiveResults;
+        
+    } catch (error) {
+        console.error('[Reports] ❌ Error in comprehensive donation source analysis:', error);
+        throw new Error(`Donation source analysis failed: ${error.message}`);
+    }
+}
+
+
+// ===================================================================
+// HELPER FUNCTIONS FOR DONATION ANALYSIS
+// ===================================================================
+
+/**
+ * Helper: Calculates median value from array of numbers
+ */
+function calculateMedian(numbers) {
+    if (!numbers || numbers.length === 0) return 0;
+    
+    const sorted = [...numbers].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    
+    return sorted.length % 2 !== 0 
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * Helper: Categorizes invoice age for donation analysis
+ */
+function categorizeInvoiceAge(age) {
+    if (age === 0) return 'Same Day';
+    if (age <= 7) return 'Within Week';
+    if (age <= 30) return 'Within Month';
+    if (age <= 90) return 'Within Quarter';
+    return 'Older';
+}
+
+/**
+ * Helper: Formats month key into readable label
+ */
+function formatMonthLabel(monthKey) {
+    try {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(year, month - 1); // month is 0-indexed
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    } catch {
+        return monthKey;
+    }
+}
+
+/**
+ * Helper: Calculates source performance rating
+ */
+function calculateSourcePerformanceRating(amount, count, totalAmount) {
+    const percentage = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
+    
+    if (percentage > 50) return 'Dominant';
+    if (percentage > 25) return 'Major';
+    if (percentage > 10) return 'Significant';
+    if (percentage > 5) return 'Contributing';
+    return 'Minor';
+}
+
+/**
+ * Helper: Calculates donation consistency score
+ */
+function calculateDonationConsistency(amounts) {
+    if (!amounts || amounts.length < 2) return 100;
+    
+    const average = amounts.reduce((sum, amt) => sum + amt, 0) / amounts.length;
+    const variance = amounts.reduce((sum, amt) => sum + Math.pow(amt - average, 2), 0) / amounts.length;
+    const standardDeviation = Math.sqrt(variance);
+    const coefficientOfVariation = average > 0 ? (standardDeviation / average) : 0;
+    
+    // Convert to consistency score (lower variation = higher consistency)
+    return Math.max(0, 100 - (coefficientOfVariation * 100));
+}
+
+/**
+ * Helper: Calculates store effectiveness rating
+ */
+function calculateStoreEffectivenessRating(amount, count, customers) {
+    const avgPerCustomer = customers > 0 ? amount / customers : 0;
+    
+    if (avgPerCustomer > 200) return 'Excellent';
+    if (avgPerCustomer > 100) return 'Very Good';
+    if (avgPerCustomer > 50) return 'Good';
+    if (avgPerCustomer > 25) return 'Fair';
+    return 'Needs Improvement';
+}
+
+/**
+ * Helper: Gets description for transaction types
+ */
+function getTransactionTypeDescription(transactionType) {
+    const descriptions = {
+        'direct_sale_overpayment': 'Customer overpaid during direct purchase',
+        'invoice_payment_overpayment': 'Customer overpaid when settling invoice',
+        'consignment_payment_overpayment': 'Team overpaid during consignment settlement',
+        'manual_donation_entry': 'Manually entered donation record',
+        'fundraising_event': 'Special fundraising event contribution',
+        'seasonal_campaign': 'Seasonal campaign donation'
+    };
+    
+    return descriptions[transactionType] || 'Unknown transaction type';
+}
+
+/**
+ * Helper: Calculates donor loyalty level based on giving patterns
+ */
+function calculateDonorLoyaltyLevel(donorData) {
+    const frequency = donorData.donationFrequency || 0;
+    const diversity = donorData.sources.size;
+    const consistency = donorData.donationSpanDays > 90;
+    
+    if (frequency > 1 && diversity > 1 && consistency) return 'Highly Loyal';
+    if (frequency > 0.5 && diversity > 0) return 'Regular Supporter';  
+    if (donorData.donationCount > 1) return 'Repeat Donor';
+    return 'One-Time Donor';
+}
+
+/**
+ * Helper: Identifies most frequent payment mode for a donor
+ */
+function getMostFrequentPaymentMode(paymentModes, donationHistory) {
+    if (!donationHistory || donationHistory.length === 0) return 'Unknown';
+    
+    const modeCount = new Map();
+    donationHistory.forEach(donation => {
+        const mode = donation.paymentMode || 'Unknown';
+        modeCount.set(mode, (modeCount.get(mode) || 0) + 1);
+    });
+    
+    return Array.from(modeCount.entries())
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unknown';
+}
+
+/**
+ * Helper: Calculates trend direction from monthly data
+ */
+function calculateTrendDirection(monthlyAmounts) {
+    if (!monthlyAmounts || monthlyAmounts.length < 2) return 'insufficient_data';
+    
+    const recent = monthlyAmounts.slice(-3); // Last 3 months
+    const earlier = monthlyAmounts.slice(0, -3); // Earlier months
+    
+    const recentAvg = recent.reduce((sum, amt) => sum + amt, 0) / recent.length;
+    const earlierAvg = earlier.length > 0 ? earlier.reduce((sum, amt) => sum + amt, 0) / earlier.length : recentAvg;
+    
+    const changePercent = earlierAvg > 0 ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
+    
+    if (changePercent > 10) return 'increasing';
+    if (changePercent < -10) return 'decreasing'; 
+    return 'stable';
+}
+
+
+/**
+ * Helper: Calculates seasonality score
+ */
+function calculateSeasonalityScore(monthlyTrends) {
+    if (monthlyTrends.size < 4) return 0; // Need at least 4 months for seasonality
+    
+    const amounts = Array.from(monthlyTrends.values());
+    const average = amounts.reduce((sum, amt) => sum + amt, 0) / amounts.length;
+    const maxDeviation = Math.max(...amounts.map(amt => Math.abs(amt - average)));
+    
+    return average > 0 ? (maxDeviation / average) * 100 : 0;
+}
+
+/**
+ * Helper: Calculates donation concentration (how concentrated donations are in top sources)
+ */
+function calculateDonationConcentration(sourceAnalysis) {
+    const amounts = Array.from(sourceAnalysis.values()).map(s => s.totalAmount).sort((a, b) => b - a);
+    const total = amounts.reduce((sum, amt) => sum + amt, 0);
+    
+    if (amounts.length < 2 || total === 0) return 100; // Fully concentrated
+    
+    const top20Percent = Math.ceil(amounts.length * 0.2);
+    const top20Amount = amounts.slice(0, top20Percent).reduce((sum, amt) => sum + amt, 0);
+    
+    return (top20Amount / total) * 100;
+}
+
+/**
+ * Helper: Calculates payment mode donation propensity
+ */
+function calculateDonationPropensity(paymentMode, data) {
+    // This could be enhanced with transaction correlation data
+    // For now, provide basic propensity based on average donation
+    const avgDonation = data.averageDonation || 0;
+    
+    if (avgDonation > 200) return 'Very High';
+    if (avgDonation > 100) return 'High';
+    if (avgDonation > 50) return 'Medium';
+    if (avgDonation > 25) return 'Low';
+    return 'Very Low';
+}
+
+/**
+ * Helper: Calculates data completeness score
+ */
+function calculateDataCompletenessScore(analysisStructures) {
+    const metrics = {
+        sourcesWithData: Array.from(analysisStructures.sourceAnalysis.keys()).filter(s => s !== 'Unknown Source').length,
+        storesWithData: Array.from(analysisStructures.storeAnalysis.keys()).filter(s => s !== 'Unknown Store').length,
+        totalSources: analysisStructures.sourceAnalysis.size,
+        totalStores: analysisStructures.storeAnalysis.size
+    };
+    
+    const sourceCompleteness = metrics.totalSources > 0 ? (metrics.sourcesWithData / metrics.totalSources) * 100 : 100;
+    const storeCompleteness = metrics.totalStores > 0 ? (metrics.storesWithData / metrics.totalStores) * 100 : 100;
+    
+    return (sourceCompleteness + storeCompleteness) / 2;
+}
+
+/**
+ * Helper: Calculates donation goal progress (placeholder for business goals)
+ */
+function calculateDonationGoalProgress(totalAmount, startDate, endDate) {
+    // This could be enhanced with actual business goals
+    // For now, provide basic goal tracking
+    
+    const monthlyGoal = 1000; // Example: ₹1,000 per month goal
+    const periods = startDate && endDate ? 
+        Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 30)) : 12; // Months in period or full year
+    
+    const targetAmount = monthlyGoal * periods;
+    const progressPercent = targetAmount > 0 ? (totalAmount / targetAmount) * 100 : 0;
+    
+    return {
+        targetAmount: targetAmount,
+        formattedTarget: formatCurrency(targetAmount),
+        actualAmount: totalAmount,
+        formattedActual: formatCurrency(totalAmount),
+        progressPercent: Math.round(progressPercent),
+        status: progressPercent >= 100 ? 'Goal Exceeded' : 
+                progressPercent >= 75 ? 'On Track' : 
+                progressPercent >= 50 ? 'Behind Schedule' : 'Significant Gap'
+    };
+}
+
+/**
+ * Helper: Generates enhanced donation recommendations with business context
+ */
+function generateEnhancedDonationRecommendations(sourceAnalysis, storeAnalysis, totalAmount, recordCount) {
+    const recommendations = [];
+    
+    // Source diversification analysis
+    if (sourceAnalysis.size === 1) {
+        const singleSource = Array.from(sourceAnalysis.keys())[0];
+        recommendations.push({
+            priority: 'Medium',
+            type: 'donation-diversification',
+            title: 'Single Donation Source Risk',
+            message: `All donations (${formatCurrency(totalAmount)}) come from: ${singleSource}`,
+            action: 'Explore opportunities to generate donations from multiple channels',
+            impact: 'Diversified donation sources provide more stable charitable income',
+            effort: 'Medium'
+        });
+    }
+    
+    // Store performance gap analysis
+    if (storeAnalysis.size > 1) {
+        const storeAmounts = Array.from(storeAnalysis.entries()).sort((a, b) => b[1].totalAmount - a[1].totalAmount);
+        if (storeAmounts.length >= 2) {
+            const [topStore, secondStore] = storeAmounts;
+            const gap = topStore[1].totalAmount - secondStore[1].totalAmount;
+            const gapPercentage = (gap / totalAmount) * 100;
+            
+            if (gapPercentage > 30) {
+                recommendations.push({
+                    priority: 'Low',
+                    type: 'store-donation-optimization',
+                    title: 'Store Donation Performance Gap',
+                    message: `${topStore[0]} generates ${formatCurrency(gap)} more donations than ${secondStore[0]} (${gapPercentage.toFixed(1)}% gap)`,
+                    action: `Study ${topStore[0]}'s donation-generating practices and implement at ${secondStore[0]}`,
+                    impact: 'Balanced donation generation could increase total donations',
+                    effort: 'Low'
+                });
+            }
+        }
+    }
+    
+    // High performance recognition
+    if (totalAmount > 10000) {
+        recommendations.push({
+            priority: 'Info',
+            type: 'donation-excellence',
+            title: 'Exceptional Donation Performance',
+            message: `Outstanding donation performance: ${formatCurrency(totalAmount)} from ${recordCount} donations`,
+            action: 'Document and replicate successful donation-generating practices',
+            impact: 'Strong community support indicates excellent customer relationships',
+            effort: 'Low'
+        });
+    }
+    
+    // Low donation warning
+    if (totalAmount < 500 && recordCount > 0) {
+        recommendations.push({
+            priority: 'Medium',
+            type: 'donation-improvement-needed',
+            title: 'Donation Generation Opportunity',
+            message: `Total donations (${formatCurrency(totalAmount)}) suggest opportunity for improvement`,
+            action: 'Implement customer engagement strategies to encourage voluntary donations',
+            impact: 'Improved donation generation supports community mission',
+            effort: 'Medium'
+        });
+    }
+    
+    // Customer engagement insights
+    const customerDonorCount = Array.from(sourceAnalysis.values()).reduce((sum, source) => sum + source.customers.size, 0);
+    if (customerDonorCount > 0 && recordCount > 0) {
+        const donationsPerDonor = recordCount / customerDonorCount;
+        if (donationsPerDonor > 3) {
+            recommendations.push({
+                priority: 'Info',
+                type: 'donor-loyalty-success',
+                title: 'Strong Donor Loyalty',
+                message: `Average ${donationsPerDonor.toFixed(1)} donations per donor indicates excellent customer loyalty`,
+                action: 'Continue current customer relationship practices',
+                impact: 'High donor retention supports sustainable charitable giving',
+                effort: 'Low'
+            });
+        }
+    }
+    
+    return recommendations;
+}
+
+/**
+ * Helper function: Classifies donors based on total donation amount
+ */
+function getDonorClassification(totalDonated) {
+    if (totalDonated >= 5000) return 'Platinum Donor';
+    if (totalDonated >= 2000) return 'Major Donor';
+    if (totalDonated >= 1000) return 'Significant Donor';  
+    if (totalDonated >= 500) return 'Generous Donor';
+    if (totalDonated >= 200) return 'Regular Donor';
+    if (totalDonated >= 100) return 'Supporter';
+    if (totalDonated >= 50) return 'Contributor';
+    return 'Friend';
+}
 
 
 /**
