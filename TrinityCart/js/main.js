@@ -742,6 +742,96 @@ async function handleExistingCataloguesGrid(button, docId) {
     if (button.classList.contains('action-btn-edit-catalogue')) {
         const catalogueData = getCatalogueDataFromGridById(docId);
         if (catalogueData) loadCatalogueForEditing(catalogueData);
+    } else if (button.classList.contains('btn-activate-catalogue')) {
+        // ✅ NEW: Activate catalogue
+        const catalogueData = getCatalogueDataFromGridById(docId);
+        if (!catalogueData) return;
+
+        const confirmed = await showModal('confirm', 'Activate Sales Catalogue', 
+            `Are you sure you want to activate "${catalogueData.catalogueName}"?\n\n` +
+            'This will:\n' +
+            '✓ Make the catalogue available for consignment requests\n' +
+            '✓ Activate price history for all catalogue items\n' +
+            '✓ Enable the catalogue in reports and analytics'
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Activating Sales Catalogue', 'info');
+            
+            try {
+                ProgressToast.updateProgress('Activating catalogue and price history...', 75);
+                
+                await updateSalesCatalogue(docId, { isActive: true }, user);
+                
+                ProgressToast.showSuccess(`"${catalogueData.catalogueName}" has been activated!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    await showModal('success', 'Catalogue Activated', 
+                        `Sales catalogue "${catalogueData.catalogueName}" has been activated successfully!\n\n` +
+                        '✓ Catalogue is now available for consignment requests\n' +
+                        '✓ Price history activated for all items\n' +
+                        '✓ Catalogue included in active reports\n\n' +
+                        'Teams can now request products from this catalogue.'
+                    );
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error activating catalogue:', error);
+                ProgressToast.showError(`Failed to activate catalogue: ${error.message}`);
+                setTimeout(() => {
+                    showModal('error', 'Activation Failed', 
+                        'Failed to activate the sales catalogue. Please try again.'
+                    );
+                }, 2000);
+            }
+        }
+        
+    } else if (button.classList.contains('btn-deactivate-catalogue')) {
+        // ✅ NEW: Deactivate catalogue  
+        const catalogueData = getCatalogueDataFromGridById(docId);
+        if (!catalogueData) return;
+
+        const confirmed = await showModal('confirm', 'Deactivate Sales Catalogue', 
+            `Are you sure you want to deactivate "${catalogueData.catalogueName}"?\n\n` +
+            'This will:\n' +
+            '⚠️ Hide the catalogue from consignment requests\n' +
+            '⚠️ Deactivate price history for all catalogue items\n' +
+            '⚠️ Remove the catalogue from active reports\n\n' +
+            'Note: This does not delete the catalogue or its items.'
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Deactivating Sales Catalogue', 'warning');
+            
+            try {
+                ProgressToast.updateProgress('Deactivating catalogue and price history...', 75);
+                
+                await updateSalesCatalogue(docId, { isActive: false }, user);
+                
+                ProgressToast.showSuccess(`"${catalogueData.catalogueName}" has been deactivated.`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    await showModal('success', 'Catalogue Deactivated', 
+                        `Sales catalogue "${catalogueData.catalogueName}" has been deactivated.\n\n` +
+                        '✓ Catalogue hidden from consignment requests\n' +
+                        '✓ Price history deactivated for all items\n' +
+                        '✓ Catalogue excluded from active reports\n\n' +
+                        'You can reactivate this catalogue at any time.'
+                    );
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error deactivating catalogue:', error);
+                ProgressToast.showError(`Failed to deactivate catalogue: ${error.message}`);
+                setTimeout(() => {
+                    showModal('error', 'Deactivation Failed', 
+                        'Failed to deactivate the sales catalogue. Please try again.'
+                    );
+                }, 2000);
+            }
+        }
     }
 }
 
