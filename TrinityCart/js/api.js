@@ -2267,13 +2267,15 @@ export async function voidSalePayment(paymentId, adminUser) {
             newPaymentStatus = 'Unpaid';
         }
 
+        // ✅ CORRECTED: Use plain numbers in console logs instead of formatCurrency
         console.log(`[API] Payment status recalculation:`);
         console.log(`  - Previous status: ${currentInvoiceData.paymentStatus}`);
-        console.log(`  - Previous paid: ${formatCurrency(currentInvoiceData.totalAmountPaid || 0)}`);
-        console.log(`  - Voided amount: ${formatCurrency(originalPaymentData.amountPaid)}`);
-        console.log(`  - New paid total: ${formatCurrency(newTotalAmountPaid)}`);
-        console.log(`  - New balance: ${formatCurrency(newBalanceDue)}`);
+        console.log(`  - Previous paid: ₹${(currentInvoiceData.totalAmountPaid || 0).toFixed(2)}`); // ✅ MANUAL FORMAT
+        console.log(`  - Voided amount: ₹${originalPaymentData.amountPaid.toFixed(2)}`); // ✅ MANUAL FORMAT
+        console.log(`  - New paid total: ₹${newTotalAmountPaid.toFixed(2)}`); // ✅ MANUAL FORMAT
+        console.log(`  - New balance: ₹${newBalanceDue.toFixed(2)}`); // ✅ MANUAL FORMAT
         console.log(`  - New status: ${newPaymentStatus}`);
+
 
         // 5. WRITE: Update invoice with recalculated amounts and status
         transaction.update(orderRef, {
@@ -2321,7 +2323,7 @@ export async function voidSalePayment(paymentId, adminUser) {
                 }
             });
             
-            console.log(`[API] ✅ Donation reversal recorded: ${formatCurrency(-originalPaymentData.donationAmount)}`);
+            console.log(`[API] ✅ Donation reversal recorded: ₹${(-originalPaymentData.donationAmount).toFixed(2)}`); // ✅ MANUAL FORMAT
         }
     });
 }
