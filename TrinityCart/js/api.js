@@ -2201,10 +2201,9 @@ export async function recordSalePayment(paymentData, user) {
 }
 
 
-
 /**
- * [NEW & TRANSACTIONAL] Voids a verified payment, creating a reversing
- * transaction and updating all related financial totals.
+ * [ENHANCED] Voids a verified payment with proper payment status recalculation,
+ * creating a reversing transaction and updating all related financial totals.
  * @param {string} paymentId - The document ID of the payment to void.
  * @param {object} adminUser - The admin performing the void.
  */
@@ -2222,8 +2221,20 @@ export async function voidSalePayment(paymentId, adminUser) {
         const originalPaymentData = paymentDoc.data();
         const orderRef = db.collection(SALES_COLLECTION_PATH).doc(originalPaymentData.invoiceId);
 
+        // READ the current invoice state to calculate new payment status
+        const invoiceDoc = await transaction.get(orderRef);
+        if (!invoiceDoc.exists) {
+            throw new Error("Related invoice not found.");
+        }
+        const currentInvoiceData = invoiceDoc.data();
+
         // 2. WRITE: Update the original payment's status to "Voided".
-        transaction.update(paymentRef, { status: 'Voided' });
+        transaction.update(paymentRef, { 
+            status: 'Voided',
+            voidedBy: adminUser.email,
+            voidedOn: now,
+            originalStatus: 'Verified' // Track original status
+        });
 
         // 3. WRITE: Create a new, reversing payment record for the audit trail.
         const reversalPaymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
@@ -2232,30 +2243,85 @@ export async function voidSalePayment(paymentId, adminUser) {
             paymentId: `VOID-${originalPaymentData.paymentId}`,
             paymentDate: now,
             amountPaid: -originalPaymentData.amountPaid, // Negative amount
-            donationAmount: -originalPaymentData.donationAmount, // Negative donation
-            totalCollected: -originalPaymentData.totalCollected,
+            donationAmount: -(originalPaymentData.donationAmount || 0), // Negative donation
+            totalCollected: -(originalPaymentData.totalCollected || originalPaymentData.amountPaid),
             paymentMode: 'REVERSAL',
             transactionRef: `Reversal for ${originalPaymentData.transactionRef}`,
             status: 'Void Reversal',
-            recordedBy: adminUser.email
+            recordedBy: adminUser.email,
+            originalPaymentId: paymentId, // Link to original payment
+            notes: `Reversal of payment ${originalPaymentData.paymentId} by ${adminUser.email}`
         });
 
-        // 4. WRITE: Atomically reverse the amounts on the main sales invoice.
+        // 4. ✅ ENHANCED: Calculate new payment status based on remaining balance
+        const newTotalAmountPaid = (currentInvoiceData.totalAmountPaid || 0) - originalPaymentData.amountPaid;
+        const newBalanceDue = currentInvoiceData.financials.totalAmount - newTotalAmountPaid;
+        
+        // ✅ CRITICAL: Recalculate payment status based on new balance
+        let newPaymentStatus;
+        if (newBalanceDue <= 0) {
+            newPaymentStatus = 'Paid';
+        } else if (newTotalAmountPaid > 0) {
+            newPaymentStatus = 'Partially Paid';
+        } else {
+            newPaymentStatus = 'Unpaid';
+        }
+
+        console.log(`[API] Payment status recalculation:`);
+        console.log(`  - Previous status: ${currentInvoiceData.paymentStatus}`);
+        console.log(`  - Previous paid: ${formatCurrency(currentInvoiceData.totalAmountPaid || 0)}`);
+        console.log(`  - Voided amount: ${formatCurrency(originalPaymentData.amountPaid)}`);
+        console.log(`  - New paid total: ${formatCurrency(newTotalAmountPaid)}`);
+        console.log(`  - New balance: ${formatCurrency(newBalanceDue)}`);
+        console.log(`  - New status: ${newPaymentStatus}`);
+
+        // 5. WRITE: Update invoice with recalculated amounts and status
         transaction.update(orderRef, {
-            totalAmountPaid: firebase.firestore.FieldValue.increment(-originalPaymentData.amountPaid),
-            balanceDue: firebase.firestore.FieldValue.increment(originalPaymentData.amountPaid)
+            totalAmountPaid: newTotalAmountPaid,
+            balanceDue: newBalanceDue,
+            paymentStatus: newPaymentStatus, // ✅ CRITICAL: Update payment status
+            lastPaymentVoided: {
+                voidedAmount: originalPaymentData.amountPaid,
+                voidedBy: adminUser.email,
+                voidedOn: now,
+                previousStatus: currentInvoiceData.paymentStatus
+            } // ✅ AUDIT: Track void details
         });
 
-        // 5. WRITE: If there was a donation, create a reversing donation record.
-        if (originalPaymentData.donationAmount > 0) {
+        // 6. ✅ ENHANCED: Create reversing donation record if original had donation
+        if (originalPaymentData.donationAmount && originalPaymentData.donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             transaction.set(donationRef, {
-                amount: -originalPaymentData.donationAmount, // Negative amount
+                amount: -originalPaymentData.donationAmount, // Negative amount (reversal)
                 donationDate: now,
-                source: 'Payment Void',
-                relatedPaymentId: paymentRef.id, // Link to the original voided payment
+                source: originalPaymentData.donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT,
+                sourceDetails: {
+                    transactionType: 'payment_void_reversal',
+                    store: currentInvoiceData.store,
+                    
+                    // ✅ CORRECTED: Use both identifiers for complete audit
+                    systemInvoiceId: currentInvoiceData.saleId,           // Digital invoice ID
+                    manualVoucherNumber: currentInvoiceData.manualVoucherNumber, // Manual voucher
+                    
+                    originalPaymentId: paymentId,
+                    voidReason: 'Administrative payment void',
+                    originalPaymentMode: originalPaymentData.paymentMode,
+                    originalTransactionRef: originalPaymentData.transactionRef
+                },
+                relatedPaymentId: paymentId, // Link to original voided payment
+                relatedReversalPaymentId: reversalPaymentRef.id, // Link to reversal record
+                customerName: currentInvoiceData.customerInfo?.name,
+                customerEmail: currentInvoiceData.customerInfo?.email,
                 recordedBy: adminUser.email,
+                audit: {
+                    createdBy: adminUser.email,
+                    createdOn: now,
+                    context: 'Payment void donation reversal',
+                    originalDonationAmount: originalPaymentData.donationAmount
+                }
             });
+            
+            console.log(`[API] ✅ Donation reversal recorded: ${formatCurrency(-originalPaymentData.donationAmount)}`);
         }
     });
 }
