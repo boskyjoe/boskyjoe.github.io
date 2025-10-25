@@ -17,7 +17,9 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
         CHURCH_TEAMS_COLLECTION_PATH,USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
         CONSIGNMENT_ORDERS_COLLECTION_PATH,
         CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
-    SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH
+    SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
+    DONATION_SOURCES,          
+    getDonationSourceByStore 
 } from './config.js';
 
 
@@ -1901,7 +1903,7 @@ export async function submitPaymentRecord(paymentData, user) {
 }
 
 /**
- * [REFACTORED] Verifies a payment and atomically updates the parent order's balance.
+ * [ENHANCED] Verifies consignment payment with donation source tracking capability.
  * @param {string} paymentId - The ID of the payment document in the ledger.
  * @param {object} adminUser - The admin verifying the payment.
  */
@@ -1932,7 +1934,25 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
             balanceDue: firebase.firestore.FieldValue.increment(-paymentData.amountPaid)
         });
 
-        // The logic to loop through relatedActivityIds has been completely removed.
+        // ✅ FUTURE ENHANCEMENT: Add consignment donation handling if needed
+        // If consignment payments can have overpayments, add donation logic here:
+        
+        if (paymentData.donationAmount && paymentData.donationAmount > 0) {
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            transaction.set(donationRef, {
+                amount: paymentData.donationAmount,
+                donationDate: now,
+                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
+                sourceDetails: {
+                    transactionType: 'consignment_payment_overpayment',
+                    teamName: paymentData.teamName,
+                    orderId: paymentData.orderId
+                },
+                relatedPaymentId: paymentId,
+                recordedBy: adminUser.email
+            });
+        }
+    
     });
 }
 
@@ -1951,14 +1971,15 @@ export async function cancelPaymentRecord(paymentId) {
 // =======================================================
 
 /**
- * [CORRECTED & FINAL] Creates a new Sales Invoice, decrements inventory,
- * and optionally records an initial payment and a donation, all in one atomic operation.
+ * [ENHANCED] Creates a new Sales Invoice with donation source tracking,
+ * decrements inventory, and optionally records an initial payment and donation.
  * @param {object} saleData - The complete data object for the new sale.
  * @param {object|null} initialPaymentData - Data for an initial payment, or null if none.
  * @param {number} donationAmount - The amount of any overpayment to be logged as a donation.
  * @param {string} userEmail - The email of the user creating the sale.
+ * @param {string|null} donationSource - Standardized donation source from DONATION_SOURCES
  */
-export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail) {
+export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail, donationSource = null) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
@@ -2013,22 +2034,56 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                 invoiceId: saleRef.id,
                 paymentId: `SPAY-${Date.now()}`,
                 paymentDate: now,
+                donationAmount: donationAmount || 0, // ✅ ENHANCED: Track donation in payment record
+                totalCollected: initialPaymentData.amountPaid + (donationAmount || 0),
                 status: 'Verified',
                 recordedBy: userEmail
             });
         }
 
-        // C. Create the donation record if there was an overpayment
+        // C. ✅ ENHANCED: Create donation record with standardized source tracking
         if (donationAmount > 0) {
-            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc(); // Assumes a top-level 'donations' collection
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
-                source: 'POS Overpayment',
+                source: donationSource || DONATION_SOURCES.POS_OVERPAYMENT, // ✅ USE CONSTANT
+                sourceDetails: {
+                    transactionType: 'direct_sale_overpayment',
+                    store: saleData.store,
+                    systemInvoiceId: saleId,
+                    manualVoucherNumber: saleData.manualVoucherNumber,
+
+                    originalTransactionAmount: saleData.financials.totalAmount,
+                    paymentMode: initialPaymentData?.paymentMode || 'Cash/Invoice',
+                    transactionReference: initialPaymentData?.transactionRef || 'Direct sale',
+
+                    customerEmail: saleData.customerInfo.email,
+                    customerPhone: saleData.customerInfo.phone,
+                    saleDate: saleData.saleDate,
+
+                    itemCount: saleData.lineItems.length,
+                    wasPaidImmediately: !!initialPaymentData
+                }, // ✅ ENHANCED: Rich source context
                 relatedSaleId: saleRef.id,
+                relatedPaymentId: initialPaymentData ? paymentRef.id : null, // ✅ LINK to payment if exists
                 customerName: saleData.customerInfo.name,
+                customerEmail: saleData.customerInfo.email,
                 recordedBy: userEmail,
+                audit: {
+                    createdBy: userEmail,
+                    createdOn: now,
+                    context: 'Direct sale overpayment donation',
+                    donationSource: donationSource // ✅ AUDIT: Track source in audit trail
+                }
             });
+            
+            console.log(`[API] ✅ Donation recorded with clear identifiers:`);
+            console.log(`  - Amount: ${formatCurrency(donationAmount)}`);
+            console.log(`  - Source: ${donationSource || 'POS Overpayment'}`);
+            console.log(`  - Invoice ID: ${saleId}`);
+            console.log(`  - Voucher: ${saleData.manualVoucherNumber}`);
         }
 
         // D. Decrement inventory for each product sold
@@ -2043,27 +2098,26 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 }
 
 
+
 // =======================================================
 // --- SALES PAYMENT API FUNCTIONS ---
 // =======================================================
 
 /**
- * [NEW & TRANSACTIONAL] Records a payment against a sales invoice, updates the
- * invoice's balance, and handles any overpayment as a donation.
- * @param {object} paymentData - An object containing payment details like invoiceId, amountPaid, etc.
+ * [ENHANCED] Records a payment against a sales invoice with donation source tracking,
+ * updates the invoice's balance, and handles any overpayment as a donation.
+ * @param {object} paymentData - Payment details including donationSource for tracking
  * @param {object} user - The user recording the payment.
  */
 export async function recordSalePayment(paymentData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
-    // Destructure all the data we receive from the controller
-    const { invoiceId, amountPaid, donationAmount, customerName, paymentMode, transactionRef, notes } = paymentData;
-
+    // ✅ ENHANCED: Destructure donation source from payment data
+    const { invoiceId, amountPaid, donationAmount, donationSource, customerName, paymentMode, transactionRef, notes } = paymentData;
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
-    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc(); // Get a ref to the new payment doc
-
+    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
 
     return db.runTransaction(async (transaction) => {
         // 1. READ the sales invoice to get its current state.
@@ -2074,19 +2128,20 @@ export async function recordSalePayment(paymentData, user) {
         const currentSaleData = saleDoc.data();
 
         // 2. WRITE: Create the new payment document in the ledger.
-        // This now includes the donationAmount.
         transaction.set(paymentRef, {
             invoiceId: invoiceId,
             paymentId: `SPAY-${Date.now()}`,
             paymentDate: now,
             amountPaid: amountPaid,
-            donationAmount: donationAmount || 0, // <-- [NEW] Store donation amount
+            donationAmount: donationAmount || 0,
             totalCollected: amountPaid + (donationAmount || 0),
             paymentMode: paymentMode,
             transactionRef: transactionRef,
             notes: notes || '',
             status: 'Verified',
-            recordedBy: user.email
+            recordedBy: user.email,
+            // ✅ NEW: Include donation source in payment record
+            donationSource: donationSource || null
         });
 
         // 3. WRITE: Update the main sales invoice's financial totals.
@@ -2100,21 +2155,51 @@ export async function recordSalePayment(paymentData, user) {
             paymentStatus: newPaymentStatus
         });
 
-        // 4. WRITE: If there was an overpayment, create a donation record.
+        // 4. ✅ ENHANCED: Create donation record with comprehensive source tracking
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
-                source: 'Invoice Overpayment',
-                // --- [NEW & CRITICAL] Link the donation to the new payment's ID ---
+                source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT, // ✅ USE CONSTANT
+                sourceDetails: {
+                    transactionType: 'invoice_payment_overpayment',
+                    store: currentSaleData.store,
+
+                    systemInvoiceId: currentSaleData.saleId,
+                    manualVoucherNumber: currentSaleData.manualVoucherNumber,
+
+                    originalInvoiceAmount: currentSaleData.financials?.totalAmount,
+                    paymentAmount: amountPaid,
+                    paymentMode: paymentMode,
+                    transactionReference: transactionRef,
+
+                    customerEmail: currentSaleData.customerInfo?.email,
+                    invoiceAge: Math.ceil((now.toDate() - currentSaleData.saleDate.toDate()) / (1000 * 60 * 60 * 24)), // Days since sale
+                    wasPartialPayment: currentSaleData.totalAmountPaid > 0, // Had previous payments
+                   
+                    paymentSequence: 'subsequent_payment' // This was a later payment, not initial
+
+                }, // ✅ COMPREHENSIVE: Full payment context
                 relatedPaymentId: paymentRef.id,
+                relatedSaleId: invoiceId,
                 customerName: customerName,
+                customerEmail: currentSaleData.customerInfo?.email,
                 recordedBy: user.email,
+                audit: {
+                    createdBy: user.email,
+                    createdOn: now,
+                    context: 'Invoice payment overpayment donation',
+                    donationSource: donationSource // ✅ AUDIT: Source in audit trail
+                }
             });
+            
+            console.log(`[API] ✅ Payment overpayment donation recorded: ${formatCurrency(donationAmount)} from ${donationSource || 'Invoice Overpayment'}`);
         }
     });
 }
+
 
 
 /**
