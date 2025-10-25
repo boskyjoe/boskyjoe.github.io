@@ -3275,19 +3275,75 @@ const existingCataloguesGridOptions = {
     columnDefs: [
         { field: "catalogueName", headerName: "Catalogue Name", flex: 1 },
         { field: "seasonName", headerName: "Season", flex: 1 },
-        { field: "isActive", headerName: "Status", width: 100, cellRenderer: p => p.value ? 
+        { 
+            field: "isActive", 
+            headerName: "Status", 
+            width: 120, 
+            cellRenderer: p => p.value ? 
                 '<span class="text-green-600 font-semibold">Active</span>' : 
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
-            headerName: "Actions", width: 100, cellClass: 'flex items-center justify-center',
+            headerName: "Actions", 
+            width: 150, // ✅ INCREASED width to accommodate two buttons
+            cellClass: 'flex items-center justify-center space-x-2', // ✅ ADD space between buttons
             cellRenderer: params => {
-                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343z" /></svg>`;
-                return `<button class="action-btn-icon action-btn-edit-catalogue" data-id="${params.data.id}" title="Edit Catalogue">${editIcon}</button>`;
+                const docId = params.data.id;
+                const isActive = params.data.isActive;
+                
+                // Edit icon (existing)
+                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+                    <path d="m2.695 14.763-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343z" />
+                </svg>`;
+                
+                // ✅ NEW: Activate/Deactivate icons
+                const deactivateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-6-8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z" clip-rule="evenodd" />
+                </svg>`;
+                
+                const activateIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-green-600">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" />
+                </svg>`;
+
+                // ✅ ENHANCED: Determine status button attributes
+                let statusIcon, statusButtonClass, statusTooltip;
+
+                if (isActive) {
+                    statusIcon = deactivateIcon;
+                    statusButtonClass = 'btn-deactivate-catalogue';
+                    statusTooltip = 'Deactivate Catalogue';
+                } else {
+                    statusIcon = activateIcon;
+                    statusButtonClass = 'btn-activate-catalogue';
+                    statusTooltip = 'Activate Catalogue';
+                }
+
+                // ✅ RETURN: Both edit and status buttons
+                return `
+                    <button class="action-btn-icon action-btn-edit-catalogue" 
+                            data-id="${docId}" 
+                            title="Edit Catalogue">
+                        ${editIcon}
+                    </button>
+                    <button class="action-btn-icon ${statusButtonClass}" 
+                            data-id="${docId}" 
+                            title="${statusTooltip}">
+                        ${statusIcon}
+                    </button>
+                `;
             }
         }
     ],
-    onGridReady: params => { existingCataloguesGridApi = params.api; }
+    
+    // ✅ ENHANCED: Add row styling for inactive catalogues
+    rowClassRules: {
+        'opacity-50': params => !params.data.isActive, // Dim inactive catalogues
+    },
+    
+    onGridReady: params => { 
+        existingCataloguesGridApi = params.api;
+        console.log('[ui.js] Existing catalogues grid ready with activate/deactivate functionality');
+    }
 };
 
 
