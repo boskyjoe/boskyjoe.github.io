@@ -52,6 +52,43 @@ export const DONATIONS_COLLECTION_PATH = `${BASE_DOC_PATH}/donations`;
 
 
 
+export const DONATION_SOURCES = {
+    // Direct store sales overpayments
+    DIRECT_SALES_CHURCH: 'Direct Sales - Church Store',
+    DIRECT_SALES_TASTY: 'Direct Sales - Tasty Treats',
+    
+    // Consignment-related donations
+    CONSIGNMENT_OVERPAYMENT: 'Consignment Team Payment',
+    CONSIGNMENT_SETTLEMENT: 'Consignment Settlement Donation',
+    
+    // Payment overpayments
+    POS_OVERPAYMENT: 'POS Transaction Overpayment',
+    INVOICE_OVERPAYMENT: 'Invoice Payment Overpayment',
+    
+    // Manual entries
+    MANUAL_DONATION: 'Manual Donation Entry',
+    CASH_ROUNDING: 'Cash Rounding Donation',
+    
+    // Special events
+    FUNDRAISING_EVENT: 'Fundraising Event',
+    SEASONAL_CAMPAIGN: 'Seasonal Campaign',
+    
+    // Other sources
+    ANONYMOUS_DONATION: 'Anonymous Donation',
+    SUPPLIER_CREDIT: 'Supplier Credit/Refund'
+};
+
+// ✅ ADD: Helper function to get donation source by store
+export function getDonationSourceByStore(storeName) {
+    switch (storeName) {
+        case 'Church Store':
+            return DONATION_SOURCES.DIRECT_SALES_CHURCH;
+        case 'Tasty Treats':
+            return DONATION_SOURCES.DIRECT_SALES_TASTY;
+        default:
+            return `Direct Sales - ${storeName}`;
+    }
+}
 
 
 
