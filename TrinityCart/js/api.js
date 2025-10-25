@@ -2113,7 +2113,6 @@ export async function recordSalePayment(paymentData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
-    // ✅ ENHANCED: Destructure donation source from payment data
     const { invoiceId, amountPaid, donationAmount, donationSource, customerName, paymentMode, transactionRef, notes } = paymentData;
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
@@ -2140,7 +2139,6 @@ export async function recordSalePayment(paymentData, user) {
             notes: notes || '',
             status: 'Verified',
             recordedBy: user.email,
-            // ✅ NEW: Include donation source in payment record
             donationSource: donationSource || null
         });
 
@@ -2155,35 +2153,59 @@ export async function recordSalePayment(paymentData, user) {
             paymentStatus: newPaymentStatus
         });
 
-        // 4. ✅ ENHANCED: Create donation record with comprehensive source tracking
+        // 4. ✅ CORRECTED: Handle donation record with proper date calculation
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            
+            // ✅ FIX: Create actual Date object for invoice age calculation
+            const currentDate = new Date();
+            let invoiceAge = 0;
+            
+            try {
+                // Safe date calculation - handle different date formats
+                let saleDate;
+                if (currentSaleData.saleDate && currentSaleData.saleDate.toDate) {
+                    // Firestore Timestamp
+                    saleDate = currentSaleData.saleDate.toDate();
+                } else if (currentSaleData.saleDate instanceof Date) {
+                    // JavaScript Date
+                    saleDate = currentSaleData.saleDate;
+                } else {
+                    // Fallback to current date if date format is unknown
+                    saleDate = currentDate;
+                }
+                
+                invoiceAge = Math.ceil((currentDate - saleDate) / (1000 * 60 * 60 * 24));
+            } catch (dateError) {
+                console.warn('[API] Could not calculate invoice age:', dateError);
+                invoiceAge = 0; // Default to 0 if calculation fails
+            }
             
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
-                source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT, // ✅ USE CONSTANT
+                source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT,
                 sourceDetails: {
                     transactionType: 'invoice_payment_overpayment',
                     store: currentSaleData.store,
-
+                    
+                    // ✅ CORRECTED: Clear field naming
                     systemInvoiceId: currentSaleData.saleId,
                     manualVoucherNumber: currentSaleData.manualVoucherNumber,
-
+                    
                     originalInvoiceAmount: currentSaleData.financials?.totalAmount,
                     paymentAmount: amountPaid,
                     paymentMode: paymentMode,
                     transactionReference: transactionRef,
-
+                    
+                    // ✅ BUSINESS INTELLIGENCE (with safe date handling)
                     customerEmail: currentSaleData.customerInfo?.email,
-                    invoiceAge: Math.ceil((now.toDate() - currentSaleData.saleDate.toDate()) / (1000 * 60 * 60 * 24)), // Days since sale
-                    wasPartialPayment: currentSaleData.totalAmountPaid > 0, // Had previous payments
-                   
-                    paymentSequence: 'subsequent_payment' // This was a later payment, not initial
-
-                }, // ✅ COMPREHENSIVE: Full payment context
+                    invoiceAge: invoiceAge, // ✅ CORRECTED: Safe calculation
+                    wasPartialPayment: currentSaleData.totalAmountPaid > 0,
+                    paymentSequence: currentSaleData.totalAmountPaid > 0 ? 'subsequent_payment' : 'first_payment'
+                },
                 relatedPaymentId: paymentRef.id,
-                relatedSaleId: invoiceId,
+                relatedInvoiceId: invoiceId,
                 customerName: customerName,
                 customerEmail: currentSaleData.customerInfo?.email,
                 recordedBy: user.email,
@@ -2191,11 +2213,11 @@ export async function recordSalePayment(paymentData, user) {
                     createdBy: user.email,
                     createdOn: now,
                     context: 'Invoice payment overpayment donation',
-                    donationSource: donationSource // ✅ AUDIT: Source in audit trail
+                    donationSource: donationSource
                 }
             });
             
-            console.log(`[API] ✅ Payment overpayment donation recorded: ${formatCurrency(donationAmount)} from ${donationSource || 'Invoice Overpayment'}`);
+            console.log(`[API] ✅ Payment overpayment donation recorded: ₹${donationAmount.toFixed(2)} from ${donationSource || 'Invoice Overpayment'}`);
         }
     });
 }
