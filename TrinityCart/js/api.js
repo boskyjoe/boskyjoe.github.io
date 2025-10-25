@@ -2147,10 +2147,19 @@ export async function recordSalePayment(paymentData, user) {
         const newBalanceDue = currentSaleData.balanceDue - amountPaid;
         const newPaymentStatus = newBalanceDue <= 0 ? 'Paid' : 'Partially Paid';
 
+        // ✅ CRITICAL: Calculate total amount tendered across all payments
+        const physicalAmountGiven = amountPaid + (donationAmount || 0); // This payment's physical amount
+        const newAmountTendered = (currentSaleData.financials?.amountTendered || 0) + physicalAmountGiven;
+
         transaction.update(saleRef, {
             totalAmountPaid: newTotalAmountPaid,
             balanceDue: newBalanceDue,
-            paymentStatus: newPaymentStatus
+            paymentStatus: newPaymentStatus,
+
+            'financials.amountTendered': newAmountTendered,
+            'financials.totalPhysicalCashReceived': newAmountTendered,
+            'financials.lastPaymentDate': now,
+            'financials.paymentCount': firebase.firestore.FieldValue.increment(1)
         });
 
         // 4. ✅ CORRECTED: Handle donation record with proper date calculation
