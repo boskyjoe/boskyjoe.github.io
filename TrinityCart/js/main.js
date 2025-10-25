@@ -9,7 +9,10 @@ import {
 
 
 import { appState } from './state.js';
-import { firebaseConfig, USERS_COLLECTION_PATH } from './config.js';
+import { firebaseConfig, USERS_COLLECTION_PATH,
+    DONATION_SOURCES,        
+    getDonationSourceByStore 
+ } from './config.js';
 
 import { updateUI, showView, showSuppliersView, showLoader, hideLoader, formatCurrency } from './ui.js';
 import { showCategoriesView,ProgressToast } from './ui.js';
@@ -2893,7 +2896,6 @@ async function handleMakePaymentSubmit(e) {
     }
 }
 
-
 /**
  * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
  * 
@@ -2983,7 +2985,7 @@ async function handleNewSaleSubmit(e) {
             return;
         }
 
-        // ✅ VALIDATE: Manual Voucher Number
+        // Validate Manual Voucher Number
         if (!voucherNumber) {
             ProgressToast.hide(0);
             await showModal('error', 'Missing Voucher Number', 'Please enter a manual voucher number for record keeping.');
@@ -2999,7 +3001,7 @@ async function handleNewSaleSubmit(e) {
             return;
         }
 
-        // ✅ VALIDATE: Tasty Treats address requirement
+        // Validate Tasty Treats address requirement
         if (selectedStore === 'Tasty Treats') {
             const deliveryAddress = document.getElementById('sale-customer-address').value.trim();
             if (!deliveryAddress) {
@@ -3054,14 +3056,14 @@ async function handleNewSaleSubmit(e) {
 
         console.log(`[main.js] Sale total calculated: ${formatCurrency(grandTotal)} for voucher ${voucherNumber}`);
 
-        // Step 5: Handle Payment Processing (CORRECTED FOR PAY LATER)
+        // Step 5: Handle Payment Processing
         const paymentType = document.getElementById('sale-payment-type').value;
         let initialPaymentData = null;
         let donationAmount = 0;
         let amountReceived = 0;
 
         if (paymentType === 'Pay Now') {
-            // ✅ PAY NOW MODE: Full payment validation
+            // PAY NOW MODE: Full payment validation
             ProgressToast.updateProgress('Processing immediate payment...', 60, 'Pay Now Mode');
 
             amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
@@ -3128,12 +3130,12 @@ async function handleNewSaleSubmit(e) {
             };
 
         } else {
-            // ✅ PAY LATER MODE: No payment validation needed
+            // PAY LATER MODE: No payment validation needed
             ProgressToast.updateProgress('Creating invoice for future payment...', 60, 'Pay Later Mode');
             
             console.log(`[main.js] Pay Later mode - creating invoice for ${formatCurrency(grandTotal)}`);
             
-            // No payment data needed - invoice will be created with full balance due
+            // No payment data needed
             initialPaymentData = null;
             donationAmount = 0;
             amountReceived = 0;
@@ -3141,6 +3143,13 @@ async function handleNewSaleSubmit(e) {
 
         // Step 6: Prepare Final Sale Data
         ProgressToast.updateProgress('Preparing transaction data...', 70, 'Step 6 of 8');
+
+        // ✅ ENHANCED: Use standardized donation source
+        let donationSource = null;
+        if (donationAmount > 0) {
+            donationSource = getDonationSourceByStore(selectedStore); // ✅ CLEAN: Use helper function
+            console.log(`[main.js] New sale donation source: ${donationSource} (${formatCurrency(donationAmount)})`);
+        }
 
         const saleData = {
             saleDate: new Date(document.getElementById('sale-date').value),
@@ -3164,8 +3173,16 @@ async function handleNewSaleSubmit(e) {
                 totalTax: finalTotalTax,
                 totalAmount: grandTotal,
                 amountTendered: amountReceived,
-                changeDue: Math.max(0, amountReceived - grandTotal) // Only positive change
-            }
+                changeDue: Math.max(0, amountReceived - grandTotal)
+            },
+            // ✅ ENHANCED: Include donation metadata with source
+            donationMetadata: donationAmount > 0 ? {
+                donationAmount: donationAmount,
+                donationSource: donationSource, // ✅ STANDARDIZED SOURCE
+                originalTransactionAmount: grandTotal,
+                customerContribution: amountReceived,
+                voucherReference: voucherNumber
+            } : null
         };
 
         // Step 7: Process Transaction
@@ -3175,7 +3192,8 @@ async function handleNewSaleSubmit(e) {
             'Step 7 of 8'
         );
 
-        await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email);
+        // ✅ ENHANCED: Pass donation source to API
+        await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email, donationSource);
 
         // Step 8: Success Completion
         ProgressToast.updateProgress('Transaction completed successfully!', 100, 'Step 8 of 8');
@@ -3204,11 +3222,12 @@ async function handleNewSaleSubmit(e) {
                 `• Payment Type: ${paymentType}\n` +
                 `• Payment Status: ${paymentStatus}\n` +
                 `• Items: ${finalLineItems.length} different products\n` +
-                `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)}\n` : ''}` +
+                `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)} (${donationSource})\n` : ''}` + // ✅ SHOW SOURCE
                 `${paymentType === 'Pay Later' ? `• Balance Due: ${formatCurrency(grandTotal)}\n` : ''}` +
                 `\n✓ Inventory updated automatically\n` +
                 `✓ Customer record created\n` +
                 `✓ Financial records updated\n` +
+                `${donationAmount > 0 ? '✓ Donation recorded with source tracking\n' : ''}` + // ✅ MENTION TRACKING
                 `${paymentType === 'Pay Later' ? '✓ Invoice ready for future payment collection' : '✓ Transaction completed and closed'}`
             );
             
@@ -3238,78 +3257,220 @@ async function handleNewSaleSubmit(e) {
     }
 }
 
-
+/**
+ * Handles sales payment recording with validation, overpayment processing, and progress tracking.
+ * 
+ * Records payments against existing sales invoices with automatic balance updates,
+ * donation processing for overpayments, and real-time invoice status reconciliation.
+ * Updates payment history and refreshes modal display with latest payment information.
+ * 
+ * BUSINESS CONTEXT:
+ * - Records customer payments against outstanding sales invoices
+ * - Handles partial payments, full payments, and overpayments as donations
+ * - Updates invoice balances and payment status automatically
+ * - Critical for cash flow management and customer account reconciliation
+ * 
+ * VALIDATION RULES:
+ * - Payment amount: Must be positive number, can exceed balance (donation)
+ * - Payment mode: Must select from available payment methods
+ * - Transaction reference: Required for audit trail and reconciliation
+ * - Invoice context: Must have valid parent invoice with outstanding balance
+ * 
+ * @param {Event} e - Form submission event from record-sale-payment-form
+ * @throws {Error} When validation fails or payment processing fails
+ * @since 1.0.0
+ * @see recordSalePayment() - Transactional API for payment processing with donations
+ * @see refreshSalePaymentModal() - UI function to update modal with latest data
+ */
 async function handleRecordSalePaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to record payments.');
+        return;
+    }
+
+    // ✅ START: Progress toast for payment processing
+    ProgressToast.show('Recording Customer Payment', 'info');
 
     const submitButton = e.target.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.textContent = 'Submitting...';
-
-    const invoiceId = document.getElementById('record-sale-invoice-id').value;
-    const invoiceData = getSalesHistoryDataById(invoiceId);
-
-    if (!invoiceData) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Payment';
-        return alert("Error: Cannot find parent invoice data.");
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
     }
-
-    const amountPaidInput = parseFloat(document.getElementById('record-sale-amount').value);
-    const balanceDue = invoiceData.balanceDue;
-
-    let donationAmount = 0;
-    if (amountPaidInput > balanceDue) {
-        donationAmount = amountPaidInput - balanceDue;
-    }
-
-    const amountToApplyToInvoice = Math.min(amountPaidInput, balanceDue);
-
-    const paymentData = {
-        invoiceId,
-        amountPaid: amountToApplyToInvoice,
-        donationAmount,
-        customerName: invoiceData.customerInfo.name,
-        paymentMode: document.getElementById('record-sale-mode').value,
-        transactionRef: document.getElementById('record-sale-ref').value,
-        notes: ''
-    };
-
-    if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Payment';
-        return alert("Amount paid must be a number greater than zero.");
-    }
-
-    if (!paymentData.transactionRef) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Payment';
-        return alert("Please enter a Reference # for the payment.");
-    }
-
-    //showLoader();
 
     try {
+        // Step 1: Invoice Data Validation
+        ProgressToast.updateProgress('Validating invoice information...', 15, 'Step 1 of 6');
+
+        const invoiceId = document.getElementById('record-sale-invoice-id').value;
+        const invoiceData = getSalesHistoryDataById(invoiceId);
+
+        if (!invoiceData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Not Found', 'Cannot find the parent invoice data. Please close and reopen the payment modal.');
+            return;
+        }
+
+        if (invoiceData.paymentStatus === 'Paid') {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Already Paid', 'This invoice has already been paid in full.');
+            return;
+        }
+
+        // Step 2: Payment Data Validation
+        ProgressToast.updateProgress('Validating payment information...', 30, 'Step 2 of 6');
+
+        const amountPaidInput = parseFloat(document.getElementById('record-sale-amount').value);
+        const paymentMode = document.getElementById('record-sale-mode').value;
+        const transactionRef = document.getElementById('record-sale-ref').value.trim();
+        const balanceDue = invoiceData.balanceDue || 0;
+
+        if (isNaN(amountPaidInput) || amountPaidInput <= 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Payment Amount', 'Payment amount must be a valid number greater than zero.');
+            return;
+        }
+
+        if (!paymentMode) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Mode', 'Please select how the payment was made.');
+            return;
+        }
+
+        if (!transactionRef) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Reference Number', 'Please enter a reference number for the payment.');
+            return;
+        }
+
+        // Step 3: Process Payment Logic (Overpayment/Donation Handling)
+        ProgressToast.updateProgress('Processing payment and donation logic...', 45, 'Step 3 of 6');
+
+        let donationAmount = 0;
+        if (amountPaidInput > balanceDue) {
+            donationAmount = amountPaidInput - balanceDue;
+            
+            const confirmOverpayment = await showModal('confirm', 'Overpayment - Record as Donation?', 
+                `Payment amount: ${formatCurrency(amountPaidInput)}\n` +
+                `Balance due: ${formatCurrency(balanceDue)}\n` +
+                `Overpayment: ${formatCurrency(donationAmount)}\n\n` +
+                'The extra amount will be recorded as a donation. Continue?'
+            );
+            
+            if (!confirmOverpayment) {
+                ProgressToast.hide(0);
+                return;
+            }
+            
+            console.log(`[main.js] Overpayment confirmed: ${formatCurrency(donationAmount)} donation`);
+        }
+
+        const amountToApplyToInvoice = Math.min(amountPaidInput, balanceDue);
+
+        // Step 4: Prepare Payment Data
+        ProgressToast.updateProgress('Preparing payment record...', 60, 'Step 4 of 6');
+
+        // ✅ ENHANCED: Use constants for donation source consistency
+        let donationSource = null;
+        if (donationAmount > 0) {
+            donationSource = getDonationSourceByStore(invoiceData.store); // ✅ CLEAN: Use helper function
+            console.log(`[main.js] Donation source determined: ${donationSource} (${formatCurrency(donationAmount)})`);
+        }
+
+        const paymentData = {
+            invoiceId,
+            amountPaid: amountToApplyToInvoice,
+            donationAmount,
+            donationSource, // ✅ ENHANCED: Include standardized donation source
+            customerName: invoiceData.customerInfo.name,
+            paymentMode: paymentMode,
+            transactionRef: transactionRef,
+            notes: document.getElementById('record-sale-notes')?.value || ''
+        };
+
+        console.log(`[main.js] Recording payment: ${formatCurrency(amountToApplyToInvoice)} for invoice ${invoiceData.saleId}`, {
+            customer: paymentData.customerName,
+            mode: paymentData.paymentMode,
+            reference: paymentData.transactionRef,
+            donation: donationAmount > 0 ? `${formatCurrency(donationAmount)} from ${donationSource}` : 'None'
+        });
+
+        // Step 5: Process Payment Transaction
+        ProgressToast.updateProgress('Recording payment and updating invoice balance...', 85, 'Step 5 of 6');
+
         await recordSalePayment(paymentData, user);
+
+        // Step 6: Success and Modal Refresh
+        ProgressToast.updateProgress('Payment recorded successfully!', 100, 'Step 6 of 6');
+        ProgressToast.showSuccess(
+            `${formatCurrency(amountToApplyToInvoice)} payment recorded${donationAmount > 0 ? ` + ${formatCurrency(donationAmount)} donation` : ''}!`
+        );
+
+        // Reset payment form
         resetSalePaymentForm();
 
+        // Get updated invoice data and refresh modal
         const updatedInvoiceData = await getSalesInvoiceById(invoiceId);
-        if (updatedInvoiceData) {
-            refreshSalePaymentModal(updatedInvoiceData);
-        } else {
-            closeRecordSalePaymentModal();
-        }
+        
+        setTimeout(async () => {
+            ProgressToast.hide(500);
+            
+            if (updatedInvoiceData) {
+                // Refresh modal with updated data
+                refreshSalePaymentModal(updatedInvoiceData);
+                
+                // ✅ ENHANCED: Success message with source information
+                await showModal('success', 'Payment Recorded Successfully', 
+                    `Customer payment has been processed!\n\n` +
+                    `• Customer: ${paymentData.customerName}\n` +
+                    `• Payment Amount: ${formatCurrency(amountToApplyToInvoice)}\n` +
+                    `• Payment Mode: ${paymentData.paymentMode}\n` +
+                    `• Reference: ${paymentData.transactionRef}\n` +
+                    `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)}\n• Donation Source: ${donationSource}\n` : ''}` +
+                    `• New Balance: ${formatCurrency(updatedInvoiceData.balanceDue || 0)}\n\n` +
+                    `✓ Invoice balance updated automatically\n` +
+                    `✓ Payment history recorded\n` +
+                    `${donationAmount > 0 ? '✓ Donation recorded with source tracking\n' : ''}` +
+                    `✓ Financial records reconciled`
+                );
+                
+            } else {
+                // If we can't get updated data, close modal
+                await showModal('success', 'Payment Recorded', 'Payment has been recorded successfully.');
+                closeRecordSalePaymentModal();
+            }
+        }, 800);
+
     } catch (error) {
         console.error("Error recording sale payment:", error);
-        alert(`Failed to record payment: ${error.message}`);
+        
+        ProgressToast.showError(`Payment recording failed: ${error.message || 'Payment processing error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Payment Recording Failed', 
+                `Failed to record the customer payment.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Common causes:\n` +
+                `• Payment amount exceeds reasonable limits\n` +
+                `• Network connection interrupted during processing\n` +
+                `• Invoice status changed during payment processing\n` +
+                `• Insufficient permissions for payment operations\n\n` +
+                `Please verify the payment details and try again.`
+            );
+        }, 2000);
+        
     } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Payment';
-        //hideLoader();
+        // Re-enable submit button
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit Payment';
+        }
     }
 }
+
+
 
 /**
  * Handles product category form submission with validation and progress tracking.
