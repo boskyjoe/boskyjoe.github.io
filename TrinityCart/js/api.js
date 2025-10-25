@@ -1971,6 +1971,52 @@ export async function cancelPaymentRecord(paymentId) {
 // =======================================================
 
 /**
+ * Helper function: Calculates invoice age safely handling different date formats
+ */
+function calculateInvoiceAge(saleDate) {
+    try {
+        const currentDate = new Date();
+        let saleDateObj;
+        
+        if (saleDate?.toDate && typeof saleDate.toDate === 'function') {
+            saleDateObj = saleDate.toDate(); // Firestore Timestamp
+        } else if (saleDate instanceof Date) {
+            saleDateObj = saleDate; // JavaScript Date
+        } else if (typeof saleDate === 'string') {
+            saleDateObj = new Date(saleDate); // Date string
+        } else {
+            return 0; // Cannot calculate
+        }
+        
+        // Validate the date is reasonable
+        if (isNaN(saleDateObj.getTime())) {
+            return 0;
+        }
+        
+        const ageDays = Math.ceil((currentDate - saleDateObj) / (1000 * 60 * 60 * 24));
+        return Math.max(0, ageDays); // Ensure non-negative
+        
+    } catch (error) {
+        console.warn('[API] Could not calculate invoice age:', error);
+        return 0;
+    }
+}
+
+/**
+ * Helper function: Classifies donors based on donation amount for recognition programs
+ */
+function getDonorClassification(donationAmount) {
+    if (donationAmount >= 2000) return 'Major Donor';
+    if (donationAmount >= 1000) return 'Significant Donor';  
+    if (donationAmount >= 500) return 'Generous Donor';
+    if (donationAmount >= 200) return 'Regular Donor';
+    if (donationAmount >= 100) return 'Supporter';
+    if (donationAmount >= 50) return 'Contributor';
+    return 'Friend';
+}
+
+
+/**
  * [ENHANCED] Creates a new Sales Invoice with donation source tracking,
  * decrements inventory, and optionally records an initial payment and donation.
  * @param {object} saleData - The complete data object for the new sale.
@@ -2045,7 +2091,10 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             
+            const donationId = `DON-${saleId}-${Date.now().toString().slice(-4)}`;
+
             transaction.set(donationRef, {
+                donationId: donationId,
                 amount: donationAmount,
                 donationDate: now,
                 source: donationSource || DONATION_SOURCES.POS_OVERPAYMENT, // ✅ USE CONSTANT
@@ -2056,34 +2105,43 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                     manualVoucherNumber: saleData.manualVoucherNumber,
 
                     originalTransactionAmount: saleData.financials.totalAmount,
-                    paymentMode: initialPaymentData?.paymentMode || 'Cash/Invoice',
+                    customerPaymentAmount: saleData.financials.amountTendered,
+                    overpaymentAmount: donationAmount,
+
+                    paymentMode: initialPaymentData?.paymentMode || 'Cash',
                     transactionReference: initialPaymentData?.transactionRef || 'Direct sale',
+                    
 
                     customerEmail: saleData.customerInfo.email,
                     customerPhone: saleData.customerInfo.phone,
                     saleDate: saleData.saleDate,
 
                     itemCount: saleData.lineItems.length,
-                    wasPaidImmediately: !!initialPaymentData
+                    wasPaidImmediately: true
                 }, // ✅ ENHANCED: Rich source context
                 relatedSaleId: saleRef.id,
                 relatedPaymentId: initialPaymentData ? paymentRef.id : null, // ✅ LINK to payment if exists
                 customerName: saleData.customerInfo.name,
                 customerEmail: saleData.customerInfo.email,
+
+                donorClassification: getDonorClassification(donationAmount),
+                isAnonymous: false, // Direct sales have customer info
                 recordedBy: userEmail,
+                status: 'Verified',
                 audit: {
                     createdBy: userEmail,
                     createdOn: now,
                     context: 'Direct sale overpayment donation',
-                    donationSource: donationSource // ✅ AUDIT: Track source in audit trail
+                    donationSource: donationSource,
+                    method: 'automatic_overpayment_processing'
                 }
             });
             
-            console.log(`[API] ✅ Donation recorded with clear identifiers:`);
-            console.log(`  - Amount: ${formatCurrency(donationAmount)}`);
+            console.log(`[API] ✅ Enhanced donation record created:`);
+            console.log(`  - Donation ID: ${donationId}`);
+            console.log(`  - Amount: ₹${donationAmount.toFixed(2)}`);
             console.log(`  - Source: ${donationSource || 'POS Overpayment'}`);
-            console.log(`  - Invoice ID: ${saleId}`);
-            console.log(`  - Voucher: ${saleData.manualVoucherNumber}`);
+            console.log(`  - Invoice: ${saleId} | Voucher: ${saleData.manualVoucherNumber}`);
         }
 
         // D. Decrement inventory for each product sold
@@ -2104,129 +2162,283 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 // =======================================================
 
 /**
- * [ENHANCED] Records a payment against a sales invoice with donation source tracking,
- * updates the invoice's balance, and handles any overpayment as a donation.
+ * [ENHANCED & CORRECTED] Records a payment against a sales invoice with comprehensive tracking.
+ * 
+ * Records customer payments against outstanding sales invoices with automatic balance updates,
+ * donation processing for overpayments, cumulative cash tracking, and standardized source
+ * attribution. Maintains complete audit trails and business intelligence context.
+ * 
+ * BUSINESS CONTEXT:
+ * - Records customer payments against outstanding sales invoices
+ * - Handles partial payments, full payments, and overpayments as donations
+ * - Updates invoice balances and payment status automatically
+ * - Tracks cumulative cash received for register reconciliation
+ * - Critical for cash flow management and customer account reconciliation
+ * 
+ * ENHANCED FEATURES:
+ * - Cumulative amountTendered tracking across multiple payments
+ * - Standardized donation source attribution using DONATION_SOURCES constants
+ * - Rich business intelligence context in donation records
+ * - Safe date handling for invoice age calculations
+ * - Comprehensive audit trails with payment sequence tracking
+ * 
  * @param {object} paymentData - Payment details including donationSource for tracking
- * @param {object} user - The user recording the payment.
+ * @param {object} user - The user recording the payment
+ * @throws {Error} When invoice not found, validation fails, or transaction processing errors
+ * @since 1.0.0 Enhanced with donation source tracking and cumulative cash management
+ * @see DONATION_SOURCES - Standardized donation source constants
+ * @see getDonorClassification() - Helper function for donor recognition levels
  */
 export async function recordSalePayment(paymentData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
-    const { invoiceId, amountPaid, donationAmount, donationSource, customerName, paymentMode, transactionRef, notes } = paymentData;
+    // Destructure payment data with enhanced fields
+    const { 
+        invoiceId, 
+        amountPaid, 
+        donationAmount, 
+        donationSource, 
+        customerName, 
+        paymentMode, 
+        transactionRef, 
+        notes 
+    } = paymentData;
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
     const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
 
     return db.runTransaction(async (transaction) => {
-        // 1. READ the sales invoice to get its current state.
-        const saleDoc = await transaction.get(saleRef);
-        if (!saleDoc.exists) {
-            throw new Error("The invoice you are trying to pay does not exist.");
-        }
-        const currentSaleData = saleDoc.data();
-
-        // 2. WRITE: Create the new payment document in the ledger.
-        transaction.set(paymentRef, {
-            invoiceId: invoiceId,
-            paymentId: `SPAY-${Date.now()}`,
-            paymentDate: now,
-            amountPaid: amountPaid,
-            donationAmount: donationAmount || 0,
-            totalCollected: amountPaid + (donationAmount || 0),
-            paymentMode: paymentMode,
-            transactionRef: transactionRef,
-            notes: notes || '',
-            status: 'Verified',
-            recordedBy: user.email,
-            donationSource: donationSource || null
-        });
-
-        // 3. WRITE: Update the main sales invoice's financial totals.
-        const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
-        const newBalanceDue = currentSaleData.balanceDue - amountPaid;
-        const newPaymentStatus = newBalanceDue <= 0 ? 'Paid' : 'Partially Paid';
-
-        // ✅ CRITICAL: Calculate total amount tendered across all payments
-        const physicalAmountGiven = amountPaid + (donationAmount || 0); // This payment's physical amount
-        const newAmountTendered = (currentSaleData.financials?.amountTendered || 0) + physicalAmountGiven;
-
-        transaction.update(saleRef, {
-            totalAmountPaid: newTotalAmountPaid,
-            balanceDue: newBalanceDue,
-            paymentStatus: newPaymentStatus,
-
-            'financials.amountTendered': newAmountTendered,
-            'financials.totalPhysicalCashReceived': newAmountTendered,
-            'financials.lastPaymentDate': now,
-            'financials.paymentCount': firebase.firestore.FieldValue.increment(1)
-        });
-
-        // 4. ✅ CORRECTED: Handle donation record with proper date calculation
-        if (donationAmount > 0) {
-            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+        try {
+            // === PHASE 1: READ & VALIDATION ===
+            console.log(`[API] Processing payment: ₹${amountPaid.toFixed(2)} for invoice ${invoiceId}`);
             
-            // ✅ FIX: Create actual Date object for invoice age calculation
-            const currentDate = new Date();
-            let invoiceAge = 0;
-            
-            try {
-                // Safe date calculation - handle different date formats
-                let saleDate;
-                if (currentSaleData.saleDate && currentSaleData.saleDate.toDate) {
-                    // Firestore Timestamp
-                    saleDate = currentSaleData.saleDate.toDate();
-                } else if (currentSaleData.saleDate instanceof Date) {
-                    // JavaScript Date
-                    saleDate = currentSaleData.saleDate;
-                } else {
-                    // Fallback to current date if date format is unknown
-                    saleDate = currentDate;
-                }
-                
-                invoiceAge = Math.ceil((currentDate - saleDate) / (1000 * 60 * 60 * 24));
-            } catch (dateError) {
-                console.warn('[API] Could not calculate invoice age:', dateError);
-                invoiceAge = 0; // Default to 0 if calculation fails
+            const saleDoc = await transaction.get(saleRef);
+            if (!saleDoc.exists) {
+                throw new Error("The invoice you are trying to pay does not exist.");
             }
             
-            transaction.set(donationRef, {
-                amount: donationAmount,
-                donationDate: now,
-                source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT,
-                sourceDetails: {
-                    transactionType: 'invoice_payment_overpayment',
-                    store: currentSaleData.store,
-                    
-                    // ✅ CORRECTED: Clear field naming
-                    systemInvoiceId: currentSaleData.saleId,
-                    manualVoucherNumber: currentSaleData.manualVoucherNumber,
-                    
-                    originalInvoiceAmount: currentSaleData.financials?.totalAmount,
-                    paymentAmount: amountPaid,
-                    paymentMode: paymentMode,
-                    transactionReference: transactionRef,
-                    
-                    // ✅ BUSINESS INTELLIGENCE (with safe date handling)
-                    customerEmail: currentSaleData.customerInfo?.email,
-                    invoiceAge: invoiceAge, // ✅ CORRECTED: Safe calculation
-                    wasPartialPayment: currentSaleData.totalAmountPaid > 0,
-                    paymentSequence: currentSaleData.totalAmountPaid > 0 ? 'subsequent_payment' : 'first_payment'
-                },
-                relatedPaymentId: paymentRef.id,
-                relatedInvoiceId: invoiceId,
-                customerName: customerName,
-                customerEmail: currentSaleData.customerInfo?.email,
+            const currentSaleData = saleDoc.data();
+            
+            // Validate invoice can accept payments
+            if (currentSaleData.paymentStatus === 'Paid' && currentSaleData.balanceDue <= 0) {
+                throw new Error("This invoice has already been paid in full.");
+            }
+
+            // === PHASE 2: PAYMENT RECORD CREATION ===
+            const paymentId = `SPAY-${Date.now()}`;
+            const physicalAmountGiven = amountPaid + (donationAmount || 0);
+            
+            transaction.set(paymentRef, {
+                // Core payment identification
+                invoiceId: invoiceId,
+                paymentId: paymentId,
+                paymentDate: now,
+                
+                // Financial details
+                amountPaid: amountPaid,
+                donationAmount: donationAmount || 0,
+                totalCollected: physicalAmountGiven,
+                
+                // Payment method and reference
+                paymentMode: paymentMode,
+                transactionRef: transactionRef,
+                notes: notes || '',
+                
+                // Administrative
+                status: 'Verified',
                 recordedBy: user.email,
+                
+                // ✅ ENHANCED: Donation source tracking
+                donationSource: donationSource || null,
+                
+                // ✅ BUSINESS CONTEXT
+                relatedInvoiceNumber: currentSaleData.saleId,
+                customerName: customerName,
+                store: currentSaleData.store,
+                
+                // Audit trail
                 audit: {
                     createdBy: user.email,
                     createdOn: now,
-                    context: 'Invoice payment overpayment donation',
-                    donationSource: donationSource
+                    context: 'Customer payment against sales invoice'
                 }
             });
+
+            console.log(`[API] ✅ Payment record created: ${paymentId}`);
+
+            // === PHASE 3: INVOICE FINANCIAL UPDATES ===
+            const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
+            const newBalanceDue = Math.max(0, (currentSaleData.financials?.totalAmount || 0) - newTotalAmountPaid);
             
-            console.log(`[API] ✅ Payment overpayment donation recorded: ₹${donationAmount.toFixed(2)} from ${donationSource || 'Invoice Overpayment'}`);
+            // ✅ ENHANCED: Proper payment status calculation
+            let newPaymentStatus;
+            if (newBalanceDue <= 0) {
+                newPaymentStatus = 'Paid';
+            } else if (newTotalAmountPaid > 0) {
+                newPaymentStatus = 'Partially Paid';
+            } else {
+                newPaymentStatus = 'Unpaid'; // Edge case
+            }
+
+            // ✅ ENHANCED: Cumulative amount tendered tracking
+            const currentAmountTendered = currentSaleData.financials?.amountTendered || 0;
+            const newAmountTendered = currentAmountTendered + physicalAmountGiven;
+            const currentPaymentCount = currentSaleData.financials?.paymentCount || 0;
+
+            // Update invoice with enhanced financial tracking
+            transaction.update(saleRef, {
+                // Core payment tracking
+                totalAmountPaid: newTotalAmountPaid,
+                balanceDue: newBalanceDue,
+                paymentStatus: newPaymentStatus,
+                
+                // ✅ ENHANCED: Comprehensive financial tracking
+                'financials.amountTendered': newAmountTendered,
+                'financials.totalPhysicalCashReceived': newAmountTendered,
+                'financials.lastPaymentDate': now,
+                'financials.paymentCount': currentPaymentCount + 1,
+                'financials.lastPaymentAmount': physicalAmountGiven,
+                'financials.lastPaymentMode': paymentMode,
+                
+                // ✅ AUDIT: Payment history summary
+                lastPaymentDetails: {
+                    paymentId: paymentId,
+                    amount: amountPaid,
+                    donationAmount: donationAmount || 0,
+                    paymentMode: paymentMode,
+                    recordedBy: user.email,
+                    recordedOn: now
+                }
+            });
+
+            console.log(`[API] ✅ Invoice financial totals updated:`);
+            console.log(`  - Previous paid: ₹${(currentSaleData.totalAmountPaid || 0).toFixed(2)}`);
+            console.log(`  - New total paid: ₹${newTotalAmountPaid.toFixed(2)}`);
+            console.log(`  - New balance: ₹${newBalanceDue.toFixed(2)}`);
+            console.log(`  - New status: ${newPaymentStatus}`);
+            console.log(`  - Cumulative cash: ₹${newAmountTendered.toFixed(2)}`);
+
+            // === PHASE 4: DONATION RECORD (IF APPLICABLE) ===
+            if (donationAmount > 0) {
+                const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+                const donationId = `DON-${paymentId}-${Date.now().toString().slice(-4)}`;
+                
+                // ✅ CORRECTED: Safe invoice age calculation
+                const currentDate = new Date();
+                let invoiceAge = 0;
+                
+                try {
+                    let saleDate;
+                    if (currentSaleData.saleDate?.toDate) {
+                        saleDate = currentSaleData.saleDate.toDate();
+                    } else if (currentSaleData.saleDate instanceof Date) {
+                        saleDate = currentSaleData.saleDate;
+                    } else {
+                        saleDate = new Date(); // Fallback
+                    }
+                    
+                    invoiceAge = Math.ceil((currentDate - saleDate) / (1000 * 60 * 60 * 24));
+                    invoiceAge = Math.max(0, invoiceAge); // Ensure non-negative
+                } catch (dateError) {
+                    console.warn('[API] Invoice age calculation failed:', dateError);
+                    invoiceAge = 0;
+                }
+
+                // ✅ ENHANCED: Comprehensive donation record
+                transaction.set(donationRef, {
+                    // Core donation identification
+                    donationId: donationId,
+                    amount: donationAmount,
+                    donationDate: now,
+                    
+                    // ✅ STANDARDIZED: Source tracking using constants
+                    source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT,
+                    
+                    // ✅ COMPREHENSIVE: Rich source context
+                    sourceDetails: {
+                        // Transaction classification
+                        transactionType: 'invoice_payment_overpayment',
+                        donationContext: 'customer_payment_overpayment',
+                        
+                        // Business identifiers
+                        store: currentSaleData.store,
+                        systemInvoiceId: currentSaleData.saleId,
+                        manualVoucherNumber: currentSaleData.manualVoucherNumber,
+                        
+                        // Financial context
+                        originalInvoiceAmount: currentSaleData.financials?.totalAmount || 0,
+                        paymentAmount: amountPaid,
+                        totalPhysicalPayment: physicalAmountGiven,
+                        invoiceBalanceBeforePayment: currentSaleData.balanceDue || 0,
+                        invoiceBalanceAfterPayment: newBalanceDue,
+                        
+                        // Payment details
+                        paymentMode: paymentMode,
+                        transactionReference: transactionRef,
+                        paymentId: paymentId,
+                        
+                        // ✅ BUSINESS INTELLIGENCE
+                        customerEmail: currentSaleData.customerInfo?.email || 'unknown',
+                        customerPhone: currentSaleData.customerInfo?.phone || 'unknown',
+                        invoiceAge: invoiceAge,
+                        wasPartiallyPaid: (currentSaleData.totalAmountPaid || 0) > 0,
+                        paymentSequence: (currentSaleData.totalAmountPaid || 0) > 0 ? 'subsequent_payment' : 'first_payment',
+                        paymentNumber: currentPaymentCount + 1,
+                        
+                        // ✅ CUSTOMER INSIGHTS
+                        isRepeatCustomer: currentPaymentCount > 0,
+                        customerTotalContributed: newAmountTendered,
+                        donationPercentageOfInvoice: ((donationAmount / (currentSaleData.financials?.totalAmount || 1)) * 100).toFixed(2)
+                    },
+                    
+                    // Relationships for data linking
+                    relatedPaymentId: paymentRef.id,
+                    relatedInvoiceId: invoiceId,
+                    relatedSaleId: invoiceId, // Same as invoice for sales
+                    
+                    // Customer information
+                    customerName: customerName,
+                    customerEmail: currentSaleData.customerInfo?.email,
+                    
+                    // ✅ DONOR RECOGNITION
+                    donorClassification: getDonorClassification(donationAmount),
+                    isAnonymous: false, // Sales donations have customer info
+                    donationCategory: 'customer_generosity',
+                    
+                    // Administrative
+                    recordedBy: user.email,
+                    status: 'Verified',
+                    processedAutomatically: true,
+                    
+                    // ✅ COMPREHENSIVE: Audit trail
+                    audit: {
+                        createdBy: user.email,
+                        createdOn: now,
+                        context: 'Invoice payment overpayment donation',
+                        donationSource: donationSource,
+                        method: 'payment_overpayment_processing',
+                        userRole: user.role || 'unknown',
+                        
+                        // Processing context
+                        processingLocation: 'sales_payment_modal',
+                        systemVersion: '1.0.0',
+                        dataVersion: 'enhanced_donation_tracking'
+                    }
+                });
+                
+                console.log(`[API] ✅ Enhanced donation record created:`);
+                console.log(`  - Donation ID: ${donationId}`);
+                console.log(`  - Amount: ₹${donationAmount.toFixed(2)}`);
+                console.log(`  - Source: ${donationSource || 'Invoice Overpayment'}`);
+                console.log(`  - Customer: ${customerName}`);
+                console.log(`  - Invoice Age: ${invoiceAge} days`);
+                console.log(`  - Payment Sequence: ${(currentSaleData.totalAmountPaid || 0) > 0 ? 'Subsequent' : 'First'}`);
+            }
+
+        } catch (transactionError) {
+            console.error('[API] Error in payment transaction:', transactionError);
+            throw new Error(`Payment processing failed: ${transactionError.message}`);
         }
     });
 }
