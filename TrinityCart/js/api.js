@@ -1057,6 +1057,174 @@ export async function deletePaymentAndUpdateInvoice(paymentId, user) {
     });
 }
 
+/**
+ * ENHANCED: Voids a supplier payment with proper audit trail and balance adjustment.
+ * 
+ * Creates reversing payment entry instead of deleting the original record, maintaining
+ * complete audit trail for accounting compliance. Updates invoice balance and payment
+ * status while preserving all historical payment information.
+ * 
+ * BUSINESS CONTEXT:
+ * - Maintains complete audit trail for supplier payment corrections
+ * - Follows professional accounting practices for payment reversals  
+ * - Enables financial reconciliation with proper paper trail
+ * - Supports error correction without data loss
+ * 
+ * @param {string} paymentId - The document ID of the supplier payment to void
+ * @param {object} adminUser - The admin performing the void operation
+ * @throws {Error} When payment not found, already voided, or transaction fails
+ * @since 1.0.0 Enhanced with void system for audit compliance
+ * @see deletePaymentAndUpdateInvoice() - Deprecated in favor of void system
+ */
+export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    return db.runTransaction(async (transaction) => {
+        // === PHASE 1: READ & VALIDATION ===
+        console.log(`[API] Voiding supplier payment: ${paymentId}`);
+        
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists) {
+            throw new Error("Payment record not found. It may have already been voided or deleted.");
+        }
+        
+        const originalPaymentData = paymentDoc.data();
+        
+        // Validate payment can be voided
+        if (originalPaymentData.status === 'Voided') {
+            throw new Error("This payment has already been voided.");
+        }
+        
+        if (originalPaymentData.status !== 'Verified' && originalPaymentData.status !== 'Recorded') {
+            throw new Error(`Payment status '${originalPaymentData.status}' cannot be voided. Only verified payments can be voided.`);
+        }
+
+        const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(originalPaymentData.relatedInvoiceId);
+        const invoiceDoc = await transaction.get(invoiceRef);
+        
+        if (!invoiceDoc.exists) {
+            throw new Error(`Related invoice ${originalPaymentData.relatedInvoiceId} does not exist.`);
+        }
+        
+        const currentInvoiceData = invoiceDoc.data();
+        
+        // Get supplier information for logging
+        const supplier = masterData.suppliers.find(s => s.id === originalPaymentData.supplierId);
+        const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+
+        console.log(`[API] Voiding payment to ${supplierName}:`, {
+            originalAmount: `₹${originalPaymentData.amountPaid.toFixed(2)}`,
+            invoiceId: currentInvoiceData.invoiceId,
+            paymentDate: originalPaymentData.paymentDate.toDate?.() || originalPaymentData.paymentDate
+        });
+
+        // === PHASE 2: CALCULATE NEW BALANCES ===
+        const voidedAmount = originalPaymentData.amountPaid;
+        const newTotalAmountPaid = Math.max(0, (currentInvoiceData.amountPaid || 0) - voidedAmount);
+        const newBalanceDue = currentInvoiceData.invoiceTotal - newTotalAmountPaid;
+        
+        // ✅ ENHANCED: Recalculate payment status based on new balance
+        let newPaymentStatus;
+        if (newBalanceDue <= 0) {
+            newPaymentStatus = 'Paid';
+        } else if (newTotalAmountPaid > 0) {
+            newPaymentStatus = 'Partially Paid';
+        } else {
+            newPaymentStatus = 'Unpaid';
+        }
+
+        console.log(`[API] Balance recalculation after void:`);
+        console.log(`  - Previous paid: ₹${(currentInvoiceData.amountPaid || 0).toFixed(2)}`);
+        console.log(`  - Voided amount: ₹${voidedAmount.toFixed(2)}`);
+        console.log(`  - New paid total: ₹${newTotalAmountPaid.toFixed(2)}`);
+        console.log(`  - New balance: ₹${newBalanceDue.toFixed(2)}`);
+        console.log(`  - New status: ${newPaymentStatus}`);
+
+        // === PHASE 3: UPDATE ORIGINAL PAYMENT (VOID, DON'T DELETE) ===
+        transaction.update(paymentRef, {
+            status: 'Voided',
+            voidedBy: adminUser.email,
+            voidedOn: now,
+            originalStatus: originalPaymentData.status || 'Recorded',
+            voidReason: 'Administrative void - payment reversal',
+            
+            // ✅ ENHANCED: Preserve original data for audit
+            originalPaymentData: {
+                originalAmount: originalPaymentData.amountPaid,
+                originalDate: originalPaymentData.paymentDate,
+                originalMode: originalPaymentData.paymentMode,
+                originalRef: originalPaymentData.transactionRef
+            }
+        });
+
+        // === PHASE 4: CREATE REVERSING PAYMENT ENTRY ===
+        const reversalPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+        const reversalPaymentId = `VOID-${originalPaymentData.paymentId || paymentId}`;
+        
+        transaction.set(reversalPaymentRef, {
+            // ✅ ENHANCED: Professional reversing entry
+            paymentId: reversalPaymentId,
+            relatedInvoiceId: originalPaymentData.relatedInvoiceId,
+            supplierId: originalPaymentData.supplierId,
+            
+            // ✅ NEGATIVE AMOUNTS: Reversing entry
+            amountPaid: -voidedAmount,
+            
+            paymentDate: now,
+            paymentMode: 'VOID_REVERSAL',
+            transactionRef: `Reversal of ${originalPaymentData.transactionRef || 'payment'}`,
+            
+            // ✅ ENHANCED: Clear reversal context
+            notes: `Reversed payment for Invoice ${currentInvoiceData.invoiceId}. Original payment: ₹${voidedAmount.toFixed(2)} on ${originalPaymentData.paymentDate.toDate?.().toLocaleDateString() || 'unknown date'}`,
+            
+            // Administrative context
+            status: 'Void_Reversal',
+            originalPaymentId: paymentId,
+            recordedBy: adminUser.email,
+            voidedBy: adminUser.email,
+            isReversalEntry: true,
+            
+            // ✅ AUDIT TRAIL
+            audit: {
+                createdBy: adminUser.email,
+                createdOn: now,
+                context: 'Supplier payment void reversal',
+                originalPaymentReference: originalPaymentData.paymentId,
+                voidReason: 'Administrative correction'
+            }
+        });
+
+        // === PHASE 5: UPDATE INVOICE WITH CORRECTED BALANCES ===
+        transaction.update(invoiceRef, {
+            amountPaid: newTotalAmountPaid,
+            balanceDue: newBalanceDue,
+            paymentStatus: newPaymentStatus,
+            
+            // ✅ ENHANCED: Track void activity
+            lastPaymentVoided: {
+                voidedAmount: voidedAmount,
+                voidedPaymentId: paymentId,
+                voidedBy: adminUser.email,
+                voidedOn: now,
+                previousStatus: currentInvoiceData.paymentStatus,
+                reversalPaymentId: reversalPaymentRef.id
+            },
+            
+            // Update audit trail
+            'audit.updatedBy': adminUser.email,
+            'audit.updatedOn': now
+        });
+
+        console.log(`[API] ✅ Supplier payment voided successfully:`);
+        console.log(`  - Original payment: VOIDED (preserved for audit)`);
+        console.log(`  - Reversal entry: ${reversalPaymentId} created`);
+        console.log(`  - Invoice status: ${currentInvoiceData.paymentStatus} → ${newPaymentStatus}`);
+        console.log(`  - Invoice balance: Updated to ₹${newBalanceDue.toFixed(2)}`);
+    });
+}
+
 
 // =======================================================
 // --- SALES CATALOGUE API FUNCTIONS ---
