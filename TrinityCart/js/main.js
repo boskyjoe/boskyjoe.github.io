@@ -55,7 +55,10 @@ import { addLineItem, calculateAllTotals, showPurchasesView, switchPurchaseTab, 
 import { addSupplierPayment } from './api.js';
 import { recordPaymentAndUpdateInvoice } from './api.js';
 import { deletePaymentAndUpdateInvoice } from './api.js';
-import { getPaymentDataFromGridById } from './ui.js';
+import { getPaymentDataFromGridById,
+    getConsignmentPaymentDataFromGridById, 
+    getSupplierPaymentDataFromGridById,    
+    getSalesPaymentDataFromGridById,   } from './ui.js';
 
 import { showSupplierPaymentModal, closeSupplierPaymentModal, getInvoiceDataFromGridById, initializeModals, closePaymentModal } from './ui.js';
 
@@ -737,10 +740,10 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
     if (!button.classList.contains('action-btn-delete-payment')) return;
 
     console.log("[main.js] Delete payment for docId:", docId);
-    const paymentData = getPaymentDataFromGridById(docId);
+    const paymentData = getSupplierPaymentDataFromGridById(docId);
 
     if (!paymentData) {
-        alert('Error: Could not find payment data in the grid.');
+        await showModal('error', 'Payment Data Error', 'Could not find supplier payment data in the grid.');
         return;
     }
 
@@ -1040,7 +1043,7 @@ async function handleTeamMembersGrid(button, docId, user) {
 }
 
 async function handleConsignmentPaymentsGrid(button, docId, user) {
-    const paymentData = getPaymentDataFromGridById(docId);
+    const paymentData = getConsignmentPaymentDataFromGridById(docId);
     if (!paymentData) return;
 
     if (button.classList.contains('action-btn-edit-payment')) {
@@ -1084,7 +1087,7 @@ async function handleSalesHistoryGrid(button, docId) {
 async function handleSalePaymentHistoryGrid(button, docId, user) {
     if (!button.classList.contains('action-btn-void-sale-payment')) return;
 
-    const paymentData = getSalePaymentDataFromGridById(docId);
+    const paymentData = getSalesPaymentDataFromGridById(docId);
     if (!paymentData) return;
 
     if (confirm(`Are you sure you want to VOID this payment of ${formatCurrency(paymentData.amountPaid)}? This will reverse the transaction and cannot be undone.`)) {
