@@ -53,7 +53,7 @@ import { masterData } from './masterData.js';
 import { getPurchaseInvoiceById,voidSupplierPaymentAndUpdateInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView, switchPurchaseTab, loadPaymentsForSelectedInvoice, resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
-import { recordPaymentAndUpdateInvoice } from './api.js';
+import { recordPaymentAndUpdateInvoice,verifySupplierPayment } from './api.js';
 import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById,
     getConsignmentPaymentDataFromGridById, 
@@ -737,74 +737,110 @@ async function handlePurchaseInvoiceGrid(button, docId, user) {
 }
 
 async function handlePurchasePaymentsGrid(button, docId, user) {
-    if (!button.classList.contains('action-btn-delete-payment')) return;
-
-    console.log("[main.js] Delete payment for docId:", docId);
     const paymentData = getSupplierPaymentDataFromGridById(docId);
-
     if (!paymentData) {
-        await showModal('error', 'Payment Data Error', 'Could not find supplier payment data in the grid.');
+        await showModal('error', 'Payment Data Error', 'Could not find payment data.');
         return;
     }
 
-    // Get supplier name for better user context
     const supplier = masterData.suppliers.find(s => s.id === paymentData.supplierId);
     const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
 
-    const confirmed = await showModal('confirm', 'Void Supplier Payment', 
-        `Are you sure you want to VOID this supplier payment?\n\n` +
-        `• Supplier: ${supplierName}\n` +
-        `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n` +
-        `• Payment Mode: ${paymentData.paymentMode}\n` +
-        `• Date: ${paymentData.paymentDate.toDate?.().toLocaleDateString() || 'Unknown'}\n\n` +
-        `⚠️ VOID PROCESS:\n` +
-        `✓ Original payment will be marked as VOIDED (preserved)\n` +
-        `✓ Reversing entry will be created for audit trail\n` +
-        `✓ Invoice balance will be updated automatically\n` +
-        `✓ Payment status will be recalculated\n\n` +
-        `This action maintains complete audit trail and cannot be undone.`
-    );
+    if (button.classList.contains('action-btn-verify-supplier-payment')) {
+        // ✅ NEW: Verify supplier payment
+        const confirmed = await showModal('confirm', 'Verify Supplier Payment', 
+            `Verify this payment to ${supplierName}?\n\n` +
+            `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n` +
+            `• Payment Mode: ${paymentData.paymentMode}\n` +
+            `• Reference: ${paymentData.transactionRef}\n` +
+            `• Submitted by: ${paymentData.submittedBy}\n\n` +
+            `This will:\n` +
+            `✓ Update the invoice balance automatically\n` +
+            `✓ Change payment status to "Verified"\n` +
+            `✓ Complete the payment processing workflow`
+        );
 
-    if (confirmed) {
-        ProgressToast.show('Voiding Supplier Payment', 'warning');
-        try {
-            ProgressToast.updateProgress('Creating void entries and updating invoice...', 75);
-            //await deletePaymentAndUpdateInvoice(docId, user);
-            await voidSupplierPaymentAndUpdateInvoice(docId, user);
-            ProgressToast.showSuccess(`Payment to ${supplierName} has been voided!`);
+        if (confirmed) {
+            ProgressToast.show('Verifying Supplier Payment', 'info');
+            
+            try {
+                ProgressToast.updateProgress('Verifying payment and updating invoice...', 75);
+                
+                await verifySupplierPayment(docId, user);
+                
+                ProgressToast.showSuccess(`Payment to ${supplierName} verified!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    
+                    await showModal('success', 'Payment Verified', 
+                        `Supplier payment has been verified successfully!\n\n` +
+                        `• Supplier: ${supplierName}\n` +
+                        `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n` +
+                        `• Status: Verified\n\n` +
+                        `✓ Invoice balance updated\n` +
+                        `✓ Payment status recalculated\n` +
+                        `✓ Supplier account adjusted`
+                    );
+                    
+                    // Refresh grids to show updated status
+                    if (typeof loadPaymentsForSelectedInvoice === 'function') {
+                        loadPaymentsForSelectedInvoice();
+                    }
+                    
+                }, 1200);
+                
+            } catch (error) {
+                console.error("Error verifying supplier payment:", error);
+                ProgressToast.showError(`Verification failed: ${error.message}`);
+                setTimeout(() => showModal('error', 'Verification Failed', error.message), 2000);
+            }
+        }
+        
+    } else if (button.classList.contains('action-btn-void-supplier-payment')) {
+        // ✅ ENHANCED: Void verified payment (same as before)
+        const confirmed = await showModal('confirm', 'Void Supplier Payment', 
+            `VOID this verified payment to ${supplierName}?\n\n` +
+            `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n\n` +
+            `This will create a reversal entry and update the invoice balance.`
+        );
 
-            setTimeout(async () => {
-                ProgressToast.hide(800);
+        if (confirmed) {
+            ProgressToast.show('Voiding Supplier Payment', 'warning');
+            
+            try {
+                ProgressToast.updateProgress('Creating void entries...', 75);
+                await voidSupplierPaymentAndUpdateInvoice(docId, user);
+                ProgressToast.showSuccess(`Payment to ${supplierName} voided!`);
+                setTimeout(() => ProgressToast.hide(500), 1000);
                 
-                await showModal('success', 'Supplier Payment Voided', 
-                    `Supplier payment has been voided successfully!\n\n` +
-                    `• Supplier: ${supplierName}\n` +
-                    `• Voided Amount: ₹${paymentData.amountPaid.toFixed(2)}\n\n` +
-                    `✓ Original payment marked as VOIDED\n` +
-                    `✓ Reversing entry created for audit trail\n` +
-                    `✓ Invoice balance updated automatically\n` +
-                    `✓ Payment status recalculated\n\n` +
-                    `The payment history shows both the original payment and the reversal for complete audit compliance.`
-                );
+            } catch (error) {
+                console.error("Error voiding supplier payment:", error);
+                ProgressToast.showError(`Void failed: ${error.message}`);
+            }
+        }
+        
+    } else if (button.classList.contains('action-btn-cancel-supplier-payment')) {
+        // ✅ NEW: Cancel pending payment (delete for unverified payments)
+        const confirmed = await showModal('confirm', 'Cancel Supplier Payment', 
+            `Cancel this pending payment submission?\n\n` +
+            `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n` +
+            `• Status: Pending Verification\n\n` +
+            `This will permanently remove the payment record since it hasn't been verified yet.`
+        );
+
+        if (confirmed) {
+            try {
+                await cancelSupplierPaymentRecord(docId);
+                await showModal('success', 'Payment Cancelled', 'Pending supplier payment has been cancelled.');
                 
-                // Refresh payment grid to show both original and reversal entries
                 if (typeof loadPaymentsForSelectedInvoice === 'function') {
                     loadPaymentsForSelectedInvoice();
                 }
-                
-            }, 1200);
-
-        } catch (error) {
-            console.error("Error deleting payment:", error);
-            ProgressToast.showError(`Void failed: ${error.message}`);
-            setTimeout(() => {
-                showModal('error', 'Void Failed', 
-                    `The supplier payment could not be voided.\n\n` +
-                    `Reason: ${error.message}\n\n` +
-                    'Please try again or contact support if the issue persists.'
-                );
-            }, 2000);
-
+            } catch (error) {
+                console.error("Error cancelling supplier payment:", error);
+                showModal('error', 'Cancel Failed', error.message);
+            }
         }
     }
 }
@@ -1760,30 +1796,28 @@ async function handleSupplierPaymentSubmit(e) {
         });
 
         // Step 4: Process Payment Transaction
-        ProgressToast.updateProgress('Recording payment and updating invoice balance...', 85, 'Step 4 of 5');
+        ProgressToast.updateProgress('Submitting payment for admin verification...', 85, 'Step 4 of 5');
 
         // Execute the complex transactional payment processing
-        await recordPaymentAndUpdateInvoice(paymentData, user);
+        await recordPaymentAndUpdateInvoice(paymentData, user, true);
 
         // Step 5: Success Completion and UI Updates
-        ProgressToast.updateProgress('Payment recorded successfully!', 100, 'Step 5 of 5');
-        ProgressToast.showSuccess(`${formatCurrency(paymentAmount)} payment to ${supplierName} recorded!`);
+        ProgressToast.updateProgress('Payment submitted successfully!', 100, 'Step 5 of 5');
+        ProgressToast.showSuccess(`Payment to ${supplierName} submitted for verification!`);
+
 
         setTimeout(async () => {
             ProgressToast.hide(800);
             
-            await showModal('success', 'Supplier Payment Recorded', 
-                `Supplier payment has been recorded successfully!\n\n` +
+            await showModal('success', 'Supplier Payment Submitted', 
+                `Supplier payment has been submitted for verification!\n\n` +
                 `• Supplier: ${supplierName}\n` +
-                `• Payment Amount: ${formatCurrency(paymentAmount)}\n` +
-                `• Payment Mode: ${paymentMode}\n` +
-                `• Payment Date: ${paymentDateObj.toLocaleDateString()}\n` +
-                `• Transaction Reference: ${transactionRef || 'Not provided'}\n` +
-                `• Notes: ${notes || 'None'}\n\n` +
-                `✓ Invoice balance updated automatically\n` +
-                `✓ Payment status recalculated\n` +
-                `✓ Supplier account balance adjusted\n` +
-                `✓ Payment history recorded for audit trail`
+                `• Amount: ${formatCurrency(paymentData.amountPaid)}\n` +
+                `• Status: Pending Admin Verification\n\n` +
+                `✓ Payment record created\n` +
+                `⏳ Awaiting admin verification\n` +
+                `📧 You will be notified when verified\n\n` +
+                `Note: Invoice balance will update after admin verification.`
             );
             
             // Close the payment modal
