@@ -3141,50 +3141,174 @@ async function handleActivityReportSubmit(e) {
     }
 }
 
-
-
+/**
+ * SIMPLIFIED: Handles consignment payment submission with automatic donation detection.
+ * 
+ * Records team payments against consignment orders using the same logic as sales payments.
+ * Automatically detects overpayments and records them as team donations with proper
+ * source attribution. Much simpler and more intuitive than manual donation entry.
+ * 
+ * BUSINESS CONTEXT:
+ * - Teams pay their consignment balance (sales revenue owed)
+ * - Teams can pay extra as donations (overpayment detection)
+ * - Same logic as customer sales payments for consistency
+ * - Supports team generosity while maintaining simple workflow
+ * 
+ * @param {Event} e - Form submission event from make-payment-form
+ */
 async function handleMakePaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
-
-    const docId = document.getElementById('payment-ledger-doc-id').value;
-    const isEditMode = !!docId;
-
-    const paymentData = {
-        orderId: appState.selectedConsignmentId,
-        teamLeadId: user.uid,
-        teamLeadName: user.displayName,
-        amountPaid: parseFloat(document.getElementById('payment-amount-input').value),
-        paymentDate: new Date(document.getElementById('payment-date-input').value),
-        paymentMode: document.getElementById('payment-mode-select').value,
-        transactionRef: document.getElementById('payment-ref-input').value,
-        notes: document.getElementById('payment-notes-input').value,
-        paymentReason: document.getElementById('payment-reason-select').value
-    };
-
-    if (!paymentData.transactionRef) {
-        return alert("Please enter a Reference # for this payment.");
+    
+    if (!user) {
+        await showModal('error', 'Not Logged In', 'You must be logged in to submit payments.');
+        return;
     }
 
-    if (isNaN(paymentData.amountPaid) || paymentData.amountPaid <= 0) {
-        return alert("Amount paid must be a number greater than zero.");
-    }
+    // ✅ START: Progress toast for consignment payment
+    ProgressToast.show('Processing Team Payment', 'info');
 
     try {
+        // Step 1: Basic Validation
+        ProgressToast.updateProgress('Validating payment information...', 25, 'Step 1 of 4');
+
+        const docId = document.getElementById('payment-ledger-doc-id').value;
+        const isEditMode = !!docId;
+        
+        const paymentAmount = parseFloat(document.getElementById('payment-amount-input').value);
+        const paymentMode = document.getElementById('payment-mode-select').value;
+        const transactionRef = document.getElementById('payment-ref-input').value.trim();
+        const notes = document.getElementById('payment-notes-input').value.trim();
+        const paymentReason = document.getElementById('payment-reason-select').value;
+
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Amount', 'Payment amount must be a number greater than zero.');
+            return;
+        }
+
+        if (!paymentMode) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Payment Mode', 'Please select how the payment is being made.');
+            return;
+        }
+
+        if (!transactionRef) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Reference', 'Please enter a Reference # for this payment.');
+            return;
+        }
+
+        // Step 2: Get Order Context and Calculate Donation
+        ProgressToast.updateProgress('Calculating payment allocation...', 50, 'Step 2 of 4');
+
+        // Get current order balance (same logic as sales payment)
+        const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
+        const orderData = orderNode?.data;
+        
+        if (!orderData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Order Data Error', 'Could not find consignment order data. Please refresh and try again.');
+            return;
+        }
+
+        const balanceDue = orderData.balanceDue || 0;
+        
+        // ✅ SAME LOGIC AS SALES: Calculate donation automatically
+        let donationAmount = 0;
+        if (paymentAmount > balanceDue) {
+            donationAmount = paymentAmount - balanceDue;
+            
+            const confirmDonation = await showModal('confirm', 'Team Overpayment - Record as Donation?', 
+                `Payment amount: ${formatCurrency(paymentAmount)}\n` +
+                `Balance due: ${formatCurrency(balanceDue)}\n` +
+                `Overpayment: ${formatCurrency(donationAmount)}\n\n` +
+                `The team's extra ${formatCurrency(donationAmount)} will be recorded as a donation to the church. Continue?`
+            );
+            
+            if (!confirmDonation) {
+                ProgressToast.hide(0);
+                return;
+            }
+            
+            console.log(`[main.js] Team overpayment confirmed as donation: ${formatCurrency(donationAmount)}`);
+        }
+
+        const amountToApplyToOrder = Math.min(paymentAmount, balanceDue);
+
+        // ✅ SIMPLIFIED: Same data structure as sales payment
+        const paymentData = {
+            orderId: appState.selectedConsignmentId,
+            teamLeadId: user.uid,
+            teamLeadName: user.displayName,
+            teamName: orderData.teamName,
+            
+            // ✅ SAME PATTERN: amountPaid + donationAmount
+            amountPaid: amountToApplyToOrder,
+            donationAmount: donationAmount,
+            totalPhysicalPayment: paymentAmount, // Total amount team gave
+            
+            paymentDate: new Date(document.getElementById('payment-date-input').value),
+            paymentMode: paymentMode,
+            transactionRef: transactionRef,
+            notes: notes,
+            paymentReason: paymentReason,
+            
+            // ✅ DONATION SOURCE
+            donationSource: donationAmount > 0 ? DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT : null
+        };
+
+        // Step 3: Submit Payment
+        ProgressToast.updateProgress('Submitting payment record...', 85, 'Step 3 of 4');
+
         if (isEditMode) {
             await updatePaymentRecord(docId, paymentData, user);
-            alert("Pending payment record updated successfully.");
         } else {
-            await submitPaymentRecord(paymentData, user);
-            alert("Payment record submitted for verification.");
+            await submitPaymentRecord(paymentData, user); // ✅ REUSE existing function with enhanced data
         }
-        resetPaymentForm();
+
+        // Step 4: Success
+        ProgressToast.updateProgress('Payment submitted successfully!', 100, 'Step 4 of 4');
+        ProgressToast.showSuccess(
+            donationAmount > 0 
+                ? `Payment: ${formatCurrency(amountToApplyToOrder)} + Team Donation: ${formatCurrency(donationAmount)}!`
+                : `Payment: ${formatCurrency(amountToApplyToOrder)} submitted!`
+        );
+
+        setTimeout(async () => {
+            ProgressToast.hide(800);
+            
+            await showModal('success', 'Team Payment Submitted', 
+                `Team payment has been submitted for verification!\n\n` +
+                `• Team: ${paymentData.teamName}\n` +
+                `• Payment Amount: ${formatCurrency(amountToApplyToOrder)}\n` +
+                `${donationAmount > 0 ? `• Team Donation: ${formatCurrency(donationAmount)}\n` : ''}` +
+                `• Payment Mode: ${paymentMode}\n` +
+                `• Reference: ${transactionRef}\n\n` +
+                `✓ Payment submitted for admin verification\n` +
+                `${donationAmount > 0 ? '✓ Team donation recorded with consignment source\n' : ''}` +
+                `⏳ Awaiting admin verification to update order balance`
+            );
+            
+            resetPaymentForm();
+            
+        }, 1200);
+
     } catch (error) {
-        console.error("Error submitting payment record:", error);
-        alert(`Failed to submit payment record: ${error.message}`);
+        console.error("Error submitting team payment:", error);
+        
+        ProgressToast.showError(`Payment failed: ${error.message || 'Payment processing error'}`);
+        
+        setTimeout(async () => {
+            await showModal('error', 'Payment Submission Failed', 
+                `Failed to submit the team payment.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Please verify all information and try again.`
+            );
+        }, 2000);
     }
 }
+
 
 /**
  * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
