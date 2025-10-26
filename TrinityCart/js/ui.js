@@ -4761,15 +4761,198 @@ export function showAddProductModal() {
     const modal = document.getElementById('add-product-modal');
     if (!modal) return;
 
-    // Populate the grid inside the modal with available products
-    if (addProductModalGridApi) {
-        const availableProducts = masterData.products.filter(p => p.isActive && p.inventoryCount > 0);
-        addProductModalGridApi.setGridOption('rowData', availableProducts);
+    // ✅ ENHANCED: Check if sales catalogue is selected
+    const selectedCatalogueId = document.getElementById('sale-catalogue-select')?.value;
+    
+    if (!selectedCatalogueId) {
+        showModal('error', 'No Sales Catalogue Selected', 
+            'Please select a sales catalogue first before adding products.\n\n' +
+            'The sales catalogue determines which products are available and their current selling prices.'
+        );
+        return;
     }
+
+    // ✅ ENHANCED: Get products from selected catalogue with prices
+    loadProductsForSelectedCatalogue(selectedCatalogueId);
 
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
 }
+
+/**
+ * ✅ ENHANCED: Load products from specific ACTIVE sales catalogue only
+ * @param {string} catalogueId - ID of the selected sales catalogue
+ */
+
+async function loadProductsForSelectedCatalogue(catalogueId) {
+    if (!addProductModalGridApi) {
+        console.error('[ui.js] Add product modal grid not ready');
+        return;
+    }
+
+    try {
+        console.log(`[ui.js] Loading products from catalogue: ${catalogueId}`);
+        
+        addProductModalGridApi.setGridOption('loading', true);
+
+        // ✅ VALIDATION: Verify the catalogue is active before loading products
+        const selectedCatalogue = masterData.salesCatalogues.find(cat => cat.id === catalogueId);
+        
+        if (!selectedCatalogue) {
+            addProductModalGridApi.setGridOption('loading', false);
+            addProductModalGridApi.showNoRowsOverlay();
+            await showModal('error', 'Catalogue Not Found', 
+                'The selected sales catalogue was not found. Please refresh the page and try again.'
+            );
+            return;
+        }
+
+        if (!selectedCatalogue.isActive) {
+            addProductModalGridApi.setGridOption('loading', false);
+            addProductModalGridApi.showNoRowsOverlay();
+            await showModal('error', 'Catalogue Not Active', 
+                `Sales catalogue "${selectedCatalogue.catalogueName}" is not currently active.\n\n` +
+                'Only active catalogues can be used for sales. Please select a different catalogue or contact an admin to activate this catalogue.'
+            );
+            return;
+        }
+
+        console.log(`[ui.js] ✅ Catalogue "${selectedCatalogue.catalogueName}" is active, loading products...`);
+
+        // Get catalogue items with their selling prices
+        const db = firebase.firestore();
+        const catalogueItemsQuery = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
+            .doc(catalogueId)
+            .collection('items');
+        
+        const catalogueItemsSnapshot = await catalogueItemsQuery.get();
+        const catalogueItems = catalogueItemsSnapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data() 
+        }));
+
+        console.log(`[ui.js] Found ${catalogueItems.length} items in catalogue "${selectedCatalogue.catalogueName}"`);
+
+        if (catalogueItems.length === 0) {
+            addProductModalGridApi.setGridOption('loading', false);
+            addProductModalGridApi.showNoRowsOverlay();
+            await showModal('info', 'Empty Catalogue', 
+                `Sales catalogue "${selectedCatalogue.catalogueName}" has no products.\n\n` +
+                'Please add products to this catalogue first, or select a different catalogue.'
+            );
+            return;
+        }
+
+        // ✅ ENHANCED: Create products array with catalogue prices and stock validation
+        const availableProductsWithPrices = catalogueItems.map(catalogueItem => {
+            // Get master product data for inventory count and validation
+            const masterProduct = masterData.products.find(p => p.id === catalogueItem.productId);
+            
+            if (!masterProduct) {
+                console.warn(`[ui.js] Master product not found for catalogue item: ${catalogueItem.productId}`);
+                return null; // Skip this item
+            }
+
+            if (!masterProduct.isActive) {
+                console.warn(`[ui.js] Master product is inactive: ${masterProduct.itemName}`);
+                return null; // Skip inactive products
+            }
+            
+            return {
+                id: catalogueItem.productId,
+                itemName: catalogueItem.productName || masterProduct.itemName,
+                categoryId: masterProduct.categoryId || 'unknown',
+                inventoryCount: masterProduct.inventoryCount || 0,
+                
+                // ✅ CRITICAL: Use catalogue selling price (this is why catalogues matter!)
+                sellingPrice: catalogueItem.sellingPrice,
+                unitPrice: catalogueItem.sellingPrice, // For cart compatibility
+                
+                // ✅ BUSINESS CONTEXT
+                catalogueId: catalogueId,
+                catalogueName: selectedCatalogue.catalogueName,
+                catalogueItemId: catalogueItem.id || doc.id,
+                
+                // ✅ PRICING CONTEXT
+                isInCatalogue: true,
+                priceSource: `Sales Catalogue: ${selectedCatalogue.catalogueName}`,
+                costPrice: catalogueItem.costPrice || masterProduct.unitPrice || 0,
+                marginPercentage: catalogueItem.marginPercentage || 0,
+                
+                // ✅ VALIDATION FLAGS
+                hasValidPrice: catalogueItem.sellingPrice > 0,
+                hasStock: masterProduct.inventoryCount > 0,
+                isAvailableForSale: masterProduct.isActive && catalogueItem.sellingPrice > 0 && masterProduct.inventoryCount > 0
+            };
+        })
+        .filter(product => product !== null) // Remove invalid products
+        .filter(product => product.hasStock && product.hasValidPrice); // ✅ Only show sellable products
+
+        console.log(`[ui.js] ✅ Processed ${availableProductsWithPrices.length} sellable products from catalogue`);
+
+        // Load products into grid
+        addProductModalGridApi.setGridOption('rowData', availableProductsWithPrices);
+        addProductModalGridApi.setGridOption('loading', false);
+
+        // ✅ ENHANCED: Log business intelligence
+        const totalCatalogueValue = availableProductsWithPrices.reduce((sum, product) => {
+            return sum + (product.inventoryCount * product.sellingPrice);
+        }, 0);
+
+        console.log(`[ui.js] 📊 Catalogue "${selectedCatalogue.catalogueName}" analysis:`);
+        console.log(`  - Items in catalogue: ${catalogueItems.length}`);
+        console.log(`  - Available for sale: ${availableProductsWithPrices.length}`);
+        console.log(`  - Total inventory value: ${formatCurrency(totalCatalogueValue)}`);
+        console.log(`  - Season: ${selectedCatalogue.seasonName}`);
+
+    } catch (error) {
+        console.error('[ui.js] Error loading catalogue products:', error);
+        if (addProductModalGridApi) {
+            addProductModalGridApi.setGridOption('loading', false);
+            addProductModalGridApi.showNoRowsOverlay();
+        }
+        
+        await showModal('error', 'Catalogue Loading Failed', 
+            'Could not load products from the selected catalogue. Please try again.\n\n' +
+            'This might be due to:\n' +
+            '• Network connectivity issues\n' +
+            '• Catalogue data corruption\n' +
+            '• Insufficient permissions to access catalogue data'
+        );
+    }
+}
+
+/**
+ * ✅ ENHANCED: Populate sales catalogue dropdown with ACTIVE catalogues only
+ */
+export function populateSalesCatalogueDropdown() {
+    const catalogueSelect = document.getElementById('sale-catalogue-select');
+    if (!catalogueSelect) return;
+
+    catalogueSelect.innerHTML = '<option value="">Select a Catalogue...</option>';
+    
+    // ✅ CRITICAL: Only show ACTIVE sales catalogues
+    const activeCatalogues = masterData.salesCatalogues.filter(cat => cat.isActive);
+    
+    if (activeCatalogues.length === 0) {
+        catalogueSelect.innerHTML = '<option value="">No active catalogues available</option>';
+        catalogueSelect.disabled = true;
+        console.warn('[ui.js] No active sales catalogues found');
+        return;
+    }
+    
+    activeCatalogues.forEach(catalogue => {
+        const option = document.createElement('option');
+        option.value = catalogue.id;
+        option.textContent = `${catalogue.catalogueName} (${catalogue.seasonName})`;
+        catalogueSelect.appendChild(option);
+    });
+
+    catalogueSelect.disabled = false;
+    console.log(`[ui.js] ✅ Populated ${activeCatalogues.length} ACTIVE sales catalogues for sales form`);
+}
+
+
 
 export function closeAddProductModal() {
     const modal = document.getElementById('add-product-modal');
@@ -4823,6 +5006,18 @@ export function showSalesView() {
                 paymentModeSelect.appendChild(option);
             }
         });
+
+         // ✅ ENHANCED: Populate sales catalogue dropdown
+        populateSalesCatalogueDropdown();
+
+        // ✅ ADD: Sales catalogue change listener
+        const catalogueSelect = document.getElementById('sale-catalogue-select');
+        if (catalogueSelect) {
+            catalogueSelect.addEventListener('change', (e) => {
+                console.log(`[ui.js] Sales catalogue changed to: ${e.target.value}`);
+                // Could refresh available products or show catalogue info
+            });
+        }
 
     }, 0); 
     
