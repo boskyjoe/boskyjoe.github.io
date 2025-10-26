@@ -946,58 +946,203 @@ export async function addSupplierPayment(paymentData, user) {
 }
 
 /**
- * Records a new supplier payment AND updates the corresponding purchase invoice
- * within a single, atomic transaction.
- * @param {object} paymentData - The data for the new payment document.
- * @param {object} user - The currently authenticated user object.
+ * ENHANCED: Records supplier payment with optional verification workflow.
+ * 
+ * Records payments to suppliers for outstanding purchase invoices. Supports both
+ * immediate processing (legacy) and verification workflow (new). When verification
+ * is enabled, payment is created as "Pending Verification" and invoice is updated
+ * only after admin verification.
+ * 
+ * @param {object} paymentData - Payment data with optional verification flag
+ * @param {object} user - User submitting the payment
+ * @param {boolean} [requireVerification=true] - Whether payment needs admin verification
  * @returns {Promise<void>}
+ * @since 1.0.0 Enhanced with verification workflow support
  */
-export async function recordPaymentAndUpdateInvoice(paymentData, user) {
+export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVerification = true) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
-    // 1. Get references to the two documents we need to work with.
     const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(paymentData.relatedInvoiceId);
-    const newPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(); // Creates a ref with a new auto-generated ID
+    const newPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
 
-    // 2. Run the transaction.
+    if (requireVerification) {
+        // ✅ NEW: VERIFICATION WORKFLOW - Just create payment record
+        console.log(`[API] Creating supplier payment for verification workflow`);
+        
+        const paymentId = `SPAY-SUP-${Date.now()}`;
+        
+        return newPaymentRef.set({
+            paymentId: paymentId,
+            relatedInvoiceId: paymentData.relatedInvoiceId,
+            supplierId: paymentData.supplierId,
+            
+            // Financial details
+            amountPaid: paymentData.amountPaid,
+            paymentDate: paymentData.paymentDate,
+            paymentMode: paymentData.paymentMode,
+            transactionRef: paymentData.transactionRef,
+            notes: paymentData.notes || '',
+            
+            // ✅ VERIFICATION STATUS
+            paymentStatus: 'Pending Verification',
+            submittedBy: user.email,
+            submittedOn: now,
+            requiresVerification: true,
+            
+            audit: {
+                createdBy: user.email,
+                createdOn: now,
+                context: 'Supplier payment submitted for admin verification'
+            }
+        });
+        
+    } else {
+        // ✅ LEGACY: IMMEDIATE PROCESSING (transactional)
+        console.log(`[API] Processing supplier payment with immediate invoice update`);
+        
+        return db.runTransaction(async (transaction) => {
+            // READ: Get the current state of the invoice first.
+            const invoiceDoc = await transaction.get(invoiceRef);
+            if (!invoiceDoc.exists) {
+                throw new Error("Invoice document does not exist!");
+            }
+
+            const invoiceData = invoiceDoc.data();
+            const amountBeingPaid = paymentData.amountPaid;
+
+            // CALCULATE: Determine the new totals and status.
+            const newAmountPaid = (invoiceData.amountPaid || 0) + amountBeingPaid;
+            const newBalanceDue = invoiceData.invoiceTotal - newAmountPaid;
+            let newPaymentStatus = "Unpaid";
+            if (newBalanceDue <= 0) {
+                newPaymentStatus = "Paid";
+            } else if (newAmountPaid > 0) {
+                newPaymentStatus = "Partially Paid";
+            }
+
+            // WRITE 1: Update the invoice document.
+            transaction.update(invoiceRef, {
+                amountPaid: newAmountPaid,
+                balanceDue: newBalanceDue,
+                paymentStatus: newPaymentStatus,
+                'audit.updatedBy': user.email,
+                'audit.updatedOn': now,
+            });
+
+            // WRITE 2: Create the new payment ledger document.
+            transaction.set(newPaymentRef, {
+                ...paymentData,
+                paymentId: `SPAY-SUP-${Date.now()}`,
+                paymentStatus: 'Verified', // ✅ IMMEDIATE: Already verified
+                recordedBy: user.email,
+                verifiedBy: user.email, // Self-verified for legacy mode
+                verifiedOn: now,
+                requiresVerification: false,
+                audit: {
+                    createdBy: user.email,
+                    createdOn: now,
+                    context: 'Supplier payment with immediate processing (legacy mode)'
+                }
+            });
+
+            console.log(`[API] ✅ Supplier payment processed immediately (legacy mode)`);
+        });
+    }
+}
+
+/**
+ * ENHANCED: Verifies pending supplier payment and updates invoice balance.
+ * 
+ * Takes a pending supplier payment and processes it using the existing transactional
+ * logic from recordPaymentAndUpdateInvoice. This ensures consistent balance calculation
+ * and payment status management.
+ * 
+ * @param {string} paymentId - ID of the payment to verify
+ * @param {object} adminUser - Admin performing the verification
+ */
+export async function verifySupplierPayment(paymentId, adminUser) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
     return db.runTransaction(async (transaction) => {
-        // READ: Get the current state of the invoice first.
+        // 1. READ the payment document
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
+            throw new Error("Payment not found or is not pending verification.");
+        }
+        
+        const paymentData = paymentDoc.data();
+        const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(paymentData.relatedInvoiceId);
+
+        // 2. READ invoice for balance calculation
         const invoiceDoc = await transaction.get(invoiceRef);
         if (!invoiceDoc.exists) {
-            throw new Error("Invoice document does not exist!");
+            throw new Error(`Related invoice does not exist.`);
         }
+        
+        const currentInvoiceData = invoiceDoc.data();
 
-        const invoiceData = invoiceDoc.data();
-        const amountBeingPaid = paymentData.amountPaid;
-
-        // CALCULATE: Determine the new totals and status.
-        const newAmountPaid = (invoiceData.amountPaid || 0) + amountBeingPaid;
-        const newBalanceDue = invoiceData.invoiceTotal - newAmountPaid;
-        let newPaymentStatus = "Partially Paid";
+        // 3. ✅ REUSE EXISTING LOGIC: Calculate new balances (same as existing function)
+        const newAmountPaid = (currentInvoiceData.amountPaid || 0) + paymentData.amountPaid;
+        const newBalanceDue = currentInvoiceData.invoiceTotal - newAmountPaid;
+        let newPaymentStatus = "Unpaid";
         if (newBalanceDue <= 0) {
             newPaymentStatus = "Paid";
+        } else if (newAmountPaid > 0) {
+            newPaymentStatus = "Partially Paid";
         }
 
-        // WRITE 1: Update the invoice document.
+        // 4. WRITE: Update payment status to verified
+        transaction.update(paymentRef, {
+            paymentStatus: 'Verified',
+            verifiedBy: adminUser.email,
+            verifiedOn: now,
+            verificationDetails: {
+                submittedBy: paymentData.submittedBy,
+                submittedOn: paymentData.submittedOn,
+                verificationDelay: paymentData.submittedOn ? 
+                    Math.round((Date.now() - paymentData.submittedOn.toMillis()) / (1000 * 60 * 60)) + ' hours' : 'Unknown'
+            }
+        });
+
+        // 5. WRITE: Update invoice (SAME LOGIC AS EXISTING FUNCTION)
         transaction.update(invoiceRef, {
             amountPaid: newAmountPaid,
             balanceDue: newBalanceDue,
             paymentStatus: newPaymentStatus,
-            'audit.updatedBy': user.email, // Also update the audit trail
+            'audit.updatedBy': adminUser.email,
             'audit.updatedOn': now,
         });
 
-        // WRITE 2: Create the new payment ledger document.
-        transaction.set(newPaymentRef, {
-            ...paymentData,
-            audit: {
-                createdBy: user.email,
-                createdOn: now,
-            }
-        });
+        console.log(`[API] ✅ Supplier payment verified using existing calculation logic`);
     });
 }
+
+/**
+ * Cancels an unverified supplier payment (deletes record since not yet processed).
+ * @param {string} paymentId - ID of pending payment to cancel
+ */
+export async function cancelSupplierPaymentRecord(paymentId) {
+    const db = firebase.firestore();
+    const paymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+    
+    // Verify payment is pending before cancelling
+    const paymentDoc = await paymentRef.get();
+    if (!paymentDoc.exists) {
+        throw new Error("Payment record not found.");
+    }
+    
+    if (paymentDoc.data().paymentStatus !== 'Pending Verification') {
+        throw new Error("Only pending payments can be cancelled. Verified payments must be voided.");
+    }
+    
+    // Safe to delete since it was never processed
+    return paymentRef.delete();
+}
+
+
 
 
 /**
@@ -4071,5 +4216,4 @@ export async function getPricingStatistics() {
         throw new Error(`Pricing statistics calculation failed: ${error.message}`);
     }
 }
-
 
