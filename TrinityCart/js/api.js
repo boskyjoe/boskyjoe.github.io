@@ -1237,13 +1237,21 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
         
         const originalPaymentData = paymentDoc.data();
         
+        // ✅ CORRECTED: Handle missing or undefined paymentStatus
+        const currentStatus = originalPaymentData.paymentStatus || originalPaymentData.status || 'Verified';
+        
+        console.log(`[API] Original payment status: "${currentStatus}"`);
+        
         // Validate payment can be voided
-        if (originalPaymentData.status === 'Voided') {
+        if (currentStatus === 'Voided') {
             throw new Error("This payment has already been voided.");
         }
         
-        if (originalPaymentData.status !== 'Verified' && originalPaymentData.status !== 'Recorded') {
-            throw new Error(`Payment status '${originalPaymentData.status}' cannot be voided. Only verified payments can be voided.`);
+        // ✅ FLEXIBLE: Allow voiding of verified payments OR legacy payments without status
+        if (currentStatus !== 'Verified' && currentStatus !== 'Recorded' && originalPaymentData.amountPaid > 0) {
+            console.warn(`[API] Payment has status "${currentStatus}" but proceeding with void since it has valid amount`);
+        } else if (!originalPaymentData.amountPaid || originalPaymentData.amountPaid <= 0) {
+            throw new Error("Cannot void payment: Invalid or missing payment amount.");
         }
 
         const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(originalPaymentData.relatedInvoiceId);
@@ -1261,13 +1269,15 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
 
         console.log(`[API] Voiding payment to ${supplierName}:`, {
             originalAmount: `₹${originalPaymentData.amountPaid.toFixed(2)}`,
+            originalStatus: currentStatus,
             invoiceId: currentInvoiceData.invoiceId,
             paymentDate: originalPaymentData.paymentDate.toDate?.() || originalPaymentData.paymentDate
         });
 
         // === PHASE 2: CALCULATE NEW BALANCES ===
         const voidedAmount = originalPaymentData.amountPaid;
-        const newTotalAmountPaid = Math.max(0, (currentInvoiceData.amountPaid || 0) - voidedAmount);
+        const currentInvoicePaidAmount = currentInvoiceData.amountPaid || 0;
+        const newTotalAmountPaid = Math.max(0, currentInvoicePaidAmount - voidedAmount);
         const newBalanceDue = currentInvoiceData.invoiceTotal - newTotalAmountPaid;
         
         // ✅ ENHANCED: Recalculate payment status based on new balance
@@ -1281,18 +1291,21 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
         }
 
         console.log(`[API] Balance recalculation after void:`);
-        console.log(`  - Previous paid: ₹${(currentInvoiceData.amountPaid || 0).toFixed(2)}`);
+        console.log(`  - Previous paid: ₹${currentInvoicePaidAmount.toFixed(2)}`);
         console.log(`  - Voided amount: ₹${voidedAmount.toFixed(2)}`);
         console.log(`  - New paid total: ₹${newTotalAmountPaid.toFixed(2)}`);
         console.log(`  - New balance: ₹${newBalanceDue.toFixed(2)}`);
-        console.log(`  - New status: ${newPaymentStatus}`);
+        console.log(`  - New status: ${currentInvoiceData.paymentStatus} → ${newPaymentStatus}`);
 
         // === PHASE 3: UPDATE ORIGINAL PAYMENT (VOID, DON'T DELETE) ===
         transaction.update(paymentRef, {
-            status: 'Voided',
+            // ✅ CORRECTED: Set status field consistently
+            paymentStatus: 'Voided',
+            status: 'Voided', // Also set legacy status field for compatibility
+            
             voidedBy: adminUser.email,
             voidedOn: now,
-            originalStatus: originalPaymentData.status || 'Recorded',
+            originalStatus: currentStatus, // ✅ CORRECTED: Use the status we determined
             voidReason: 'Administrative void - payment reversal',
             
             // ✅ ENHANCED: Preserve original data for audit
@@ -1300,7 +1313,8 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
                 originalAmount: originalPaymentData.amountPaid,
                 originalDate: originalPaymentData.paymentDate,
                 originalMode: originalPaymentData.paymentMode,
-                originalRef: originalPaymentData.transactionRef
+                originalRef: originalPaymentData.transactionRef,
+                originalStatus: currentStatus
             }
         });
 
@@ -1324,8 +1338,10 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
             // ✅ ENHANCED: Clear reversal context
             notes: `Reversed payment for Invoice ${currentInvoiceData.invoiceId}. Original payment: ₹${voidedAmount.toFixed(2)} on ${originalPaymentData.paymentDate.toDate?.().toLocaleDateString() || 'unknown date'}`,
             
-            // Administrative context
+            // ✅ CONSISTENT: Set both status fields
+            paymentStatus: 'Void_Reversal',
             status: 'Void_Reversal',
+            
             originalPaymentId: paymentId,
             recordedBy: adminUser.email,
             voidedBy: adminUser.email,
@@ -1336,7 +1352,7 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
                 createdBy: adminUser.email,
                 createdOn: now,
                 context: 'Supplier payment void reversal',
-                originalPaymentReference: originalPaymentData.paymentId,
+                originalPaymentReference: originalPaymentData.paymentId || paymentId,
                 voidReason: 'Administrative correction'
             }
         });
@@ -1369,7 +1385,6 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
         console.log(`  - Invoice balance: Updated to ₹${newBalanceDue.toFixed(2)}`);
     });
 }
-
 
 // =======================================================
 // --- SALES CATALOGUE API FUNCTIONS ---
