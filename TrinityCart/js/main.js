@@ -630,6 +630,17 @@ function setupGlobalClickHandler() {
         const user = appState.currentUser;
 
 
+        // ✅ DEBUG: Log user state
+        console.log('[DEBUG] Global click handler - user state:', {
+            userExists: !!user,
+            userEmail: user?.email || 'No email',
+            userRole: user?.role || 'No role',
+            targetElement: target.tagName,
+            targetClasses: target.className
+        });
+
+        
+
         // Authentication
         if (target.closest('#login-button')) return EventHandlers.auth.login();
         if (target.closest('#logout-button')) return EventHandlers.auth.logout();
@@ -639,7 +650,16 @@ function setupGlobalClickHandler() {
         if (navTrigger && handleNavigation(navTrigger)) return;
 
         // Grid actions
-        if (await handleGridAction(target, user)) return;
+        if (user) {
+            console.log('[DEBUG] User is available, checking for grid action');
+            if (await handleGridAction(target, user)) {
+                console.log('[DEBUG] Grid action handled successfully');
+                return;
+            }
+        } else {
+            console.warn('[DEBUG] No user available - skipping grid actions');
+        }
+
 
         // Mobile sidebar - handled separately to avoid nested listeners
         // (Mobile sidebar setup is now done once in setupMobileSidebar)
@@ -671,6 +691,7 @@ function handleNavigation(navTrigger) {
 // GRID ACTION HANDLERS
 // ============================================================================
 
+
 async function handleGridAction(target, user) {
     const gridButton = target.closest('button[data-id]');
     if (!gridButton || !user) return false;
@@ -679,11 +700,11 @@ async function handleGridAction(target, user) {
     const grid = gridButton.closest('.ag-theme-alpine');
     if (!docId || !grid) return false;
 
-    console.log('[Grid action]:', grid.id);
+    console.log('[Grid action]:', grid.id, 'by user:', user.email);
 
     const handler = EventHandlers.grids[grid.id];
     if (handler) {
-        await handler(gridButton, docId, user);
+        await handler(gridButton, docId, user); // ✅ ENSURE user is passed
         return true;
     }
 
@@ -738,14 +759,34 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
     }
 }
 
-async function handleExistingCataloguesGrid(button, docId) {
+// main.js - ENHANCED: Add user validation to existing catalogues handler
+
+async function handleExistingCataloguesGrid(button, docId, user) {
+    // ✅ ADD: User validation at function start
+    if (!user) {
+        console.error('[main.js] User not available for catalogue operations');
+        await showModal('error', 'Authentication Required', 'You must be logged in to manage catalogues.');
+        return;
+    }
+
+    console.log(`[main.js] Catalogue action by user: ${user.email}, catalogue: ${docId}`);
+
     if (button.classList.contains('action-btn-edit-catalogue')) {
+        // Existing edit functionality
+        console.log('[main.js] Edit catalogue action');
         const catalogueData = getCatalogueDataFromGridById(docId);
-        if (catalogueData) loadCatalogueForEditing(catalogueData);
+        if (catalogueData) {
+            loadCatalogueForEditing(catalogueData);
+        }
+        
     } else if (button.classList.contains('btn-activate-catalogue')) {
         // ✅ NEW: Activate catalogue
+        console.log('[main.js] Activate catalogue action');
         const catalogueData = getCatalogueDataFromGridById(docId);
-        if (!catalogueData) return;
+        if (!catalogueData) {
+            await showModal('error', 'Data Error', 'Could not find catalogue data. Please refresh the page.');
+            return;
+        }
 
         const confirmed = await showModal('confirm', 'Activate Sales Catalogue', 
             `Are you sure you want to activate "${catalogueData.catalogueName}"?\n\n` +
@@ -761,6 +802,12 @@ async function handleExistingCataloguesGrid(button, docId) {
             try {
                 ProgressToast.updateProgress('Activating catalogue and price history...', 75);
                 
+                console.log(`[main.js] Calling updateSalesCatalogue for activation:`, {
+                    docId: docId,
+                    isActive: true,
+                    userEmail: user.email
+                });
+
                 await updateSalesCatalogue(docId, { isActive: true }, user);
                 
                 ProgressToast.showSuccess(`"${catalogueData.catalogueName}" has been activated!`);
@@ -777,7 +824,7 @@ async function handleExistingCataloguesGrid(button, docId) {
                 }, 1000);
                 
             } catch (error) {
-                console.error('Error activating catalogue:', error);
+                console.error('[main.js] Error activating catalogue:', error);
                 ProgressToast.showError(`Failed to activate catalogue: ${error.message}`);
                 setTimeout(() => {
                     showModal('error', 'Activation Failed', 
@@ -789,8 +836,12 @@ async function handleExistingCataloguesGrid(button, docId) {
         
     } else if (button.classList.contains('btn-deactivate-catalogue')) {
         // ✅ NEW: Deactivate catalogue  
+        console.log('[main.js] Deactivate catalogue action');
         const catalogueData = getCatalogueDataFromGridById(docId);
-        if (!catalogueData) return;
+        if (!catalogueData) {
+            await showModal('error', 'Data Error', 'Could not find catalogue data. Please refresh the page.');
+            return;
+        }
 
         const confirmed = await showModal('confirm', 'Deactivate Sales Catalogue', 
             `Are you sure you want to deactivate "${catalogueData.catalogueName}"?\n\n` +
@@ -807,6 +858,12 @@ async function handleExistingCataloguesGrid(button, docId) {
             try {
                 ProgressToast.updateProgress('Deactivating catalogue and price history...', 75);
                 
+                console.log(`[main.js] Calling updateSalesCatalogue for deactivation:`, {
+                    docId: docId,
+                    isActive: false,
+                    userEmail: user.email
+                });
+
                 await updateSalesCatalogue(docId, { isActive: false }, user);
                 
                 ProgressToast.showSuccess(`"${catalogueData.catalogueName}" has been deactivated.`);
@@ -823,7 +880,7 @@ async function handleExistingCataloguesGrid(button, docId) {
                 }, 1000);
                 
             } catch (error) {
-                console.error('Error deactivating catalogue:', error);
+                console.error('[main.js] Error deactivating catalogue:', error);
                 ProgressToast.showError(`Failed to deactivate catalogue: ${error.message}`);
                 setTimeout(() => {
                     showModal('error', 'Deactivation Failed', 
@@ -832,6 +889,9 @@ async function handleExistingCataloguesGrid(button, docId) {
                 }, 2000);
             }
         }
+        
+    } else {
+        console.warn('[main.js] Unknown catalogue grid action:', button.className);
     }
 }
 
