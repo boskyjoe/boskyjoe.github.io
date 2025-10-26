@@ -22,6 +22,8 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
     getDonationSourceByStore 
 } from './config.js';
 
+import { masterData } from './masterData.js';
+
 
 
 
