@@ -1882,8 +1882,8 @@ export async function updatePaymentRecord(paymentId, updatedData, user) {
 }
 
 /**
- * [REFACTORED] Creates a new "Pending Verification" payment record in the ledger.
- * @param {object} paymentData - The payment data from the form.
+ * ENHANCED: Creates consignment payment record with automatic donation handling.
+ * @param {object} paymentData - The payment data with donation information.
  * @param {object} user - The team lead submitting the record.
  */
 export async function submitPaymentRecord(paymentData, user) {
@@ -1891,14 +1891,79 @@ export async function submitPaymentRecord(paymentData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const paymentId = `CPAY-${Date.now()}`;
 
-    // The paymentData object no longer contains 'relatedActivityIds'.
-    // It's just a simple record of a payment being made against the order balance.
-    return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).add({
-        ...paymentData,
-        paymentId: paymentId,
-        paymentStatus: 'Pending Verification',
-        submittedBy: user.email,
-        submittedOn: now,
+    return db.runTransaction(async (transaction) => {
+        // Create main payment record
+        const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
+        
+        transaction.set(paymentRef, {
+            paymentId: paymentId,
+            orderId: paymentData.orderId,
+            teamLeadId: paymentData.teamLeadId,
+            teamLeadName: paymentData.teamLeadName,
+            teamName: paymentData.teamName,
+            
+            // ✅ ENHANCED: Include donation information
+            amountPaid: paymentData.amountPaid, // Amount applied to balance
+            donationAmount: paymentData.donationAmount || 0, // Extra amount as donation
+            totalCollected: (paymentData.amountPaid || 0) + (paymentData.donationAmount || 0),
+            
+            paymentDate: paymentData.paymentDate,
+            paymentMode: paymentData.paymentMode,
+            transactionRef: paymentData.transactionRef,
+            notes: paymentData.notes || '',
+            paymentReason: paymentData.paymentReason,
+            
+            paymentStatus: 'Pending Verification',
+            submittedBy: user.email,
+            submittedOn: now,
+            
+            // ✅ DONATION CONTEXT
+            donationSource: paymentData.donationSource
+        });
+
+        // ✅ ENHANCED: Create donation record if overpayment (same pattern as sales)
+        if (paymentData.donationAmount && paymentData.donationAmount > 0) {
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            const donationId = `DON-TEAM-${paymentId}-${Date.now().toString().slice(-4)}`;
+            
+            transaction.set(donationRef, {
+                donationId: donationId,
+                amount: paymentData.donationAmount,
+                donationDate: now,
+                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
+                
+                sourceDetails: {
+                    transactionType: 'consignment_payment_overpayment',
+                    teamName: paymentData.teamName,
+                    orderId: paymentData.orderId,
+                    requiredAmount: (paymentData.totalPhysicalPayment || 0) - (paymentData.donationAmount || 0),
+                    tenderedAmount: paymentData.totalPhysicalPayment || paymentData.amountPaid + paymentData.donationAmount,
+                    overpaymentAmount: paymentData.donationAmount,
+                    paymentMode: paymentData.paymentMode,
+                    transactionReference: paymentData.transactionRef
+                },
+                
+                relatedPaymentId: paymentRef.id,
+                relatedConsignmentOrderId: paymentData.orderId,
+                
+                teamName: paymentData.teamName,
+                teamLeadName: paymentData.teamLeadName,
+                teamLeadEmail: user.email,
+                
+                donorClassification: getDonorClassification(paymentData.donationAmount),
+                isAnonymous: false,
+                
+                recordedBy: user.email,
+                status: 'Pending Verification',
+                
+                audit: {
+                    createdBy: user.email,
+                    createdOn: now,
+                    context: 'Consignment team payment overpayment',
+                    donationSource: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT
+                }
+            });
+        }
     });
 }
 
