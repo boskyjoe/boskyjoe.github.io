@@ -1904,6 +1904,50 @@ export function getPaymentDataFromGridById(paymentId) {
     return rowNode ? rowNode.data : null;
 }
 
+
+/**
+ * Gets payment data from the consignment payments grid
+ */
+export function getConsignmentPaymentDataFromGridById(paymentId) {
+    if (!consignmentPaymentsGridApi) {
+        console.error("Cannot get consignment payment data: Grid API not available.");
+        return null;
+    }
+    const rowNode = consignmentPaymentsGridApi.getRowNode(paymentId);
+    return rowNode ? rowNode.data : null;
+}
+
+/**
+ * Gets payment data from the purchase payments grid (supplier payments)
+ */
+export function getSupplierPaymentDataFromGridById(paymentId) {
+    if (!purchasePaymentsGridApi) {
+        console.error("Cannot get supplier payment data: Purchase Payments Grid API not available.");
+        return null;
+    }
+    const rowNode = purchasePaymentsGridApi.getRowNode(paymentId);
+    return rowNode ? rowNode.data : null;
+}
+
+/**
+ * Gets payment data from the sales payment history grid
+ */
+export function getSalesPaymentDataFromGridById(paymentId) {
+    if (!salePaymentHistoryGridApi) {
+        console.error("Cannot get sales payment data: Sale Payment History Grid API not available.");
+        return null;
+    }
+    const rowNode = salePaymentHistoryGridApi.getRowNode(paymentId);
+    return rowNode ? rowNode.data : null;
+}
+
+
+
+
+
+
+
+
 export function initializePurchaseGrids() {
     if (isPurchaseGridsInitialized) return;
     const invoicesGridDiv = document.getElementById('purchase-invoices-grid');
