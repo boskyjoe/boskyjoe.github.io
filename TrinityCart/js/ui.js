@@ -1868,18 +1868,72 @@ const purchasePaymentsGridOptions = {
         { field: "notes", headerName: "Notes", width: 300, flex: 1 },
         { field: "transactionRef", headerName: "Reference #", width: 300, flex: 2 },
         {
-            headerName: "Actions", width: 100, cellClass: 'flex items-center justify-center',
+            field: "paymentStatus",
+            headerName: "Status",
+            width: 140,
             cellRenderer: params => {
-                // Re-use the same trash can icon from other grids for consistency
-                const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                const status = params.value || 'Unknown';
+                if (status === 'Verified') {
+                    return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Verified</span>`;
+                } else if (status === 'Pending Verification') {
+                    return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Pending</span>`;
+                } else if (status === 'Voided') {
+                    return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">Voided</span>`;
+                }
+                return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">${status}</span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 150, // ✅ INCREASED: More room for multiple buttons
+            cellClass: 'flex items-center justify-center space-x-1',
+            cellRenderer: params => {
+                const paymentStatus = params.data.paymentStatus || 'Unknown';
+                const submittedBy = params.data.submittedBy;
+                const currentUser = appState.currentUser;
+                
+                let buttons = '';
+                
+                // ✅ NEW: Verification button (admin only, pending payments only)
+                if (paymentStatus === 'Pending Verification' && currentUser?.role === 'admin') {
+                    const verifyIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
+                    </svg>`;
+                    
+                    buttons += `<button class="action-btn-icon action-btn-verify-supplier-payment text-green-600 hover:text-green-700 hover:bg-green-100" 
+                                      data-id="${params.data.id}" 
+                                      title="Verify Payment">
+                                  ${verifyIcon}
+                              </button>`;
+                }
+                
+                // ✅ ENHANCED: Void button (admin only, verified payments only)
+                if (paymentStatus === 'Verified' && currentUser?.role === 'admin') {
+                    const voidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                        <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
+                    </svg>`;
+                    
+                    buttons += `<button class="action-btn-icon action-btn-void-supplier-payment text-red-500 hover:text-red-700 hover:bg-red-100" 
+                                      data-id="${params.data.id}" 
+                                      title="Void Payment">
+                                  ${voidIcon}
+                              </button>`;
+                }
+                
+                // ✅ NEW: Cancel button (submitter can cancel their own pending payments)
+                if (paymentStatus === 'Pending Verification' && submittedBy === currentUser?.email) {
+                    const cancelIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>`;
+                    
+                    buttons += `<button class="action-btn-icon action-btn-cancel-supplier-payment text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+                                      data-id="${params.data.id}" 
+                                      title="Cancel Payment">
+                                  ${cancelIcon}
+                              </button>`;
+                }
 
-                // Apply standard classes for styling and a specific class for event handling
-                return `<button 
-                            class="action-btn-icon action-btn-delete action-btn-delete-payment" 
-                            data-id="${params.data.id}" 
-                            title="Delete Payment">
-                                ${deleteIcon}
-                        </button>`;
+                return buttons;
             }
         }
     ],
