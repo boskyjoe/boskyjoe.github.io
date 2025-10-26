@@ -3195,6 +3195,7 @@ async function handleMakePaymentSubmit(e) {
  * 
  * BUSINESS CONTEXT:
  * - Direct sales for Church Store and Tasty Treats locations
+ * - Uses active sales catalogues for accurate pricing and product availability
  * - Real-time inventory deduction upon sale completion
  * - Supports partial payments, overpayments (donations), and invoice creation
  * - Manual voucher numbers for audit trail and record reconciliation
@@ -3206,6 +3207,7 @@ async function handleMakePaymentSubmit(e) {
  * 
  * VALIDATION RULES:
  * - Customer information: Name, email, phone are required
+ * - Sales catalogue: Must select from active catalogues for pricing accuracy
  * - Manual voucher: Required for audit trail and manual record keeping
  * - Cart items: Must have at least one product with valid pricing
  * - Payment details: Required for Pay Now transactions
@@ -3232,7 +3234,7 @@ async function handleNewSaleSubmit(e) {
 
     try {
         // Step 1: Cart and Basic Validation
-        ProgressToast.updateProgress('Validating shopping cart...', 10, 'Step 1 of 8');
+        ProgressToast.updateProgress('Validating shopping cart...', 10, 'Step 1 of 9'); // ✅ UPDATED: 9 steps now
 
         const rawCartItems = getSalesCartItems();
         if (rawCartItems.length === 0) {
@@ -3241,8 +3243,43 @@ async function handleNewSaleSubmit(e) {
             return;
         }
 
-        // Step 2: Customer Information Validation
-        ProgressToast.updateProgress('Validating customer information...', 20, 'Step 2 of 8');
+        // Step 2: Sales Catalogue Validation (NEW STEP)
+        ProgressToast.updateProgress('Validating sales catalogue selection...', 15, 'Step 2 of 9');
+
+        const selectedCatalogueId = document.getElementById('sale-catalogue-select').value;
+
+        if (!selectedCatalogueId) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Sales Catalogue', 
+                'Please select which sales catalogue to use for this sale.\n\n' +
+                'The sales catalogue determines product availability and current pricing.'
+            );
+            return;
+        }
+
+        // ✅ ENHANCED: Validate catalogue is active and accessible
+        const selectedCatalogue = masterData.salesCatalogues.find(cat => cat.id === selectedCatalogueId);
+        if (!selectedCatalogue) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invalid Sales Catalogue', 
+                'The selected sales catalogue was not found. Please refresh the page and try again.'
+            );
+            return;
+        }
+
+        if (!selectedCatalogue.isActive) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Inactive Sales Catalogue', 
+                `Sales catalogue "${selectedCatalogue.catalogueName}" is not currently active.\n\n` +
+                'Please select an active catalogue or contact an admin to activate this catalogue.'
+            );
+            return;
+        }
+
+        console.log(`[main.js] ✅ Using active sales catalogue: "${selectedCatalogue.catalogueName}" (${selectedCatalogue.seasonName})`);
+
+        // Step 3: Customer Information Validation
+        ProgressToast.updateProgress('Validating customer information...', 25, 'Step 3 of 9');
 
         const customerName = document.getElementById('sale-customer-name').value.trim();
         const customerEmail = document.getElementById('sale-customer-email').value.trim();
@@ -3301,8 +3338,8 @@ async function handleNewSaleSubmit(e) {
             }
         }
 
-        // Step 3: Calculate Line Items
-        ProgressToast.updateProgress('Calculating line item totals...', 30, 'Step 3 of 8');
+        // Step 4: Calculate Line Items
+        ProgressToast.updateProgress('Calculating line item totals...', 35, 'Step 4 of 9');
 
         const finalLineItems = [];
         let itemsSubtotal = 0;
@@ -3333,8 +3370,8 @@ async function handleNewSaleSubmit(e) {
             totalItemLevelTax += taxAmount;
         });
 
-        // Step 4: Calculate Order Totals
-        ProgressToast.updateProgress('Calculating order totals and taxes...', 45, 'Step 4 of 8');
+        // Step 5: Calculate Order Totals
+        ProgressToast.updateProgress('Calculating order totals and taxes...', 50, 'Step 5 of 9');
 
         const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
         const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
@@ -3346,7 +3383,7 @@ async function handleNewSaleSubmit(e) {
 
         console.log(`[main.js] Sale total calculated: ${formatCurrency(grandTotal)} for voucher ${voucherNumber}`);
 
-        // Step 5: Handle Payment Processing
+        // Step 6: Handle Payment Processing
         const paymentType = document.getElementById('sale-payment-type').value;
         let initialPaymentData = null;
         let donationAmount = 0;
@@ -3354,7 +3391,7 @@ async function handleNewSaleSubmit(e) {
 
         if (paymentType === 'Pay Now') {
             // PAY NOW MODE: Full payment validation
-            ProgressToast.updateProgress('Processing immediate payment...', 60, 'Pay Now Mode');
+            ProgressToast.updateProgress('Processing immediate payment...', 65, 'Pay Now Mode');
 
             amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
             const paymentMode = document.getElementById('sale-payment-mode').value;
@@ -3421,7 +3458,7 @@ async function handleNewSaleSubmit(e) {
 
         } else {
             // PAY LATER MODE: No payment validation needed
-            ProgressToast.updateProgress('Creating invoice for future payment...', 60, 'Pay Later Mode');
+            ProgressToast.updateProgress('Creating invoice for future payment...', 65, 'Pay Later Mode');
             
             console.log(`[main.js] Pay Later mode - creating invoice for ${formatCurrency(grandTotal)}`);
             
@@ -3431,20 +3468,27 @@ async function handleNewSaleSubmit(e) {
             amountReceived = 0;
         }
 
-        // Step 6: Prepare Final Sale Data
-        ProgressToast.updateProgress('Preparing transaction data...', 70, 'Step 6 of 8');
+        // Step 7: Prepare Final Sale Data (ENHANCED WITH CATALOGUE ATTRIBUTION)
+        ProgressToast.updateProgress('Preparing transaction data with catalogue attribution...', 75, 'Step 7 of 9');
 
         // ✅ ENHANCED: Use standardized donation source
         let donationSource = null;
         if (donationAmount > 0) {
-            donationSource = getDonationSourceByStore(selectedStore); // ✅ CLEAN: Use helper function
-            console.log(`[main.js] New sale donation source: ${donationSource} (${formatCurrency(donationAmount)})`);
+            donationSource = getDonationSourceByStore(selectedStore);
+            console.log(`[main.js] Sale donation source: ${donationSource} (${formatCurrency(donationAmount)})`);
         }
 
         const saleData = {
             saleDate: new Date(document.getElementById('sale-date').value),
             store: selectedStore,
             manualVoucherNumber: voucherNumber,
+            
+            // ✅ ENHANCED: Sales catalogue attribution
+            salesCatalogueId: selectedCatalogueId,
+            salesCatalogueName: selectedCatalogue.catalogueName,
+            salesSeasonId: selectedCatalogue.seasonId,
+            salesSeasonName: selectedCatalogue.seasonName,
+            
             customerInfo: {
                 name: customerName,
                 email: customerEmail,
@@ -3467,18 +3511,18 @@ async function handleNewSaleSubmit(e) {
             }
         };
 
-        // Step 7: Process Transaction
+        // Step 8: Process Transaction
         ProgressToast.updateProgress(
             paymentType === 'Pay Now' ? 'Processing payment and updating inventory...' : 'Creating invoice and updating inventory...', 
             90, 
-            'Step 7 of 8'
+            'Step 8 of 9'
         );
 
         // ✅ ENHANCED: Pass donation source to API
         await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email, donationSource);
 
-        // Step 8: Success Completion
-        ProgressToast.updateProgress('Transaction completed successfully!', 100, 'Step 8 of 8');
+        // Step 9: Success Completion
+        ProgressToast.updateProgress('Transaction completed successfully!', 100, 'Step 9 of 9');
         
         const successMessage = paymentType === 'Pay Now' 
             ? `Sale completed for ${customerName} - Voucher ${voucherNumber}!`
@@ -3489,7 +3533,7 @@ async function handleNewSaleSubmit(e) {
         setTimeout(async () => {
             ProgressToast.hide(800);
             
-            // Enhanced success message with transaction summary
+            // Enhanced success message with catalogue attribution
             const paymentStatus = paymentType === 'Pay Later' ? 'Invoice Created (Payment Due)' :
                                  amountReceived >= grandTotal ? 'Paid in Full' : 'Partially Paid';
             
@@ -3500,16 +3544,19 @@ async function handleNewSaleSubmit(e) {
                 `• Customer: ${customerName}\n` +
                 `• Voucher Number: ${voucherNumber}\n` +
                 `• Store: ${selectedStore}\n` +
+                `• Sales Catalogue: ${selectedCatalogue.catalogueName}\n` + // ✅ NEW: Show catalogue used
+                `• Season: ${selectedCatalogue.seasonName}\n` + // ✅ NEW: Show season context
                 `• Total Amount: ${formatCurrency(grandTotal)}\n` +
                 `• Payment Type: ${paymentType}\n` +
                 `• Payment Status: ${paymentStatus}\n` +
                 `• Items: ${finalLineItems.length} different products\n` +
-                `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)} (${donationSource})\n` : ''}` + // ✅ SHOW SOURCE
+                `${donationAmount > 0 ? `• Donation: ${formatCurrency(donationAmount)} (${donationSource})\n` : ''}` +
                 `${paymentType === 'Pay Later' ? `• Balance Due: ${formatCurrency(grandTotal)}\n` : ''}` +
                 `\n✓ Inventory updated automatically\n` +
                 `✓ Customer record created\n` +
                 `✓ Financial records updated\n` +
-                `${donationAmount > 0 ? '✓ Donation recorded with source tracking\n' : ''}` + // ✅ MENTION TRACKING
+                `✓ Sale attributed to "${selectedCatalogue.catalogueName}"\n` + // ✅ NEW: Attribution notice
+                `${donationAmount > 0 ? '✓ Donation recorded with source tracking\n' : ''}` +
                 `${paymentType === 'Pay Later' ? '✓ Invoice ready for future payment collection' : '✓ Transaction completed and closed'}`
             );
             
@@ -3530,6 +3577,7 @@ async function handleNewSaleSubmit(e) {
                 `Error: ${error.message}\n\n` +
                 `Common causes:\n` +
                 `• Insufficient inventory for requested quantities\n` +
+                `• Selected catalogue became inactive during transaction\n` +
                 `• Network connection interrupted during processing\n` +
                 `• Invalid customer or ${paymentType === 'Pay Now' ? 'payment ' : ''}information\n` +
                 `• Database permission or access issues\n\n` +
