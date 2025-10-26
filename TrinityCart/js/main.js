@@ -50,7 +50,7 @@ import { initializeMasterDataListeners } from './masterData.js';
 import { masterData } from './masterData.js';
 
 
-import { getPurchaseInvoiceById, } from './api.js';
+import { getPurchaseInvoiceById,voidSupplierPaymentAndUpdateInvoice } from './api.js';
 import { addLineItem, calculateAllTotals, showPurchasesView, switchPurchaseTab, loadPaymentsForSelectedInvoice, resetPurchaseForm, loadInvoiceDataIntoForm } from './ui.js';
 import { addSupplierPayment } from './api.js';
 import { recordPaymentAndUpdateInvoice } from './api.js';
@@ -744,17 +744,64 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
         return;
     }
 
-    const confirmed = confirm(
-        `Are you sure you want to delete the payment of $${paymentData.amountPaid.toFixed(2)}? This will update the invoice balance and cannot be undone.`
+    // Get supplier name for better user context
+    const supplier = masterData.suppliers.find(s => s.id === paymentData.supplierId);
+    const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+
+    const confirmed = await showModal('confirm', 'Void Supplier Payment', 
+        `Are you sure you want to VOID this supplier payment?\n\n` +
+        `• Supplier: ${supplierName}\n` +
+        `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n` +
+        `• Payment Mode: ${paymentData.paymentMode}\n` +
+        `• Date: ${paymentData.paymentDate.toDate?.().toLocaleDateString() || 'Unknown'}\n\n` +
+        `⚠️ VOID PROCESS:\n` +
+        `✓ Original payment will be marked as VOIDED (preserved)\n` +
+        `✓ Reversing entry will be created for audit trail\n` +
+        `✓ Invoice balance will be updated automatically\n` +
+        `✓ Payment status will be recalculated\n\n` +
+        `This action maintains complete audit trail and cannot be undone.`
     );
 
     if (confirmed) {
+        ProgressToast.show('Voiding Supplier Payment', 'warning');
         try {
-            await deletePaymentAndUpdateInvoice(docId, user);
-            alert('Success: The payment has been deleted and the invoice balance has been updated.');
+            ProgressToast.updateProgress('Creating void entries and updating invoice...', 75);
+            //await deletePaymentAndUpdateInvoice(docId, user);
+            await voidSupplierPaymentAndUpdateInvoice(docId, user);
+            ProgressToast.showSuccess(`Payment to ${supplierName} has been voided!`);
+
+            setTimeout(async () => {
+                ProgressToast.hide(800);
+                
+                await showModal('success', 'Supplier Payment Voided', 
+                    `Supplier payment has been voided successfully!\n\n` +
+                    `• Supplier: ${supplierName}\n` +
+                    `• Voided Amount: ₹${paymentData.amountPaid.toFixed(2)}\n\n` +
+                    `✓ Original payment marked as VOIDED\n` +
+                    `✓ Reversing entry created for audit trail\n` +
+                    `✓ Invoice balance updated automatically\n` +
+                    `✓ Payment status recalculated\n\n` +
+                    `The payment history shows both the original payment and the reversal for complete audit compliance.`
+                );
+                
+                // Refresh payment grid to show both original and reversal entries
+                if (typeof loadPaymentsForSelectedInvoice === 'function') {
+                    loadPaymentsForSelectedInvoice();
+                }
+                
+            }, 1200);
+
         } catch (error) {
             console.error("Error deleting payment:", error);
-            alert(`Delete Failed: The payment could not be deleted. Reason: ${error.message}`);
+            ProgressToast.showError(`Void failed: ${error.message}`);
+            setTimeout(() => {
+                showModal('error', 'Void Failed', 
+                    `The supplier payment could not be voided.\n\n` +
+                    `Reason: ${error.message}\n\n` +
+                    'Please try again or contact support if the issue persists.'
+                );
+            }, 2000);
+
         }
     }
 }
