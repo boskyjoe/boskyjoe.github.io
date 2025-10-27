@@ -3563,6 +3563,13 @@ export function showSalesCatalogueView() {
             // For now, we ensure it's empty.
             catalogueItemsGridApi.setGridOption('rowData', []);
 
+            // Add legend
+            addInventoryLegendToAvailableProducts();
+            //Listen for data changes to update counts
+            availableProductsGridApi.addEventListener('filterChanged', () => {
+                setTimeout(() => updateInventoryLegendCounts(), 100);
+            });
+
             console.log("[ui.js] Attaching real-time listener for existing catalogues.");
             const db = firebase.firestore();
             existingCataloguesGridApi.setGridOption('loading', true); // Show loading overlay
@@ -3588,6 +3595,96 @@ export function showSalesCatalogueView() {
     }, 50);
 }
 
+/**
+ * ✅ NEW: Adds inventory status legend above the available products grid
+ */
+function addInventoryLegendToAvailableProducts() {
+    const gridContainer = document.querySelector('#available-products-grid').closest('div');
+    const existingLegend = gridContainer.querySelector('.inventory-legend');
+    
+    // Don't add if legend already exists
+    if (existingLegend) return;
+
+    // Create legend container
+    const legendContainer = document.createElement('div');
+    legendContainer.className = 'inventory-legend bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4';
+    legendContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div>
+                <h5 class="text-sm font-semibold text-gray-700 mb-2">📦 Inventory Status Guide</h5>
+                <div class="flex items-center space-x-4 text-xs">
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 bg-green-100 border border-green-300 rounded flex items-center justify-center">
+                            <span class="text-green-700 font-bold text-xs">25</span>
+                        </div>
+                        <span class="text-gray-600">Good Stock (10+ units)</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded flex items-center justify-center">
+                            <span class="text-yellow-700 font-bold text-xs">5</span>
+                        </div>
+                        <span class="text-gray-600">Low Stock (1-9 units)</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <div class="w-4 h-4 bg-red-100 border border-red-300 rounded flex items-center justify-center">
+                            <span class="text-red-700 font-bold text-xs">OUT</span>
+                        </div>
+                        <span class="text-gray-600">Out of Stock (0 units)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-gray-500">
+                    <div><span class="font-semibold text-green-600" id="good-stock-count">0</span> well-stocked</div>
+                    <div><span class="font-semibold text-yellow-600" id="low-stock-count">0</span> low stock</div>
+                    <div><span class="font-semibold text-red-600" id="out-stock-count">0</span> out of stock</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Insert legend before the grid
+    gridContainer.insertBefore(legendContainer, gridContainer.querySelector('#available-products-grid'));
+    
+    console.log('[ui.js] ✅ Added inventory status legend to available products grid');
+    
+    // Update counts whenever grid data changes
+    updateInventoryLegendCounts();
+}
+
+/**
+ * ✅ NEW: Updates the inventory legend counts based on current grid data
+ */
+function updateInventoryLegendCounts() {
+    if (!availableProductsGridApi) return;
+
+    let goodStock = 0;
+    let lowStock = 0;
+    let outOfStock = 0;
+
+    // Count products by stock level
+    availableProductsGridApi.forEachNodeAfterFilterAndSort(node => {
+        const stock = node.data.inventoryCount || 0;
+        if (stock === 0) {
+            outOfStock++;
+        } else if (stock < 10) {
+            lowStock++;
+        } else {
+            goodStock++;
+        }
+    });
+
+    // Update legend counts
+    const goodStockElement = document.getElementById('good-stock-count');
+    const lowStockElement = document.getElementById('low-stock-count');
+    const outStockElement = document.getElementById('out-stock-count');
+
+    if (goodStockElement) goodStockElement.textContent = goodStock;
+    if (lowStockElement) lowStockElement.textContent = lowStock;  
+    if (outStockElement) outStockElement.textContent = outOfStock;
+    
+    console.log(`[ui.js] Updated inventory counts: ${goodStock} good, ${lowStock} low, ${outOfStock} out`);
+}
 
 
 // =======================================================
