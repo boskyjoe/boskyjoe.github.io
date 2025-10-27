@@ -3600,13 +3600,27 @@ export function showSalesCatalogueView() {
  * ✅ NEW: Adds inventory status legend above the available products grid
  */
 function addInventoryLegendToAvailableProducts() {
-    const gridContainer = document.querySelector('#available-products-grid').closest('div');
+    console.log('[DEBUG] addInventoryLegendToAvailableProducts called');
+    
+    const availableGrid = document.querySelector('#available-products-grid');
+    console.log('[DEBUG] Available products grid element:', availableGrid);
+    
+    const gridContainer = availableGrid?.closest('div');
+    console.log('[DEBUG] Grid container:', gridContainer);
+    
+    if (!gridContainer) {
+        console.error('[DEBUG] Could not find grid container for legend');
+        return;
+    }
+    
     const existingLegend = gridContainer.querySelector('.inventory-legend');
+    console.log('[DEBUG] Existing legend:', existingLegend);
     
     // Don't add if legend already exists
-    if (existingLegend) return;
-
-    console.log("[ui.js] inventory legentd addInventoryLegendToAvailableProducts");
+    if (existingLegend) {
+        console.log('[DEBUG] Legend already exists, skipping');
+        return;
+    }
 
     // Create legend container
     const legendContainer = document.createElement('div');
@@ -3646,13 +3660,31 @@ function addInventoryLegendToAvailableProducts() {
         </div>
     `;
 
+    // ✅ DEBUG: Log insertion
+    console.log('[DEBUG] Inserting legend before grid');
+    console.log('[DEBUG] Grid element to insert before:', gridContainer.querySelector('#available-products-grid'));
+    
     // Insert legend before the grid
-    gridContainer.insertBefore(legendContainer, gridContainer.querySelector('#available-products-grid'));
+    try {
+        gridContainer.insertBefore(legendContainer, gridContainer.querySelector('#available-products-grid'));
+        console.log('[DEBUG] ✅ Legend inserted successfully');
+        
+        // Verify it was added
+        const addedLegend = gridContainer.querySelector('.inventory-legend');
+        console.log('[DEBUG] Legend in DOM after insertion:', !!addedLegend);
+        
+        if (addedLegend) {
+            console.log('[DEBUG] Legend HTML:', addedLegend.outerHTML);
+        }
+        
+    } catch (insertError) {
+        console.error('[DEBUG] Error inserting legend:', insertError);
+    }
     
-    console.log('[ui.js] ✅ Added inventory status legend to available products grid');
-    
-    // Update counts whenever grid data changes
-    updateInventoryLegendCounts();
+    // Update counts
+    setTimeout(() => {
+        updateInventoryLegendCounts();
+    }, 200);
 }
 
 /**
