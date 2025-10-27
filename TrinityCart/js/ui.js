@@ -4826,6 +4826,12 @@ const consignmentPaymentsGridOptions = {
             width: 120, 
             valueFormatter: p => formatCurrency(p.value)
         },
+        { 
+            field: "donationAmount", 
+            headerName: "Donation", 
+            width: 120, 
+            valueFormatter: p => formatCurrency(p.value)
+        },
         { field: "paymentMode", headerName: "Mode", flex: 1 },
         { field: "transactionRef", headerName: "Reference #", flex: 1 },
         {
