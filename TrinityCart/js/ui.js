@@ -1832,16 +1832,14 @@ const purchasePaymentsGridOptions = {
                 if (!params.data || !purchaseInvoicesGridApi) {
                     return '';
                 }
-
                 const parentInvoiceDocId = params.data.relatedInvoiceId;
                 const invoiceNode = purchaseInvoicesGridApi.getRowNode(parentInvoiceDocId);
-
                 return invoiceNode ? invoiceNode.data.supplierInvoiceNo : parentInvoiceDocId;
             }
         },
         {
             headerName: "Supplier",
-            width: 300,
+            width: 200, // ✅ REDUCED: Make room for other columns
             pinned: 'left',
             valueGetter: params => {
                 if (!params.data) return '';
@@ -1849,22 +1847,67 @@ const purchasePaymentsGridOptions = {
                 return supplier ? supplier.supplierName : 'Unknown Supplier';
             }
         },
-        { field: "paymentDate", headerName: "Payment Date", flex: 1, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { 
+            field: "paymentDate", 
+            headerName: "Payment Date", 
+            width: 120, // ✅ FIXED WIDTH: Prevent column expansion
+            valueFormatter: p => p.value.toDate().toLocaleDateString() 
+        },
         {
             field: "amountPaid",
             headerName: "Amount Paid",
-            flex: 1,
-            valueFormatter: p => p.value ? formatCurrency(p.value) : ''
+            width: 120, // ✅ FIXED WIDTH
+            valueFormatter: p => p.value ? formatCurrency(p.value) : '',
+            cellClass: 'text-right font-semibold'
         },
-        { field: "paymentMode", headerName: "Mode", width: 300, flex: 1 },
-        { field: "notes", headerName: "Notes", width: 300, flex: 1 },
-        { field: "transactionRef", headerName: "Reference #", width: 300, flex: 2 },
+        { 
+            field: "paymentMode", 
+            headerName: "Mode", 
+            width: 100 // ✅ REDUCED: Payment modes are usually short
+        },
+        { 
+            field: "transactionRef", 
+            headerName: "Reference #", 
+            width: 140 // ✅ REDUCED: Usually short references
+        },
+        {
+            // ✅ ENHANCED: Notes field with truncation and tooltip
+            field: "notes", 
+            headerName: "Notes", 
+            width: 200, // ✅ REASONABLE WIDTH
+            cellRenderer: params => {
+                const notes = params.value || '';
+                
+                if (!notes.trim()) {
+                    return '<span class="text-gray-400 italic text-sm">No notes</span>';
+                }
+                
+                // ✅ TRUNCATE: Show first 50 characters with ellipsis
+                const maxLength = 50;
+                const displayText = notes.length > maxLength 
+                    ? notes.substring(0, maxLength) + '...'
+                    : notes;
+                
+                // ✅ TOOLTIP: Full text on hover using HTML title attribute
+                return `<span class="text-sm text-gray-700" title="${notes.replace(/"/g, '&quot;')}">${displayText}</span>`;
+            },
+            
+            // ✅ ENABLE: Tooltip on cell
+            tooltipField: 'notes', // AG-Grid will show full text on hover
+            
+            // ✅ TEXT WRAPPING: For better display
+            cellStyle: { 
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+            }
+        },
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 140,
+            width: 120, // ✅ FIXED WIDTH
             cellRenderer: params => {
-                const status = params.value || 'Unknown';
+                const status = params.value || 'Verified'; // Default to Verified for legacy records
                 if (status === 'Verified') {
                     return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Verified</span>`;
                 } else if (status === 'Pending Verification') {
@@ -1881,14 +1924,16 @@ const purchasePaymentsGridOptions = {
             headerName: "Actions",
             width: 150,
             cellClass: 'flex items-center justify-center space-x-1',
+            // ✅ FIXED WIDTH: Prevents layout issues
+            suppressSizeToFit: true,
             cellRenderer: params => {
-                const paymentStatus = params.data.paymentStatus || 'Unknown';
+                const paymentStatus = params.data.paymentStatus || 'Verified'; // ✅ DEFAULT for legacy records
                 const submittedBy = params.data.submittedBy;
                 const currentUser = appState.currentUser;
                 
                 let buttons = '';
                 
-                // ✅ VERIFY BUTTON: Admin only, pending payments only
+                // Verification button (admin only, pending payments only)
                 if (paymentStatus === 'Pending Verification' && currentUser?.role === 'admin') {
                     const verifyIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
@@ -1901,20 +1946,20 @@ const purchasePaymentsGridOptions = {
                               </button>`;
                 }
                 
-                // ✅ VOID BUTTON: Admin only, verified payments only
-                if (paymentStatus === 'Verified' && currentUser?.role === 'admin') {
+                // Void button (admin only, verified payments only)
+                if ((paymentStatus === 'Verified' || !paymentStatus) && currentUser?.role === 'admin') {
                     const voidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
                     </svg>`;
                     
-                    buttons += `<button class="action-btn-icon action-btn-void-supplier-payment text-red-500 hover:text-red-700 hover:bg-red-100" 
+                    buttons += `<button class="action-btn-icon action-btn-void-supplier-payment action-btn-delete text-red-500 hover:text-red-700 hover:bg-red-100" 
                                       data-id="${params.data.id}" 
                                       title="Void Payment">
                                   ${voidIcon}
                               </button>`;
                 }
                 
-                // ✅ CORRECTED: Cancel button with standard red delete icon
+                // Cancel button (submitter can cancel their own pending payments)
                 if (paymentStatus === 'Pending Verification' && submittedBy === currentUser?.email) {
                     const cancelIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                         <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
@@ -1931,13 +1976,26 @@ const purchasePaymentsGridOptions = {
             }
         }
     ],
-    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true },
+    
+    // ✅ ENHANCED: Better default column settings
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        filter: true, 
+        wrapText: false, // ✅ PREVENT: Text wrapping that breaks layout
+        suppressSizeToFit: false // Allow column auto-sizing
+    },
+    
     onGridReady: (params) => {
-        console.log("[ui.js] Purchase Payments Grid ready with verification workflow.");
+        console.log("[ui.js] Purchase Payments Grid ready with enhanced notes handling.");
         purchasePaymentsGridApi = params.api;
+        
+        // ✅ AUTO-SIZE: Fit columns on initial load
+        setTimeout(() => {
+            params.api.sizeColumnsToFit();
+        }, 100);
     }
 };
-
 
 export function getPaymentDataFromGridById(paymentId) {
     // --- THIS IS THE FIX ---
@@ -2011,13 +2069,14 @@ export function initializePurchaseGrids() {
 
 // NEW FUNCTION: This function will be called when the payments tab is clicked.
 export async function loadPaymentsForSelectedInvoice() {
-
     if (!purchasePaymentsGridApi || !purchaseInvoicesGridApi) {
         console.error("Cannot load payments: One or more grid APIs are not ready.");
         return;
     }
 
-    // 1. Get the currently selected rows from the top grid.
+    console.log('[ui.js] Refreshing supplier payments grid...');
+    
+    // Get the currently selected rows from the invoices grid
     const selectedInvoiceNodes = purchaseInvoicesGridApi.getSelectedNodes();
 
     purchasePaymentsGridApi.setGridOption('loading', true);
@@ -2025,29 +2084,47 @@ export async function loadPaymentsForSelectedInvoice() {
 
     try {
         if (selectedInvoiceNodes.length > 0) {
-            // --- FILTERED MODE ---
-            console.log(`[ui.js] Filtered Mode: Loading payments for ${selectedInvoiceNodes.length} selected invoice(s).`);
+            // FILTERED MODE: Load payments for selected invoice(s)
+            console.log(`[ui.js] Loading payments for ${selectedInvoiceNodes.length} selected invoice(s)`);
 
-            // Create an array of promises, one for each selected invoice.
             const fetchPromises = selectedInvoiceNodes.map(node => getPaymentsForInvoice(node.data.id));
-
-            // Wait for all fetch operations to complete.
             const paymentGroups = await Promise.all(fetchPromises);
-
-            // Flatten the array of arrays into a single list of payments.
             paymentsToShow = paymentGroups.flat();
 
         } else {
-            // --- GLOBAL MODE ---
-            console.log("[ui.js] Global Mode: No invoices selected. Loading all payments.");
-
-            // Call our new API function to get all payments.
+            // GLOBAL MODE: Load all payments
+            console.log("[ui.js] Loading all supplier payments (no specific invoice selected)");
             paymentsToShow = await getAllSupplierPayments();
         }
 
-        // 2. Update the payments grid with the final list of payments.
+        // ✅ ENHANCED: Sort payments by date (newest first) and show voided entries
+        paymentsToShow.sort((a, b) => {
+            const dateA = a.paymentDate?.toDate ? a.paymentDate.toDate() : new Date(a.paymentDate);
+            const dateB = b.paymentDate?.toDate ? b.paymentDate.toDate() : new Date(b.paymentDate);
+            return dateB - dateA; // Newest first
+        });
+
+        // Update the payments grid
         purchasePaymentsGridApi.setGridOption('rowData', paymentsToShow);
         purchasePaymentsGridApi.setGridOption('loading', false);
+
+        console.log(`[ui.js] ✅ Loaded ${paymentsToShow.length} supplier payment records`);
+        
+        // ✅ LOG: Show breakdown of payment statuses
+        const statusBreakdown = {};
+        paymentsToShow.forEach(payment => {
+            const status = payment.paymentStatus || payment.status || 'Unknown';
+            statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
+        });
+        
+        console.log('[ui.js] Payment status breakdown:', statusBreakdown);
+
+        // ✅ AUTO-SIZE: Adjust columns after data load
+        setTimeout(() => {
+            if (purchasePaymentsGridApi) {
+                purchasePaymentsGridApi.sizeColumnsToFit();
+            }
+        }, 200);
 
     } catch (error) {
         console.error("Error loading payments:", error);
@@ -2055,7 +2132,6 @@ export async function loadPaymentsForSelectedInvoice() {
         purchasePaymentsGridApi.showNoRowsOverlay();
     }
 }
-
 
 
 
