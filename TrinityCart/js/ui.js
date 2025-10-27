@@ -3565,10 +3565,13 @@ export function showSalesCatalogueView() {
 
             // Add legend
             addInventoryLegendToAvailableProducts();
-            //Listen for data changes to update counts
+            //Update legend when data or filters change
             availableProductsGridApi.addEventListener('filterChanged', () => {
-
-                setTimeout(() => updateInventoryLegendCounts(), 100);
+                setTimeout(() => updateInventoryLegendCounts(), 150);
+            });
+            
+            availableProductsGridApi.addEventListener('sortChanged', () => {
+                setTimeout(() => updateInventoryLegendCounts(), 150);
             });
 
             console.log("[ui.js] Attaching real-time listener for existing catalogues.");
@@ -3600,7 +3603,7 @@ export function showSalesCatalogueView() {
  * ✅ NEW: Adds inventory status legend above the available products grid
  */
 function addInventoryLegendToAvailableProducts() {
-    console.log('[ui.js] Adding clean inventory legend');
+    console.log('[ui.js] Adding professional inventory legend');
     
     const availableGrid = document.querySelector('#available-products-grid');
     const gridContainer = availableGrid?.closest('div');
@@ -3610,15 +3613,16 @@ function addInventoryLegendToAvailableProducts() {
         return;
     }
     
-    // Remove existing legend
+    // Remove existing legend for refresh
     const existingLegend = gridContainer.querySelector('.inventory-legend');
     if (existingLegend) {
         existingLegend.remove();
+        console.log('[ui.js] Removed existing legend for refresh');
     }
 
-    // ✅ REDESIGNED: Clean, minimal, professional legend
+    // ✅ PROFESSIONAL CARD: Clean, elegant design
     const legendContainer = document.createElement('div');
-    legendContainer.className = 'inventory-legend bg-gray-50 border border-gray-200 rounded-md p-3 mb-3';
+    legendContainer.className = 'inventory-legend bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3';
     
     legendContainer.innerHTML = `
         <div class="space-y-2">
@@ -3658,17 +3662,18 @@ function addInventoryLegendToAvailableProducts() {
     // Insert before grid
     try {
         gridContainer.insertBefore(legendContainer, availableGrid);
-        console.log('[ui.js] ✅ Clean legend inserted successfully');
+        console.log('[ui.js] ✅ Professional legend inserted successfully');
         
-        // Update counts after insertion
+        // Update counts after DOM is ready
         setTimeout(() => {
             updateInventoryLegendCounts();
         }, 300);
         
     } catch (insertError) {
-        console.error('[ui.js] Error inserting clean legend:', insertError);
+        console.error('[ui.js] Error inserting professional legend:', insertError);
     }
 }
+
 
 
 
@@ -3683,7 +3688,7 @@ function updateInventoryLegendCounts() {
     let outOfStock = 0;
     let totalShown = 0;
 
-    // Count products by stock level (including filtered results)
+    // Count products by stock level (respects current filters)
     availableProductsGridApi.forEachNodeAfterFilterAndSort(node => {
         const stock = node.data.inventoryCount || 0;
         totalShown++;
@@ -3697,7 +3702,7 @@ function updateInventoryLegendCounts() {
         }
     });
 
-    // Update counts in legend
+    // Update legend display elements
     const elements = {
         total: document.getElementById('total-products-shown'),
         good: document.getElementById('good-stock-count'),
@@ -3705,12 +3710,14 @@ function updateInventoryLegendCounts() {
         out: document.getElementById('out-stock-count')
     };
 
-    if (elements.total) elements.total.textContent = `${totalShown} products shown`;
+    if (elements.total) {
+        elements.total.textContent = `${totalShown} product${totalShown !== 1 ? 's' : ''} shown`;
+    }
     if (elements.good) elements.good.textContent = goodStock;
     if (elements.low) elements.low.textContent = lowStock;
     if (elements.out) elements.out.textContent = outOfStock;
     
-    console.log(`[ui.js] ✅ Legend counts updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out of ${totalShown} total`);
+    console.log(`[ui.js] ✅ Professional legend updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out of ${totalShown} total`);
 }
 
 
