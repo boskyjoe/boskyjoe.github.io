@@ -56,7 +56,7 @@ import { addSupplierPayment } from './api.js';
 import { recordPaymentAndUpdateInvoice,verifySupplierPayment } from './api.js';
 import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById,
-    getConsignmentPaymentDataFromGridById, 
+    getConsignmentPaymentDataFromGridById, refreshConsignmentPaymentsGrid,
     getSupplierPaymentDataFromGridById,    
     getSalesPaymentDataFromGridById, getSelectedConsignmentOrderBalance,  
     getSelectedConsignmentOrderData  } from './ui.js';
@@ -1113,32 +1113,243 @@ async function handleTeamMembersGrid(button, docId, user) {
     }
 }
 
-async function handleConsignmentPaymentsGrid(button, docId, user) {
-    const paymentData = getConsignmentPaymentDataFromGridById(docId);
-    if (!paymentData) return;
 
+/**
+ * Handles action button clicks in the consignment payments grid with comprehensive processing.
+ * 
+ * Processes admin and team lead actions on consignment payment records including payment
+ * editing, verification, and cancellation. Provides role-based functionality with proper
+ * validation and user feedback through progress tracking and confirmation dialogs.
+ * 
+ * BUSINESS CONTEXT:
+ * - Manages team payment records against consignment orders
+ * - Supports payment editing by original submitters (team leads)
+ * - Enables admin verification of pending team payments with order balance updates
+ * - Allows cancellation of unprocessed payments to correct errors
+ * - Critical for consignment settlement workflow and team accountability
+ * 
+ * ROLE-BASED ACTIONS:
+ * TEAM LEAD: Can edit/cancel their own pending payments
+ * ADMIN: Can verify pending payments, void verified payments
+ * FINANCE: Can verify pending payments, void verified payments
+ * 
+ * VALIDATION RULES:
+ * - Edit: Only pending payments by original submitter
+ * - Verify: Only pending payments, admin/finance roles only
+ * - Cancel: Only pending payments by original submitter
+ * - Void: Only verified payments, admin/finance roles only
+ * 
+ * @param {HTMLElement} button - The clicked action button element
+ * @param {string} docId - Document ID of the payment record
+ * @param {object} user - Current user object with role and permissions
+ * @throws {Error} When payment not found, insufficient permissions, or processing fails
+ * @since 1.0.0
+ * @see verifyConsignmentPayment() - API function for payment verification with order updates
+ * @see cancelPaymentRecord() - API function for cancelling unprocessed payments
+ * @see loadPaymentRecordForEditing() - UI function for payment editing workflow
+ * @see refreshConsignmentPaymentsGrid() - UI function for manual grid refresh
+ */
+async function handleConsignmentPaymentsGrid(button, docId, user) {
+    // ✅ INPUT VALIDATION: Ensure required parameters
+    if (!user) {
+        await showModal('error', 'Authentication Required', 'You must be logged in to manage payments.');
+        return;
+    }
+
+    const paymentData = getConsignmentPaymentDataFromGridById(docId);
+    if (!paymentData) {
+        await showModal('error', 'Payment Not Found', 'Could not find payment data. Please refresh the page and try again.');
+        return;
+    }
+
+    console.log(`[main.js] Consignment payment action by ${user.email}:`, {
+        paymentId: paymentData.paymentId || docId,
+        teamName: paymentData.teamName,
+        amount: formatCurrency(paymentData.amountPaid || 0),
+        status: paymentData.paymentStatus,
+        action: button.className
+    });
+
+    // ✅ EDIT PAYMENT ACTION
     if (button.classList.contains('action-btn-edit-payment')) {
-        loadPaymentRecordForEditing(paymentData);
-    } else if (button.classList.contains('action-btn-cancel-payment')) {
-        if (confirm("Are you sure you want to cancel and delete this pending payment record? This action cannot be undone.")) {
+        console.log('[main.js] Edit payment action - loading payment for editing');
+        
+        // Check if user can edit this payment
+        if (paymentData.submittedBy !== user.email && user.role !== 'admin') {
+            await showModal('error', 'Permission Denied', 
+                'You can only edit payments that you submitted, or contact an admin for assistance.'
+            );
+            return;
+        }
+
+        try {
+            loadPaymentRecordForEditing(paymentData);
+            console.log('[main.js] ✅ Payment loaded for editing');
+        } catch (error) {
+            console.error('[main.js] Error loading payment for editing:', error);
+            await showModal('error', 'Edit Failed', 'Could not load payment for editing. Please try again.');
+        }
+        
+    } 
+    // ✅ CANCEL PAYMENT ACTION  
+    else if (button.classList.contains('action-btn-cancel-payment')) {
+        console.log('[main.js] Cancel payment action initiated');
+
+        // ✅ ENHANCED: Validation with user feedback
+        if (paymentData.paymentStatus !== 'Pending Verification') {
+            await showModal('error', 'Cannot Cancel', 
+                `This payment has status "${paymentData.paymentStatus}" and cannot be cancelled.\n\n` +
+                'Only pending payments can be cancelled. Verified payments must be voided.'
+            );
+            return;
+        }
+
+        const confirmed = await showModal('confirm', 'Cancel Team Payment', 
+            `Are you sure you want to cancel this pending payment?\n\n` +
+            `• Team: ${paymentData.teamName}\n` +
+            `• Amount: ${formatCurrency(paymentData.amountPaid || 0)}\n` +
+            `• Submitted: ${paymentData.paymentDate?.toDate?.()?.toLocaleDateString() || 'Unknown'}\n\n` +
+            `⚠️ This action cannot be undone.\n` +
+            `The payment record will be permanently deleted.`
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Cancelling Team Payment', 'warning');
+            
             try {
+                ProgressToast.updateProgress('Cancelling payment record...', 75, 'Processing');
+                
                 await cancelPaymentRecord(docId);
-                alert("Payment record has been cancelled.");
+                
+                ProgressToast.showSuccess(`Payment from ${paymentData.teamName} cancelled successfully!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    
+                    await showModal('success', 'Payment Cancelled', 
+                        `Team payment has been cancelled successfully.\n\n` +
+                        `• Team: ${paymentData.teamName}\n` +
+                        `• Cancelled Amount: ${formatCurrency(paymentData.amountPaid || 0)}\n\n` +
+                        `✓ Payment record deleted\n` +
+                        `✓ Team can resubmit if needed\n` +
+                        `✓ No impact on order balance (payment was not yet verified)`
+                    );
+                    
+                    // ✅ TRIGGER: Manual refresh after cancellation
+                    setTimeout(() => {
+                        refreshConsignmentPaymentsGrid();
+                        console.log('[main.js] ✅ Triggered payment grid refresh after cancellation');
+                    }, 500);
+                    
+                }, 1200);
+                
             } catch (error) {
                 console.error("Error cancelling payment record:", error);
-                alert(`Failed to cancel payment record: ${error.message}`);
+                
+                ProgressToast.showError(`Failed to cancel payment: ${error.message}`);
+                
+                setTimeout(async () => {
+                    await showModal('error', 'Cancellation Failed', 
+                        `Failed to cancel the payment record.\n\n` +
+                        `Error: ${error.message}\n\n` +
+                        `Please try again or contact support if the issue persists.`
+                    );
+                }, 2000);
             }
         }
-    } else if (button.classList.contains('action-btn-verify-payment')) {
-        if (confirm(`Are you sure you want to verify this payment of $${paymentData.amountPaid.toFixed(2)}? This will update the order balance.`)) {
+        
+    } 
+    // ✅ VERIFY PAYMENT ACTION
+    else if (button.classList.contains('action-btn-verify-payment')) {
+        console.log('[main.js] Verify payment action initiated');
+
+        // ✅ ENHANCED: Role-based validation
+        const hasVerificationPermissions = user.role === 'admin' || user.role === 'finance';
+        
+        if (!hasVerificationPermissions) {
+            await showModal('error', 'Permission Denied', 
+                'Only admin and finance users can verify payments.\n\n' +
+                `Your current role: ${user.role}`
+            );
+            return;
+        }
+
+        if (paymentData.paymentStatus !== 'Pending Verification') {
+            await showModal('error', 'Cannot Verify', 
+                `This payment has status "${paymentData.paymentStatus}" and cannot be verified.\n\n` +
+                'Only pending payments can be verified.'
+            );
+            return;
+        }
+
+        const confirmed = await showModal('confirm', 'Verify Team Payment', 
+            `Verify this payment from ${paymentData.teamName}?\n\n` +
+            `• Team: ${paymentData.teamName}\n` +
+            `• Amount: ${formatCurrency(paymentData.amountPaid || 0)}\n` +
+            `• Payment Mode: ${paymentData.paymentMode}\n` +
+            `• Reference: ${paymentData.transactionRef}\n` +
+            `• Submitted by: ${paymentData.submittedBy}\n\n` +
+            `This will:\n` +
+            `✓ Update the consignment order balance\n` +
+            `✓ Mark payment as verified\n` +
+            `✓ Notify the team of verification`
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Verifying Team Payment', 'info');
+            
             try {
+                ProgressToast.updateProgress('Verifying payment and updating order balance...', 85, 'Processing');
+                
                 await verifyConsignmentPayment(docId, user);
-                alert("Payment successfully verified!");
+                
+                ProgressToast.showSuccess(`Payment from ${paymentData.teamName} verified successfully!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    
+                    await showModal('success', 'Payment Verified', 
+                        `Team payment has been verified successfully!\n\n` +
+                        `• Team: ${paymentData.teamName}\n` +
+                        `• Verified Amount: ${formatCurrency(paymentData.amountPaid || 0)}\n` +
+                        `• Verified by: ${user.displayName}\n\n` +
+                        `✓ Consignment order balance updated\n` +
+                        `✓ Payment status changed to verified\n` +
+                        `✓ Team notified of verification\n` +
+                        `✓ Funds applied to order settlement`
+                    );
+                    
+                    // ✅ TRIGGER: Manual refresh after verification
+                    setTimeout(() => {
+                        refreshConsignmentPaymentsGrid();
+                        console.log('[main.js] ✅ Triggered payment grid refresh after verification');
+                    }, 500);
+                    
+                }, 1200);
+                
             } catch (error) {
                 console.error("Error verifying payment:", error);
-                alert(`Payment verification failed: ${error.message}`);
+                
+                ProgressToast.showError(`Verification failed: ${error.message}`);
+                
+                setTimeout(async () => {
+                    await showModal('error', 'Verification Failed', 
+                        `Payment verification failed.\n\n` +
+                        `Error: ${error.message}\n\n` +
+                        `Common causes:\n` +
+                        `• Payment status changed during processing\n` +
+                        `• Network connection interrupted\n` +
+                        `• Order was modified by another user\n\n` +
+                        `Please refresh the page and try again.`
+                    );
+                }, 2000);
             }
         }
+        
+    } else {
+        // ✅ UNKNOWN ACTION: Log for debugging
+        console.warn('[main.js] Unknown consignment payment action:', button.className);
+        await showModal('error', 'Unknown Action', 'The requested action is not recognized. Please refresh the page.');
     }
 }
 
@@ -3415,6 +3626,11 @@ async function handleMakePaymentSubmit(e) {
             );
             
             resetPaymentForm();
+
+            /*setTimeout(() => {
+                refreshConsignmentPaymentsGrid();
+                console.log('[main.js] Triggered payment history grid refresh');
+            }, 500);*/
             
         }, 1200);
 
