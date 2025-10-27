@@ -3613,78 +3613,96 @@ function addInventoryLegendToAvailableProducts() {
         return;
     }
     
+    // ✅ FORCE REFRESH: Remove existing legend first
     const existingLegend = gridContainer.querySelector('.inventory-legend');
-    console.log('[DEBUG] Existing legend:', existingLegend);
-    
-    // Don't add if legend already exists
     if (existingLegend) {
-        console.log('[DEBUG] Legend already exists, skipping');
-        return;
+        console.log('[DEBUG] Removing existing legend for refresh');
+        existingLegend.remove();
     }
 
-    // Create legend container
+    // Create legend container with enhanced visibility
     const legendContainer = document.createElement('div');
-    legendContainer.className = 'inventory-legend bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4';
+    legendContainer.className = 'inventory-legend bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4'; // ✅ ENHANCED: More visible styling
+    legendContainer.style.cssText = 'display: block !important; visibility: visible !important; position: relative !important; z-index: 10 !important;'; // ✅ FORCE VISIBILITY
+    
     legendContainer.innerHTML = `
         <div class="flex items-center justify-between">
             <div>
-                <h5 class="text-sm font-semibold text-gray-700 mb-2">📦 Inventory Status Guide</h5>
-                <div class="flex items-center space-x-4 text-xs">
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 bg-green-100 border border-green-300 rounded flex items-center justify-center">
-                            <span class="text-green-700 font-bold text-xs">25</span>
+                <h5 class="text-base font-bold text-blue-800 mb-3">📦 Inventory Status Color Guide</h5>
+                <div class="flex items-center space-x-6 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 bg-green-100 border-2 border-green-400 rounded flex items-center justify-center">
+                            <span class="text-green-800 font-bold text-xs">15</span>
                         </div>
-                        <span class="text-gray-600">Good Stock (10+ units)</span>
+                        <span class="text-gray-700 font-medium">Good Stock (10+ units)</span>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded flex items-center justify-center">
-                            <span class="text-yellow-700 font-bold text-xs">5</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 bg-yellow-100 border-2 border-yellow-400 rounded flex items-center justify-center">
+                            <span class="text-yellow-800 font-bold text-xs">5</span>
                         </div>
-                        <span class="text-gray-600">Low Stock (1-9 units)</span>
+                        <span class="text-gray-700 font-medium">Low Stock (1-9 units)</span>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <div class="w-4 h-4 bg-red-100 border border-red-300 rounded flex items-center justify-center">
-                            <span class="text-red-700 font-bold text-xs">OUT</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-6 h-6 bg-red-100 border-2 border-red-400 rounded flex items-center justify-center">
+                            <span class="text-red-800 font-bold text-xs">OUT</span>
                         </div>
-                        <span class="text-gray-600">Out of Stock (0 units)</span>
+                        <span class="text-gray-700 font-medium">Out of Stock (0 units)</span>
                     </div>
                 </div>
             </div>
-            <div class="text-right">
-                <div class="text-xs text-gray-500">
-                    <div><span class="font-semibold text-green-600" id="good-stock-count">0</span> well-stocked</div>
-                    <div><span class="font-semibold text-yellow-600" id="low-stock-count">0</span> low stock</div>
-                    <div><span class="font-semibold text-red-600" id="out-stock-count">0</span> out of stock</div>
+            <div class="text-right bg-white p-2 rounded border">
+                <div class="text-xs text-gray-600 font-medium mb-1">Current Counts:</div>
+                <div class="space-y-1">
+                    <div><span class="font-bold text-green-600" id="good-stock-count">0</span> well-stocked</div>
+                    <div><span class="font-bold text-yellow-600" id="low-stock-count">0</span> low stock</div>
+                    <div><span class="font-bold text-red-600" id="out-stock-count">0</span> out of stock</div>
                 </div>
             </div>
         </div>
     `;
 
-    // ✅ DEBUG: Log insertion
-    console.log('[DEBUG] Inserting legend before grid');
-    console.log('[DEBUG] Grid element to insert before:', gridContainer.querySelector('#available-products-grid'));
-    
-    // Insert legend before the grid
+    console.log('[DEBUG] Legend HTML created:', legendContainer.outerHTML);
+
+    // ✅ ENHANCED: Try multiple insertion methods
     try {
-        gridContainer.insertBefore(legendContainer, gridContainer.querySelector('#available-products-grid'));
-        console.log('[DEBUG] ✅ Legend inserted successfully');
-        
-        // Verify it was added
-        const addedLegend = gridContainer.querySelector('.inventory-legend');
-        console.log('[DEBUG] Legend in DOM after insertion:', !!addedLegend);
-        
-        if (addedLegend) {
-            console.log('[DEBUG] Legend HTML:', addedLegend.outerHTML);
-        }
+        // Method 1: Insert before grid
+        gridContainer.insertBefore(legendContainer, availableGrid);
+        console.log('[DEBUG] ✅ Legend inserted using insertBefore');
         
     } catch (insertError) {
-        console.error('[DEBUG] Error inserting legend:', insertError);
+        console.error('[DEBUG] insertBefore failed:', insertError);
+        
+        try {
+            // Method 2: Prepend to container
+            gridContainer.prepend(legendContainer);
+            console.log('[DEBUG] ✅ Legend inserted using prepend');
+            
+        } catch (prependError) {
+            console.error('[DEBUG] prepend failed:', prependError);
+            
+            // Method 3: Append before grid
+            const gridParent = availableGrid.parentNode;
+            if (gridParent) {
+                gridParent.insertBefore(legendContainer, availableGrid);
+                console.log('[DEBUG] ✅ Legend inserted using parentNode.insertBefore');
+            }
+        }
     }
     
-    // Update counts
+    // ✅ VERIFY: Check if legend is now in DOM
     setTimeout(() => {
+        const addedLegend = document.querySelector('.inventory-legend');
+        console.log('[DEBUG] Legend verification after insertion:', !!addedLegend);
+        
+        if (addedLegend) {
+            console.log('[DEBUG] Legend visibility:', window.getComputedStyle(addedLegend).visibility);
+            console.log('[DEBUG] Legend display:', window.getComputedStyle(addedLegend).display);
+            console.log('[DEBUG] Legend position:', addedLegend.getBoundingClientRect());
+        }
+        
+        // Update counts
         updateInventoryLegendCounts();
-    }, 200);
+    }, 500);
 }
 
 /**
