@@ -388,20 +388,6 @@ function initializeSalesPaymentsTab() {
     // Will implement: reuse existing sales payment grid
 }
 
-// ===================================================================
-// EXPORT PUBLIC INTERFACE
-// ===================================================================
 
-export {
-    // Main functions for main.js
-    showPaymentManagementView,
-    switchPaymentMgmtTab,
-    
-    // Will add more exports as we implement tabs:
-    // routePaymentMgmtAction,
-    // handlePaymentMgmtSupplierAction,
-    // handlePaymentMgmtTeamAction,
-    // handlePaymentMgmtSalesAction
-};
 
 console.log('[PmtMgmt] 💳 Payment Management Module loaded successfully');
