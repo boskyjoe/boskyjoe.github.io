@@ -3567,6 +3567,7 @@ export function showSalesCatalogueView() {
             addInventoryLegendToAvailableProducts();
             //Listen for data changes to update counts
             availableProductsGridApi.addEventListener('filterChanged', () => {
+
                 setTimeout(() => updateInventoryLegendCounts(), 100);
             });
 
@@ -3604,6 +3605,8 @@ function addInventoryLegendToAvailableProducts() {
     
     // Don't add if legend already exists
     if (existingLegend) return;
+
+    console.log("[ui.js] inventory legentd addInventoryLegendToAvailableProducts");
 
     // Create legend container
     const legendContainer = document.createElement('div');
