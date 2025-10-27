@@ -1004,41 +1004,64 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
         console.log(`[API] Processing supplier payment with immediate invoice update`);
         
         return db.runTransaction(async (transaction) => {
-            // READ: Get the current state of the invoice first.
+            // READ: Get the current state of the invoice
             const invoiceDoc = await transaction.get(invoiceRef);
             if (!invoiceDoc.exists) {
                 throw new Error("Invoice document does not exist!");
             }
 
             const invoiceData = invoiceDoc.data();
-            const amountBeingPaid = paymentData.amountPaid;
+            
+            // ✅ ENHANCED: Same debugging as verification function
+            console.log(`[API] 🔍 LEGACY payment processing debug:`);
+            console.log(`  📋 Invoice Total: ${invoiceData.invoiceTotal}`);
+            console.log(`  💳 Current Paid: ${invoiceData.amountPaid || 0}`);
+            console.log(`  💸 Payment Amount: ${paymentData.amountPaid}`);
 
-            // CALCULATE: Determine the new totals and status.
-            const newAmountPaid = (invoiceData.amountPaid || 0) + amountBeingPaid;
-            const newBalanceDue = invoiceData.invoiceTotal - newAmountPaid;
-            let newPaymentStatus = "Unpaid";
-            if (newBalanceDue <= 0) {
+            // ✅ CORRECTED: Same calculation logic as verification
+            const invoiceTotal = Number(invoiceData.invoiceTotal || 0);
+            const currentAmountPaid = Number(invoiceData.amountPaid || 0);
+            const paymentAmount = Number(paymentData.amountPaid || 0);
+            
+            const newTotalAmountPaid = currentAmountPaid + paymentAmount;
+            const calculatedBalance = invoiceTotal - newTotalAmountPaid;
+            const newBalanceDue = Math.max(0, Math.round(calculatedBalance * 100) / 100);
+            
+            // ✅ IDENTICAL: Same status logic as verification function
+            let newPaymentStatus;
+            
+            if (newBalanceDue === 0) {
                 newPaymentStatus = "Paid";
-            } else if (newAmountPaid > 0) {
+            } else if (newBalanceDue < 0) {
+                newPaymentStatus = "Paid"; // Overpaid
+            } else if (newTotalAmountPaid > 0) {
                 newPaymentStatus = "Partially Paid";
+            } else {
+                newPaymentStatus = "Unpaid";
             }
 
-            // WRITE 1: Update the invoice document.
+            console.log(`[API] 🧮 LEGACY calculation results:`);
+            console.log(`  💰 NEW Total Paid: ₹${newTotalAmountPaid.toFixed(2)}`);
+            console.log(`  📊 NEW Balance Due: ₹${newBalanceDue.toFixed(2)}`);
+            console.log(`  📈 NEW Status: ${invoiceData.paymentStatus} → ${newPaymentStatus}`);
+
+            // WRITE 1: Update the invoice document
             transaction.update(invoiceRef, {
-                amountPaid: newAmountPaid,
+                amountPaid: newTotalAmountPaid,
                 balanceDue: newBalanceDue,
-                paymentStatus: newPaymentStatus,
+                paymentStatus: newPaymentStatus, // ✅ CRITICAL: Should be "Paid" when balance is 0
                 'audit.updatedBy': user.email,
                 'audit.updatedOn': now,
             });
 
-            // WRITE 2: Create the new payment ledger document.
+            // WRITE 2: Create the payment record
             transaction.set(newPaymentRef, {
                 ...paymentData,
                 paymentId: `SPAY-SUP-${Date.now()}`,
-                paymentStatus: 'Verified', // ✅ IMMEDIATE: Already verified
+                paymentStatus: 'Verified',
+                status: 'Verified',
                 recordedBy: user.email,
-                verifiedBy: user.email, // Self-verified for legacy mode
+                verifiedBy: user.email,
                 verifiedOn: now,
                 requiresVerification: false,
                 audit: {
@@ -1048,10 +1071,11 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
                 }
             });
 
-            console.log(`[API] ✅ Supplier payment processed immediately (legacy mode)`);
+            console.log(`[API] ✅ Legacy payment completed with status: ${newPaymentStatus}`);
         });
     }
 }
+
 
 /**
  * ENHANCED: Verifies pending supplier payment and updates invoice balance.
@@ -1063,6 +1087,7 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
  * @param {string} paymentId - ID of the payment to verify
  * @param {object} adminUser - Admin performing the verification
  */
+
 export async function verifySupplierPayment(paymentId, adminUser) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -1085,40 +1110,117 @@ export async function verifySupplierPayment(paymentId, adminUser) {
         }
         
         const currentInvoiceData = invoiceDoc.data();
+        
+        // ✅ ENHANCED: Comprehensive debugging
+        console.log(`[API] 🔍 DETAILED payment verification debugging:`);
+        console.log(`  📋 Invoice ID: ${currentInvoiceData.invoiceId}`);
+        console.log(`  💰 Invoice Total (raw): ${currentInvoiceData.invoiceTotal}`);
+        console.log(`  💰 Invoice Total (number): ${Number(currentInvoiceData.invoiceTotal)}`);
+        console.log(`  💳 Current Amount Paid (raw): ${currentInvoiceData.amountPaid}`);
+        console.log(`  💳 Current Amount Paid (number): ${Number(currentInvoiceData.amountPaid || 0)}`);
+        console.log(`  📊 Current Balance Due: ${currentInvoiceData.balanceDue}`);
+        console.log(`  📈 Current Status: "${currentInvoiceData.paymentStatus}"`);
+        console.log(`  💸 Payment Being Verified: ${paymentData.amountPaid}`);
 
-        // 3. ✅ REUSE EXISTING LOGIC: Calculate new balances (same as existing function)
-        const newAmountPaid = (currentInvoiceData.amountPaid || 0) + paymentData.amountPaid;
-        const newBalanceDue = currentInvoiceData.invoiceTotal - newAmountPaid;
-        let newPaymentStatus = "Unpaid";
-        if (newBalanceDue <= 0) {
-            newPaymentStatus = "Paid";
-        } else if (newAmountPaid > 0) {
-            newPaymentStatus = "Partially Paid";
+        // ✅ CORRECTED: Safe number conversion and calculation
+        const invoiceTotal = Number(currentInvoiceData.invoiceTotal || 0);
+        const currentAmountPaid = Number(currentInvoiceData.amountPaid || 0);
+        const paymentAmount = Number(paymentData.amountPaid || 0);
+        
+        // Validate numbers
+        if (isNaN(invoiceTotal) || isNaN(currentAmountPaid) || isNaN(paymentAmount)) {
+            console.error(`[API] ❌ Invalid numbers detected:`, {
+                invoiceTotal: invoiceTotal,
+                currentAmountPaid: currentAmountPaid,
+                paymentAmount: paymentAmount
+            });
+            throw new Error("Invalid number values in invoice or payment data");
+        }
+        
+        // ✅ CORRECTED: Precise calculation with proper rounding
+        const newTotalAmountPaid = currentAmountPaid + paymentAmount;
+        const calculatedBalance = invoiceTotal - newTotalAmountPaid;
+        const newBalanceDue = Math.max(0, Math.round(calculatedBalance * 100) / 100); // Round to 2 decimal places
+        
+        // ✅ ENHANCED: Detailed status calculation with explicit logic
+        let newPaymentStatus;
+        
+        console.log(`[API] 🧮 STATUS CALCULATION LOGIC:`);
+        console.log(`  💰 Invoice Total: ${invoiceTotal}`);
+        console.log(`  💰 New Total Paid: ${newTotalAmountPaid}`);
+        console.log(`  📊 Calculated Balance: ${calculatedBalance}`);
+        console.log(`  📊 Rounded Balance Due: ${newBalanceDue}`);
+        console.log(`  🤔 Is Balance Zero? ${newBalanceDue === 0}`);
+        console.log(`  🤔 Is Balance <= 0? ${newBalanceDue <= 0}`);
+        console.log(`  🤔 Total Paid > 0? ${newTotalAmountPaid > 0}`);
+        
+        if (newBalanceDue === 0) {
+            newPaymentStatus = 'Paid';
+            console.log(`  ✅ STATUS: PAID (balance is exactly zero)`);
+        } else if (newBalanceDue < 0) {
+            newPaymentStatus = 'Paid'; // Overpaid
+            console.log(`  ✅ STATUS: PAID (overpaid by ₹${Math.abs(newBalanceDue).toFixed(2)})`);
+        } else if (newTotalAmountPaid > 0) {
+            newPaymentStatus = 'Partially Paid';
+            console.log(`  📊 STATUS: PARTIALLY PAID (₹${newBalanceDue.toFixed(2)} remaining)`);
+        } else {
+            newPaymentStatus = 'Unpaid';
+            console.log(`  ❌ STATUS: UNPAID (no payments recorded)`);
         }
 
-        // 4. WRITE: Update payment status to verified
+        // ✅ FINAL: Log the transition
+        console.log(`[API] 📈 STATUS TRANSITION: "${currentInvoiceData.paymentStatus}" → "${newPaymentStatus}"`);
+
+        // 3. WRITE: Update payment status to verified
         transaction.update(paymentRef, {
             paymentStatus: 'Verified',
+            status: 'Verified', // For compatibility
             verifiedBy: adminUser.email,
             verifiedOn: now,
             verificationDetails: {
                 submittedBy: paymentData.submittedBy,
                 submittedOn: paymentData.submittedOn,
-                verificationDelay: paymentData.submittedOn ? 
-                    Math.round((Date.now() - paymentData.submittedOn.toMillis()) / (1000 * 60 * 60)) + ' hours' : 'Unknown'
+                invoiceTotal: invoiceTotal,
+                previousBalance: currentInvoiceData.balanceDue || 0,
+                newBalance: newBalanceDue,
+                statusTransition: `${currentInvoiceData.paymentStatus} → ${newPaymentStatus}`,
+                calculationDebug: {
+                    invoiceTotal: invoiceTotal,
+                    previousPaid: currentAmountPaid,
+                    thisPayment: paymentAmount,
+                    newTotalPaid: newTotalAmountPaid,
+                    calculatedBalance: calculatedBalance,
+                    finalBalance: newBalanceDue
+                }
             }
         });
 
-        // 5. WRITE: Update invoice (SAME LOGIC AS EXISTING FUNCTION)
+        // 4. ✅ CORRECTED: Update invoice with proper status
         transaction.update(invoiceRef, {
-            amountPaid: newAmountPaid,
+            amountPaid: newTotalAmountPaid,
             balanceDue: newBalanceDue,
-            paymentStatus: newPaymentStatus,
+            paymentStatus: newPaymentStatus, // ✅ CRITICAL: Should now correctly show "Paid"
+            
+            // ✅ AUDIT: Enhanced tracking
+            lastPaymentVerification: {
+                verifiedPaymentId: paymentId,
+                verifiedAmount: paymentAmount,
+                verifiedBy: adminUser.email,
+                verifiedOn: now,
+                previousStatus: currentInvoiceData.paymentStatus,
+                newStatus: newPaymentStatus,
+                balanceTransition: `₹${(currentInvoiceData.balanceDue || 0).toFixed(2)} → ₹${newBalanceDue.toFixed(2)}`
+            },
+            
             'audit.updatedBy': adminUser.email,
-            'audit.updatedOn': now,
+            'audit.updatedOn': now
         });
 
-        console.log(`[API] ✅ Supplier payment verified using existing calculation logic`);
+        console.log(`[API] ✅ VERIFICATION COMPLETED:`);
+        console.log(`  💳 Payment: ${paymentData.paymentId || paymentId} → VERIFIED`);
+        console.log(`  📋 Invoice: ${currentInvoiceData.invoiceId} → ${newPaymentStatus}`);
+        console.log(`  💰 Balance: ₹${(currentInvoiceData.balanceDue || 0).toFixed(2)} → ₹${newBalanceDue.toFixed(2)}`);
+        console.log(`  📊 Status: ${currentInvoiceData.paymentStatus} → ${newPaymentStatus}`);
     });
 }
 
