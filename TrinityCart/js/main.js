@@ -785,7 +785,8 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
                     
                     // Refresh grids to show updated status
                     if (typeof loadPaymentsForSelectedInvoice === 'function') {
-                        loadPaymentsForSelectedInvoice();
+                        console.log('[main.js] Refreshing payment grid after verification');
+                        await loadPaymentsForSelectedInvoice();
                     }
                     
                 }, 1200);
@@ -799,8 +800,15 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
         
     } else if (button.classList.contains('action-btn-void-supplier-payment')) {
         // ✅ ENHANCED: Void verified payment (same as before)
+
+        const paymentData = getSupplierPaymentDataFromGridById(docId);
+        if (!paymentData) return;
+
+        const supplier = masterData.suppliers.find(s => s.id === paymentData.supplierId);
+        const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+
         const confirmed = await showModal('confirm', 'Void Supplier Payment', 
-            `VOID this verified payment to ${supplierName}?\n\n` +
+            `VOID this payment to ${supplierName}?\n\n` +
             `• Amount: ₹${paymentData.amountPaid.toFixed(2)}\n\n` +
             `This will create a reversal entry and update the invoice balance.`
         );
@@ -809,14 +817,40 @@ async function handlePurchasePaymentsGrid(button, docId, user) {
             ProgressToast.show('Voiding Supplier Payment', 'warning');
             
             try {
-                ProgressToast.updateProgress('Creating void entries...', 75);
+                ProgressToast.updateProgress('Creating void entries and updating invoice...', 75);
+                
                 await voidSupplierPaymentAndUpdateInvoice(docId, user);
-                ProgressToast.showSuccess(`Payment to ${supplierName} voided!`);
-                setTimeout(() => ProgressToast.hide(500), 1000);
+                
+                ProgressToast.showSuccess(`Payment to ${supplierName} voided successfully!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(500);
+                    
+                    await showModal('success', 'Payment Voided', 
+                        `Supplier payment has been voided with complete audit trail.\n\n` +
+                        `✓ Original payment marked as VOIDED\n` +
+                        `✓ Reversal entry created\n` +
+                        `✓ Invoice balance updated\n\n` +
+                        `The payment grid will refresh to show the void entries.`
+                    );
+                    
+                    // ✅ CRITICAL: Refresh payment grid to show void entries
+                    if (typeof loadPaymentsForSelectedInvoice === 'function') {
+                        console.log('[main.js] Refreshing payment grid after void operation');
+                        await loadPaymentsForSelectedInvoice();
+                    }
+                    
+                }, 1000);
                 
             } catch (error) {
                 console.error("Error voiding supplier payment:", error);
                 ProgressToast.showError(`Void failed: ${error.message}`);
+                setTimeout(() => {
+                    showModal('error', 'Void Failed', 
+                        `The supplier payment could not be voided.\n\n` +
+                        `Reason: ${error.message}`
+                    );
+                }, 2000);
             }
         }
         
