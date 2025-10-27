@@ -24,9 +24,9 @@
 
 // UI functions (existing - read-only access)
 import { showModal } from './modal.js';
+import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 import { 
     formatCurrency,
-    createGrid,
     showView,
     ProgressToast,
     
