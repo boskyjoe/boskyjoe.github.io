@@ -4174,6 +4174,41 @@ function hideConsignmentDetailPanel() {
 
 //function showConsignmentDetailPanel(orderData) {
 
+/**
+ * Manually refreshes the consignment payments grid for the selected order
+ */
+export async function refreshConsignmentPaymentsGrid() {
+    if (!consignmentPaymentsGridApi || !appState.selectedConsignmentId) {
+        console.error('[ui.js] Cannot refresh - grid API or selected order not available');
+        return;
+    }
+
+    try {
+        console.log(`[ui.js] Manually refreshing payment history for order: ${appState.selectedConsignmentId}`);
+        
+        consignmentPaymentsGridApi.setGridOption('loading', true);
+
+        const db = firebase.firestore();
+        const paymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('orderId', '==', appState.selectedConsignmentId)
+            .orderBy('paymentDate', 'desc');
+        
+        const snapshot = await paymentsQuery.get();
+        const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        consignmentPaymentsGridApi.setGridOption('rowData', payments);
+        consignmentPaymentsGridApi.setGridOption('loading', false);
+        
+        console.log(`[ui.js] ✅ Payment history manually refreshed: ${payments.length} payments`);
+        
+    } catch (error) {
+        console.error('[ui.js] Error manually refreshing payment history:', error);
+        if (consignmentPaymentsGridApi) {
+            consignmentPaymentsGridApi.setGridOption('loading', false);
+        }
+    }
+}
+
 
 /**
  * [NEW & SUPERIOR] The single authoritative function for rendering the detail panel.
