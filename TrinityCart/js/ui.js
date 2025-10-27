@@ -184,6 +184,12 @@ document.addEventListener('masterDataUpdated', (e) => {
         // ... (existing logic for categories) ...
     }
 
+    if (type === 'products') {
+        setTimeout(() => {
+            updateInventoryLegendCounts();
+        }, 200);
+    }
+    
     if (type === 'seasons') {
         // THE FIX: We no longer need to update the columns. We just need to
         // refresh the cells to make sure the valueFormatter runs again.
@@ -3563,16 +3569,9 @@ export function showSalesCatalogueView() {
             // For now, we ensure it's empty.
             catalogueItemsGridApi.setGridOption('rowData', []);
 
-            // Add legend
-            addInventoryLegendToAvailableProducts();
-            //Update legend when data or filters change
-            availableProductsGridApi.addEventListener('filterChanged', () => {
-                setTimeout(() => updateInventoryLegendCounts(), 150);
-            });
-            
-            availableProductsGridApi.addEventListener('sortChanged', () => {
-                setTimeout(() => updateInventoryLegendCounts(), 150);
-            });
+            setTimeout(() => {
+                addInventoryLegendToAvailableProducts();
+            }, 500);
 
             console.log("[ui.js] Attaching real-time listener for existing catalogues.");
             const db = firebase.firestore();
@@ -3603,121 +3602,136 @@ export function showSalesCatalogueView() {
  * ✅ NEW: Adds inventory status legend above the available products grid
  */
 function addInventoryLegendToAvailableProducts() {
-    console.log('[ui.js] Adding professional inventory legend');
+    console.log('[ui.js] Adding basic visible legend');
     
-    const availableGrid = document.querySelector('#available-products-grid');
-    const gridContainer = availableGrid?.closest('div');
+    // ✅ SIMPLE: Direct approach - find the exact parent
+    const gridElement = document.getElementById('available-products-grid');
     
-    if (!gridContainer) {
-        console.error('[ui.js] Could not find grid container for legend');
+    if (!gridElement) {
+        console.error('[ui.js] available-products-grid element not found');
         return;
     }
     
-    // Remove existing legend for refresh
-    const existingLegend = gridContainer.querySelector('.inventory-legend');
+    console.log('[ui.js] Grid element found:', gridElement);
+    
+    // ✅ BASIC: Use immediate parent
+    const parentDiv = gridElement.parentElement;
+    
+    if (!parentDiv) {
+        console.error('[ui.js] Grid parent element not found');
+        return;
+    }
+    
+    console.log('[ui.js] Parent element found:', parentDiv);
+    
+    // ✅ REMOVE: Any existing legend
+    const existingLegend = parentDiv.querySelector('.inventory-legend');
     if (existingLegend) {
         existingLegend.remove();
-        console.log('[ui.js] Removed existing legend for refresh');
+        console.log('[ui.js] Removed existing legend');
     }
 
-    // ✅ PROFESSIONAL CARD: Clean, elegant design
-    const legendContainer = document.createElement('div');
-    legendContainer.className = 'inventory-legend bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3';
+    // ✅ SIMPLE: Create very basic visible legend
+    const legend = document.createElement('div');
+    legend.className = 'inventory-legend';
+    legend.style.cssText = `
+        background: #f9fafb !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        margin-bottom: 8px !important;
+        font-size: 12px !important;
+        display: block !important;
+        visibility: visible !important;
+        position: relative !important;
+    `;
     
-    legendContainer.innerHTML = `
-        <div class="space-y-2">
-            <!-- Title Row -->
-            <div class="flex items-center justify-between">
-                <h6 class="text-xs font-medium text-gray-600 uppercase tracking-wide">📦 Stock Status</h6>
-                <div class="text-xs text-gray-500 italic" id="total-products-shown">0 products</div>
+    legend.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-weight: 500; color: #4b5563;">Stock Status:</span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 12px; height: 12px; background-color: #10b981; border-radius: 2px; display: inline-block;"></span>
+                    <span style="color: #6b7280;">Good (10+)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 12px; height: 12px; background-color: #f59e0b; border-radius: 2px; display: inline-block;"></span>
+                    <span style="color: #6b7280;">Low (1-9)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 12px; height: 12px; background-color: #ef4444; border-radius: 2px; display: inline-block;"></span>
+                    <span style="color: #6b7280;">Out of Stock</span>
+                </span>
             </div>
-            
-            <!-- Legend Items Row -->
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-1.5">
-                        <div class="w-3 h-3 bg-green-500 rounded-sm"></div>
-                        <span class="text-xs text-gray-600 italic">Good (10+)</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5">
-                        <div class="w-3 h-3 bg-yellow-500 rounded-sm"></div>
-                        <span class="text-xs text-gray-600 italic">Low (1-9)</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5">
-                        <div class="w-3 h-3 bg-red-500 rounded-sm"></div>
-                        <span class="text-xs text-gray-600 italic">Out of Stock</span>
-                    </div>
-                </div>
-                
-                <!-- Current Counts -->
-                <div class="flex items-center space-x-3 text-xs">
-                    <span class="text-green-600 font-medium"><span id="good-stock-count">0</span> good</span>
-                    <span class="text-yellow-600 font-medium"><span id="low-stock-count">0</span> low</span>  
-                    <span class="text-red-600 font-medium"><span id="out-stock-count">0</span> out</span>
-                </div>
+            <div style="font-size: 11px; color: #9ca3af;">
+                <span style="color: #10b981; font-weight: 600;" id="good-stock-count">0</span> good • 
+                <span style="color: #f59e0b; font-weight: 600;" id="low-stock-count">0</span> low • 
+                <span style="color: #ef4444; font-weight: 600;" id="out-stock-count">0</span> out
             </div>
         </div>
     `;
-
-    // Insert before grid
-    try {
-        gridContainer.insertBefore(legendContainer, availableGrid);
-        console.log('[ui.js] ✅ Professional legend inserted successfully');
-        
-        // Update counts after DOM is ready
-        setTimeout(() => {
+    
+    // ✅ SIMPLE: Insert using basic DOM method
+    parentDiv.insertBefore(legend, gridElement);
+    
+    console.log('[ui.js] ✅ Basic legend inserted');
+    
+    // ✅ VERIFY: Check if it's visible
+    setTimeout(() => {
+        const addedLegend = document.querySelector('.inventory-legend');
+        if (addedLegend) {
+            console.log('[ui.js] ✅ Legend verified in DOM');
+            console.log('[ui.js] Legend position:', addedLegend.getBoundingClientRect());
             updateInventoryLegendCounts();
-        }, 300);
-        
-    } catch (insertError) {
-        console.error('[ui.js] Error inserting professional legend:', insertError);
-    }
+        } else {
+            console.error('[ui.js] ❌ Legend not found after insertion');
+        }
+    }, 200);
 }
 
-
-
-
 /**
- * ✅ NEW: Updates the inventory legend counts based on current grid data
+ * ✅ SIMPLE: Update counts function
  */
 function updateInventoryLegendCounts() {
-    if (!availableProductsGridApi) return;
+    if (!availableProductsGridApi) {
+        console.log('[ui.js] Grid API not ready for count update');
+        return;
+    }
 
     let goodStock = 0;
     let lowStock = 0;
     let outOfStock = 0;
-    let totalShown = 0;
 
-    // Count products by stock level (respects current filters)
-    availableProductsGridApi.forEachNodeAfterFilterAndSort(node => {
-        const stock = node.data.inventoryCount || 0;
-        totalShown++;
+    try {
+        // ✅ SAFE: Use forEachNode with error handling
+        availableProductsGridApi.forEachNode(node => {
+            if (node && node.data) {
+                const stock = node.data.inventoryCount || 0;
+                
+                if (stock === 0) {
+                    outOfStock++;
+                } else if (stock < 10) {
+                    lowStock++;
+                } else {
+                    goodStock++;
+                }
+            }
+        });
+
+        // Update counts
+        const goodElement = document.getElementById('good-stock-count');
+        const lowElement = document.getElementById('low-stock-count');
+        const outElement = document.getElementById('out-stock-count');
+
+        if (goodElement) goodElement.textContent = goodStock;
+        if (lowElement) lowElement.textContent = lowStock;
+        if (outElement) outElement.textContent = outOfStock;
         
-        if (stock === 0) {
-            outOfStock++;
-        } else if (stock < 10) {
-            lowStock++;
-        } else {
-            goodStock++;
-        }
-    });
-
-    // Update legend display elements
-    const elements = {
-        total: document.getElementById('total-products-shown'),
-        good: document.getElementById('good-stock-count'),
-        low: document.getElementById('low-stock-count'),
-        out: document.getElementById('out-stock-count')
-    };
-
-    if (elements.total) {
-        elements.total.textContent = `${totalShown} product${totalShown !== 1 ? 's' : ''} shown`;
+        console.log(`[ui.js] ✅ Counts updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out`);
+        
+    } catch (countError) {
+        console.error('[ui.js] Error updating inventory counts:', countError);
     }
-    if (elements.good) elements.good.textContent = goodStock;
-    if (elements.low) elements.low.textContent = lowStock;
-    if (elements.out) elements.out.textContent = outOfStock;
-    
-    console.log(`[ui.js] ✅ Professional legend updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out of ${totalShown} total`);
 }
 
 
