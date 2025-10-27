@@ -216,7 +216,7 @@ export function getDonationSourceByStore(storeName) {
 ]; */
 
 // BONUS: Alternative icon set using outline style (if you prefer)
-export const navConfigOutline = [
+export const navConfig = [
     // 1. Dashboard - Outline style
     {
         type: "link",
