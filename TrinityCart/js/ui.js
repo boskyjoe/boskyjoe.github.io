@@ -4822,7 +4822,7 @@ const consignmentPaymentsGridOptions = {
         { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { 
             field: "amountPaid", 
-            headerName: "Amount", 
+            headerName: "Amount Paid", 
             width: 120, 
             valueFormatter: p => formatCurrency(p.value)
         },
