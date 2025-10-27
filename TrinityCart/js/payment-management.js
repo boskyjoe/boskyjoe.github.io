@@ -23,8 +23,8 @@
 // ===================================================================
 
 // UI functions (existing - read-only access)
+import { showModal } from './modal.js';
 import { 
-    showModal,
     formatCurrency,
     createGrid,
     showView,
