@@ -58,7 +58,8 @@ import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById,
     getConsignmentPaymentDataFromGridById, 
     getSupplierPaymentDataFromGridById,    
-    getSalesPaymentDataFromGridById,   } from './ui.js';
+    getSalesPaymentDataFromGridById, getSelectedConsignmentOrderBalance,  
+    getSelectedConsignmentOrderData  } from './ui.js';
 
 import { showSupplierPaymentModal, closeSupplierPaymentModal, getInvoiceDataFromGridById, initializeModals, closePaymentModal } from './ui.js';
 
@@ -3317,12 +3318,11 @@ async function handleMakePaymentSubmit(e) {
             return;
         }
 
-        // Step 2: Get Order Context and Calculate Donation
+        // Step 2: Get Order Context and Calculate Donation (CORRECTED)
         ProgressToast.updateProgress('Calculating payment allocation...', 50, 'Step 2 of 4');
 
-        // Get current order balance (same logic as sales payment)
-        const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
-        const orderData = orderNode?.data;
+        // ✅ CORRECTED: Use ui.js helper function instead of direct grid access
+        const orderData = getSelectedConsignmentOrderData();
         
         if (!orderData) {
             ProgressToast.hide(0);
@@ -3332,6 +3332,12 @@ async function handleMakePaymentSubmit(e) {
 
         const balanceDue = orderData.balanceDue || 0;
         
+        console.log(`[main.js] Processing payment for order ${orderData.consignmentId}:`, {
+            teamName: orderData.teamName,
+            balanceDue: formatCurrency(balanceDue),
+            paymentAmount: formatCurrency(paymentAmount)
+        });
+
         // ✅ SAME LOGIC AS SALES: Calculate donation automatically
         let donationAmount = 0;
         if (paymentAmount > balanceDue) {
@@ -3340,7 +3346,7 @@ async function handleMakePaymentSubmit(e) {
             const confirmDonation = await showModal('confirm', 'Team Overpayment - Record as Donation?', 
                 `Payment amount: ${formatCurrency(paymentAmount)}\n` +
                 `Balance due: ${formatCurrency(balanceDue)}\n` +
-                `Overpayment: ${formatCurrency(donationAmount)}\n\n` +
+                `Team overpayment: ${formatCurrency(donationAmount)}\n\n` +
                 `The team's extra ${formatCurrency(donationAmount)} will be recorded as a donation to the church. Continue?`
             );
             
@@ -3382,7 +3388,7 @@ async function handleMakePaymentSubmit(e) {
         if (isEditMode) {
             await updatePaymentRecord(docId, paymentData, user);
         } else {
-            await submitPaymentRecord(paymentData, user); // ✅ REUSE existing function with enhanced data
+            await submitPaymentRecord(paymentData, user); // ✅ REUSE existing function
         }
 
         // Step 4: Success
@@ -3397,15 +3403,15 @@ async function handleMakePaymentSubmit(e) {
             ProgressToast.hide(800);
             
             await showModal('success', 'Team Payment Submitted', 
-                `Team payment has been submitted for verification!\n\n` +
+                `Team payment has been submitted successfully!\n\n` +
                 `• Team: ${paymentData.teamName}\n` +
-                `• Payment Amount: ${formatCurrency(amountToApplyToOrder)}\n` +
+                `• Applied to Balance: ${formatCurrency(amountToApplyToOrder)}\n` +
                 `${donationAmount > 0 ? `• Team Donation: ${formatCurrency(donationAmount)}\n` : ''}` +
                 `• Payment Mode: ${paymentMode}\n` +
                 `• Reference: ${transactionRef}\n\n` +
                 `✓ Payment submitted for admin verification\n` +
-                `${donationAmount > 0 ? '✓ Team donation recorded with consignment source\n' : ''}` +
-                `⏳ Awaiting admin verification to update order balance`
+                `${donationAmount > 0 ? '✓ Team donation recorded\n' : ''}` +
+                `⏳ Awaiting admin verification`
             );
             
             resetPaymentForm();
