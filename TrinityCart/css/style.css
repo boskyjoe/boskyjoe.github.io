@@ -295,17 +295,45 @@ main {
     overflow: hidden !important;
 }
 
-/* Better tooltip styling */
-[title]:hover::after {
+/* ✅ CORRECTED: Specific tooltip styling only for grid notes */
+.ag-theme-alpine .ag-cell .text-sm[title]:hover {
+    position: relative;
+}
+
+/* Custom tooltip for notes cells only */
+.ag-theme-alpine .ag-cell .text-sm[title]:hover::after {
     content: attr(title);
     position: absolute;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    top: 100%;
+    left: 0;
+    background: #1f2937; /* Dark gray background */
+    color: #f9fafb; /* Light gray text */
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
     white-space: pre-wrap;
     z-index: 1000;
-    max-width: 300px;
+    max-width: 250px;
     word-wrap: break-word;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    
+    /* Better positioning */
+    margin-top: 4px;
+    
+    /* Ensure readability */
+    line-height: 1.3;
+    font-weight: normal;
+}
+
+/* Arrow for custom tooltip */
+.ag-theme-alpine .ag-cell .text-sm[title]:hover::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    border: 4px solid transparent;
+    border-bottom-color: #1f2937;
+    z-index: 1001;
+    pointer-events: none;
 }
