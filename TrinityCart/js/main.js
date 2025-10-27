@@ -133,6 +133,11 @@ import {
 } from './ui.js';
 
 
+import { 
+    showPaymentManagementView,
+    switchPaymentMgmtTab
+} from './payment-management.js';
+
 
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
@@ -573,6 +578,7 @@ const EventHandlers = {
         'church-teams-view': showChurchTeamsView,
         'consignment-view': showConsignmentView,
         'sales-view': showSalesView,
+        'pmt-mgmt-view': showPaymentManagementView,
         // ADD THESE NEW REPORT VIEWS:
         'reports-hub-view': showReportsHubView,
         'sales-reports-view': showSalesReportsView,
