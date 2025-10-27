@@ -1089,8 +1089,406 @@
 
 
 
-                <div id="payments-view" class="view">
-                    <h2 class="text-2xl font-semibold">Payment Management</h2>
+                <!-- =================================== -->
+                <!--      PAYMENT MANAGEMENT MODULE      -->
+                <!-- =================================== -->
+                <div id="pmt-mgmt-view" class="view space-y-6">
+                    
+                    <!-- TOP SECTION: Financial Overview Dashboard -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-2xl font-bold text-gray-900">💳 Payment Management Center</h2>
+                                    <p class="text-sm text-gray-600 mt-1">Comprehensive payment operations for admin and finance</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-sm text-gray-500">
+                                        Last updated: <span id="pmt-mgmt-last-refresh">--:--</span>
+                                    </div>
+                                    <button id="pmt-mgmt-refresh-all" class="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-100" title="Refresh All Data">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dashboard Metrics Cards -->
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                
+                                <!-- Urgent Actions Card -->
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600">Urgent Actions</p>
+                                            <p class="text-2xl font-bold text-red-700" id="pmt-mgmt-urgent-count">0</p>
+                                        </div>
+                                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" id="pmt-mgmt-urgent-details">Overdue & pending</p>
+                                </div>
+                                
+                                <!-- Pending Verification Card -->
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-yellow-500 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600">Pending Verification</p>
+                                            <p class="text-2xl font-bold text-yellow-700" id="pmt-mgmt-pending-count">0</p>
+                                        </div>
+                                        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" id="pmt-mgmt-pending-amount">₹0 awaiting approval</p>
+                                </div>
+                                
+                                <!-- Outstanding Receivables Card -->
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600">Outstanding AR</p>
+                                            <p class="text-2xl font-bold text-blue-700" id="pmt-mgmt-receivables-amount">₹0</p>
+                                        </div>
+                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" id="pmt-mgmt-receivables-count">0 invoices due</p>
+                                </div>
+                                
+                                <!-- Outstanding Payables Card -->
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-purple-500 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600">Outstanding AP</p>
+                                            <p class="text-2xl font-bold text-purple-700" id="pmt-mgmt-payables-amount">₹0</p>
+                                        </div>
+                                        <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" id="pmt-mgmt-payables-count">0 invoices due</p>
+                                </div>
+                                
+                                <!-- Today's Activity Card -->
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-green-500 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600">Today's Activity</p>
+                                            <p class="text-2xl font-bold text-green-700" id="pmt-mgmt-today-count">0</p>
+                                        </div>
+                                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" id="pmt-mgmt-today-amount">₹0 processed</p>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MIDDLE SECTION: Quick Actions & Insights -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-800">🎯 Action Required</h3>
+                                <div class="flex space-x-2">
+                                    <button id="pmt-mgmt-quick-verify-all" class="bg-green-600 text-white px-3 py-2 text-sm rounded hover:bg-green-700">
+                                        ⚡ Quick Verify All
+                                    </button>
+                                    <button id="pmt-mgmt-export-summary" class="bg-blue-600 text-white px-3 py-2 text-sm rounded hover:bg-blue-700">
+                                        📊 Export Summary
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Items List -->
+                        <div class="p-6">
+                            <div id="pmt-mgmt-action-items" class="space-y-3">
+                                <!-- Dynamic action items will be populated here -->
+                                <div class="text-center text-gray-500 py-4">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <p>Loading action items...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MAIN SECTION: Tabbed Payment Operations -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        
+                        <!-- Tab Navigation -->
+                        <div class="border-b border-gray-200">
+                            <nav class="flex space-x-8 px-6" aria-label="Payment Management Tabs">
+                                
+                                <button id="pmt-mgmt-tab-dashboard" class="pmt-mgmt-tab py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap active">
+                                    📊 Dashboard Overview
+                                </button>
+                                
+                                <button id="pmt-mgmt-tab-suppliers" class="pmt-mgmt-tab py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                    📤 Supplier Payments
+                                    <span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full" id="pmt-mgmt-supplier-badge">0</span>
+                                </button>
+                                
+                                <button id="pmt-mgmt-tab-teams" class="pmt-mgmt-tab py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                    👥 Team Payments  
+                                    <span class="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full" id="pmt-mgmt-team-badge">0</span>
+                                </button>
+                                
+                                <button id="pmt-mgmt-tab-sales" class="pmt-mgmt-tab py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                    💳 Sales Payments
+                                    <span class="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full" id="pmt-mgmt-sales-badge">0</span>
+                                </button>
+                                
+                            </nav>
+                        </div>
+
+                        <!-- Tab Content Panels -->
+                        <div class="tab-content-area">
+                            
+                            <!-- DASHBOARD TAB CONTENT -->
+                            <div id="pmt-mgmt-dashboard-content" class="pmt-mgmt-tab-content active p-6">
+                                <div class="space-y-6">
+                                    
+                                    <!-- Quick Access Cards -->
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        
+                                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 cursor-pointer hover:bg-red-100 transition-colors" 
+                                            onclick="document.getElementById('pmt-mgmt-tab-suppliers').click()">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-semibold text-red-800">Supplier Payments</h4>
+                                                    <p class="text-sm text-red-600">Pay invoices & verify payments</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 transition-colors"
+                                            onclick="document.getElementById('pmt-mgmt-tab-teams').click()">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-semibold text-green-800">Team Payments</h4>
+                                                    <p class="text-sm text-green-600">Collect & verify consignment payments</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"
+                                            onclick="document.getElementById('pmt-mgmt-tab-sales').click()">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-semibold text-blue-800">Sales Payments</h4>
+                                                    <p class="text-sm text-blue-600">Collect customer & invoice payments</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                    
+                                    <!-- Today's Activity Summary -->
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <h4 class="font-semibold text-gray-800 mb-3">📈 Today's Financial Activity</h4>
+                                        <div id="pmt-mgmt-daily-summary" class="space-y-2 text-sm text-gray-600">
+                                            <!-- Dynamic daily summary will be populated here -->
+                                            <div class="text-center text-gray-400 py-2">Loading today's activity...</div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- SUPPLIER PAYMENTS TAB CONTENT -->
+                            <div id="pmt-mgmt-suppliers-content" class="pmt-mgmt-tab-content p-6 space-y-4">
+                                
+                                <!-- Supplier Tab Header -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-gray-800">📤 Supplier Payment Operations</h3>
+                                        <p class="text-sm text-gray-600">Manage payments to suppliers and verify pending transactions</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button id="pmt-mgmt-create-supplier-payment" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                            </svg>
+                                            <span>New Supplier Payment</span>
+                                        </button>
+                                        <button id="pmt-mgmt-verify-all-suppliers" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                            ✅ Verify All Pending
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Supplier Payments Filter Bar -->
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <span class="text-sm font-medium text-gray-700">Filter by:</span>
+                                            <div class="flex space-x-2">
+                                                <button id="pmt-mgmt-supplier-filter-all" class="pmt-mgmt-supplier-filter active px-3 py-1 text-sm rounded bg-white border">All</button>
+                                                <button id="pmt-mgmt-supplier-filter-pending" class="pmt-mgmt-supplier-filter px-3 py-1 text-sm rounded border">Pending</button>
+                                                <button id="pmt-mgmt-supplier-filter-overdue" class="pmt-mgmt-supplier-filter px-3 py-1 text-sm rounded border">Overdue</button>
+                                                <button id="pmt-mgmt-supplier-filter-today" class="pmt-mgmt-supplier-filter px-3 py-1 text-sm rounded border">Today</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3">
+                                            <input type="text" id="pmt-mgmt-supplier-search" placeholder="Search suppliers..." class="form-input w-48 text-sm">
+                                            <select id="pmt-mgmt-supplier-status-filter" class="form-input w-32 text-sm">
+                                                <option value="">All Status</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="verified">Verified</option>
+                                                <option value="overdue">Overdue</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Supplier Payments Grid -->
+                                <div id="pmt-mgmt-supplier-grid-container" class="bg-white border rounded-lg">
+                                    <div id="pmt-mgmt-supplier-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                </div>
+                                
+                            </div>
+
+                            <!-- TEAM PAYMENTS TAB CONTENT -->
+                            <div id="pmt-mgmt-teams-content" class="pmt-mgmt-tab-content p-6 space-y-4">
+                                
+                                <!-- Team Tab Header -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-gray-800">👥 Team Payment Operations</h3>
+                                        <p class="text-sm text-gray-600">Collect and verify consignment payments from teams</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button id="pmt-mgmt-collect-team-payment" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                            </svg>
+                                            <span>Collect Payment</span>
+                                        </button>
+                                        <button id="pmt-mgmt-verify-all-teams" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                            ✅ Verify All Pending
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Team Payments Filter Bar -->
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <span class="text-sm font-medium text-gray-700">Filter by:</span>
+                                            <div class="flex space-x-2">
+                                                <button id="pmt-mgmt-team-filter-all" class="pmt-mgmt-team-filter active px-3 py-1 text-sm rounded bg-white border">All</button>
+                                                <button id="pmt-mgmt-team-filter-pending" class="pmt-mgmt-team-filter px-3 py-1 text-sm rounded border">Pending</button>
+                                                <button id="pmt-mgmt-team-filter-verified" class="pmt-mgmt-team-filter px-3 py-1 text-sm rounded border">Verified</button>
+                                                <button id="pmt-mgmt-team-filter-overdue" class="pmt-mgmt-team-filter px-3 py-1 text-sm rounded border">Overdue</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3">
+                                            <input type="text" id="pmt-mgmt-team-search" placeholder="Search teams..." class="form-input w-48 text-sm">
+                                            <select id="pmt-mgmt-team-name-filter" class="form-input w-40 text-sm">
+                                                <option value="">All Teams</option>
+                                                <!-- Populated by JS -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Team Payments Grid -->
+                                <div id="pmt-mgmt-team-grid-container" class="bg-white border rounded-lg">
+                                    <div id="pmt-mgmt-team-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                </div>
+                                
+                            </div>
+
+                            <!-- SALES PAYMENTS TAB CONTENT -->
+                            <div id="pmt-mgmt-sales-content" class="pmt-mgmt-tab-content p-6 space-y-4">
+                                
+                                <!-- Sales Tab Header -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-gray-800">💳 Customer Payment Operations</h3>
+                                        <p class="text-sm text-gray-600">Collect payments from customers and manage invoice settlements</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button id="pmt-mgmt-collect-customer-payment" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                            </svg>
+                                            <span>Collect Payment</span>
+                                        </button>
+                                        <button id="pmt-mgmt-send-reminders" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">
+                                            📧 Send Reminders
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Sales Payments Filter Bar -->
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <span class="text-sm font-medium text-gray-700">Filter by:</span>
+                                            <div class="flex space-x-2">
+                                                <button id="pmt-mgmt-sales-filter-all" class="pmt-mgmt-sales-filter active px-3 py-1 text-sm rounded bg-white border">All</button>
+                                                <button id="pmt-mgmt-sales-filter-unpaid" class="pmt-mgmt-sales-filter px-3 py-1 text-sm rounded border">Unpaid</button>
+                                                <button id="pmt-mgmt-sales-filter-partial" class="pmt-mgmt-sales-filter px-3 py-1 text-sm rounded border">Partial</button>
+                                                <button id="pmt-mgmt-sales-filter-overdue" class="pmt-mgmt-sales-filter px-3 py-1 text-sm rounded border">Overdue</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3">
+                                            <input type="text" id="pmt-mgmt-sales-search" placeholder="Search customers..." class="form-input w-48 text-sm">
+                                            <select id="pmt-mgmt-sales-store-filter" class="form-input w-32 text-sm">
+                                                <option value="">All Stores</option>
+                                                <option value="Church Store">Church Store</option>
+                                                <option value="Tasty Treats">Tasty Treats</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sales Payments Grid -->
+                                <div id="pmt-mgmt-sales-grid-container" class="bg-white border rounded-lg">
+                                    <div id="pmt-mgmt-sales-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
                 </div>
 
 
