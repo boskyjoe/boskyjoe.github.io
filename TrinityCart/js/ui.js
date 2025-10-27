@@ -4296,13 +4296,33 @@ export function renderConsignmentDetail(orderData) {
 
         // 3. Set up the real-time listener for the "Payments" grid
         const paymentsUnsub = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-            .where('orderId', '==', orderData.id) // We should link payments directly to the order
+            .where('orderId', '==', orderData.id) // Make sure this matches your payment records
+            .orderBy('paymentDate', 'desc')
             .onSnapshot(snapshot => {
-                console.log("[Firestore] Received update for payments.");
+                console.log(`[ui.js] Payment history update for order ${orderData.id}: ${snapshot.size} payments`);
+                
                 const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Debug each payment
+                payments.forEach((payment, index) => {
+                    console.log(`[ui.js] Payment ${index + 1}:`, {
+                        id: payment.id,
+                        teamName: payment.teamName,
+                        amount: formatCurrency(payment.amountPaid || 0),
+                        status: payment.paymentStatus,
+                        date: payment.paymentDate?.toDate?.()?.toLocaleDateString()
+                    });
+                });
+                
                 if (consignmentPaymentsGridApi) {
                     consignmentPaymentsGridApi.setGridOption('rowData', payments);
+                    console.log(`[ui.js] ✅ Payment history grid updated with ${payments.length} records`);
+                } else {
+                    console.error('[ui.js] ❌ consignmentPaymentsGridApi not available for payment update');
                 }
+                
+            }, error => {
+                console.error("[Firestore] Error listening to payments:", error);
             });
 
 
