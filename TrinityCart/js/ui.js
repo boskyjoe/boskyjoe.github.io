@@ -189,7 +189,7 @@ document.addEventListener('masterDataUpdated', (e) => {
             updateInventoryLegendCounts();
         }, 200);
     }
-    
+
     if (type === 'seasons') {
         // THE FIX: We no longer need to update the columns. We just need to
         // refresh the cells to make sure the valueFormatter runs again.
@@ -2351,6 +2351,7 @@ function updateBulkProductsTotalCount(totalCount) {
 /**
  * Shows the bulk add products modal and initializes grid
  */
+
 export function showBulkAddProductsModal() {
     const modal = document.getElementById('bulk-add-products-modal');
     if (!modal) {
@@ -2382,6 +2383,17 @@ export function showBulkAddProductsModal() {
                 const activeProducts = masterData.products.filter(p => p.isActive);
                 bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
                 
+                setTimeout(() => {
+                    addInventoryLegendToGrid('bulk-add-products-grid', bulkAddProductsGridApi, {
+                        title: '📦 Stock for Purchase',
+                        className: 'border-green-200 bg-green-50'
+                    });
+                    
+                    // ✅ SETUP: Auto-update for bulk grid
+                    setupInventoryLegendAutoUpdate('bulk-add-products-grid', bulkAddProductsGridApi);
+                    
+                }, 300);
+
                 // Verify data loaded using correct method
                 setTimeout(() => {
                     const displayedRows = bulkAddProductsGridApi.getDisplayedRowCount();
@@ -3569,8 +3581,13 @@ export function showSalesCatalogueView() {
             // For now, we ensure it's empty.
             catalogueItemsGridApi.setGridOption('rowData', []);
 
+            // ✅ ADD LEGEND: Using generic function
             setTimeout(() => {
-                addInventoryLegendToAvailableProducts();
+                addInventoryLegendToGrid('available-products-grid', availableProductsGridApi);
+                
+                // ✅ SETUP: Auto-update for this grid
+                setupInventoryLegendAutoUpdate('available-products-grid', availableProductsGridApi);
+                
             }, 500);
 
             console.log("[ui.js] Attaching real-time listener for existing catalogues.");
@@ -3598,115 +3615,159 @@ export function showSalesCatalogueView() {
     }, 50);
 }
 
+
 /**
- * ✅ NEW: Adds inventory status legend above the available products grid
+ * Generic function to add inventory status legend to any product grid.
+ * 
+ * Creates a professional card-style legend explaining inventory color coding
+ * and shows live counts of products in each stock category. Updates automatically
+ * when grid data or filters change.
+ * 
+ * @param {string} gridId - The ID of the grid element (e.g., 'available-products-grid')
+ * @param {object} gridApi - The AG-Grid API object for the grid
+ * @param {object} [options={}] - Customization options
+ * @param {string} [options.position='above'] - Position: 'above' or 'below' grid
+ * @param {string} [options.title='📦 Stock Status'] - Legend title
+ * @param {boolean} [options.showCounts=true] - Whether to show live counts
+ * @param {string} [options.className=''] - Additional CSS classes
+ * 
+ * @returns {boolean} Success status
+ * 
+ * @example
+ * // Add legend to available products grid
+ * addInventoryLegendToGrid('available-products-grid', availableProductsGridApi);
+ * 
+ * // Add legend to bulk add products grid
+ * addInventoryLegendToGrid('bulk-add-products-grid', bulkAddProductsGridApi, {
+ *   title: '📦 Product Inventory Status',
+ *   position: 'below'
+ * });
+ * 
+ * @since 1.0.0
  */
-function addInventoryLegendToAvailableProducts() {
-    console.log('[ui.js] Adding basic visible legend');
+export function addInventoryLegendToGrid(gridId, gridApi, options = {}) {
+    const {
+        position = 'above',
+        title = '📦 Stock Status',
+        showCounts = true,
+        className = ''
+    } = options;
     
-    // ✅ SIMPLE: Direct approach - find the exact parent
-    const gridElement = document.getElementById('available-products-grid');
+    console.log(`[ui.js] Adding inventory legend to grid: ${gridId}`);
     
+    // Find grid elements
+    const gridElement = document.getElementById(gridId);
     if (!gridElement) {
-        console.error('[ui.js] available-products-grid element not found');
-        return;
+        console.error(`[ui.js] Grid element not found: ${gridId}`);
+        return false;
     }
     
-    console.log('[ui.js] Grid element found:', gridElement);
-    
-    // ✅ BASIC: Use immediate parent
-    const parentDiv = gridElement.parentElement;
-    
-    if (!parentDiv) {
-        console.error('[ui.js] Grid parent element not found');
-        return;
+    const gridContainer = gridElement.parentElement;
+    if (!gridContainer) {
+        console.error(`[ui.js] Grid container not found for: ${gridId}`);
+        return false;
     }
     
-    console.log('[ui.js] Parent element found:', parentDiv);
+    // Create unique legend ID for this grid
+    const legendId = `inventory-legend-${gridId}`;
     
-    // ✅ REMOVE: Any existing legend
-    const existingLegend = parentDiv.querySelector('.inventory-legend');
+    // Remove existing legend
+    const existingLegend = document.getElementById(legendId);
     if (existingLegend) {
         existingLegend.remove();
-        console.log('[ui.js] Removed existing legend');
+        console.log(`[ui.js] Removed existing legend for grid: ${gridId}`);
     }
 
-    // ✅ SIMPLE: Create very basic visible legend
-    const legend = document.createElement('div');
-    legend.className = 'inventory-legend';
-    legend.style.cssText = `
-        background: #f9fafb !important;
-        border: 1px solid #d1d5db !important;
-        border-radius: 6px !important;
-        padding: 8px 12px !important;
-        margin-bottom: 8px !important;
-        font-size: 12px !important;
-        display: block !important;
-        visibility: visible !important;
-        position: relative !important;
-    `;
+    // ✅ GENERIC: Create legend with customizable options
+    const legendContainer = document.createElement('div');
+    legendContainer.id = legendId;
+    legendContainer.className = `inventory-legend ${className} bg-gray-50 border border-gray-200 rounded-lg p-3 ${position === 'above' ? 'mb-3' : 'mt-3'}`;
     
-    legend.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-weight: 500; color: #4b5563;">Stock Status:</span>
-                <span style="display: flex; align-items: center; gap: 4px;">
-                    <span style="width: 12px; height: 12px; background-color: #10b981; border-radius: 2px; display: inline-block;"></span>
-                    <span style="color: #6b7280;">Good (10+)</span>
-                </span>
-                <span style="display: flex; align-items: center; gap: 4px;">
-                    <span style="width: 12px; height: 12px; background-color: #f59e0b; border-radius: 2px; display: inline-block;"></span>
-                    <span style="color: #6b7280;">Low (1-9)</span>
-                </span>
-                <span style="display: flex; align-items: center; gap: 4px;">
-                    <span style="width: 12px; height: 12px; background-color: #ef4444; border-radius: 2px; display: inline-block;"></span>
-                    <span style="color: #6b7280;">Out of Stock</span>
-                </span>
+    const countsSection = showCounts ? `
+        <div class="flex items-center space-x-3 text-xs">
+            <span class="text-green-600 font-medium"><span id="good-stock-count-${gridId}">0</span> good</span>
+            <span class="text-yellow-600 font-medium"><span id="low-stock-count-${gridId}">0</span> low</span>  
+            <span class="text-red-600 font-medium"><span id="out-stock-count-${gridId}">0</span> out</span>
+        </div>
+    ` : '';
+    
+    legendContainer.innerHTML = `
+        <div class="space-y-2">
+            <!-- Title Row -->
+            <div class="flex items-center justify-between">
+                <h6 class="text-xs font-medium text-gray-600 uppercase tracking-wide">${title}</h6>
+                ${showCounts ? `<div class="text-xs text-gray-500 italic" id="total-products-shown-${gridId}">0 products</div>` : ''}
             </div>
-            <div style="font-size: 11px; color: #9ca3af;">
-                <span style="color: #10b981; font-weight: 600;" id="good-stock-count">0</span> good • 
-                <span style="color: #f59e0b; font-weight: 600;" id="low-stock-count">0</span> low • 
-                <span style="color: #ef4444; font-weight: 600;" id="out-stock-count">0</span> out
+            
+            <!-- Legend Items Row -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-1.5">
+                        <div class="w-3 h-3 bg-green-500 rounded-sm"></div>
+                        <span class="text-xs text-gray-600 italic">Good (10+)</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-sm"></div>
+                        <span class="text-xs text-gray-600 italic">Low (1-9)</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <div class="w-3 h-3 bg-red-500 rounded-sm"></div>
+                        <span class="text-xs text-gray-600 italic">Out of Stock</span>
+                    </div>
+                </div>
+                ${countsSection}
             </div>
         </div>
     `;
-    
-    // ✅ SIMPLE: Insert using basic DOM method
-    parentDiv.insertBefore(legend, gridElement);
-    
-    console.log('[ui.js] ✅ Basic legend inserted');
-    
-    // ✅ VERIFY: Check if it's visible
-    setTimeout(() => {
-        const addedLegend = document.querySelector('.inventory-legend');
-        if (addedLegend) {
-            console.log('[ui.js] ✅ Legend verified in DOM');
-            console.log('[ui.js] Legend position:', addedLegend.getBoundingClientRect());
-            updateInventoryLegendCounts();
+
+    // ✅ GENERIC: Insert based on position preference
+    try {
+        if (position === 'above') {
+            gridContainer.insertBefore(legendContainer, gridElement);
         } else {
-            console.error('[ui.js] ❌ Legend not found after insertion');
+            gridContainer.appendChild(legendContainer);
         }
-    }, 200);
+        
+        console.log(`[ui.js] ✅ Legend added ${position} grid: ${gridId}`);
+        
+        // ✅ UPDATE: Counts for this specific grid
+        if (showCounts) {
+            setTimeout(() => {
+                updateInventoryLegendCountsForGrid(gridId, gridApi);
+            }, 300);
+        }
+        
+        return true;
+        
+    } catch (insertError) {
+        console.error(`[ui.js] Error inserting legend for ${gridId}:`, insertError);
+        return false;
+    }
 }
 
 /**
- * ✅ SIMPLE: Update counts function
+ * ✅ GENERIC: Update inventory legend counts for specific grid
+ * 
+ * @param {string} gridId - The grid ID to update counts for
+ * @param {object} gridApi - The AG-Grid API object
  */
-function updateInventoryLegendCounts() {
-    if (!availableProductsGridApi) {
-        console.log('[ui.js] Grid API not ready for count update');
+export function updateInventoryLegendCountsForGrid(gridId, gridApi) {
+    if (!gridApi) {
+        console.log(`[ui.js] Grid API not ready for counts update: ${gridId}`);
         return;
     }
 
     let goodStock = 0;
     let lowStock = 0;
     let outOfStock = 0;
+    let totalShown = 0;
 
     try {
-        // ✅ SAFE: Use forEachNode with error handling
-        availableProductsGridApi.forEachNode(node => {
-            if (node && node.data) {
+        // ✅ SAFE: Count with error handling
+        gridApi.forEachNode(node => {
+            if (node && node.data && typeof node.data.inventoryCount !== 'undefined') {
                 const stock = node.data.inventoryCount || 0;
+                totalShown++;
                 
                 if (stock === 0) {
                     outOfStock++;
@@ -3718,22 +3779,69 @@ function updateInventoryLegendCounts() {
             }
         });
 
-        // Update counts
-        const goodElement = document.getElementById('good-stock-count');
-        const lowElement = document.getElementById('low-stock-count');
-        const outElement = document.getElementById('out-stock-count');
+        // ✅ GENERIC: Update counts with grid-specific IDs
+        const elements = {
+            total: document.getElementById(`total-products-shown-${gridId}`),
+            good: document.getElementById(`good-stock-count-${gridId}`),
+            low: document.getElementById(`low-stock-count-${gridId}`),
+            out: document.getElementById(`out-stock-count-${gridId}`)
+        };
 
-        if (goodElement) goodElement.textContent = goodStock;
-        if (lowElement) lowElement.textContent = lowStock;
-        if (outElement) outElement.textContent = outOfStock;
+        if (elements.total) {
+            elements.total.textContent = `${totalShown} product${totalShown !== 1 ? 's' : ''} shown`;
+        }
+        if (elements.good) elements.good.textContent = goodStock;
+        if (elements.low) elements.low.textContent = lowStock;
+        if (elements.out) elements.out.textContent = outOfStock;
         
-        console.log(`[ui.js] ✅ Counts updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out`);
+        console.log(`[ui.js] ✅ ${gridId} legend updated: ${goodStock} good, ${lowStock} low, ${outOfStock} out of ${totalShown}`);
         
     } catch (countError) {
-        console.error('[ui.js] Error updating inventory counts:', countError);
+        console.error(`[ui.js] Error updating counts for ${gridId}:`, countError);
     }
 }
 
+/**
+ * ✅ GENERIC: Setup legend auto-update for any grid
+ * 
+ * @param {string} gridId - Grid ID to setup auto-update for
+ * @param {object} gridApi - Grid API object
+ */
+export function setupInventoryLegendAutoUpdate(gridId, gridApi) {
+    if (!gridApi) return;
+    
+    console.log(`[ui.js] Setting up auto-update for legend: ${gridId}`);
+    
+    // Update legend when filters change
+    const updateLegendForThisGrid = () => {
+        setTimeout(() => {
+            updateInventoryLegendCountsForGrid(gridId, gridApi);
+        }, 150);
+    };
+    
+    try {
+        // Listen for grid events that affect displayed data
+        gridApi.addEventListener('filterChanged', updateLegendForThisGrid);
+        gridApi.addEventListener('sortChanged', updateLegendForThisGrid);
+        gridApi.addEventListener('modelUpdated', updateLegendForThisGrid);
+        
+        console.log(`[ui.js] ✅ Auto-update listeners added for ${gridId} legend`);
+        
+    } catch (listenerError) {
+        console.warn(`[ui.js] Could not add legend auto-update listeners for ${gridId}:`, listenerError);
+    }
+}
+
+
+
+//✅ LEGACY: Keep existing function for backward compatibility
+function addInventoryLegendToAvailableProducts() {
+    return addInventoryLegendToGrid('available-products-grid', availableProductsGridApi);
+}
+
+function updateInventoryLegendCounts() {
+    return updateInventoryLegendCountsForGrid('available-products-grid', availableProductsGridApi);
+}
 
 // =======================================================
 // --- CONSIGNMENT MANAGEMENT UI ---
@@ -5069,10 +5177,19 @@ export function calculateSalesTotals() {
 
 }
 
-// Functions to manage the "Add Product" modal
+/**
+ * ENHANCED: Shows add product modal with catalogue-specific products and inventory legend.
+ * 
+ * Validates sales catalogue selection, loads products from the selected catalogue
+ * with proper pricing, and displays inventory status legend for user guidance.
+ * 
+ * @since 1.0.0 Enhanced with catalogue validation and inventory legend
+ */
 export function showAddProductModal() {
     const modal = document.getElementById('add-product-modal');
     if (!modal) return;
+
+    console.log('[ui.js] Opening add product modal with catalogue validation');
 
     // ✅ ENHANCED: Check if sales catalogue is selected
     const selectedCatalogueId = document.getElementById('sale-catalogue-select')?.value;
@@ -5085,18 +5202,56 @@ export function showAddProductModal() {
         return;
     }
 
-    // ✅ ENHANCED: Get products from selected catalogue with prices
-    loadProductsForSelectedCatalogue(selectedCatalogueId);
+    // Get catalogue information for context
+    const selectedCatalogue = masterData.salesCatalogues.find(cat => cat.id === selectedCatalogueId);
+    const catalogueName = selectedCatalogue ? selectedCatalogue.catalogueName : 'Selected Catalogue';
 
+    console.log(`[ui.js] Loading products from catalogue: ${catalogueName}`);
+
+    const modalTitle = modal.querySelector('h3');
+    if (modalTitle) {
+        modalTitle.textContent = `Add Product from ${catalogueName}`;
+        console.log(`[ui.js] Updated modal title for catalogue: ${catalogueName}`);
+    }
+
+    // Show modal first
     modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('visible'), 10);
+    setTimeout(() => {
+        modal.classList.add('visible');
+        
+        // ✅ ENHANCED: Load catalogue-specific products and add legend
+        setTimeout(() => {
+            loadProductsForSelectedCatalogue(selectedCatalogueId);
+            
+            // ✅ ADD: Inventory legend after products are loaded
+            setTimeout(() => {
+                const legendAdded = addInventoryLegendToGrid('add-product-modal-grid', addProductModalGridApi, {
+                    title: `🛒 ${catalogueName} Stock`,
+                    position: 'above',
+                    showCounts: true,
+                    className: 'border-blue-200 bg-blue-50' // Blue theme for sales modal
+                });
+                
+                if (legendAdded) {
+                    console.log('[ui.js] ✅ Inventory legend added to sales add product modal');
+                    
+                    // ✅ SETUP: Auto-update legend when modal grid changes
+                    setupInventoryLegendAutoUpdate('add-product-modal-grid', addProductModalGridApi);
+                } else {
+                    console.warn('[ui.js] Could not add legend to add product modal');
+                }
+                
+            }, 400); // Wait for catalogue products to load
+            
+        }, 200); // Wait for modal to be fully visible
+        
+    }, 10);
 }
 
-/**
- * ✅ ENHANCED: Load products from specific ACTIVE sales catalogue only
- * @param {string} catalogueId - ID of the selected sales catalogue
- */
 
+/**
+ * ENHANCED: Load products from specific ACTIVE sales catalogue with legend update
+ */
 async function loadProductsForSelectedCatalogue(catalogueId) {
     if (!addProductModalGridApi) {
         console.error('[ui.js] Add product modal grid not ready');
@@ -5104,35 +5259,23 @@ async function loadProductsForSelectedCatalogue(catalogueId) {
     }
 
     try {
-        console.log(`[ui.js] Loading products from catalogue: ${catalogueId}`);
+        console.log(`[ui.js] Loading catalogue products: ${catalogueId}`);
         
         addProductModalGridApi.setGridOption('loading', true);
 
-        // ✅ VALIDATION: Verify the catalogue is active before loading products
+        // Validate catalogue is active
         const selectedCatalogue = masterData.salesCatalogues.find(cat => cat.id === catalogueId);
         
-        if (!selectedCatalogue) {
+        if (!selectedCatalogue || !selectedCatalogue.isActive) {
             addProductModalGridApi.setGridOption('loading', false);
             addProductModalGridApi.showNoRowsOverlay();
-            await showModal('error', 'Catalogue Not Found', 
-                'The selected sales catalogue was not found. Please refresh the page and try again.'
+            await showModal('error', 'Catalogue Not Available', 
+                'The selected sales catalogue is not currently active or was not found.'
             );
             return;
         }
 
-        if (!selectedCatalogue.isActive) {
-            addProductModalGridApi.setGridOption('loading', false);
-            addProductModalGridApi.showNoRowsOverlay();
-            await showModal('error', 'Catalogue Not Active', 
-                `Sales catalogue "${selectedCatalogue.catalogueName}" is not currently active.\n\n` +
-                'Only active catalogues can be used for sales. Please select a different catalogue or contact an admin to activate this catalogue.'
-            );
-            return;
-        }
-
-        console.log(`[ui.js] ✅ Catalogue "${selectedCatalogue.catalogueName}" is active, loading products...`);
-
-        // Get catalogue items with their selling prices
+        // Get catalogue items
         const db = firebase.firestore();
         const catalogueItemsQuery = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
@@ -5146,77 +5289,44 @@ async function loadProductsForSelectedCatalogue(catalogueId) {
 
         console.log(`[ui.js] Found ${catalogueItems.length} items in catalogue "${selectedCatalogue.catalogueName}"`);
 
-        if (catalogueItems.length === 0) {
-            addProductModalGridApi.setGridOption('loading', false);
-            addProductModalGridApi.showNoRowsOverlay();
-            await showModal('info', 'Empty Catalogue', 
-                `Sales catalogue "${selectedCatalogue.catalogueName}" has no products.\n\n` +
-                'Please add products to this catalogue first, or select a different catalogue.'
-            );
-            return;
-        }
-
-        // ✅ ENHANCED: Create products array with catalogue prices and stock validation
+        // Process catalogue items with master product data
         const availableProductsWithPrices = catalogueItems.map(catalogueItem => {
-            // Get master product data for inventory count and validation
             const masterProduct = masterData.products.find(p => p.id === catalogueItem.productId);
             
-            if (!masterProduct) {
-                console.warn(`[ui.js] Master product not found for catalogue item: ${catalogueItem.productId}`);
-                return null; // Skip this item
-            }
-
-            if (!masterProduct.isActive) {
-                console.warn(`[ui.js] Master product is inactive: ${masterProduct.itemName}`);
-                return null; // Skip inactive products
+            if (!masterProduct || !masterProduct.isActive) {
+                return null; // Skip inactive or missing products
             }
             
             return {
                 id: catalogueItem.productId,
                 itemName: catalogueItem.productName || masterProduct.itemName,
                 categoryId: masterProduct.categoryId || 'unknown',
-                inventoryCount: masterProduct.inventoryCount || 0,
+                inventoryCount: masterProduct.inventoryCount || 0, // ✅ CRITICAL: For legend counts
                 
-                // ✅ CRITICAL: Use catalogue selling price (this is why catalogues matter!)
+                // Catalogue pricing
                 sellingPrice: catalogueItem.sellingPrice,
-                unitPrice: catalogueItem.sellingPrice, // For cart compatibility
+                unitPrice: catalogueItem.sellingPrice,
                 
-                // ✅ BUSINESS CONTEXT
+                // Context
                 catalogueId: catalogueId,
                 catalogueName: selectedCatalogue.catalogueName,
-                catalogueItemId: catalogueItem.id || doc.id,
-                
-                // ✅ PRICING CONTEXT
+                catalogueItemId: catalogueItem.id,
                 isInCatalogue: true,
-                priceSource: `Sales Catalogue: ${selectedCatalogue.catalogueName}`,
-                costPrice: catalogueItem.costPrice || masterProduct.unitPrice || 0,
-                marginPercentage: catalogueItem.marginPercentage || 0,
-                
-                // ✅ VALIDATION FLAGS
-                hasValidPrice: catalogueItem.sellingPrice > 0,
-                hasStock: masterProduct.inventoryCount > 0,
-                isAvailableForSale: masterProduct.isActive && catalogueItem.sellingPrice > 0 && masterProduct.inventoryCount > 0
+                priceSource: `Catalogue: ${selectedCatalogue.catalogueName}`
             };
         })
-        .filter(product => product !== null) // Remove invalid products
-        .filter(product => product.hasStock && product.hasValidPrice); // ✅ Only show sellable products
+        .filter(product => product !== null && product.inventoryCount >= 0); // Include all stock levels
 
-        console.log(`[ui.js] ✅ Processed ${availableProductsWithPrices.length} sellable products from catalogue`);
-
-        // Load products into grid
+        // Load into grid
         addProductModalGridApi.setGridOption('rowData', availableProductsWithPrices);
         addProductModalGridApi.setGridOption('loading', false);
 
-        // ✅ ENHANCED: Log business intelligence
-        const totalCatalogueValue = availableProductsWithPrices.reduce((sum, product) => {
-            return sum + (product.inventoryCount * product.sellingPrice);
-        }, 0);
+        console.log(`[ui.js] ✅ Loaded ${availableProductsWithPrices.length} catalogue products`);
 
-        console.log(`[ui.js] 📊 Catalogue "${selectedCatalogue.catalogueName}" analysis:`);
-        console.log(`  - Items in catalogue: ${catalogueItems.length}`);
-        console.log(`  - Available for sale: ${availableProductsWithPrices.length}`);
-        console.log(`  - Total inventory value: ${formatCurrency(totalCatalogueValue)}`);
-        console.log(`  - Season: ${selectedCatalogue.seasonName}`);
+        // ✅ UPDATE: Legend counts after data is loaded
+        setTimeout(() => {
+            updateInventoryLegendCountsForGrid('add-product-modal-grid', addProductModalGridApi);
+        }, 200);
 
     } catch (error) {
         console.error('[ui.js] Error loading catalogue products:', error);
@@ -5226,11 +5336,7 @@ async function loadProductsForSelectedCatalogue(catalogueId) {
         }
         
         await showModal('error', 'Catalogue Loading Failed', 
-            'Could not load products from the selected catalogue. Please try again.\n\n' +
-            'This might be due to:\n' +
-            '• Network connectivity issues\n' +
-            '• Catalogue data corruption\n' +
-            '• Insufficient permissions to access catalogue data'
+            'Could not load products from the selected catalogue. Please try again.'
         );
     }
 }
