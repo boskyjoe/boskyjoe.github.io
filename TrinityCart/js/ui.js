@@ -3843,6 +3843,68 @@ function updateInventoryLegendCounts() {
 // --- CONSIGNMENT MANAGEMENT UI ---
 // =======================================================
 
+
+/**
+ * Gets the balance due for the currently selected consignment order
+ * @returns {number} Balance due amount or 0 if not found
+ */
+export function getSelectedConsignmentOrderBalance() {
+    if (!consignmentOrdersGridApi || !appState.selectedConsignmentId) {
+        console.error('[ui.js] Cannot get order balance - grid API or selected ID not available');
+        return 0;
+    }
+
+    try {
+        const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
+        const orderData = orderNode?.data;
+        
+        if (!orderData) {
+            console.error('[ui.js] Could not find order data for selected consignment');
+            return 0;
+        }
+
+        console.log(`[ui.js] Retrieved balance for order ${orderData.consignmentId}: ${formatCurrency(orderData.balanceDue || 0)}`);
+        return orderData.balanceDue || 0;
+        
+    } catch (error) {
+        console.error('[ui.js] Error getting consignment order balance:', error);
+        return 0;
+    }
+}
+
+/**
+ * Gets complete data for the currently selected consignment order
+ * @returns {object|null} Order data object or null if not found
+ */
+export function getSelectedConsignmentOrderData() {
+    if (!consignmentOrdersGridApi || !appState.selectedConsignmentId) {
+        console.error('[ui.js] Cannot get order data - grid API or selected ID not available');
+        return null;
+    }
+
+    try {
+        const orderNode = consignmentOrdersGridApi.getRowNode(appState.selectedConsignmentId);
+        const orderData = orderNode?.data;
+        
+        if (!orderData) {
+            console.error('[ui.js] Could not find order data for selected consignment');
+            return null;
+        }
+
+        console.log(`[ui.js] Retrieved order data for ${orderData.consignmentId}:`, {
+            teamName: orderData.teamName,
+            balanceDue: formatCurrency(orderData.balanceDue || 0),
+            status: orderData.status
+        });
+        
+        return orderData;
+        
+    } catch (error) {
+        console.error('[ui.js] Error getting consignment order data:', error);
+        return null;
+    }
+}
+
 // 1. Define variables for all the new grid APIs and state
 let consignmentOrdersGridApi = null;
 let fulfillmentItemsGridApi = null;
