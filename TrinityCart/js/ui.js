@@ -1845,7 +1845,7 @@ const purchasePaymentsGridOptions = {
         },
         {
             headerName: "Supplier",
-            width: 200, // ✅ REDUCED: Make room for other columns
+            width: 200,
             pinned: 'left',
             valueGetter: params => {
                 if (!params.data) return '';
@@ -1856,31 +1856,30 @@ const purchasePaymentsGridOptions = {
         { 
             field: "paymentDate", 
             headerName: "Payment Date", 
-            width: 120, // ✅ FIXED WIDTH: Prevent column expansion
+            width: 120,
             valueFormatter: p => p.value.toDate().toLocaleDateString() 
         },
         {
             field: "amountPaid",
             headerName: "Amount Paid",
-            width: 120, // ✅ FIXED WIDTH
+            width: 120,
             valueFormatter: p => p.value ? formatCurrency(p.value) : '',
             cellClass: 'text-right font-semibold'
         },
         { 
             field: "paymentMode", 
             headerName: "Mode", 
-            width: 100 // ✅ REDUCED: Payment modes are usually short
+            width: 100
         },
         { 
             field: "transactionRef", 
             headerName: "Reference #", 
-            width: 140 // ✅ REDUCED: Usually short references
+            width: 140
         },
         {
-            // ✅ ENHANCED: Notes field with truncation and tooltip
             field: "notes", 
             headerName: "Notes", 
-            width: 200, // ✅ REASONABLE WIDTH
+            width: 200,
             cellRenderer: params => {
                 const notes = params.value || '';
                 
@@ -1888,20 +1887,14 @@ const purchasePaymentsGridOptions = {
                     return '<span class="text-gray-400 italic text-sm">No notes</span>';
                 }
                 
-                // ✅ TRUNCATE: Show first 50 characters with ellipsis
                 const maxLength = 50;
                 const displayText = notes.length > maxLength 
                     ? notes.substring(0, maxLength) + '...'
                     : notes;
                 
-                // ✅ TOOLTIP: Full text on hover using HTML title attribute
                 return `<span class="text-sm text-gray-700" title="${notes.replace(/"/g, '&quot;')}">${displayText}</span>`;
             },
-            
-            // ✅ ENABLE: Tooltip on cell
-            tooltipField: 'notes', // AG-Grid will show full text on hover
-            
-            // ✅ TEXT WRAPPING: For better display
+            tooltipField: 'notes',
             cellStyle: { 
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -1911,9 +1904,9 @@ const purchasePaymentsGridOptions = {
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 120, // ✅ FIXED WIDTH
+            width: 120,
             cellRenderer: params => {
-                const status = params.value || 'Verified'; // Default to Verified for legacy records
+                const status = params.value || 'Verified';
                 if (status === 'Verified') {
                     return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Verified</span>`;
                 } else if (status === 'Pending Verification') {
@@ -1930,42 +1923,47 @@ const purchasePaymentsGridOptions = {
             headerName: "Actions",
             width: 150,
             cellClass: 'flex items-center justify-center space-x-1',
-            // ✅ FIXED WIDTH: Prevents layout issues
             suppressSizeToFit: true,
             cellRenderer: params => {
-                const paymentStatus = params.data.paymentStatus || 'Verified'; // ✅ DEFAULT for legacy records
+                const paymentStatus = params.data.paymentStatus || 'Verified';
                 const submittedBy = params.data.submittedBy;
                 const currentUser = appState.currentUser;
                 
+                // ✅ CORRECTED: Check for admin OR finance roles
+                const hasFinancialPermissions = currentUser && (
+                    currentUser.role === 'admin' || 
+                    currentUser.role === 'finance'
+                );
+                
                 let buttons = '';
                 
-                // Verification button (admin only, pending payments only)
-                if (paymentStatus === 'Pending Verification' && currentUser?.role === 'admin') {
+                // ✅ VERIFY BUTTON: Admin or Finance only, pending payments only
+                if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
                     const verifyIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
                     </svg>`;
                     
                     buttons += `<button class="action-btn-icon action-btn-verify-supplier-payment text-green-600 hover:text-green-700 hover:bg-green-100" 
                                       data-id="${params.data.id}" 
-                                      title="Verify Payment">
+                                      title="Verify Payment (${currentUser.role === 'admin' ? 'Admin' : 'Finance'})">
                                   ${verifyIcon}
                               </button>`;
                 }
                 
-                // Void button (admin only, verified payments only)
-                if ((paymentStatus === 'Verified' || !paymentStatus) && currentUser?.role === 'admin') {
+                // ✅ VOID BUTTON: Admin or Finance only, verified payments only
+                if ((paymentStatus === 'Verified' || !paymentStatus) && hasFinancialPermissions) {
                     const voidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                         <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
                     </svg>`;
                     
                     buttons += `<button class="action-btn-icon action-btn-void-supplier-payment action-btn-delete text-red-500 hover:text-red-700 hover:bg-red-100" 
                                       data-id="${params.data.id}" 
-                                      title="Void Payment">
+                                      title="Void Payment (${currentUser.role === 'admin' ? 'Admin' : 'Finance'})">
                                   ${voidIcon}
                               </button>`;
                 }
                 
-                // Cancel button (submitter can cancel their own pending payments)
+                // ✅ CANCEL BUTTON: Submitter can cancel their own pending payments
                 if (paymentStatus === 'Pending Verification' && submittedBy === currentUser?.email) {
                     const cancelIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                         <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
@@ -1973,7 +1971,7 @@ const purchasePaymentsGridOptions = {
                     
                     buttons += `<button class="action-btn-icon action-btn-cancel-supplier-payment action-btn-delete text-red-500 hover:text-red-700 hover:bg-red-100" 
                                       data-id="${params.data.id}" 
-                                      title="Cancel Pending Payment">
+                                      title="Cancel Your Pending Payment">
                                   ${cancelIcon}
                               </button>`;
                 }
@@ -1983,20 +1981,18 @@ const purchasePaymentsGridOptions = {
         }
     ],
     
-    // ✅ ENHANCED: Better default column settings
     defaultColDef: { 
         resizable: true, 
         sortable: true, 
         filter: true, 
-        wrapText: false, // ✅ PREVENT: Text wrapping that breaks layout
-        suppressSizeToFit: false // Allow column auto-sizing
+        wrapText: false,
+        suppressSizeToFit: false
     },
     
     onGridReady: (params) => {
-        console.log("[ui.js] Purchase Payments Grid ready with enhanced notes handling.");
+        console.log("[ui.js] Purchase Payments Grid ready with role-based permissions.");
         purchasePaymentsGridApi = params.api;
         
-        // ✅ AUTO-SIZE: Fit columns on initial load
         setTimeout(() => {
             params.api.sizeColumnsToFit();
         }, 100);
