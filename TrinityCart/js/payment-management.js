@@ -98,11 +98,6 @@ const pmtMgmtSupplierGridOptions = {
     paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50, 100],
     
-    // ✅ CORRECT: Use either fixed height OR auto height, not both
-    autoHeight: true, // Fixed height is more stable
-    // getRowHeight: params => 'auto', // Remove this if using fixed height
-    
-    suppressAutoSize: true,
     suppressSizeToFit: false,
     suppressRowTransform: true,
     domLayout: 'normal',
@@ -405,7 +400,7 @@ const pmtMgmtSupplierGridOptions = {
         suppressHeaderMenuButton: false, // Show menu for advanced options
         suppressHeaderFilterButton: true,
         wrapText: true,
-        autoHeight: false, // Use fixed row height instead
+        autoHeight: true, // Use fixed row height instead
         wrapHeaderText: true,
         autoHeaderHeight: true,
         cellStyle: {
