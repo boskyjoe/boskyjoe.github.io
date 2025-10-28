@@ -246,8 +246,8 @@ const pmtMgmtSupplierGridOptions = {
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
-            cellStyle: {
-                textAlign: 'center',
+            cellStyle: { 
+                textAlign: 'center', 
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
@@ -261,25 +261,40 @@ const pmtMgmtSupplierGridOptions = {
             },
             cellRenderer: params => {
                 const days = params.value || 0;
-                let colorClass, urgencyText;
+                let colorClass, urgencyText, urgencyIcon;
                 
                 if (days > 30) {
                     colorClass = 'text-red-700 bg-red-100 border-red-300';
                     urgencyText = 'OVERDUE';
+                    urgencyIcon = `<svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                   </svg>`;
                 } else if (days > 14) {
                     colorClass = 'text-orange-700 bg-orange-100 border-orange-300';
                     urgencyText = 'AGING';
+                    urgencyIcon = `<svg class="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
                 } else if (days > 7) {
                     colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
                     urgencyText = 'DUE';
+                    urgencyIcon = `<svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
                 } else {
                     colorClass = 'text-gray-700 bg-gray-100 border-gray-300';
                     urgencyText = 'RECENT';
+                    urgencyIcon = `<svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
                 }
                 
                 return `<div class="flex flex-col items-center justify-center h-full gap-1">
                             <div class="font-bold text-sm">${days}d</div>
-                            <span class="text-xs px-2 py-1 rounded-full border ${colorClass}">${urgencyText}</span>
+                            <div class="flex items-center space-x-1 text-xs px-2 py-1 rounded-full border ${colorClass}">
+                                ${urgencyIcon}
+                                <span>${urgencyText}</span>
+                            </div>
                         </div>`;
             }
         },
@@ -309,29 +324,38 @@ const pmtMgmtSupplierGridOptions = {
                 const statusConfig = {
                     'Unpaid': { 
                         class: 'bg-red-100 text-red-800 border-red-300', 
-                        icon: '💸', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                               </svg>`, 
                         text: 'UNPAID' 
                     },
                     'Partially Paid': { 
                         class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
-                        icon: '⚡', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                               </svg>`, 
                         text: 'PARTIAL' 
                     },
                     'Paid': { 
                         class: 'bg-green-100 text-green-800 border-green-300', 
-                        icon: '✅', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                               </svg>`, 
                         text: 'PAID' 
                     }
                 };
                 
                 const config = statusConfig[status] || { 
                     class: 'bg-gray-100 text-gray-800 border-gray-300', 
-                    icon: '📋', 
+                    icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                           </svg>`, 
                     text: status 
                 };
                 
-                return `<span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
-                            ${config.icon} ${config.text}
+                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
+                            ${config.icon}
+                            <span>${config.text}</span>
                         </span>`;
             }
         },
@@ -357,7 +381,7 @@ const pmtMgmtSupplierGridOptions = {
             cellRenderer: params => {
                 const status = params.data.paymentStatus;
                 const balanceDue = params.data.balanceDue || 0;
-                const currentUser = window.appState?.currentUser || appState?.currentUser;
+                const currentUser = appState.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
@@ -369,30 +393,44 @@ const pmtMgmtSupplierGridOptions = {
                 
                 if (status === 'Paid' || balanceDue <= 0) {
                     return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600" 
+                                <button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
                                       data-id="${params.data.id}" 
                                       title="View Invoice Details">
-                                    📋 View
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <span>View</span>
                                 </button>
-                                <button class="pmt-mgmt-view-payments-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600" 
+                                <button class="pmt-mgmt-view-payments-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
                                       data-id="${params.data.id}" 
                                       title="View Payment History">
-                                    💰 History
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                    </svg>
+                                    <span>History</span>
                                 </button>
                             </div>`;
                 } else {
+                    // Outstanding invoice - primary pay action
                     const urgencyClass = params.data.urgencyLevel === 'critical' ? 'animate-pulse' : '';
                     
                     return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass}" 
+                                <button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
                                       data-id="${params.data.id}" 
                                       title="Pay Outstanding Balance of ${formatCurrency(balanceDue)}">
-                                    💸 PAY ${formatCurrency(balanceDue)}
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    <span>PAY ${formatCurrency(balanceDue)}</span>
                                 </button>
-                                <button class="pmt-mgmt-view-supplier-invoice bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600" 
+                                <button class="pmt-mgmt-view-supplier-invoice bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
                                       data-id="${params.data.id}" 
                                       title="View Invoice Details">
-                                    📋 View
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    <span>View</span>
                                 </button>
                             </div>`;
                 }
@@ -400,16 +438,14 @@ const pmtMgmtSupplierGridOptions = {
         }
     ],
     
-    // ✅ CRITICAL: Fixed defaultColDef without autoHeight
+    // ✅ CRITICAL: Fixed defaultColDef without autoHeight for stability
     defaultColDef: {
         resizable: true,
         sortable: true,
         filter: true,
         floatingFilter: true,
         
-        // ✅ REMOVED: autoHeight causes the grid to not render
-        // autoHeight: true, // ❌ This was the problem!
-        
+        // ✅ REMOVED: autoHeight prevents grid from rendering properly in payment management
         wrapHeaderText: true,
         autoHeaderHeight: true,
         
@@ -424,14 +460,13 @@ const pmtMgmtSupplierGridOptions = {
    
     onGridReady: (params) => {
         pmtMgmtSupplierGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Business-Smart Supplier Invoices Grid ready with floating filters");
+        console.log("[PmtMgmt] ✅ Business-Smart Supplier Invoices Grid ready with SVG icons");
         
         setTimeout(() => {
             loadSupplierInvoicesForMgmtTab('outstanding');
         }, 200);
     }
 };
-
 
 
 const pmtMgmtTeamGridOptions = {
