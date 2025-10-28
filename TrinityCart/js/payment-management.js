@@ -584,18 +584,35 @@ const PMT_MGMT_CONFIG = {
  * Shows the payment management dashboard (main entry point from main.js)
  */
 export function showPaymentManagementView() {
-    console.log('[PmtMgmt] 🚀 Opening Payment Management Center');
+    console.log('[DEBUG] 🚀 showPaymentManagementView called');
     
-    showView('pmt-mgmt-view');
-    
-    // Initialize dashboard on first load
-    if (!pmtMgmtDashboardInitialized) {
-        initializePaymentManagementDashboard();
-        pmtMgmtDashboardInitialized = true;
+    try {
+        // Check if view exists
+        const viewElement = document.getElementById('pmt-mgmt-view');
+        console.log('[DEBUG] Payment management view element:', !!viewElement);
+        
+        if (!viewElement) {
+            console.error('[DEBUG] ❌ pmt-mgmt-view element not found in DOM');
+            showModal('error', 'View Not Found', 'Payment Management view was not found. Please check if the HTML was added correctly.');
+            return;
+        }
+        
+        console.log('[DEBUG] ✅ Showing payment management view...');
+        showView('pmt-mgmt-view');
+        
+        // Initialize dashboard  
+        if (!pmtMgmtDashboardInitialized) {
+            console.log('[DEBUG] 🎯 Initializing dashboard for first time...');
+            initializePaymentManagementDashboard();
+            pmtMgmtDashboardInitialized = true;
+        } else {
+            console.log('[DEBUG] Dashboard already initialized, refreshing...');
+            refreshPaymentManagementDashboard();
+        }
+        
+    } catch (error) {
+        console.error('[DEBUG] ❌ Error in showPaymentManagementView:', error);
     }
-    
-    // Always refresh data when view is opened
-    refreshPaymentManagementDashboard();
 }
 
 // ===================================================================
@@ -606,25 +623,25 @@ export function showPaymentManagementView() {
  * Initializes the payment management dashboard structure
  */
 function initializePaymentManagementDashboard() {
-    console.log('[PmtMgmt] Initializing Payment Management Dashboard');
+    console.log('[DEBUG] 🎛️ initializePaymentManagementDashboard called');
     
     try {
         // Setup tab navigation
+        console.log('[DEBUG] Setting up tab navigation...');
         setupPaymentMgmtTabNavigation();
         
         // Setup event listeners
+        console.log('[DEBUG] Setting up event listeners...');
         setupPaymentMgmtEventListeners();
         
         // Initialize default tab (dashboard)
+        console.log('[DEBUG] Switching to default dashboard tab...');
         switchPaymentMgmtTab('pmt-mgmt-tab-dashboard', 'pmt-mgmt-dashboard-content');
         
-        console.log('[PmtMgmt] ✅ Dashboard initialization completed');
+        console.log('[DEBUG] ✅ Dashboard initialization completed');
         
     } catch (error) {
-        console.error('[PmtMgmt] Dashboard initialization failed:', error);
-        showModal('error', 'Initialization Failed', 
-            'Payment Management dashboard could not initialize properly. Please refresh the page.'
-        );
+        console.error('[DEBUG] ❌ Dashboard initialization failed:', error);
     }
 }
 
@@ -632,6 +649,8 @@ function initializePaymentManagementDashboard() {
  * Sets up tab navigation event listeners
  */
 function setupPaymentMgmtTabNavigation() {
+    console.log('[DEBUG] 🎯 Setting up payment management tab navigation...');
+    
     const tabs = [
         { tabId: 'pmt-mgmt-tab-dashboard', contentId: 'pmt-mgmt-dashboard-content' },
         { tabId: 'pmt-mgmt-tab-suppliers', contentId: 'pmt-mgmt-suppliers-content' },
@@ -639,20 +658,26 @@ function setupPaymentMgmtTabNavigation() {
         { tabId: 'pmt-mgmt-tab-sales', contentId: 'pmt-mgmt-sales-content' }
     ];
     
-    tabs.forEach(tab => {
+    tabs.forEach((tab, index) => {
         const tabElement = document.getElementById(tab.tabId);
+        console.log(`[DEBUG] Tab ${index + 1} (${tab.tabId}):`, !!tabElement);
+        
         if (tabElement) {
             tabElement.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log(`[DEBUG] 🖱️ Tab clicked: ${tab.tabId} → ${tab.contentId}`);
                 switchPaymentMgmtTab(tab.tabId, tab.contentId);
             });
             
-            console.log(`[PmtMgmt] ✅ Tab listener setup: ${tab.tabId}`);
+            console.log(`[DEBUG] ✅ Event listener added to: ${tab.tabId}`);
         } else {
-            console.warn(`[PmtMgmt] Tab element not found: ${tab.tabId}`);
+            console.error(`[DEBUG] ❌ Tab element not found: ${tab.tabId}`);
         }
     });
+    
+    console.log('[DEBUG] ✅ Tab navigation setup completed');
 }
+
 
 /**
  * Sets up payment management event listeners
@@ -678,67 +703,82 @@ function setupPaymentMgmtEventListeners() {
  * Switches between payment management tabs
  */
 export function switchPaymentMgmtTab(activeTabId, activeContentId) {
-    console.log(`[PmtMgmt] Switching to tab: ${activeTabId}`);
+    console.log(`[DEBUG] switchPaymentMgmtTab called with:`, {
+        activeTabId: activeTabId,
+        activeContentId: activeContentId
+    });
     
     try {
         // Update tab active states
+        console.log('[DEBUG] Updating tab active states...');
         document.querySelectorAll('.pmt-mgmt-tab').forEach(tab => {
             tab.classList.remove('active');
+            console.log(`[DEBUG] Removed active from tab: ${tab.id}`);
         });
         
         const activeTab = document.getElementById(activeTabId);
+        console.log('[DEBUG] Active tab element found:', !!activeTab);
         if (activeTab) {
             activeTab.classList.add('active');
+            console.log(`[DEBUG] ✅ Added active to tab: ${activeTabId}`);
         }
         
         // Update content visibility
+        console.log('[DEBUG] Updating content visibility...');
         document.querySelectorAll('.pmt-mgmt-tab-content').forEach(content => {
             content.classList.remove('active');
+            console.log(`[DEBUG] Removed active from content: ${content.id}`);
         });
         
         const activeContent = document.getElementById(activeContentId);
+        console.log('[DEBUG] Active content element found:', !!activeContent);
         if (activeContent) {
             activeContent.classList.add('active');
+            console.log(`[DEBUG] ✅ Added active to content: ${activeContentId}`);
         }
         
-        // Initialize tab-specific content
+        // ✅ CRITICAL: Initialize tab-specific content
+        console.log(`[DEBUG] Calling initializePaymentMgmtTabContent for: ${activeContentId}`);
         initializePaymentMgmtTabContent(activeContentId);
         
         pmtMgmtCurrentTab = activeContentId;
-        
-        console.log(`[PmtMgmt] ✅ Switched to tab: ${activeTabId}`);
+        console.log(`[DEBUG] ✅ Tab switch completed: ${activeTabId}`);
         
     } catch (error) {
-        console.error('[PmtMgmt] Error switching tabs:', error);
+        console.error('[DEBUG] ❌ Error in switchPaymentMgmtTab:', error);
     }
 }
 
 /**
  * Initializes content for specific payment management tab
+ * 
  */
 function initializePaymentMgmtTabContent(contentId) {
-    console.log(`[PmtMgmt] Initializing tab content: ${contentId}`);
+    console.log(`[DEBUG] 🚀 initializePaymentMgmtTabContent called for: ${contentId}`);
     
     switch (contentId) {
         case 'pmt-mgmt-dashboard-content':
-            // Dashboard is always initialized, just refresh data
+            console.log('[DEBUG] Initializing dashboard content...');
             refreshPaymentManagementDashboard();
             break;
             
         case 'pmt-mgmt-suppliers-content':
+            console.log('[DEBUG] 📤 Calling initializeSupplierPaymentsTab()');
             initializeSupplierPaymentsTab();
             break;
             
         case 'pmt-mgmt-teams-content':
+            console.log('[DEBUG] 👥 Calling initializeTeamPaymentsTab()');
             initializeTeamPaymentsTab();
             break;
             
         case 'pmt-mgmt-sales-content':
+            console.log('[DEBUG] 💳 Calling initializeSalesPaymentsTab()');
             initializeSalesPaymentsTab();
             break;
             
         default:
-            console.warn(`[PmtMgmt] Unknown tab content: ${contentId}`);
+            console.warn(`[DEBUG] ❌ Unknown tab content: ${contentId}`);
     }
 }
 
