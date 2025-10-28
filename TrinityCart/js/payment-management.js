@@ -99,7 +99,7 @@ const pmtMgmtSupplierGridOptions = {
     paginationPageSizeSelector: [10, 25, 50, 100],
     
     // ✅ CORRECT: Use either fixed height OR auto height, not both
-    rowHeight: 60, // Fixed height is more stable
+    autoHeight: true, // Fixed height is more stable
     // getRowHeight: params => 'auto', // Remove this if using fixed height
     
     suppressAutoSize: true,
