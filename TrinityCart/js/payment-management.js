@@ -89,16 +89,27 @@ const supplierInvoicesPagination = {
  * BUSINESS-SMART: Supplier invoices grid optimized for payment operations
  * Shows outstanding invoices that need payment action, with complete business context
  */
+
 const pmtMgmtSupplierGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
+    
     pagination: true,
     paginationPageSize: 25,
-    paginationPageSizeSelector: [10, 25, 50],
+    paginationPageSizeSelector: [10, 25, 50, 100],
     
-    rowHeight: 45,
+    // ✅ CORRECT: Use either fixed height OR auto height, not both
+    rowHeight: 60, // Fixed height is more stable
+    // getRowHeight: params => 'auto', // Remove this if using fixed height
+    
     suppressAutoSize: true,
+    suppressSizeToFit: false,
+    suppressRowTransform: true,
     domLayout: 'normal',
+    
+    // ✅ ADD: Enable text wrapping at grid level
+    wrapText: true,
+    autoHeight: false, // Use fixed height instead for stability
     
     columnDefs: [
         {
@@ -106,59 +117,124 @@ const pmtMgmtSupplierGridOptions = {
             width: 160,
             pinned: 'left',
             field: "supplierInvoiceNo",
-            cellStyle: { fontWeight: 'bold', color: '#1f2937' },
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            cellStyle: { 
+                fontWeight: 'bold', 
+                color: '#1f2937',
+                whiteSpace: 'normal',
+                lineHeight: '1.4',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px'
+            },
             valueFormatter: params => params.value || 'Not Provided'
         },
         {
             headerName: "Supplier",
-            width: 180,
+            width: 200,
             pinned: 'left',
             field: "supplierName",
-            cellStyle: { fontWeight: 'bold', color: '#1f2937' }
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            cellStyle: { 
+                fontWeight: 'bold', 
+                color: '#1f2937',
+                whiteSpace: 'normal',
+                lineHeight: '1.4',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px',
+                wordBreak: 'break-word'
+            }
         },
         {
             headerName: "System Invoice ID",
             width: 140,
             field: "invoiceId",
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
             cellStyle: { 
                 fontFamily: 'monospace',
                 fontSize: '11px',
-                color: '#6b7280'
+                color: '#6b7280',
+                whiteSpace: 'normal',
+                lineHeight: '1.4',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px',
+                wordBreak: 'break-all'
             }
         },
         {
             headerName: "Invoice Total",
             width: 120,
             field: "invoiceTotal",
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right font-semibold',
-            cellStyle: { color: '#374151' }
+            cellStyle: { 
+                color: '#374151',
+                fontWeight: '600',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                padding: '8px'
+            }
         },
         {
             headerName: "Amount Paid",
             width: 120,
             field: "amountPaid",
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right',
-            cellStyle: { color: '#059669' }
+            cellStyle: { 
+                color: '#059669',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                padding: '8px'
+            }
         },
         {
             headerName: "Balance Due",
             width: 120,
             field: "balanceDue",
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right font-bold',
             cellStyle: params => {
                 const balance = params.value || 0;
-                if (balance > 10000) return { color: '#dc2626', fontWeight: 'bold' };
-                if (balance > 5000) return { color: '#ea580c', fontWeight: 'bold' };
-                return { color: '#dc2626' };
+                const baseStyle = {
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    padding: '8px'
+                };
+                
+                if (balance > 10000) return { ...baseStyle, color: '#dc2626' };
+                if (balance > 5000) return { ...baseStyle, color: '#ea580c' };
+                return { ...baseStyle, color: '#dc2626' };
             }
         },
         {
             headerName: "Days Outstanding",
-            width: 110,
-            cellStyle: { textAlign: 'center', fontWeight: 'bold' },
+            width: 130,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            cellStyle: { 
+                textAlign: 'center', 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px'
+            },
             valueGetter: params => {
                 const purchaseDate = params.data.purchaseDate?.toDate ? 
                     params.data.purchaseDate.toDate() : new Date();
@@ -167,25 +243,33 @@ const pmtMgmtSupplierGridOptions = {
             },
             cellRenderer: params => {
                 const days = params.value || 0;
-                let colorClass, urgencyText;
+                let bgColor, textColor, borderColor, urgencyText;
                 
                 if (days > 30) {
-                    colorClass = 'text-red-700 bg-red-100 border border-red-300';
+                    bgColor = '#fee2e2';
+                    textColor = '#991b1b';
+                    borderColor = '#fca5a5';
                     urgencyText = 'OVERDUE';
                 } else if (days > 14) {
-                    colorClass = 'text-orange-700 bg-orange-100 border border-orange-300';
+                    bgColor = '#ffedd5';
+                    textColor = '#9a3412';
+                    borderColor = '#fdba74';
                     urgencyText = 'AGING';
                 } else if (days > 7) {
-                    colorClass = 'text-yellow-700 bg-yellow-100 border border-yellow-300';
+                    bgColor = '#fef3c7';
+                    textColor = '#92400e';
+                    borderColor = '#fcd34d';
                     urgencyText = 'DUE';
                 } else {
-                    colorClass = 'text-gray-700 bg-gray-100 border border-gray-300';
+                    bgColor = '#f3f4f6';
+                    textColor = '#374151';
+                    borderColor = '#d1d5db';
                     urgencyText = 'RECENT';
                 }
                 
-                return `<div class="text-center">
-                            <div class="font-bold text-sm">${days}d</div>
-                            <div class="text-xs px-2 py-1 rounded-full ${colorClass}">${urgencyText}</div>
+                return `<div style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 2px;">
+                            <div style="font-weight: bold; font-size: 14px;">${days}d</div>
+                            <div style="font-size: 10px; padding: 2px 8px; border-radius: 9999px; background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${borderColor}; white-space: nowrap;">${urgencyText}</div>
                         </div>`;
             }
         },
@@ -193,34 +277,50 @@ const pmtMgmtSupplierGridOptions = {
             field: "paymentStatus",
             headerName: "Status",
             width: 120,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px'
+            },
             cellRenderer: params => {
                 const status = params.value;
                 
                 const statusConfig = {
                     'Unpaid': { 
-                        class: 'bg-red-100 text-red-800 border-red-300', 
+                        bgColor: '#fee2e2',
+                        textColor: '#991b1b',
+                        borderColor: '#fca5a5',
                         icon: '💸', 
                         text: 'UNPAID' 
                     },
                     'Partially Paid': { 
-                        class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                        bgColor: '#fef3c7',
+                        textColor: '#92400e',
+                        borderColor: '#fcd34d',
                         icon: '⚡', 
                         text: 'PARTIAL' 
                     },
                     'Paid': { 
-                        class: 'bg-green-100 text-green-800 border-green-300', 
+                        bgColor: '#d1fae5',
+                        textColor: '#065f46',
+                        borderColor: '#6ee7b7',
                         icon: '✅', 
                         text: 'PAID' 
                     }
                 };
                 
                 const config = statusConfig[status] || { 
-                    class: 'bg-gray-100 text-gray-800', 
+                    bgColor: '#f3f4f6',
+                    textColor: '#1f2937',
+                    borderColor: '#d1d5db',
                     icon: '📋', 
                     text: status 
                 };
                 
-                return `<span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
+                return `<span style="display: inline-flex; align-items: center; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; border: 1px solid ${config.borderColor}; background-color: ${config.bgColor}; color: ${config.textColor}; white-space: nowrap;">
                             ${config.icon} ${config.text}
                         </span>`;
             }
@@ -228,47 +328,67 @@ const pmtMgmtSupplierGridOptions = {
         {
             headerName: "Actions",
             width: 180,
-            cellClass: 'flex items-center justify-center space-x-1',
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
             suppressSizeToFit: true,
+            cellStyle: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '4px',
+                gap: '4px'
+            },
             cellRenderer: params => {
                 const status = params.data.paymentStatus;
                 const balanceDue = params.data.balanceDue || 0;
-                const currentUser = appState.currentUser;
+                const currentUser = window.appState?.currentUser || appState?.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
                 
                 if (!hasFinancialPermissions) {
-                    return `<span class="text-xs text-gray-500 italic">View only</span>`;
+                    return `<span style="font-size: 11px; color: #6b7280; font-style: italic;">View only</span>`;
                 }
                 
                 if (status === 'Paid' || balanceDue <= 0) {
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600" 
+                    return `<div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
+                                <button class="pmt-mgmt-view-supplier-invoice" 
+                                      style="background-color: #3b82f6; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap;"
                                       data-id="${params.data.id}" 
-                                      title="View Invoice Details">
+                                      title="View Invoice Details"
+                                      onmouseover="this.style.backgroundColor='#2563eb'"
+                                      onmouseout="this.style.backgroundColor='#3b82f6'">
                                     📋 View
                                 </button>
-                                <button class="pmt-mgmt-view-payments-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600" 
+                                <button class="pmt-mgmt-view-payments-history" 
+                                      style="background-color: #10b981; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap;"
                                       data-id="${params.data.id}" 
-                                      title="View Payment History">
+                                      title="View Payment History"
+                                      onmouseover="this.style.backgroundColor='#059669'"
+                                      onmouseout="this.style.backgroundColor='#10b981'">
                                     💰 History
                                 </button>
                             </div>`;
                 } else {
                     // Outstanding invoice - primary pay action
-                    const urgencyClass = params.data.urgencyLevel === 'critical' ? 'animate-pulse' : '';
+                    const urgencyAnimation = params.data.urgencyLevel === 'critical' ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : '';
                     
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass}" 
+                    return `<div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
+                                <button class="pmt-mgmt-pay-supplier-invoice" 
+                                      style="background-color: #ef4444; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; white-space: nowrap; ${urgencyAnimation}"
                                       data-id="${params.data.id}" 
-                                      title="Pay Outstanding Balance">
+                                      title="Pay Outstanding Balance"
+                                      onmouseover="this.style.backgroundColor='#dc2626'"
+                                      onmouseout="this.style.backgroundColor='#ef4444'">
                                     💸 PAY ${formatCurrency(balanceDue)}
                                 </button>
-                                <button class="pmt-mgmt-view-supplier-invoice bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600" 
+                                <button class="pmt-mgmt-view-supplier-invoice" 
+                                      style="background-color: #6b7280; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap;"
                                       data-id="${params.data.id}" 
-                                      title="View Invoice Details">
+                                      title="View Invoice Details"
+                                      onmouseover="this.style.backgroundColor='#4b5563'"
+                                      onmouseout="this.style.backgroundColor='#6b7280'">
                                     📋 View
                                 </button>
                             </div>`;
@@ -277,17 +397,30 @@ const pmtMgmtSupplierGridOptions = {
         }
     ],
     
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
-        filter: false
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true,
+        suppressHeaderMenuButton: false, // Show menu for advanced options
+        suppressHeaderFilterButton: true,
+        wrapText: true,
+        autoHeight: false, // Use fixed row height instead
+        wrapHeaderText: true,
+        autoHeaderHeight: true,
+        cellStyle: {
+            display: 'flex',
+            alignItems: 'center',
+            whiteSpace: 'normal',
+            lineHeight: '1.4',
+            padding: '8px'
+        }
     },
-    
+   
     onGridReady: (params) => {
         pmtMgmtSupplierGridApi = params.api;
         console.log("[PmtMgmt] ✅ Business-Smart Supplier Invoices Grid ready");
         
-        // ✅ BUSINESS DEFAULT: Load outstanding invoices immediately
         setTimeout(() => {
             loadSupplierInvoicesForMgmtTab('outstanding');
         }, 200);
