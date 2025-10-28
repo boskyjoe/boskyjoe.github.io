@@ -303,7 +303,7 @@ const pmtMgmtSupplierGridOptions = {
             headerName: "Status",
             width: 120,
             
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter',
             floatingFilter: true,
             filterParams: {
                 values: ['Unpaid', 'Partially Paid', 'Paid']
@@ -673,7 +673,7 @@ const pmtMgmtTeamGridOptions = {
             headerName: "Status",
             width: 130,
             
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter',
             floatingFilter: true,
             filterParams: {
                 values: ['Pending Verification', 'Verified', 'Cancelled']
@@ -916,7 +916,7 @@ const pmtMgmtSalesGridOptions = {
             headerName: "Store",
             width: 120,
             
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter',
             floatingFilter: true,
             filterParams: {
                 values: ['Church Store', 'Tasty Treats']
@@ -1055,7 +1055,7 @@ const pmtMgmtSalesGridOptions = {
             headerName: "Status",
             width: 120,
             
-            filter: 'agSetColumnFilter',
+            filter: 'agTextColumnFilter',
             floatingFilter: true,
             filterParams: {
                 values: ['Verified', 'Voided']
