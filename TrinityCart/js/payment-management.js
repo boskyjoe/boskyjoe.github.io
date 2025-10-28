@@ -80,20 +80,28 @@ const pmtMgmtSupplierGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
     pagination: true,
-    paginationPageSize: 25, // ✅ SMALLER: Reduces rendering load
+    paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50],
     
-    // ✅ STABILITY: Prevent auto-height issues
+    // ✅ CRITICAL FIX: Set fixed row height to prevent infinite scrolling
+    rowHeight: 50,
+    
+    // ✅ STABILITY: Prevent layout shifts and auto-height issues
     suppressAutoSize: true,
     suppressSizeToFit: false,
+    suppressRowTransform: true,
+    domLayout: 'normal',
     
     columnDefs: [
         {
             headerName: "Invoice Reference",
             width: 160,
             pinned: 'left',
-            cellStyle: { fontWeight: 'bold' },
-            // ✅ SIMPLIFIED: Avoid complex valueGetter that might cause re-renders
+            cellStyle: { 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center'
+            },
             field: "relatedInvoiceId", 
             valueFormatter: params => {
                 const id = params.value || 'Unknown';
@@ -104,13 +112,15 @@ const pmtMgmtSupplierGridOptions = {
             headerName: "Supplier",
             width: 180,
             pinned: 'left',
-            cellStyle: { fontWeight: 'bold' },
-            // ✅ SIMPLIFIED: Static field instead of complex lookup
+            cellStyle: { 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center'
+            },
             field: "supplierName",
             valueFormatter: params => {
                 if (params.value) return params.value;
                 
-                // Simple lookup without causing re-renders
                 const supplier = masterData.suppliers.find(s => s.id === params.data.supplierId);
                 return supplier ? supplier.supplierName : 'Unknown';
             }
@@ -119,7 +129,10 @@ const pmtMgmtSupplierGridOptions = {
             field: "paymentDate", 
             headerName: "Date", 
             width: 110,
-            // ✅ SIMPLIFIED: Basic date formatting
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center'
+            },
             valueFormatter: params => {
                 try {
                     const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
@@ -135,41 +148,58 @@ const pmtMgmtSupplierGridOptions = {
             width: 120,
             valueFormatter: params => formatCurrency(params.value || 0),
             cellClass: 'text-right',
-            cellStyle: { color: '#dc2626', fontWeight: 'bold' }
+            cellStyle: { 
+                color: '#dc2626', 
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
         },
         { 
             field: "paymentMode", 
             headerName: "Mode", 
             width: 100,
-            // ✅ SIMPLE: No complex rendering
-            cellStyle: { fontSize: '12px' }
+            cellStyle: { 
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center'
+            }
         },
         {
             field: "paymentStatus",
             headerName: "Status",
             width: 120,
-            // ✅ SIMPLIFIED: Reduce complex rendering that might cause shaking
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0'
+            },
             cellRenderer: params => {
                 const status = params.value || 'Verified';
                 
                 if (status === 'Verified') {
-                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-green-200 text-green-800">✓ VERIFIED</span>`;
+                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #bbf7d0; color: #166534;">✓ VERIFIED</span>`;
                 } else if (status === 'Pending Verification') {
-                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-yellow-200 text-yellow-800">⏳ PENDING</span>`;
+                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #fef08a; color: #854d0e;">⏳ PENDING</span>`;
                 } else if (status === 'Voided') {
-                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">❌ VOIDED</span>`;
+                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #e5e7eb; color: #1f2937;">❌ VOIDED</span>`;
                 }
                 
-                return `<span class="px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">${status}</span>`;
+                return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 9999px; background-color: #bfdbfe; color: #1e40af;">${status}</span>`;
             }
         },
         {
             headerName: "Actions",
             width: 120,
-            // ✅ PREVENT: Auto-sizing that causes instability
             suppressSizeToFit: true,
             suppressAutoSize: true,
-            cellClass: 'flex items-center justify-center',
+            cellStyle: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '0'
+            },
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Verified';
                 const currentUser = appState.currentUser;
@@ -177,31 +207,44 @@ const pmtMgmtSupplierGridOptions = {
                 const hasPermissions = currentUser && (currentUser.role === 'admin' || currentUser.role === 'finance');
                 
                 if (paymentStatus === 'Pending Verification' && hasPermissions) {
-                    return `<button class="pmt-mgmt-verify-supplier-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600" 
-                                  data-id="${params.data.id}" title="Verify">
+                    return `<button class="pmt-mgmt-verify-supplier-payment" 
+                                  style="background-color: #22c55e; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer;"
+                                  data-id="${params.data.id}" 
+                                  title="Verify"
+                                  onmouseover="this.style.backgroundColor='#16a34a'"
+                                  onmouseout="this.style.backgroundColor='#22c55e'">
                                 ✓ Verify
                             </button>`;
                 } else if (paymentStatus === 'Verified' && hasPermissions) {
-                    return `<button class="pmt-mgmt-void-supplier-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600" 
-                                  data-id="${params.data.id}" title="Void">
+                    return `<button class="pmt-mgmt-void-supplier-payment" 
+                                  style="background-color: #ef4444; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer;"
+                                  data-id="${params.data.id}" 
+                                  title="Void"
+                                  onmouseover="this.style.backgroundColor='#dc2626'"
+                                  onmouseout="this.style.backgroundColor='#ef4444'">
                                 ❌ Void
                             </button>`;
                 }
                 
-                return `<span class="text-xs text-gray-500">No actions</span>`;
+                return `<span style="font-size: 11px; color: #6b7280;">No actions</span>`;
             }
         }
     ],
     
-    // ✅ STABLE: Prevent dynamic column sizing
+    // ✅ STABLE: Consistent column defaults with fixed heights
     defaultColDef: { 
-        resizable: false,      // ✅ DISABLE: Prevents column width changes
+        resizable: false,
         sortable: true, 
-        filter: false,         // ✅ DISABLE: Prevent filter-related rendering
-        suppressSizeToFit: true // ✅ PREVENT: Auto-sizing
+        filter: false,
+        suppressSizeToFit: true,
+        cellStyle: {
+            display: 'flex',
+            alignItems: 'center',
+            height: '100%'
+        }
     },
     
-    // ✅ PREVENT: Auto-sizing that causes instability
+    // ✅ PERFORMANCE: Keep virtualization enabled
     suppressColumnVirtualisation: false,
     suppressRowVirtualisation: false,
     
