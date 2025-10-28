@@ -138,7 +138,9 @@ import {
     switchPaymentMgmtTab,            
     clearPaymentMgmtCache,           
     refreshPaymentManagementDashboard,
-    getSupplierInvoiceFromMgmtGrid  
+    getSupplierInvoiceFromMgmtGrid,
+    showSupplierInvoiceDetailsModal,  
+    closeSupplierInvoiceDetailsModal
 } from './payment-management.js';
 
 
@@ -1695,7 +1697,10 @@ function handleStandaloneButtons(target, event) {
         return true;
     }
 
-   
+   if (target.closest('#pmt-mgmt-supplier-invoice-modal .modal-close-trigger')) {
+        closeSupplierInvoiceDetailsModal();
+        return true;
+    }   
 
 
 
@@ -5516,8 +5521,13 @@ async function handlePmtMgmtViewSupplierInvoice(target) {
     const invoiceId = target.dataset.id;
     
     console.log(`[main.js] View supplier invoice: ${invoiceId}`);
+
+    if (!invoiceId) {
+        await showModal('error', 'Invalid Invoice', 'Invoice ID not found. Please refresh and try again.');
+        return;
+    }
     
-    const invoiceData = getSupplierInvoiceFromPmtMgmtGrid(invoiceId);
+    /*const invoiceData = getSupplierInvoiceFromPmtMgmtGrid(invoiceId);
     
     if (invoiceData) {
         await showModal('info', 'Supplier Invoice Details', 
@@ -5539,6 +5549,15 @@ async function handlePmtMgmtViewSupplierInvoice(target) {
         );
     } else {
         await showModal('error', 'Invoice Not Found', 'Invoice details are not available.');
+    }*/
+
+    try {
+        // ✅ ENHANCED: Show detailed modal instead of simple text modal
+        await showSupplierInvoiceDetailsModal(invoiceId);
+        
+    } catch (error) {
+        console.error('[main.js] Error opening invoice details modal:', error);
+        await showModal('error', 'Modal Error', 'Could not open invoice details. Please try again.');
     }
 }
 
