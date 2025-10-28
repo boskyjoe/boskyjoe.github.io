@@ -140,7 +140,11 @@ import {
     refreshPaymentManagementDashboard,
     getSupplierInvoiceFromMgmtGrid,
     showSupplierInvoiceDetailsModal,  
-    closeSupplierInvoiceDetailsModal
+    closeSupplierInvoiceDetailsModal,
+    showSupplierInvoiceDetailsModal,     
+    closeSupplierInvoiceDetailsModal,   
+    handleSupplierPayOutstandingBalance,  
+    getSupplierInvoiceFromMgmtGrid  
 } from './payment-management.js';
 
 
