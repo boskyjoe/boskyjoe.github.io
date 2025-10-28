@@ -44,7 +44,9 @@ import {
     // Existing helper functions
     resetPaymentForm,
     loadPaymentsForSelectedInvoice,
-    purchasePaymentsGridOptions,consignmentPaymentsGridOptions,salePaymentHistoryGridOptions
+    purchasePaymentsGridOptions,      // Supplier payments grid config
+    consignmentPaymentsGridOptions,   // Team payments grid config  
+    salePaymentHistoryGridOptions,    // Sales payments grid config
 
 } from './ui.js';
 
