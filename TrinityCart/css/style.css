@@ -337,3 +337,56 @@ main {
     z-index: 1001;
     pointer-events: none;
 }
+
+/* Payment Management Tab Navigation */
+.pmt-mgmt-tab {
+    border-bottom-color: transparent;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.pmt-mgmt-tab:hover {
+    color: #374151;
+    border-bottom-color: #d1d5db;
+}
+
+.pmt-mgmt-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+
+/* Payment Management Tab Content */
+.pmt-mgmt-tab-content {
+    display: none;
+}
+
+.pmt-mgmt-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Filter buttons styling */
+.pmt-mgmt-supplier-filter,
+.pmt-mgmt-team-filter,
+.pmt-mgmt-sales-filter {
+    transition: all 0.2s ease;
+}
+
+.pmt-mgmt-supplier-filter.active,
+.pmt-mgmt-team-filter.active,
+.pmt-mgmt-sales-filter.active {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-color: #2563eb !important;
+}
+
+/* Payment Management specific grid styling */
+#pmt-mgmt-view .ag-theme-alpine {
+    border-radius: 6px;
+}
+
+#pmt-mgmt-view .ag-header {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e5e7eb;
+}
