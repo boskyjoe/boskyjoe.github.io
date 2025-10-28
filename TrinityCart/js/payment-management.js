@@ -1276,7 +1276,7 @@ export function showSupplierPaymentFromMgmt(invoiceData) {
 /**
  * Gets supplier invoice data from payment management grid
  */
-function getSupplierInvoiceFromMgmtGrid(invoiceId) {
+export function getSupplierInvoiceFromMgmtGrid(invoiceId) {
     if (!pmtMgmtSupplierGridApi) {
         console.error('[PmtMgmt] Supplier grid API not available');
         return null;
@@ -1781,7 +1781,7 @@ function handlePaymentMgmtQuickAction(action) {
 /**
  * Refreshes all payment management dashboard data
  */
-async function refreshPaymentManagementDashboard() {
+export function refreshPaymentManagementDashboard() {
     console.log('[PmtMgmt] 🔄 Refreshing dashboard with Firestore optimization...');
 
     try {
