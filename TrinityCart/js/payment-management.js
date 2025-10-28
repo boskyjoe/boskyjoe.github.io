@@ -72,203 +72,208 @@ import {
 
 
 
-
 /**
- * DEDICATED: Supplier payments grid configuration for Payment Management module
- * Optimized for payment operations workflow with enhanced context and actions
+ * BUSINESS-SMART: Supplier invoices grid optimized for payment operations
+ * Shows outstanding invoices that need payment action, with complete business context
  */
 const pmtMgmtSupplierGridOptions = {
-    theme: 'legacy',
+    theme: 'alpine',
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50],
-
-    // ✅ CRITICAL FIX: Set fixed row height to prevent infinite scrolling
-    rowHeight: 50,
-
-    // ✅ STABILITY: Prevent layout shifts and auto-height issues
+    
+    // ✅ STABILITY: Fixed dimensions to prevent vibration
+    rowHeight: 45,
     suppressAutoSize: true,
-    suppressSizeToFit: false,
-    suppressRowTransform: true,
     domLayout: 'normal',
-
+    
     columnDefs: [
         {
             headerName: "Supplier Invoice #",
             width: 160,
             pinned: 'left',
-            cellStyle: {
+            field: "supplierInvoiceNo", // ✅ DIRECT: Already in invoice data
+            cellStyle: { 
                 fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center'
+                color: '#1f2937'
             },
-            // ✅ USE: Enriched supplier invoice number
-            field: "supplierInvoiceNo",
-            valueFormatter: params => {
-                const invoiceNo = params.value || 'Not Available';
-                return invoiceNo === 'Not Available' ?
-                    `Doc: ${params.data.relatedInvoiceId?.substring(0, 12)}...` :
-                    invoiceNo;
-            }
+            valueFormatter: params => params.value || 'Not Provided'
         },
         {
             headerName: "Supplier",
             width: 180,
             pinned: 'left',
-            cellStyle: {
+            field: "supplierName", // ✅ DIRECT: Already in invoice data
+            cellStyle: { 
                 fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center'
-            },
-            // ✅ USE: Enriched supplier name
-            field: "supplierName",
-            valueFormatter: params => params.value || 'Unknown Supplier'
+                color: '#1f2937'
+            }
         },
         {
             headerName: "System Invoice ID",
             width: 140,
-            // ✅ USE: System-generated invoice ID for reference
-            field: "systemInvoiceId",
-            cellStyle: {
-                fontSize: '11px',
+            field: "invoiceId", // ✅ DIRECT: System-generated invoice ID
+            cellStyle: { 
                 fontFamily: 'monospace',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center'
+                fontSize: '11px',
+                color: '#6b7280'
             }
         },
         {
-            field: "paymentDate",
-            headerName: "Payment Date",
+            headerName: "Invoice Total",
             width: 120,
-            cellStyle: {
-                display: 'flex',
-                alignItems: 'center'
-            },
-            // ✅ USE: Pre-formatted date to avoid calculation during rendering
-            valueGetter: params => params.data.formattedDate || 'Unknown'
+            field: "invoiceTotal",
+            valueFormatter: p => formatCurrency(p.value || 0),
+            cellClass: 'text-right font-semibold',
+            cellStyle: { color: '#374151' }
         },
         {
+            headerName: "Amount Paid",
+            width: 120,
             field: "amountPaid",
-            headerName: "Amount",
-            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
             cellClass: 'text-right',
-            cellStyle: {
-                color: '#dc2626',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end'
-            },
-            // ✅ USE: Pre-formatted currency to avoid calculation during rendering
-            valueGetter: params => params.data.formattedAmount || '₹0.00'
+            cellStyle: { color: '#059669' } // Green for paid amounts
         },
         {
-            field: "paymentMode",
-            headerName: "Payment Mode",
+            headerName: "Balance Due",
             width: 120,
-            cellStyle: {
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center'
+            field: "balanceDue",
+            valueFormatter: p => formatCurrency(p.value || 0),
+            cellClass: 'text-right font-bold',
+            cellStyle: params => {
+                const balance = params.value || 0;
+                if (balance > 10000) return { color: '#dc2626', fontWeight: 'bold' }; // High amounts: bold red
+                if (balance > 5000) return { color: '#ea580c', fontWeight: 'bold' }; // Medium amounts: orange
+                return { color: '#dc2626' }; // All outstanding: red
+            }
+        },
+        {
+            headerName: "Days Outstanding",
+            width: 110,
+            cellStyle: { textAlign: 'center', fontWeight: 'bold' },
+            valueGetter: params => {
+                const purchaseDate = params.data.purchaseDate?.toDate ? 
+                    params.data.purchaseDate.toDate() : new Date();
+                const days = Math.ceil((new Date() - purchaseDate) / (1000 * 60 * 60 * 24));
+                return Math.max(0, days);
+            },
+            cellRenderer: params => {
+                const days = params.value || 0;
+                let colorClass, urgencyText;
+                
+                if (days > 30) {
+                    colorClass = 'text-red-600 bg-red-100';
+                    urgencyText = 'OVERDUE';
+                } else if (days > 14) {
+                    colorClass = 'text-orange-600 bg-orange-100';  
+                    urgencyText = 'AGING';
+                } else if (days > 7) {
+                    colorClass = 'text-yellow-600 bg-yellow-100';
+                    urgencyText = 'DUE';
+                } else {
+                    colorClass = 'text-gray-600 bg-gray-100';
+                    urgencyText = 'RECENT';
+                }
+                
+                return `<div class="text-center">
+                            <div class="font-bold">${days}d</div>
+                            <div class="text-xs px-1 rounded ${colorClass}">${urgencyText}</div>
+                        </div>`;
             }
         },
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 130,
-            cellStyle: {
-                display: 'flex',
-                alignItems: 'center',
-                padding: '4px'
-            },
+            width: 120,
             cellRenderer: params => {
-                const status = params.value || 'Verified';
-
-                // ✅ INLINE STYLES: Prevent CSS conflicts
-                const statusStyles = {
-                    'Verified': 'background-color: #bbf7d0; color: #166534;',
-                    'Pending Verification': 'background-color: #fef08a; color: #854d0e;',
-                    'Voided': 'background-color: #e5e7eb; color: #1f2937;'
+                const status = params.value;
+                
+                const statusConfig = {
+                    'Unpaid': { 
+                        class: 'bg-red-100 text-red-800 border-red-300', 
+                        icon: '💸', 
+                        text: 'UNPAID' 
+                    },
+                    'Partially Paid': { 
+                        class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                        icon: '⚡', 
+                        text: 'PARTIAL' 
+                    },
+                    'Paid': { 
+                        class: 'bg-green-100 text-green-800 border-green-300', 
+                        icon: '✅', 
+                        text: 'PAID' 
+                    }
                 };
-
-                const style = statusStyles[status] || 'background-color: #bfdbfe; color: #1e40af;';
-
-                return `<span style="display: inline-block; padding: 4px 8px; font-size: 10px; font-weight: bold; border-radius: 12px; ${style}">
-                            ${status.toUpperCase()}
+                
+                const config = statusConfig[status] || { 
+                    class: 'bg-gray-100 text-gray-800', 
+                    icon: '📋', 
+                    text: status 
+                };
+                
+                return `<span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
+                            ${config.icon} ${config.text}
                         </span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 140,
+            width: 160,
+            cellClass: 'flex items-center justify-center space-x-1',
             suppressSizeToFit: true,
-            cellStyle: {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
-            },
             cellRenderer: params => {
-                const paymentStatus = params.data.paymentStatus || 'Verified';
+                const status = params.data.paymentStatus;
+                const balanceDue = params.data.balanceDue || 0;
                 const currentUser = appState.currentUser;
-
-                const hasPermissions = currentUser && (currentUser.role === 'admin' || currentUser.role === 'finance');
-
-                if (paymentStatus === 'Pending Verification' && hasPermissions) {
-                    return `<button class="pmt-mgmt-verify-supplier-payment" 
-                                  style="background: #10b981; color: white; padding: 6px 10px; font-size: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+                
+                const hasFinancialPermissions = currentUser && (
+                    currentUser.role === 'admin' || currentUser.role === 'finance'
+                );
+                
+                if (!hasFinancialPermissions) {
+                    return `<span class="text-xs text-gray-500 italic">View only</span>`;
+                }
+                
+                if (status === 'Paid' || balanceDue <= 0) {
+                    return `<button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600" 
                                   data-id="${params.data.id}" 
-                                  title="Verify Payment to ${params.data.supplierName}"
-                                  onmouseover="this.style.background='#059669'"
-                                  onmouseout="this.style.background='#10b981'">
-                                ✅ VERIFY
+                                  title="View Invoice Details">
+                                📋 View Details
                             </button>`;
-                } else if (paymentStatus === 'Verified' && hasPermissions) {
-                    return `<button class="pmt-mgmt-void-supplier-payment" 
-                                  style="background: #ef4444; color: white; padding: 6px 10px; font-size: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+                } else {
+                    // Outstanding invoice - show pay action
+                    return `<button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-3 py-1 text-xs rounded hover:bg-red-600 font-semibold" 
                                   data-id="${params.data.id}" 
-                                  title="Void Payment to ${params.data.supplierName}"
-                                  onmouseover="this.style.background='#dc2626'"
-                                  onmouseout="this.style.background='#ef4444'">
-                                ❌ VOID
+                                  title="Pay Outstanding Balance of ${formatCurrency(balanceDue)}">
+                                💸 PAY ${formatCurrency(balanceDue)}
                             </button>`;
                 }
-
-                return `<span style="font-size: 10px; color: #9ca3af; font-style: italic;">Complete</span>`;
             }
         }
     ],
-
-    // ✅ STABLE: Consistent column defaults with fixed heights
-    defaultColDef: {
-        resizable: false,
-        sortable: true,
-        filter: false,
-        suppressSizeToFit: true,
-        cellStyle: {
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%'
-        }
+    
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        filter: false // Keep simple initially
     },
-
-    // ✅ PERFORMANCE: Keep virtualization enabled
-    suppressColumnVirtualisation: false,
-    suppressRowVirtualisation: false,
-
+    
     onGridReady: (params) => {
         pmtMgmtSupplierGridApi = params.api;
-        console.log("[DEBUG] ✅ Stable Supplier Payments Grid ready");
-
-        // ✅ STABILITY: Set fixed size and load data
+        console.log("[PmtMgmt] ✅ Business-Smart Supplier Invoices Grid ready");
+        
+        // ✅ DEFAULT: Load outstanding invoices immediately
         setTimeout(() => {
-            params.api.sizeColumnsToFit();
-            loadSupplierPaymentsForMgmtTab();
+            loadSupplierInvoicesForMgmtTab('outstanding');
         }, 200);
     }
 };
+
+
+
 
 
 const pmtMgmtTeamGridOptions = {
@@ -1428,6 +1433,225 @@ function initializeSupplierPaymentsTab() {
 
     setupSupplierPaymentFilters();
 }
+
+/**
+ * BUSINESS-FOCUSED: Load supplier invoices based on payment operations needs
+ * 
+ * DEFAULT: Shows outstanding invoices (Unpaid/Partially Paid) - immediate action items
+ * REFERENCE: Shows paid invoices with pagination - historical reference
+ * EFFICIENCY: Minimizes reads by focusing on actionable business data
+ */
+async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', paginationOptions = {}) {
+    const {
+        page = 1,
+        pageSize = 25,
+        lastDocSnapshot = null,
+        forceRefresh = false
+    } = paginationOptions;
+
+    console.log(`[PmtMgmt] 🎯 BUSINESS-SMART loading: ${filterStatus} supplier invoices`);
+
+    if (!pmtMgmtSupplierGridApi) {
+        console.error('[PmtMgmt] Supplier grid API not ready');
+        return;
+    }
+
+    try {
+        pmtMgmtSupplierGridApi.setGridOption('loading', true);
+
+        // ✅ BUSINESS-SMART CACHING: Outstanding data cached shorter (more dynamic)
+        const cacheMinutes = filterStatus === 'outstanding' ? 2 : 10; // Outstanding changes more frequently
+        const cacheKey = `pmt_mgmt_supplier_${filterStatus}_p${page}`;
+        
+        if (!forceRefresh) {
+            const cached = getCachedPaymentMetrics(cacheKey, cacheMinutes);
+            if (cached && cached.invoices) {
+                console.log(`[PmtMgmt] ✅ Using cached ${filterStatus} invoices - 0 reads`);
+                pmtMgmtSupplierGridApi.setGridOption('rowData', cached.invoices);
+                pmtMgmtSupplierGridApi.setGridOption('loading', false);
+                updateSupplierInvoicesSummary(cached.metadata, cached.invoices);
+                return cached;
+            }
+        }
+
+        const db = firebase.firestore();
+        let query = db.collection(PURCHASE_INVOICES_COLLECTION_PATH);
+        let totalReads = 0;
+
+        // ===================================================================
+        // BUSINESS-SMART QUERY STRATEGY
+        // ===================================================================
+        
+        switch (filterStatus) {
+            case 'outstanding':
+                // ✅ PRIORITY QUERY: All outstanding invoices (action items)
+                console.log('[PmtMgmt] 🎯 Priority Query: Loading ALL outstanding invoices for immediate action');
+                
+                query = query
+                    .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                    .orderBy('purchaseDate', 'desc');
+                    // ✅ NO LIMIT: Outstanding invoices are typically few (<20), load all for complete action list
+                
+                break;
+                
+            case 'paid':
+                // ✅ REFERENCE QUERY: Paginated paid invoices (historical reference)
+                console.log(`[PmtMgmt] 📚 Reference Query: Loading paid invoices page ${page} for historical reference`);
+                
+                query = query
+                    .where('paymentStatus', '==', 'Paid')
+                    .orderBy('purchaseDate', 'desc');
+                
+                // ✅ PAGINATION: For large historical dataset
+                if (lastDocSnapshot && page > 1) {
+                    query = query.startAfter(lastDocSnapshot);
+                    console.log('[PmtMgmt] Applied pagination cursor for page', page);
+                }
+                
+                query = query.limit(pageSize);
+                break;
+                
+            default:
+                throw new Error(`Filter status '${filterStatus}' not implemented`);
+        }
+
+        // ===================================================================
+        // EXECUTE BUSINESS QUERY
+        // ===================================================================
+        console.log('[PmtMgmt] Executing optimized business query...');
+        
+        const snapshot = await query.get();
+        totalReads = snapshot.size;
+
+        const invoices = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            _docSnapshot: doc // For pagination cursor
+        }));
+
+        console.log(`[PmtMgmt] ✅ BUSINESS QUERY RESULTS:`);
+        console.log(`  📊 Filter: ${filterStatus}`);
+        console.log(`  📋 Records: ${invoices.length}`);
+        console.log(`  🔥 Reads: ${totalReads}`);
+        console.log(`  💼 Business Value: ${filterStatus === 'outstanding' ? '100% actionable' : '0% actionable (reference only)'}`);
+
+        // ===================================================================
+        // BUSINESS INTELLIGENCE ENHANCEMENT
+        // ===================================================================
+        const businessEnhancedInvoices = invoices.map((invoice, index) => {
+            const daysOutstanding = calculateDaysOutstanding(invoice.purchaseDate);
+            const urgency = calculateBusinessUrgency(invoice, daysOutstanding);
+            
+            return {
+                ...invoice,
+                
+                // ✅ BUSINESS METRICS
+                daysOutstanding: daysOutstanding,
+                urgencyLevel: urgency.level,
+                urgencyReason: urgency.reason,
+                
+                // ✅ FINANCIAL ANALYSIS
+                paymentProgress: invoice.invoiceTotal > 0 ? 
+                    ((invoice.amountPaid || 0) / invoice.invoiceTotal) * 100 : 0,
+                    
+                // ✅ OPERATIONAL CONTEXT
+                requiresImmediateAction: urgency.level === 'critical' || urgency.level === 'high',
+                isOverdue: daysOutstanding > 30,
+                
+                // ✅ UI OPTIMIZATION
+                formattedTotal: formatCurrency(invoice.invoiceTotal || 0),
+                formattedPaid: formatCurrency(invoice.amountPaid || 0),
+                formattedBalance: formatCurrency(invoice.balanceDue || 0),
+                formattedDate: invoice.purchaseDate?.toDate ? 
+                    invoice.purchaseDate.toDate().toLocaleDateString() : 'Unknown',
+                
+                // Remove doc snapshot from display
+                _docSnapshot: undefined
+            };
+        });
+
+        // ===================================================================
+        // LOAD DATA AND UPDATE BUSINESS SUMMARY
+        // ===================================================================
+        pmtMgmtSupplierGridApi.setGridOption('rowData', businessEnhancedInvoices);
+        pmtMgmtSupplierGridApi.setGridOption('loading', false);
+
+        // Calculate business metrics
+        const businessMetrics = {
+            totalInvoices: businessEnhancedInvoices.length,
+            totalOutstanding: businessEnhancedInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
+            criticalCount: businessEnhancedInvoices.filter(inv => inv.urgencyLevel === 'critical').length,
+            overdueCount: businessEnhancedInvoices.filter(inv => inv.isOverdue).length,
+            averageDaysOutstanding: businessEnhancedInvoices.length > 0 ? 
+                businessEnhancedInvoices.reduce((sum, inv) => sum + inv.daysOutstanding, 0) / businessEnhancedInvoices.length : 0,
+            
+            // Pagination info
+            currentPage: page,
+            hasMorePages: invoices.length === pageSize,
+            lastDocument: invoices.length > 0 ? invoices[invoices.length - 1]._docSnapshot : null,
+            totalReads: totalReads,
+            filterStatus: filterStatus
+        };
+
+        // ✅ CACHE: Store business-enhanced data
+        cachePaymentMetrics(cacheKey, {
+            invoices: businessEnhancedInvoices,
+            metadata: businessMetrics
+        });
+
+        // Update summary display
+        updateSupplierInvoicesSummary(businessMetrics, businessEnhancedInvoices);
+
+        console.log(`[PmtMgmt] 🎯 BUSINESS INTELLIGENCE SUMMARY:`);
+        console.log(`  💰 Total Outstanding: ${formatCurrency(businessMetrics.totalOutstanding)}`);
+        console.log(`  🚨 Critical Invoices: ${businessMetrics.criticalCount}`);
+        console.log(`  ⏰ Overdue Invoices: ${businessMetrics.overdueCount}`);
+        console.log(`  📊 Avg Days Outstanding: ${businessMetrics.averageDaysOutstanding.toFixed(1)} days`);
+        console.log(`  🔥 Firestore Efficiency: ${totalReads} reads`);
+
+        return { invoices: businessEnhancedInvoices, metadata: businessMetrics };
+
+    } catch (error) {
+        console.error('[PmtMgmt] ❌ Error loading supplier invoices:', error);
+        
+        if (pmtMgmtSupplierGridApi) {
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            pmtMgmtSupplierGridApi.showNoRowsOverlay();
+        }
+        
+        showModal('error', 'Supplier Invoices Loading Failed', 
+            `Could not load supplier invoices.\n\nError: ${error.message}`
+        );
+    }
+}
+
+
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate invoice urgency for prioritization
+ */
+function calculateBusinessUrgency(invoice, daysOutstanding) {
+    const balanceDue = invoice.balanceDue || 0;
+    
+    // Business rules for payment urgency
+    if (balanceDue > 20000 && daysOutstanding > 45) {
+        return { level: 'critical', reason: 'Large amount severely overdue' };
+    } else if (balanceDue > 10000 && daysOutstanding > 30) {
+        return { level: 'high', reason: 'Significant amount overdue' };
+    } else if (daysOutstanding > 30) {
+        return { level: 'high', reason: 'Invoice is overdue' };
+    } else if (daysOutstanding > 14) {
+        return { level: 'medium', reason: 'Invoice is aging' };
+    } else if (balanceDue > 15000) {
+        return { level: 'medium', reason: 'Large amount due' };
+    } else {
+        return { level: 'normal', reason: 'Standard payment timeline' };
+    }
+}
+
+
+
+
 
 /**
  * FREE TIER OPTIMIZED: Load supplier payments with complete invoice and supplier context
