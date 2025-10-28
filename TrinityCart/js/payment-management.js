@@ -3591,6 +3591,163 @@ export function closeSupplierInvoiceDetailsModal() {
 }
 
 
+/**
+ * SUPPLIER-SPECIFIC: Handles pay outstanding balance for SUPPLIER invoice
+ */
+export async function handleSupplierPayOutstandingBalance(invoiceId) {
+    console.log(`[PmtMgmt] 💰 Paying outstanding balance for SUPPLIER invoice: ${invoiceId}`);
+    
+    try {
+        ProgressToast.show('Preparing Supplier Payment Form...', 'info');
+        ProgressToast.updateProgress('Loading invoice details...', 50);
+        
+        // ===================================================================
+        // STEP 1: GET SUPPLIER INVOICE DATA AND VALIDATE
+        // ===================================================================
+        
+        const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
+        if (!invoiceData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Supplier Invoice Not Found', 
+                'Could not find supplier invoice data. Please refresh the page and try again.');
+            return;
+        }
+        
+        const balanceDue = invoiceData.balanceDue || 0;
+        
+        if (balanceDue <= 0) {
+            ProgressToast.hide(0);
+            await showModal('info', 'Supplier Invoice Fully Paid', 
+                `Supplier invoice ${invoiceData.supplierInvoiceNo || invoiceData.invoiceId} is already fully paid!\n\n` +
+                `• Supplier: ${invoiceData.supplierName}\n` +
+                `• Status: ${invoiceData.paymentStatus}`
+            );
+            return;
+        }
+        
+        console.log(`[PmtMgmt] Supplier invoice balance confirmed: ${formatCurrency(balanceDue)} for ${invoiceData.supplierName}`);
+        
+        // ===================================================================
+        // STEP 2: CLOSE DETAILS MODAL AND OPEN PAYMENT MODAL
+        // ===================================================================
+        
+        ProgressToast.updateProgress(`Preparing payment of ${formatCurrency(balanceDue)}...`, 75);
+        
+        // Close the invoice details modal first
+        closeSupplierInvoiceDetailsModal();
+        
+        // Wait for modal to close, then open payment modal
+        setTimeout(() => {
+            ProgressToast.updateProgress('Opening supplier payment interface...', 90);
+            
+            // ✅ REUSE: Your existing supplier payment modal with pre-filled data
+            showSupplierPaymentModalWithData({
+                invoiceId: invoiceData.id,
+                systemInvoiceId: invoiceData.invoiceId,
+                supplierInvoiceNo: invoiceData.supplierInvoiceNo,
+                supplierId: invoiceData.supplierId,
+                supplierName: invoiceData.supplierName,
+                invoiceTotal: invoiceData.invoiceTotal || 0,
+                amountPaid: invoiceData.amountPaid || 0,
+                balanceDue: balanceDue,
+                suggestedPaymentAmount: balanceDue, // Default to full balance
+                context: 'payment_management_outstanding'
+            });
+            
+            ProgressToast.hide(300);
+            
+        }, 400); // Wait for details modal to close
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error preparing supplier outstanding payment:', error);
+        ProgressToast.showError(`Failed to prepare supplier payment: ${error.message}`);
+        
+        setTimeout(() => {
+            showModal('error', 'Supplier Payment Preparation Failed', 
+                `Failed to prepare payment for supplier invoice ${invoiceId}.\n\nError: ${error.message}`
+            );
+        }, 1500);
+    }
+}
+
+
+/**
+ * SUPPLIER-SPECIFIC: Calculate new balance after supplier payment
+ */
+function calculateSupplierBalanceAfterPayment(paymentAmount, supplierInvoiceData) {
+    const currentBalanceDue = supplierInvoiceData.balanceDue || 0;
+    const currentAmountPaid = supplierInvoiceData.amountPaid || 0;
+    const invoiceTotal = supplierInvoiceData.invoiceTotal || 0;
+    
+    const newTotalAmountPaid = currentAmountPaid + paymentAmount;
+    const newBalanceDue = Math.max(0, invoiceTotal - newTotalAmountPaid);
+    
+    let newPaymentStatus;
+    if (newBalanceDue <= 0) {
+        newPaymentStatus = 'Paid';
+    } else if (newTotalAmountPaid > 0) {
+        newPaymentStatus = 'Partially Paid';
+    } else {
+        newPaymentStatus = 'Unpaid';
+    }
+    
+    return {
+        newBalanceDue: newBalanceDue,
+        newTotalAmountPaid: newTotalAmountPaid,
+        newPaymentStatus: newPaymentStatus,
+        isFullyPaid: newBalanceDue <= 0,
+        paymentProgress: invoiceTotal > 0 ? (newTotalAmountPaid / invoiceTotal) * 100 : 0
+    };
+}
+
+/**
+ * SUPPLIER-SPECIFIC: Enhanced supplier payment modal with pre-filled data
+ */
+export function showSupplierPaymentModalWithData(supplierData) {
+    console.log('[PmtMgmt] Opening supplier payment modal with pre-filled data...');
+    
+    try {
+        // ✅ REUSE: Existing supplier payment modal
+        const modal = document.getElementById('supplier-payment-modal'); // Your existing modal
+        if (!modal) {
+            showModal('error', 'Payment Modal Not Available', 
+                'Supplier payment modal not found. Please use Purchase Management for payments.'
+            );
+            return;
+        }
+
+        // ✅ PRE-FILL: Populate modal with supplier invoice data
+        const elements = {
+            invoiceId: document.getElementById('supplier-payment-invoice-id'),
+            supplierId: document.getElementById('supplier-payment-supplier-id'),
+            amount: document.getElementById('supplier-payment-amount-input'),
+            date: document.getElementById('supplier-payment-date-input')
+        };
+
+        // Pre-populate fields
+        if (elements.invoiceId) elements.invoiceId.value = supplierData.invoiceId || '';
+        if (elements.supplierId) elements.supplierId.value = supplierData.supplierId || '';
+        if (elements.amount) elements.amount.value = (supplierData.suggestedPaymentAmount || 0).toFixed(2);
+        if (elements.date) elements.date.value = new Date().toISOString().split('T')[0]; // Today's date
+
+        // Update modal title with supplier context
+        const modalTitle = modal.querySelector('h3');
+        if (modalTitle) {
+            modalTitle.textContent = `Pay Supplier: ${supplierData.supplierName}`;
+        }
+
+        // Show modal using existing pattern
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+
+        console.log('[PmtMgmt] ✅ Supplier payment modal opened with pre-filled data');
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error showing supplier payment modal:', error);
+        showModal('error', 'Modal Error', 'Could not open supplier payment modal.');
+    }
+}
+
 
 
 
