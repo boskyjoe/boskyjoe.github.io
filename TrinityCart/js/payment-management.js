@@ -97,14 +97,11 @@ const pmtMgmtSupplierGridOptions = {
     paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50, 100],
     
-    // ✅ CORRECTED: Remove conflicting settings
-    suppressSizeToFit: false,
-    suppressRowTransform: false, // ✅ ENABLE: Allow row transforms for proper rendering
-    domLayout: 'normal',
+    // ✅ CRITICAL: Set fixed row height for stability
+    rowHeight: 60,
     
-    // ✅ REMOVE: These were preventing proper row height adjustment
-    // wrapText: true,          // ❌ REMOVE: Conflicts with autoHeight
-    // autoHeight: false,       // ❌ REMOVE: We want dynamic row heights
+    // ✅ CORRECT: Normal DOM layout
+    domLayout: 'normal',
     
     columnDefs: [
         {
@@ -113,18 +110,19 @@ const pmtMgmtSupplierGridOptions = {
             pinned: 'left',
             field: "supplierInvoiceNo",
             
-            // ✅ FLOATING FILTER: Enable properly
             filter: 'agTextColumnFilter',
             floatingFilter: true,
             
-            // ✅ HEADER: Proper wrapping
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
             cellStyle: { 
                 fontWeight: 'bold', 
-                color: '#1f2937'
-                // ✅ REMOVE: Complex flex styling that conflicts with autoHeight
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
             },
             valueFormatter: params => params.value || 'Not Provided'
         },
@@ -134,7 +132,6 @@ const pmtMgmtSupplierGridOptions = {
             pinned: 'left',
             field: "supplierName",
             
-            // ✅ FLOATING FILTER: Enable properly
             filter: 'agTextColumnFilter',
             floatingFilter: true,
             
@@ -143,7 +140,11 @@ const pmtMgmtSupplierGridOptions = {
             
             cellStyle: { 
                 fontWeight: 'bold', 
-                color: '#1f2937'
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
             }
         },
         {
@@ -151,7 +152,6 @@ const pmtMgmtSupplierGridOptions = {
             width: 140,
             field: "invoiceId",
             
-            // ✅ FLOATING FILTER: Enable
             filter: 'agTextColumnFilter', 
             floatingFilter: true,
             
@@ -161,7 +161,11 @@ const pmtMgmtSupplierGridOptions = {
             cellStyle: { 
                 fontFamily: 'monospace',
                 fontSize: '11px',
-                color: '#6b7280'
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
             }
         },
         {
@@ -169,7 +173,6 @@ const pmtMgmtSupplierGridOptions = {
             width: 120,
             field: "invoiceTotal",
             
-            // ✅ FLOATING FILTER: Number filter for amounts
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
             
@@ -177,8 +180,14 @@ const pmtMgmtSupplierGridOptions = {
             autoHeaderHeight: true,
             
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right font-semibold', // ✅ SIMPLE: Use CSS classes instead of complex inline styles
-            cellStyle: { color: '#374151' }
+            cellStyle: { 
+                color: '#374151',
+                fontWeight: '600',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
         },
         {
             headerName: "Amount Paid",
@@ -192,8 +201,13 @@ const pmtMgmtSupplierGridOptions = {
             autoHeaderHeight: true,
             
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right',
-            cellStyle: { color: '#059669' }
+            cellStyle: { 
+                color: '#059669',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
         },
         {
             headerName: "Balance Due",
@@ -207,26 +221,38 @@ const pmtMgmtSupplierGridOptions = {
             autoHeaderHeight: true,
             
             valueFormatter: p => formatCurrency(p.value || 0),
-            cellClass: 'text-right font-bold',
             cellStyle: params => {
                 const balance = params.value || 0;
-                if (balance > 10000) return { color: '#dc2626' };
-                if (balance > 5000) return { color: '#ea580c' };
-                return { color: '#dc2626' };
+                const baseStyle = {
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end'
+                };
+                
+                if (balance > 10000) return { ...baseStyle, color: '#dc2626' };
+                if (balance > 5000) return { ...baseStyle, color: '#ea580c' };
+                return { ...baseStyle, color: '#dc2626' };
             }
         },
         {
             headerName: "Days Outstanding",
             width: 130,
             
-            // ✅ FLOATING FILTER: Number filter for days
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
-            cellClass: 'text-center font-bold',
+            cellStyle: {
+                textAlign: 'center',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            },
             valueGetter: params => {
                 const purchaseDate = params.data.purchaseDate?.toDate ? 
                     params.data.purchaseDate.toDate() : new Date();
@@ -262,7 +288,6 @@ const pmtMgmtSupplierGridOptions = {
             headerName: "Status",
             width: 120,
             
-            // ✅ FLOATING FILTER: Set filter for status
             filter: 'agSetColumnFilter',
             floatingFilter: true,
             filterParams: {
@@ -271,6 +296,12 @@ const pmtMgmtSupplierGridOptions = {
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            },
             
             cellRenderer: params => {
                 const status = params.value;
@@ -308,7 +339,6 @@ const pmtMgmtSupplierGridOptions = {
             headerName: "Actions",
             width: 180,
             
-            // ✅ NO FILTER: Actions column doesn't need filtering
             filter: false,
             floatingFilter: false,
             
@@ -316,12 +346,18 @@ const pmtMgmtSupplierGridOptions = {
             autoHeaderHeight: true,
             
             suppressSizeToFit: true,
-            cellClass: 'flex items-center justify-center space-x-1',
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+            },
             
             cellRenderer: params => {
                 const status = params.data.paymentStatus;
                 const balanceDue = params.data.balanceDue || 0;
-                const currentUser = appState.currentUser;
+                const currentUser = window.appState?.currentUser || appState?.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
@@ -364,20 +400,26 @@ const pmtMgmtSupplierGridOptions = {
         }
     ],
     
-    // ✅ CORRECTED: Standard defaultColDef that works like other grids
+    // ✅ CRITICAL: Fixed defaultColDef without autoHeight
     defaultColDef: {
         resizable: true,
         sortable: true,
         filter: true,
-        floatingFilter: true, // ✅ ENABLE: Floating filters by default
+        floatingFilter: true,
         
-        // ✅ STANDARD: Remove complex styling overrides
-        wrapText: true,
-        autoHeight: true, // ✅ ENABLE: Auto row height based on content
+        // ✅ REMOVED: autoHeight causes the grid to not render
+        // autoHeight: true, // ❌ This was the problem!
         
-        // ✅ HEADER: Proper header configuration
         wrapHeaderText: true,
-        autoHeaderHeight: true
+        autoHeaderHeight: true,
+        
+        cellStyle: {
+            display: 'flex',
+            alignItems: 'center',
+            whiteSpace: 'normal',
+            lineHeight: '1.4',
+            padding: '8px'
+        }
     },
    
     onGridReady: (params) => {
@@ -389,7 +431,6 @@ const pmtMgmtSupplierGridOptions = {
         }, 200);
     }
 };
-
 
 
 
