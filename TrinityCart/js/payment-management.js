@@ -26,22 +26,22 @@
 import { appState } from './state.js';
 import { showModal } from './modal.js';
 import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
-import { 
+import {
     formatCurrency,
     showView,
     ProgressToast,
-    
+
     // Existing payment modals (reuse as-is)
     showSupplierPaymentModal,
     showRecordSalePaymentModal,
     closeSupplierPaymentModal,
     closeRecordSalePaymentModal,
-    
+
     // Existing grid data functions (reuse as-is)
     getSupplierPaymentDataFromGridById,
     getSalesPaymentDataFromGridById,
     getConsignmentPaymentDataFromGridById,
-    
+
     // Existing helper functions
     resetPaymentForm,
     loadPaymentsForSelectedInvoice
@@ -55,14 +55,14 @@ import {
     verifyConsignmentPayment,
     cancelPaymentRecord,
     voidSalePayment,
-    
+
     // Data functions (existing)
     getPurchaseInvoiceById,
     getSalesInvoiceById
 } from './api.js';
 
 import { masterData } from './masterData.js';
-import { 
+import {
     DONATION_SOURCES,
     SALES_COLLECTION_PATH,
     CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,
@@ -83,85 +83,92 @@ const pmtMgmtSupplierGridOptions = {
     pagination: true,
     paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50],
-    
+
     // ✅ CRITICAL FIX: Set fixed row height to prevent infinite scrolling
     rowHeight: 50,
-    
+
     // ✅ STABILITY: Prevent layout shifts and auto-height issues
     suppressAutoSize: true,
     suppressSizeToFit: false,
     suppressRowTransform: true,
     domLayout: 'normal',
-    
+
     columnDefs: [
         {
-            headerName: "Invoice Reference",
+            headerName: "Supplier Invoice #",
             width: 160,
             pinned: 'left',
-            cellStyle: { 
+            cellStyle: {
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center'
             },
-            field: "relatedInvoiceId", 
+            // ✅ USE: Enriched supplier invoice number
+            field: "supplierInvoiceNo",
             valueFormatter: params => {
-                const id = params.value || 'Unknown';
-                return id.length > 20 ? id.substring(0, 20) + '...' : id;
+                const invoiceNo = params.value || 'Not Available';
+                return invoiceNo === 'Not Available' ?
+                    `Doc: ${params.data.relatedInvoiceId?.substring(0, 12)}...` :
+                    invoiceNo;
             }
         },
         {
             headerName: "Supplier",
             width: 180,
             pinned: 'left',
-            cellStyle: { 
+            cellStyle: {
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center'
             },
+            // ✅ USE: Enriched supplier name
             field: "supplierName",
-            valueFormatter: params => {
-                if (params.value) return params.value;
-                
-                const supplier = masterData.suppliers.find(s => s.id === params.data.supplierId);
-                return supplier ? supplier.supplierName : 'Unknown';
+            valueFormatter: params => params.value || 'Unknown Supplier'
+        },
+        {
+            headerName: "System Invoice ID",
+            width: 140,
+            // ✅ USE: System-generated invoice ID for reference
+            field: "systemInvoiceId",
+            cellStyle: {
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center'
             }
         },
-        { 
-            field: "paymentDate", 
-            headerName: "Date", 
-            width: 110,
+        {
+            field: "paymentDate",
+            headerName: "Payment Date",
+            width: 120,
             cellStyle: {
                 display: 'flex',
                 alignItems: 'center'
             },
-            valueFormatter: params => {
-                try {
-                    const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
-                    return date.toLocaleDateString();
-                } catch {
-                    return 'Invalid Date';
-                }
-            }
+            // ✅ USE: Pre-formatted date to avoid calculation during rendering
+            valueGetter: params => params.data.formattedDate || 'Unknown'
         },
         {
             field: "amountPaid",
             headerName: "Amount",
             width: 120,
-            valueFormatter: params => formatCurrency(params.value || 0),
             cellClass: 'text-right',
-            cellStyle: { 
-                color: '#dc2626', 
+            cellStyle: {
+                color: '#dc2626',
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-end'
-            }
+            },
+            // ✅ USE: Pre-formatted currency to avoid calculation during rendering
+            valueGetter: params => params.data.formattedAmount || '₹0.00'
         },
-        { 
-            field: "paymentMode", 
-            headerName: "Mode", 
-            width: 100,
-            cellStyle: { 
+        {
+            field: "paymentMode",
+            headerName: "Payment Mode",
+            width: 120,
+            cellStyle: {
                 fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center'
@@ -170,72 +177,74 @@ const pmtMgmtSupplierGridOptions = {
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 120,
+            width: 130,
             cellStyle: {
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0'
+                padding: '4px'
             },
             cellRenderer: params => {
                 const status = params.value || 'Verified';
-                
-                if (status === 'Verified') {
-                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #bbf7d0; color: #166534;">✓ VERIFIED</span>`;
-                } else if (status === 'Pending Verification') {
-                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #fef08a; color: #854d0e;">⏳ PENDING</span>`;
-                } else if (status === 'Voided') {
-                    return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 9999px; background-color: #e5e7eb; color: #1f2937;">❌ VOIDED</span>`;
-                }
-                
-                return `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 9999px; background-color: #bfdbfe; color: #1e40af;">${status}</span>`;
+
+                // ✅ INLINE STYLES: Prevent CSS conflicts
+                const statusStyles = {
+                    'Verified': 'background-color: #bbf7d0; color: #166534;',
+                    'Pending Verification': 'background-color: #fef08a; color: #854d0e;',
+                    'Voided': 'background-color: #e5e7eb; color: #1f2937;'
+                };
+
+                const style = statusStyles[status] || 'background-color: #bfdbfe; color: #1e40af;';
+
+                return `<span style="display: inline-block; padding: 4px 8px; font-size: 10px; font-weight: bold; border-radius: 12px; ${style}">
+                            ${status.toUpperCase()}
+                        </span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 120,
+            width: 140,
             suppressSizeToFit: true,
-            suppressAutoSize: true,
-            cellStyle: { 
-                display: 'flex', 
-                alignItems: 'center', 
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
-                padding: '0'
+                gap: '4px'
             },
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Verified';
                 const currentUser = appState.currentUser;
-                
+
                 const hasPermissions = currentUser && (currentUser.role === 'admin' || currentUser.role === 'finance');
-                
+
                 if (paymentStatus === 'Pending Verification' && hasPermissions) {
                     return `<button class="pmt-mgmt-verify-supplier-payment" 
-                                  style="background-color: #22c55e; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer;"
+                                  style="background: #10b981; color: white; padding: 6px 10px; font-size: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
                                   data-id="${params.data.id}" 
-                                  title="Verify"
-                                  onmouseover="this.style.backgroundColor='#16a34a'"
-                                  onmouseout="this.style.backgroundColor='#22c55e'">
-                                ✓ Verify
+                                  title="Verify Payment to ${params.data.supplierName}"
+                                  onmouseover="this.style.background='#059669'"
+                                  onmouseout="this.style.background='#10b981'">
+                                ✅ VERIFY
                             </button>`;
                 } else if (paymentStatus === 'Verified' && hasPermissions) {
                     return `<button class="pmt-mgmt-void-supplier-payment" 
-                                  style="background-color: #ef4444; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer;"
+                                  style="background: #ef4444; color: white; padding: 6px 10px; font-size: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
                                   data-id="${params.data.id}" 
-                                  title="Void"
-                                  onmouseover="this.style.backgroundColor='#dc2626'"
-                                  onmouseout="this.style.backgroundColor='#ef4444'">
-                                ❌ Void
+                                  title="Void Payment to ${params.data.supplierName}"
+                                  onmouseover="this.style.background='#dc2626'"
+                                  onmouseout="this.style.background='#ef4444'">
+                                ❌ VOID
                             </button>`;
                 }
-                
-                return `<span style="font-size: 11px; color: #6b7280;">No actions</span>`;
+
+                return `<span style="font-size: 10px; color: #9ca3af; font-style: italic;">Complete</span>`;
             }
         }
     ],
-    
+
     // ✅ STABLE: Consistent column defaults with fixed heights
-    defaultColDef: { 
+    defaultColDef: {
         resizable: false,
-        sortable: true, 
+        sortable: true,
         filter: false,
         suppressSizeToFit: true,
         cellStyle: {
@@ -244,15 +253,15 @@ const pmtMgmtSupplierGridOptions = {
             height: '100%'
         }
     },
-    
+
     // ✅ PERFORMANCE: Keep virtualization enabled
     suppressColumnVirtualisation: false,
     suppressRowVirtualisation: false,
-    
+
     onGridReady: (params) => {
         pmtMgmtSupplierGridApi = params.api;
         console.log("[DEBUG] ✅ Stable Supplier Payments Grid ready");
-        
+
         // ✅ STABILITY: Set fixed size and load data
         setTimeout(() => {
             params.api.sizeColumnsToFit();
@@ -267,7 +276,7 @@ const pmtMgmtTeamGridOptions = {
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 50,
-    
+
     columnDefs: [
         {
             headerName: "Team",
@@ -284,9 +293,9 @@ const pmtMgmtTeamGridOptions = {
                 return orderId ? `Order: ${orderId.substring(0, 12)}...` : 'Unknown';
             }
         },
-        { 
-            field: "paymentDate", 
-            headerName: "Payment Date", 
+        {
+            field: "paymentDate",
+            headerName: "Payment Date",
             width: 130,
             valueFormatter: params => {
                 try {
@@ -315,14 +324,14 @@ const pmtMgmtTeamGridOptions = {
             width: 140,
             cellRenderer: params => {
                 const status = params.value || 'Pending Verification';
-                
+
                 const statusConfig = {
                     'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
                     'Pending Verification': { class: 'text-yellow-700 bg-yellow-100', icon: '⏳' }
                 };
-                
+
                 const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '📋' };
-                
+
                 return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
                             ${config.icon} ${status}
                         </span>`;
@@ -335,13 +344,13 @@ const pmtMgmtTeamGridOptions = {
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Pending Verification';
                 const currentUser = appState.currentUser;
-                
+
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
-                
+
                 let buttons = '';
-                
+
                 // Verify button
                 if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
                     buttons += `<button class="pmt-mgmt-verify-team-payment bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded" 
@@ -352,7 +361,7 @@ const pmtMgmtTeamGridOptions = {
                                   </svg>
                               </button>`;
                 }
-                
+
                 // View button
                 buttons += `<button class="pmt-mgmt-view-team-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
                                   data-id="${params.data.id}" 
@@ -362,22 +371,22 @@ const pmtMgmtTeamGridOptions = {
                                 <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
                               </svg>
                           </button>`;
-                
+
                 return buttons;
             }
         }
     ],
-    
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
+
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
         filter: true
     },
-    
+
     onGridReady: (params) => {
         pmtMgmtTeamGridApi = params.api;
         console.log("[PmtMgmt] ✅ Dedicated Team Payments Grid ready");
-        
+
         setTimeout(() => {
             loadTeamPaymentsForMgmtTab();
         }, 100);
@@ -390,7 +399,7 @@ const pmtMgmtSalesGridOptions = {
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 50,
-    
+
     columnDefs: [
         {
             headerName: "Customer",
@@ -407,9 +416,9 @@ const pmtMgmtSalesGridOptions = {
                 return invoiceId ? `Invoice: ${invoiceId}` : 'Unknown';
             }
         },
-        { 
-            field: "paymentDate", 
-            headerName: "Payment Date", 
+        {
+            field: "paymentDate",
+            headerName: "Payment Date",
             width: 130,
             valueFormatter: params => {
                 try {
@@ -434,18 +443,18 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             field: "status",
-            headerName: "Status", 
+            headerName: "Status",
             width: 120,
             cellRenderer: params => {
                 const status = params.value || 'Verified';
-                
+
                 const statusConfig = {
                     'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
                     'Voided': { class: 'text-gray-700 bg-gray-100', icon: '❌' }
                 };
-                
+
                 const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '💳' };
-                
+
                 return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
                             ${config.icon} ${status}
                         </span>`;
@@ -458,13 +467,13 @@ const pmtMgmtSalesGridOptions = {
             cellRenderer: params => {
                 const status = params.data.status || 'Verified';
                 const currentUser = appState.currentUser;
-                
+
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
-                
+
                 let buttons = '';
-                
+
                 // Void button for verified payments
                 if (status === 'Verified' && hasFinancialPermissions) {
                     buttons += `<button class="pmt-mgmt-void-sales-payment bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded" 
@@ -475,7 +484,7 @@ const pmtMgmtSalesGridOptions = {
                                   </svg>
                               </button>`;
                 }
-                
+
                 // View button for all payments
                 buttons += `<button class="pmt-mgmt-view-sales-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
                                   data-id="${params.data.id}" 
@@ -485,22 +494,22 @@ const pmtMgmtSalesGridOptions = {
                                 <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
                               </svg>
                           </button>`;
-                
+
                 return buttons;
             }
         }
     ],
-    
-    defaultColDef: { 
-        resizable: true, 
-        sortable: true, 
+
+    defaultColDef: {
+        resizable: true,
+        sortable: true,
         filter: true
     },
-    
+
     onGridReady: (params) => {
         pmtMgmtSalesGridApi = params.api;
         console.log("[PmtMgmt] ✅ Dedicated Sales Payments Grid ready");
-        
+
         setTimeout(() => {
             loadSalesPaymentsForMgmtTab();
         }, 100);
@@ -513,18 +522,18 @@ const pmtMgmtSalesGridOptions = {
  */
 function getInvoiceNumberForPayment(invoiceId) {
     if (!invoiceId) return 'Unknown';
-    
+
     try {
         // ✅ OPTIMIZATION: Use cached invoice data if available from dashboard load
         const cachedInvoice = pmtMgmtState.invoiceCache?.get(invoiceId);
         if (cachedInvoice) {
             return cachedInvoice.supplierInvoiceNo || invoiceId;
         }
-        
+
         // ✅ FALLBACK: Return invoice ID if we can't look up the supplier invoice number
         // This prevents empty cells while avoiding additional Firestore queries
         return invoiceId.substring(0, 20) + '...'; // Truncate long IDs
-        
+
     } catch (error) {
         console.warn(`[PmtMgmt] Could not get invoice number for ${invoiceId}:`, error);
         return 'Unknown';
@@ -575,21 +584,21 @@ const PMT_MGMT_CONFIG = {
  */
 export function showPaymentManagementView() {
     console.log('[DEBUG] 🚀 showPaymentManagementView called');
-    
+
     try {
         // Check if view exists
         const viewElement = document.getElementById('pmt-mgmt-view');
         console.log('[DEBUG] Payment management view element:', !!viewElement);
-        
+
         if (!viewElement) {
             console.error('[DEBUG] ❌ pmt-mgmt-view element not found in DOM');
             showModal('error', 'View Not Found', 'Payment Management view was not found. Please check if the HTML was added correctly.');
             return;
         }
-        
+
         console.log('[DEBUG] ✅ Showing payment management view...');
         showView('pmt-mgmt-view');
-        
+
         // Initialize dashboard  
         if (!pmtMgmtDashboardInitialized) {
             console.log('[DEBUG] 🎯 Initializing dashboard for first time...');
@@ -599,7 +608,7 @@ export function showPaymentManagementView() {
             console.log('[DEBUG] Dashboard already initialized, refreshing...');
             refreshPaymentManagementDashboard();
         }
-        
+
     } catch (error) {
         console.error('[DEBUG] ❌ Error in showPaymentManagementView:', error);
     }
@@ -614,22 +623,22 @@ export function showPaymentManagementView() {
  */
 function initializePaymentManagementDashboard() {
     console.log('[DEBUG] 🎛️ initializePaymentManagementDashboard called');
-    
+
     try {
         // Setup tab navigation
         console.log('[DEBUG] Setting up tab navigation...');
         setupPaymentMgmtTabNavigation();
-        
+
         // Setup event listeners
         console.log('[DEBUG] Setting up event listeners...');
         setupPaymentMgmtEventListeners();
-        
+
         // Initialize default tab (dashboard)
         console.log('[DEBUG] Switching to default dashboard tab...');
         switchPaymentMgmtTab('pmt-mgmt-tab-dashboard', 'pmt-mgmt-dashboard-content');
-        
+
         console.log('[DEBUG] ✅ Dashboard initialization completed');
-        
+
     } catch (error) {
         console.error('[DEBUG] ❌ Dashboard initialization failed:', error);
     }
@@ -640,31 +649,31 @@ function initializePaymentManagementDashboard() {
  */
 function setupPaymentMgmtTabNavigation() {
     console.log('[DEBUG] 🎯 Setting up payment management tab navigation...');
-    
+
     const tabs = [
         { tabId: 'pmt-mgmt-tab-dashboard', contentId: 'pmt-mgmt-dashboard-content' },
         { tabId: 'pmt-mgmt-tab-suppliers', contentId: 'pmt-mgmt-suppliers-content' },
         { tabId: 'pmt-mgmt-tab-teams', contentId: 'pmt-mgmt-teams-content' },
         { tabId: 'pmt-mgmt-tab-sales', contentId: 'pmt-mgmt-sales-content' }
     ];
-    
+
     tabs.forEach((tab, index) => {
         const tabElement = document.getElementById(tab.tabId);
         console.log(`[DEBUG] Tab ${index + 1} (${tab.tabId}):`, !!tabElement);
-        
+
         if (tabElement) {
             tabElement.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log(`[DEBUG] 🖱️ Tab clicked: ${tab.tabId} → ${tab.contentId}`);
                 switchPaymentMgmtTab(tab.tabId, tab.contentId);
             });
-            
+
             console.log(`[DEBUG] ✅ Event listener added to: ${tab.tabId}`);
         } else {
             console.error(`[DEBUG] ❌ Tab element not found: ${tab.tabId}`);
         }
     });
-    
+
     console.log('[DEBUG] ✅ Tab navigation setup completed');
 }
 
@@ -680,7 +689,7 @@ function setupPaymentMgmtEventListeners() {
             refreshPaymentManagementDashboard();
         });
     }
-    
+
     // Quick action buttons (will be implemented in next steps)
     console.log('[PmtMgmt] ✅ Event listeners setup completed');
 }
@@ -697,7 +706,7 @@ export function switchPaymentMgmtTab(activeTabId, activeContentId) {
         activeTabId: activeTabId,
         activeContentId: activeContentId
     });
-    
+
     try {
         // Update tab active states
         console.log('[DEBUG] Updating tab active states...');
@@ -705,35 +714,35 @@ export function switchPaymentMgmtTab(activeTabId, activeContentId) {
             tab.classList.remove('active');
             console.log(`[DEBUG] Removed active from tab: ${tab.id}`);
         });
-        
+
         const activeTab = document.getElementById(activeTabId);
         console.log('[DEBUG] Active tab element found:', !!activeTab);
         if (activeTab) {
             activeTab.classList.add('active');
             console.log(`[DEBUG] ✅ Added active to tab: ${activeTabId}`);
         }
-        
+
         // Update content visibility
         console.log('[DEBUG] Updating content visibility...');
         document.querySelectorAll('.pmt-mgmt-tab-content').forEach(content => {
             content.classList.remove('active');
             console.log(`[DEBUG] Removed active from content: ${content.id}`);
         });
-        
+
         const activeContent = document.getElementById(activeContentId);
         console.log('[DEBUG] Active content element found:', !!activeContent);
         if (activeContent) {
             activeContent.classList.add('active');
             console.log(`[DEBUG] ✅ Added active to content: ${activeContentId}`);
         }
-        
+
         // ✅ CRITICAL: Initialize tab-specific content
         console.log(`[DEBUG] Calling initializePaymentMgmtTabContent for: ${activeContentId}`);
         initializePaymentMgmtTabContent(activeContentId);
-        
+
         pmtMgmtCurrentTab = activeContentId;
         console.log(`[DEBUG] ✅ Tab switch completed: ${activeTabId}`);
-        
+
     } catch (error) {
         console.error('[DEBUG] ❌ Error in switchPaymentMgmtTab:', error);
     }
@@ -745,28 +754,28 @@ export function switchPaymentMgmtTab(activeTabId, activeContentId) {
  */
 function initializePaymentMgmtTabContent(contentId) {
     console.log(`[DEBUG] 🚀 initializePaymentMgmtTabContent called for: ${contentId}`);
-    
+
     switch (contentId) {
         case 'pmt-mgmt-dashboard-content':
             console.log('[DEBUG] Initializing dashboard content...');
             refreshPaymentManagementDashboard();
             break;
-            
+
         case 'pmt-mgmt-suppliers-content':
             console.log('[DEBUG] 📤 Calling initializeSupplierPaymentsTab()');
             initializeSupplierPaymentsTab();
             break;
-            
+
         case 'pmt-mgmt-teams-content':
             console.log('[DEBUG] 👥 Calling initializeTeamPaymentsTab()');
             initializeTeamPaymentsTab();
             break;
-            
+
         case 'pmt-mgmt-sales-content':
             console.log('[DEBUG] 💳 Calling initializeSalesPaymentsTab()');
             initializeSalesPaymentsTab();
             break;
-            
+
         default:
             console.warn(`[DEBUG] ❌ Unknown tab content: ${contentId}`);
     }
@@ -779,11 +788,11 @@ function initializePaymentMgmtTabContent(contentId) {
 function updatePaymentMgmtActionItems(metrics) {
     const actionItemsContainer = document.getElementById('pmt-mgmt-action-items');
     if (!actionItemsContainer) return;
-    
+
     console.log('[PmtMgmt] Updating action items section...');
-    
+
     const actionItems = [];
-    
+
     // Generate action items based on metrics
     if (metrics.pendingCount > 0) {
         actionItems.push({
@@ -795,7 +804,7 @@ function updatePaymentMgmtActionItems(metrics) {
             color: 'yellow'
         });
     }
-    
+
     if (metrics.supplierMetrics.pending > 0) {
         actionItems.push({
             priority: 'high',
@@ -806,7 +815,7 @@ function updatePaymentMgmtActionItems(metrics) {
             color: 'red'
         });
     }
-    
+
     if (metrics.teamMetrics.pending > 0) {
         actionItems.push({
             priority: 'medium',
@@ -817,7 +826,7 @@ function updatePaymentMgmtActionItems(metrics) {
             color: 'green'
         });
     }
-    
+
     if (actionItems.length === 0) {
         // No urgent actions
         actionItemsContainer.innerHTML = `
@@ -849,9 +858,9 @@ function updatePaymentMgmtActionItems(metrics) {
                 </button>
             </div>
         `).join('');
-        
+
         actionItemsContainer.innerHTML = actionItemsHtml;
-        
+
         // Add click listeners to action buttons
         actionItemsContainer.querySelectorAll('.pmt-mgmt-action-button').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -860,7 +869,7 @@ function updatePaymentMgmtActionItems(metrics) {
             });
         });
     }
-    
+
     console.log(`[PmtMgmt] ✅ Updated action items: ${actionItems.length} actions available`);
 }
 
@@ -874,34 +883,31 @@ function updatePaymentMgmtTabBadges(metrics) {
         team: document.getElementById('pmt-mgmt-team-badge'),
         sales: document.getElementById('pmt-mgmt-sales-badge')
     };
-    
+
     if (badges.supplier) {
         badges.supplier.textContent = metrics.supplierMetrics.pending || 0;
-        badges.supplier.className = `ml-2 text-xs px-2 py-1 rounded-full ${
-            metrics.supplierMetrics.pending > 0 
-                ? 'bg-red-100 text-red-800' 
+        badges.supplier.className = `ml-2 text-xs px-2 py-1 rounded-full ${metrics.supplierMetrics.pending > 0
+                ? 'bg-red-100 text-red-800'
                 : 'bg-gray-100 text-gray-600'
-        }`;
+            }`;
     }
-    
+
     if (badges.team) {
         badges.team.textContent = metrics.teamMetrics.pending || 0;
-        badges.team.className = `ml-2 text-xs px-2 py-1 rounded-full ${
-            metrics.teamMetrics.pending > 0 
-                ? 'bg-green-100 text-green-800' 
+        badges.team.className = `ml-2 text-xs px-2 py-1 rounded-full ${metrics.teamMetrics.pending > 0
+                ? 'bg-green-100 text-green-800'
                 : 'bg-gray-100 text-gray-600'
-        }`;
+            }`;
     }
-    
+
     if (badges.sales) {
         badges.sales.textContent = metrics.salesMetrics.pending || 0;
-        badges.sales.className = `ml-2 text-xs px-2 py-1 rounded-full ${
-            metrics.salesMetrics.pending > 0 
-                ? 'bg-blue-100 text-blue-800' 
+        badges.sales.className = `ml-2 text-xs px-2 py-1 rounded-full ${metrics.salesMetrics.pending > 0
+                ? 'bg-blue-100 text-blue-800'
                 : 'bg-gray-100 text-gray-600'
-        }`;
+            }`;
     }
-    
+
     console.log('[PmtMgmt] ✅ Tab badges updated with pending counts');
 }
 
@@ -911,25 +917,25 @@ function updatePaymentMgmtTabBadges(metrics) {
  */
 function handlePaymentMgmtQuickAction(action) {
     console.log(`[PmtMgmt] Quick action triggered: ${action}`);
-    
+
     switch (action) {
         case 'verify-pending':
             // Switch to appropriate tab with pending filter
             switchPaymentMgmtTab('pmt-mgmt-tab-suppliers', 'pmt-mgmt-suppliers-content');
             break;
-            
+
         case 'goto-suppliers':
             switchPaymentMgmtTab('pmt-mgmt-tab-suppliers', 'pmt-mgmt-suppliers-content');
             break;
-            
+
         case 'goto-teams':
             switchPaymentMgmtTab('pmt-mgmt-tab-teams', 'pmt-mgmt-teams-content');
             break;
-            
+
         case 'goto-sales':
             switchPaymentMgmtTab('pmt-mgmt-tab-sales', 'pmt-mgmt-sales-content');
             break;
-            
+
         default:
             console.warn('[PmtMgmt] Unknown quick action:', action);
     }
@@ -946,39 +952,39 @@ function handlePaymentMgmtQuickAction(action) {
  */
 async function refreshPaymentManagementDashboard() {
     console.log('[PmtMgmt] 🔄 Refreshing dashboard with Firestore optimization...');
-    
+
     try {
         ProgressToast.show('Loading Payment Dashboard', 'info');
         ProgressToast.updateProgress('Optimizing data queries for free tier...', 25);
-        
+
         // ✅ OPTIMIZED: Load metrics with caching and limits
         const startTime = Date.now();
         const metrics = await loadPaymentMgmtMetrics();
         const loadTime = Date.now() - startTime;
-        
+
         ProgressToast.updateProgress('Processing payment data...', 60);
-        
+
         // Update dashboard cards
         updatePaymentMgmtDashboardCards(metrics);
-        
+
         // Update action items (high-priority payments)
         updatePaymentMgmtActionItems(metrics);
-        
+
         // Update tab badges with counts
         updatePaymentMgmtTabBadges(metrics);
-        
+
         // Update last refresh time with performance info
         pmtMgmtState.lastRefreshTime = new Date();
         const refreshElement = document.getElementById('pmt-mgmt-last-refresh');
         if (refreshElement) {
             refreshElement.textContent = `${pmtMgmtState.lastRefreshTime.toLocaleTimeString()} (${metrics.totalFirestoreReads} reads)`;
         }
-        
+
         ProgressToast.updateProgress('Dashboard updated successfully!', 100);
-        
+
         setTimeout(() => {
             ProgressToast.hide(300);
-            
+
             // Show performance info for free tier awareness
             if (metrics.totalFirestoreReads > 0) {
                 console.log(`[PmtMgmt] 📊 PERFORMANCE SUMMARY:`);
@@ -988,15 +994,15 @@ async function refreshPaymentManagementDashboard() {
                 console.log(`  ⏰ Next Cache Expiry: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
             }
         }, 800);
-        
+
         console.log('[PmtMgmt] ✅ Dashboard refresh completed');
-        
+
     } catch (error) {
         console.error('[PmtMgmt] Dashboard refresh failed:', error);
         ProgressToast.showError('Failed to refresh dashboard data');
-        
+
         setTimeout(() => {
-            showModal('error', 'Dashboard Refresh Failed', 
+            showModal('error', 'Dashboard Refresh Failed',
                 `Could not refresh payment management data.\n\n` +
                 `Error: ${error.message}\n\n` +
                 `This might be due to:\n` +
@@ -1020,10 +1026,10 @@ function getCachedPaymentMetrics(cacheKey, maxAgeMinutes = 3) {
     try {
         const cached = localStorage.getItem(`pmt_mgmt_${cacheKey}`);
         if (!cached) return null;
-        
+
         const { data, timestamp } = JSON.parse(cached);
         const ageMinutes = (Date.now() - timestamp) / (1000 * 60);
-        
+
         if (ageMinutes < maxAgeMinutes) {
             console.log(`[PmtMgmt] Cache hit: ${cacheKey} (${ageMinutes.toFixed(1)}min old)`);
             return data;
@@ -1032,7 +1038,7 @@ function getCachedPaymentMetrics(cacheKey, maxAgeMinutes = 3) {
             localStorage.removeItem(`pmt_mgmt_${cacheKey}`);
             return null;
         }
-        
+
     } catch (error) {
         console.warn(`[PmtMgmt] Cache read error for ${cacheKey}:`, error);
         return null;
@@ -1050,10 +1056,10 @@ function cachePaymentMetrics(cacheKey, data) {
             version: '1.0.0',
             module: 'PaymentManagement'
         };
-        
+
         localStorage.setItem(`pmt_mgmt_${cacheKey}`, JSON.stringify(cacheData));
         console.log(`[PmtMgmt] ✅ Cached: ${cacheKey}`);
-        
+
     } catch (error) {
         console.warn(`[PmtMgmt] Cache write error for ${cacheKey}:`, error);
     }
@@ -1065,7 +1071,7 @@ function cachePaymentMetrics(cacheKey, data) {
 export function clearPaymentMgmtCache() {
     const keys = Object.keys(localStorage);
     const pmtMgmtKeys = keys.filter(key => key.startsWith('pmt_mgmt_'));
-    
+
     pmtMgmtKeys.forEach(key => localStorage.removeItem(key));
     console.log(`[PmtMgmt] ✅ Cleared ${pmtMgmtKeys.length} cached items`);
 }
@@ -1080,11 +1086,11 @@ export function clearPaymentMgmtCache() {
  */
 function calculateDaysOverdue(dueDate, currentDate = new Date()) {
     if (!dueDate) return 0;
-    
+
     const due = dueDate.toDate ? dueDate.toDate() : new Date(dueDate);
     const diffTime = currentDate - due;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return Math.max(0, diffDays);
 }
 
@@ -1097,10 +1103,10 @@ function calculatePaymentPriority(payment) {
     const amount = payment.amountPaid || 0;
     const status = (payment.paymentStatus || payment.status || '').toLowerCase();
     const daysOverdue = calculateDaysOverdue(payment.dueDate);
-    
+
     // Priority scoring
     let priority = 'normal';
-    
+
     if (status === 'pending verification' && daysOverdue > 5) {
         priority = 'urgent';
     } else if (amount > 10000 && status === 'pending verification') {
@@ -1108,7 +1114,7 @@ function calculatePaymentPriority(payment) {
     } else if (daysOverdue > 2) {
         priority = 'high';
     }
-    
+
     return {
         level: priority,
         score: daysOverdue + (amount > 5000 ? 2 : 0),
@@ -1135,112 +1141,112 @@ function calculatePaymentPriority(payment) {
  */
 async function loadPaymentMgmtMetrics() {
     console.log('[PmtMgmt] 📊 Loading dashboard metrics with Firestore optimization...');
-    
+
     // ✅ CACHE CHECK: 5-minute cache for dashboard metrics
     const cacheKey = 'pmt_mgmt_dashboard_metrics';
     const cachedMetrics = getCachedPaymentMetrics(cacheKey);
-    
+
     if (cachedMetrics) {
         console.log('[PmtMgmt] ✅ Using cached dashboard metrics - 0 Firestore reads');
         return cachedMetrics;
     }
-    
+
     const db = firebase.firestore();
     let totalFirestoreReads = 0;
     const startTime = Date.now();
-    
+
     try {
         // ===================================================================
         // PHASE 1: OPTIMIZED SUPPLIER PAYMENTS (Limited Query)
         // ===================================================================
         console.log('[PmtMgmt] 📤 Phase 1: Loading supplier payment metrics...');
-        
+
         const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
             .limit(50); // ✅ LIMIT: Prevent excessive reads
-        
+
         const supplierSnapshot = await supplierPaymentsQuery.get();
         totalFirestoreReads += supplierSnapshot.size;
-        
+
         const supplierPayments = supplierSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             paymentType: 'supplier'
         }));
-        
+
         console.log(`[PmtMgmt] Retrieved ${supplierPayments.length} supplier payments`);
 
         // ===================================================================
         // PHASE 2: OPTIMIZED CONSIGNMENT PAYMENTS (Limited Query) 
         // ===================================================================
         console.log('[PmtMgmt] 👥 Phase 2: Loading team payment metrics...');
-        
+
         const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
             .limit(50); // ✅ LIMIT: Prevent excessive reads
-        
+
         const teamSnapshot = await teamPaymentsQuery.get();
         totalFirestoreReads += teamSnapshot.size;
-        
+
         const teamPayments = teamSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             paymentType: 'consignment'
         }));
-        
+
         console.log(`[PmtMgmt] Retrieved ${teamPayments.length} team payments`);
 
         // ===================================================================
         // PHASE 3: OPTIMIZED SALES PAYMENTS (Limited Query)
         // ===================================================================
         console.log('[PmtMgmt] 💳 Phase 3: Loading sales payment metrics...');
-        
+
         const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
             .limit(50); // ✅ LIMIT: Prevent excessive reads
-        
+
         const salesSnapshot = await salesPaymentsQuery.get();
         totalFirestoreReads += salesSnapshot.size;
-        
+
         const salesPayments = salesSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             paymentType: 'customer'
         }));
-        
+
         console.log(`[PmtMgmt] Retrieved ${salesPayments.length} sales payments`);
 
         // ===================================================================
         // PHASE 4: CLIENT-SIDE AGGREGATION (No Additional Reads)
         // ===================================================================
         console.log('[PmtMgmt] 🧮 Phase 4: Calculating metrics client-side...');
-        
+
         const allPayments = [...supplierPayments, ...teamPayments, ...salesPayments];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         // ✅ CLIENT-SIDE: Calculate all metrics without additional queries
         const metrics = {
             // Urgent actions (overdue + pending)
             urgentCount: 0,
             urgentDetails: '',
-            
+
             // Pending verification
             pendingCount: 0,
             pendingAmount: 0,
-            
+
             // Outstanding receivables (money owed to us)
             receivablesAmount: 0,
             receivablesCount: 0,
-            
+
             // Outstanding payables (money we owe)
             payablesAmount: 0,
             payablesCount: 0,
-            
+
             // Today's activity
             todayCount: 0,
             todayAmount: 0,
-            
+
             // Breakdown by type
             supplierMetrics: {
                 total: supplierPayments.length,
@@ -1260,47 +1266,47 @@ async function loadPaymentMgmtMetrics() {
                 verified: 0,
                 amount: 0
             },
-            
+
             // Metadata
             totalFirestoreReads: totalFirestoreReads,
             calculationTime: 0,
             cacheKey: cacheKey
         };
-        
+
         // EFFICIENT SINGLE-PASS PROCESSING
         allPayments.forEach(payment => {
             const amount = payment.amountPaid || 0;
             const status = (payment.paymentStatus || payment.status || '').toLowerCase();
             const paymentDate = payment.paymentDate?.toDate ? payment.paymentDate.toDate() : new Date(payment.paymentDate);
             const isToday = paymentDate >= today;
-            
+
             // Count pending verifications
             if (status === 'pending verification' || status === 'pending') {
                 metrics.pendingCount++;
                 metrics.pendingAmount += amount;
                 metrics.urgentCount++; // Pending payments are urgent
             }
-            
+
             // Count today's activity
             if (isToday && (status === 'verified' || status === 'completed')) {
                 metrics.todayCount++;
                 metrics.todayAmount += amount;
             }
-            
+
             // Calculate by payment type
             switch (payment.paymentType) {
                 case 'supplier':
                     metrics.supplierMetrics.amount += amount;
                     if (status === 'pending verification') metrics.supplierMetrics.pending++;
                     if (status === 'verified') metrics.supplierMetrics.verified++;
-                    
+
                     // Supplier payments are payables (money we owe)
                     if (status === 'pending verification') {
                         metrics.payablesAmount += amount;
                         metrics.payablesCount++;
                     }
                     break;
-                    
+
                 case 'consignment':
                 case 'customer':
                     if (payment.paymentType === 'consignment') {
@@ -1312,20 +1318,20 @@ async function loadPaymentMgmtMetrics() {
                         if (status === 'pending verification') metrics.salesMetrics.pending++;
                         if (status === 'verified') metrics.salesMetrics.verified++;
                     }
-                    
+
                     // Team/customer payments are receivables (money owed to us)
                     // Note: This logic might need refinement based on your business model
                     break;
             }
         });
-        
+
         // Calculate urgent details
         const pendingText = metrics.pendingCount > 0 ? `${metrics.pendingCount} pending` : '';
         metrics.urgentDetails = pendingText;
-        
+
         const executionTime = Date.now() - startTime;
         metrics.calculationTime = executionTime;
-        
+
         console.log('[PmtMgmt] 🎯 METRICS CALCULATION SUMMARY:');
         console.log(`  💰 Total Payments Analyzed: ${allPayments.length}`);
         console.log(`  ⚠️  Urgent Actions: ${metrics.urgentCount}`);
@@ -1333,12 +1339,12 @@ async function loadPaymentMgmtMetrics() {
         console.log(`  📊 Today's Activity: ${metrics.todayCount} payments (${formatCurrency(metrics.todayAmount)})`);
         console.log(`  🔥 Firestore Reads Used: ${totalFirestoreReads}`);
         console.log(`  ⚡ Calculation Time: ${executionTime}ms`);
-        
+
         // ✅ CACHE: Store results for 5 minutes
         cachePaymentMetrics(cacheKey, metrics);
-        
+
         return metrics;
-        
+
     } catch (error) {
         console.error('[PmtMgmt] ❌ Error loading payment metrics:', error);
         throw new Error(`Payment metrics loading failed: ${error.message}`);
@@ -1361,7 +1367,7 @@ function updatePaymentMgmtDashboardCards(metrics) {
         today: document.getElementById('pmt-mgmt-today-count'),
         todayAmount: document.getElementById('pmt-mgmt-today-amount')
     };
-    
+
     // Update card values safely
     if (elements.urgent) elements.urgent.textContent = metrics.urgentCount || 0;
     if (elements.pending) elements.pending.textContent = metrics.pendingCount || 0;
@@ -1372,7 +1378,7 @@ function updatePaymentMgmtDashboardCards(metrics) {
     if (elements.payablesCount) elements.payablesCount.textContent = `${metrics.payablesCount || 0} invoices`;
     if (elements.today) elements.today.textContent = metrics.todayCount || 0;
     if (elements.todayAmount) elements.todayAmount.textContent = formatCurrency(metrics.todayAmount || 0);
-    
+
     console.log('[PmtMgmt] ✅ Dashboard cards updated with latest metrics');
 }
 
@@ -1391,21 +1397,21 @@ function updatePaymentMgmtDashboardCards(metrics) {
  */
 function initializeSupplierPaymentsTab() {
     console.log('[DEBUG] Initializing Supplier Payments tab...');
-    
+
     const gridContainer = document.getElementById('pmt-mgmt-supplier-grid');
     console.log('[DEBUG] Supplier grid container:', gridContainer);
-    
+
     if (!gridContainer) {
         console.error('[DEBUG] ❌ Supplier payments grid container not found');
-        console.log('[DEBUG] Available elements with pmt-mgmt:', 
+        console.log('[DEBUG] Available elements with pmt-mgmt:',
             Array.from(document.querySelectorAll('[id*="pmt-mgmt"]')).map(el => el.id)
         );
         return;
     }
-    
+
     console.log('[DEBUG] Grid container found, creating grid...');
     console.log('[DEBUG] Container dimensions:', gridContainer.getBoundingClientRect());
-    
+
     if (!pmtMgmtSupplierGridApi) {
         try {
             pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions);
@@ -1419,60 +1425,240 @@ function initializeSupplierPaymentsTab() {
             loadSupplierPaymentsForMgmtTab();
         }, 100);
     }
-    
+
     setupSupplierPaymentFilters();
 }
 
+/**
+ * FREE TIER OPTIMIZED: Load supplier payments with complete invoice and supplier context
+ * 
+ * Fetches supplier payments and enriches them with related invoice details (invoiceId, 
+ * supplierInvoiceNo) and supplier names using efficient batch queries and intelligent 
+ * caching to minimize Firestore reads while providing complete business context.
+ */
 async function loadSupplierPaymentsForMgmtTab() {
-    console.log('[DEBUG] Loading supplier payments with stability fixes...');
-    
+    console.log('[PmtMgmt] 📤 Loading supplier payments with complete context...');
+
     if (!pmtMgmtSupplierGridApi) {
-        console.error('[DEBUG] Grid API not ready');
+        console.error('[PmtMgmt] Supplier grid API not ready');
         return;
     }
-    
+
     try {
         pmtMgmtSupplierGridApi.setGridOption('loading', true);
-        
+
+        // ✅ CACHE CHECK: 3-minute cache for enriched data
+        const cacheKey = 'pmt_mgmt_supplier_payments_enriched';
+        const cached = getCachedPaymentMetrics(cacheKey, 3);
+
+        if (cached && cached.enrichedSupplierPayments) {
+            console.log('[PmtMgmt] ✅ Using cached enriched supplier payments - 0 Firestore reads');
+            pmtMgmtSupplierGridApi.setGridOption('rowData', cached.enrichedSupplierPayments);
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            return;
+        }
+
         const db = firebase.firestore();
+        let totalReads = 0;
+
+        // ===================================================================
+        // PHASE 1: GET SUPPLIER PAYMENTS
+        // ===================================================================
+        console.log('[PmtMgmt] Phase 1: Fetching supplier payments...');
+
         const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(25); // ✅ SMALLER LIMIT: Reduces rendering load
-        
-        const snapshot = await supplierPaymentsQuery.get();
-        console.log(`[DEBUG] Retrieved ${snapshot.size} supplier payments`);
-        
-        // ✅ STABLE: Pre-process data to avoid rendering loops
-        const processedPayments = snapshot.docs.map(doc => {
-            const payment = { id: doc.id, ...doc.data() };
-            
-            // Pre-calculate supplier name to avoid lookup during rendering
+            .limit(30);
+
+        const paymentsSnapshot = await supplierPaymentsQuery.get();
+        totalReads += paymentsSnapshot.size;
+
+        const supplierPayments = paymentsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        console.log(`[PmtMgmt] Retrieved ${supplierPayments.length} supplier payments (${paymentsSnapshot.size} reads)`);
+
+        // ===================================================================
+        // PHASE 2: BATCH FETCH RELATED INVOICES
+        // ===================================================================
+        console.log('[PmtMgmt] Phase 2: Batch fetching related invoice details...');
+
+        // Get unique invoice IDs from payments
+        const uniqueInvoiceIds = [...new Set(
+            supplierPayments
+                .map(p => p.relatedInvoiceId)
+                .filter(Boolean)
+        )];
+
+        console.log(`[PmtMgmt] Found ${uniqueInvoiceIds.length} unique invoice IDs to fetch`);
+
+        let invoiceDetails = new Map();
+
+        if (uniqueInvoiceIds.length > 0 && uniqueInvoiceIds.length <= 25) {
+            console.log(`[PmtMgmt] Batch fetching ${uniqueInvoiceIds.length} invoice details...`);
+
+            // ✅ BATCH FETCH: Get all related invoices
+            const invoicePromises = uniqueInvoiceIds.map(invoiceId =>
+                db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(invoiceId).get()
+            );
+
+            const invoiceDocs = await Promise.all(invoicePromises);
+            totalReads += invoiceDocs.length;
+
+            // Build invoice lookup map
+            invoiceDocs.forEach((doc, index) => {
+                if (doc.exists) {
+                    const invoiceData = doc.data();
+                    invoiceDetails.set(uniqueInvoiceIds[index], {
+                        systemInvoiceId: invoiceData.invoiceId,         // Your system invoice ID
+                        supplierInvoiceNo: invoiceData.supplierInvoiceNo, // Supplier's invoice number
+                        supplierName: invoiceData.supplierName,          // Supplier name from invoice
+                        invoiceTotal: invoiceData.invoiceTotal,
+                        supplierId: invoiceData.supplierId,
+                        purchaseDate: invoiceData.purchaseDate
+                    });
+                    
+                    console.log(`[PmtMgmt] Invoice ${index + 1} details:`, {
+                        systemId: invoiceData.invoiceId,
+                        supplierInvoiceNo: invoiceData.supplierInvoiceNo,
+                        supplier: invoiceData.supplierName
+                    });
+                }
+            });
+
+            console.log(`[PmtMgmt] ✅ Batch fetched ${invoiceDetails.size} invoice details (${invoiceDocs.length} reads)`);
+        } else if (uniqueInvoiceIds.length > 25) {
+            console.warn(`[PmtMgmt] Too many invoices to batch fetch (${uniqueInvoiceIds.length}), using fallback lookup`);
+        }
+
+        // ===================================================================
+        // PHASE 3: ENRICH PAYMENT DATA WITH COMPLETE CONTEXT
+        // ===================================================================
+        console.log('[PmtMgmt] Phase 3: Enriching payments with complete business context...');
+
+        const enrichedSupplierPayments = supplierPayments.map((payment, index) => {
+            const invoice = invoiceDetails.get(payment.relatedInvoiceId);
             const supplier = masterData.suppliers.find(s => s.id === payment.supplierId);
-            
-            return {
+
+            // Create enriched payment record with complete context
+            const enrichedPayment = {
                 ...payment,
-                supplierName: supplier ? supplier.supplierName : 'Unknown Supplier',
+
+                // ✅ INVOICE CONTEXT: From purchase invoice lookup
+                systemInvoiceId: invoice?.systemInvoiceId || payment.relatedInvoiceId || 'Unknown',
+                supplierInvoiceNo: invoice?.supplierInvoiceNo || 'Not Available',
+
+                // ✅ SUPPLIER CONTEXT: Prioritize invoice supplier name, fallback to masterData
+                supplierName: invoice?.supplierName || supplier?.supplierName || 'Unknown Supplier',
+
+                // ✅ FINANCIAL CONTEXT: Invoice relationship
+                invoiceTotal: invoice?.invoiceTotal || 0,
+                purchaseDate: invoice?.purchaseDate,
+
+                // ✅ UI OPTIMIZATION: Pre-formatted display values
                 formattedAmount: formatCurrency(payment.amountPaid || 0),
                 formattedDate: payment.paymentDate?.toDate ? 
-                    payment.paymentDate.toDate().toLocaleDateString() : 'Unknown'
+                    payment.paymentDate.toDate().toLocaleDateString() : 'Unknown Date',
+
+                // ✅ BUSINESS INTELLIGENCE: Data quality tracking
+                dataCompleteness: {
+                    hasInvoiceDetails: !!invoice,
+                    hasSupplierDetails: !!supplier,
+                    completenessScore: (!!invoice ? 70 : 0) + (!!supplier ? 30 : 0) // Invoice data more valuable
+                }
             };
+
+            // Debug first few payments
+            if (index < 5) {
+                console.log(`[PmtMgmt] Enriched payment ${index + 1}:`, {
+                    paymentId: payment.paymentId || payment.id,
+                    systemInvoiceId: enrichedPayment.systemInvoiceId,
+                    supplierInvoiceNo: enrichedPayment.supplierInvoiceNo,
+                    supplierName: enrichedPayment.supplierName,
+                    amount: enrichedPayment.formattedAmount,
+                    hasInvoiceData: !!invoice,
+                    hasSupplierData: !!supplier
+                });
+            }
+
+            return enrichedPayment;
         });
-        
-        console.log(`[DEBUG] Processed ${processedPayments.length} payments for stable rendering`);
-        
-        // ✅ SINGLE UPDATE: Load all data at once to prevent multiple re-renders
-        pmtMgmtSupplierGridApi.setGridOption('rowData', processedPayments);
+
+        // ===================================================================
+        // PHASE 4: LOAD ENRICHED DATA AND REPORT RESULTS
+        // ===================================================================
+        console.log('[PmtMgmt] Phase 4: Loading enriched data into grid...');
+
+        pmtMgmtSupplierGridApi.setGridOption('rowData', enrichedSupplierPayments);
         pmtMgmtSupplierGridApi.setGridOption('loading', false);
-        
-        // ✅ VERIFY: Data loaded properly
+
+        // ✅ CACHE: Store enriched data with metadata
+        cachePaymentMetrics(cacheKey, {
+            enrichedSupplierPayments: enrichedSupplierPayments,
+            metadata: {
+                totalReads: totalReads,
+                paymentsLoaded: enrichedSupplierPayments.length,
+                invoicesLookedUp: invoiceDetails.size,
+                uniqueInvoices: uniqueInvoiceIds.length,
+                cacheExpiry: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
+                loadTime: new Date().toISOString()
+            }
+        });
+
+        // ===================================================================
+        // PHASE 5: SUCCESS REPORTING AND ANALYTICS
+        // ===================================================================
+        console.log(`[PmtMgmt] 🎯 SUPPLIER PAYMENTS ENRICHMENT COMPLETED:`);
+        console.log(`  💳 Total Payments: ${enrichedSupplierPayments.length}`);
+        console.log(`  📋 Invoice Lookups: ${invoiceDetails.size}/${uniqueInvoiceIds.length} successful`);
+        console.log(`  👥 Supplier Matches: ${enrichedSupplierPayments.filter(p => p.supplierName !== 'Unknown Supplier').length}`);
+        console.log(`  📊 Invoice Numbers: ${enrichedSupplierPayments.filter(p => p.supplierInvoiceNo !== 'Not Available').length}`);
+        console.log(`  🔥 Firestore Reads Used: ${totalReads}`);
+
+        // Calculate data quality metrics
+        const avgCompleteness = enrichedSupplierPayments.length > 0 ? 
+            enrichedSupplierPayments.reduce((sum, p) => sum + p.dataCompleteness.completenessScore, 0) / enrichedSupplierPayments.length : 0;
+
+        console.log(`  📈 Average Data Completeness: ${avgCompleteness.toFixed(1)}%`);
+
+        // Business intelligence logging
+        const statusBreakdown = {};
+        enrichedSupplierPayments.forEach(payment => {
+            const status = payment.paymentStatus || 'Verified';
+            statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
+        });
+
+        console.log(`  📊 Payment Status Breakdown:`, statusBreakdown);
+
+        // Auto-fit columns for optimal display
         setTimeout(() => {
-            const rowCount = pmtMgmtSupplierGridApi.getDisplayedRowCount();
-            console.log(`[DEBUG] ✅ Stable grid shows ${rowCount} rows`);
-        }, 300);
-        
+            if (pmtMgmtSupplierGridApi) {
+                pmtMgmtSupplierGridApi.sizeColumnsToFit();
+                console.log('[PmtMgmt] ✅ Grid columns auto-fitted');
+            }
+        }, 200);
+
     } catch (error) {
-        console.error('[DEBUG] Error in stable loading:', error);
-        pmtMgmtSupplierGridApi?.setGridOption('loading', false);
+        console.error('[PmtMgmt] ❌ Error in enriched supplier payments loading:', error);
+
+        if (pmtMgmtSupplierGridApi) {
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            pmtMgmtSupplierGridApi.showNoRowsOverlay();
+        }
+
+        // Enhanced error reporting for troubleshooting
+        showModal('error', 'Supplier Payments Loading Failed',
+            `Could not load supplier payment details.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Possible causes:\n` +
+            `• Network connectivity issues\n` +
+            `• Firestore permission restrictions\n` +
+            `• Database query limits reached\n` +
+            `• Invoice or supplier data inconsistencies\n\n` +
+            `Please try refreshing or contact support.`
+        );
     }
 }
 
@@ -1482,26 +1668,26 @@ async function loadSupplierPaymentsForMgmtTab() {
  */
 async function loadTeamPaymentsForMgmtTab() {
     console.log('[DEBUG] Starting loadTeamPaymentsForMgmtTab');
-    
+
     if (!pmtMgmtTeamGridApi) {
         console.error('[DEBUG] ❌ pmtMgmtTeamGridApi not available');
         return;
     }
-    
+
     try {
         console.log('[DEBUG] ✅ Team grid API available, loading data...');
         pmtMgmtTeamGridApi.setGridOption('loading', true);
-        
+
         const db = firebase.firestore();
         console.log('[DEBUG] Collection path:', CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH);
-        
+
         const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
             .limit(10); // Small limit for testing
-        
+
         const snapshot = await teamPaymentsQuery.get();
         console.log(`[DEBUG] Team payments snapshot size: ${snapshot.size}`);
-        
+
         const teamPayments = snapshot.docs.map(doc => {
             const data = { id: doc.id, ...doc.data() };
             console.log('[DEBUG] Team payment:', {
@@ -1512,15 +1698,15 @@ async function loadTeamPaymentsForMgmtTab() {
             });
             return data;
         });
-        
+
         pmtMgmtTeamGridApi.setGridOption('rowData', teamPayments);
         pmtMgmtTeamGridApi.setGridOption('loading', false);
-        
+
         setTimeout(() => {
             const rowCount = pmtMgmtTeamGridApi.getDisplayedRowCount();
             console.log(`[DEBUG] ✅ Team grid shows ${rowCount} rows`);
         }, 200);
-        
+
     } catch (error) {
         console.error('[DEBUG] ❌ Error loading team payments:', error);
         if (pmtMgmtTeamGridApi) {
@@ -1535,18 +1721,18 @@ async function loadTeamPaymentsForMgmtTab() {
  */
 function initializeTeamPaymentsTab() {
     console.log('[PmtMgmt] 👥 Initializing Team Payments tab with dedicated grid...');
-    
+
     const gridContainer = document.getElementById('pmt-mgmt-team-grid');
     if (!gridContainer) {
         console.error('[PmtMgmt] Team payments grid container not found');
         return;
     }
-    
+
     if (!pmtMgmtTeamGridApi) {
         pmtMgmtTeamGridApi = createGrid(gridContainer, pmtMgmtTeamGridOptions); // Local config
         console.log('[PmtMgmt] ✅ Dedicated team payments grid created');
     }
-    
+
     setupTeamPaymentFilters();
 }
 
@@ -1556,18 +1742,18 @@ function initializeTeamPaymentsTab() {
  */
 function initializeSalesPaymentsTab() {
     console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with dedicated grid...');
-    
+
     const gridContainer = document.getElementById('pmt-mgmt-sales-grid');
     if (!gridContainer) {
         console.error('[PmtMgmt] Sales payments grid container not found');
         return;
     }
-    
+
     if (!pmtMgmtSalesGridApi) {
         pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions); // Local config
         console.log('[PmtMgmt] ✅ Dedicated sales payments grid created');
     }
-    
+
     setupSalesPaymentFilters();
 }
 
@@ -1576,26 +1762,26 @@ function initializeSalesPaymentsTab() {
  */
 async function loadSalesPaymentsForMgmtTab() {
     console.log('[DEBUG] Starting loadSalesPaymentsForMgmtTab');
-    
+
     if (!pmtMgmtSalesGridApi) {
         console.error('[DEBUG] ❌ pmtMgmtSalesGridApi not available');
         return;
     }
-    
+
     try {
         console.log('[DEBUG] ✅ Sales grid API available, loading data...');
         pmtMgmtSalesGridApi.setGridOption('loading', true);
-        
+
         const db = firebase.firestore();
         console.log('[DEBUG] Collection path:', SALES_PAYMENTS_LEDGER_COLLECTION_PATH);
-        
+
         const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
             .limit(10); // Small limit for testing
-        
+
         const snapshot = await salesPaymentsQuery.get();
         console.log(`[DEBUG] Sales payments snapshot size: ${snapshot.size}`);
-        
+
         const salesPayments = snapshot.docs.map(doc => {
             const data = { id: doc.id, ...doc.data() };
             console.log('[DEBUG] Sales payment:', {
@@ -1606,15 +1792,15 @@ async function loadSalesPaymentsForMgmtTab() {
             });
             return data;
         });
-        
+
         pmtMgmtSalesGridApi.setGridOption('rowData', salesPayments);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
-        
+
         setTimeout(() => {
             const rowCount = pmtMgmtSalesGridApi.getDisplayedRowCount();
             console.log(`[DEBUG] ✅ Sales grid shows ${rowCount} rows`);
         }, 200);
-        
+
     } catch (error) {
         console.error('[DEBUG] ❌ Error loading sales payments:', error);
         if (pmtMgmtSalesGridApi) {
@@ -1632,7 +1818,7 @@ async function loadSalesPaymentsForMgmtTab() {
  */
 function setupSupplierPaymentFilters() {
     const filters = ['all', 'pending', 'overdue', 'today'];
-    
+
     filters.forEach(filter => {
         const button = document.getElementById(`pmt-mgmt-supplier-filter-${filter}`);
         if (button) {
@@ -1642,7 +1828,7 @@ function setupSupplierPaymentFilters() {
             });
         }
     });
-    
+
     // Search input
     const searchInput = document.getElementById('pmt-mgmt-supplier-search');
     if (searchInput) {
@@ -1652,7 +1838,7 @@ function setupSupplierPaymentFilters() {
             }
         });
     }
-    
+
     console.log('[PmtMgmt] ✅ Supplier payment filters setup');
 }
 
@@ -1661,9 +1847,9 @@ function setupSupplierPaymentFilters() {
  */
 function applySupplierPaymentFilter(filterType) {
     if (!pmtMgmtSupplierGridApi) return;
-    
+
     console.log(`[PmtMgmt] Applying supplier filter: ${filterType}`);
-    
+
     switch (filterType) {
         case 'all':
             pmtMgmtSupplierGridApi.setFilterModel(null);
@@ -1702,7 +1888,7 @@ function updateSupplierFilterActiveState(activeButton) {
  */
 function setupTeamPaymentFilters() {
     const filters = ['all', 'pending', 'verified', 'overdue'];
-    
+
     filters.forEach(filter => {
         const button = document.getElementById(`pmt-mgmt-team-filter-${filter}`);
         if (button) {
@@ -1712,7 +1898,7 @@ function setupTeamPaymentFilters() {
             });
         }
     });
-    
+
     // Team search
     const searchInput = document.getElementById('pmt-mgmt-team-search');
     if (searchInput) {
@@ -1722,7 +1908,7 @@ function setupTeamPaymentFilters() {
             }
         });
     }
-    
+
     // Team name filter dropdown
     const teamFilter = document.getElementById('pmt-mgmt-team-name-filter');
     if (teamFilter) {
@@ -1734,7 +1920,7 @@ function setupTeamPaymentFilters() {
             option.textContent = team.teamName;
             teamFilter.appendChild(option);
         });
-        
+
         teamFilter.addEventListener('change', (e) => {
             if (pmtMgmtTeamGridApi) {
                 const filterValue = e.target.value;
@@ -1748,7 +1934,7 @@ function setupTeamPaymentFilters() {
             }
         });
     }
-    
+
     console.log('[PmtMgmt] ✅ Team payment filters setup');
 }
 
@@ -1757,9 +1943,9 @@ function setupTeamPaymentFilters() {
  */
 function applyTeamPaymentFilter(filterType) {
     if (!pmtMgmtTeamGridApi) return;
-    
+
     console.log(`[PmtMgmt] Applying team filter: ${filterType}`);
-    
+
     switch (filterType) {
         case 'all':
             pmtMgmtTeamGridApi.setFilterModel(null);
@@ -1796,7 +1982,7 @@ function updateTeamFilterActiveState(activeButton) {
  */
 function setupSalesPaymentFilters() {
     const filters = ['all', 'unpaid', 'partial', 'overdue'];
-    
+
     filters.forEach(filter => {
         const button = document.getElementById(`pmt-mgmt-sales-filter-${filter}`);
         if (button) {
@@ -1806,7 +1992,7 @@ function setupSalesPaymentFilters() {
             });
         }
     });
-    
+
     // Sales search
     const searchInput = document.getElementById('pmt-mgmt-sales-search');
     if (searchInput) {
@@ -1816,7 +2002,7 @@ function setupSalesPaymentFilters() {
             }
         });
     }
-    
+
     // Store filter
     const storeFilter = document.getElementById('pmt-mgmt-sales-store-filter');
     if (storeFilter) {
@@ -1833,7 +2019,7 @@ function setupSalesPaymentFilters() {
             }
         });
     }
-    
+
     console.log('[PmtMgmt] ✅ Sales payment filters setup');
 }
 
@@ -1843,9 +2029,9 @@ function setupSalesPaymentFilters() {
  */
 function applySalesPaymentFilter(filterType) {
     if (!pmtMgmtSalesGridApi) return;
-    
+
     console.log(`[PmtMgmt] Applying sales filter: ${filterType}`);
-    
+
     switch (filterType) {
         case 'all':
             pmtMgmtSalesGridApi.setFilterModel(null);
