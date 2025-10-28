@@ -1579,6 +1579,7 @@ function handleStandaloneButtons(target, event) {
         '#pmt-mgmt-create-supplier-payment': async () => await handlePmtMgmtCreateSupplierPayment(),
         '#pmt-mgmt-pay-all-outstanding': async () => await handlePmtMgmtPayAllOutstanding(),
         '#pmt-mgmt-supplier-refresh': async () => await handlePmtMgmtSupplierRefresh(),
+        '#pmt-mgmt-modal-pay-invoice': async () => await handleSupplierPayOutstandingBalanceFromModal(),
         
         // ✅ ADD: Payment Management action button classes
         '.pmt-mgmt-pay-supplier-invoice': async () => await handlePmtMgmtPaySupplierInvoice(target),
@@ -5773,6 +5774,54 @@ async function handlePmtMgmtPaySupplierInvoice(target) {
 function getSupplierInvoiceFromPmtMgmtGrid(invoiceId) {
     // ✅ DELEGATE: Get data from payment management module
     return getSupplierInvoiceFromMgmtGrid ? getSupplierInvoiceFromMgmtGrid(invoiceId) : null;
+}
+
+
+
+/**
+ * BUSINESS LOGIC: Handle pay outstanding balance from supplier invoice modal
+ */
+async function handleSupplierPayOutstandingBalanceFromModal() {
+    console.log('[main.js] 💰 Pay outstanding balance from supplier invoice modal');
+    
+    const payButton = document.getElementById('pmt-mgmt-modal-pay-invoice');
+    const invoiceId = payButton?.dataset?.invoiceId;
+    const balanceDue = parseFloat(payButton?.dataset?.balanceDue || 0);
+    
+    if (!invoiceId) {
+        await showModal('error', 'Invoice Data Missing', 'Could not find invoice information. Please try again.');
+        return;
+    }
+
+    try {
+        // ✅ BUSINESS CONFIRMATION: Following your pattern
+        const confirmed = await showModal('confirm', 'Pay Supplier Outstanding Balance', 
+            `Pay the outstanding balance for this supplier invoice?\n\n` +
+            `• Invoice ID: ${invoiceId}\n` +
+            `• Outstanding Amount: ${formatCurrency(balanceDue)}\n\n` +
+            `This will:\n` +
+            `✓ Close the invoice details modal\n` +
+            `✓ Open the supplier payment form\n` +
+            `✓ Pre-fill the payment amount\n` +
+            `✓ Use your existing payment workflow\n\n` +
+            `Proceed with payment?`
+        );
+
+        if (confirmed) {
+            // ✅ CLOSE: Invoice details modal first  
+            closeSupplierInvoiceDetailsModal();
+            
+            // ✅ WAIT: For modal close animation
+            setTimeout(() => {
+                // ✅ REUSE: Your existing supplier payment workflow
+                handlePmtMgmtPaySupplierInvoice({ dataset: { id: invoiceId } });
+            }, 400);
+        }
+
+    } catch (error) {
+        console.error('[main.js] Error handling supplier pay outstanding balance:', error);
+        await showModal('error', 'Payment Action Failed', 'Could not initiate supplier payment. Please try again.');
+    }
 }
 
 
