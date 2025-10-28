@@ -80,8 +80,12 @@ const pmtMgmtSupplierGridOptions = {
     theme: 'alpine',
     getRowId: params => params.data.id,
     pagination: true,
-    paginationPageSize: 50,
-    paginationPageSizeSelector: [25, 50, 100],
+    paginationPageSize: 25, // ✅ SMALLER: Reduces rendering load
+    paginationPageSizeSelector: [10, 25, 50],
+    
+    // ✅ STABILITY: Prevent auto-height issues
+    suppressAutoSize: true,
+    suppressSizeToFit: false,
     
     columnDefs: [
         {
@@ -89,46 +93,39 @@ const pmtMgmtSupplierGridOptions = {
             width: 160,
             pinned: 'left',
             cellStyle: { fontWeight: 'bold' },
-            valueGetter: params => {
-                if (!params.data) return 'Unknown';
-                
-                // ✅ PAYMENT MANAGEMENT SPECIFIC: Show meaningful reference
-                if (params.data.supplierInvoiceNo) {
-                    return params.data.supplierInvoiceNo;
-                } else if (params.data.relatedInvoiceId) {
-                    return `Doc: ${params.data.relatedInvoiceId.substring(0, 15)}...`;
-                } else {
-                    return `Payment: ${params.data.paymentId || 'Unknown'}`;
-                }
+            // ✅ SIMPLIFIED: Avoid complex valueGetter that might cause re-renders
+            field: "relatedInvoiceId", 
+            valueFormatter: params => {
+                const id = params.value || 'Unknown';
+                return id.length > 20 ? id.substring(0, 20) + '...' : id;
             }
         },
         {
             headerName: "Supplier",
-            width: 200,
+            width: 180,
             pinned: 'left',
             cellStyle: { fontWeight: 'bold' },
-            valueGetter: params => {
-                if (!params.data || !params.data.supplierId) return 'Unknown Supplier';
+            // ✅ SIMPLIFIED: Static field instead of complex lookup
+            field: "supplierName",
+            valueFormatter: params => {
+                if (params.value) return params.value;
                 
+                // Simple lookup without causing re-renders
                 const supplier = masterData.suppliers.find(s => s.id === params.data.supplierId);
-                return supplier ? supplier.supplierName : `ID: ${params.data.supplierId}`;
+                return supplier ? supplier.supplierName : 'Unknown';
             }
         },
         { 
             field: "paymentDate", 
-            headerName: "Payment Date", 
-            width: 130,
+            headerName: "Date", 
+            width: 110,
+            // ✅ SIMPLIFIED: Basic date formatting
             valueFormatter: params => {
                 try {
-                    if (params.value?.toDate) {
-                        return params.value.toDate().toLocaleDateString();
-                    } else if (params.value instanceof Date) {
-                        return params.value.toLocaleDateString();
-                    } else {
-                        return new Date(params.value).toLocaleDateString();
-                    }
+                    const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
+                    return date.toLocaleDateString();
                 } catch {
-                    return 'Unknown Date';
+                    return 'Invalid Date';
                 }
             }
         },
@@ -136,138 +133,87 @@ const pmtMgmtSupplierGridOptions = {
             field: "amountPaid",
             headerName: "Amount",
             width: 120,
-            valueFormatter: params => params.value ? formatCurrency(params.value) : '₹0.00',
-            cellClass: 'text-right font-bold',
-            cellStyle: { color: '#dc2626' } // Red for outbound payments
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellClass: 'text-right',
+            cellStyle: { color: '#dc2626', fontWeight: 'bold' }
         },
         { 
             field: "paymentMode", 
-            headerName: "Payment Mode", 
-            width: 120,
+            headerName: "Mode", 
+            width: 100,
+            // ✅ SIMPLE: No complex rendering
             cellStyle: { fontSize: '12px' }
-        },
-        { 
-            field: "transactionRef", 
-            headerName: "Reference", 
-            width: 140,
-            cellRenderer: params => {
-                const ref = params.value || '';
-                if (!ref) return '<span class="text-gray-400 italic">No reference</span>';
-                
-                const displayRef = ref.length > 15 ? ref.substring(0, 15) + '...' : ref;
-                return `<span class="text-sm font-mono" title="${ref}">${displayRef}</span>`;
-            }
-        },
-        {
-            field: "notes", 
-            headerName: "Notes", 
-            width: 180,
-            cellRenderer: params => {
-                const notes = params.value || '';
-                
-                if (!notes.trim()) {
-                    return '<span class="text-gray-400 italic text-xs">No notes</span>';
-                }
-                
-                const maxLength = 40;
-                const displayText = notes.length > maxLength 
-                    ? notes.substring(0, maxLength) + '...'
-                    : notes;
-                
-                return `<span class="text-xs text-gray-700" title="${notes.replace(/"/g, '&quot;')}">${displayText}</span>`;
-            }
         },
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 130,
+            width: 120,
+            // ✅ SIMPLIFIED: Reduce complex rendering that might cause shaking
             cellRenderer: params => {
                 const status = params.value || 'Verified';
                 
-                const statusConfig = {
-                    'Verified': { class: 'text-green-700 bg-green-100 border-green-300', icon: '✅' },
-                    'Pending Verification': { class: 'text-yellow-700 bg-yellow-100 border-yellow-300', icon: '⏳' },
-                    'Voided': { class: 'text-gray-700 bg-gray-100 border-gray-300', icon: '❌' },
-                    'Void_Reversal': { class: 'text-red-700 bg-red-100 border-red-300', icon: '🔄' }
-                };
+                if (status === 'Verified') {
+                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-green-200 text-green-800">✓ VERIFIED</span>`;
+                } else if (status === 'Pending Verification') {
+                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-yellow-200 text-yellow-800">⏳ PENDING</span>`;
+                } else if (status === 'Voided') {
+                    return `<span class="px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">❌ VOIDED</span>`;
+                }
                 
-                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100 border-blue-300', icon: '📋' };
-                
-                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${config.class}">
-                            ${config.icon} ${status}
-                        </span>`;
+                return `<span class="px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">${status}</span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 160,
-            cellClass: 'flex items-center justify-center space-x-1',
+            width: 120,
+            // ✅ PREVENT: Auto-sizing that causes instability
             suppressSizeToFit: true,
+            suppressAutoSize: true,
+            cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Verified';
-                const submittedBy = params.data.submittedBy;
                 const currentUser = appState.currentUser;
                 
-                const hasFinancialPermissions = currentUser && (
-                    currentUser.role === 'admin' || 
-                    currentUser.role === 'finance'
-                );
+                const hasPermissions = currentUser && (currentUser.role === 'admin' || currentUser.role === 'finance');
                 
-                let buttons = '';
-                
-                // ✅ VERIFY BUTTON: For pending payments
-                if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
-                    buttons += `<button class="action-btn-icon pmt-mgmt-verify-supplier-payment bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded" 
-                                      data-id="${params.data.id}" 
-                                      title="Verify Payment">
-                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
-                                  </svg>
-                              </button>`;
+                if (paymentStatus === 'Pending Verification' && hasPermissions) {
+                    return `<button class="pmt-mgmt-verify-supplier-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600" 
+                                  data-id="${params.data.id}" title="Verify">
+                                ✓ Verify
+                            </button>`;
+                } else if (paymentStatus === 'Verified' && hasPermissions) {
+                    return `<button class="pmt-mgmt-void-supplier-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600" 
+                                  data-id="${params.data.id}" title="Void">
+                                ❌ Void
+                            </button>`;
                 }
                 
-                // ✅ VOID BUTTON: For verified payments
-                if ((paymentStatus === 'Verified' || !paymentStatus) && hasFinancialPermissions) {
-                    buttons += `<button class="action-btn-icon pmt-mgmt-void-supplier-payment bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded" 
-                                      data-id="${params.data.id}" 
-                                      title="Void Payment">
-                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4z" clip-rule="evenodd" />
-                                  </svg>
-                              </button>`;
-                }
-                
-                // ✅ VIEW BUTTON: For all payments (see details)
-                buttons += `<button class="action-btn-icon pmt-mgmt-view-supplier-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
-                                  data-id="${params.data.id}" 
-                                  title="View Payment Details">
-                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                              </svg>
-                          </button>`;
-                
-                return buttons;
+                return `<span class="text-xs text-gray-500">No actions</span>`;
             }
         }
     ],
     
+    // ✅ STABLE: Prevent dynamic column sizing
     defaultColDef: { 
-        resizable: true, 
+        resizable: false,      // ✅ DISABLE: Prevents column width changes
         sortable: true, 
-        filter: true, 
-        wrapText: false,
-        suppressSizeToFit: false
+        filter: false,         // ✅ DISABLE: Prevent filter-related rendering
+        suppressSizeToFit: true // ✅ PREVENT: Auto-sizing
     },
+    
+    // ✅ PREVENT: Auto-sizing that causes instability
+    suppressColumnVirtualisation: false,
+    suppressRowVirtualisation: false,
     
     onGridReady: (params) => {
         pmtMgmtSupplierGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Dedicated Supplier Payments Grid ready");
+        console.log("[DEBUG] ✅ Stable Supplier Payments Grid ready");
         
-        // Auto-load data
+        // ✅ STABILITY: Set fixed size and load data
         setTimeout(() => {
+            params.api.sizeColumnsToFit();
             loadSupplierPaymentsForMgmtTab();
-        }, 100);
+        }, 200);
     }
 };
 
@@ -1433,82 +1379,56 @@ function initializeSupplierPaymentsTab() {
     setupSupplierPaymentFilters();
 }
 
-
 async function loadSupplierPaymentsForMgmtTab() {
-    console.log('[DEBUG] Starting loadSupplierPaymentsForMgmtTab');
+    console.log('[DEBUG] Loading supplier payments with stability fixes...');
     
     if (!pmtMgmtSupplierGridApi) {
-        console.error('[DEBUG] ❌ pmtMgmtSupplierGridApi not available');
+        console.error('[DEBUG] Grid API not ready');
         return;
     }
     
     try {
-        console.log('[DEBUG] ✅ Grid API available, loading data...');
         pmtMgmtSupplierGridApi.setGridOption('loading', true);
         
         const db = firebase.firestore();
-        console.log('[DEBUG] Firestore reference created');
-        
-        // ✅ DEBUG: Check collection path
-        console.log('[DEBUG] Collection path:', SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH);
-        
         const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(10); // ✅ REDUCED: Small limit for testing
+            .limit(25); // ✅ SMALLER LIMIT: Reduces rendering load
         
-        console.log('[DEBUG] Query created, executing...');
         const snapshot = await supplierPaymentsQuery.get();
+        console.log(`[DEBUG] Retrieved ${snapshot.size} supplier payments`);
         
-        console.log('[DEBUG] Query results:');
-        console.log(`  - Snapshot size: ${snapshot.size}`);
-        console.log(`  - Snapshot empty: ${snapshot.empty}`);
-        
-        const supplierPayments = snapshot.docs.map(doc => {
-            const data = { id: doc.id, ...doc.data() };
-            console.log('[DEBUG] Payment record:', {
-                id: data.id,
-                supplierId: data.supplierId,
-                amountPaid: data.amountPaid,
-                paymentStatus: data.paymentStatus,
-                paymentDate: data.paymentDate
-            });
-            return data;
+        // ✅ STABLE: Pre-process data to avoid rendering loops
+        const processedPayments = snapshot.docs.map(doc => {
+            const payment = { id: doc.id, ...doc.data() };
+            
+            // Pre-calculate supplier name to avoid lookup during rendering
+            const supplier = masterData.suppliers.find(s => s.id === payment.supplierId);
+            
+            return {
+                ...payment,
+                supplierName: supplier ? supplier.supplierName : 'Unknown Supplier',
+                formattedAmount: formatCurrency(payment.amountPaid || 0),
+                formattedDate: payment.paymentDate?.toDate ? 
+                    payment.paymentDate.toDate().toLocaleDateString() : 'Unknown'
+            };
         });
         
-        console.log(`[DEBUG] ✅ Processed ${supplierPayments.length} supplier payments`);
-        console.log('[DEBUG] First payment sample:', supplierPayments[0]);
+        console.log(`[DEBUG] Processed ${processedPayments.length} payments for stable rendering`);
         
-        // ✅ LOAD: Data into grid
-        pmtMgmtSupplierGridApi.setGridOption('rowData', supplierPayments);
+        // ✅ SINGLE UPDATE: Load all data at once to prevent multiple re-renders
+        pmtMgmtSupplierGridApi.setGridOption('rowData', processedPayments);
         pmtMgmtSupplierGridApi.setGridOption('loading', false);
         
-        // ✅ VERIFY: Data was loaded
+        // ✅ VERIFY: Data loaded properly
         setTimeout(() => {
             const rowCount = pmtMgmtSupplierGridApi.getDisplayedRowCount();
-            console.log(`[DEBUG] ✅ Grid shows ${rowCount} rows after loading`);
-            
-            if (rowCount === 0 && supplierPayments.length > 0) {
-                console.error('[DEBUG] ❌ Grid has data but shows 0 rows - likely grid configuration issue');
-                console.log('[DEBUG] Grid API state:', {
-                    api: !!pmtMgmtSupplierGridApi,
-                    rowData: supplierPayments.length,
-                    displayed: rowCount
-                });
-            }
-        }, 200);
+            console.log(`[DEBUG] ✅ Stable grid shows ${rowCount} rows`);
+        }, 300);
         
     } catch (error) {
-        console.error('[DEBUG] ❌ Error loading supplier payments:', error);
-        console.error('[DEBUG] Error details:', {
-            message: error.message,
-            code: error.code,
-            stack: error.stack
-        });
-        
-        if (pmtMgmtSupplierGridApi) {
-            pmtMgmtSupplierGridApi.setGridOption('loading', false);
-            pmtMgmtSupplierGridApi.showNoRowsOverlay();
-        }
+        console.error('[DEBUG] Error in stable loading:', error);
+        pmtMgmtSupplierGridApi?.setGridOption('loading', false);
     }
 }
 
