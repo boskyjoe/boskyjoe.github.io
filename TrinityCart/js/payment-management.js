@@ -43,10 +43,7 @@ import {
     
     // Existing helper functions
     resetPaymentForm,
-    loadPaymentsForSelectedInvoice,
-    purchasePaymentsGridOptions,      // Supplier payments grid config
-    consignmentPaymentsGridOptions,   // Team payments grid config  
-    salePaymentHistoryGridOptions,    // Sales payments grid config
+    loadPaymentsForSelectedInvoice
 
 } from './ui.js';
 
@@ -71,6 +68,547 @@ import {
     SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH,
     SALES_PAYMENTS_LEDGER_COLLECTION_PATH
 } from './config.js';
+
+
+
+
+/**
+ * DEDICATED: Supplier payments grid configuration for Payment Management module
+ * Optimized for payment operations workflow with enhanced context and actions
+ */
+const pmtMgmtSupplierGridOptions = {
+    theme: 'alpine',
+    getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100],
+    
+    columnDefs: [
+        {
+            headerName: "Invoice Reference",
+            width: 160,
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' },
+            valueGetter: params => {
+                if (!params.data) return 'Unknown';
+                
+                // ✅ PAYMENT MANAGEMENT SPECIFIC: Show meaningful reference
+                if (params.data.supplierInvoiceNo) {
+                    return params.data.supplierInvoiceNo;
+                } else if (params.data.relatedInvoiceId) {
+                    return `Doc: ${params.data.relatedInvoiceId.substring(0, 15)}...`;
+                } else {
+                    return `Payment: ${params.data.paymentId || 'Unknown'}`;
+                }
+            }
+        },
+        {
+            headerName: "Supplier",
+            width: 200,
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' },
+            valueGetter: params => {
+                if (!params.data || !params.data.supplierId) return 'Unknown Supplier';
+                
+                const supplier = masterData.suppliers.find(s => s.id === params.data.supplierId);
+                return supplier ? supplier.supplierName : `ID: ${params.data.supplierId}`;
+            }
+        },
+        { 
+            field: "paymentDate", 
+            headerName: "Payment Date", 
+            width: 130,
+            valueFormatter: params => {
+                try {
+                    if (params.value?.toDate) {
+                        return params.value.toDate().toLocaleDateString();
+                    } else if (params.value instanceof Date) {
+                        return params.value.toLocaleDateString();
+                    } else {
+                        return new Date(params.value).toLocaleDateString();
+                    }
+                } catch {
+                    return 'Unknown Date';
+                }
+            }
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount",
+            width: 120,
+            valueFormatter: params => params.value ? formatCurrency(params.value) : '₹0.00',
+            cellClass: 'text-right font-bold',
+            cellStyle: { color: '#dc2626' } // Red for outbound payments
+        },
+        { 
+            field: "paymentMode", 
+            headerName: "Payment Mode", 
+            width: 120,
+            cellStyle: { fontSize: '12px' }
+        },
+        { 
+            field: "transactionRef", 
+            headerName: "Reference", 
+            width: 140,
+            cellRenderer: params => {
+                const ref = params.value || '';
+                if (!ref) return '<span class="text-gray-400 italic">No reference</span>';
+                
+                const displayRef = ref.length > 15 ? ref.substring(0, 15) + '...' : ref;
+                return `<span class="text-sm font-mono" title="${ref}">${displayRef}</span>`;
+            }
+        },
+        {
+            field: "notes", 
+            headerName: "Notes", 
+            width: 180,
+            cellRenderer: params => {
+                const notes = params.value || '';
+                
+                if (!notes.trim()) {
+                    return '<span class="text-gray-400 italic text-xs">No notes</span>';
+                }
+                
+                const maxLength = 40;
+                const displayText = notes.length > maxLength 
+                    ? notes.substring(0, maxLength) + '...'
+                    : notes;
+                
+                return `<span class="text-xs text-gray-700" title="${notes.replace(/"/g, '&quot;')}">${displayText}</span>`;
+            }
+        },
+        {
+            field: "paymentStatus",
+            headerName: "Status",
+            width: 130,
+            cellRenderer: params => {
+                const status = params.value || 'Verified';
+                
+                const statusConfig = {
+                    'Verified': { class: 'text-green-700 bg-green-100 border-green-300', icon: '✅' },
+                    'Pending Verification': { class: 'text-yellow-700 bg-yellow-100 border-yellow-300', icon: '⏳' },
+                    'Voided': { class: 'text-gray-700 bg-gray-100 border-gray-300', icon: '❌' },
+                    'Void_Reversal': { class: 'text-red-700 bg-red-100 border-red-300', icon: '🔄' }
+                };
+                
+                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100 border-blue-300', icon: '📋' };
+                
+                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${config.class}">
+                            ${config.icon} ${status}
+                        </span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 160,
+            cellClass: 'flex items-center justify-center space-x-1',
+            suppressSizeToFit: true,
+            cellRenderer: params => {
+                const paymentStatus = params.data.paymentStatus || 'Verified';
+                const submittedBy = params.data.submittedBy;
+                const currentUser = appState.currentUser;
+                
+                const hasFinancialPermissions = currentUser && (
+                    currentUser.role === 'admin' || 
+                    currentUser.role === 'finance'
+                );
+                
+                let buttons = '';
+                
+                // ✅ VERIFY BUTTON: For pending payments
+                if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
+                    buttons += `<button class="action-btn-icon pmt-mgmt-verify-supplier-payment bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded" 
+                                      data-id="${params.data.id}" 
+                                      title="Verify Payment">
+                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
+                                  </svg>
+                              </button>`;
+                }
+                
+                // ✅ VOID BUTTON: For verified payments
+                if ((paymentStatus === 'Verified' || !paymentStatus) && hasFinancialPermissions) {
+                    buttons += `<button class="action-btn-icon pmt-mgmt-void-supplier-payment bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded" 
+                                      data-id="${params.data.id}" 
+                                      title="Void Payment">
+                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4z" clip-rule="evenodd" />
+                                  </svg>
+                              </button>`;
+                }
+                
+                // ✅ VIEW BUTTON: For all payments (see details)
+                buttons += `<button class="action-btn-icon pmt-mgmt-view-supplier-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
+                                  data-id="${params.data.id}" 
+                                  title="View Payment Details">
+                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                              </svg>
+                          </button>`;
+                
+                return buttons;
+            }
+        }
+    ],
+    
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        filter: true, 
+        wrapText: false,
+        suppressSizeToFit: false
+    },
+    
+    onGridReady: (params) => {
+        pmtMgmtSupplierGridApi = params.api;
+        console.log("[PmtMgmt] ✅ Dedicated Supplier Payments Grid ready");
+        
+        // Auto-load data
+        setTimeout(() => {
+            loadSupplierPaymentsForMgmtTab();
+        }, 100);
+    }
+};
+
+
+const pmtMgmtTeamGridOptions = {
+    theme: 'alpine',
+    getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    
+    columnDefs: [
+        {
+            headerName: "Team",
+            width: 180,
+            pinned: 'left',
+            field: "teamName",
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            headerName: "Order Reference",
+            width: 140,
+            valueGetter: params => {
+                const orderId = params.data.orderId;
+                return orderId ? `Order: ${orderId.substring(0, 12)}...` : 'Unknown';
+            }
+        },
+        { 
+            field: "paymentDate", 
+            headerName: "Payment Date", 
+            width: 130,
+            valueFormatter: params => {
+                try {
+                    return params.value?.toDate ? params.value.toDate().toLocaleDateString() : 'Unknown';
+                } catch {
+                    return 'Unknown Date';
+                }
+            }
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount",
+            width: 120,
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellClass: 'text-right font-bold',
+            cellStyle: { color: '#059669' } // Green for inbound payments
+        },
+        {
+            field: "paymentMode",
+            headerName: "Payment Mode",
+            width: 120
+        },
+        {
+            field: "paymentStatus",
+            headerName: "Status",
+            width: 140,
+            cellRenderer: params => {
+                const status = params.value || 'Pending Verification';
+                
+                const statusConfig = {
+                    'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
+                    'Pending Verification': { class: 'text-yellow-700 bg-yellow-100', icon: '⏳' }
+                };
+                
+                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '📋' };
+                
+                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
+                            ${config.icon} ${status}
+                        </span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 140,
+            cellClass: 'flex items-center justify-center space-x-1',
+            cellRenderer: params => {
+                const paymentStatus = params.data.paymentStatus || 'Pending Verification';
+                const currentUser = appState.currentUser;
+                
+                const hasFinancialPermissions = currentUser && (
+                    currentUser.role === 'admin' || currentUser.role === 'finance'
+                );
+                
+                let buttons = '';
+                
+                // Verify button
+                if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
+                    buttons += `<button class="pmt-mgmt-verify-team-payment bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded" 
+                                      data-id="${params.data.id}" 
+                                      title="Verify Team Payment">
+                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
+                                  </svg>
+                              </button>`;
+                }
+                
+                // View button
+                buttons += `<button class="pmt-mgmt-view-team-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
+                                  data-id="${params.data.id}" 
+                                  title="View Payment Details">
+                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
+                              </svg>
+                          </button>`;
+                
+                return buttons;
+            }
+        }
+    ],
+    
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        filter: true
+    },
+    
+    onGridReady: (params) => {
+        pmtMgmtTeamGridApi = params.api;
+        console.log("[PmtMgmt] ✅ Dedicated Team Payments Grid ready");
+        
+        setTimeout(() => {
+            loadTeamPaymentsForMgmtTab();
+        }, 100);
+    }
+};
+
+
+const pmtMgmtSalesGridOptions = {
+    theme: 'alpine',
+    getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    
+    columnDefs: [
+        {
+            headerName: "Customer",
+            width: 180,
+            pinned: 'left',
+            field: "customerName",
+            cellStyle: { fontWeight: 'bold' }
+        },
+        {
+            headerName: "Invoice Reference",
+            width: 140,
+            valueGetter: params => {
+                const invoiceId = params.data.invoiceId;
+                return invoiceId ? `Invoice: ${invoiceId}` : 'Unknown';
+            }
+        },
+        { 
+            field: "paymentDate", 
+            headerName: "Payment Date", 
+            width: 130,
+            valueFormatter: params => {
+                try {
+                    return params.value?.toDate ? params.value.toDate().toLocaleDateString() : 'Unknown';
+                } catch {
+                    return 'Unknown Date';
+                }
+            }
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount",
+            width: 120,
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellClass: 'text-right font-bold',
+            cellStyle: { color: '#059669' } // Green for inbound payments
+        },
+        {
+            field: "paymentMode",
+            headerName: "Payment Mode",
+            width: 120
+        },
+        {
+            field: "status",
+            headerName: "Status", 
+            width: 120,
+            cellRenderer: params => {
+                const status = params.value || 'Verified';
+                
+                const statusConfig = {
+                    'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
+                    'Voided': { class: 'text-gray-700 bg-gray-100', icon: '❌' }
+                };
+                
+                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '💳' };
+                
+                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
+                            ${config.icon} ${status}
+                        </span>`;
+            }
+        },
+        {
+            headerName: "Actions",
+            width: 120,
+            cellClass: 'flex items-center justify-center space-x-1',
+            cellRenderer: params => {
+                const status = params.data.status || 'Verified';
+                const currentUser = appState.currentUser;
+                
+                const hasFinancialPermissions = currentUser && (
+                    currentUser.role === 'admin' || currentUser.role === 'finance'
+                );
+                
+                let buttons = '';
+                
+                // Void button for verified payments
+                if (status === 'Verified' && hasFinancialPermissions) {
+                    buttons += `<button class="pmt-mgmt-void-sales-payment bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded" 
+                                      data-id="${params.data.id}" 
+                                      title="Void Payment">
+                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5z" clip-rule="evenodd"/>
+                                  </svg>
+                              </button>`;
+                }
+                
+                // View button for all payments
+                buttons += `<button class="pmt-mgmt-view-sales-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
+                                  data-id="${params.data.id}" 
+                                  title="View Payment Details">
+                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
+                              </svg>
+                          </button>`;
+                
+                return buttons;
+            }
+        }
+    ],
+    
+    defaultColDef: { 
+        resizable: true, 
+        sortable: true, 
+        filter: true
+    },
+    
+    onGridReady: (params) => {
+        pmtMgmtSalesGridApi = params.api;
+        console.log("[PmtMgmt] ✅ Dedicated Sales Payments Grid ready");
+        
+        setTimeout(() => {
+            loadSalesPaymentsForMgmtTab();
+        }, 100);
+    }
+};
+
+
+/**
+ * Gets supplier invoice number for a payment (optimized lookup)
+ */
+function getInvoiceNumberForPayment(invoiceId) {
+    if (!invoiceId) return 'Unknown';
+    
+    try {
+        // ✅ OPTIMIZATION: Use cached invoice data if available from dashboard load
+        const cachedInvoice = pmtMgmtState.invoiceCache?.get(invoiceId);
+        if (cachedInvoice) {
+            return cachedInvoice.supplierInvoiceNo || invoiceId;
+        }
+        
+        // ✅ FALLBACK: Return invoice ID if we can't look up the supplier invoice number
+        // This prevents empty cells while avoiding additional Firestore queries
+        return invoiceId.substring(0, 20) + '...'; // Truncate long IDs
+        
+    } catch (error) {
+        console.warn(`[PmtMgmt] Could not get invoice number for ${invoiceId}:`, error);
+        return 'Unknown';
+    }
+}
+
+
+/**
+ * ENHANCED: Load supplier payments with invoice number pre-fetching (OPTIONAL)
+ */
+async function loadSupplierPaymentsForMgmtTabEnhanced() {
+    if (!pmtMgmtSupplierGridApi) return;
+    
+    try {
+        console.log('[PmtMgmt] Loading supplier payments with invoice context...');
+        pmtMgmtSupplierGridApi.setGridOption('loading', true);
+        
+        const db = firebase.firestore();
+        
+        // ✅ LOAD: Supplier payments
+        const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .orderBy('paymentDate', 'desc')
+            .limit(75);
+        
+        const paymentsSnapshot = await supplierPaymentsQuery.get();
+        const supplierPayments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        console.log(`[PmtMgmt] Loaded ${supplierPayments.length} supplier payments`);
+        
+        // ✅ OPTIMIZATION: Pre-fetch related invoice numbers to avoid lookup delays
+        const uniqueInvoiceIds = [...new Set(supplierPayments.map(p => p.relatedInvoiceId).filter(Boolean))];
+        
+        if (uniqueInvoiceIds.length > 0 && uniqueInvoiceIds.length <= 20) { // Only if reasonable number
+            console.log(`[PmtMgmt] Pre-fetching ${uniqueInvoiceIds.length} invoice numbers...`);
+            
+            const invoicePromises = uniqueInvoiceIds.map(id => 
+                db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(id).get()
+            );
+            
+            const invoiceDocs = await Promise.all(invoicePromises);
+            const invoiceCache = new Map();
+            
+            invoiceDocs.forEach(doc => {
+                if (doc.exists) {
+                    invoiceCache.set(doc.id, doc.data());
+                }
+            });
+            
+            // Store in state for grid valueGetter to use
+            pmtMgmtState.invoiceCache = invoiceCache;
+            
+            console.log(`[PmtMgmt] ✅ Pre-fetched ${invoiceCache.size} invoice details`);
+        }
+        
+        // Enhanced payment data with invoice context
+        const enhancedPayments = supplierPayments.map(payment => ({
+            ...payment,
+            // ✅ PRE-POPULATE: Add invoice number to payment data
+            supplierInvoiceNo: pmtMgmtState.invoiceCache?.get(payment.relatedInvoiceId)?.supplierInvoiceNo || payment.relatedInvoiceId
+        }));
+        
+        pmtMgmtSupplierGridApi.setGridOption('rowData', enhancedPayments);
+        pmtMgmtSupplierGridApi.setGridOption('loading', false);
+        
+        console.log(`[PmtMgmt] ✅ Supplier payments loaded with invoice context`);
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading enhanced supplier payments:', error);
+        // Fallback to basic loading
+        loadSupplierPaymentsForMgmtTab();
+    }
+}
+
+
 
 // ===================================================================
 // MODULE-SPECIFIC VARIABLES (Safe - isolated in this file)
@@ -878,49 +1416,66 @@ function updatePaymentMgmtDashboardCards(metrics) {
 // TAB INITIALIZATION PLACEHOLDERS (Implement in next steps)
 // ===================================================================
 
-
 /**
- * FREE TIER OPTIMIZED: Loads supplier payments data with caching
+ * ENHANCED: Load supplier payments with complete context
  */
 async function loadSupplierPaymentsForMgmtTab() {
-    if (!pmtMgmtSupplierGridApi) {
-        console.warn('[PmtMgmt] Supplier grid API not ready');
-        return;
-    }
+    if (!pmtMgmtSupplierGridApi) return;
     
     try {
-        console.log('[PmtMgmt] Loading supplier payments with optimization...');
+        console.log('[PmtMgmt] Loading supplier payments with complete context...');
         pmtMgmtSupplierGridApi.setGridOption('loading', true);
         
-        // ✅ CACHE CHECK: 3-minute cache for tab data
-        const cacheKey = 'pmt_mgmt_supplier_payments';
+        // Check cache first
+        const cacheKey = 'pmt_mgmt_supplier_payments_enhanced';
         const cached = getCachedPaymentMetrics(cacheKey);
         
         if (cached && cached.supplierPayments) {
-            console.log('[PmtMgmt] Using cached supplier payments - 0 Firestore reads');
+            console.log('[PmtMgmt] Using cached enhanced supplier payments - 0 reads');
             pmtMgmtSupplierGridApi.setGridOption('rowData', cached.supplierPayments);
             pmtMgmtSupplierGridApi.setGridOption('loading', false);
             return;
         }
         
         const db = firebase.firestore();
+        let totalReads = 0;
         
-        // ✅ OPTIMIZED QUERY: Recent supplier payments only
+        // Load supplier payments
         const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(75); // Reasonable limit for supplier payments
+            .limit(50); // Reduced limit for free tier
         
-        const snapshot = await supplierPaymentsQuery.get();
-        const supplierPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const paymentsSnapshot = await supplierPaymentsQuery.get();
+        totalReads += paymentsSnapshot.size;
         
-        console.log(`[PmtMgmt] ✅ Loaded ${supplierPayments.length} supplier payments (${snapshot.size} reads)`);
+        const supplierPayments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Load into grid
-        pmtMgmtSupplierGridApi.setGridOption('rowData', supplierPayments);
+        console.log(`[PmtMgmt] Loaded ${supplierPayments.length} supplier payments (${totalReads} reads)`);
+        
+        // ✅ ENHANCE: Add supplier and invoice context to each payment
+        const enhancedPayments = supplierPayments.map(payment => {
+            // Get supplier name from masterData (no additional reads)
+            const supplier = masterData.suppliers.find(s => s.id === payment.supplierId);
+            const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
+            
+            return {
+                ...payment,
+                supplierName: supplierName,
+                supplierInvoiceDisplay: payment.relatedInvoiceId // Use invoice ID as display for now
+            };
+        });
+        
+        // Load enhanced data into grid
+        pmtMgmtSupplierGridApi.setGridOption('rowData', enhancedPayments);
         pmtMgmtSupplierGridApi.setGridOption('loading', false);
         
-        // ✅ CACHE: Store for 3 minutes
-        cachePaymentMetrics(cacheKey, { supplierPayments: supplierPayments, timestamp: Date.now() });
+        // Cache enhanced data
+        cachePaymentMetrics(cacheKey, { 
+            supplierPayments: enhancedPayments,
+            totalReads: totalReads 
+        });
+        
+        console.log(`[PmtMgmt] ✅ Enhanced supplier payments loaded (${totalReads} Firestore reads)`);
         
     } catch (error) {
         console.error('[PmtMgmt] Error loading supplier payments:', error);
@@ -937,7 +1492,7 @@ async function loadSupplierPaymentsForMgmtTab() {
  * Initializes supplier payments tab (placeholder)
  */
 function initializeSupplierPaymentsTab() {
-    console.log('[PmtMgmt] 📤 Initializing Supplier Payments tab...');
+    console.log('[PmtMgmt] 📤 Initializing Supplier Payments tab with dedicated grid...');
     
     const gridContainer = document.getElementById('pmt-mgmt-supplier-grid');
     if (!gridContainer) {
@@ -945,29 +1500,12 @@ function initializeSupplierPaymentsTab() {
         return;
     }
     
-    // ✅ REUSE: Existing supplier payments grid configuration (SAFE)
-    const pmtMgmtSupplierGridOptions = {
-        ...purchasePaymentsGridOptions, // REUSE existing proven configuration
-        
-        // ✅ OVERRIDE: Only the grid API assignment to avoid conflicts
-        onGridReady: params => {
-            pmtMgmtSupplierGridApi = params.api; // UNIQUE variable name
-            console.log('[PmtMgmt] ✅ Supplier payments grid ready in Payment Management');
-            
-            // Auto-load data after grid is ready
-            setTimeout(() => {
-                loadSupplierPaymentsForMgmtTab();
-            }, 100);
-        }
-    };
-    
-    // Initialize grid with existing configuration
+    // ✅ DEDICATED: Use local grid configuration
     if (!pmtMgmtSupplierGridApi) {
-        pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions);
-        console.log('[PmtMgmt] ✅ Supplier payments grid created');
+        pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions); // Local config
+        console.log('[PmtMgmt] ✅ Dedicated supplier payments grid created');
     }
     
-    // Setup supplier-specific filter listeners
     setupSupplierPaymentFilters();
 }
 
@@ -1022,7 +1560,7 @@ async function loadTeamPaymentsForMgmtTab() {
  * Initializes team payments tab (placeholder)
  */
 function initializeTeamPaymentsTab() {
-    console.log('[PmtMgmt] 👥 Initializing Team Payments tab...');
+    console.log('[PmtMgmt] 👥 Initializing Team Payments tab with dedicated grid...');
     
     const gridContainer = document.getElementById('pmt-mgmt-team-grid');
     if (!gridContainer) {
@@ -1030,34 +1568,20 @@ function initializeTeamPaymentsTab() {
         return;
     }
     
-    // ✅ REUSE: Existing consignment payments grid configuration
-    const pmtMgmtTeamGridOptions = {
-        ...consignmentPaymentsGridOptions, // REUSE existing configuration
-        
-        onGridReady: params => {
-            pmtMgmtTeamGridApi = params.api; // UNIQUE variable name
-            console.log('[PmtMgmt] ✅ Team payments grid ready in Payment Management');
-            
-            setTimeout(() => {
-                loadTeamPaymentsForMgmtTab();
-            }, 100);
-        }
-    };
-    
     if (!pmtMgmtTeamGridApi) {
-        pmtMgmtTeamGridApi = createGrid(gridContainer, pmtMgmtTeamGridOptions);
-        console.log('[PmtMgmt] ✅ Team payments grid created');
+        pmtMgmtTeamGridApi = createGrid(gridContainer, pmtMgmtTeamGridOptions); // Local config
+        console.log('[PmtMgmt] ✅ Dedicated team payments grid created');
     }
     
-    // Setup team-specific filters
     setupTeamPaymentFilters();
 }
+
 
 /**
  * Initializes sales payments tab (placeholder)
  */
 function initializeSalesPaymentsTab() {
-    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab...');
+    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with dedicated grid...');
     
     const gridContainer = document.getElementById('pmt-mgmt-sales-grid');
     if (!gridContainer) {
@@ -1065,26 +1589,11 @@ function initializeSalesPaymentsTab() {
         return;
     }
     
-    // ✅ REUSE: Existing sales payments grid configuration  
-    const pmtMgmtSalesGridOptions = {
-        ...salePaymentHistoryGridOptions, // REUSE existing configuration
-        
-        onGridReady: params => {
-            pmtMgmtSalesGridApi = params.api; // UNIQUE variable name
-            console.log('[PmtMgmt] ✅ Sales payments grid ready in Payment Management');
-            
-            setTimeout(() => {
-                loadSalesPaymentsForMgmtTab();
-            }, 100);
-        }
-    };
-    
     if (!pmtMgmtSalesGridApi) {
-        pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions);
-        console.log('[PmtMgmt] ✅ Sales payments grid created');
+        pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions); // Local config
+        console.log('[PmtMgmt] ✅ Dedicated sales payments grid created');
     }
     
-    // Setup sales-specific filters
     setupSalesPaymentFilters();
 }
 
