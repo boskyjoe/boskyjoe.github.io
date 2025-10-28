@@ -77,7 +77,7 @@ import {
  * Optimized for payment operations workflow with enhanced context and actions
  */
 const pmtMgmtSupplierGridOptions = {
-    theme: 'alpine',
+    theme: 'legacy',
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 25, // ✅ SMALLER: Reduces rendering load
@@ -219,7 +219,7 @@ const pmtMgmtSupplierGridOptions = {
 
 
 const pmtMgmtTeamGridOptions = {
-    theme: 'alpine',
+    theme: 'legacy',
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 50,
