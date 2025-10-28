@@ -545,69 +545,83 @@ function getInvoiceNumberForPayment(invoiceId) {
 /**
  * ENHANCED: Load supplier payments with invoice number pre-fetching (OPTIONAL)
  */
-async function loadSupplierPaymentsForMgmtTabEnhanced() {
-    if (!pmtMgmtSupplierGridApi) return;
+async function loadSupplierPaymentsForMgmtTab() {
+    console.log('[DEBUG] Starting loadSupplierPaymentsForMgmtTab');
+    
+    if (!pmtMgmtSupplierGridApi) {
+        console.error('[DEBUG] ❌ pmtMgmtSupplierGridApi not available');
+        return;
+    }
     
     try {
-        console.log('[PmtMgmt] Loading supplier payments with invoice context...');
+        console.log('[DEBUG] ✅ Grid API available, loading data...');
         pmtMgmtSupplierGridApi.setGridOption('loading', true);
         
         const db = firebase.firestore();
+        console.log('[DEBUG] Firestore reference created');
         
-        // ✅ LOAD: Supplier payments
+        // ✅ DEBUG: Check collection path
+        console.log('[DEBUG] Collection path:', SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH);
+        
         const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(75);
+            .limit(10); // ✅ REDUCED: Small limit for testing
         
-        const paymentsSnapshot = await supplierPaymentsQuery.get();
-        const supplierPayments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('[DEBUG] Query created, executing...');
+        const snapshot = await supplierPaymentsQuery.get();
         
-        console.log(`[PmtMgmt] Loaded ${supplierPayments.length} supplier payments`);
+        console.log('[DEBUG] Query results:');
+        console.log(`  - Snapshot size: ${snapshot.size}`);
+        console.log(`  - Snapshot empty: ${snapshot.empty}`);
         
-        // ✅ OPTIMIZATION: Pre-fetch related invoice numbers to avoid lookup delays
-        const uniqueInvoiceIds = [...new Set(supplierPayments.map(p => p.relatedInvoiceId).filter(Boolean))];
-        
-        if (uniqueInvoiceIds.length > 0 && uniqueInvoiceIds.length <= 20) { // Only if reasonable number
-            console.log(`[PmtMgmt] Pre-fetching ${uniqueInvoiceIds.length} invoice numbers...`);
-            
-            const invoicePromises = uniqueInvoiceIds.map(id => 
-                db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(id).get()
-            );
-            
-            const invoiceDocs = await Promise.all(invoicePromises);
-            const invoiceCache = new Map();
-            
-            invoiceDocs.forEach(doc => {
-                if (doc.exists) {
-                    invoiceCache.set(doc.id, doc.data());
-                }
+        const supplierPayments = snapshot.docs.map(doc => {
+            const data = { id: doc.id, ...doc.data() };
+            console.log('[DEBUG] Payment record:', {
+                id: data.id,
+                supplierId: data.supplierId,
+                amountPaid: data.amountPaid,
+                paymentStatus: data.paymentStatus,
+                paymentDate: data.paymentDate
             });
-            
-            // Store in state for grid valueGetter to use
-            pmtMgmtState.invoiceCache = invoiceCache;
-            
-            console.log(`[PmtMgmt] ✅ Pre-fetched ${invoiceCache.size} invoice details`);
-        }
+            return data;
+        });
         
-        // Enhanced payment data with invoice context
-        const enhancedPayments = supplierPayments.map(payment => ({
-            ...payment,
-            // ✅ PRE-POPULATE: Add invoice number to payment data
-            supplierInvoiceNo: pmtMgmtState.invoiceCache?.get(payment.relatedInvoiceId)?.supplierInvoiceNo || payment.relatedInvoiceId
-        }));
+        console.log(`[DEBUG] ✅ Processed ${supplierPayments.length} supplier payments`);
+        console.log('[DEBUG] First payment sample:', supplierPayments[0]);
         
-        pmtMgmtSupplierGridApi.setGridOption('rowData', enhancedPayments);
+        // ✅ LOAD: Data into grid
+        pmtMgmtSupplierGridApi.setGridOption('rowData', supplierPayments);
         pmtMgmtSupplierGridApi.setGridOption('loading', false);
         
-        console.log(`[PmtMgmt] ✅ Supplier payments loaded with invoice context`);
+        // ✅ VERIFY: Data was loaded
+        setTimeout(() => {
+            const rowCount = pmtMgmtSupplierGridApi.getDisplayedRowCount();
+            console.log(`[DEBUG] ✅ Grid shows ${rowCount} rows after loading`);
+            
+            if (rowCount === 0 && supplierPayments.length > 0) {
+                console.error('[DEBUG] ❌ Grid has data but shows 0 rows - likely grid configuration issue');
+                console.log('[DEBUG] Grid API state:', {
+                    api: !!pmtMgmtSupplierGridApi,
+                    rowData: supplierPayments.length,
+                    displayed: rowCount
+                });
+            }
+        }, 200);
         
     } catch (error) {
-        console.error('[PmtMgmt] Error loading enhanced supplier payments:', error);
-        // Fallback to basic loading
-        loadSupplierPaymentsForMgmtTab();
+        console.error('[DEBUG] ❌ Error loading supplier payments:', error);
+        console.error('[DEBUG] Error details:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        
+        if (pmtMgmtSupplierGridApi) {
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            pmtMgmtSupplierGridApi.showNoRowsOverlay();
+        }
     }
 }
-
 
 
 // ===================================================================
@@ -1492,68 +1506,90 @@ async function loadSupplierPaymentsForMgmtTab() {
  * Initializes supplier payments tab (placeholder)
  */
 function initializeSupplierPaymentsTab() {
-    console.log('[PmtMgmt] 📤 Initializing Supplier Payments tab with dedicated grid...');
+    console.log('[DEBUG] Initializing Supplier Payments tab...');
     
     const gridContainer = document.getElementById('pmt-mgmt-supplier-grid');
+    console.log('[DEBUG] Supplier grid container:', gridContainer);
+    
     if (!gridContainer) {
-        console.error('[PmtMgmt] Supplier payments grid container not found');
+        console.error('[DEBUG] ❌ Supplier payments grid container not found');
+        console.log('[DEBUG] Available elements with pmt-mgmt:', 
+            Array.from(document.querySelectorAll('[id*="pmt-mgmt"]')).map(el => el.id)
+        );
         return;
     }
     
-    // ✅ DEDICATED: Use local grid configuration
+    console.log('[DEBUG] Grid container found, creating grid...');
+    console.log('[DEBUG] Container dimensions:', gridContainer.getBoundingClientRect());
+    
     if (!pmtMgmtSupplierGridApi) {
-        pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions); // Local config
-        console.log('[PmtMgmt] ✅ Dedicated supplier payments grid created');
+        try {
+            pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions);
+            console.log('[DEBUG] ✅ Supplier payments grid created successfully');
+        } catch (gridError) {
+            console.error('[DEBUG] ❌ Error creating supplier grid:', gridError);
+        }
+    } else {
+        console.log('[DEBUG] Supplier grid already exists, loading data...');
+        setTimeout(() => {
+            loadSupplierPaymentsForMgmtTab();
+        }, 100);
     }
     
     setupSupplierPaymentFilters();
 }
 
-
 /**
  * FREE TIER OPTIMIZED: Loads team payments data
  */
 async function loadTeamPaymentsForMgmtTab() {
-    if (!pmtMgmtTeamGridApi) return;
+    console.log('[DEBUG] Starting loadTeamPaymentsForMgmtTab');
+    
+    if (!pmtMgmtTeamGridApi) {
+        console.error('[DEBUG] ❌ pmtMgmtTeamGridApi not available');
+        return;
+    }
     
     try {
-        console.log('[PmtMgmt] Loading team payments...');
+        console.log('[DEBUG] ✅ Team grid API available, loading data...');
         pmtMgmtTeamGridApi.setGridOption('loading', true);
         
-        // ✅ CACHE CHECK
-        const cacheKey = 'pmt_mgmt_team_payments';
-        const cached = getCachedPaymentMetrics(cacheKey);
-        
-        if (cached && cached.teamPayments) {
-            console.log('[PmtMgmt] Using cached team payments - 0 reads');
-            pmtMgmtTeamGridApi.setGridOption('rowData', cached.teamPayments);
-            pmtMgmtTeamGridApi.setGridOption('loading', false);
-            return;
-        }
-        
         const db = firebase.firestore();
+        console.log('[DEBUG] Collection path:', CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH);
+        
         const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(75);
+            .limit(10); // Small limit for testing
         
         const snapshot = await teamPaymentsQuery.get();
-        const teamPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`[DEBUG] Team payments snapshot size: ${snapshot.size}`);
         
-        console.log(`[PmtMgmt] ✅ Loaded ${teamPayments.length} team payments (${snapshot.size} reads)`);
+        const teamPayments = snapshot.docs.map(doc => {
+            const data = { id: doc.id, ...doc.data() };
+            console.log('[DEBUG] Team payment:', {
+                id: data.id,
+                teamName: data.teamName,
+                amountPaid: data.amountPaid,
+                paymentStatus: data.paymentStatus
+            });
+            return data;
+        });
         
         pmtMgmtTeamGridApi.setGridOption('rowData', teamPayments);
         pmtMgmtTeamGridApi.setGridOption('loading', false);
         
-        // Cache results
-        cachePaymentMetrics(cacheKey, { teamPayments: teamPayments });
+        setTimeout(() => {
+            const rowCount = pmtMgmtTeamGridApi.getDisplayedRowCount();
+            console.log(`[DEBUG] ✅ Team grid shows ${rowCount} rows`);
+        }, 200);
         
     } catch (error) {
-        console.error('[PmtMgmt] Error loading team payments:', error);
+        console.error('[DEBUG] ❌ Error loading team payments:', error);
         if (pmtMgmtTeamGridApi) {
             pmtMgmtTeamGridApi.setGridOption('loading', false);
-            pmtMgmtTeamGridApi.showNoRowsOverlay();
         }
     }
+}
 }
 
 /**
@@ -1601,44 +1637,50 @@ function initializeSalesPaymentsTab() {
  * FREE TIER OPTIMIZED: Loads sales payments data
  */
 async function loadSalesPaymentsForMgmtTab() {
-    if (!pmtMgmtSalesGridApi) return;
+    console.log('[DEBUG] Starting loadSalesPaymentsForMgmtTab');
+    
+    if (!pmtMgmtSalesGridApi) {
+        console.error('[DEBUG] ❌ pmtMgmtSalesGridApi not available');
+        return;
+    }
     
     try {
-        console.log('[PmtMgmt] Loading sales payments...');
+        console.log('[DEBUG] ✅ Sales grid API available, loading data...');
         pmtMgmtSalesGridApi.setGridOption('loading', true);
         
-        // ✅ CACHE CHECK
-        const cacheKey = 'pmt_mgmt_sales_payments';
-        const cached = getCachedPaymentMetrics(cacheKey);
-        
-        if (cached && cached.salesPayments) {
-            console.log('[PmtMgmt] Using cached sales payments - 0 reads');
-            pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesPayments);
-            pmtMgmtSalesGridApi.setGridOption('loading', false);
-            return;
-        }
-        
         const db = firebase.firestore();
+        console.log('[DEBUG] Collection path:', SALES_PAYMENTS_LEDGER_COLLECTION_PATH);
+        
         const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
             .orderBy('paymentDate', 'desc')
-            .limit(75);
+            .limit(10); // Small limit for testing
         
         const snapshot = await salesPaymentsQuery.get();
-        const salesPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`[DEBUG] Sales payments snapshot size: ${snapshot.size}`);
         
-        console.log(`[PmtMgmt] ✅ Loaded ${salesPayments.length} sales payments (${snapshot.size} reads)`);
+        const salesPayments = snapshot.docs.map(doc => {
+            const data = { id: doc.id, ...doc.data() };
+            console.log('[DEBUG] Sales payment:', {
+                id: data.id,
+                customerName: data.customerName,
+                amountPaid: data.amountPaid,
+                status: data.status
+            });
+            return data;
+        });
         
         pmtMgmtSalesGridApi.setGridOption('rowData', salesPayments);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
         
-        // Cache results
-        cachePaymentMetrics(cacheKey, { salesPayments: salesPayments });
+        setTimeout(() => {
+            const rowCount = pmtMgmtSalesGridApi.getDisplayedRowCount();
+            console.log(`[DEBUG] ✅ Sales grid shows ${rowCount} rows`);
+        }, 200);
         
     } catch (error) {
-        console.error('[PmtMgmt] Error loading sales payments:', error);
+        console.error('[DEBUG] ❌ Error loading sales payments:', error);
         if (pmtMgmtSalesGridApi) {
             pmtMgmtSalesGridApi.setGridOption('loading', false);
-            pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
     }
 }
