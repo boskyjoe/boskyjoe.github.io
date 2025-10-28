@@ -43,7 +43,9 @@ import {
     
     // Existing helper functions
     resetPaymentForm,
-    loadPaymentsForSelectedInvoice
+    loadPaymentsForSelectedInvoice,
+    purchasePaymentsGridOptions,consignmentPaymentsGridOptions,salePaymentHistoryGridOptions
+
 } from './ui.js';
 
 // API functions (existing - call without modification)
@@ -504,13 +506,13 @@ async function refreshPaymentManagementDashboard() {
 }
 
 // ===================================================================
-// INTELLIGENT CACHING SYSTEM (FREE TIER OPTIMIZATION)
+// ENHANCED CACHING SYSTEM (FREE TIER OPTIMIZATION)
 // ===================================================================
 
 /**
- * Gets cached payment metrics if still fresh
+ * Enhanced cache function with multiple cache durations
  */
-function getCachedPaymentMetrics(cacheKey) {
+function getCachedPaymentMetrics(cacheKey, maxAgeMinutes = 3) {
     try {
         const cached = localStorage.getItem(`pmt_mgmt_${cacheKey}`);
         if (!cached) return null;
@@ -518,38 +520,38 @@ function getCachedPaymentMetrics(cacheKey) {
         const { data, timestamp } = JSON.parse(cached);
         const ageMinutes = (Date.now() - timestamp) / (1000 * 60);
         
-        // ✅ 5-MINUTE CACHE: Balance between freshness and read optimization
-        if (ageMinutes < 5) {
-            console.log(`[PmtMgmt] Using cached metrics (${ageMinutes.toFixed(1)} min old)`);
+        if (ageMinutes < maxAgeMinutes) {
+            console.log(`[PmtMgmt] Cache hit: ${cacheKey} (${ageMinutes.toFixed(1)}min old)`);
             return data;
         } else {
-            console.log(`[PmtMgmt] Cache expired (${ageMinutes.toFixed(1)} min old), fetching fresh data`);
+            console.log(`[PmtMgmt] Cache expired: ${cacheKey} (${ageMinutes.toFixed(1)}min old)`);
             localStorage.removeItem(`pmt_mgmt_${cacheKey}`);
             return null;
         }
         
     } catch (error) {
-        console.warn('[PmtMgmt] Error reading cache:', error);
+        console.warn(`[PmtMgmt] Cache read error for ${cacheKey}:`, error);
         return null;
     }
 }
 
 /**
- * Caches payment metrics for future use
+ * Enhanced cache storage with metadata
  */
-function cachePaymentMetrics(cacheKey, metrics) {
+function cachePaymentMetrics(cacheKey, data) {
     try {
         const cacheData = {
-            data: metrics,
+            data: data,
             timestamp: Date.now(),
-            version: '1.0.0'
+            version: '1.0.0',
+            module: 'PaymentManagement'
         };
         
         localStorage.setItem(`pmt_mgmt_${cacheKey}`, JSON.stringify(cacheData));
-        console.log(`[PmtMgmt] ✅ Cached metrics for 5 minutes (${metrics.totalFirestoreReads} reads saved)`);
+        console.log(`[PmtMgmt] ✅ Cached: ${cacheKey}`);
         
     } catch (error) {
-        console.warn('[PmtMgmt] Error caching metrics:', error);
+        console.warn(`[PmtMgmt] Cache write error for ${cacheKey}:`, error);
     }
 }
 
@@ -874,29 +876,518 @@ function updatePaymentMgmtDashboardCards(metrics) {
 // TAB INITIALIZATION PLACEHOLDERS (Implement in next steps)
 // ===================================================================
 
+
+/**
+ * FREE TIER OPTIMIZED: Loads supplier payments data with caching
+ */
+async function loadSupplierPaymentsForMgmtTab() {
+    if (!pmtMgmtSupplierGridApi) {
+        console.warn('[PmtMgmt] Supplier grid API not ready');
+        return;
+    }
+    
+    try {
+        console.log('[PmtMgmt] Loading supplier payments with optimization...');
+        pmtMgmtSupplierGridApi.setGridOption('loading', true);
+        
+        // ✅ CACHE CHECK: 3-minute cache for tab data
+        const cacheKey = 'pmt_mgmt_supplier_payments';
+        const cached = getCachedPaymentMetrics(cacheKey);
+        
+        if (cached && cached.supplierPayments) {
+            console.log('[PmtMgmt] Using cached supplier payments - 0 Firestore reads');
+            pmtMgmtSupplierGridApi.setGridOption('rowData', cached.supplierPayments);
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            return;
+        }
+        
+        const db = firebase.firestore();
+        
+        // ✅ OPTIMIZED QUERY: Recent supplier payments only
+        const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .orderBy('paymentDate', 'desc')
+            .limit(75); // Reasonable limit for supplier payments
+        
+        const snapshot = await supplierPaymentsQuery.get();
+        const supplierPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        console.log(`[PmtMgmt] ✅ Loaded ${supplierPayments.length} supplier payments (${snapshot.size} reads)`);
+        
+        // Load into grid
+        pmtMgmtSupplierGridApi.setGridOption('rowData', supplierPayments);
+        pmtMgmtSupplierGridApi.setGridOption('loading', false);
+        
+        // ✅ CACHE: Store for 3 minutes
+        cachePaymentMetrics(cacheKey, { supplierPayments: supplierPayments, timestamp: Date.now() });
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading supplier payments:', error);
+        if (pmtMgmtSupplierGridApi) {
+            pmtMgmtSupplierGridApi.setGridOption('loading', false);
+            pmtMgmtSupplierGridApi.showNoRowsOverlay();
+        }
+    }
+}
+
+
+
 /**
  * Initializes supplier payments tab (placeholder)
  */
 function initializeSupplierPaymentsTab() {
-    console.log('[PmtMgmt] TODO: Initialize supplier payments tab');
-    // Will implement: reuse existing supplier payment grid
+    console.log('[PmtMgmt] 📤 Initializing Supplier Payments tab...');
+    
+    const gridContainer = document.getElementById('pmt-mgmt-supplier-grid');
+    if (!gridContainer) {
+        console.error('[PmtMgmt] Supplier payments grid container not found');
+        return;
+    }
+    
+    // ✅ REUSE: Existing supplier payments grid configuration (SAFE)
+    const pmtMgmtSupplierGridOptions = {
+        ...purchasePaymentsGridOptions, // REUSE existing proven configuration
+        
+        // ✅ OVERRIDE: Only the grid API assignment to avoid conflicts
+        onGridReady: params => {
+            pmtMgmtSupplierGridApi = params.api; // UNIQUE variable name
+            console.log('[PmtMgmt] ✅ Supplier payments grid ready in Payment Management');
+            
+            // Auto-load data after grid is ready
+            setTimeout(() => {
+                loadSupplierPaymentsForMgmtTab();
+            }, 100);
+        }
+    };
+    
+    // Initialize grid with existing configuration
+    if (!pmtMgmtSupplierGridApi) {
+        pmtMgmtSupplierGridApi = createGrid(gridContainer, pmtMgmtSupplierGridOptions);
+        console.log('[PmtMgmt] ✅ Supplier payments grid created');
+    }
+    
+    // Setup supplier-specific filter listeners
+    setupSupplierPaymentFilters();
+}
+
+
+/**
+ * FREE TIER OPTIMIZED: Loads team payments data
+ */
+async function loadTeamPaymentsForMgmtTab() {
+    if (!pmtMgmtTeamGridApi) return;
+    
+    try {
+        console.log('[PmtMgmt] Loading team payments...');
+        pmtMgmtTeamGridApi.setGridOption('loading', true);
+        
+        // ✅ CACHE CHECK
+        const cacheKey = 'pmt_mgmt_team_payments';
+        const cached = getCachedPaymentMetrics(cacheKey);
+        
+        if (cached && cached.teamPayments) {
+            console.log('[PmtMgmt] Using cached team payments - 0 reads');
+            pmtMgmtTeamGridApi.setGridOption('rowData', cached.teamPayments);
+            pmtMgmtTeamGridApi.setGridOption('loading', false);
+            return;
+        }
+        
+        const db = firebase.firestore();
+        const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .orderBy('paymentDate', 'desc')
+            .limit(75);
+        
+        const snapshot = await teamPaymentsQuery.get();
+        const teamPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        console.log(`[PmtMgmt] ✅ Loaded ${teamPayments.length} team payments (${snapshot.size} reads)`);
+        
+        pmtMgmtTeamGridApi.setGridOption('rowData', teamPayments);
+        pmtMgmtTeamGridApi.setGridOption('loading', false);
+        
+        // Cache results
+        cachePaymentMetrics(cacheKey, { teamPayments: teamPayments });
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading team payments:', error);
+        if (pmtMgmtTeamGridApi) {
+            pmtMgmtTeamGridApi.setGridOption('loading', false);
+            pmtMgmtTeamGridApi.showNoRowsOverlay();
+        }
+    }
 }
 
 /**
  * Initializes team payments tab (placeholder)
  */
 function initializeTeamPaymentsTab() {
-    console.log('[PmtMgmt] TODO: Initialize team payments tab');
-    // Will implement: reuse existing consignment payment grid
+    console.log('[PmtMgmt] 👥 Initializing Team Payments tab...');
+    
+    const gridContainer = document.getElementById('pmt-mgmt-team-grid');
+    if (!gridContainer) {
+        console.error('[PmtMgmt] Team payments grid container not found');
+        return;
+    }
+    
+    // ✅ REUSE: Existing consignment payments grid configuration
+    const pmtMgmtTeamGridOptions = {
+        ...consignmentPaymentsGridOptions, // REUSE existing configuration
+        
+        onGridReady: params => {
+            pmtMgmtTeamGridApi = params.api; // UNIQUE variable name
+            console.log('[PmtMgmt] ✅ Team payments grid ready in Payment Management');
+            
+            setTimeout(() => {
+                loadTeamPaymentsForMgmtTab();
+            }, 100);
+        }
+    };
+    
+    if (!pmtMgmtTeamGridApi) {
+        pmtMgmtTeamGridApi = createGrid(gridContainer, pmtMgmtTeamGridOptions);
+        console.log('[PmtMgmt] ✅ Team payments grid created');
+    }
+    
+    // Setup team-specific filters
+    setupTeamPaymentFilters();
 }
 
 /**
  * Initializes sales payments tab (placeholder)
  */
 function initializeSalesPaymentsTab() {
-    console.log('[PmtMgmt] TODO: Initialize sales payments tab');
-    // Will implement: reuse existing sales payment grid
+    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab...');
+    
+    const gridContainer = document.getElementById('pmt-mgmt-sales-grid');
+    if (!gridContainer) {
+        console.error('[PmtMgmt] Sales payments grid container not found');
+        return;
+    }
+    
+    // ✅ REUSE: Existing sales payments grid configuration  
+    const pmtMgmtSalesGridOptions = {
+        ...salePaymentHistoryGridOptions, // REUSE existing configuration
+        
+        onGridReady: params => {
+            pmtMgmtSalesGridApi = params.api; // UNIQUE variable name
+            console.log('[PmtMgmt] ✅ Sales payments grid ready in Payment Management');
+            
+            setTimeout(() => {
+                loadSalesPaymentsForMgmtTab();
+            }, 100);
+        }
+    };
+    
+    if (!pmtMgmtSalesGridApi) {
+        pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions);
+        console.log('[PmtMgmt] ✅ Sales payments grid created');
+    }
+    
+    // Setup sales-specific filters
+    setupSalesPaymentFilters();
 }
+
+/**
+ * FREE TIER OPTIMIZED: Loads sales payments data
+ */
+async function loadSalesPaymentsForMgmtTab() {
+    if (!pmtMgmtSalesGridApi) return;
+    
+    try {
+        console.log('[PmtMgmt] Loading sales payments...');
+        pmtMgmtSalesGridApi.setGridOption('loading', true);
+        
+        // ✅ CACHE CHECK
+        const cacheKey = 'pmt_mgmt_sales_payments';
+        const cached = getCachedPaymentMetrics(cacheKey);
+        
+        if (cached && cached.salesPayments) {
+            console.log('[PmtMgmt] Using cached sales payments - 0 reads');
+            pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesPayments);
+            pmtMgmtSalesGridApi.setGridOption('loading', false);
+            return;
+        }
+        
+        const db = firebase.firestore();
+        const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .orderBy('paymentDate', 'desc')
+            .limit(75);
+        
+        const snapshot = await salesPaymentsQuery.get();
+        const salesPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        console.log(`[PmtMgmt] ✅ Loaded ${salesPayments.length} sales payments (${snapshot.size} reads)`);
+        
+        pmtMgmtSalesGridApi.setGridOption('rowData', salesPayments);
+        pmtMgmtSalesGridApi.setGridOption('loading', false);
+        
+        // Cache results
+        cachePaymentMetrics(cacheKey, { salesPayments: salesPayments });
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading sales payments:', error);
+        if (pmtMgmtSalesGridApi) {
+            pmtMgmtSalesGridApi.setGridOption('loading', false);
+            pmtMgmtSalesGridApi.showNoRowsOverlay();
+        }
+    }
+}
+
+// ===================================================================
+// FILTER SETUP FUNCTIONS (TAB-SPECIFIC)
+// ===================================================================
+
+/**
+ * Sets up filter listeners for supplier payments tab
+ */
+function setupSupplierPaymentFilters() {
+    const filters = ['all', 'pending', 'overdue', 'today'];
+    
+    filters.forEach(filter => {
+        const button = document.getElementById(`pmt-mgmt-supplier-filter-${filter}`);
+        if (button) {
+            button.addEventListener('click', () => {
+                applySupplierPaymentFilter(filter);
+                updateSupplierFilterActiveState(button);
+            });
+        }
+    });
+    
+    // Search input
+    const searchInput = document.getElementById('pmt-mgmt-supplier-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (pmtMgmtSupplierGridApi) {
+                pmtMgmtSupplierGridApi.setQuickFilter(e.target.value);
+            }
+        });
+    }
+    
+    console.log('[PmtMgmt] ✅ Supplier payment filters setup');
+}
+
+/**
+ * Applies filter to supplier payments grid
+ */
+function applySupplierPaymentFilter(filterType) {
+    if (!pmtMgmtSupplierGridApi) return;
+    
+    console.log(`[PmtMgmt] Applying supplier filter: ${filterType}`);
+    
+    switch (filterType) {
+        case 'all':
+            pmtMgmtSupplierGridApi.setFilterModel(null);
+            break;
+        case 'pending':
+            pmtMgmtSupplierGridApi.setFilterModel({
+                paymentStatus: { type: 'equals', filter: 'Pending Verification' }
+            });
+            break;
+        case 'overdue':
+            // Could enhance with date-based overdue logic
+            console.log('[PmtMgmt] TODO: Implement overdue filter logic');
+            break;
+        case 'today':
+            const today = new Date().toISOString().split('T')[0];
+            pmtMgmtSupplierGridApi.setFilterModel({
+                paymentDate: { type: 'equals', filter: today }
+            });
+            break;
+    }
+}
+
+
+/**
+ * Updates active state for supplier filter buttons
+ */
+function updateSupplierFilterActiveState(activeButton) {
+    document.querySelectorAll('.pmt-mgmt-supplier-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    activeButton.classList.add('active');
+}
+
+/**
+ * Sets up filter listeners for team payments tab
+ */
+function setupTeamPaymentFilters() {
+    const filters = ['all', 'pending', 'verified', 'overdue'];
+    
+    filters.forEach(filter => {
+        const button = document.getElementById(`pmt-mgmt-team-filter-${filter}`);
+        if (button) {
+            button.addEventListener('click', () => {
+                applyTeamPaymentFilter(filter);
+                updateTeamFilterActiveState(button);
+            });
+        }
+    });
+    
+    // Team search
+    const searchInput = document.getElementById('pmt-mgmt-team-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (pmtMgmtTeamGridApi) {
+                pmtMgmtTeamGridApi.setQuickFilter(e.target.value);
+            }
+        });
+    }
+    
+    // Team name filter dropdown
+    const teamFilter = document.getElementById('pmt-mgmt-team-name-filter');
+    if (teamFilter) {
+        // Populate with team names from masterData
+        teamFilter.innerHTML = '<option value="">All Teams</option>';
+        masterData.teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team.teamName;
+            option.textContent = team.teamName;
+            teamFilter.appendChild(option);
+        });
+        
+        teamFilter.addEventListener('change', (e) => {
+            if (pmtMgmtTeamGridApi) {
+                const filterValue = e.target.value;
+                if (filterValue) {
+                    pmtMgmtTeamGridApi.setFilterModel({
+                        teamName: { type: 'equals', filter: filterValue }
+                    });
+                } else {
+                    pmtMgmtTeamGridApi.setFilterModel(null);
+                }
+            }
+        });
+    }
+    
+    console.log('[PmtMgmt] ✅ Team payment filters setup');
+}
+
+/**
+ * Applies filter to team payments grid
+ */
+function applyTeamPaymentFilter(filterType) {
+    if (!pmtMgmtTeamGridApi) return;
+    
+    console.log(`[PmtMgmt] Applying team filter: ${filterType}`);
+    
+    switch (filterType) {
+        case 'all':
+            pmtMgmtTeamGridApi.setFilterModel(null);
+            break;
+        case 'pending':
+            pmtMgmtTeamGridApi.setFilterModel({
+                paymentStatus: { type: 'equals', filter: 'Pending Verification' }
+            });
+            break;
+        case 'verified':
+            pmtMgmtTeamGridApi.setFilterModel({
+                paymentStatus: { type: 'equals', filter: 'Verified' }
+            });
+            break;
+        case 'overdue':
+            // Enhanced logic for overdue team payments
+            console.log('[PmtMgmt] TODO: Implement team overdue filter');
+            break;
+    }
+}
+
+/**
+ * Updates active state for team filter buttons
+ */
+function updateTeamFilterActiveState(activeButton) {
+    document.querySelectorAll('.pmt-mgmt-team-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    activeButton.classList.add('active');
+}
+
+/**
+ * Sets up filter listeners for sales payments tab
+ */
+function setupSalesPaymentFilters() {
+    const filters = ['all', 'unpaid', 'partial', 'overdue'];
+    
+    filters.forEach(filter => {
+        const button = document.getElementById(`pmt-mgmt-sales-filter-${filter}`);
+        if (button) {
+            button.addEventListener('click', () => {
+                applySalesPaymentFilter(filter);
+                updateSalesFilterActiveState(button);
+            });
+        }
+    });
+    
+    // Sales search
+    const searchInput = document.getElementById('pmt-mgmt-sales-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (pmtMgmtSalesGridApi) {
+                pmtMgmtSalesGridApi.setQuickFilter(e.target.value);
+            }
+        });
+    }
+    
+    // Store filter
+    const storeFilter = document.getElementById('pmt-mgmt-sales-store-filter');
+    if (storeFilter) {
+        storeFilter.addEventListener('change', (e) => {
+            if (pmtMgmtSalesGridApi) {
+                const filterValue = e.target.value;
+                if (filterValue) {
+                    pmtMgmtSalesGridApi.setFilterModel({
+                        store: { type: 'equals', filter: filterValue }
+                    });
+                } else {
+                    pmtMgmtSalesGridApi.setFilterModel(null);
+                }
+            }
+        });
+    }
+    
+    console.log('[PmtMgmt] ✅ Sales payment filters setup');
+}
+
+
+/**
+ * Applies filter to sales payments grid
+ */
+function applySalesPaymentFilter(filterType) {
+    if (!pmtMgmtSalesGridApi) return;
+    
+    console.log(`[PmtMgmt] Applying sales filter: ${filterType}`);
+    
+    switch (filterType) {
+        case 'all':
+            pmtMgmtSalesGridApi.setFilterModel(null);
+            break;
+        case 'unpaid':
+            pmtMgmtSalesGridApi.setFilterModel({
+                paymentStatus: { type: 'equals', filter: 'Unpaid' }
+            });
+            break;
+        case 'partial':
+            pmtMgmtSalesGridApi.setFilterModel({
+                paymentStatus: { type: 'equals', filter: 'Partially Paid' }
+            });
+            break;
+        case 'overdue':
+            // Enhanced overdue logic for sales
+            console.log('[PmtMgmt] TODO: Implement sales overdue filter');
+            break;
+    }
+}
+
+
+/**
+ * Updates active state for sales filter buttons
+ */
+function updateSalesFilterActiveState(activeButton) {
+    document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    activeButton.classList.add('active');
+}
+
+
 
 
 
