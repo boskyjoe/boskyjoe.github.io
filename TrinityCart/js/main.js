@@ -134,9 +134,10 @@ import {
 
 
 import { 
-    showPaymentManagementView,
-    switchPaymentMgmtTab,
-    clearPaymentMgmtCache
+    showPaymentManagementView,       
+    switchPaymentMgmtTab,            
+    clearPaymentMgmtCache,            
+    refreshPaymentManagementDashboard
 } from './payment-management.js';
 
 
@@ -557,6 +558,7 @@ async function handleFulfillConsignmentClick() {
 // EVENT HANDLER REGISTRY
 // ============================================================================
 
+
 const EventHandlers = {
     // Authentication handlers
     auth: {
@@ -579,7 +581,7 @@ const EventHandlers = {
         'church-teams-view': showChurchTeamsView,
         'consignment-view': showConsignmentView,
         'sales-view': showSalesView,
-        'pmt-mgmt-view': showPaymentManagementView,
+        'pmt-mgmt-view': showPaymentManagementView, // ✅ FROM: payment-management.js
         // ADD THESE NEW REPORT VIEWS:
         'reports-hub-view': showReportsHubView,
         'sales-reports-view': showSalesReportsView,
@@ -615,7 +617,8 @@ const EventHandlers = {
         'seasons-grid': handleSeasonsGrid,
         'sales-events-grid': handleSalesEventsGrid,
         'users-grid': handleUsersGrid,
-        'products-catalogue-grid': handleProductsCatalogueGrid
+        'products-catalogue-grid': handleProductsCatalogueGrid,
+        'pmt-mgmt-supplier-grid': handlePmtMgmtSupplierGrid
     }
 };
 
@@ -1568,6 +1571,16 @@ function handleStandaloneButtons(target, event) {
         '#bulk-clear-selection': () => handleBulkClearSelection(), 
         '#bulk-select-with-prices': () => handleBulkSelectWithPrices(),
         '.action-btn-add-to-cart': () => handleAddToCart(target),
+        // ✅ ADD: Payment Management button handlers (following your pattern)
+        '#pmt-mgmt-create-supplier-payment': async () => await handlePmtMgmtCreateSupplierPayment(),
+        '#pmt-mgmt-pay-all-outstanding': async () => await handlePmtMgmtPayAllOutstanding(),
+        '#pmt-mgmt-supplier-refresh': async () => await handlePmtMgmtSupplierRefresh(),
+        
+        // ✅ ADD: Payment Management action button classes
+        '.pmt-mgmt-pay-supplier-invoice': async () => await handlePmtMgmtPaySupplierInvoice(target),
+        '.pmt-mgmt-view-supplier-invoice': async () => await handlePmtMgmtViewSupplierInvoice(target),
+        '.pmt-mgmt-view-payments-history': async () => await handlePmtMgmtViewPaymentHistory(target),
+
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
             
@@ -2083,7 +2096,7 @@ async function handleSupplierPaymentSubmit(e) {
                     handlePmtMgmtSupplierRefresh();
                 }, 1000);
             }
-            
+
             // Refresh payments grid to show the new payment
             if (typeof loadPaymentsForSelectedInvoice === 'function') {
                 await loadPaymentsForSelectedInvoice();
@@ -5496,107 +5509,35 @@ function setupActivityTypeListener() {
 // ===================================================================
 
 /**
- * ENHANCED: Handle pay supplier invoice action from payment management
- */
-async function handlePmtMgmtPaySupplierInvoice(target) {
-    const invoiceId = target.dataset.id;
-    const user = appState.currentUser;
-    
-    if (!user) {
-        await showModal('error', 'Authentication Required', 'You must be logged in to process payments.');
-        return;
-    }
-    
-    if (!invoiceId) {
-        await showModal('error', 'Invalid Invoice', 'Invoice ID not found. Please refresh and try again.');
-        return;
-    }
-    
-    console.log(`[PmtMgmt] 💸 Pay supplier invoice action: ${invoiceId}`);
-    
-    try {
-        ProgressToast.show('Opening Supplier Payment Interface', 'info');
-        ProgressToast.updateProgress('Loading invoice details...', 50);
-        
-        // ✅ GET INVOICE DATA: From grid or database
-        const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
-        
-        if (!invoiceData) {
-            // Fallback: Get from database
-            const dbInvoice = await getPurchaseInvoiceById(invoiceId);
-            if (!dbInvoice) {
-                ProgressToast.hide(0);
-                await showModal('error', 'Invoice Not Found', 'Could not find the invoice data. Please refresh and try again.');
-                return;
-            }
-        }
-        
-        ProgressToast.updateProgress('Opening payment modal...', 85);
-        
-        // ✅ REUSE: Open existing supplier payment modal
-        showSupplierPaymentModal({
-            id: invoiceId,
-            invoiceId: invoiceData?.invoiceId || 'Unknown',
-            supplierName: invoiceData?.supplierName || 'Unknown Supplier',
-            balanceDue: invoiceData?.balanceDue || 0,
-            invoiceTotal: invoiceData?.invoiceTotal || 0
-        });
-        
-        ProgressToast.hide(300);
-        
-    } catch (error) {
-        console.error('[PmtMgmt] Error opening supplier payment:', error);
-        ProgressToast.showError(`Failed to open payment interface: ${error.message}`);
-        
-        setTimeout(() => {
-            showModal('error', 'Payment Interface Failed', 
-                'Could not open the supplier payment interface. Please try again.'
-            );
-        }, 1500);
-    }
-}
-
-/**
  * ENHANCED: Handle view supplier invoice details
  */
 async function handlePmtMgmtViewSupplierInvoice(target) {
     const invoiceId = target.dataset.id;
     
-    console.log(`[PmtMgmt] 📋 View supplier invoice: ${invoiceId}`);
+    console.log(`[main.js] View supplier invoice: ${invoiceId}`);
     
-    try {
-        ProgressToast.show('Loading Invoice Details', 'info');
-        ProgressToast.updateProgress('Retrieving invoice information...', 75);
-        
-        const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
-        
-        if (invoiceData) {
-            ProgressToast.hide(300);
-            
-            // ✅ DETAILED MODAL: Show comprehensive invoice information
-            await showModal('info', 'Supplier Invoice Details', 
-                `📋 INVOICE INFORMATION\n\n` +
-                `• System Invoice ID: ${invoiceData.invoiceId || 'Unknown'}\n` +
-                `• Supplier Invoice #: ${invoiceData.supplierInvoiceNo || 'Not Provided'}\n` +
-                `• Supplier: ${invoiceData.supplierName}\n` +
-                `• Purchase Date: ${invoiceData.formattedDate || 'Unknown'}\n\n` +
-                `💰 FINANCIAL DETAILS\n\n` +
-                `• Invoice Total: ${formatCurrency(invoiceData.invoiceTotal || 0)}\n` +
-                `• Amount Paid: ${formatCurrency(invoiceData.amountPaid || 0)}\n` +
-                `• Balance Due: ${formatCurrency(invoiceData.balanceDue || 0)}\n` +
-                `• Payment Status: ${invoiceData.paymentStatus}\n\n` +
-                `📊 OPERATIONAL CONTEXT\n\n` +
-                `• Days Outstanding: ${invoiceData.daysOutstanding || 0} days\n` +
-                `• Urgency Level: ${invoiceData.urgencyLevel || 'Normal'}\n` +
-                `• Requires Action: ${invoiceData.requiresImmediateAction ? 'Yes' : 'No'}`
-            );
-        } else {
-            ProgressToast.showError('Invoice details not available');
-        }
-        
-    } catch (error) {
-        console.error('[PmtMgmt] Error viewing invoice details:', error);
-        ProgressToast.showError('Failed to load invoice details');
+    const invoiceData = getSupplierInvoiceFromPmtMgmtGrid(invoiceId);
+    
+    if (invoiceData) {
+        await showModal('info', 'Supplier Invoice Details', 
+            `📋 SUPPLIER INVOICE DETAILS\n\n` +
+            `INVOICE INFORMATION:\n` +
+            `• System Invoice ID: ${invoiceData.invoiceId}\n` +
+            `• Supplier Invoice #: ${invoiceData.supplierInvoiceNo || 'Not Provided'}\n` +
+            `• Supplier: ${invoiceData.supplierName}\n` +
+            `• Purchase Date: ${invoiceData.formattedDate || 'Unknown'}\n\n` +
+            `FINANCIAL SUMMARY:\n` +
+            `• Invoice Total: ${formatCurrency(invoiceData.invoiceTotal || 0)}\n` +
+            `• Amount Paid: ${formatCurrency(invoiceData.amountPaid || 0)}\n` +
+            `• Balance Due: ${formatCurrency(invoiceData.balanceDue || 0)}\n` +
+            `• Payment Status: ${invoiceData.paymentStatus}\n\n` +
+            `PAYMENT PRIORITY:\n` +
+            `• Days Outstanding: ${invoiceData.daysOutstanding || 0} days\n` +
+            `• Urgency Level: ${invoiceData.urgencyLevel || 'Normal'}\n` +
+            `• Priority Reason: ${invoiceData.urgencyReason || 'Standard timeline'}`
+        );
+    } else {
+        await showModal('error', 'Invoice Not Found', 'Invoice details are not available.');
     }
 }
 
@@ -5643,155 +5584,79 @@ async function handlePmtMgmtViewPaymentHistory(target) {
     }
 }
 
-
 /**
- * ENHANCED: Handle create new supplier payment
+ * Handle create supplier payment
  */
 async function handlePmtMgmtCreateSupplierPayment() {
-    const user = appState.currentUser;
+    console.log('[main.js] Create new supplier payment');
     
-    console.log(`[PmtMgmt] 📝 Create new supplier payment by ${user?.email}`);
+    // ✅ OPTIONS: Give user choice (following your pattern)
+    const choice = await showModal('confirm', 'Create Supplier Payment', 
+        'How would you like to create a supplier payment?\n\n' +
+        '📋 PAY EXISTING INVOICE:\n' +
+        'Select from outstanding invoices shown in the grid\n\n' +
+        '💰 DIRECT PAYMENT:\n' +
+        'Go to Purchase Management for full invoice selection\n\n' +
+        'Which option would you prefer?',
+        [
+            { text: 'Use Grid Invoices', value: 'grid' },
+            { text: 'Go to Purchase Mgmt', value: 'purchase' },
+            { text: 'Cancel', value: 'cancel' }
+        ]
+    );
     
-    try {
-        ProgressToast.show('Creating New Supplier Payment', 'info');
-        ProgressToast.updateProgress('Opening payment creation interface...', 75);
-        
-        // ✅ BUSINESS LOGIC: Show options for new payment
-        const paymentOption = await showModal('confirm', 'Create Supplier Payment', 
-            `Choose payment creation method:\n\n` +
-            `📋 PAY EXISTING INVOICE:\n` +
-            `Select from outstanding supplier invoices\n` +
-            `(Recommended for regular operations)\n\n` +
-            `💰 MANUAL PAYMENT ENTRY:\n` +
-            `Create payment without specific invoice\n` +
-            `(For advances, deposits, or corrections)\n\n` +
-            `Which method would you like to use?`,
-            [
-                { text: 'Pay Existing Invoice', value: 'existing' },
-                { text: 'Manual Entry', value: 'manual' },
-                { text: 'Cancel', value: 'cancel' }
-            ]
+    if (choice === 'purchase') {
+        // ✅ ROUTE: To existing purchase management (your proven workflow)
+        showPurchasesView();
+        await showModal('info', 'Navigation', 
+            'Switched to Purchase Management where you can:\n\n' +
+            '1. Select any supplier invoice\n' +
+            '2. Click the payment button\n' +
+            '3. Complete payment process\n\n' +
+            'Return to Payment Management to see updated status.'
         );
-        
-        ProgressToast.hide(300);
-        
-        if (paymentOption === 'existing') {
-            // ✅ ROUTE: To existing purchase management for invoice selection
-            await showModal('info', 'Navigation', 
-                'This will open the Purchase Management module where you can:\n\n' +
-                '1. Select an outstanding supplier invoice\n' +
-                '2. Click the payment button\n' +
-                '3. Complete the payment process\n\n' +
-                'After payment, return to Payment Management to see updated status.'
-            );
-            
-            // TODO: Navigate to purchase management
-            // showPurchasesView();
-            
-        } else if (paymentOption === 'manual') {
-            // ✅ MANUAL: Direct supplier payment entry (future enhancement)
-            await showModal('info', 'Manual Payment Entry', 
-                'Manual supplier payment entry will be implemented in the next phase.\n\n' +
-                'For now, please use the Purchase Management module to create supplier payments.'
-            );
-        }
-        
-    } catch (error) {
-        console.error('[PmtMgmt] Error creating supplier payment:', error);
-        ProgressToast.showError('Failed to create payment');
+    } else if (choice === 'grid') {
+        await showModal('info', 'Grid-Based Payment', 
+            'Use the PAY buttons in the Outstanding Invoices grid below.\n\n' +
+            'Each PAY button will open the payment form for that specific invoice.'
+        );
     }
 }
 
-
 /**
- * ENHANCED: Handle pay all outstanding invoices (bulk operation)  
+ * Handle pay all outstanding (future bulk feature)
  */
 async function handlePmtMgmtPayAllOutstanding() {
-    const user = appState.currentUser;
+    console.log('[main.js] Pay all outstanding invoices');
     
-    console.log(`[PmtMgmt] 💸 Pay all outstanding invoices by ${user?.email}`);
-    
-    try {
-        // Get outstanding invoices from grid
-        const outstandingInvoices = [];
-        if (pmtMgmtSupplierGridApi) {
-            pmtMgmtSupplierGridApi.forEachNodeAfterFilterAndSort(node => {
-                if (node.data && (node.data.balanceDue || 0) > 0) {
-                    outstandingInvoices.push(node.data);
-                }
-            });
-        }
-        
-        if (outstandingInvoices.length === 0) {
-            await showModal('info', 'No Outstanding Invoices', 
-                'There are no outstanding supplier invoices to pay.\n\n' +
-                'All supplier invoices are currently paid in full.'
-            );
-            return;
-        }
-        
-        const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
-        
-        const confirmed = await showModal('confirm', 'Pay All Outstanding Invoices', 
-            `Pay all outstanding supplier invoices?\n\n` +
-            `📊 SUMMARY:\n` +
-            `• Invoices: ${outstandingInvoices.length}\n` +
-            `• Total Amount: ${formatCurrency(totalOutstanding)}\n` +
-            `• Suppliers: ${new Set(outstandingInvoices.map(inv => inv.supplierName)).size}\n\n` +
-            `⚠️ BULK PAYMENT PROCESS:\n` +
-            `This will create individual payment records for each invoice.\n` +
-            `Each payment will require verification before updating invoice balances.\n\n` +
-            `Continue with bulk payment creation?`
-        );
-        
-        if (confirmed) {
-            // TODO: Implement bulk payment creation
-            await showModal('info', 'Bulk Payment Creation', 
-                'Bulk payment creation will be implemented in the next development phase.\n\n' +
-                `For now, please process the ${outstandingInvoices.length} invoices individually using the PAY buttons.`
-            );
-        }
-        
-    } catch (error) {
-        console.error('[PmtMgmt] Error in bulk payment operation:', error);
-        showModal('error', 'Bulk Payment Failed', 'Could not process bulk payment operation.');
-    }
+    await showModal('info', 'Bulk Payment Feature', 
+        'Bulk payment processing will be implemented in a future update.\n\n' +
+        'For now, please use individual PAY buttons for each invoice.'
+    );
 }
 
-
 /**
- * ENHANCED: Handle supplier tab refresh
+ * Handle supplier tab refresh
  */
 async function handlePmtMgmtSupplierRefresh() {
-    console.log(`[PmtMgmt] 🔄 Refreshing supplier payments tab`);
+    console.log('[main.js] Refresh supplier payments tab');
     
     try {
-        const currentFilter = supplierInvoicesPagination.currentFilter || 'outstanding';
+        // ✅ CLEAR CACHE: Force fresh data
+        if (typeof clearPaymentMgmtCache === 'function') {
+            clearPaymentMgmtCache();
+        }
         
-        ProgressToast.show('Refreshing Supplier Data', 'info');
-        ProgressToast.updateProgress('Clearing cache and reloading...', 50);
+        // ✅ RELOAD: Supplier tab data
+        if (typeof refreshPaymentManagementDashboard === 'function') {
+            await refreshPaymentManagementDashboard();
+        }
         
-        // Clear relevant caches
-        clearPaymentMgmtCache();
-        
-        // Reload with current filter
-        await loadSupplierInvoicesForMgmtTab(currentFilter, {
-            page: 1,
-            forceRefresh: true
-        });
-        
-        ProgressToast.updateProgress('Supplier data refreshed successfully!', 100);
-        
-        setTimeout(() => {
-            ProgressToast.hide(300);
-            showModal('success', 'Data Refreshed', 
-                'Supplier payment data has been refreshed with the latest information from the database.'
-            );
-        }, 800);
+        await showModal('success', 'Data Refreshed', 'Supplier payment data has been refreshed with the latest information.');
         
     } catch (error) {
-        console.error('[PmtMgmt] Error refreshing supplier tab:', error);
-        ProgressToast.showError('Refresh failed');
+        console.error('[main.js] Error refreshing supplier data:', error);
+        await showModal('error', 'Refresh Failed', 'Could not refresh supplier data. Please try again.');
     }
 }
 
@@ -5828,6 +5693,98 @@ function getSupplierInvoiceFromMgmtGrid(invoiceId) {
     }
 }
 
+// ===================================================================
+// PAYMENT MANAGEMENT GRID HANDLERS (following your pattern)
+// ===================================================================
+
+/**
+ * ENHANCED: Handle payment management supplier grid actions
+ */
+async function handlePmtMgmtSupplierGrid(button, docId, user) {
+    console.log(`[main.js] Payment management supplier grid action:`, {
+        action: button.className,
+        invoiceId: docId,
+        user: user.email
+    });
+    
+    // ✅ ROUTE: Payment management actions to handlers
+    if (button.classList.contains('pmt-mgmt-pay-supplier-invoice')) {
+        await handlePmtMgmtPaySupplierInvoice(button);
+    } else if (button.classList.contains('pmt-mgmt-view-supplier-invoice')) {
+        await handlePmtMgmtViewSupplierInvoice(button);
+    } else if (button.classList.contains('pmt-mgmt-view-payments-history')) {
+        await handlePmtMgmtViewPaymentHistory(button);
+    } else {
+        console.warn('[main.js] Unknown payment management supplier action:', button.className);
+    }
+}
+
+// ===================================================================
+// PAYMENT MANAGEMENT: SUPPLIER ACTIONS
+// ===================================================================
+
+/**
+ * Handle pay supplier invoice from payment management  
+ */
+async function handlePmtMgmtPaySupplierInvoice(target) {
+    const invoiceId = target.dataset.id;
+    const user = appState.currentUser;
+    
+    if (!user || !invoiceId) return;
+    
+    console.log(`[main.js] Pay supplier invoice: ${invoiceId}`);
+    
+    try {
+        // ✅ GET INVOICE DATA: From payment management grid
+        const invoiceData = getSupplierInvoiceFromPmtMgmtGrid(invoiceId);
+        
+        if (!invoiceData) {
+            await showModal('error', 'Invoice Data Error', 'Could not find invoice data. Please refresh and try again.');
+            return;
+        }
+        
+        const balanceDue = invoiceData.balanceDue || 0;
+        
+        // ✅ CONFIRMATION: Following your pattern
+        const confirmed = await showModal('confirm', 'Pay Supplier Invoice', 
+            `Pay outstanding balance for this supplier invoice?\n\n` +
+            `• Supplier: ${invoiceData.supplierName}\n` +
+            `• Invoice: ${invoiceData.supplierInvoiceNo || invoiceData.invoiceId}\n` +
+            `• Balance Due: ${formatCurrency(balanceDue)}\n\n` +
+            `This will open the supplier payment form.`
+        );
+        
+        if (confirmed) {
+            // ✅ REUSE: Existing supplier payment modal (your proven code)
+            showSupplierPaymentModal({
+                id: invoiceId,
+                invoiceId: invoiceData.invoiceId,
+                supplierName: invoiceData.supplierName,
+                balanceDue: balanceDue,
+                invoiceTotal: invoiceData.invoiceTotal || 0,
+                supplierId: invoiceData.supplierId
+            });
+        }
+        
+    } catch (error) {
+        console.error('[main.js] Error paying supplier invoice:', error);
+        await showModal('error', 'Payment Error', 'Failed to initiate supplier payment. Please try again.');
+    }
+}
+
+
+
+// ===================================================================
+// HELPER FUNCTIONS (following your pattern)
+// ===================================================================
+
+/**
+ * Get supplier invoice data from payment management grid
+ */
+function getSupplierInvoiceFromPmtMgmtGrid(invoiceId) {
+    // ✅ DELEGATE: Get data from payment management module
+    return getSupplierInvoiceFromMgmtGrid ? getSupplierInvoiceFromMgmtGrid(invoiceId) : null;
+}
 
 
 
