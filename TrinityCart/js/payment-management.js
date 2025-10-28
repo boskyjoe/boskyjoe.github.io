@@ -1524,7 +1524,7 @@ async function loadTeamPaymentsForMgmtTab() {
         }
     }
 }
-}
+
 
 /**
  * Initializes team payments tab (placeholder)
