@@ -850,127 +850,503 @@ const pmtMgmtTeamGridOptions = {
 };
 
 const pmtMgmtSalesGridOptions = {
-    theme: 'legacy',
+    theme: 'alpine', // ✅ CONSISTENT: Same theme as other payment management grids
     getRowId: params => params.data.id,
+    
     pagination: true,
-    paginationPageSize: 50,
-
+    paginationPageSize: 25, // ✅ CONSISTENT: Same pagination as other grids
+    paginationPageSizeSelector: [10, 25, 50, 100],
+    
+    // ✅ STABILITY: Fixed row height like other grids
+    rowHeight: 60,
+    domLayout: 'normal',
+    
     columnDefs: [
         {
-            headerName: "Customer",
+            headerName: "Customer Name",
             width: 180,
             pinned: 'left',
             field: "customerName",
-            cellStyle: { fontWeight: 'bold' }
-        },
-        {
-            headerName: "Invoice Reference",
-            width: 140,
-            valueGetter: params => {
-                const invoiceId = params.data.invoiceId;
-                return invoiceId ? `Invoice: ${invoiceId}` : 'Unknown';
+            
+            // ✅ CONSISTENCY: Same filter setup
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                fontWeight: 'bold', 
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
             }
         },
         {
-            field: "paymentDate",
+            headerName: "Invoice Reference",
+            width: 160,
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
+            },
+            valueGetter: params => {
+                const invoiceId = params.data.invoiceId;
+                return invoiceId || 'Unknown Invoice';
+            },
+            valueFormatter: params => {
+                const invoiceId = params.value || 'Unknown';
+                return invoiceId.length > 15 ? invoiceId.substring(0, 15) + '...' : invoiceId;
+            }
+        },
+        {
+            headerName: "Store",
+            width: 120,
+            
+            filter: 'agSetColumnFilter',
+            floatingFilter: true,
+            filterParams: {
+                values: ['Church Store', 'Tasty Treats']
+            },
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '12px',
+                fontWeight: '500'
+            },
+            valueGetter: params => {
+                // Get store from related invoice data if available
+                return params.data.store || 'Unknown Store';
+            },
+            cellRenderer: params => {
+                const store = params.value || 'Unknown';
+                const storeConfig = {
+                    'Church Store': { 
+                        class: 'text-purple-700 bg-purple-100 border-purple-300',
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                               </svg>`
+                    },
+                    'Tasty Treats': { 
+                        class: 'text-orange-700 bg-orange-100 border-orange-300',
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                               </svg>`
+                    }
+                };
+                
+                const config = storeConfig[store] || { 
+                    class: 'text-gray-700 bg-gray-100 border-gray-300',
+                    icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/>
+                           </svg>`
+                };
+                
+                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full border ${config.class}">
+                            ${config.icon}
+                            <span>${store}</span>
+                        </span>`;
+            }
+        },
+        {
             headerName: "Payment Date",
             width: 130,
+            field: "paymentDate",
+            
+            filter: 'agDateColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center'
+            },
             valueFormatter: params => {
                 try {
-                    return params.value?.toDate ? params.value.toDate().toLocaleDateString() : 'Unknown';
+                    const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
+                    return date.toLocaleDateString();
                 } catch {
                     return 'Unknown Date';
                 }
             }
         },
         {
-            field: "amountPaid",
-            headerName: "Amount",
+            headerName: "Amount Paid",
             width: 120,
+            field: "amountPaid",
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
             valueFormatter: params => formatCurrency(params.value || 0),
-            cellClass: 'text-right font-bold',
-            cellStyle: { color: '#059669' } // Green for inbound payments
+            cellStyle: { 
+                color: '#059669', // Green for inbound payments
+                fontWeight: 'bold',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
         },
         {
-            field: "paymentMode",
             headerName: "Payment Mode",
-            width: 120
+            width: 120,
+            field: "paymentMode",
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '12px'
+            }
+        },
+        {
+            headerName: "Transaction Ref",
+            width: 140,
+            field: "transactionRef",
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center'
+            },
+            valueFormatter: params => {
+                const ref = params.value || 'No Reference';
+                return ref.length > 15 ? ref.substring(0, 15) + '...' : ref;
+            }
         },
         {
             field: "status",
             headerName: "Status",
             width: 120,
+            
+            filter: 'agSetColumnFilter',
+            floatingFilter: true,
+            filterParams: {
+                values: ['Verified', 'Voided']
+            },
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            },
+            
             cellRenderer: params => {
                 const status = params.value || 'Verified';
-
+                
                 const statusConfig = {
-                    'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
-                    'Voided': { class: 'text-gray-700 bg-gray-100', icon: '❌' }
+                    'Verified': { 
+                        class: 'bg-green-100 text-green-800 border-green-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                               </svg>`, 
+                        text: 'VERIFIED' 
+                    },
+                    'Voided': { 
+                        class: 'bg-gray-100 text-gray-800 border-gray-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                               </svg>`, 
+                        text: 'VOIDED' 
+                    },
+                    'Pending': { 
+                        class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                               </svg>`, 
+                        text: 'PENDING' 
+                    }
                 };
-
-                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '💳' };
-
-                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
-                            ${config.icon} ${status}
+                
+                const config = statusConfig[status] || { 
+                    class: 'bg-blue-100 text-blue-800 border-blue-300', 
+                    icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                           </svg>`, 
+                    text: status.toUpperCase() 
+                };
+                
+                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
+                            ${config.icon}
+                            <span>${config.text}</span>
                         </span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 120,
-            cellClass: 'flex items-center justify-center space-x-1',
+            width: 180,
+            
+            filter: false,
+            floatingFilter: false,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            suppressSizeToFit: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+            },
+            
             cellRenderer: params => {
                 const status = params.data.status || 'Verified';
                 const currentUser = appState.currentUser;
-
+                
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
-
-                let buttons = '';
-
-                // Void button for verified payments
-                if (status === 'Verified' && hasFinancialPermissions) {
-                    buttons += `<button class="pmt-mgmt-void-sales-payment bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded" 
+                
+                if (!hasFinancialPermissions) {
+                    return `<span class="text-xs text-gray-500 italic">View only</span>`;
+                }
+                
+                if (status === 'Verified') {
+                    return `<div class="flex space-x-1">
+                                <button class="pmt-mgmt-void-sales-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 flex items-center space-x-1" 
                                       data-id="${params.data.id}" 
                                       title="Void Payment">
-                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5z" clip-rule="evenodd"/>
-                                  </svg>
-                              </button>`;
-                }
-
-                // View button for all payments
-                buttons += `<button class="pmt-mgmt-view-sales-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    <span>Void</span>
+                                </button>
+                                <button class="pmt-mgmt-view-sales-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                      data-id="${params.data.id}" 
+                                      title="View Payment Details">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    <span>View</span>
+                                </button>
+                                <button class="pmt-mgmt-view-sales-invoice bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
+                                      data-id="${params.data.invoiceId}" 
+                                      title="View Related Invoice">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <span>Invoice</span>
+                                </button>
+                            </div>`;
+                } else if (status === 'Voided') {
+                    return `<button class="pmt-mgmt-view-sales-payment bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
+                                  data-id="${params.data.id}" 
+                                  title="View Voided Payment Details">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                <span>View Details</span>
+                            </button>`;
+                } else {
+                    return `<button class="pmt-mgmt-view-sales-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
                                   data-id="${params.data.id}" 
                                   title="View Payment Details">
-                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
-                              </svg>
-                          </button>`;
-
-                return buttons;
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                <span>View Details</span>
+                            </button>`;
+                }
             }
         }
     ],
-
+    
+    // ✅ CONSISTENT: Same defaultColDef as other payment management grids
     defaultColDef: {
         resizable: true,
         sortable: true,
-        filter: true
+        filter: true,
+        floatingFilter: true,
+        
+        wrapHeaderText: true,
+        autoHeaderHeight: true,
+        
+        cellStyle: {
+            display: 'flex',
+            alignItems: 'center',
+            whiteSpace: 'normal',
+            lineHeight: '1.4',
+            padding: '8px'
+        }
     },
-
+   
     onGridReady: (params) => {
         pmtMgmtSalesGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Dedicated Sales Payments Grid ready");
-
+        console.log("[PmtMgmt] ✅ Business-Smart Sales Payments Grid ready with SVG icons");
+        
         setTimeout(() => {
             loadSalesPaymentsForMgmtTab();
-        }, 100);
+        }, 200);
     }
 };
 
+
+/**
+ * ENHANCED: Show supplier payment modal with payment management integration
+ */
+export function showSupplierPaymentFromMgmt(invoiceData) {
+    console.log('[PmtMgmt] Opening supplier payment modal with enhanced integration...');
+    
+    try {
+        // ✅ POPULATE: Pre-fill supplier payment modal with invoice data
+        const modal = document.getElementById('supplier-payment-modal');
+        if (!modal) {
+            showModal('error', 'Payment Modal Not Found', 
+                'The supplier payment modal is not available. Please use the Purchase Management module instead.'
+            );
+            return;
+        }
+        
+        // Pre-populate modal fields
+        document.getElementById('supplier-payment-invoice-id').value = invoiceData.id;
+        document.getElementById('supplier-payment-supplier-id').value = invoiceData.supplierId || '';
+        
+        // Set default payment amount to balance due
+        const balanceDue = invoiceData.balanceDue || 0;
+        document.getElementById('supplier-payment-amount-input').value = balanceDue.toFixed(2);
+        
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('supplier-payment-date-input').value = today;
+        
+        // Show modal
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+        
+        console.log('[PmtMgmt] ✅ Supplier payment modal opened with pre-filled data');
+        
+        // ✅ SETUP: Modal close handler to refresh payment management
+        modal.addEventListener('close', () => {
+            // Refresh supplier tab after modal closes
+            setTimeout(() => {
+                handlePmtMgmtSupplierRefresh();
+            }, 500);
+        });
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error showing supplier payment modal:', error);
+        showModal('error', 'Modal Error', 'Could not open supplier payment modal.');
+    }
+}
+
+/**
+ * Gets supplier invoice data from payment management grid
+ */
+function getSupplierInvoiceFromMgmtGrid(invoiceId) {
+    if (!pmtMgmtSupplierGridApi) {
+        console.error('[PmtMgmt] Supplier grid API not available');
+        return null;
+    }
+    
+    try {
+        const rowNode = pmtMgmtSupplierGridApi.getRowNode(invoiceId);
+        return rowNode ? rowNode.data : null;
+    } catch (error) {
+        console.error('[PmtMgmt] Error getting invoice from grid:', error);
+        return null;
+    }
+}
+
+
+/**
+ * BUSINESS ALTERNATIVE: Load outstanding sales invoices instead of just payments
+ * (Similar to supplier approach - focus on what needs collection action)
+ */
+async function loadOutstandingSalesInvoices(filterStatus = 'outstanding') {
+    console.log(`[PmtMgmt] 💳 Loading ${filterStatus} sales invoices for collection focus...`);
+    
+    if (!pmtMgmtSalesGridApi) return;
+    
+    try {
+        pmtMgmtSalesGridApi.setGridOption('loading', true);
+        
+        const db = firebase.firestore();
+        let query = db.collection(SALES_COLLECTION_PATH);
+        
+        switch (filterStatus) {
+            case 'outstanding':
+                // ✅ BUSINESS FOCUS: Unpaid and partially paid sales invoices (collection targets)
+                query = query
+                    .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                    .orderBy('saleDate', 'desc');
+                console.log('[PmtMgmt] Loading outstanding sales invoices for collection...');
+                break;
+                
+            case 'paid':
+                // Reference: Paid sales invoices
+                query = query
+                    .where('paymentStatus', '==', 'Paid')  
+                    .orderBy('saleDate', 'desc')
+                    .limit(25);
+                console.log('[PmtMgmt] Loading paid sales invoices for reference...');
+                break;
+        }
+        
+        const snapshot = await query.get();
+        const salesInvoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Enhance with collection context
+        const enhancedInvoices = salesInvoices.map(invoice => ({
+            ...invoice,
+            daysOverdue: calculateDaysOverdue(invoice.saleDate),
+            formattedTotal: formatCurrency(invoice.financials?.totalAmount || 0),
+            formattedBalance: formatCurrency(invoice.balanceDue || 0),
+            needsCollection: (invoice.balanceDue || 0) > 0
+        }));
+        
+        pmtMgmtSalesGridApi.setGridOption('rowData', enhancedInvoices);
+        pmtMgmtSalesGridApi.setGridOption('loading', false);
+        
+        console.log(`[PmtMgmt] ✅ Loaded ${enhancedInvoices.length} sales invoices (${snapshot.size} reads)`);
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading sales invoices:', error);
+    }
+}
 
 /**
  * Gets supplier invoice number for a payment (optimized lookup)
