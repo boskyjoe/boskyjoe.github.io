@@ -141,7 +141,6 @@ import {
     getSupplierInvoiceFromMgmtGrid,
     showSupplierInvoiceDetailsModal,  
     closeSupplierInvoiceDetailsModal,
-    showSupplierInvoiceDetailsModal,     
     closeSupplierInvoiceDetailsModal,   
     handleSupplierPayOutstandingBalance,  
     getSupplierInvoiceFromMgmtGrid  
