@@ -91,7 +91,7 @@ const supplierInvoicesPagination = {
  */
 
 const pmtMgmtSupplierGridOptions = {
-    theme: 'legacy',
+    theme: 'alpine',
     getRowId: params => params.data.id,
     
     pagination: true,
