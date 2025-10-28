@@ -5663,38 +5663,6 @@ async function handlePmtMgmtSupplierRefresh() {
 
 
 // ===================================================================
-// HELPER FUNCTIONS FOR PAYMENT MANAGEMENT
-// ===================================================================
-
-/**
- * Gets supplier invoice data from payment management grid
- */
-function getSupplierInvoiceFromMgmtGrid(invoiceId) {
-    if (!pmtMgmtSupplierGridApi) {
-        console.error('[main.js] Payment management supplier grid not available');
-        return null;
-    }
-    
-    try {
-        const rowNode = pmtMgmtSupplierGridApi.getRowNode(invoiceId);
-        if (rowNode && rowNode.data) {
-            console.log(`[main.js] Found invoice data in payment management grid:`, {
-                invoiceId: rowNode.data.invoiceId,
-                supplier: rowNode.data.supplierName,
-                balance: formatCurrency(rowNode.data.balanceDue || 0)
-            });
-            return rowNode.data;
-        } else {
-            console.warn(`[main.js] Invoice ${invoiceId} not found in payment management grid`);
-            return null;
-        }
-    } catch (error) {
-        console.error('[main.js] Error getting invoice from payment management grid:', error);
-        return null;
-    }
-}
-
-// ===================================================================
 // PAYMENT MANAGEMENT GRID HANDLERS (following your pattern)
 // ===================================================================
 
