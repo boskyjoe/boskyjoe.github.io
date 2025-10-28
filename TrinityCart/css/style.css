@@ -363,7 +363,6 @@ main {
 
 .pmt-mgmt-tab-content.active {
     display: block;
-    animation: fadeIn 0.3s ease-in-out;
 }
 
 /* Filter buttons styling */
@@ -382,11 +381,21 @@ main {
 }
 
 /* Payment Management specific grid styling */
+#pmt-mgmt-view * {
+    animation: none !important;
+    transition: none !important;
+}
+
 #pmt-mgmt-view .ag-theme-alpine {
     height: 500px !important;
     min-height: 500px !important;
     max-height: 500px !important;
     overflow: hidden !important;
+}
+#pmt-mgmt-view.view.active {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 #pmt-mgmt-view .ag-header {
