@@ -1781,7 +1781,7 @@ function handlePaymentMgmtQuickAction(action) {
 /**
  * Refreshes all payment management dashboard data
  */
-export function refreshPaymentManagementDashboard() {
+export async function refreshPaymentManagementDashboard() {
     console.log('[PmtMgmt] 🔄 Refreshing dashboard with Firestore optimization...');
 
     try {
