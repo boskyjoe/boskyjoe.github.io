@@ -468,129 +468,386 @@ const pmtMgmtSupplierGridOptions = {
     }
 };
 
-
 const pmtMgmtTeamGridOptions = {
-    theme: 'legacy',
+    theme: 'alpine', // ✅ CONSISTENT: Same theme as supplier grid
     getRowId: params => params.data.id,
+    
     pagination: true,
-    paginationPageSize: 50,
-
+    paginationPageSize: 25, // ✅ CONSISTENT: Same as supplier grid
+    paginationPageSizeSelector: [10, 25, 50, 100],
+    
+    // ✅ STABILITY: Fixed row height like supplier grid
+    rowHeight: 60,
+    domLayout: 'normal',
+    
     columnDefs: [
         {
-            headerName: "Team",
+            headerName: "Team Name",
             width: 180,
             pinned: 'left',
             field: "teamName",
-            cellStyle: { fontWeight: 'bold' }
-        },
-        {
-            headerName: "Order Reference",
-            width: 140,
-            valueGetter: params => {
-                const orderId = params.data.orderId;
-                return orderId ? `Order: ${orderId.substring(0, 12)}...` : 'Unknown';
+            
+            // ✅ CONSISTENCY: Same filter setup as supplier grid
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                fontWeight: 'bold', 
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
             }
         },
         {
-            field: "paymentDate",
+            headerName: "Order Reference",
+            width: 160,
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
+            },
+            valueGetter: params => {
+                const orderId = params.data.orderId;
+                return orderId ? orderId : 'Unknown Order';
+            },
+            valueFormatter: params => {
+                const orderId = params.value || 'Unknown';
+                return orderId.length > 15 ? orderId.substring(0, 15) + '...' : orderId;
+            }
+        },
+        {
+            headerName: "Team Lead",
+            width: 160,
+            field: "teamLeadName",
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                whiteSpace: 'normal',
+                lineHeight: '1.4'
+            }
+        },
+        {
             headerName: "Payment Date",
             width: 130,
+            field: "paymentDate",
+            
+            filter: 'agDateColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center'
+            },
             valueFormatter: params => {
                 try {
-                    return params.value?.toDate ? params.value.toDate().toLocaleDateString() : 'Unknown';
+                    const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
+                    return date.toLocaleDateString();
                 } catch {
                     return 'Unknown Date';
                 }
             }
         },
         {
-            field: "amountPaid",
-            headerName: "Amount",
+            headerName: "Amount Paid",
             width: 120,
+            field: "amountPaid",
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
             valueFormatter: params => formatCurrency(params.value || 0),
-            cellClass: 'text-right font-bold',
-            cellStyle: { color: '#059669' } // Green for inbound payments
+            cellStyle: { 
+                color: '#059669', // Green for inbound payments
+                fontWeight: 'bold',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
         },
         {
-            field: "paymentMode",
             headerName: "Payment Mode",
-            width: 120
+            width: 120,
+            field: "paymentMode",
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '12px'
+            }
+        },
+        {
+            headerName: "Days Since Submitted",
+            width: 140,
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                textAlign: 'center',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            },
+            valueGetter: params => {
+                const submittedDate = params.data.submittedOn?.toDate ? 
+                    params.data.submittedOn.toDate() : 
+                    (params.data.paymentDate?.toDate ? params.data.paymentDate.toDate() : new Date());
+                const days = Math.ceil((new Date() - submittedDate) / (1000 * 60 * 60 * 24));
+                return Math.max(0, days);
+            },
+            cellRenderer: params => {
+                const days = params.value || 0;
+                let colorClass, statusText, statusIcon;
+                
+                if (days > 5) {
+                    colorClass = 'text-red-700 bg-red-100 border-red-300';
+                    statusText = 'DELAYED';
+                    statusIcon = `<svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                  </svg>`;
+                } else if (days > 2) {
+                    colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
+                    statusText = 'PENDING';
+                    statusIcon = `<svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                  </svg>`;
+                } else {
+                    colorClass = 'text-green-700 bg-green-100 border-green-300';
+                    statusText = 'RECENT';
+                    statusIcon = `<svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                  </svg>`;
+                }
+                
+                return `<div class="flex flex-col items-center justify-center h-full gap-1">
+                            <div class="font-bold text-sm">${days}d</div>
+                            <div class="flex items-center space-x-1 text-xs px-2 py-1 rounded-full border ${colorClass}">
+                                ${statusIcon}
+                                <span>${statusText}</span>
+                            </div>
+                        </div>`;
+            }
         },
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 140,
+            width: 130,
+            
+            filter: 'agSetColumnFilter',
+            floatingFilter: true,
+            filterParams: {
+                values: ['Pending Verification', 'Verified', 'Cancelled']
+            },
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            },
+            
             cellRenderer: params => {
                 const status = params.value || 'Pending Verification';
-
+                
                 const statusConfig = {
-                    'Verified': { class: 'text-green-700 bg-green-100', icon: '✅' },
-                    'Pending Verification': { class: 'text-yellow-700 bg-yellow-100', icon: '⏳' }
+                    'Verified': { 
+                        class: 'bg-green-100 text-green-800 border-green-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                               </svg>`, 
+                        text: 'VERIFIED' 
+                    },
+                    'Pending Verification': { 
+                        class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                               </svg>`, 
+                        text: 'PENDING' 
+                    },
+                    'Cancelled': { 
+                        class: 'bg-gray-100 text-gray-800 border-gray-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                               </svg>`, 
+                        text: 'CANCELLED' 
+                    }
                 };
-
-                const config = statusConfig[status] || { class: 'text-blue-700 bg-blue-100', icon: '📋' };
-
-                return `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.class}">
-                            ${config.icon} ${status}
+                
+                const config = statusConfig[status] || { 
+                    class: 'bg-blue-100 text-blue-800 border-blue-300', 
+                    icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                           </svg>`, 
+                    text: status 
+                };
+                
+                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
+                            ${config.icon}
+                            <span>${config.text}</span>
                         </span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 140,
-            cellClass: 'flex items-center justify-center space-x-1',
+            width: 180,
+            
+            filter: false,
+            floatingFilter: false,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            suppressSizeToFit: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+            },
+            
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Pending Verification';
                 const currentUser = appState.currentUser;
-
+                
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
-
-                let buttons = '';
-
-                // Verify button
-                if (paymentStatus === 'Pending Verification' && hasFinancialPermissions) {
-                    buttons += `<button class="pmt-mgmt-verify-team-payment bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded" 
-                                      data-id="${params.data.id}" 
-                                      title="Verify Team Payment">
-                                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.06 0l4-5.5Z" clip-rule="evenodd" />
-                                  </svg>
-                              </button>`;
+                
+                if (!hasFinancialPermissions) {
+                    return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
-
-                // View button
-                buttons += `<button class="pmt-mgmt-view-team-payment bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded" 
+                
+                if (paymentStatus === 'Verified') {
+                    return `<div class="flex space-x-1">
+                                <button class="pmt-mgmt-view-team-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                      data-id="${params.data.id}" 
+                                      title="View Payment Details">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    <span>View Details</span>
+                                </button>
+                                <button class="pmt-mgmt-view-team-order bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
+                                      data-id="${params.data.orderId}" 
+                                      title="View Consignment Order">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                    </svg>
+                                    <span>Order</span>
+                                </button>
+                            </div>`;
+                } else if (paymentStatus === 'Pending Verification') {
+                    // Pending payments - verify action
+                    const daysWaiting = params.data.daysWaiting || 0;
+                    const urgencyClass = daysWaiting > 5 ? 'animate-pulse' : '';
+                    
+                    return `<div class="flex space-x-1">
+                                <button class="pmt-mgmt-verify-team-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
+                                      data-id="${params.data.id}" 
+                                      title="Verify Team Payment of ${formatCurrency(params.data.amountPaid || 0)}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>VERIFY ${formatCurrency(params.data.amountPaid || 0)}</span>
+                                </button>
+                                <button class="pmt-mgmt-view-team-payment bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
+                                      data-id="${params.data.id}" 
+                                      title="View Payment Details">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    <span>View</span>
+                                </button>
+                            </div>`;
+                } else {
+                    // Other statuses - view only
+                    return `<button class="pmt-mgmt-view-team-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
                                   data-id="${params.data.id}" 
                                   title="View Payment Details">
-                              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10z" clip-rule="evenodd"/>
-                              </svg>
-                          </button>`;
-
-                return buttons;
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                <span>View Details</span>
+                            </button>`;
+                }
             }
         }
     ],
-
+    
+    // ✅ CONSISTENT: Same defaultColDef as supplier grid (without autoHeight)
     defaultColDef: {
         resizable: true,
         sortable: true,
-        filter: true
+        filter: true,
+        floatingFilter: true,
+        
+        wrapHeaderText: true,
+        autoHeaderHeight: true,
+        
+        cellStyle: {
+            display: 'flex',
+            alignItems: 'center',
+            whiteSpace: 'normal',
+            lineHeight: '1.4',
+            padding: '8px'
+        }
     },
-
+   
     onGridReady: (params) => {
         pmtMgmtTeamGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Dedicated Team Payments Grid ready");
-
+        console.log("[PmtMgmt] ✅ Business-Smart Team Payments Grid ready with SVG icons");
+        
         setTimeout(() => {
             loadTeamPaymentsForMgmtTab();
-        }, 100);
+        }, 200);
     }
 };
-
 
 const pmtMgmtSalesGridOptions = {
     theme: 'legacy',
