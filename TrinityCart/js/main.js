@@ -134,8 +134,7 @@ import {
 
 
 import { 
-    showPaymentManagementView,
-    switchPaymentMgmtTab,clearPaymentMgmtCache,refreshPaymentManagementDashboard
+    showPaymentManagementView
 } from './payment-management.js';
 
 
