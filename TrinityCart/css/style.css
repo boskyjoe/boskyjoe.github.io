@@ -283,7 +283,6 @@ main {
 
 .ag-theme-alpine {
     max-width: 100% !important;
-    overflow: hidden !important;
 }
 
 .ag-theme-alpine .ag-cell .text-sm[title]:hover {
