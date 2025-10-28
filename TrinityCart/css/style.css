@@ -383,10 +383,47 @@ main {
 
 /* Payment Management specific grid styling */
 #pmt-mgmt-view .ag-theme-alpine {
-    border-radius: 6px;
+    height: 500px !important;
+    min-height: 500px !important;
+    max-height: 500px !important;
+    overflow: hidden !important;
 }
 
 #pmt-mgmt-view .ag-header {
     background-color: #f8fafc;
     border-bottom: 2px solid #e5e7eb;
+}
+
+/* Stable grid container */
+#pmt-mgmt-supplier-grid,
+#pmt-mgmt-team-grid,
+#pmt-mgmt-sales-grid {
+    height: 500px !important;
+    width: 100% !important;
+}
+
+/* Prevent column header instability */
+#pmt-mgmt-view .ag-header {
+    height: 40px !important;
+    min-height: 40px !important;
+}
+
+/* Prevent row height changes */
+#pmt-mgmt-view .ag-row {
+    height: 35px !important;
+    min-height: 35px !important;
+}
+
+/* Stable cell content */
+#pmt-mgmt-view .ag-cell {
+    height: 35px !important;
+    line-height: 35px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+/* Prevent button rendering loops */
+#pmt-mgmt-view .ag-cell button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
 }
