@@ -134,10 +134,11 @@ import {
 
 
 import { 
-    showPaymentManagementView,       
+    showPaymentManagementView,        
     switchPaymentMgmtTab,            
-    clearPaymentMgmtCache,            
-    refreshPaymentManagementDashboard
+    clearPaymentMgmtCache,           
+    refreshPaymentManagementDashboard,
+    getSupplierInvoiceFromMgmtGrid  
 } from './payment-management.js';
 
 
