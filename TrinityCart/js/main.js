@@ -138,7 +138,6 @@ import {
     switchPaymentMgmtTab,            
     clearPaymentMgmtCache,           
     refreshPaymentManagementDashboard,
-    getSupplierInvoiceFromMgmtGrid,
     showSupplierInvoiceDetailsModal,  
     closeSupplierInvoiceDetailsModal,   
     handleSupplierPayOutstandingBalance,  
