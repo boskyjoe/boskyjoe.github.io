@@ -10196,3 +10196,20 @@ export class ProgressToast {
         if (elements.closeBtn) elements.closeBtn.classList.add('hidden');
     }
 }
+
+
+export { 
+    // Supplier/Purchase payment grid config
+    purchasePaymentsGridOptions,
+    
+    // Consignment/Team payment grid config  
+    consignmentPaymentsGridOptions,
+    
+    // Sales payment grid config
+    salePaymentHistoryGridOptions,
+    
+    // ✅ OPTIONAL: Export other grids if needed later
+    // salesHistoryGridOptions,
+    // purchaseInvoicesGridOptions,
+    // etc.
+};
