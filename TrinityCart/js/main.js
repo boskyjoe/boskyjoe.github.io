@@ -140,7 +140,6 @@ import {
     refreshPaymentManagementDashboard,
     getSupplierInvoiceFromMgmtGrid,
     showSupplierInvoiceDetailsModal,  
-    closeSupplierInvoiceDetailsModal,
     closeSupplierInvoiceDetailsModal,   
     handleSupplierPayOutstandingBalance,  
     getSupplierInvoiceFromMgmtGrid  
