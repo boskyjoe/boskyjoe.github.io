@@ -10197,19 +10197,3 @@ export class ProgressToast {
     }
 }
 
-
-export { 
-    // Supplier/Purchase payment grid config
-    purchasePaymentsGridOptions,
-    
-    // Consignment/Team payment grid config  
-    consignmentPaymentsGridOptions,
-    
-    // Sales payment grid config
-    salePaymentHistoryGridOptions,
-    
-    // ✅ OPTIONAL: Export other grids if needed later
-    // salesHistoryGridOptions,
-    // purchaseInvoicesGridOptions,
-    // etc.
-};
