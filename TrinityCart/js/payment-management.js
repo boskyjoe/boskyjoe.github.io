@@ -92,7 +92,7 @@ const supplierInvoicesPagination = {
  * Shows outstanding invoices that need payment action, with complete business context
  */
 const pmtMgmtSupplierGridOptions = {
-    theme: 'alpine',
+    theme: 'legacy',
     getRowId: params => params.data.id,
     
     pagination: true,
