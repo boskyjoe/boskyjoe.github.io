@@ -1642,9 +1642,9 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-verification-action': async (target) => {
             console.log('[DEBUG] Verification handler called');
             console.log('[DEBUG] arguments.length:', arguments.length);
-            console.log('[DEBUG] arguments[0] (passedTarget):', arguments[0]);
+            console.log('[DEBUG] arguments[0] (target):', arguments[0]);
             console.log('[DEBUG] typeof arguments[0]:', typeof arguments[0]);
-            console.log('[DEBUG] passedTarget === arguments[0]:', passedTarget === arguments[0]);
+            console.log('[DEBUG] target === arguments[0]:', target === arguments[0]);
             
             // Show what we actually received
             if (arguments[0]) {
@@ -1658,7 +1658,7 @@ function handleStandaloneButtons(target, event) {
                 `Has dataset: ${!!arguments[0]?.dataset}\n` +
                 `VerificationAction: ${arguments[0]?.dataset?.verificationAction || 'undefined'}`
             );
-            
+
             const verificationAction = target.dataset.verificationAction;
             const verificationType = target.dataset.verificationType;
             
