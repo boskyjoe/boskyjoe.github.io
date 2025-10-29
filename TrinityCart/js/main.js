@@ -1600,7 +1600,61 @@ function handleStandaloneButtons(target, event) {
             } else {
                 console.error('[main.js] No product ID found for removal');
             }
+        },
+        '.pmt-mgmt-verification-action': async (target) => {
+            const verificationAction = target.dataset.verificationAction;
+            const verificationType = target.dataset.verificationType;
+            
+            console.log(`[main.js] ✅ Verification action requested: ${verificationAction}`);
+            
+            switch (verificationAction) {
+                case 'verify-supplier-payments':
+                    console.log('[main.js] Navigating to supplier payments for verification');
+                    switchPaymentMgmtTab('pmt-mgmt-tab-suppliers', 'pmt-mgmt-suppliers-content');
+                    
+                    // Show helpful guidance
+                    setTimeout(() => {
+                        showModal('info', 'Supplier Payment Verification', 
+                            'Switched to Supplier Payments tab.\n\n' +
+                            'You can now:\n' +
+                            '✅ Review pending supplier payments\n' +
+                            '✅ Click verify buttons on individual payments\n' +
+                            '✅ See updated invoice balances after verification'
+                        );
+                    }, 500);
+                    break;
+                    
+                case 'verify-team-payments':
+                    console.log('[main.js] Navigating to team payments for verification');
+                    switchPaymentMgmtTab('pmt-mgmt-tab-teams', 'pmt-mgmt-teams-content');
+                    
+                    setTimeout(() => {
+                        showModal('info', 'Team Payment Verification', 
+                            'Switched to Team Payments tab.\n\n' +
+                            'You can now:\n' +
+                            '✅ Review pending team payments\n' +
+                            '✅ Click verify buttons on individual payments\n' +
+                            '✅ See updated consignment order balances'
+                        );
+                    }, 500);
+                    break;
+                    
+                case 'review-void-requests':
+                    console.log('[main.js] Navigating to sales payments for void review');
+                    switchPaymentMgmtTab('pmt-mgmt-tab-sales', 'pmt-mgmt-sales-content');
+                    break;
+                    
+                default:
+                    console.warn(`[main.js] Unknown verification action: ${verificationAction}`);
+                    showModal('error', 'Unknown Action', 'The requested verification action is not recognized.');
+            }
         }
+
+
+
+
+
+
     };
 
     // Add modal close trigger
