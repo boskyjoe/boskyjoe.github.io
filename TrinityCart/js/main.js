@@ -1904,9 +1904,17 @@ function handleStandaloneButtons(target, event) {
     }
 
     // Check all button handlers
-    for (const [selector, handler] of Object.entries(buttonHandlers)) {
+    f/*or (const [selector, handler] of Object.entries(buttonHandlers)) {
         if (target.closest(selector)) {
             handler();
+            return true;
+        }
+    }*/
+
+    // ✅ CRITICAL FIX: Pass target parameter to all handlers
+    for (const [selector, handler] of Object.entries(buttonHandlers)) {
+        if (target.closest(selector)) {
+            handler(target); // ✅ NOW PASSES TARGET TO ALL HANDLERS
             return true;
         }
     }
@@ -1962,13 +1970,7 @@ function handleStandaloneButtons(target, event) {
     }   
 
 
-    // ✅ CRITICAL FIX: Pass target parameter to all handlers
-    for (const [selector, handler] of Object.entries(buttonHandlers)) {
-        if (target.closest(selector)) {
-            handler(target); // ✅ NOW PASSES TARGET TO ALL HANDLERS
-            return true;
-        }
-    }
+    
 
 
 
