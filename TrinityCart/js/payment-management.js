@@ -361,9 +361,9 @@ const pmtMgmtSupplierGridOptions = {
                         </span>`;
             }
         },
-        {
+       {
             headerName: "Actions",
-            width: 220,
+            width: 280, // Room for multiple buttons
             
             filter: false,
             floatingFilter: false,
@@ -380,7 +380,7 @@ const pmtMgmtSupplierGridOptions = {
                 gap: '4px'
             },
             
-            cellRenderer: params => {
+            cellRenderer: params => { // ✅ REMOVED: async (now synchronous)
                 const status = params.data.paymentStatus;
                 const balanceDue = params.data.balanceDue || 0;
                 const currentUser = appState.currentUser;
@@ -392,64 +392,50 @@ const pmtMgmtSupplierGridOptions = {
                 if (!hasFinancialPermissions) {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
-
+                
                 let buttons = '';
-
-                const hasPendingPayments = checkForPendingPayments(params.data.id); // Helper function
-                if (hasPendingPayments) {
-                    buttons += `<button class="pmt-mgmt-verify-invoice-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse" 
-                                      data-invoice-id="${params.data.id}" 
-                                      title="Verify Pending Payments for this Invoice">
+                
+                // ✅ VERIFICATION: Use pre-loaded pending payment status
+                if (params.data.hasPendingPayments === true && params.data.pendingPaymentsCount > 0) {
+                    const pendingCount = params.data.pendingPaymentsCount;
+                    const pendingAmount = params.data.pendingPaymentsAmount || 0;
+                    
+                    buttons += `<button class="pmt-mgmt-verify-invoice-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse"
+                                    data-invoice-id="${params.data.id}"
+                                    title="Verify ${pendingCount} Pending Payments (${formatCurrency(pendingAmount)})">
                                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    VERIFY PAYMENTS
+                                    VERIFY (${pendingCount})
                                 </button> `;
                 }
-
-                if (status === 'Paid' || balanceDue <= 0) {
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Invoice Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    <span>View</span>
-                                </button>
-                                <button class="pmt-mgmt-view-payments-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Payment History">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                                    </svg>
-                                    <span>History</span>
-                                </button>
-                            </div>`;
-                } else {
-                    // Outstanding invoice - primary pay action
+                
+                // ✅ PAYMENT: For outstanding invoices
+                if (status !== 'Paid' && balanceDue > 0) {
                     const urgencyClass = params.data.urgencyLevel === 'critical' ? 'animate-pulse' : '';
                     
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="Pay Outstanding Balance of ${formatCurrency(balanceDue)}">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    buttons += `<button class="pmt-mgmt-pay-supplier-invoice bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass}"
+                                    data-id="${params.data.id}" 
+                                    title="Pay Outstanding Balance of ${formatCurrency(balanceDue)}">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                                     </svg>
-                                    <span>PAY ${formatCurrency(balanceDue)}</span>
-                                </button>
-                                <button class="pmt-mgmt-view-supplier-invoice bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Invoice Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    <span>View</span>
-                                </button>
-                            </div>`;
+                                    PAY ${formatCurrency(balanceDue)}
+                                </button> `;
                 }
+                
+                // ✅ VIEW: Always available
+                buttons += `<button class="pmt-mgmt-view-supplier-invoice bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600"
+                                data-id="${params.data.id}" 
+                                title="View Invoice Details">
+                                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                View
+                            </button>`;
+                
+                return `<div class="flex space-x-1">${buttons}</div>`;
             }
         }
     ],
@@ -867,13 +853,121 @@ const pmtMgmtTeamGridOptions = {
 
 
 /**
- * HELPER: Check if invoice has pending payments awaiting verification
+ * ENHANCED: Check if invoice has pending payments awaiting verification
+ * @param {string} invoiceId - The invoice ID to check for pending payments
+ * @returns {Promise<object>} Object with pending payment info and count
  */
-function checkForPendingPayments(invoiceId) {
-    // This would check if there are pending supplier payments for this invoice
-    // Could be enhanced with real-time checking or cached data
-    return false; // Placeholder - implement based on your data structure
+export async function checkForPendingPayments(invoiceId) {
+    console.log(`[PmtMgmt] Checking pending payments for invoice: ${invoiceId}`);
+
+    try {
+        const db = firebase.firestore();
+        let hasPendingPayments = false;
+        let pendingPaymentsCount = 0;
+        let totalPendingAmount = 0;
+        const pendingPaymentsList = [];
+
+        // ===================================================================
+        // PHASE 1: CHECK SUPPLIER PAYMENTS PENDING VERIFICATION
+        // ===================================================================
+
+        console.log('[PmtMgmt] Phase 1: Checking supplier payments...');
+        
+        const supplierPaymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('relatedInvoiceId', '==', invoiceId)
+            .where('paymentStatus', '==', 'Pending Verification')
+            .orderBy('submittedOn', 'asc');
+
+        const supplierPaymentsSnapshot = await supplierPaymentsQuery.get();
+        
+        supplierPaymentsSnapshot.docs.forEach(doc => {
+            const payment = { id: doc.id, ...doc.data() };
+            
+            if (payment.amountPaid && payment.amountPaid > 0) {
+                hasPendingPayments = true;
+                pendingPaymentsCount++;
+                totalPendingAmount += payment.amountPaid;
+                
+                pendingPaymentsList.push({
+                    id: payment.id,
+                    type: 'supplier_payment',
+                    paymentAmount: payment.amountPaid,
+                    paymentMode: payment.paymentMode || 'Unknown',
+                    submittedDate: payment.submittedOn,
+                    submittedBy: payment.submittedBy || 'Unknown',
+                    paymentReference: payment.transactionRef || '',
+                    daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date())
+                });
+            }
+        });
+
+        console.log(`[PmtMgmt] Found ${pendingPaymentsCount} pending supplier payments`);
+
+        // ===================================================================
+        // PHASE 2: RETURN COMPLETE PENDING STATUS
+        // ===================================================================
+
+        const result = {
+            invoiceId: invoiceId,
+            hasPendingPayments: hasPendingPayments,
+            totalPendingCount: pendingPaymentsCount,
+            totalPendingAmount: totalPendingAmount,
+            pendingPaymentsList: pendingPaymentsList,
+            
+            // Summary for UI display
+            summaryText: pendingPaymentsCount > 0 ? 
+                `${pendingPaymentsCount} payment${pendingPaymentsCount > 1 ? 's' : ''} awaiting verification (${formatCurrency(totalPendingAmount)})` :
+                'No pending payments for verification',
+                
+            // Action state for buttons
+            actionState: pendingPaymentsCount > 0 ? 'verification_needed' : 'no_action_needed'
+        };
+
+        console.log(`[PmtMgmt] Pending payments check result for invoice ${invoiceId}:`, {
+            hasPending: result.hasPendingPayments,
+            count: result.totalPendingCount,
+            amount: formatCurrency(result.totalPendingAmount)
+        });
+        
+        return result;
+
+    } catch (error) {
+        console.error(`[PmtMgmt] Error checking pending payments for invoice ${invoiceId}:`, error);
+        
+        // Return failure state
+        return {
+            invoiceId: invoiceId,
+            hasPendingPayments: false,
+            totalPendingCount: 0,
+            totalPendingAmount: 0,
+            pendingPaymentsList: [],
+            summaryText: 'Error loading payment status',
+            actionState: 'error',
+            errorMessage: error.message
+        };
+    }
 }
+
+/**
+ * HELPER: Calculate days since submission/payment
+ */
+function calculateDaysWaiting(submittedDate) {
+    if (!submittedDate) return 0;
+
+    try {
+        const submitted = submittedDate.toDate ? 
+            submittedDate.toDate() : 
+            new Date(submittedDate);
+        
+        const today = new Date();
+        const diffTime = today - submitted;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    } catch {
+        return 0;
+    }
+}
+
 
 const pmtMgmtSalesGridOptions = {
     theme: 'alpine', // ✅ CONSISTENT: Same theme as other payment management grids
@@ -2331,6 +2425,7 @@ function initializeSupplierPaymentsTab() {
  * REFERENCE: Shows paid invoices with pagination - historical reference
  * EFFICIENCY: Minimizes reads by focusing on actionable business data
  */
+
 async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', paginationOptions = {}) {
     const {
         page = 1,
@@ -2339,8 +2434,8 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
         forceRefresh = false
     } = paginationOptions;
 
-    console.log(`[PmtMgmt] 🎯 BUSINESS-SMART loading: ${filterStatus} supplier invoices (page ${page})`);
-
+    console.log(`[PmtMgmt] Loading supplier invoices with pending payment status (${filterStatus}, page ${page})...`);
+    
     if (!pmtMgmtSupplierGridApi) {
         console.error('[PmtMgmt] Supplier grid API not ready');
         return;
@@ -2349,7 +2444,7 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
     try {
         pmtMgmtSupplierGridApi.setGridOption('loading', true);
 
-        // Smart caching strategy
+        // ✅ CORRECTED: Smart caching strategy
         const cacheMinutes = filterStatus === 'outstanding' ? 2 : 10;
         const cacheKey = `pmt_mgmt_supplier_${filterStatus}_p${page}`;
         
@@ -2377,7 +2472,7 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
                 console.log('[PmtMgmt] 🎯 PRIORITY: Loading ALL outstanding invoices (complete action list)');
                 query = query
                     .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
-                    .orderBy('purchaseDate', 'asc'); // ✅ BUSINESS SMART: Oldest first (highest priority)
+                    .orderBy('purchaseDate', 'asc'); // Oldest first (highest priority)
                 break;
                 
             case 'paid':
@@ -2403,94 +2498,144 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
             _docSnapshot: doc
         }));
 
-        console.log(`[PmtMgmt] ✅ QUERY RESULTS: ${invoices.length} ${filterStatus} invoices (${totalReads} reads)`);
+        console.log(`[PmtMgmt] ✅ Retrieved ${invoices.length} ${filterStatus} invoices (${totalReads} reads)`);
 
         // ===================================================================
-        // BUSINESS INTELLIGENCE ENHANCEMENT
+        // ✅ ENHANCED: CHECK PENDING PAYMENTS FOR EACH INVOICE
         // ===================================================================
-        const enhancedInvoices = invoices.map(invoice => {
-            const daysOutstanding = calculateDaysOutstanding(invoice.purchaseDate);
-            const urgency = calculateBusinessUrgency(invoice, daysOutstanding);
-            
-            return {
-                ...invoice,
-                daysOutstanding: daysOutstanding,
-                urgencyLevel: urgency.level,
-                urgencyReason: urgency.reason,
-                requiresImmediateAction: urgency.level === 'critical' || urgency.level === 'high',
-                isOverdue: daysOutstanding > 30,
-                formattedTotal: formatCurrency(invoice.invoiceTotal || 0),
-                formattedPaid: formatCurrency(invoice.amountPaid || 0),
-                formattedBalance: formatCurrency(invoice.balanceDue || 0),
-                formattedDate: invoice.purchaseDate?.toDate ? 
-                    invoice.purchaseDate.toDate().toLocaleDateString() : 'Unknown',
-                _docSnapshot: undefined
-            };
-        });
+        
+        console.log('[PmtMgmt] Checking pending payment status for each invoice...');
+        
+        const enhancedInvoicesWithPendingStatus = await Promise.all(
+            invoices.map(async (invoice) => {
+                try {
+                    // Check for pending payments for this specific invoice
+                    const pendingStatus = await checkForPendingPayments(invoice.id);
+                    
+                    const daysOutstanding = calculateDaysOutstanding(invoice.purchaseDate);
+                    const urgency = calculateBusinessUrgency(invoice, daysOutstanding);
+                    
+                    return {
+                        ...invoice,
+                        
+                        // ✅ PENDING PAYMENT STATUS: Pre-calculated for cell renderer
+                        hasPendingPayments: pendingStatus.hasPendingPayments,
+                        pendingPaymentsCount: pendingStatus.totalPendingCount,
+                        pendingPaymentsAmount: pendingStatus.totalPendingAmount,
+                        pendingPaymentsSummary: pendingStatus.summaryText,
+                        
+                        // Business intelligence
+                        daysOutstanding: daysOutstanding,
+                        urgencyLevel: urgency.level,
+                        urgencyReason: urgency.reason,
+                        requiresImmediateAction: urgency.level === 'critical' || urgency.level === 'high',
+                        isOverdue: daysOutstanding > 30,
+                        
+                        // UI optimization
+                        formattedTotal: formatCurrency(invoice.invoiceTotal || 0),
+                        formattedPaid: formatCurrency(invoice.amountPaid || 0),
+                        formattedBalance: formatCurrency(invoice.balanceDue || 0),
+                        formattedDate: invoice.purchaseDate?.toDate ? 
+                            invoice.purchaseDate.toDate().toLocaleDateString() : 'Unknown',
+                        
+                        // Remove doc snapshot from display data
+                        _docSnapshot: undefined
+                    };
+                } catch (error) {
+                    console.warn(`[PmtMgmt] Error checking pending payments for invoice ${invoice.id}:`, error);
+                    
+                    // Return invoice data without pending status if check fails
+                    return {
+                        ...invoice,
+                        hasPendingPayments: false,
+                        pendingPaymentsCount: 0,
+                        pendingPaymentsAmount: 0,
+                        pendingPaymentsSummary: 'Could not check pending status',
+                        daysOutstanding: calculateDaysOutstanding(invoice.purchaseDate),
+                        formattedTotal: formatCurrency(invoice.invoiceTotal || 0),
+                        formattedPaid: formatCurrency(invoice.amountPaid || 0),
+                        formattedBalance: formatCurrency(invoice.balanceDue || 0),
+                        _docSnapshot: undefined
+                    };
+                }
+            })
+        );
+
+        console.log(`[PmtMgmt] ✅ Enhanced ${enhancedInvoicesWithPendingStatus.length} invoices with pending payment verification status`);
 
         // ===================================================================
         // PAGINATION AND DISPLAY LOGIC
         // ===================================================================
+        
         const hasMorePages = filterStatus === 'paid' && invoices.length === pageSize;
         
         if (page === 1) {
             // First page or outstanding (replace data)
-            pmtMgmtSupplierGridApi.setGridOption('rowData', enhancedInvoices);
+            pmtMgmtSupplierGridApi.setGridOption('rowData', enhancedInvoicesWithPendingStatus);
         } else {
             // Subsequent pages for paid invoices (append data)
             const currentData = [];
             pmtMgmtSupplierGridApi.forEachNode(node => currentData.push(node.data));
-            const combinedData = [...currentData, ...enhancedInvoices];
+            const combinedData = [...currentData, ...enhancedInvoicesWithPendingStatus];
             pmtMgmtSupplierGridApi.setGridOption('rowData', combinedData);
             console.log(`[PmtMgmt] ✅ Appended page ${page}: ${combinedData.length} total invoices`);
         }
 
         pmtMgmtSupplierGridApi.setGridOption('loading', false);
 
-        // Update pagination state
-        supplierInvoicesPagination.currentPage = page;
-        supplierInvoicesPagination.hasMorePages = hasMorePages;
-        if (invoices.length > 0) {
-            supplierInvoicesPagination.lastSnapshot = invoices[invoices.length - 1]._docSnapshot;
-        }
-
-        // Business metrics
+        // ===================================================================
+        // BUSINESS METRICS AND ANALYTICS
+        // ===================================================================
+        
+        // Calculate business metrics
         const businessMetrics = {
             filterStatus: filterStatus,
-            totalInvoices: enhancedInvoices.length,
+            totalInvoices: enhancedInvoicesWithPendingStatus.length,
             currentPage: page,
             hasMorePages: hasMorePages,
-            lastDocument: supplierInvoicesPagination.lastSnapshot,
+            lastDocument: invoices.length > 0 ? invoices[invoices.length - 1]._docSnapshot : null,
             totalReads: totalReads,
             
-            // Business intelligence
-            totalOutstanding: enhancedInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
-            criticalCount: enhancedInvoices.filter(inv => inv.urgencyLevel === 'critical').length,
-            overdueCount: enhancedInvoices.filter(inv => inv.isOverdue).length,
-            averageDaysOutstanding: enhancedInvoices.length > 0 ? 
-                enhancedInvoices.reduce((sum, inv) => sum + inv.daysOutstanding, 0) / enhancedInvoices.length : 0
+            // Financial intelligence
+            totalOutstanding: enhancedInvoicesWithPendingStatus.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
+            criticalCount: enhancedInvoicesWithPendingStatus.filter(inv => inv.urgencyLevel === 'critical').length,
+            overdueCount: enhancedInvoicesWithPendingStatus.filter(inv => inv.isOverdue).length,
+            averageDaysOutstanding: enhancedInvoicesWithPendingStatus.length > 0 ? 
+                enhancedInvoicesWithPendingStatus.reduce((sum, inv) => sum + inv.daysOutstanding, 0) / enhancedInvoicesWithPendingStatus.length : 0,
+            
+            // ✅ VERIFICATION INTELLIGENCE: Count invoices with pending payments
+            invoicesWithPendingPayments: enhancedInvoicesWithPendingStatus.filter(inv => inv.hasPendingPayments === true).length,
+            totalPendingVerificationAmount: enhancedInvoicesWithPendingStatus.reduce((sum, inv) => sum + (inv.pendingPaymentsAmount || 0), 0),
+            totalPendingPaymentsCount: enhancedInvoicesWithPendingStatus.reduce((sum, inv) => sum + (inv.pendingPaymentsCount || 0), 0)
         };
 
-        // Cache first page data
+        // Cache enhanced data
         if (page === 1) {
             cachePaymentMetrics(cacheKey, {
-                invoices: enhancedInvoices,
+                invoices: enhancedInvoicesWithPendingStatus,
                 metadata: businessMetrics
             });
         }
 
-        updateSupplierInvoicesSummary(businessMetrics, enhancedInvoices);
+        // Update summary display
+        updateSupplierInvoicesSummary(businessMetrics, enhancedInvoicesWithPendingStatus);
 
-        console.log(`[PmtMgmt] 🎯 BUSINESS RESULTS:`);
-        console.log(`  📊 ${filterStatus.toUpperCase()}: ${enhancedInvoices.length} invoices`);
-        console.log(`  💰 Outstanding: ${formatCurrency(businessMetrics.totalOutstanding)}`);
+        // ===================================================================
+        // SUCCESS REPORTING WITH VERIFICATION INSIGHTS
+        // ===================================================================
+        
+        console.log(`[PmtMgmt] 🎯 ENHANCED LOADING RESULTS:`);
+        console.log(`  📊 ${filterStatus.toUpperCase()}: ${enhancedInvoicesWithPendingStatus.length} invoices`);
+        console.log(`  💰 Outstanding Amount: ${formatCurrency(businessMetrics.totalOutstanding)}`);
         console.log(`  🚨 Critical: ${businessMetrics.criticalCount}, Overdue: ${businessMetrics.overdueCount}`);
-        console.log(`  🔥 Firestore: ${totalReads} reads`);
+        console.log(`  ✅ Invoices with Pending Payments: ${businessMetrics.invoicesWithPendingPayments}`);
+        console.log(`  🔍 Total Pending Verifications: ${businessMetrics.totalPendingPaymentsCount} payments (${formatCurrency(businessMetrics.totalPendingVerificationAmount)})`);
+        console.log(`  🔥 Firestore Reads: ${totalReads}`);
 
-        return { invoices: enhancedInvoices, metadata: businessMetrics };
+        return { invoices: enhancedInvoicesWithPendingStatus, metadata: businessMetrics };
 
     } catch (error) {
-        console.error('[PmtMgmt] ❌ Error loading supplier invoices:', error);
+        console.error('[PmtMgmt] ❌ Error loading supplier invoices with pending status:', error);
         
         if (pmtMgmtSupplierGridApi) {
             pmtMgmtSupplierGridApi.setGridOption('loading', false);
@@ -2498,7 +2643,13 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
         }
         
         showModal('error', 'Supplier Invoices Loading Failed', 
-            `Could not load supplier invoices.\n\nError: ${error.message}\n\nPlease refresh and try again.`
+            `Could not load supplier invoices with pending payment status.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `This might be due to:\n` +
+            `• Network connectivity issues\n` +
+            `• Database permission restrictions\n` +
+            `• High volume of pending payments\n\n` +
+            `Please refresh and try again.`
         );
     }
 }
@@ -2545,19 +2696,8 @@ function calculateBusinessUrgency(invoice, daysOutstanding) {
  * BUSINESS SUMMARY: Updates supplier invoices summary with business intelligence
  */
 function updateSupplierInvoicesSummary(metadata, invoices) {
-    const tabContent = document.getElementById('pmt-mgmt-suppliers-content');
-    if (!tabContent) return;
-    
-    let summaryElement = tabContent.querySelector('#pmt-mgmt-supplier-summary-bar');
-    
-    if (!summaryElement) {
-        summaryElement = document.getElementById('pmt-mgmt-supplier-summary-bar');
-    }
-    
-    if (!summaryElement) {
-        console.warn('[PmtMgmt] Summary bar not found');
-        return;
-    }
+    const summaryElement = document.getElementById('pmt-mgmt-supplier-summary-bar');
+    if (!summaryElement) return;
     
     const totalOutstanding = invoices ? 
         invoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0) : 0;
@@ -2565,6 +2705,7 @@ function updateSupplierInvoicesSummary(metadata, invoices) {
         invoices.filter(inv => inv.urgencyLevel === 'critical').length : 0;
     const overdueCount = invoices ?
         invoices.filter(inv => inv.daysOutstanding > 30).length : 0;
+    const verificationCount = metadata.invoicesWithPendingPayments || 0;
 
     if (metadata.filterStatus === 'outstanding') {
         summaryElement.innerHTML = `
@@ -2579,9 +2720,29 @@ function updateSupplierInvoicesSummary(metadata, invoices) {
                                 ${overdueCount > 0 ? ` • <span class="text-red-700 font-bold">${overdueCount} OVERDUE</span>` : ''}
                             </p>
                         </div>
+                        
+                        ${verificationCount > 0 ? 
+                            `<div class="bg-green-100 border border-green-300 rounded-lg px-3 py-2">
+                                <div class="text-green-800 font-bold flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>${verificationCount} NEED VERIFICATION</span>
+                                </div>
+                                <div class="text-xs text-green-600">
+                                    ${formatCurrency(metadata.totalPendingVerificationAmount || 0)} pending approval
+                                </div>
+                            </div>` : ''
+                        }
+                        
                         ${criticalCount > 0 ? 
                             `<div class="bg-red-100 border border-red-300 rounded-lg px-3 py-2">
-                                <div class="text-red-800 font-bold">🚨 ${criticalCount} CRITICAL</div>
+                                <div class="text-red-800 font-bold flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+                                    </svg>
+                                    <span>${criticalCount} CRITICAL</span>
+                                </div>
                                 <div class="text-xs text-red-600">Require immediate attention</div>
                             </div>` : ''
                         }
@@ -2628,6 +2789,8 @@ function updateSupplierInvoicesSummary(metadata, invoices) {
             });
         }
     }
+    
+    console.log(`[PmtMgmt] ✅ Summary updated: ${verificationCount} invoices need payment verification`);
 }
 
 
@@ -4042,51 +4205,221 @@ export function showSupplierPaymentModalWithData(supplierData) {
 /**
  * ENHANCED: Show verification modal for invoice payments
  */
-export async function showSupplierInvoicePaymentVerificationModal(invoiceId) {
-    console.log(`[PmtMgmt] ✅ Opening payment verification modal for invoice: ${invoiceId}`);
-    
+export async function showSupplierInvoicePaymentVerificationModal(supplierInvoiceId) {
+    console.log(`[PmtMgmt] Opening payment verification modal for invoice: ${supplierInvoiceId}`);
+
     const modal = document.getElementById('pmt-mgmt-verify-invoice-payments-modal');
     if (!modal) {
-        console.error('[PmtMgmt] Payment verification modal not found');
+        console.error('[PmtMgmt] Verification modal not found');
         return;
     }
 
     try {
         ProgressToast.show('Loading Pending Payments', 'info');
-        
+
         // Get invoice and pending payments data
-        const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
-        const pendingPayments = await getPendingPaymentsForInvoice(invoiceId);
-        
-        if (pendingPayments.length === 0) {
+        const [invoiceData, pendingStatus] = await Promise.all([
+            getInvoiceDataById(supplierInvoiceId),
+            checkForPendingPayments(supplierInvoiceId)
+        ]);
+
+        if (!invoiceData) {
             ProgressToast.hide(0);
-            await showModal('info', 'No Pending Payments', 
-                'This invoice has no payments pending verification.');
+            await showModal('error', 'Invoice Not Found',
+                `Could not find invoice data for ID: ${supplierInvoiceId}\n\nPlease refresh the page and try again.`
+            );
             return;
         }
-        
-        // Populate modal
+
+        // Update modal header information
         document.getElementById('verify-invoice-number').textContent = 
-            invoiceData?.supplierInvoiceNo || invoiceData?.invoiceId || 'Unknown';
+            invoiceData.supplierInvoiceNo || supplierInvoiceId;
         document.getElementById('verify-supplier-name').textContent = 
-            invoiceData?.supplierName || 'Unknown Supplier';
-        document.getElementById('verify-modal-subtitle').textContent = 
-            `${pendingPayments.length} payment${pendingPayments.length > 1 ? 's' : ''} awaiting verification`;
-        
+            invoiceData.supplierName || 'Unknown Supplier';
+
+        if (pendingStatus.hasPendingPayments === false || pendingStatus.totalPendingCount === 0) {
+            ProgressToast.hide(0);
+
+            await showModal('info', 'No Pending Payments',
+                'This invoice has no payments pending verification.\n\n' +
+                'All payments for this invoice are already in finalized state.'
+            );
+            return;
+        }
+
         // Setup verification grid with pending payments
-        setupPendingPaymentsVerificationGrid(pendingPayments);
+        console.log(`[PmtMgmt] Setting up verification grid: ${pendingStatus.totalPendingCount} payments`);
         
-        ProgressToast.hide(300);
-        
-        // Show modal
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('visible'), 10);
-        
+        setupPendingPaymentsVerificationGrid(pendingStatus.pendingPaymentsList);
+
+        // Update modal subtitle with summary
+        document.getElementById('verify-modal-subtitle').textContent = pendingStatus.summaryText;
+
+        ProgressToast.showSuccess(`${pendingStatus.totalPendingCount} payments loaded for verification!`);
+
+        setTimeout(() => {
+            ProgressToast.hide(800);
+
+            // Show modal
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('visible'), 10);
+
+        }, 1200);
+
     } catch (error) {
         console.error('[PmtMgmt] Error showing verification modal:', error);
-        ProgressToast.showError('Failed to load verification modal');
+
+        ProgressToast.showError(`Failed to load payment verification modal: ${error.message}`);
+
+        setTimeout(() => {
+            showModal('error', 'Verification Modal Error', 
+                'Could not load payment verification interface.\n\n' +
+                `Error: ${error.message}`
+            );
+        }, 2000);
     }
 }
+
+
+/**
+ * ENHANCED: Setup verification grid for pending payments
+ */
+function setupPendingPaymentsVerificationGrid(pendingPayments) {
+    const gridContainer = document.getElementById('verify-pending-payments-grid');
+    if (!gridContainer) return;
+
+    console.log('[PmtMgmt] Setting up pending payments verification grid...');
+
+    const verificationGridOptions = {
+        theme: 'alpine',
+        rowHeight: 45,
+        headerHeight: 40,
+        
+        columnDefs: [
+            {
+                headerName: "Payment Date",
+                field: "submittedDate", 
+                width: 120,
+                valueFormatter: params => {
+                    const date = params.value;
+                    if (!date) return 'Unknown';
+                    try {
+                        return date.toDate ? 
+                            date.toDate().toLocaleDateString() :
+                            new Date(date).toLocaleDateString();
+                    } catch {
+                        return 'Invalid Date';
+                    }
+                }
+            },
+            {
+                headerName: "Submitted By",
+                field: "submittedBy",
+                flex: 1,
+                cellStyle: { fontWeight: 'bold' }
+            },
+            {
+                headerName: "Amount",
+                field: "paymentAmount",
+                width: 120,
+                valueFormatter: params => formatCurrency(params.value || 0),
+                cellClass: 'text-right font-semibold',
+                cellStyle: { color: '#059669' }
+            },
+            {
+                headerName: "Payment Mode",
+                field: "paymentMode",
+                width: 100, 
+                cellStyle: { fontSize: '12px' }
+            },
+            {
+                headerName: "Reference",
+                field: "paymentReference",
+                width: 120,
+                cellStyle: { fontFamily: 'monospace', fontSize: '11px' }
+            },
+            {
+                headerName: "Days Waiting",
+                width: 110,
+                valueGetter: params => {
+                    const submitted = params.data.submittedDate;
+                    return calculateDaysWaiting(submitted);
+                },
+                cellRenderer: params => {
+                    const days = params.value || 0;
+                    let colorClass, urgencyText;
+                    
+                    if (days > 7) {
+                        colorClass = 'text-red-700 bg-red-100 border-red-300';
+                        urgencyText = 'URGENT';
+                    } else if (days > 3) {
+                        colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
+                        urgencyText = 'FOLLOW';
+                    } else {
+                        colorClass = 'text-green-700 bg-green-100 border-green-300';
+                        urgencyText = 'RECENT';
+                    }
+                    
+                    return `<div class="text-center">
+                                <div class="font-bold text-sm">${days}d</div>
+                                <div class="text-xs px-2 py-1 rounded border ${colorClass}">${urgencyText}</div>
+                            </div>`;
+                }
+            },
+            {
+                headerName: "Actions",
+                width: 180,
+                cellClass: 'flex items-center justify-center space-x-1',
+                cellRenderer: params => {
+                    const payment = params.data;
+                    
+                    return `<div class="flex space-x-1">
+                                <button class="pmt-mgmt-verify-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold"
+                                      data-payment-id="${payment.id}"
+                                      data-original-invoice-id="${invoiceId}"
+                                      title="Verify This Payment">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    VERIFY
+                                </button>
+                                <button class="pmt-mgmt-reject-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600"
+                                      data-payment-id="${payment.id}"
+                                      data-original-invoice-id="${invoiceId}"
+                                      title="Reject This Payment">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                    REJECT
+                                </button>
+                            </div>`;
+                }
+            }
+        ],
+
+        defaultColDef: {
+            resizable: true, 
+            sortable: true,
+            filter: true
+        },
+        
+        onGridReady: (params) => {
+            pmtMgmtPendingPaymentsGridApi = params.api;
+            console.log('[PmtMgmt] Verification grid ready');
+        }
+    };
+
+    // Create verification grid
+    if (!pmtMgmtPendingPaymentsGridApi) {
+        pmtMgmtPendingPaymentsGridApi = createGrid(gridContainer, verificationGridOptions);
+    }
+
+    // Load pending payments data
+    pmtMgmtPendingPaymentsGridApi.setGridOption('rowData', pendingPayments);
+
+    console.log(`[PmtMgmt] Verification grid setup: ${pendingPayments.length} payments loaded`);
+}
+
 
 
 
