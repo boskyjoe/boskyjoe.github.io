@@ -85,6 +85,8 @@ const supplierInvoicesPagination = {
 };
 
 
+
+
 /**
  * BUSINESS-SMART: Supplier invoices grid optimized for payment operations
  * Shows outstanding invoices that need payment action, with complete business context
@@ -1385,6 +1387,20 @@ let pmtMgmtCurrentTab = 'dashboard';
 let pmtMgmtSupplierGridApi = null;
 let pmtMgmtTeamGridApi = null;
 let pmtMgmtSalesGridApi = null;
+
+// ✅ ADD: Supplier invoice details modal grids
+let pmtMgmtSupplierLineItemsGridApi = null;
+let pmtMgmtSupplierPaymentHistoryGridApi = null;
+
+
+// ✅ FUTURE: Team payment details modal grids
+let pmtMgmtTeamLineItemsGridApi = null;
+let pmtMgmtTeamPaymentHistoryGridApi = null;
+
+// ✅ FUTURE: Sales payment details modal grids  
+let pmtMgmtSalesLineItemsGridApi = null;
+let pmtMgmtSalesPaymentHistoryGridApi = null;
+
 
 // Module state (isolated)
 const pmtMgmtState = {
@@ -3414,13 +3430,17 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
  */
 async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
     const gridContainer = document.getElementById('pmt-mgmt-invoice-payment-history-grid');
-    if (!gridContainer) return;
+    if (!gridContainer) {
+        console.warn('[PmtMgmt] Supplier payment history grid container not found');
+        return;
+    }
 
     console.log('[PmtMgmt] Setting up supplier payment history grid...');
 
-    const paymentHistoryGridOptions = {
+    const supplierPaymentHistoryGridOptions = {
         theme: 'alpine',
         pagination: false,
+        rowHeight: 35, // Compact rows for payment history
         
         columnDefs: [
             { 
@@ -3454,12 +3474,13 @@ async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
                 width: 100,
                 cellRenderer: params => {
                     const status = params.value || 'Verified';
-                    if (status === 'Verified') {
-                        return `<span class="text-xs font-semibold text-green-700">✅ VERIFIED</span>`;
-                    } else if (status === 'Voided') {
-                        return `<span class="text-xs font-semibold text-red-700">❌ VOIDED</span>`;
-                    }
-                    return status;
+                    const statusConfig = {
+                        'Verified': 'text-green-700',
+                        'Pending Verification': 'text-yellow-700',
+                        'Voided': 'text-red-700'
+                    };
+                    const colorClass = statusConfig[status] || 'text-blue-700';
+                    return `<span class="text-xs font-semibold ${colorClass}">${status.toUpperCase()}</span>`;
                 }
             }
         ],
@@ -3468,14 +3489,37 @@ async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
             resizable: true,
             sortable: false,
             filter: false
+        },
+        
+        onGridReady: (params) => {
+            pmtMgmtSupplierPaymentHistoryGridApi = params.api; // ✅ NOW DECLARED
+            console.log('[PmtMgmt] ✅ Supplier payment history grid ready');
         }
     };
 
+    // Create grid only if not already created
     if (!pmtMgmtSupplierPaymentHistoryGridApi) {
-        pmtMgmtSupplierPaymentHistoryGridApi = createGrid(gridContainer, paymentHistoryGridOptions);
+        pmtMgmtSupplierPaymentHistoryGridApi = createGrid(gridContainer, supplierPaymentHistoryGridOptions);
     }
 
+    // Wait for grid and load payment history
+    const waitForPaymentHistoryGrid = setInterval(() => {
+        if (pmtMgmtSupplierPaymentHistoryGridApi) {
+            clearInterval(waitForPaymentHistoryGrid);
+            
+            // Load payment history for this supplier invoice
+            loadSupplierPaymentHistoryData(invoiceId);
+        }
+    }, 50);
+}
+
+/**
+ * SUPPLIER-SPECIFIC: Load payment history data for supplier invoice
+ */
+async function loadSupplierPaymentHistoryData(invoiceId) {
     try {
+        console.log(`[PmtMgmt] Loading payment history for supplier invoice: ${invoiceId}`);
+        
         const db = firebase.firestore();
         const paymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
             .where('relatedInvoiceId', '==', invoiceId)
@@ -3485,12 +3529,23 @@ async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
         const payments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         pmtMgmtSupplierPaymentHistoryGridApi.setGridOption('rowData', payments);
-        document.getElementById('pmt-mgmt-payments-count').textContent = `${payments.length} payments`;
         
-        console.log(`[PmtMgmt] ✅ Supplier payment history: ${payments.length} payments loaded`);
+        // Update payments count display
+        const countElement = document.getElementById('pmt-mgmt-payments-count');
+        if (countElement) {
+            countElement.textContent = `${payments.length} payments`;
+        }
+        
+        console.log(`[PmtMgmt] ✅ Supplier payment history loaded: ${payments.length} payments`);
         
     } catch (error) {
         console.error('[PmtMgmt] Error loading supplier payment history:', error);
+        
+        // Show "No payments" if error
+        const countElement = document.getElementById('pmt-mgmt-payments-count');
+        if (countElement) {
+            countElement.textContent = '0 payments';
+        }
     }
 }
 
@@ -3500,13 +3555,17 @@ async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
  */
 async function setupSupplierInvoiceLineItemsGrid(supplierInvoiceData) {
     const gridContainer = document.getElementById('pmt-mgmt-invoice-line-items-grid');
-    if (!gridContainer) return;
+    if (!gridContainer) {
+        console.warn('[PmtMgmt] Supplier line items grid container not found');
+        return;
+    }
 
     console.log('[PmtMgmt] Setting up supplier invoice line items grid...');
 
-    const lineItemsGridOptions = {
+    const supplierLineItemsGridOptions = {
         theme: 'alpine',
         pagination: false,
+        rowHeight: 40, // Smaller rows for line items
         
         columnDefs: [
             { 
@@ -3524,7 +3583,7 @@ async function setupSupplierInvoiceLineItemsGrid(supplierInvoiceData) {
             { 
                 headerName: "Unit Cost", 
                 field: "unitPurchasePrice", 
-                width: 100,
+                width: 120,
                 valueFormatter: p => formatCurrency(p.value || 0),
                 cellClass: 'text-right'
             },
@@ -3542,21 +3601,37 @@ async function setupSupplierInvoiceLineItemsGrid(supplierInvoiceData) {
             resizable: true,
             sortable: false,
             filter: false
+        },
+        
+        onGridReady: (params) => {
+            pmtMgmtSupplierLineItemsGridApi = params.api; // ✅ NOW DECLARED
+            console.log('[PmtMgmt] ✅ Supplier line items grid ready');
         }
     };
 
+    // Create grid only if not already created
     if (!pmtMgmtSupplierLineItemsGridApi) {
-        pmtMgmtSupplierLineItemsGridApi = createGrid(gridContainer, lineItemsGridOptions);
+        pmtMgmtSupplierLineItemsGridApi = createGrid(gridContainer, supplierLineItemsGridOptions);
     }
 
-    const lineItems = supplierInvoiceData.lineItems || [];
-    pmtMgmtSupplierLineItemsGridApi.setGridOption('rowData', lineItems);
-    
-    document.getElementById('pmt-mgmt-line-items-count').textContent = `${lineItems.length} items`;
-    
-    console.log(`[PmtMgmt] ✅ Supplier line items grid: ${lineItems.length} items loaded`);
+    // Wait for grid to be ready before loading data
+    const waitForLineItemsGrid = setInterval(() => {
+        if (pmtMgmtSupplierLineItemsGridApi) {
+            clearInterval(waitForLineItemsGrid);
+            
+            const lineItems = supplierInvoiceData.lineItems || [];
+            pmtMgmtSupplierLineItemsGridApi.setGridOption('rowData', lineItems);
+            
+            // Update count display
+            const countElement = document.getElementById('pmt-mgmt-line-items-count');
+            if (countElement) {
+                countElement.textContent = `${lineItems.length} items`;
+            }
+            
+            console.log(`[PmtMgmt] ✅ Supplier line items loaded: ${lineItems.length} items`);
+        }
+    }, 50);
 }
-
 
 
 
