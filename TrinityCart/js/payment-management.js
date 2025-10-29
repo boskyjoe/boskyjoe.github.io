@@ -3258,8 +3258,9 @@ let pmtMgmtPaymentHistoryGridApi = null;
 /**
  * ENHANCED: Shows detailed supplier invoice modal with complete information
  */
+
 export async function showSupplierInvoiceDetailsModal(invoiceId) {
-    console.log(`[PmtMgmt] 📋 Opening detailed invoice modal for: ${invoiceId}`);
+    console.log(`[PmtMgmt] 📋 Opening detailed supplier invoice modal for: ${invoiceId}`);
     
     const modal = document.getElementById('pmt-mgmt-supplier-invoice-modal');
     if (!modal) {
@@ -3269,10 +3270,10 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
 
     try {
         ProgressToast.show('Loading Invoice Details', 'info');
-        ProgressToast.updateProgress('Retrieving complete invoice information...', 50);
+        ProgressToast.updateProgress('Retrieving invoice information...', 50);
         
         // ===================================================================
-        // PHASE 1: GET COMPLETE INVOICE DATA
+        // GET COMPLETE INVOICE DATA (UI OPERATION)
         // ===================================================================
         
         const db = firebase.firestore();
@@ -3280,33 +3281,32 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
         
         if (!invoiceDoc.exists) {
             ProgressToast.hide(0);
-            await showModal('error', 'Invoice Not Found', 'The requested invoice could not be found in the database.');
+            await showModal('error', 'Invoice Not Found', 'The requested invoice could not be found.');
             return;
         }
         
         const invoiceData = { id: invoiceDoc.id, ...invoiceDoc.data() };
-        console.log('[PmtMgmt] Retrieved complete invoice data:', invoiceData.invoiceId);
 
         // ===================================================================
-        // PHASE 2: POPULATE MODAL HEADER AND BASIC INFO
+        // POPULATE MODAL (UI OPERATIONS)
         // ===================================================================
         
         ProgressToast.updateProgress('Populating invoice details...', 75);
         
-        // Update modal title
+        // Update modal title and subtitle
         document.getElementById('pmt-mgmt-invoice-modal-title').textContent = 
             `Invoice: ${invoiceData.supplierInvoiceNo || invoiceData.invoiceId}`;
         document.getElementById('pmt-mgmt-invoice-modal-subtitle').textContent = 
             `${invoiceData.supplierName} • ${invoiceData.paymentStatus}`;
 
-        // Populate invoice information
+        // Populate all invoice fields
         document.getElementById('pmt-mgmt-system-invoice-id').textContent = invoiceData.invoiceId || 'Unknown';
         document.getElementById('pmt-mgmt-supplier-invoice-no').textContent = invoiceData.supplierInvoiceNo || 'Not Provided';
         document.getElementById('pmt-mgmt-supplier-name').textContent = invoiceData.supplierName || 'Unknown Supplier';
         document.getElementById('pmt-mgmt-purchase-date').textContent = invoiceData.purchaseDate?.toDate ? 
             invoiceData.purchaseDate.toDate().toLocaleDateString() : 'Unknown Date';
         
-        // Calculate and show days outstanding
+        // Calculate and populate days outstanding
         const daysOutstanding = calculateDaysOutstanding(invoiceData.purchaseDate);
         document.getElementById('pmt-mgmt-days-outstanding').textContent = `${daysOutstanding} days`;
         
@@ -3315,54 +3315,54 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
         document.getElementById('pmt-mgmt-amount-paid').textContent = formatCurrency(invoiceData.amountPaid || 0);
         document.getElementById('pmt-mgmt-balance-due').textContent = formatCurrency(invoiceData.balanceDue || 0);
         
-        // Payment status with styling
+        // Payment status with proper styling
         const statusElement = document.getElementById('pmt-mgmt-payment-status-display');
         const status = invoiceData.paymentStatus || 'Unknown';
         
-        if (status === 'Paid') {
-            statusElement.innerHTML = `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                PAID
-            </span>`;
-        } else if (status === 'Partially Paid') {
-            statusElement.innerHTML = `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                PARTIALLY PAID
-            </span>`;
-        } else if (status === 'Unpaid') {
-            statusElement.innerHTML = `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/>
-                </svg>
-                UNPAID
-            </span>`;
-        }
+        const statusConfigs = {
+            'Paid': {
+                html: `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                         </svg>
+                         PAID
+                       </span>`
+            },
+            'Partially Paid': {
+                html: `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                         </svg>
+                         PARTIALLY PAID
+                       </span>`
+            },
+            'Unpaid': {
+                html: `<span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/>
+                         </svg>
+                         UNPAID
+                       </span>`
+            }
+        };
+        
+        statusElement.innerHTML = statusConfigs[status]?.html || status;
 
         // ===================================================================
-        // PHASE 3: SETUP LINE ITEMS GRID
+        // SETUP GRIDS (UI OPERATIONS)
         // ===================================================================
         
-        ProgressToast.updateProgress('Loading line items...', 85);
-        
-        await setupInvoiceLineItemsGrid(invoiceData);
+        await setupSupplierInvoiceLineItemsGrid(invoiceData);
 
-        // ===================================================================
-        // PHASE 4: SETUP PAYMENT HISTORY (if any payments exist)
-        // ===================================================================
-        
         if ((invoiceData.amountPaid || 0) > 0) {
-            await setupInvoicePaymentHistoryGrid(invoiceId);
+            await setupSupplierInvoicePaymentHistoryGrid(invoiceId);
             document.getElementById('pmt-mgmt-payment-history-section').style.display = 'block';
         } else {
             document.getElementById('pmt-mgmt-payment-history-section').style.display = 'none';
         }
 
         // ===================================================================
-        // PHASE 5: SETUP ACTION BUTTON
+        // SETUP PAY BUTTON (UI OPERATION - NO BUSINESS LOGIC)
         // ===================================================================
         
         const payButton = document.getElementById('pmt-mgmt-modal-pay-invoice');
@@ -3370,13 +3370,17 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
         
         if (balanceDue > 0 && (status === 'Unpaid' || status === 'Partially Paid')) {
             payButton.style.display = 'block';
-            payButton.textContent = `Pay Outstanding Balance (${formatCurrency(balanceDue)})`;
-            payButton.onclick = () => {
-                closeSupplierInvoiceDetailsModal();
-                setTimeout(() => {
-                    handlePmtMgmtPaySupplierInvoice({ dataset: { id: invoiceId } });
-                }, 300);
-            };
+            payButton.innerHTML = `
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                Pay Outstanding Balance (${formatCurrency(balanceDue)})
+            `;
+            
+            // ✅ UI SETUP: Store invoice ID for main.js to access
+            payButton.dataset.invoiceId = invoiceId;
+            payButton.dataset.balanceDue = balanceDue;
+            
         } else {
             payButton.style.display = 'none';
         }
@@ -3385,7 +3389,7 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
         document.getElementById('pmt-mgmt-invoice-last-updated').textContent = new Date().toLocaleTimeString();
 
         // ===================================================================
-        // PHASE 6: SHOW MODAL
+        // SHOW MODAL (UI OPERATION)
         // ===================================================================
         
         ProgressToast.updateProgress('Invoice details loaded successfully!', 100);
@@ -3393,23 +3397,168 @@ export async function showSupplierInvoiceDetailsModal(invoiceId) {
         setTimeout(() => {
             ProgressToast.hide(300);
             
-            // Show modal
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('visible'), 10);
             
         }, 500);
 
     } catch (error) {
-        console.error('[PmtMgmt] Error loading invoice details:', error);
-        ProgressToast.showError(`Failed to load invoice details: ${error.message}`);
-        
-        setTimeout(() => {
-            showModal('error', 'Invoice Loading Failed', 
-                'Could not load the complete invoice information. Please try again.'
-            );
-        }, 1500);
+        console.error('[PmtMgmt] Error in supplier invoice details modal:', error);
+        ProgressToast.showError(`Failed to load supplier invoice details: ${error.message}`);
     }
 }
+
+
+/**
+ * SUPPLIER-SPECIFIC: Setup payment history grid for supplier invoice
+ */
+async function setupSupplierInvoicePaymentHistoryGrid(invoiceId) {
+    const gridContainer = document.getElementById('pmt-mgmt-invoice-payment-history-grid');
+    if (!gridContainer) return;
+
+    console.log('[PmtMgmt] Setting up supplier payment history grid...');
+
+    const paymentHistoryGridOptions = {
+        theme: 'alpine',
+        pagination: false,
+        
+        columnDefs: [
+            { 
+                headerName: "Payment Date", 
+                field: "paymentDate", 
+                width: 120,
+                valueFormatter: p => p.value?.toDate ? p.value.toDate().toLocaleDateString() : 'Unknown'
+            },
+            { 
+                headerName: "Amount Paid", 
+                field: "amountPaid", 
+                width: 120,
+                valueFormatter: p => formatCurrency(p.value || 0),
+                cellClass: 'text-right font-bold',
+                cellStyle: { color: '#059669' }
+            },
+            { 
+                headerName: "Payment Mode", 
+                field: "paymentMode", 
+                width: 120
+            },
+            { 
+                headerName: "Reference #", 
+                field: "transactionRef", 
+                flex: 1,
+                cellStyle: { fontFamily: 'monospace', fontSize: '11px' }
+            },
+            { 
+                headerName: "Status", 
+                field: "paymentStatus", 
+                width: 100,
+                cellRenderer: params => {
+                    const status = params.value || 'Verified';
+                    if (status === 'Verified') {
+                        return `<span class="text-xs font-semibold text-green-700">✅ VERIFIED</span>`;
+                    } else if (status === 'Voided') {
+                        return `<span class="text-xs font-semibold text-red-700">❌ VOIDED</span>`;
+                    }
+                    return status;
+                }
+            }
+        ],
+        
+        defaultColDef: {
+            resizable: true,
+            sortable: false,
+            filter: false
+        }
+    };
+
+    if (!pmtMgmtSupplierPaymentHistoryGridApi) {
+        pmtMgmtSupplierPaymentHistoryGridApi = createGrid(gridContainer, paymentHistoryGridOptions);
+    }
+
+    try {
+        const db = firebase.firestore();
+        const paymentsQuery = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('relatedInvoiceId', '==', invoiceId)
+            .orderBy('paymentDate', 'desc');
+        
+        const paymentsSnapshot = await paymentsQuery.get();
+        const payments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        pmtMgmtSupplierPaymentHistoryGridApi.setGridOption('rowData', payments);
+        document.getElementById('pmt-mgmt-payments-count').textContent = `${payments.length} payments`;
+        
+        console.log(`[PmtMgmt] ✅ Supplier payment history: ${payments.length} payments loaded`);
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error loading supplier payment history:', error);
+    }
+}
+
+
+/**
+ * SUPPLIER-SPECIFIC: Setup line items grid for supplier invoice
+ */
+async function setupSupplierInvoiceLineItemsGrid(supplierInvoiceData) {
+    const gridContainer = document.getElementById('pmt-mgmt-invoice-line-items-grid');
+    if (!gridContainer) return;
+
+    console.log('[PmtMgmt] Setting up supplier invoice line items grid...');
+
+    const lineItemsGridOptions = {
+        theme: 'alpine',
+        pagination: false,
+        
+        columnDefs: [
+            { 
+                headerName: "Product Name", 
+                field: "productName", 
+                flex: 1,
+                cellStyle: { fontWeight: 'bold' }
+            },
+            { 
+                headerName: "Quantity", 
+                field: "quantity", 
+                width: 80,
+                cellClass: 'text-center font-bold'
+            },
+            { 
+                headerName: "Unit Cost", 
+                field: "unitPurchasePrice", 
+                width: 100,
+                valueFormatter: p => formatCurrency(p.value || 0),
+                cellClass: 'text-right'
+            },
+            { 
+                headerName: "Line Total", 
+                field: "lineItemTotal", 
+                width: 120,
+                valueFormatter: p => formatCurrency(p.value || 0),
+                cellClass: 'text-right font-bold',
+                cellStyle: { color: '#374151' }
+            }
+        ],
+        
+        defaultColDef: {
+            resizable: true,
+            sortable: false,
+            filter: false
+        }
+    };
+
+    if (!pmtMgmtSupplierLineItemsGridApi) {
+        pmtMgmtSupplierLineItemsGridApi = createGrid(gridContainer, lineItemsGridOptions);
+    }
+
+    const lineItems = supplierInvoiceData.lineItems || [];
+    pmtMgmtSupplierLineItemsGridApi.setGridOption('rowData', lineItems);
+    
+    document.getElementById('pmt-mgmt-line-items-count').textContent = `${lineItems.length} items`;
+    
+    console.log(`[PmtMgmt] ✅ Supplier line items grid: ${lineItems.length} items loaded`);
+}
+
+
+
 
 /**
  * Sets up line items grid within the invoice modal
