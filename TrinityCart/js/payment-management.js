@@ -380,7 +380,7 @@ const pmtMgmtSupplierGridOptions = {
                 gap: '4px'
             },
             
-            cellRenderer: params => { // ✅ REMOVED: async (now synchronous)
+            cellRenderer: params => { 
                 const status = params.data.paymentStatus;
                 const balanceDue = params.data.balanceDue || 0;
                 const currentUser = appState.currentUser;
@@ -395,10 +395,14 @@ const pmtMgmtSupplierGridOptions = {
                 
                 let buttons = '';
                 
+                console.log('VERIFICATION :',params.data.hasPendingPayments);
+
+
                 // ✅ VERIFICATION: Use pre-loaded pending payment status
                 if (params.data.hasPendingPayments === true && params.data.pendingPaymentsCount > 0) {
                     const pendingCount = params.data.pendingPaymentsCount;
                     const pendingAmount = params.data.pendingPaymentsAmount || 0;
+                    
                     
                     buttons += `<button class="pmt-mgmt-verify-invoice-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse"
                                     data-invoice-id="${params.data.id}"
