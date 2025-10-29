@@ -1904,7 +1904,7 @@ function handleStandaloneButtons(target, event) {
     }
 
     // Check all button handlers
-    f/*or (const [selector, handler] of Object.entries(buttonHandlers)) {
+    /*for (const [selector, handler] of Object.entries(buttonHandlers)) {
         if (target.closest(selector)) {
             handler();
             return true;
