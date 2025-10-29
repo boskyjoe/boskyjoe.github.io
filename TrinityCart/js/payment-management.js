@@ -4313,11 +4313,15 @@ export async function showSupplierInvoicePaymentVerificationModal(supplierInvoic
 /**
  * ENHANCED: Setup verification grid for pending payments
  */
+
 function setupPendingPaymentsVerificationGrid(pendingPayments) {
     const gridContainer = document.getElementById('verify-pending-payments-grid');
     if (!gridContainer) return;
 
-    console.log('[PmtMgmt] Setting up pending payments verification grid...');
+    const payment = params.data;
+    const originalInvoiceId = payment.relatedInvoiceId || payment.invoiceId || 'unknown'; 
+
+    console.log('[PmtMgmt] Setting up pending payments verification grid...',pendingPayments);
 
     const verificationGridOptions = {
         theme: 'legacy',
@@ -4405,7 +4409,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                     return `<div class="flex space-x-1">
                                 <button class="pmt-mgmt-verify-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold"
                                       data-payment-id="${payment.id}"
-                                      data-original-invoice-id="${invoiceId}"
+                                      data-original-invoice-id="${originalInvoiceId}"
                                       title="Verify This Payment">
                                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -4414,7 +4418,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                                 </button>
                                 <button class="pmt-mgmt-reject-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600"
                                       data-payment-id="${payment.id}"
-                                      data-original-invoice-id="${invoiceId}"
+                                      data-original-invoice-id="${originalInvoiceId}"
                                       title="Reject This Payment">
                                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
