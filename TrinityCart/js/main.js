@@ -1640,6 +1640,25 @@ function handleStandaloneButtons(target, event) {
             }
         },
         '.pmt-mgmt-verification-action': async (target) => {
+            console.log('[DEBUG] Verification handler called');
+            console.log('[DEBUG] arguments.length:', arguments.length);
+            console.log('[DEBUG] arguments[0] (passedTarget):', arguments[0]);
+            console.log('[DEBUG] typeof arguments[0]:', typeof arguments[0]);
+            console.log('[DEBUG] passedTarget === arguments[0]:', passedTarget === arguments[0]);
+            
+            // Show what we actually received
+            if (arguments[0]) {
+                console.log('[DEBUG] arguments[0] dataset:', arguments[0].dataset);
+                console.log('[DEBUG] arguments[0] verificationAction:', arguments[0].dataset?.verificationAction);
+            }
+            
+            await showModal('info', 'Debug Information', 
+                `Handler called with ${arguments.length} argument(s)\n\n` +
+                `Argument 0 type: ${typeof arguments[0]}\n` +
+                `Has dataset: ${!!arguments[0]?.dataset}\n` +
+                `VerificationAction: ${arguments[0]?.dataset?.verificationAction || 'undefined'}`
+            );
+            
             const verificationAction = target.dataset.verificationAction;
             const verificationType = target.dataset.verificationType;
             
