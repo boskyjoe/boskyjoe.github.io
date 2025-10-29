@@ -4318,9 +4318,6 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
     const gridContainer = document.getElementById('verify-pending-payments-grid');
     if (!gridContainer) return;
 
-    const payment = params.data;
-    const originalInvoiceId = payment.relatedInvoiceId || payment.invoiceId || 'unknown'; 
-
     console.log('[PmtMgmt] Setting up pending payments verification grid...',pendingPayments);
 
     const verificationGridOptions = {
@@ -4405,6 +4402,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 cellClass: 'flex items-center justify-center space-x-1',
                 cellRenderer: params => {
                     const payment = params.data;
+                    const originalInvoiceId = payment.relatedInvoiceId || payment.invoiceId || 'unknown';
                     
                     return `<div class="flex space-x-1">
                                 <button class="pmt-mgmt-verify-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold"
