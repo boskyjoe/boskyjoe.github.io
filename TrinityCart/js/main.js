@@ -2097,6 +2097,8 @@ async function handleSupplierPaymentSubmit(e) {
             // Close the payment modal
             closeSupplierPaymentModal();
 
+            await refreshPaymentManagementAfterSupplierPayment();
+
             const paymentMgmtView = document.getElementById('pmt-mgmt-view');
             if (paymentMgmtView && paymentMgmtView.classList.contains('active')) {
                 console.log('[main.js] Refreshing payment management after supplier payment');
@@ -2140,6 +2142,63 @@ async function handleSupplierPaymentSubmit(e) {
         }
     }
 }
+
+
+/**
+ * ENHANCED: Refresh payment management after supplier payment operations
+ */
+async function refreshPaymentManagementAfterSupplierPayment() {
+    try {
+        // Check if payment management view is currently active
+        const paymentMgmtView = document.getElementById('pmt-mgmt-view');
+        const isPaymentMgmtActive = paymentMgmtView && paymentMgmtView.classList.contains('active');
+        
+        if (isPaymentMgmtActive) {
+            console.log('[main.js] 🔄 Payment Management is active, refreshing after supplier payment...');
+            
+            // ✅ COMPREHENSIVE REFRESH: Clear cache and reload all data
+            if (typeof clearPaymentMgmtCache === 'function') {
+                clearPaymentMgmtCache();
+                console.log('[main.js] Cleared payment management cache');
+            }
+            
+            // ✅ DASHBOARD REFRESH: Update summary cards and action items
+            if (typeof refreshPaymentManagementDashboard === 'function') {
+                await refreshPaymentManagementDashboard();
+                console.log('[main.js] Refreshed payment management dashboard');
+            }
+            
+            // ✅ SUPPLIER TAB REFRESH: Reload supplier invoices grid
+            const supplierTab = document.getElementById('pmt-mgmt-suppliers-content');
+            if (supplierTab && supplierTab.classList.contains('active')) {
+                console.log('[main.js] Supplier tab is active, refreshing supplier invoices...');
+                
+                // Force reload supplier invoices
+                if (typeof loadSupplierInvoicesForMgmtTab === 'function') {
+                    await loadSupplierInvoicesForMgmtTab('outstanding', { forceRefresh: true });
+                }
+            }
+            
+            // ✅ USER FEEDBACK: Let user know data was refreshed
+            setTimeout(() => {
+                ProgressToast.show('Payment Management Updated', 'success');
+                ProgressToast.updateProgress('Dashboard and grids refreshed with latest data', 100);
+                
+                setTimeout(() => {
+                    ProgressToast.hide(800);
+                }, 1200);
+            }, 1000);
+            
+        } else {
+            console.log('[main.js] Payment Management not active, skipping refresh');
+        }
+        
+    } catch (error) {
+        console.error('[main.js] Error refreshing payment management:', error);
+    }
+}
+
+
 
 
 /**
