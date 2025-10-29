@@ -4058,6 +4058,54 @@
 
 
 
+    <!-- SUPPLIER INVOICE PAYMENTS VERIFICATION MODAL -->
+    <div id="pmt-mgmt-verify-invoice-payments-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col" style="z-index: 51;">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900">✅ Verify Invoice Payments</h3>
+                <p class="text-sm text-gray-600" id="verify-modal-subtitle">Review and verify pending payments</p>
+            </div>
+
+            <!-- Invoice Summary -->
+            <div class="p-4 bg-gray-50 border-b">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-600">Invoice:</span>
+                        <span class="font-semibold ml-2" id="verify-invoice-number">-</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Supplier:</span>
+                        <span class="font-semibold ml-2" id="verify-supplier-name">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Payments Grid -->
+            <div class="flex-1 p-6">
+                <h4 class="font-medium text-gray-800 mb-4">Payments Awaiting Verification</h4>
+                <div id="verify-pending-payments-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;"></div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t flex justify-between">
+                <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">
+                    Cancel
+                </button>
+                <div class="space-x-2">
+                    <button type="button" id="verify-all-payments-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        ✅ Verify All Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
     <!-- Firebase SDKs -->
 
     <script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-app-compat.js"></script>
