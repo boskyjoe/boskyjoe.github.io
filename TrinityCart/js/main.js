@@ -1550,6 +1550,13 @@ function setupMobileSidebar() {
 // ============================================================================
 
 function handleStandaloneButtons(target, event) {
+    console.log('[DEBUG] handleStandaloneButtons called with:', {
+        target: target,
+        targetType: typeof target,
+        targetTagName: target?.tagName,
+        targetClasses: target?.className,
+        eventType: event?.type
+    });
     const buttonHandlers = {
         '#add-line-item-btn': () => addLineItem(),
         '.remove-line-item-btn': () => {
