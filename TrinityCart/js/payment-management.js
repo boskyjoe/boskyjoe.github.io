@@ -4320,7 +4320,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
     console.log('[PmtMgmt] Setting up pending payments verification grid...');
 
     const verificationGridOptions = {
-        theme: 'alpine',
+        theme: 'legacy',
         rowHeight: 45,
         headerHeight: 40,
         
