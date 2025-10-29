@@ -141,7 +141,9 @@ import {
     showSupplierInvoiceDetailsModal,  
     closeSupplierInvoiceDetailsModal,   
     handleSupplierPayOutstandingBalance,  
-    getSupplierInvoiceFromMgmtGrid  
+    getSupplierInvoiceFromMgmtGrid,
+    showSupplierInvoicePaymentVerificationModal, 
+    buildActionRequiredList
 } from './payment-management.js';
 
 
@@ -1601,6 +1603,35 @@ function handleStandaloneButtons(target, event) {
                 console.error('[main.js] No product ID found for removal');
             }
         },
+        '.pmt-mgmt-verify-invoice-payments': async (target) => {
+            const invoiceId = target.dataset.invoiceId;
+            
+            console.log(`[main.js] Opening verification modal for invoice: ${invoiceId}`);
+            
+            if (!invoiceId) {
+                await showModal('error', 'Invoice ID Missing', 'Could not find invoice ID for verification.');
+                return;
+            }
+
+            try {
+                ProgressToast.show('Loading Verification Interface', 'info');
+                
+                // Open the verification modal
+                await showSupplierInvoicePaymentVerificationModal(invoiceId);
+                
+                ProgressToast.hide(300);
+                
+            } catch (error) {
+                console.error('[main.js] Error opening verification modal:', error);
+                ProgressToast.showError('Could not open verification modal');
+                
+                setTimeout(() => {
+                    showModal('error', 'Verification Modal Error', 
+                        'Could not open payment verification interface. Please try again.'
+                    );
+                }, 1500);
+            }
+        },
         '.pmt-mgmt-verification-action': async (target) => {
             const verificationAction = target.dataset.verificationAction;
             const verificationType = target.dataset.verificationType;
@@ -1647,6 +1678,156 @@ function handleStandaloneButtons(target, event) {
                 default:
                     console.warn(`[main.js] Unknown verification action: ${verificationAction}`);
                     showModal('error', 'Unknown Action', 'The requested verification action is not recognized.');
+            }
+        },
+        // VERIFY INDIVIDUAL PAYMENT
+        '.pmt-mgmt-verify-payment': async (target) => {
+            const paymentId = target.dataset.paymentId;
+            
+            console.log(`[main.js] Verifying payment: ${paymentId}`);
+
+            const confirmed = await showModal('confirm', 'Verify Supplier Payment',
+                'Are you sure you want to verify this payment?\n\n' +
+                'This action will:\n' +
+                '✓ Update the invoice balance\n' +  
+                '✓ Record the verified payment\n' +  
+                '✓ Update supplier account\n\n' +
+                'This action cannot be undone.'
+            );
+
+            if (confirmed) {
+                try {
+                    ProgressToast.show('Verifying Payment...', 'info');
+                    
+                    await verifySupplierPayment(paymentId, appState.currentUser);
+                    
+                    ProgressToast.showSuccess('Payment verified successfully!');
+
+                    // Refresh verification modal and grids
+                    setTimeout(async () => {
+                        document.getElementById('pmt-mgmt-verify-invoice-payments-modal').style.display = 'none';
+                        
+                        setTimeout(async () => {
+                            const originalInvoiceId = target.dataset.originalInvoiceId;
+                            if (originalInvoiceId) {
+                                await showSupplierInvoicePaymentVerificationModal(originalInvoiceId);
+                            }
+                            
+                            // Refresh supplier grid
+                            if (typeof loadSupplierInvoicesForMgmtTab === 'function') {
+                                await loadSupplierInvoicesForMgmtTab('outstanding', { forceRefresh: true });
+                            }
+                        }, 300);
+                    }, 800);
+
+                } catch (error) {
+                    console.error('[main.js] Error verifying payment:', error);
+                    ProgressToast.showError(`Verification failed: ${error.message}`);
+                }
+            }
+        },
+
+        // REJECT INDIVIDUAL PAYMENT
+        '.pmt-mgmt-reject-payment': async (target) => {
+            const paymentId = target.dataset.paymentId;
+            
+            console.log(`[main.js] Rejecting payment: ${paymentId}`);
+
+            const confirmed = await showModal('confirm', 'Reject Supplier Payment',
+                'Are you sure you want to reject this payment?\n\n' +
+                'This action will:\n' +
+                '❌ Mark the payment as rejected\n' +
+                '❌ Notify the submitter\n' +
+                '❌ Remove from pending verification\n\n' +
+                'The payment can be resubmitted if needed.'
+            );
+
+            if (confirmed) {
+                try {
+                    ProgressToast.show('Rejecting Payment...', 'warning');
+                    
+                    await rejectSupplierPayment(paymentId, appState.currentUser);
+                    
+                    ProgressToast.showSuccess('Payment rejected');
+
+                    // Refresh verification modal
+                    setTimeout(() => {
+                        document.getElementById('pmt-mgmt-verify-invoice-payments-modal').style.display = 'none';
+                        
+                        setTimeout(async () => {
+                            const originalInvoiceId = target.dataset.originalInvoiceId;
+                            if (originalInvoiceId) {
+                                await showSupplierInvoicePaymentVerificationModal(originalInvoiceId);
+                            }
+                        }, 300);
+                    }, 800);
+
+                } catch (error) {
+                    console.error('[main.js] Error rejecting payment:', error);
+                    ProgressToast.showError(`Rejection failed: ${error.message}`);
+                }
+            }
+        },
+
+        // BULK VERIFY ALL SELECTED
+        '#verify-all-payments-btn': async () => {
+            console.log('[main.js] Bulk verifying payments...');
+            
+            const selectedPayments = [];
+            
+            if (pmtMgmtPendingPaymentsGridApi) {
+                pmtMgmtPendingPaymentsGridApi.getSelectedNodes().forEach(node => {
+                    if (node.data) {
+                        selectedPayments.push(node.data);
+                    }
+                });
+            }
+
+            if (selectedPayments.length === 0) {
+                await showModal('info', 'No Payments Selected', 
+                    'Please select payments to verify using the checkboxes.');
+                return;
+            }
+
+            const totalAmount = selectedPayments.reduce((sum, payment) => sum + (payment.paymentAmount || 0), 0);
+
+            const confirmed = await showModal('confirm', 'Bulk Payment Verification',
+                `Verify ${selectedPayments.length} selected payments?\n\n` +
+                `Total amount: ${formatCurrency(totalAmount)}\n\n` +
+                `This will:\n` +
+                `✓ Update all related invoice balances\n` +
+                `✓ Mark all payments as verified\n` +  
+                `✓ Notify all submitters`
+            );
+
+            if (confirmed) {
+                try {
+                    ProgressToast.show('Bulk Verifying Payments...', 'info');
+
+                    // Process each payment individually for safety
+                    for (const payment of selectedPayments) {
+                        await verifySupplierPayment(payment.id, appState.currentUser);
+                    }
+
+                    ProgressToast.showSuccess(`Bulk verification complete: ${selectedPayments.length} payments verified, ${formatCurrency(totalAmount)} processed`);
+
+                    // Close modal and refresh
+                    setTimeout(() => {
+                        document.getElementById('pmt-mgmt-verify-invoice-payments-modal').style.display = 'none';
+                        
+                        setTimeout(async () => {
+                            // Refresh action required and supplier grid
+                            await buildActionRequiredList();
+                            if (typeof loadSupplierInvoicesForMgmtTab === 'function') {
+                                await loadSupplierInvoicesForMgmtTab('outstanding', { forceRefresh: true });
+                            }
+                        }, 300);
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('[main.js] Error in bulk verification:', error);
+                    ProgressToast.showError(`Bulk verification failed: ${error.message}`);
+                }
             }
         }
 
