@@ -4245,7 +4245,8 @@ export async function showSupplierInvoicePaymentVerificationModal(supplierInvoic
 
         // Get invoice and pending payments data
         const [invoiceData, pendingStatus] = await Promise.all([
-            getInvoiceDataById(supplierInvoiceId),
+            //getInvoiceDataById(supplierInvoiceId),
+            getPurchaseInvoiceById(supplierInvoiceId),
             checkForPendingPayments(supplierInvoiceId)
         ]);
 
