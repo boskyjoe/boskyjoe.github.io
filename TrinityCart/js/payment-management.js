@@ -363,7 +363,7 @@ const pmtMgmtSupplierGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 180,
+            width: 220,
             
             filter: false,
             floatingFilter: false,
@@ -392,7 +392,21 @@ const pmtMgmtSupplierGridOptions = {
                 if (!hasFinancialPermissions) {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
-                
+
+                let buttons = '';
+
+                const hasPendingPayments = checkForPendingPayments(params.data.id); // Helper function
+                if (hasPendingPayments) {
+                    buttons += `<button class="pmt-mgmt-verify-invoice-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse" 
+                                      data-invoice-id="${params.data.id}" 
+                                      title="Verify Pending Payments for this Invoice">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    VERIFY PAYMENTS
+                                </button> `;
+                }
+
                 if (status === 'Paid' || balanceDue <= 0) {
                     return `<div class="flex space-x-1">
                                 <button class="pmt-mgmt-view-supplier-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
@@ -850,6 +864,16 @@ const pmtMgmtTeamGridOptions = {
         }, 200);
     }
 };
+
+
+/**
+ * HELPER: Check if invoice has pending payments awaiting verification
+ */
+function checkForPendingPayments(invoiceId) {
+    // This would check if there are pending supplier payments for this invoice
+    // Could be enhanced with real-time checking or cached data
+    return false; // Placeholder - implement based on your data structure
+}
 
 const pmtMgmtSalesGridOptions = {
     theme: 'alpine', // ✅ CONSISTENT: Same theme as other payment management grids
@@ -1636,90 +1660,131 @@ function updatePaymentMgmtActionItems(metrics) {
     const actionItemsContainer = document.getElementById('pmt-mgmt-action-items');
     if (!actionItemsContainer) return;
 
-    console.log('[PmtMgmt] Updating action items section...');
+    console.log('[PmtMgmt] Updating VERIFICATION-FOCUSED action items section...');
 
-    const actionItems = [];
+    const verificationItems = [];
 
-    // Generate action items based on metrics
-    if (metrics.pendingCount > 0) {
-        actionItems.push({
-            priority: 'high',
-            icon: '⏳',
-            title: `${metrics.pendingCount} payments awaiting verification`,
-            description: `${formatCurrency(metrics.pendingAmount)} total pending approval`,
-            action: 'verify-pending',
-            color: 'yellow'
-        });
-    }
-
-    if (metrics.supplierMetrics.pending > 0) {
-        actionItems.push({
+    // ✅ SIMPLIFIED: Only show verification tasks
+    if (metrics.supplierMetrics && metrics.supplierMetrics.pending > 0) {
+        verificationItems.push({
             priority: 'high',
             icon: '📤',
-            title: `${metrics.supplierMetrics.pending} supplier payments pending`,
-            description: 'Verify to maintain good supplier relationships',
-            action: 'goto-suppliers',
-            color: 'red'
+            title: `${metrics.supplierMetrics.pending} supplier payments need verification`,
+            description: `${formatCurrency(metrics.supplierMetrics.pendingAmount || 0)} awaiting admin approval`,
+            details: `Verify to update invoice balances and maintain supplier relationships`,
+            action: 'verify-supplier-payments',
+            color: 'red',
+            urgency: metrics.supplierMetrics.pending > 5 ? 'critical' : 'high'
         });
     }
 
-    if (metrics.teamMetrics.pending > 0) {
-        actionItems.push({
+    if (metrics.teamMetrics && metrics.teamMetrics.pending > 0) {
+        verificationItems.push({
             priority: 'medium',
             icon: '👥',
-            title: `${metrics.teamMetrics.pending} team payments pending`,
-            description: 'Verify team consignment settlements',
-            action: 'goto-teams',
-            color: 'green'
+            title: `${metrics.teamMetrics.pending} team payments need verification`,
+            description: `${formatCurrency(metrics.teamMetrics.pendingAmount || 0)} from consignment teams`,
+            details: `Verify to complete team settlements and update order balances`,
+            action: 'verify-team-payments',
+            color: 'green',
+            urgency: metrics.teamMetrics.pending > 3 ? 'high' : 'medium'
         });
     }
 
-    if (actionItems.length === 0) {
-        // No urgent actions
+    // ✅ FUTURE: Add other verification types
+    if (metrics.salesMetrics && metrics.salesMetrics.voidRequests > 0) {
+        verificationItems.push({
+            priority: 'medium',
+            icon: '💳',
+            title: `${metrics.salesMetrics.voidRequests} void requests need approval`,
+            description: `Sales payment void requests awaiting admin approval`,
+            details: `Review and approve/reject payment void requests`,
+            action: 'review-void-requests',
+            color: 'blue',
+            urgency: 'medium'
+        });
+    }
+
+    if (verificationItems.length === 0) {
+        // ✅ ENHANCED: All verifications complete
         actionItemsContainer.innerHTML = `
-            <div class="text-center py-6">
-                <svg class="w-12 h-12 mx-auto text-green-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="text-center py-8">
+                <svg class="w-16 h-16 mx-auto text-green-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <h4 class="text-lg font-semibold text-gray-700">All Caught Up!</h4>
-                <p class="text-sm text-gray-500 mt-1">No urgent payment actions required at this time.</p>
-                <p class="text-xs text-gray-400 mt-2">
-                    ✅ ${metrics.todayCount} payments processed today (${formatCurrency(metrics.todayAmount)})
-                </p>
+                <h4 class="text-xl font-semibold text-green-700">All Verifications Complete!</h4>
+                <p class="text-sm text-green-600 mt-2">No payment verifications are pending your approval.</p>
+                <div class="mt-4 p-3 bg-green-50 rounded-lg">
+                    <p class="text-sm text-gray-600">
+                        <span class="font-semibold">Today's Activity:</span> 
+                        ${metrics.todayCount || 0} payments processed (${formatCurrency(metrics.todayAmount || 0)})
+                    </p>
+                </div>
+                <div class="mt-4 text-xs text-gray-500">
+                    💡 Use the tabs above to initiate new payments or review payment history
+                </div>
             </div>
         `;
     } else {
-        // Show action items
-        const actionItemsHtml = actionItems.map(item => `
-            <div class="flex items-center justify-between p-3 border-l-4 border-${item.color}-400 bg-${item.color}-50 rounded-r-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="text-xl">${item.icon}</div>
-                    <div>
-                        <h5 class="font-semibold text-${item.color}-800">${item.title}</h5>
-                        <p class="text-sm text-${item.color}-600">${item.description}</p>
+        // ✅ VERIFICATION-FOCUSED: Show verification action items
+        const verificationItemsHtml = verificationItems.map(item => {
+            const priorityStyles = {
+                'critical': 'border-red-400 bg-red-50',
+                'high': 'border-orange-400 bg-orange-50', 
+                'medium': 'border-yellow-400 bg-yellow-50',
+                'low': 'border-gray-400 bg-gray-50'
+            };
+            
+            const buttonStyles = {
+                'red': 'bg-red-600 hover:bg-red-700',
+                'green': 'bg-green-600 hover:bg-green-700',
+                'blue': 'bg-blue-600 hover:bg-blue-700',
+                'yellow': 'bg-yellow-600 hover:bg-yellow-700'
+            };
+            
+            const containerStyle = priorityStyles[item.urgency] || priorityStyles['medium'];
+            const buttonStyle = buttonStyles[item.color] || buttonStyles['blue'];
+            const pulseClass = item.urgency === 'critical' ? 'animate-pulse' : '';
+            
+            return `
+                <div class="flex items-center justify-between p-4 border-l-4 rounded-r-lg ${containerStyle}">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-3xl">${item.icon}</div>
+                        <div class="flex-1">
+                            <h5 class="font-semibold text-gray-900">${item.title}</h5>
+                            <p class="text-sm text-gray-600">${item.description}</p>
+                            <p class="text-xs text-gray-500 mt-1">${item.details}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        ${item.urgency === 'critical' ? 
+                            `<div class="text-red-600 font-bold text-sm">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+                                </svg>
+                                URGENT
+                             </div>` : ''
+                        }
+                        
+                        <button class="pmt-mgmt-verification-action bg-green-600 text-white px-4 py-2 text-sm font-semibold rounded transition-colors hover:bg-green-700 ${pulseClass}"
+                                data-verification-action="${item.action}"
+                                data-verification-type="${item.color}">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Verify Now
+                        </button>
                     </div>
                 </div>
-                <button class="pmt-mgmt-action-button bg-${item.color}-600 text-white px-3 py-2 rounded text-sm hover:bg-${item.color}-700" 
-                        data-action="${item.action}">
-                    Take Action →
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
-        actionItemsContainer.innerHTML = actionItemsHtml;
-
-        // Add click listeners to action buttons
-        actionItemsContainer.querySelectorAll('.pmt-mgmt-action-button').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                handlePaymentMgmtQuickAction(action);
-            });
-        });
+        actionItemsContainer.innerHTML = verificationItemsHtml;
     }
 
-    console.log(`[PmtMgmt] ✅ Updated action items: ${actionItems.length} actions available`);
+    console.log(`[PmtMgmt] ✅ Updated VERIFICATION action items: ${verificationItems.length} verifications needed`);
 }
-
 
 /**
  * Updates tab badges with payment counts
@@ -3969,6 +4034,57 @@ export function showSupplierPaymentModalWithData(supplierData) {
     } catch (error) {
         console.error('[PmtMgmt] Error showing supplier payment modal:', error);
         showModal('error', 'Modal Error', 'Could not open supplier payment modal.');
+    }
+}
+
+
+
+/**
+ * ENHANCED: Show verification modal for invoice payments
+ */
+export async function showSupplierInvoicePaymentVerificationModal(invoiceId) {
+    console.log(`[PmtMgmt] ✅ Opening payment verification modal for invoice: ${invoiceId}`);
+    
+    const modal = document.getElementById('pmt-mgmt-verify-invoice-payments-modal');
+    if (!modal) {
+        console.error('[PmtMgmt] Payment verification modal not found');
+        return;
+    }
+
+    try {
+        ProgressToast.show('Loading Pending Payments', 'info');
+        
+        // Get invoice and pending payments data
+        const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
+        const pendingPayments = await getPendingPaymentsForInvoice(invoiceId);
+        
+        if (pendingPayments.length === 0) {
+            ProgressToast.hide(0);
+            await showModal('info', 'No Pending Payments', 
+                'This invoice has no payments pending verification.');
+            return;
+        }
+        
+        // Populate modal
+        document.getElementById('verify-invoice-number').textContent = 
+            invoiceData?.supplierInvoiceNo || invoiceData?.invoiceId || 'Unknown';
+        document.getElementById('verify-supplier-name').textContent = 
+            invoiceData?.supplierName || 'Unknown Supplier';
+        document.getElementById('verify-modal-subtitle').textContent = 
+            `${pendingPayments.length} payment${pendingPayments.length > 1 ? 's' : ''} awaiting verification`;
+        
+        // Setup verification grid with pending payments
+        setupPendingPaymentsVerificationGrid(pendingPayments);
+        
+        ProgressToast.hide(300);
+        
+        // Show modal
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error showing verification modal:', error);
+        ProgressToast.showError('Failed to load verification modal');
     }
 }
 
