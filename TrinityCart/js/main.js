@@ -1947,6 +1947,14 @@ function handleStandaloneButtons(target, event) {
     }   
 
 
+    // ✅ CRITICAL FIX: Pass target parameter to all handlers
+    for (const [selector, handler] of Object.entries(buttonHandlers)) {
+        if (target.closest(selector)) {
+            handler(target); // ✅ NOW PASSES TARGET TO ALL HANDLERS
+            return true;
+        }
+    }
+
 
 
     return false;
