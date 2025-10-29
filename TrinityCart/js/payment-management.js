@@ -1524,6 +1524,8 @@ let pmtMgmtTeamPaymentHistoryGridApi = null;
 let pmtMgmtSalesLineItemsGridApi = null;
 let pmtMgmtSalesPaymentHistoryGridApi = null;
 
+let pmtMgmtPendingPaymentsGridApi = null;
+
 
 // Module state (isolated)
 const pmtMgmtState = {
