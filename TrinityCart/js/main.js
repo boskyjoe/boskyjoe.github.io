@@ -5782,48 +5782,63 @@ function getSupplierInvoiceFromPmtMgmtGrid(invoiceId) {
  * BUSINESS LOGIC: Handle pay outstanding balance from supplier invoice modal
  */
 async function handleSupplierPayOutstandingBalanceFromModal() {
-    console.log('[main.js] 💰 Pay outstanding balance from supplier invoice modal');
+    console.log('[main.js] 💰 Pay outstanding balance with smooth transition');
     
     const payButton = document.getElementById('pmt-mgmt-modal-pay-invoice');
     const invoiceId = payButton?.dataset?.invoiceId;
     const balanceDue = parseFloat(payButton?.dataset?.balanceDue || 0);
     
-    if (!invoiceId) {
-        await showModal('error', 'Invoice Data Missing', 'Could not find invoice information. Please try again.');
+    if (!invoiceId || balanceDue <= 0) {
+        await showModal('error', 'Invalid Payment Data', 'Payment information is not available.');
         return;
     }
 
     try {
-        const confirmed = await showModal('confirm', 'Pay Supplier Outstanding Balance', 
-            `Pay the outstanding balance for this supplier invoice?\n\n` +
-            `• Invoice ID: ${invoiceId}\n` +
-            `• Outstanding Amount: ${formatCurrency(balanceDue)}\n\n` +
-            `This will open the supplier payment form.`
-        );
-
-        if (confirmed) {
-            console.log('[main.js] Payment confirmed, closing invoice modal and opening payment modal...');
+        // ✅ USER FEEDBACK: Show what's happening
+        ProgressToast.show('Preparing Supplier Payment', 'info');
+        ProgressToast.updateProgress('Closing invoice details and opening payment form...', 50);
+        
+        // ✅ SMOOTH TRANSITION: Close → Wait → Open → Update
+        console.log('[main.js] Step 1: Closing invoice details modal...');
+        closeSupplierInvoiceDetailsModal();
+        
+        // Wait for close animation
+        setTimeout(() => {
+            console.log('[main.js] Step 2: Invoice modal closed, opening payment modal...');
+            ProgressToast.updateProgress('Opening supplier payment form...', 80);
             
-            // ✅ STEP 1: Close invoice details modal FIRST
-            closeSupplierInvoiceDetailsModal();
+            // Get invoice data before opening payment modal
+            const invoiceData = getSupplierInvoiceFromMgmtGrid(invoiceId);
             
-            // ✅ STEP 2: Wait for modal close animation to complete
-            setTimeout(() => {
-                console.log('[main.js] Opening supplier payment modal after invoice modal closed...');
+            if (invoiceData) {
+                // Open payment modal with context
+                const target = { 
+                    dataset: { 
+                        id: invoiceId,
+                        supplierName: invoiceData.supplierName,
+                        balanceDue: balanceDue.toFixed(2)
+                    } 
+                };
                 
-                // ✅ STEP 3: Now open payment modal (no z-index conflict)
-                const target = { dataset: { id: invoiceId } };
                 handlePmtMgmtPaySupplierInvoice(target);
                 
-            }, 500); // Wait for close animation to complete
-        }
+                ProgressToast.updateProgress('Payment form ready!', 100);
+                
+                setTimeout(() => {
+                    ProgressToast.hide(300);
+                }, 500);
+                
+            } else {
+                ProgressToast.showError('Could not load invoice data for payment');
+            }
+            
+        }, 400); // Match modal close animation duration
 
     } catch (error) {
-        console.error('[main.js] Error handling supplier pay outstanding balance:', error);
-        await showModal('error', 'Payment Action Failed', 'Could not initiate supplier payment. Please try again.');
+        console.error('[main.js] Error in smooth payment transition:', error);
+        ProgressToast.showError('Failed to open payment form');
     }
 }
-
 
 
 // --- APPLICATION INITIALIZATION ---
