@@ -5794,28 +5794,28 @@ async function handleSupplierPayOutstandingBalanceFromModal() {
     }
 
     try {
-        // ✅ BUSINESS CONFIRMATION: Following your pattern
         const confirmed = await showModal('confirm', 'Pay Supplier Outstanding Balance', 
             `Pay the outstanding balance for this supplier invoice?\n\n` +
             `• Invoice ID: ${invoiceId}\n` +
             `• Outstanding Amount: ${formatCurrency(balanceDue)}\n\n` +
-            `This will:\n` +
-            `✓ Close the invoice details modal\n` +
-            `✓ Open the supplier payment form\n` +
-            `✓ Pre-fill the payment amount\n` +
-            `✓ Use your existing payment workflow\n\n` +
-            `Proceed with payment?`
+            `This will open the supplier payment form.`
         );
 
         if (confirmed) {
-            // ✅ CLOSE: Invoice details modal first  
+            console.log('[main.js] Payment confirmed, closing invoice modal and opening payment modal...');
+            
+            // ✅ STEP 1: Close invoice details modal FIRST
             closeSupplierInvoiceDetailsModal();
             
-            // ✅ WAIT: For modal close animation
+            // ✅ STEP 2: Wait for modal close animation to complete
             setTimeout(() => {
-                // ✅ REUSE: Your existing supplier payment workflow
-                handlePmtMgmtPaySupplierInvoice({ dataset: { id: invoiceId } });
-            }, 400);
+                console.log('[main.js] Opening supplier payment modal after invoice modal closed...');
+                
+                // ✅ STEP 3: Now open payment modal (no z-index conflict)
+                const target = { dataset: { id: invoiceId } };
+                handlePmtMgmtPaySupplierInvoice(target);
+                
+            }, 500); // Wait for close animation to complete
         }
 
     } catch (error) {
