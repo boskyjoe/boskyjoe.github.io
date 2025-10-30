@@ -352,3 +352,47 @@ main {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
 }
+
+/* ===================================================================== */
+/* PAYMENT MANAGEMENT GRID HEADERS - SCOPED */
+/* ===================================================================== */
+
+/* Wrap headers only in payment management grids */
+#pmt-mgmt-supplier-grid .ag-header-cell-text,
+#pmt-mgmt-team-grid .ag-header-cell-text,
+#pmt-mgmt-sales-grid .ag-header-cell-text {
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    overflow: visible !important;
+}
+
+#pmt-mgmt-supplier-grid .ag-header-cell-label,
+#pmt-mgmt-team-grid .ag-header-cell-label,
+#pmt-mgmt-sales-grid .ag-header-cell-label {
+    white-space: normal !important;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+/* Floating filter styling for payment management grids */
+#pmt-mgmt-supplier-grid .ag-floating-filter,
+#pmt-mgmt-team-grid .ag-floating-filter,
+#pmt-mgmt-sales-grid .ag-floating-filter {
+    height: 40px !important;
+    min-height: 40px !important;
+}
+
+#pmt-mgmt-supplier-grid .ag-floating-filter-body,
+#pmt-mgmt-team-grid .ag-floating-filter-body,
+#pmt-mgmt-sales-grid .ag-floating-filter-body {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+}
+
+#pmt-mgmt-supplier-grid .ag-input-field-input,
+#pmt-mgmt-team-grid .ag-input-field-input,
+#pmt-mgmt-sales-grid .ag-input-field-input {
+    height: 100% !important;
+    padding: 4px 8px !important;
+}
