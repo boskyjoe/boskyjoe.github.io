@@ -396,3 +396,37 @@ main {
     height: 100% !important;
     padding: 4px 8px !important;
 }
+
+/* ===================================================================== */
+/* PAYMENT VERIFICATION MODAL Z-INDEX FIX */
+/* ===================================================================== */
+
+/* Ensure verification modals appear above other modals */
+#pmt-mgmt-verify-invoice-payments-modal {
+    z-index: 10050 !important; /* Higher than other modals */
+}
+
+#pmt-mgmt-verify-invoice-payments-modal .bg-white,
+#pmt-mgmt-verify-invoice-payments-modal > div:last-child {
+    z-index: 10051 !important;
+}
+
+/* Ensure supplier invoice details modal stays below verification */
+#pmt-mgmt-supplier-invoice-modal {
+    z-index: 10000 !important; /* Lower than verification modal */
+}
+
+#pmt-mgmt-supplier-invoice-modal .bg-white,
+#pmt-mgmt-supplier-invoice-modal > div:last-child {
+    z-index: 10001 !important;
+}
+
+/* Make sure confirmation modals appear above everything */
+#custom-modal {
+    z-index: 10100 !important;
+}
+
+#custom-modal .bg-white,
+#custom-modal > div:last-child {
+    z-index: 10101 !important;
+}
