@@ -4446,7 +4446,7 @@ export async function showSupplierInvoicePaymentVerificationModal(supplierInvoic
         return;
     }
 
-    
+
     const modal = document.getElementById('pmt-mgmt-verify-invoice-payments-modal');
     if (!modal) {
         console.error('[PmtMgmt] Verification modal not found');
@@ -4456,6 +4456,7 @@ export async function showSupplierInvoicePaymentVerificationModal(supplierInvoic
     try {
         ProgressToast.show('Loading Pending Payments', 'info');
 
+        console.log('[payment-management.js] showSupplierInvoicePaymentVerificationModal supplierInvoiceId:', supplierInvoiceId);
         // Get invoice and pending payments data
         const [invoiceData, pendingStatus] = await Promise.all([
             //getInvoiceDataById(supplierInvoiceId),
