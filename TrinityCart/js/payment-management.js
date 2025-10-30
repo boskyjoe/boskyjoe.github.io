@@ -86,6 +86,173 @@ const supplierInvoicesPagination = {
 };
 
 
+// ===================================================================
+// REAL-TIME SYNCHRONIZATION SYSTEM
+// ===================================================================
+
+// Module state to track listeners
+let pmtMgmtRealtimeListeners = {
+    supplierPayments: null,
+    teamPayments: null,
+    salesPayments: null,
+    isActive: false
+};
+
+
+/**
+ * ENHANCED: Setup real-time listeners for Payment Management module
+ * 
+ * Establishes live connections to all payment collections to automatically
+ * refresh action items when payments are added, verified, or modified by
+ * other users or modules. Critical for multi-user environments.
+ */
+export function initializePaymentManagementRealtimeSync() {
+    console.log('[PmtMgmt] 🔄 Initializing real-time synchronization...');
+    
+    // Only initialize if Payment Management view is active
+    const paymentMgmtView = document.getElementById('pmt-mgmt-view');
+    if (!paymentMgmtView || !paymentMgmtView.classList.contains('active')) {
+        console.log('[PmtMgmt] Payment Management not active - skipping real-time setup');
+        return;
+    }
+
+    const db = firebase.firestore();
+
+    try {
+        // ===================================================================
+        // LISTENER 1: SUPPLIER PAYMENTS (Most Critical)
+        // ===================================================================
+        console.log('[PmtMgmt] 📤 Setting up supplier payments real-time listener...');
+        
+        pmtMgmtRealtimeListeners.supplierPayments = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('paymentStatus', '==', 'Pending Verification')
+            .onSnapshot(
+                // SUCCESS HANDLER
+                async (snapshot) => {
+                    console.log('[PmtMgmt] 🔔 SUPPLIER PAYMENTS CHANGED - refreshing action items...');
+                    console.log(`[PmtMgmt] Detected ${snapshot.docChanges().length} supplier payment changes`);
+                    
+                    // Log what changed for debugging
+                    snapshot.docChanges().forEach(change => {
+                        const paymentData = change.doc.data();
+                        console.log(`[PmtMgmt] Supplier payment ${change.type}: ${paymentData.paymentId || change.doc.id} (${formatCurrency(paymentData.amountPaid || 0)})`);
+                    });
+
+                    // ✅ REFRESH: Action items only (lightweight)
+                    try {
+                        await buildActionRequiredList({ forceRefresh: true });
+                        console.log('[PmtMgmt] ✅ Action items refreshed due to supplier payment changes');
+                        
+                        // ✅ OPTIONAL: Show subtle notification to user
+                        showRealtimeUpdateNotification('supplier', snapshot.docChanges().length);
+                        
+                    } catch (refreshError) {
+                        console.error('[PmtMgmt] Error refreshing after supplier payment change:', refreshError);
+                    }
+                },
+                // ERROR HANDLER
+                (error) => {
+                    console.error('[PmtMgmt] Supplier payments listener error:', error);
+                }
+            );
+
+        // ===================================================================
+        // LISTENER 2: TEAM PAYMENTS
+        // ===================================================================
+        console.log('[PmtMgmt] 👥 Setting up team payments real-time listener...');
+        
+        pmtMgmtRealtimeListeners.teamPayments = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('paymentStatus', '==', 'Pending Verification')
+            .onSnapshot(
+                async (snapshot) => {
+                    console.log('[PmtMgmt] 🔔 TEAM PAYMENTS CHANGED - refreshing action items...');
+                    
+                    snapshot.docChanges().forEach(change => {
+                        const paymentData = change.doc.data();
+                        console.log(`[PmtMgmt] Team payment ${change.type}: ${paymentData.teamName} (${formatCurrency(paymentData.amountPaid || 0)})`);
+                    });
+
+                    try {
+                        await buildActionRequiredList({ forceRefresh: true });
+                        console.log('[PmtMgmt] ✅ Action items refreshed due to team payment changes');
+                        
+                        showRealtimeUpdateNotification('team', snapshot.docChanges().length);
+                        
+                    } catch (refreshError) {
+                        console.error('[PmtMgmt] Error refreshing after team payment change:', refreshError);
+                    }
+                },
+                (error) => {
+                    console.error('[PmtMgmt] Team payments listener error:', error);
+                }
+            );
+
+        // ===================================================================
+        // LISTENER 3: SALES PAYMENTS (Future enhancement)
+        // ===================================================================
+        // You can add sales payment listener here later if needed
+
+        pmtMgmtRealtimeListeners.isActive = true;
+        console.log('[PmtMgmt] ✅ Real-time synchronization active for Payment Management');
+
+    } catch (error) {
+        console.error('[PmtMgmt] Error setting up real-time listeners:', error);
+    }
+}
+
+
+/**
+ * CLEANUP: Detach real-time listeners when leaving Payment Management
+ */
+export function detachPaymentManagementRealtimeSync() {
+    console.log('[PmtMgmt] 🔌 Detaching real-time synchronization...');
+    
+    if (pmtMgmtRealtimeListeners.supplierPayments) {
+        pmtMgmtRealtimeListeners.supplierPayments();
+        pmtMgmtRealtimeListeners.supplierPayments = null;
+        console.log('[PmtMgmt] ✅ Supplier payments listener detached');
+    }
+
+    if (pmtMgmtRealtimeListeners.teamPayments) {
+        pmtMgmtRealtimeListeners.teamPayments();
+        pmtMgmtRealtimeListeners.teamPayments = null;
+        console.log('[PmtMgmt] ✅ Team payments listener detached');
+    }
+
+    if (pmtMgmtRealtimeListeners.salesPayments) {
+        pmtMgmtRealtimeListeners.salesPayments();
+        pmtMgmtRealtimeListeners.salesPayments = null;
+        console.log('[PmtMgmt] ✅ Sales payments listener detached');
+    }
+
+    pmtMgmtRealtimeListeners.isActive = false;
+    console.log('[PmtMgmt] ✅ All Payment Management real-time listeners detached');
+}
+
+
+/**
+ * SUBTLE UX: Show brief notification when real-time changes occur
+ */
+function showRealtimeUpdateNotification(paymentType, changeCount) {
+    const typeNames = {
+        'supplier': '📤 Supplier',
+        'team': '👥 Team', 
+        'sales': '💳 Sales'
+    };
+    
+    // Show subtle toast notification (brief, non-intrusive)
+    ProgressToast.show(`${typeNames[paymentType]} Payment Update`, 'info');
+    ProgressToast.updateProgress(`${changeCount} payment${changeCount > 1 ? 's' : ''} changed - action items updated`, 100, 'Real-time sync');
+    
+    // Auto-hide quickly
+    setTimeout(() => {
+        ProgressToast.hide(1000);
+    }, 1500);
+}
+
+
+
+
 
 
 /**
@@ -1572,6 +1739,10 @@ export function showPaymentManagementView() {
         console.log('[DEBUG] ✅ Showing payment management view...');
         showView('pmt-mgmt-view');
 
+
+
+
+
         // Initialize dashboard  
         if (!pmtMgmtDashboardInitialized) {
             console.log('[DEBUG] 🎯 Initializing dashboard for first time...');
@@ -1581,6 +1752,11 @@ export function showPaymentManagementView() {
             console.log('[DEBUG] Dashboard already initialized, refreshing...');
             refreshPaymentManagementDashboard();
         }
+
+        // ✅ NEW: Initialize real-time sync after dashboard is ready
+        setTimeout(() => {
+            initializePaymentManagementRealtimeSync();
+        }, 1000); // Wait for dashboard to finish loading
 
     } catch (error) {
         console.error('[DEBUG] ❌ Error in showPaymentManagementView:', error);
@@ -2013,6 +2189,7 @@ export async function refreshPaymentManagementDashboard() {
 
         // Update action items (high-priority payments)
         await buildActionRequiredList({ metrics: metrics });
+
         //updatePaymentMgmtActionItems(metrics);
 
         // Update tab badges with counts
