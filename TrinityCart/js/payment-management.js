@@ -2709,7 +2709,7 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
 /**
  * BUSINESS INTELLIGENCE: Calculate days outstanding from invoice date
  */
-function calculateDaysOutstanding(purchaseDate) {
+function calculateDaysOutstandingPurchase(purchaseDate) {
     if (!purchaseDate) return 0;
     
     try {
@@ -5298,9 +5298,9 @@ function processSupplierPayables(invoiceDocs) {
         return {
             id: doc.id,
             ...data,
-            daysOutstanding: calculateDaysOutstanding(data.purchaseDate),
-            isOverdue: calculateDaysOutstanding(data.purchaseDate) > 30,
-            isCritical: calculateDaysOutstanding(data.purchaseDate) > 45 || (data.balanceDue || 0) > 15000
+            daysOutstanding: calculateDaysOutstandingPurchase(data.purchaseDate),
+            isOverdue: calculateDaysOutstandingPurchase(data.purchaseDate) > 30,
+            isCritical: calculateDaysOutstandingPurchase(data.purchaseDate) > 45 || (data.balanceDue || 0) > 15000
         };
     });
 
@@ -5323,8 +5323,8 @@ function processDirectSalesReceivables(salesDocs) {
         return {
             id: doc.id,
             ...data,
-            daysOutstanding: calculateDaysOutstanding(data.saleDate),
-            isOverdue: calculateDaysOutstanding(data.saleDate) > 30
+            daysOutstanding: calculateDaysOutstandingPurchase(data.saleDate),
+            isOverdue: calculateDaysOutstandingPurchase(data.saleDate) > 30
         };
     });
 
@@ -5344,8 +5344,8 @@ function processConsignmentReceivables(orderDocs) {
         return {
             id: doc.id,
             ...data,
-            daysOutstanding: calculateDaysOutstanding(data.requestDate),
-            isOverdue: calculateDaysOutstanding(data.requestDate) > 60 // Longer cycle for consignments
+            daysOutstanding: calculateDaysOutstandingPurchase(data.requestDate),
+            isOverdue: calculateDaysOutstandingPurchase(data.requestDate) > 60 // Longer cycle for consignments
         };
     });
 
