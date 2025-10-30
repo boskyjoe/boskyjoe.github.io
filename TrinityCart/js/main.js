@@ -1610,6 +1610,21 @@ function handleStandaloneButtons(target, event) {
                 console.error('[main.js] No product ID found for removal');
             }
         },
+        '#pmt-mgmt-refresh-actions': async () => {
+            console.log('[PmtMgmt] 🔄 Manual action items refresh requested');
+            
+            ProgressToast.show('Refreshing Action Items', 'info');
+            
+            try {
+                await buildActionRequiredList({ forceRefresh: true });
+                ProgressToast.showSuccess('Action items refreshed!');
+                setTimeout(() => ProgressToast.hide(300), 800);
+                
+            } catch (error) {
+                console.error('[PmtMgmt] Manual refresh failed:', error);
+                ProgressToast.showError('Refresh failed - please try again');
+            }
+        },
         '.pmt-mgmt-verify-invoice-payments': async (target) => {
             const invoiceId = target.dataset.invoiceId;
             
