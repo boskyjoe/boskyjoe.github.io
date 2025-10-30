@@ -4323,7 +4323,11 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
     const verificationGridOptions = {
         theme: 'legacy',
         rowHeight: 45,
-        headerHeight: 60, // Increased to accommodate wrapped text
+        headerHeight: 60,
+        
+        // Enable tooltips globally
+        tooltipShowDelay: 500, // Show tooltip after 500ms hover
+        tooltipHideDelay: 2000, // Hide tooltip after 2 seconds of no hover
         
         columnDefs: [
             {
@@ -4343,6 +4347,17 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                         return 'Invalid Date';
                     }
                 },
+                tooltipValueGetter: params => {
+                    const date = params.value;
+                    if (!date) return 'Unknown';
+                    try {
+                        return date.toDate ? 
+                            date.toDate().toLocaleString() : // Full date+time in tooltip
+                            new Date(date).toLocaleString();
+                    } catch {
+                        return 'Invalid Date';
+                    }
+                },
                 headerClass: 'wrapped-header'
             },
             {
@@ -4352,6 +4367,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 floatingFilter: true,
                 filter: 'agTextColumnFilter',
                 cellStyle: { fontWeight: 'bold' },
+                tooltipField: "submittedBy", // Show full name in tooltip
                 headerClass: 'wrapped-header'
             },
             {
@@ -4363,6 +4379,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 valueFormatter: params => formatCurrency(params.value || 0),
                 cellClass: 'text-right font-semibold',
                 cellStyle: { color: '#059669' },
+                tooltipValueGetter: params => `Amount: ${formatCurrency(params.value || 0)}`,
                 headerClass: 'wrapped-header'
             },
             {
@@ -4372,6 +4389,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 floatingFilter: true,
                 filter: 'agTextColumnFilter',
                 cellStyle: { fontSize: '12px' },
+                tooltipField: "paymentMode", // Show full payment mode
                 headerClass: 'wrapped-header'
             },
             {
@@ -4381,6 +4399,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 floatingFilter: true,
                 filter: 'agTextColumnFilter',
                 cellStyle: { fontFamily: 'monospace', fontSize: '11px' },
+                tooltipField: "paymentReference", // Show full reference number
                 headerClass: 'wrapped-header'
             },
             {
@@ -4412,12 +4431,25 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                                 <div class="text-xs px-2 py-1 rounded border ${colorClass}">${urgencyText}</div>
                             </div>`;
                 },
+                tooltipValueGetter: params => {
+                    const days = params.value || 0;
+                    const submitted = params.data.submittedDate;
+                    let submittedDateStr = 'Unknown';
+                    if (submitted) {
+                        try {
+                            submittedDateStr = submitted.toDate ? 
+                                submitted.toDate().toLocaleDateString() :
+                                new Date(submitted).toLocaleDateString();
+                        } catch {}
+                    }
+                    return `Waiting for ${days} days (Submitted: ${submittedDateStr})`;
+                },
                 headerClass: 'wrapped-header'
             },
             {
                 headerName: "Actions",
                 width: 180,
-                floatingFilter: false, // No filter for action column
+                floatingFilter: false,
                 filter: false,
                 sortable: false,
                 cellClass: 'flex items-center justify-center space-x-1',
@@ -4447,6 +4479,7 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                             </div>`;
                 },
                 headerClass: 'wrapped-header'
+                // No tooltip for action column
             }
         ],
 
@@ -4454,20 +4487,17 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
             resizable: true, 
             sortable: true,
             filter: true,
-            floatingFilter: true, // Enable floating filters by default
-            wrapHeaderText: true, // Enable header text wrapping
-            autoHeaderHeight: true // Auto-adjust header height
+            floatingFilter: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            tooltipComponent: null // Use default tooltip component
         },
         
         onGridReady: (params) => {
             pmtMgmtPendingPaymentsGridApi = params.api;
             console.log('[PmtMgmt] Verification grid ready');
-            
-            // Auto-size columns to fit content (optional)
-            // params.api.sizeColumnsToFit();
         }
     };
-
     // Create verification grid
     if (!pmtMgmtPendingPaymentsGridApi) {
         pmtMgmtPendingPaymentsGridApi = createGrid(gridContainer, verificationGridOptions);
