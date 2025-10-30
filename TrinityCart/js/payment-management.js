@@ -4668,6 +4668,26 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                 cellRenderer: params => {
                     const payment = params.data;
                     const originalInvoiceId = payment.relatedInvoiceId || payment.invoiceId || 'unknown';
+                    // ✅ DEBUG: Log the complete payment data structure
+                    console.log('[Grid] 🔍 PAYMENT DATA STRUCTURE DEBUG:');
+                    console.log('  Payment ID:', payment.id);
+                    console.log('  Payment object keys:', Object.keys(payment));
+                    console.log('  relatedInvoiceId:', payment.relatedInvoiceId);
+                    console.log('  invoiceId:', payment.invoiceId);
+                    console.log('  Full payment data:', payment);
+                    
+                    // ✅ TRY DIFFERENT POSSIBLE FIELD NAMES
+                    const possibleInvoiceIds = [
+                        payment.relatedInvoiceId,
+                        payment.invoiceId,
+                        payment.originalInvoiceId,
+                        payment.parentInvoiceId,
+                        payment.supplierInvoiceId,
+                        payment.purchaseInvoiceId
+                    ];
+                    
+                    console.log('[Grid] Possible invoice ID fields:', possibleInvoiceIds);
+                    
                     
                     return `<div class="flex space-x-1">
                                 <button class="pmt-mgmt-verify-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold"
