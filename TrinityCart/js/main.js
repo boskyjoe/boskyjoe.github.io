@@ -1705,8 +1705,9 @@ function handleStandaloneButtons(target, event) {
         // VERIFY INDIVIDUAL PAYMENT
         '.pmt-mgmt-verify-payment': async (target) => {
             const paymentId = target.dataset.paymentId;
+            const originalInvoiceId = target.dataset.originalInvoiceId;
             
-            console.log(`[main.js] Verifying payment: ${paymentId}`);
+            console.log(`[main.js] Verifying payment: ${paymentId} for invoice: ${originalInvoiceId}`);
 
             const confirmed = await showModal('confirm', 'Verify Supplier Payment',
                 'Are you sure you want to verify this payment?\n\n' +
@@ -1721,30 +1722,82 @@ function handleStandaloneButtons(target, event) {
                 try {
                     ProgressToast.show('Verifying Payment...', 'info');
                     
+                    const verificationModal = document.getElementById('pmt-mgmt-verify-invoice-payments-modal');
+                    if (verificationModal) {
+                        verificationModal.classList.remove('visible');
+                        verificationModal.style.display = 'none';
+                        console.log('[main.js] ✅ Closed verification modal');
+                    }
                     await verifySupplierPayment(paymentId, appState.currentUser);
                     
-                    ProgressToast.showSuccess('Payment verified successfully!');
+                    ProgressToast.updateProgress('Payment verified! Updating displays...', 90);
 
+                    
                     // Refresh verification modal and grids
-                    setTimeout(async () => {
-                        document.getElementById('pmt-mgmt-verify-invoice-payments-modal').style.display = 'none';
+                     setTimeout(async () => {
+                        ProgressToast.showSuccess('Payment verified successfully!');
                         
                         setTimeout(async () => {
-                            const originalInvoiceId = target.dataset.originalInvoiceId;
-                            if (originalInvoiceId) {
-                                await showSupplierInvoicePaymentVerificationModal(originalInvoiceId);
-                            }
+                            ProgressToast.hide(300);
                             
-                            // Refresh supplier grid
-                            if (typeof loadSupplierInvoicesForMgmtTab === 'function') {
-                                await loadSupplierInvoicesForMgmtTab('outstanding', { forceRefresh: true });
-                            }
-                        }, 300);
-                    }, 800);
+                            // ✅ STEP 4: Show success confirmation
+                            await showModal('success', 'Payment Verified',
+                                'Supplier payment has been verified successfully!\n\n' +
+                                '✅ Invoice balance updated\n' +
+                                '✅ Payment status changed to verified\n' +
+                                '✅ Supplier account updated\n\n' +
+                                'The verification interface will refresh with remaining payments.'
+                            );
+                            
+                            // ✅ STEP 5: Refresh the verification modal with updated data
+                            setTimeout(async () => {
+                                if (originalInvoiceId) {
+                                    console.log('[main.js] ✅ Reopening verification modal for invoice:', originalInvoiceId);
+                                    
+                                    try {
+                                        await showSupplierInvoicePaymentVerificationModal(originalInvoiceId);
+                                        console.log('[main.js] ✅ Verification modal reopened successfully');
+                                    } catch (modalError) {
+                                        console.error('[main.js] Error reopening verification modal:', modalError);
+                                        
+                                        // ✅ FALLBACK: If modal fails to reopen, just refresh the supplier grid
+                                        await showModal('info', 'Verification Complete', 
+                                            'Payment verified successfully!\n\n' +
+                                            'The verification modal cannot be reopened, but the payment has been processed.\n\n' +
+                                            'Check the Supplier Payments tab for updated invoice status.'
+                                        );
+                                    }
+                                }
+                                
+                                // ✅ STEP 6: Always refresh the supplier grid
+                                if (typeof loadSupplierInvoicesForMgmtTab === 'function') {
+                                    console.log('[main.js] ✅ Refreshing supplier grid with updated data');
+                                    await loadSupplierInvoicesForMgmtTab('outstanding', { forceRefresh: true });
+                                }
+                                
+                                // ✅ STEP 7: Refresh dashboard action items
+                                if (typeof buildActionRequiredList === 'function') {
+                                    console.log('[main.js] ✅ Refreshing action items after verification');
+                                    await buildActionRequiredList({ forceRefresh: true });
+                                }
+                                
+                            }, 800);
+                            
+                        }, 1200);
+                        
+                    }, 600);
 
                 } catch (error) {
                     console.error('[main.js] Error verifying payment:', error);
                     ProgressToast.showError(`Verification failed: ${error.message}`);
+                    
+                    setTimeout(async () => {
+                        await showModal('error', 'Verification Failed',
+                            `Payment verification failed.\n\n` +
+                            `Error: ${error.message}\n\n` +
+                            'Please try again or check the payment details.'
+                        );
+                    }, 2000);
                 }
             }
         },
