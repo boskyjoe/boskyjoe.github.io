@@ -1068,7 +1068,10 @@ export async function checkForPendingPayments(invoiceId) {
                     submittedDate: payment.submittedOn,
                     submittedBy: payment.submittedBy || 'Unknown',
                     paymentReference: payment.transactionRef || '',
-                    daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date())
+                    daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date()),
+                    relatedInvoiceId: payment.relatedInvoiceId || invoiceId, 
+                    originalInvoiceId: invoiceId,                           
+                    invoiceId: invoiceId 
                 });
             }
         });
