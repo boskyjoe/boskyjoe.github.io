@@ -4438,6 +4438,15 @@ export function showSupplierPaymentModalWithData(supplierData) {
 export async function showSupplierInvoicePaymentVerificationModal(supplierInvoiceId) {
     console.log(`[PmtMgmt] Opening payment verification modal for invoice: ${supplierInvoiceId}`);
 
+
+    // ✅ VALIDATION: Check if invoice ID is valid
+    if (!supplierInvoiceId || typeof supplierInvoiceId !== 'string') {
+        await showModal('error', 'Invalid Invoice ID', 
+            'The invoice ID is missing or invalid. Please select an invoice from the grid and try again.');
+        return;
+    }
+
+    
     const modal = document.getElementById('pmt-mgmt-verify-invoice-payments-modal');
     if (!modal) {
         console.error('[PmtMgmt] Verification modal not found');
