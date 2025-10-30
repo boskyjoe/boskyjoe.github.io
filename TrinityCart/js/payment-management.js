@@ -4323,13 +4323,15 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
     const verificationGridOptions = {
         theme: 'legacy',
         rowHeight: 45,
-        headerHeight: 40,
+        headerHeight: 60, // Increased to accommodate wrapped text
         
         columnDefs: [
             {
                 headerName: "Payment Date",
                 field: "submittedDate", 
                 width: 120,
+                floatingFilter: true,
+                filter: 'agDateColumnFilter',
                 valueFormatter: params => {
                     const date = params.value;
                     if (!date) return 'Unknown';
@@ -4340,37 +4342,52 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                     } catch {
                         return 'Invalid Date';
                     }
-                }
+                },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Submitted By",
                 field: "submittedBy",
                 flex: 1,
-                cellStyle: { fontWeight: 'bold' }
+                floatingFilter: true,
+                filter: 'agTextColumnFilter',
+                cellStyle: { fontWeight: 'bold' },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Amount",
                 field: "paymentAmount",
                 width: 120,
+                floatingFilter: true,
+                filter: 'agNumberColumnFilter',
                 valueFormatter: params => formatCurrency(params.value || 0),
                 cellClass: 'text-right font-semibold',
-                cellStyle: { color: '#059669' }
+                cellStyle: { color: '#059669' },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Payment Mode",
                 field: "paymentMode",
-                width: 100, 
-                cellStyle: { fontSize: '12px' }
+                width: 100,
+                floatingFilter: true,
+                filter: 'agTextColumnFilter',
+                cellStyle: { fontSize: '12px' },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Reference",
                 field: "paymentReference",
                 width: 120,
-                cellStyle: { fontFamily: 'monospace', fontSize: '11px' }
+                floatingFilter: true,
+                filter: 'agTextColumnFilter',
+                cellStyle: { fontFamily: 'monospace', fontSize: '11px' },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Days Waiting",
                 width: 110,
+                floatingFilter: true,
+                filter: 'agNumberColumnFilter',
                 valueGetter: params => {
                     const submitted = params.data.submittedDate;
                     return calculateDaysWaiting(submitted);
@@ -4394,11 +4411,15 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                                 <div class="font-bold text-sm">${days}d</div>
                                 <div class="text-xs px-2 py-1 rounded border ${colorClass}">${urgencyText}</div>
                             </div>`;
-                }
+                },
+                headerClass: 'wrapped-header'
             },
             {
                 headerName: "Actions",
                 width: 180,
+                floatingFilter: false, // No filter for action column
+                filter: false,
+                sortable: false,
                 cellClass: 'flex items-center justify-center space-x-1',
                 cellRenderer: params => {
                     const payment = params.data;
@@ -4406,37 +4427,44 @@ function setupPendingPaymentsVerificationGrid(pendingPayments) {
                     
                     return `<div class="flex space-x-1">
                                 <button class="pmt-mgmt-verify-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold"
-                                      data-payment-id="${payment.id}"
-                                      data-original-invoice-id="${originalInvoiceId}"
-                                      title="Verify This Payment">
+                                    data-payment-id="${payment.id}"
+                                    data-original-invoice-id="${originalInvoiceId}"
+                                    title="Verify This Payment">
                                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
                                     VERIFY
                                 </button>
                                 <button class="pmt-mgmt-reject-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600"
-                                      data-payment-id="${payment.id}"
-                                      data-original-invoice-id="${originalInvoiceId}"
-                                      title="Reject This Payment">
+                                    data-payment-id="${payment.id}"
+                                    data-original-invoice-id="${originalInvoiceId}"
+                                    title="Reject This Payment">
                                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
                                     REJECT
                                 </button>
                             </div>`;
-                }
+                },
+                headerClass: 'wrapped-header'
             }
         ],
 
         defaultColDef: {
             resizable: true, 
             sortable: true,
-            filter: true
+            filter: true,
+            floatingFilter: true, // Enable floating filters by default
+            wrapHeaderText: true, // Enable header text wrapping
+            autoHeaderHeight: true // Auto-adjust header height
         },
         
         onGridReady: (params) => {
             pmtMgmtPendingPaymentsGridApi = params.api;
             console.log('[PmtMgmt] Verification grid ready');
+            
+            // Auto-size columns to fit content (optional)
+            // params.api.sizeColumnsToFit();
         }
     };
 
