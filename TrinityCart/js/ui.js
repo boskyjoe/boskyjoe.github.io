@@ -54,6 +54,7 @@ import {
     REPORT_CONFIGS 
 } from './reports.js';
 
+import {detachPaymentManagementRealtimeSync} from './payment-management.js'
 
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
@@ -6002,6 +6003,14 @@ export function showView(viewId) {
     }
 
     detachAllRealtimeListeners();
+
+    // ✅ NEW: Cleanup Payment Management listeners when leaving
+    if (appState.activeView === 'pmt-mgmt-view' && viewId !== 'pmt-mgmt-view') {
+        console.log('[ui.js] Leaving Payment Management - cleaning up real-time listeners');
+        if (typeof detachPaymentManagementRealtimeSync === 'function') {
+            detachPaymentManagementRealtimeSync();
+        }
+    }
 
     appState.activeView = viewId;
     views.forEach(view => {
