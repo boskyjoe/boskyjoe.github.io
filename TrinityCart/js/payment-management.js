@@ -1981,24 +1981,34 @@ function handlePaymentMgmtQuickAction(action) {
  * Refreshes all payment management dashboard data
  */
 
+
 export async function refreshPaymentManagementDashboard() {
     console.log('[PmtMgmt] 🔄 Refreshing dashboard with Firestore optimization...');
 
     try {
         ProgressToast.show('Loading Payment Dashboard', 'info');
-        ProgressToast.updateProgress('Optimizing data queries for free tier...', 25);
+        ProgressToast.updateProgress('Optimizing data queries for free tier...', 20);
 
         // ✅ OPTIMIZED: Load metrics with caching and limits
         const startTime = Date.now();
         const metrics = await loadPaymentMgmtMetrics();
         const loadTime = Date.now() - startTime;
 
+        ProgressToast.updateProgress('Loading outstanding balances...', 45);
+
+        // ✅ NEW: Load outstanding balance metrics separately
+        const outstandingMetrics = await loadOutstandingBalanceMetrics();
         
 
-        ProgressToast.updateProgress('Processing payment data...', 60);
+        ProgressToast.updateProgress('Processing combined data...', 70);
+
 
         // Update dashboard cards
         updatePaymentMgmtDashboardCards(metrics);
+
+        // ✅ NEW: Update outstanding balance cards
+        updateOutstandingBalanceCards(outstandingMetrics);
+
 
         // Update action items (high-priority payments)
         await buildActionRequiredList({ metrics: metrics });
@@ -2011,7 +2021,8 @@ export async function refreshPaymentManagementDashboard() {
         pmtMgmtState.lastRefreshTime = new Date();
         const refreshElement = document.getElementById('pmt-mgmt-last-refresh');
         if (refreshElement) {
-            refreshElement.textContent = `${pmtMgmtState.lastRefreshTime.toLocaleTimeString()} (${metrics.totalFirestoreReads} reads)`;
+            const totalReads = (metrics.totalFirestoreReads || 0) + (outstandingMetrics.metadata?.firestoreReadsUsed || 0);
+            refreshElement.textContent = `${pmtMgmtState.lastRefreshTime.toLocaleTimeString()} (${totalReads} reads)`;
         }
 
         ProgressToast.updateProgress('Dashboard updated successfully!', 100);
@@ -2019,20 +2030,33 @@ export async function refreshPaymentManagementDashboard() {
         setTimeout(() => {
             ProgressToast.hide(300);
 
-            // Show performance info for free tier awareness
-            if (metrics.totalFirestoreReads > 0) {
-                console.log(`[PmtMgmt] 📊 PERFORMANCE SUMMARY:`);
-                console.log(`  🔥 Firestore Reads: ${metrics.totalFirestoreReads}`);
+            // ✅ ENHANCED: Show combined performance info for free tier awareness
+            const paymentReads = metrics.totalFirestoreReads || 0;
+            const balanceReads = outstandingMetrics.metadata?.firestoreReadsUsed || 0;
+            const totalReads = paymentReads + balanceReads;
+
+            if (totalReads > 0) {
+                console.log(`[PmtMgmt] 📊 ENHANCED PERFORMANCE SUMMARY:`);
+                console.log(`  🔄 Payment Operations: ${paymentReads} reads`);
+                console.log(`  💰 Outstanding Balances: ${balanceReads} reads`);
+                console.log(`  🔥 Total Firestore Reads: ${totalReads}`);
                 console.log(`  ⚡ Load Time: ${loadTime}ms`);
-                console.log(`  💾 Cache Status: ${metrics.totalFirestoreReads === 0 ? 'Hit (saved reads)' : 'Miss (fresh data)'}`);
+                console.log(`  💾 Cache Status: ${totalReads === 0 ? 'Hit (saved reads)' : 'Miss (fresh data)'}`);
                 console.log(`  ⏰ Next Cache Expiry: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
+                
+                // ✅ NEW: Business intelligence summary
+                console.log(`  💼 BUSINESS POSITION:`);
+                console.log(`    📤 We Owe Suppliers: ${outstandingMetrics.supplierPayables?.formattedTotalOutstanding || '₹0'}`);
+                console.log(`    📈 Owed to Us: ${formatCurrency((outstandingMetrics.directSalesReceivables?.totalOutstanding || 0) + (outstandingMetrics.consignmentReceivables?.totalOutstanding || 0))}`);
+                console.log(`    💰 Net Position: ${outstandingMetrics.netPosition?.formattedNetPosition || '₹0'}`);
+                console.log(`    🎯 Status: ${outstandingMetrics.executiveSummary?.overallHealth || 'Unknown'}`);
             }
         }, 800);
 
-        console.log('[PmtMgmt] ✅ Dashboard refresh completed');
+        console.log('[PmtMgmt] ✅ Enhanced dashboard refresh completed with outstanding balance intelligence');
 
     } catch (error) {
-        console.error('[PmtMgmt] Dashboard refresh failed:', error);
+        console.error('[PmtMgmt] Enhanced dashboard refresh failed:', error);
         ProgressToast.showError('Failed to refresh dashboard data');
 
         setTimeout(() => {
@@ -5029,7 +5053,387 @@ function generateRecommendedAction(supplierIntel, teamIntel) {
 }
 
 
+/**
+ * STANDALONE: Outstanding Balance Metrics (completely separate from payment metrics).
+ * 
+ * Provides executive-level financial intelligence by analyzing outstanding balances
+ * across all business channels. This function is independent and doesn't interfere
+ * with existing payment operations metrics.
+ * 
+ * @param {Object} [options={}] - Configuration options
+ * @param {boolean} [options.useCache=true] - Enable 10-minute caching
+ * @param {number} [options.queryLimit=100] - Max records per query
+ * 
+ * @returns {Promise<Object>} Complete outstanding balance analysis
+ */
+export async function loadOutstandingBalanceMetrics(options = {}) {
+    const { useCache = true, queryLimit = 100 } = options;
+    
+    console.log('[PmtMgmt] 💰 Loading STANDALONE outstanding balance metrics...');
+    
+    // Separate cache key to avoid conflicts
+    const balanceCacheKey = 'outstanding_balance_metrics_standalone';
+    
+    if (useCache) {
+        const cachedBalances = getCachedPaymentMetrics(balanceCacheKey, 10); // 10-minute cache
+        if (cachedBalances) {
+            console.log('[PmtMgmt] ✅ Using cached outstanding balances - 0 Firestore reads');
+            return cachedBalances;
+        }
+    }
 
+    const db = firebase.firestore();
+    let totalReads = 0;
+    const startTime = Date.now();
+
+    try {
+        // ===================================================================
+        // COLLECT OUTSTANDING DATA FROM ALL 3 BUSINESS CHANNELS
+        // ===================================================================
+        
+        const [supplierInvoicesSnapshot, directSalesSnapshot, consignmentOrdersSnapshot] = await Promise.all([
+            // 📤 SUPPLIER INVOICES with outstanding balances
+            db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                .orderBy('purchaseDate', 'asc')
+                .limit(queryLimit)
+                .get(),
+            
+            // 🏪 DIRECT SALES with outstanding balances
+            db.collection(SALES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                .orderBy('saleDate', 'asc')
+                .limit(queryLimit)
+                .get(),
+            
+            // 👥 CONSIGNMENT ORDERS with outstanding balances
+            db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                .where('status', '==', 'Active')
+                .where('balanceDue', '>', 0)
+                .orderBy('requestDate', 'asc')
+                .limit(queryLimit)
+                .get()
+        ]);
+
+        totalReads = supplierInvoicesSnapshot.size + directSalesSnapshot.size + consignmentOrdersSnapshot.size;
+
+        console.log(`[PmtMgmt] 📊 Outstanding data collected:`, {
+            supplierInvoices: supplierInvoicesSnapshot.size,
+            directSales: directSalesSnapshot.size,
+            consignmentOrders: consignmentOrdersSnapshot.size,
+            totalReads: totalReads
+        });
+
+        // ===================================================================
+        // PROCESS EACH CHANNEL INDEPENDENTLY
+        // ===================================================================
+        
+        // Process supplier payables
+        const supplierPayables = processSupplierPayables(supplierInvoicesSnapshot.docs);
+        
+        // Process direct sales receivables
+        const directSalesReceivables = processDirectSalesReceivables(directSalesSnapshot.docs);
+        
+        // Process consignment receivables
+        const consignmentReceivables = processConsignmentReceivables(consignmentOrdersSnapshot.docs);
+        
+        // Calculate net position
+        const totalReceivables = directSalesReceivables.totalOutstanding + consignmentReceivables.totalOutstanding;
+        const totalPayables = supplierPayables.totalOutstanding;
+        const netPosition = totalReceivables - totalPayables;
+
+        // ===================================================================
+        // ASSEMBLE FINAL STANDALONE METRICS
+        // ===================================================================
+        
+        const standalonemetrics = {
+            supplierPayables,
+            directSalesReceivables,
+            consignmentReceivables,
+            
+            netPosition: {
+                totalReceivables,
+                totalPayables,
+                netPosition,
+                formattedReceivables: formatCurrency(totalReceivables),
+                formattedPayables: formatCurrency(totalPayables),
+                formattedNetPosition: formatCurrency(netPosition),
+                healthStatus: netPosition >= 0 ? 'positive' : 'negative',
+                riskLevel: Math.abs(netPosition) > 50000 ? 'high' : Math.abs(netPosition) > 20000 ? 'medium' : 'low'
+            },
+            
+            executiveSummary: {
+                keyInsight: generateKeyFinancialInsight(totalReceivables, totalPayables, netPosition),
+                urgentAction: generateUrgentFinancialAction(supplierPayables, directSalesReceivables, consignmentReceivables),
+                overallHealth: netPosition >= 0 ? 'Healthy Cash Position' : 'Cash Flow Attention Needed'
+            },
+            
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                firestoreReadsUsed: totalReads,
+                executionTimeMs: Date.now() - startTime,
+                cacheKey: balanceCacheKey
+            }
+        };
+
+        // Cache for future use
+        cachePaymentMetrics(balanceCacheKey, standalonemetrics);
+
+        console.log(`[PmtMgmt] ✅ Standalone outstanding balance metrics completed (${totalReads} reads)`);
+        return standalonemetrics;
+
+    } catch (error) {
+        console.error('[PmtMgmt] ❌ Error in standalone outstanding balance metrics:', error);
+        throw new Error(`Outstanding balance calculation failed: ${error.message}`);
+    }
+}
+
+/**
+ * NEW: Updates outstanding balance cards (completely separate from payment operations)
+ */
+function updateOutstandingBalanceCards(outstandingMetrics) {
+    console.log('[PmtMgmt] 💰 Updating standalone outstanding balance cards...');
+    
+    if (!outstandingMetrics) {
+        console.warn('[PmtMgmt] No outstanding balance metrics provided - using placeholders');
+        return;
+    }
+
+    // ✅ NET CASH POSITION (Most important business metric)
+    const netPositionElement = document.getElementById('pmt-mgmt-net-position');
+    const netPositionStatusElement = document.getElementById('pmt-mgmt-net-position-status');
+    
+    if (netPositionElement && outstandingMetrics.netPosition) {
+        const netAmount = outstandingMetrics.netPosition.netPosition || 0;
+        netPositionElement.textContent = formatCurrency(netAmount);
+        
+        // Dynamic styling based on cash position
+        if (netAmount >= 20000) {
+            netPositionElement.className = 'text-2xl font-bold text-green-700';
+            if (netPositionStatusElement) netPositionStatusElement.textContent = 'Strong cash position';
+        } else if (netAmount >= 0) {
+            netPositionElement.className = 'text-2xl font-bold text-indigo-700';
+            if (netPositionStatusElement) netPositionStatusElement.textContent = 'Healthy cash flow';
+        } else if (netAmount >= -10000) {
+            netPositionElement.className = 'text-2xl font-bold text-yellow-700';
+            if (netPositionStatusElement) netPositionStatusElement.textContent = 'Monitor cash flow';
+        } else {
+            netPositionElement.className = 'text-2xl font-bold text-red-700 animate-pulse';
+            if (netPositionStatusElement) netPositionStatusElement.textContent = 'Cash flow attention needed';
+        }
+    }
+
+    // ✅ SUPPLIER PAYABLES (What we owe)
+    const supplierPayablesElement = document.getElementById('pmt-mgmt-supplier-payables-outstanding');
+    const supplierBreakdownElement = document.getElementById('pmt-mgmt-supplier-payables-breakdown');
+    
+    if (supplierPayablesElement && outstandingMetrics.supplierPayables) {
+        const supplier = outstandingMetrics.supplierPayables;
+        supplierPayablesElement.textContent = formatCurrency(supplier.totalOutstanding || 0);
+        
+        // Color based on urgency
+        if (supplier.criticalCount > 0) {
+            supplierPayablesElement.className = 'text-2xl font-bold text-red-700 animate-pulse';
+        } else if (supplier.overdueCount > 0) {
+            supplierPayablesElement.className = 'text-2xl font-bold text-red-700';
+        } else {
+            supplierPayablesElement.className = 'text-2xl font-bold text-red-600';
+        }
+        
+        if (supplierBreakdownElement) {
+            let breakdownText = `${supplier.invoiceCount || 0} invoices`;
+            if (supplier.criticalCount > 0) {
+                breakdownText += `, ${supplier.criticalCount} critical`;
+            } else if (supplier.overdueCount > 0) {
+                breakdownText += `, ${supplier.overdueCount} overdue`;
+            }
+            supplierBreakdownElement.textContent = breakdownText;
+        }
+    }
+
+    // ✅ CUSTOMER RECEIVABLES (Direct sales owed to us)
+    const customerReceivablesElement = document.getElementById('pmt-mgmt-customers-receivables-outstanding');
+    const customerBreakdownElement = document.getElementById('pmt-mgmt-customers-receivables-breakdown');
+    
+    if (customerReceivablesElement && outstandingMetrics.directSalesReceivables) {
+        const directSales = outstandingMetrics.directSalesReceivables;
+        customerReceivablesElement.textContent = formatCurrency(directSales.totalOutstanding || 0);
+        
+        if (customerBreakdownElement) {
+            const churchAmount = directSales.churchStoreOutstanding || 0;
+            const tastyAmount = directSales.tastyTreatsOutstanding || 0;
+            customerBreakdownElement.textContent = `Church: ${formatCurrency(churchAmount)}, Tasty: ${formatCurrency(tastyAmount)}`;
+        }
+    }
+
+    // ✅ TEAM RECEIVABLES (Consignment settlements owed to us)
+    const teamReceivablesElement = document.getElementById('pmt-mgmt-teams-receivables-outstanding');
+    const teamBreakdownElement = document.getElementById('pmt-mgmt-teams-receivables-breakdown');
+    
+    if (teamReceivablesElement && outstandingMetrics.consignmentReceivables) {
+        const consignment = outstandingMetrics.consignmentReceivables;
+        teamReceivablesElement.textContent = formatCurrency(consignment.totalOutstanding || 0);
+        
+        if (teamBreakdownElement) {
+            teamBreakdownElement.textContent = `${consignment.teamCount || 0} teams, ${consignment.activeOrderCount || 0} active orders`;
+        }
+    }
+
+    console.log('[PmtMgmt] ✅ Outstanding balance cards updated with real business intelligence');
+}
+
+// ===================================================================
+// HELPER FUNCTIONS FOR OUTSTANDING BALANCE ANALYSIS
+// ===================================================================
+
+
+// ===================================================================
+// HELPER PROCESSING FUNCTIONS
+// ===================================================================
+
+
+function processSupplierPayables(invoiceDocs) {
+    const invoices = invoiceDocs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            daysOutstanding: calculateDaysOutstanding(data.purchaseDate),
+            isOverdue: calculateDaysOutstanding(data.purchaseDate) > 30,
+            isCritical: calculateDaysOutstanding(data.purchaseDate) > 45 || (data.balanceDue || 0) > 15000
+        };
+    });
+
+    return {
+        totalOutstanding: invoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
+        invoiceCount: invoices.length,
+        overdueAmount: invoices.filter(inv => inv.isOverdue).reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
+        overdueCount: invoices.filter(inv => inv.isOverdue).length,
+        criticalAmount: invoices.filter(inv => inv.isCritical).reduce((sum, inv) => sum + (inv.balanceDue || 0), 0),
+        criticalCount: invoices.filter(inv => inv.isCritical).length,
+        avgDaysOutstanding: invoices.length > 0 
+            ? invoices.reduce((sum, inv) => sum + inv.daysOutstanding, 0) / invoices.length 
+            : 0
+    };
+}
+
+function processDirectSalesReceivables(salesDocs) {
+    const sales = salesDocs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            daysOutstanding: calculateDaysOutstanding(data.saleDate),
+            isOverdue: calculateDaysOutstanding(data.saleDate) > 30
+        };
+    });
+
+    return {
+        totalOutstanding: sales.reduce((sum, sale) => sum + (sale.balanceDue || 0), 0),
+        invoiceCount: sales.length,
+        churchStoreOutstanding: sales.filter(s => s.store === 'Church Store').reduce((sum, s) => sum + (s.balanceDue || 0), 0),
+        tastyTreatsOutstanding: sales.filter(s => s.store === 'Tasty Treats').reduce((sum, s) => sum + (s.balanceDue || 0), 0),
+        overdueAmount: sales.filter(s => s.isOverdue).reduce((sum, s) => sum + (s.balanceDue || 0), 0),
+        overdueCount: sales.filter(s => s.isOverdue).length
+    };
+}
+
+function processConsignmentReceivables(orderDocs) {
+    const orders = orderDocs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            daysOutstanding: calculateDaysOutstanding(data.requestDate),
+            isOverdue: calculateDaysOutstanding(data.requestDate) > 60 // Longer cycle for consignments
+        };
+    });
+
+    return {
+        totalOutstanding: orders.reduce((sum, order) => sum + (order.balanceDue || 0), 0),
+        activeOrderCount: orders.length,
+        teamCount: new Set(orders.map(order => order.teamName)).size,
+        largestBalance: Math.max(...orders.map(order => order.balanceDue || 0), 0),
+        overdueAmount: orders.filter(o => o.isOverdue).reduce((sum, o) => sum + (o.balanceDue || 0), 0),
+        overdueCount: orders.filter(o => o.isOverdue).length
+    };
+}
+
+function generateKeyFinancialInsight(receivables, payables, netPosition) {
+    if (netPosition > 20000) {
+        return `Strong Position: ${formatCurrency(netPosition)} positive cash flow`;
+    } else if (netPosition > 0) {
+        return `Healthy: ${formatCurrency(netPosition)} positive, monitor collections`;
+    } else if (netPosition > -10000) {
+        return `Manageable: ${formatCurrency(Math.abs(netPosition))} negative, prioritize collections`;
+    } else {
+        return `Attention Needed: ${formatCurrency(Math.abs(netPosition))} negative, urgent action required`;
+    }
+}
+
+function generateUrgentFinancialAction(supplier, directSales, consignment) {
+    if (supplier.criticalCount > 0) return `Pay ${supplier.criticalCount} critical supplier invoices immediately`;
+    if (supplier.overdueCount > 0) return `Address ${supplier.overdueCount} overdue supplier payments`;
+    if (directSales.overdueCount > 0) return `Follow up on ${directSales.overdueCount} overdue customer payments`;
+    if (consignment.overdueCount > 0) return `Settle ${consignment.overdueCount} overdue consignment balances`;
+    return 'Continue normal monitoring of outstanding balances';
+}
+
+/**
+ * Calculate days outstanding from invoice/order date
+ */
+function calculateDaysOutstanding(dateField) {
+    if (!dateField) return 0;
+    
+    try {
+        const invoiceDate = dateField.toDate ? dateField.toDate() : new Date(dateField);
+        const today = new Date();
+        const diffTime = today - invoiceDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    } catch (error) {
+        console.warn('[PmtMgmt] Error calculating days outstanding:', error);
+        return 0;
+    }
+}
+
+/**
+ * Generate most urgent outstanding action
+ */
+function generateMostUrgentOutstandingAction(supplierPayables, directSales, consignment) {
+    if (supplierPayables.criticalCount > 0) {
+        return `URGENT: ${supplierPayables.criticalCount} critical supplier invoices (${formatCurrency(supplierPayables.criticalAmount)})`;
+    }
+    
+    if (supplierPayables.overdueCount > 0) {
+        return `High Priority: ${supplierPayables.overdueCount} overdue supplier invoices (${formatCurrency(supplierPayables.overdueAmount)})`;
+    }
+    
+    if (directSales.overdueCount > 0) {
+        return `Customer Follow-up: ${directSales.overdueCount} overdue customer invoices (${formatCurrency(directSales.overdueAmount)})`;
+    }
+    
+    if (consignment.overdueCount > 0) {
+        return `Team Settlement: ${consignment.overdueCount} overdue team settlements (${formatCurrency(consignment.overdueAmount)})`;
+    }
+    
+    if (supplierPayables.totalOutstanding > directSales.totalOutstanding + consignment.totalOutstanding) {
+        return `Cash Flow Watch: Payables exceed receivables by ${formatCurrency(supplierPayables.totalOutstanding - (directSales.totalOutstanding + consignment.totalOutstanding))}`;
+    }
+    
+    return 'Normal Monitoring: Outstanding balances within acceptable ranges';
+}
+
+/**
+ * Assess overall financial health
+ */
+function assessOverallFinancialHealth(netPosition, cashFlowRisk) {
+    if (cashFlowRisk === 'high') return 'Needs Immediate Attention';
+    if (cashFlowRisk === 'medium') return 'Requires Monitoring';
+    if (netPosition > 10000) return 'Strong Position';
+    if (netPosition >= 0) return 'Healthy';
+    return 'Manageable';
+}
 
 
 
