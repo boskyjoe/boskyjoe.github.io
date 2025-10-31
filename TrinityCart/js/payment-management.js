@@ -3358,56 +3358,269 @@ function initializeSalesPaymentsTab() {
 }
 
 /**
- * FREE TIER OPTIMIZED: Loads sales payments data
+ * ENHANCED: Load sales payment data with business intelligence and collection focus.
+ * 
+ * Loads sales data optimized for Payment Management operations including customer
+ * collection management, payment audit, and void operations with comprehensive
+ * business context for effective financial management.
+ * 
+ * @param {string} [focusMode='payments'] - 'payments' for audit, 'outstanding' for collections
+ * @param {Object} [options={}] - Additional options for customization
  */
-async function loadSalesPaymentsForMgmtTab() {
-    console.log('[DEBUG] Starting loadSalesPaymentsForMgmtTab');
+async function loadSalesPaymentsForMgmtTab(focusMode = 'payments', options = {}) {
+    const { useCache = true, queryLimit = 50 } = options;
+    
+    console.log(`[PmtMgmt] 💳 Loading ENHANCED sales ${focusMode} data for management tab...`);
 
     if (!pmtMgmtSalesGridApi) {
-        console.error('[DEBUG] ❌ pmtMgmtSalesGridApi not available');
+        console.error('[PmtMgmt] ❌ Sales grid API not available');
         return;
     }
 
     try {
-        console.log('[DEBUG] ✅ Sales grid API available, loading data...');
+        console.log('[PmtMgmt] ✅ Sales grid API available, loading enhanced data...');
         pmtMgmtSalesGridApi.setGridOption('loading', true);
 
+        // ===================================================================
+        // BUSINESS-FOCUSED DATA LOADING WITH CACHING
+        // ===================================================================
+        
+        const cacheKey = `sales_${focusMode}_enhanced`;
+        
+        if (useCache) {
+            const cached = getCachedPaymentMetrics(cacheKey, 5); // 5-minute cache
+            if (cached && cached.salesData) {
+                console.log(`[PmtMgmt] ✅ Using cached sales ${focusMode} data - 0 Firestore reads`);
+                pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesData);
+                pmtMgmtSalesGridApi.setGridOption('loading', false);
+                updateSalesPaymentsSummary(cached.metadata, cached.salesData, focusMode);
+                return;
+            }
+        }
+
         const db = firebase.firestore();
-        console.log('[DEBUG] Collection path:', SALES_PAYMENTS_LEDGER_COLLECTION_PATH);
+        let totalReads = 0;
+        let salesData = [];
 
-        const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
-            .orderBy('paymentDate', 'desc')
-            .limit(10); // Small limit for testing
+        if (focusMode === 'outstanding') {
+            // ===================================================================
+            // BUSINESS FOCUS: Outstanding Sales Invoices (Collection Targets)
+            // ===================================================================
+            console.log('[PmtMgmt] 🎯 COLLECTION FOCUS: Loading outstanding sales invoices...');
+            
+            const outstandingSalesQuery = db.collection(SALES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                .orderBy('saleDate', 'asc') // Oldest first for collection priority
+                .limit(queryLimit);
 
-        const snapshot = await salesPaymentsQuery.get();
-        console.log(`[DEBUG] Sales payments snapshot size: ${snapshot.size}`);
+            const snapshot = await outstandingSalesQuery.get();
+            totalReads = snapshot.size;
 
-        const salesPayments = snapshot.docs.map(doc => {
-            const data = { id: doc.id, ...doc.data() };
-            console.log('[DEBUG] Sales payment:', {
-                id: data.id,
-                customerName: data.customerName,
-                amountPaid: data.amountPaid,
-                status: data.status
+            console.log(`[PmtMgmt] Outstanding sales snapshot size: ${snapshot.size}`);
+
+            salesData = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const daysOverdue = calculateDaysOverdue(data.saleDate);
+                
+                // ✅ ENHANCED: Add business intelligence for collections
+                const enhancedSale = {
+                    id: doc.id,
+                    ...data,
+                    
+                    // ✅ COLLECTION INTELLIGENCE
+                    daysOverdue: daysOverdue,
+                    isOverdue: daysOverdue > 30,
+                    collectionPriority: calculateCustomerCollectionPriority(data, daysOverdue),
+                    
+                    // ✅ CUSTOMER CONTEXT (for follow-up)
+                    customerName: data.customerInfo?.name || 'Unknown Customer',
+                    customerEmail: data.customerInfo?.email || 'No Email',
+                    customerPhone: data.customerInfo?.phone || 'No Phone',
+                    
+                    // ✅ UI FORMATTING
+                    formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
+                    formattedBalance: formatCurrency(data.balanceDue || 0),
+                    formattedAmountPaid: formatCurrency(data.totalAmountPaid || 0),
+                    
+                    // ✅ ACTION CONTEXT
+                    followUpRequired: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
+                    contactMethod: data.customerInfo?.phone ? 'phone' : 
+                                 data.customerInfo?.email ? 'email' : 'none',
+                    urgencyLevel: daysOverdue > 60 ? 'critical' : 
+                                 daysOverdue > 30 ? 'high' : 'medium'
+                };
+
+                console.log(`[PmtMgmt] Outstanding invoice: ${enhancedSale.customerName} - ${enhancedSale.formattedBalance} (${daysOverdue} days)`);
+                return enhancedSale;
             });
-            return data;
-        });
 
-        pmtMgmtSalesGridApi.setGridOption('rowData', salesPayments);
+        } else {
+            // ===================================================================
+            // AUDIT FOCUS: Sales Payment Transactions (Your Current Approach)
+            // ===================================================================
+            console.log('[PmtMgmt] 📋 AUDIT FOCUS: Loading sales payment transactions...');
+            
+            const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
+                .orderBy('paymentDate', 'desc')
+                .limit(queryLimit);
+
+            const snapshot = await salesPaymentsQuery.get();
+            totalReads = snapshot.size;
+
+            console.log(`[PmtMgmt] Sales payments snapshot size: ${snapshot.size}`);
+
+            salesData = snapshot.docs.map(doc => {
+                const data = { id: doc.id, ...doc.data() };
+                
+                // ✅ ENHANCED: Add audit context and customer information
+                const enhancedPayment = {
+                    ...data,
+                    
+                    // ✅ CUSTOMER CONTEXT
+                    customerName: data.customerName || 'Unknown Customer',
+                    
+                    // ✅ INVOICE CONTEXT (get from related sales invoice if available)
+                    invoiceId: data.invoiceId || 'Unknown Invoice',
+                    store: data.store || 'Unknown Store', // May need to lookup from invoice
+                    
+                    // ✅ UI FORMATTING
+                    formattedAmount: formatCurrency(data.amountPaid || 0),
+                    formattedDate: data.paymentDate?.toDate ? 
+                        data.paymentDate.toDate().toLocaleDateString() : 'Unknown Date',
+                    
+                    // ✅ AUDIT INTELLIGENCE
+                    canVoid: (data.status || data.paymentStatus) === 'Verified',
+                    isVoided: (data.status || data.paymentStatus) === 'Voided',
+                    hasReversals: data.amountPaid < 0 // Negative amounts are reversals
+                };
+
+                console.log(`[PmtMgmt] Sales payment: ${enhancedPayment.customerName} - ${enhancedPayment.formattedAmount} (${enhancedPayment.status || 'Unknown Status'})`);
+                return enhancedPayment;
+            });
+        }
+
+        // ===================================================================
+        // UPDATE UI WITH ENHANCED DATA
+        // ===================================================================
+        
+        pmtMgmtSalesGridApi.setGridOption('rowData', salesData);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
 
+        // ✅ CACHE: Store enhanced data for performance
+        if (useCache && totalReads > 0) {
+            cachePaymentMetrics(cacheKey, {
+                salesData: salesData,
+                metadata: {
+                    mode: focusMode,
+                    totalRecords: salesData.length,
+                    totalReads: totalReads,
+                    loadedAt: new Date().toISOString(),
+                    businessContext: focusMode === 'outstanding' ? 'Customer Collection Management' : 'Payment Transaction Audit'
+                }
+            });
+        }
+
+        // ✅ BUSINESS INTELLIGENCE SUMMARY
+        updateSalesPaymentsSummary({
+            mode: focusMode,
+            totalRecords: salesData.length,
+            totalReads: totalReads
+        }, salesData, focusMode);
+
+        // Auto-fit columns after data load
         setTimeout(() => {
-            const rowCount = pmtMgmtSalesGridApi.getDisplayedRowCount();
-            console.log(`[DEBUG] ✅ Sales grid shows ${rowCount} rows`);
+            if (pmtMgmtSalesGridApi) {
+                pmtMgmtSalesGridApi.sizeColumnsToFit();
+            }
         }, 200);
 
+        console.log(`[PmtMgmt] ✅ Enhanced sales ${focusMode} data loaded: ${salesData.length} records (${totalReads} reads)`);
+
     } catch (error) {
-        console.error('[DEBUG] ❌ Error loading sales payments:', error);
+        console.error(`[PmtMgmt] ❌ Error loading enhanced sales ${focusMode} data:`, error);
+        
         if (pmtMgmtSalesGridApi) {
             pmtMgmtSalesGridApi.setGridOption('loading', false);
+            pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
+        
+        showModal('error', `Sales ${focusMode === 'outstanding' ? 'Invoices' : 'Payments'} Loading Failed`,
+            `Could not load sales ${focusMode} data for Payment Management.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Please refresh and try again.`
+        );
     }
 }
+
+
+/**
+ * BUSINESS LOGIC: Calculate customer collection priority
+ */
+function calculateCustomerCollectionPriority(saleData, daysOverdue) {
+    const balanceDue = saleData.balanceDue || 0;
+    
+    // Critical: High amount + very overdue
+    if (balanceDue > 15000 && daysOverdue > 60) {
+        return 'critical';
+    }
+    // High: Significant amount or very overdue
+    else if (balanceDue > 8000 || daysOverdue > 45) {
+        return 'high';  
+    }
+    // Medium: Moderate amount or overdue
+    else if (balanceDue > 3000 || daysOverdue > 30) {
+        return 'medium';
+    }
+    // Low: Recent or small amounts
+    else {
+        return 'low';
+    }
+}
+
+
+/**
+ * HELPER: Update sales payments summary with business context
+ */
+function updateSalesPaymentsSummary(metadata, salesData, focusMode) {
+    console.log(`[PmtMgmt] 💳 SALES ${focusMode.toUpperCase()} SUMMARY:`);
+    
+    if (focusMode === 'outstanding' && salesData.length > 0) {
+        // Collection management intelligence
+        const totalOutstanding = salesData.reduce((sum, sale) => sum + (sale.balanceDue || 0), 0);
+        const overdueCount = salesData.filter(sale => sale.isOverdue).length;
+        const criticalCount = salesData.filter(sale => sale.collectionPriority === 'critical').length;
+        const highPriorityCount = salesData.filter(sale => sale.collectionPriority === 'high').length;
+        
+        // Store breakdown
+        const churchStoreOutstanding = salesData.filter(s => s.store === 'Church Store')
+            .reduce((sum, s) => sum + (s.balanceDue || 0), 0);
+        const tastyTreatsOutstanding = salesData.filter(s => s.store === 'Tasty Treats')
+            .reduce((sum, s) => sum + (s.balanceDue || 0), 0);
+        
+        console.log(`  💰 Total Outstanding: ${formatCurrency(totalOutstanding)}`);
+        console.log(`  🏛️ Church Store Outstanding: ${formatCurrency(churchStoreOutstanding)}`);
+        console.log(`  🍰 Tasty Treats Outstanding: ${formatCurrency(tastyTreatsOutstanding)}`);
+        console.log(`  ⚠️ Overdue Customers: ${overdueCount} invoices`);
+        console.log(`  🚨 Critical Collections: ${criticalCount} customers`);
+        console.log(`  📞 High Priority Follow-up: ${highPriorityCount} customers`);
+        
+    } else if (focusMode === 'payments' && salesData.length > 0) {
+        // Payment audit intelligence
+        const totalAmount = salesData.reduce((sum, payment) => sum + Math.abs(payment.amountPaid || 0), 0);
+        const verifiedCount = salesData.filter(p => (p.status || p.paymentStatus) === 'Verified').length;
+        const voidedCount = salesData.filter(p => (p.status || p.paymentStatus) === 'Voided').length;
+        
+        console.log(`  💳 Total Payment Amount: ${formatCurrency(totalAmount)}`);
+        console.log(`  ✅ Verified Payments: ${verifiedCount}`);
+        console.log(`  ❌ Voided Payments: ${voidedCount}`);
+    }
+    
+    console.log(`  📊 Records Loaded: ${salesData.length}`);
+    console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
+}
+
+
+
 
 // ===================================================================
 // FILTER SETUP FUNCTIONS (TAB-SPECIFIC)
@@ -3645,19 +3858,27 @@ function updateTeamFilterActiveState(activeButton) {
  * Sets up filter listeners for sales payments tab
  */
 function setupSalesPaymentFilters() {
-    const filters = ['all', 'unpaid', 'partial', 'overdue'];
+    console.log('[PmtMgmt] Setting up BUSINESS-SMART sales payment filters...');
+    
+    // ✅ COLLECTIONS FILTER: Outstanding invoices for follow-up
+    const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+    if (collectionsFilter) {
+        collectionsFilter.addEventListener('click', () => {
+            loadSalesPaymentsForMgmtTab('outstanding');
+            updateSalesFilterActiveState(collectionsFilter);
+        });
+    }
+    
+    // ✅ PAYMENTS FILTER: Payment transactions for audit
+    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+    if (paymentsFilter) {
+        paymentsFilter.addEventListener('click', () => {
+            loadSalesPaymentsForMgmtTab('payments');
+            updateSalesFilterActiveState(paymentsFilter);
+        });
+    }
 
-    filters.forEach(filter => {
-        const button = document.getElementById(`pmt-mgmt-sales-filter-${filter}`);
-        if (button) {
-            button.addEventListener('click', () => {
-                applySalesPaymentFilter(filter);
-                updateSalesFilterActiveState(button);
-            });
-        }
-    });
-
-    // Sales search
+    // Search functionality (works for both modes)
     const searchInput = document.getElementById('pmt-mgmt-sales-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -3667,7 +3888,7 @@ function setupSalesPaymentFilters() {
         });
     }
 
-    // Store filter
+    // Store filter (works for both modes)
     const storeFilter = document.getElementById('pmt-mgmt-sales-store-filter');
     if (storeFilter) {
         storeFilter.addEventListener('change', (e) => {
@@ -3684,8 +3905,43 @@ function setupSalesPaymentFilters() {
         });
     }
 
-    console.log('[PmtMgmt] ✅ Sales payment filters setup');
+    // Refresh button
+    const refreshButton = document.getElementById('pmt-mgmt-sales-refresh');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+            const currentMode = getCurrentSalesFilterMode(); // Helper function
+            console.log(`[PmtMgmt] Manual refresh: ${currentMode} sales data`);
+            loadSalesPaymentsForMgmtTab(currentMode, { useCache: false }); // Force refresh
+        });
+    }
+
+    console.log('[PmtMgmt] ✅ Business-smart sales filters setup completed');
 }
+
+
+/**
+ * HELPER: Determine current sales filter mode
+ */
+function getCurrentSalesFilterMode() {
+    const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+    return collectionsFilter?.classList.contains('active') ? 'outstanding' : 'payments';
+}
+
+/**
+ * HELPER: Update active filter button state
+ */
+function updateSalesFilterActiveState(activeButton) {
+    document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
+        btn.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+        btn.classList.add('bg-white', 'border-gray-300');
+    });
+    
+    activeButton.classList.add('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+}
+
+
+
+
 
 
 /**
