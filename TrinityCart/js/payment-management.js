@@ -1155,7 +1155,9 @@ const pmtMgmtSalesGridOptions = {
     
     // ✅ STABILITY: Fixed row height like other grids
     rowHeight: 60,
-    domLayout: 'normal',
+
+    suppressColumnVirtualisation: false,
+    suppressSizeToFit: true, 
     
     columnDefs: [
         {
@@ -1168,6 +1170,8 @@ const pmtMgmtSalesGridOptions = {
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
+
+            minWidth: 100,
             
             cellStyle: { 
                 fontWeight: 'bold', 
