@@ -1680,8 +1680,11 @@ const pmtMgmtSalesGridOptions = {
         pmtMgmtSalesGridApi = params.api;
         console.log("[PmtMgmt] ✅ Business-Smart Sales INVOICES Grid ready for collections");
         
-        setTimeout(() => {
-            loadSalesPaymentsForMgmtTab('outstanding'); // ✅ Default to collection focus
+       setTimeout(() => {
+            console.log('[PmtMgmt] 🔄 Initial sales data load...');
+            loadSalesPaymentsForMgmtTab('outstanding').then(() => {
+                console.log('[PmtMgmt] ✅ Initial load completed - freshness indicator should be visible');
+            });
         }, 200);
     }
 };
@@ -3015,6 +3018,7 @@ function startCacheCountdown(gridId, cacheMinutes) {
 /**
  * BALANCED: Global refresh function for manual refresh buttons
  */
+
 window.refreshSpecificGrid = async function(gridId, gridType) {
     console.log(`[PmtMgmt] 🔄 Manual refresh requested for ${gridType} grid (${gridId})`);
     
@@ -3025,14 +3029,16 @@ window.refreshSpecificGrid = async function(gridId, gridType) {
         switch (gridType) {
             case 'supplier':
                 const currentSupplierFilter = getCurrentSupplierFilterMode();
-                console.log(`[PmtMgmt] 📤 Refreshing supplier grid in ${currentSupplierFilter} mode`);
+                console.log(`[PmtMgmt] 📤 Supplier refresh: Current mode = ${currentSupplierFilter}`);
                 ProgressToast.updateProgress(`Refreshing ${currentSupplierFilter} supplier data...`, 50);
                 await loadSupplierInvoicesForMgmtTab(currentSupplierFilter, { forceRefresh: true });
                 break;
                 
             case 'sales':
                 const currentSalesFilter = getCurrentSalesFilterMode();
-                console.log(`[PmtMgmt] 💳 Refreshing sales grid in ${currentSalesFilter} mode`);
+                console.log(`[PmtMgmt] 💳 Sales refresh: Current mode = ${currentSalesFilter}`);
+                console.log(`[PmtMgmt] 💳 About to call loadSalesPaymentsForMgmtTab('${currentSalesFilter}', { forceRefresh: true })`);
+                
                 ProgressToast.updateProgress(`Refreshing ${currentSalesFilter} sales data...`, 50);
                 await loadSalesPaymentsForMgmtTab(currentSalesFilter, { forceRefresh: true });
                 break;
@@ -3041,7 +3047,7 @@ window.refreshSpecificGrid = async function(gridId, gridType) {
                 throw new Error(`Unknown grid type: ${gridType}`);
         }
         
-        ProgressToast.updateProgress('Data refreshed successfully!', 100);
+        ProgressToast.updateProgress('Refresh completed!', 100);
         ProgressToast.showSuccess('Data refreshed successfully!');
         setTimeout(() => ProgressToast.hide(300), 800);
         
@@ -3050,14 +3056,6 @@ window.refreshSpecificGrid = async function(gridId, gridType) {
     } catch (error) {
         console.error(`[PmtMgmt] Manual refresh failed for ${gridType}:`, error);
         ProgressToast.showError('Refresh failed - please try again');
-        
-        setTimeout(() => {
-            showModal('error', 'Refresh Failed', 
-                `Could not refresh ${gridType} data.\n\n` +
-                `Error: ${error.message}\n\n` +
-                `Please try again or check your connection.`
-            );
-        }, 2000);
     }
 };
 
@@ -3854,7 +3852,9 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
                 updateSalesDataSummary(cached.metadata, cached.salesData, focusMode);
                 
                 // ✅ BALANCED: Add freshness indicator for cached data
-                addDataFreshnessIndicator('pmt-mgmt-sales-grid', cached.metadata.loadedAt, cacheMinutes);
+                setTimeout(() => {
+                    addDataFreshnessIndicator('pmt-mgmt-sales-grid', cached.metadata.loadedAt || 'Cached', cacheMinutes);
+                }, 300);
                 
                 return cached;
             }
@@ -4075,6 +4075,13 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
             totalReads: totalReads,
             loadedAt: new Date().toLocaleTimeString()
         }, salesData, focusMode);
+
+
+        setTimeout(() => {
+            addDataFreshnessIndicator('pmt-mgmt-sales-grid', new Date().toLocaleTimeString(), cacheMinutes);
+            console.log(`[PmtMgmt] ✅ Freshness indicator added for fresh ${focusMode} data`);
+        }, 500);
+
 
         // Auto-fit columns
         setTimeout(() => {
