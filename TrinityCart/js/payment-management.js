@@ -1146,7 +1146,7 @@ function calculateDaysWaiting(submittedDate) {
 
 
 const pmtMgmtSalesGridOptions = {
-    theme: 'alpine', // ✅ CONSISTENT: Same theme as other payment management grids
+    theme: 'alpine', // ✅ CONSISTENT: Same theme as other grids
     getRowId: params => params.data.id,
     
     pagination: true,
@@ -1162,9 +1162,7 @@ const pmtMgmtSalesGridOptions = {
             headerName: "Customer Name",
             width: 180,
             pinned: 'left',
-            field: "customerName",
             
-            // ✅ CONSISTENCY: Same filter setup
             filter: 'agTextColumnFilter',
             floatingFilter: true,
             
@@ -1178,11 +1176,16 @@ const pmtMgmtSalesGridOptions = {
                 alignItems: 'center',
                 whiteSpace: 'normal',
                 lineHeight: '1.4'
+            },
+            
+            // ✅ CORRECTED: Get customer name from invoice data
+            valueGetter: params => {
+                return params.data.customerInfo?.name || params.data.customerName || 'Unknown Customer';
             }
         },
         {
-            headerName: "Invoice Reference",
-            width: 160,
+            headerName: "Invoice ID",
+            width: 150,
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
@@ -1199,9 +1202,10 @@ const pmtMgmtSalesGridOptions = {
                 whiteSpace: 'normal',
                 lineHeight: '1.4'
             },
+            
+            // ✅ CORRECTED: Get invoice ID from sales invoice
             valueGetter: params => {
-                const invoiceId = params.data.invoiceId;
-                return invoiceId || 'Unknown Invoice';
+                return params.data.saleId || params.data.invoiceId || 'Unknown Invoice';
             },
             valueFormatter: params => {
                 const invoiceId = params.value || 'Unknown';
@@ -1211,6 +1215,7 @@ const pmtMgmtSalesGridOptions = {
         {
             headerName: "Store",
             width: 120,
+            field: "store",
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
@@ -1227,12 +1232,9 @@ const pmtMgmtSalesGridOptions = {
                 fontSize: '12px',
                 fontWeight: '500'
             },
-            valueGetter: params => {
-                // Get store from related invoice data if available
-                return params.data.store || 'Unknown Store';
-            },
+            
             cellRenderer: params => {
-                const store = params.value || 'Unknown';
+                const store = params.value || 'Unknown Store';
                 const storeConfig = {
                     'Church Store': { 
                         class: 'text-purple-700 bg-purple-100 border-purple-300',
@@ -1262,9 +1264,9 @@ const pmtMgmtSalesGridOptions = {
             }
         },
         {
-            headerName: "Payment Date",
+            headerName: "Invoice Date",
             width: 130,
-            field: "paymentDate",
+            field: "saleDate",
             
             filter: 'agDateColumnFilter',
             floatingFilter: true,
@@ -1286,9 +1288,33 @@ const pmtMgmtSalesGridOptions = {
             }
         },
         {
+            headerName: "Invoice Total",
+            width: 120,
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            // ✅ CORRECTED: Get total from invoice financials
+            valueGetter: params => {
+                return params.data.financials?.totalAmount || 0;
+            },
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellStyle: { 
+                color: '#374151',
+                fontWeight: '600',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
+        },
+        {
             headerName: "Amount Paid",
             width: 120,
-            field: "amountPaid",
+            field: "totalAmountPaid",
             
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
@@ -1298,7 +1324,7 @@ const pmtMgmtSalesGridOptions = {
             
             valueFormatter: params => formatCurrency(params.value || 0),
             cellStyle: { 
-                color: '#059669', // Green for inbound payments
+                color: '#059669', // Green for payments received
                 fontWeight: 'bold',
                 textAlign: 'right',
                 display: 'flex',
@@ -1307,54 +1333,122 @@ const pmtMgmtSalesGridOptions = {
             }
         },
         {
-            headerName: "Payment Mode",
+            headerName: "Balance Due",
             width: 120,
-            field: "paymentMode",
+            field: "balanceDue",
             
-            filter: 'agTextColumnFilter',
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellStyle: params => {
+                const balance = params.value || 0;
+                const baseStyle = {
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end'
+                };
+                
+                // Color based on outstanding amount and urgency
+                if (balance > 10000) return { ...baseStyle, color: '#dc2626' }; // High amount - red
+                if (balance > 5000) return { ...baseStyle, color: '#ea580c' };  // Medium amount - orange
+                if (balance > 0) return { ...baseStyle, color: '#dc2626' };     // Any outstanding - red
+                return { ...baseStyle, color: '#059669' };                     // Paid in full - green
+            }
+        },
+        {
+            headerName: "Days Outstanding",
+            width: 130,
+            
+            filter: 'agNumberColumnFilter',
             floatingFilter: true,
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
             cellStyle: { 
+                textAlign: 'center', 
+                fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
-                fontSize: '12px'
-            }
-        },
-        {
-            headerName: "Transaction Ref",
-            width: 140,
-            field: "transactionRef",
-            
-            filter: 'agTextColumnFilter',
-            floatingFilter: true,
-            
-            wrapHeaderText: true,
-            autoHeaderHeight: true,
-            
-            cellStyle: { 
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center'
+                justifyContent: 'center'
             },
-            valueFormatter: params => {
-                const ref = params.value || 'No Reference';
-                return ref.length > 15 ? ref.substring(0, 15) + '...' : ref;
+            
+            // ✅ CORRECTED: Calculate days from invoice date
+            valueGetter: params => {
+                const saleDate = params.data.saleDate?.toDate ? 
+                    params.data.saleDate.toDate() : 
+                    new Date(params.data.saleDate || Date.now());
+                const days = Math.ceil((new Date() - saleDate) / (1000 * 60 * 60 * 24));
+                return Math.max(0, days);
+            },
+            cellRenderer: params => {
+                const days = params.value || 0;
+                const balance = params.data.balanceDue || 0;
+                
+                let colorClass, urgencyText, urgencyIcon;
+                
+                // ✅ BUSINESS LOGIC: Collection urgency based on days + amount
+                if (balance === 0) {
+                    // Paid in full
+                    colorClass = 'text-green-700 bg-green-100 border-green-300';
+                    urgencyText = 'PAID';
+                    urgencyIcon = `<svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                   </svg>`;
+                } else if (days > 60 || (balance > 10000 && days > 30)) {
+                    // Critical collection issue
+                    colorClass = 'text-red-700 bg-red-100 border-red-300';
+                    urgencyText = 'CRITICAL';
+                    urgencyIcon = `<svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                   </svg>`;
+                } else if (days > 30 || balance > 8000) {
+                    // High priority collection
+                    colorClass = 'text-orange-700 bg-orange-100 border-orange-300';
+                    urgencyText = 'HIGH';
+                    urgencyIcon = `<svg class="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
+                } else if (days > 14 || balance > 3000) {
+                    // Medium priority
+                    colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
+                    urgencyText = 'MEDIUM';
+                    urgencyIcon = `<svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
+                } else {
+                    // Recent or low priority
+                    colorClass = 'text-blue-700 bg-blue-100 border-blue-300';
+                    urgencyText = 'RECENT';
+                    urgencyIcon = `<svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
+                }
+                
+                return `<div class="flex flex-col items-center justify-center h-full gap-1">
+                            <div class="font-bold text-sm">${days}d</div>
+                            <div class="flex items-center space-x-1 text-xs px-2 py-1 rounded-full border ${colorClass}">
+                                ${urgencyIcon}
+                                <span>${urgencyText}</span>
+                            </div>
+                        </div>`;
             }
         },
         {
-            field: "status",
-            headerName: "Status",
-            width: 120,
+            headerName: "Payment Status",
+            width: 140,
+            field: "paymentStatus",
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
             filterParams: {
-                values: ['Verified', 'Voided']
+                values: ['Unpaid', 'Partially Paid', 'Paid']
             },
             
             wrapHeaderText: true,
@@ -1367,36 +1461,36 @@ const pmtMgmtSalesGridOptions = {
             },
             
             cellRenderer: params => {
-                const status = params.value || 'Verified';
+                const status = params.value || 'Unknown';
                 
                 const statusConfig = {
-                    'Verified': { 
+                    'Paid': { 
                         class: 'bg-green-100 text-green-800 border-green-300', 
                         icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                </svg>`, 
-                        text: 'VERIFIED' 
+                        text: 'PAID' 
                     },
-                    'Voided': { 
-                        class: 'bg-gray-100 text-gray-800 border-gray-300', 
-                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                               </svg>`, 
-                        text: 'VOIDED' 
-                    },
-                    'Pending': { 
+                    'Partially Paid': { 
                         class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
                         icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                </svg>`, 
-                        text: 'PENDING' 
+                        text: 'PARTIAL' 
+                    },
+                    'Unpaid': { 
+                        class: 'bg-red-100 text-red-800 border-red-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/>
+                               </svg>`, 
+                        text: 'UNPAID' 
                     }
                 };
                 
                 const config = statusConfig[status] || { 
-                    class: 'bg-blue-100 text-blue-800 border-blue-300', 
+                    class: 'bg-gray-100 text-gray-800 border-gray-300', 
                     icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                            </svg>`, 
                     text: status.toUpperCase() 
                 };
@@ -1408,8 +1502,49 @@ const pmtMgmtSalesGridOptions = {
             }
         },
         {
+            headerName: "Customer Contact",
+            width: 200,
+            
+            filter: 'agTextColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: {
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '11px'
+            },
+            
+            // ✅ COLLECTION CONTEXT: Customer contact information
+            cellRenderer: params => {
+                const customerInfo = params.data.customerInfo || {};
+                const email = customerInfo.email || 'No email';
+                const phone = customerInfo.phone || 'No phone';
+                
+                return `
+                    <div class="py-1">
+                        <div class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer" 
+                             onclick="navigator.clipboard.writeText('${email}')" 
+                             title="Click to copy email">
+                            📧 ${email.length > 20 ? email.substring(0, 17) + '...' : email}
+                        </div>
+                        <div class="text-xs text-green-600 hover:text-green-800 cursor-pointer" 
+                             onclick="navigator.clipboard.writeText('${phone}')" 
+                             title="Click to copy phone">
+                            📞 ${phone}
+                        </div>
+                    </div>
+                `;
+            },
+            
+            // Use email for filtering/sorting
+            valueGetter: params => params.data.customerInfo?.email || 'No email'
+        },
+        {
             headerName: "Actions",
-            width: 180,
+            width: 250, // ✅ WIDER: Room for multiple customer collection actions
             
             filter: false,
             floatingFilter: false,
@@ -1427,7 +1562,9 @@ const pmtMgmtSalesGridOptions = {
             },
             
             cellRenderer: params => {
-                const status = params.data.status || 'Verified';
+                const paymentStatus = params.data.paymentStatus || 'Unknown';
+                const balanceDue = params.data.balanceDue || 0;
+                const daysOverdue = params.value || 0; // From Days Outstanding column
                 const currentUser = appState.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
@@ -1438,55 +1575,55 @@ const pmtMgmtSalesGridOptions = {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
                 
-                if (status === 'Verified') {
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-void-sales-payment bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="Void Payment">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                    <span>Void</span>
-                                </button>
-                                <button class="pmt-mgmt-view-sales-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Payment Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    <span>View</span>
-                                </button>
-                                <button class="pmt-mgmt-view-sales-invoice bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                      data-id="${params.data.invoiceId}" 
-                                      title="View Related Invoice">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    <span>Invoice</span>
-                                </button>
-                            </div>`;
-                } else if (status === 'Voided') {
-                    return `<button class="pmt-mgmt-view-sales-payment bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
-                                  data-id="${params.data.id}" 
-                                  title="View Voided Payment Details">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                <span>View Details</span>
-                            </button>`;
+                let buttons = '';
+                
+                if (paymentStatus === 'Paid') {
+                    // ✅ PAID INVOICES: View and reference actions
+                    buttons = `<div class="flex space-x-1">
+                                    <button class="pmt-mgmt-view-sales-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="View Invoice Details">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <span>View Details</span>
+                                    </button>
+                                    <button class="pmt-mgmt-manage-sales-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="Manage Payment History">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                        </svg>
+                                        <span>Payments</span>
+                                    </button>
+                                </div>`;
                 } else {
-                    return `<button class="pmt-mgmt-view-sales-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                  data-id="${params.data.id}" 
-                                  title="View Payment Details">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                <span>View Details</span>
-                            </button>`;
+                    // ✅ OUTSTANDING INVOICES: Collection actions
+                    const urgencyClass = daysOverdue > 45 ? 'animate-pulse' : '';
+                    
+                    buttons = `<div class="flex space-x-1">
+                                    <button class="pmt-mgmt-collect-customer-payment bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700 font-semibold ${urgencyClass} flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="Collect Payment for ${formatCurrency(balanceDue)}">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                        </svg>
+                                        <span>COLLECT ${formatCurrency(balanceDue)}</span>
+                                    </button>
+                                    <button class="pmt-mgmt-view-sales-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="View Invoice Details">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <span>View</span>
+                                    </button>
+                                </div>`;
                 }
+                
+                return buttons;
             }
         }
     ],
@@ -1512,14 +1649,13 @@ const pmtMgmtSalesGridOptions = {
    
     onGridReady: (params) => {
         pmtMgmtSalesGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Business-Smart Sales Payments Grid ready with SVG icons");
+        console.log("[PmtMgmt] ✅ Business-Smart Sales INVOICES Grid ready for collections");
         
         setTimeout(() => {
-            loadSalesPaymentsForMgmtTab();
+            loadSalesPaymentsForMgmtTab('outstanding'); // ✅ Default to collection focus
         }, 200);
     }
 };
-
 
 /**
  * ENHANCED: Show supplier payment modal with payment management integration
@@ -3341,7 +3477,7 @@ function initializeTeamPaymentsTab() {
  * Initializes sales payments tab (placeholder)
  */
 function initializeSalesPaymentsTab() {
-    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with dedicated grid...');
+    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with INVOICE-FOCUSED approach...');
 
     const gridContainer = document.getElementById('pmt-mgmt-sales-grid');
     if (!gridContainer) {
@@ -3350,27 +3486,36 @@ function initializeSalesPaymentsTab() {
     }
 
     if (!pmtMgmtSalesGridApi) {
-        pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions); // Local config
-        console.log('[PmtMgmt] ✅ Dedicated sales payments grid created');
+        pmtMgmtSalesGridApi = createGrid(gridContainer, pmtMgmtSalesGridOptions);
+        console.log('[PmtMgmt] ✅ Sales invoices grid created');
     }
+
+    // ✅ BUSINESS DEFAULT: Load outstanding invoices (collection targets)
+    setTimeout(() => {
+        loadSalesPaymentsForMgmtTab('outstanding'); // Default to collection focus
+    }, 200);
 
     setupSalesPaymentFilters();
 }
 
 /**
- * ENHANCED: Load sales payment data with business intelligence and collection focus.
+ * CORRECTED: Load sales INVOICES for Payment Management (not payment transactions).
  * 
- * Loads sales data optimized for Payment Management operations including customer
- * collection management, payment audit, and void operations with comprehensive
- * business context for effective financial management.
+ * This function focuses on sales invoices to show what customers owe (outstanding)
+ * versus what has been fully collected (paid). This is the correct business view
+ * for customer collection management and sales revenue tracking.
  * 
- * @param {string} [focusMode='payments'] - 'payments' for audit, 'outstanding' for collections
- * @param {Object} [options={}] - Additional options for customization
+ * BUSINESS MODES:
+ * - 'outstanding': Unpaid/Partially Paid sales invoices (customers who owe money) 
+ * - 'paid': Fully paid sales invoices (successful collections for reference)
+ * 
+ * @param {string} [focusMode='outstanding'] - 'outstanding' or 'paid'
+ * @param {Object} [options={}] - Configuration options
  */
-async function loadSalesPaymentsForMgmtTab(focusMode = 'payments', options = {}) {
-    const { useCache = true, queryLimit = 50 } = options;
+async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
+    const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
     
-    console.log(`[PmtMgmt] 💳 Loading ENHANCED sales ${focusMode} data for management tab...`);
+    console.log(`[PmtMgmt] 💳 Loading sales INVOICES for ${focusMode} management...`);
 
     if (!pmtMgmtSalesGridApi) {
         console.error('[PmtMgmt] ❌ Sales grid API not available');
@@ -3378,35 +3523,37 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'payments', options = {})
     }
 
     try {
-        console.log('[PmtMgmt] ✅ Sales grid API available, loading enhanced data...');
         pmtMgmtSalesGridApi.setGridOption('loading', true);
 
         // ===================================================================
-        // BUSINESS-FOCUSED DATA LOADING WITH CACHING
+        // CACHE CHECK FOR PERFORMANCE
         // ===================================================================
         
-        const cacheKey = `sales_${focusMode}_enhanced`;
+        const cacheKey = `sales_invoices_${focusMode}`;
         
-        if (useCache) {
+        if (useCache && !forceRefresh) {
             const cached = getCachedPaymentMetrics(cacheKey, 5); // 5-minute cache
-            if (cached && cached.salesData) {
-                console.log(`[PmtMgmt] ✅ Using cached sales ${focusMode} data - 0 Firestore reads`);
-                pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesData);
+            if (cached && cached.invoices) {
+                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} sales invoices - 0 Firestore reads`);
+                pmtMgmtSalesGridApi.setGridOption('rowData', cached.invoices);
                 pmtMgmtSalesGridApi.setGridOption('loading', false);
-                updateSalesPaymentsSummary(cached.metadata, cached.salesData, focusMode);
-                return;
+                updateSalesInvoicesSummary(cached.metadata, cached.invoices);
+                return cached;
             }
         }
 
         const db = firebase.firestore();
         let totalReads = 0;
-        let salesData = [];
+        let salesInvoices = [];
 
+        // ===================================================================
+        // BUSINESS-FOCUSED QUERIES: SALES INVOICES (NOT PAYMENTS)
+        // ===================================================================
+        
         if (focusMode === 'outstanding') {
-            // ===================================================================
-            // BUSINESS FOCUS: Outstanding Sales Invoices (Collection Targets)
-            // ===================================================================
+            // ✅ COLLECTION FOCUS: Outstanding customer balances
             console.log('[PmtMgmt] 🎯 COLLECTION FOCUS: Loading outstanding sales invoices...');
+            console.log('[PmtMgmt] Query collection:', SALES_COLLECTION_PATH);
             
             const outstandingSalesQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
@@ -3416,141 +3563,222 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'payments', options = {})
             const snapshot = await outstandingSalesQuery.get();
             totalReads = snapshot.size;
 
-            console.log(`[PmtMgmt] Outstanding sales snapshot size: ${snapshot.size}`);
+            console.log(`[PmtMgmt] Outstanding sales invoices snapshot size: ${snapshot.size}`);
 
-            salesData = snapshot.docs.map(doc => {
+            salesInvoices = snapshot.docs.map(doc => {
                 const data = doc.data();
                 const daysOverdue = calculateDaysOverdue(data.saleDate);
                 
-                // ✅ ENHANCED: Add business intelligence for collections
-                const enhancedSale = {
+                return {
                     id: doc.id,
                     ...data,
                     
                     // ✅ COLLECTION INTELLIGENCE
                     daysOverdue: daysOverdue,
                     isOverdue: daysOverdue > 30,
-                    collectionPriority: calculateCustomerCollectionPriority(data, daysOverdue),
+                    collectionUrgency: calculateCollectionUrgency(data.balanceDue || 0, daysOverdue),
                     
-                    // ✅ CUSTOMER CONTEXT (for follow-up)
+                    // ✅ CUSTOMER CONTEXT (for collections)
                     customerName: data.customerInfo?.name || 'Unknown Customer',
                     customerEmail: data.customerInfo?.email || 'No Email',
                     customerPhone: data.customerInfo?.phone || 'No Phone',
                     
-                    // ✅ UI FORMATTING
+                    // ✅ BUSINESS CONTEXT
+                    invoiceReference: data.saleId || doc.id,
+                    manualVoucherNumber: data.manualVoucherNumber || 'No Voucher',
+                    store: data.store || 'Unknown Store',
+                    
+                    // ✅ FINANCIAL CONTEXT
                     formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedBalance: formatCurrency(data.balanceDue || 0),
                     formattedAmountPaid: formatCurrency(data.totalAmountPaid || 0),
                     
-                    // ✅ ACTION CONTEXT
-                    followUpRequired: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
-                    contactMethod: data.customerInfo?.phone ? 'phone' : 
-                                 data.customerInfo?.email ? 'email' : 'none',
-                    urgencyLevel: daysOverdue > 60 ? 'critical' : 
-                                 daysOverdue > 30 ? 'high' : 'medium'
+                    // ✅ COLLECTION ACTIONS
+                    needsFollowUp: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
+                    contactMethod: data.customerInfo?.phone ? 'Phone' : 
+                                 data.customerInfo?.email ? 'Email' : 'No Contact',
+                    paymentCompletionPercentage: calculatePaymentCompletion(data)
                 };
-
-                console.log(`[PmtMgmt] Outstanding invoice: ${enhancedSale.customerName} - ${enhancedSale.formattedBalance} (${daysOverdue} days)`);
-                return enhancedSale;
             });
 
-        } else {
-            // ===================================================================
-            // AUDIT FOCUS: Sales Payment Transactions (Your Current Approach)
-            // ===================================================================
-            console.log('[PmtMgmt] 📋 AUDIT FOCUS: Loading sales payment transactions...');
+        } else if (focusMode === 'paid') {
+            // ✅ REFERENCE FOCUS: Fully paid sales invoices
+            console.log('[PmtMgmt] ✅ REFERENCE FOCUS: Loading paid sales invoices...');
             
-            const salesPaymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH)
-                .orderBy('paymentDate', 'desc')
+            const paidSalesQuery = db.collection(SALES_COLLECTION_PATH)
+                .where('paymentStatus', '==', 'Paid')
+                .orderBy('saleDate', 'desc') // Recent paid first
                 .limit(queryLimit);
 
-            const snapshot = await salesPaymentsQuery.get();
+            const snapshot = await paidSalesQuery.get();
             totalReads = snapshot.size;
 
-            console.log(`[PmtMgmt] Sales payments snapshot size: ${snapshot.size}`);
+            console.log(`[PmtMgmt] Paid sales invoices snapshot size: ${snapshot.size}`);
 
-            salesData = snapshot.docs.map(doc => {
-                const data = { id: doc.id, ...doc.data() };
+            salesInvoices = snapshot.docs.map(doc => {
+                const data = doc.data();
                 
-                // ✅ ENHANCED: Add audit context and customer information
-                const enhancedPayment = {
+                return {
+                    id: doc.id,
                     ...data,
                     
-                    // ✅ CUSTOMER CONTEXT
-                    customerName: data.customerName || 'Unknown Customer',
+                    // ✅ REFERENCE CONTEXT
+                    customerName: data.customerInfo?.name || 'Unknown Customer',
+                    invoiceReference: data.saleId || doc.id,
+                    store: data.store || 'Unknown Store',
                     
-                    // ✅ INVOICE CONTEXT (get from related sales invoice if available)
-                    invoiceId: data.invoiceId || 'Unknown Invoice',
-                    store: data.store || 'Unknown Store', // May need to lookup from invoice
+                    // ✅ PAYMENT COMPLETION CONTEXT
+                    formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
+                    formattedAmountReceived: formatCurrency(data.totalAmountPaid || 0),
+                    paymentEfficiency: calculatePaymentEfficiency(data),
                     
-                    // ✅ UI FORMATTING
-                    formattedAmount: formatCurrency(data.amountPaid || 0),
-                    formattedDate: data.paymentDate?.toDate ? 
-                        data.paymentDate.toDate().toLocaleDateString() : 'Unknown Date',
-                    
-                    // ✅ AUDIT INTELLIGENCE
-                    canVoid: (data.status || data.paymentStatus) === 'Verified',
-                    isVoided: (data.status || data.paymentStatus) === 'Voided',
-                    hasReversals: data.amountPaid < 0 // Negative amounts are reversals
+                    // ✅ SUCCESS METRICS
+                    wasOverpayment: (data.totalAmountPaid || 0) > (data.financials?.totalAmount || 0),
+                    collectionSuccess: 'Fully Collected'
                 };
-
-                console.log(`[PmtMgmt] Sales payment: ${enhancedPayment.customerName} - ${enhancedPayment.formattedAmount} (${enhancedPayment.status || 'Unknown Status'})`);
-                return enhancedPayment;
             });
         }
 
         // ===================================================================
-        // UPDATE UI WITH ENHANCED DATA
+        // UPDATE UI WITH ENHANCED INVOICE DATA
         // ===================================================================
         
-        pmtMgmtSalesGridApi.setGridOption('rowData', salesData);
+        pmtMgmtSalesGridApi.setGridOption('rowData', salesInvoices);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
 
-        // ✅ CACHE: Store enhanced data for performance
+        // ✅ CACHE: Store enhanced data
         if (useCache && totalReads > 0) {
             cachePaymentMetrics(cacheKey, {
-                salesData: salesData,
+                invoices: salesInvoices,
                 metadata: {
                     mode: focusMode,
-                    totalRecords: salesData.length,
+                    totalRecords: salesInvoices.length,
                     totalReads: totalReads,
                     loadedAt: new Date().toISOString(),
-                    businessContext: focusMode === 'outstanding' ? 'Customer Collection Management' : 'Payment Transaction Audit'
+                    businessContext: focusMode === 'outstanding' ? 'Customer Collection Management' : 'Payment Success Reference'
                 }
             });
         }
 
         // ✅ BUSINESS INTELLIGENCE SUMMARY
-        updateSalesPaymentsSummary({
+        updateSalesInvoicesSummary({
             mode: focusMode,
-            totalRecords: salesData.length,
+            totalRecords: salesInvoices.length,
             totalReads: totalReads
-        }, salesData, focusMode);
+        }, salesInvoices);
 
-        // Auto-fit columns after data load
+        // Auto-fit columns
         setTimeout(() => {
             if (pmtMgmtSalesGridApi) {
                 pmtMgmtSalesGridApi.sizeColumnsToFit();
             }
         }, 200);
 
-        console.log(`[PmtMgmt] ✅ Enhanced sales ${focusMode} data loaded: ${salesData.length} records (${totalReads} reads)`);
+        console.log(`[PmtMgmt] ✅ Sales invoices (${focusMode}) loaded: ${salesInvoices.length} records (${totalReads} reads)`);
+
+        return { invoices: salesInvoices, metadata: { totalReads, mode: focusMode } };
 
     } catch (error) {
-        console.error(`[PmtMgmt] ❌ Error loading enhanced sales ${focusMode} data:`, error);
+        console.error(`[PmtMgmt] ❌ Error loading sales invoices (${focusMode}):`, error);
         
         if (pmtMgmtSalesGridApi) {
             pmtMgmtSalesGridApi.setGridOption('loading', false);
             pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
         
-        showModal('error', `Sales ${focusMode === 'outstanding' ? 'Invoices' : 'Payments'} Loading Failed`,
-            `Could not load sales ${focusMode} data for Payment Management.\n\n` +
+        showModal('error', `Sales ${focusMode === 'outstanding' ? 'Collections' : 'History'} Loading Failed`,
+            `Could not load ${focusMode} sales invoices.\n\n` +
             `Error: ${error.message}\n\n` +
             `Please refresh and try again.`
         );
     }
 }
+
+
+/**
+ * BUSINESS LOGIC: Calculate collection urgency for outstanding invoices
+ */
+function calculateCollectionUrgency(balanceAmount, daysOverdue) {
+    if (balanceAmount > 15000 && daysOverdue > 60) return 'critical';
+    if (balanceAmount > 8000 || daysOverdue > 45) return 'high';
+    if (balanceAmount > 3000 || daysOverdue > 30) return 'medium';
+    return 'low';
+}
+
+/**
+ * HELPER: Calculate payment completion percentage
+ */
+function calculatePaymentCompletion(invoiceData) {
+    const totalAmount = invoiceData.financials?.totalAmount || 0;
+    const amountPaid = invoiceData.totalAmountPaid || 0;
+    
+    if (totalAmount === 0) return 0;
+    return Math.round((amountPaid / totalAmount) * 100);
+}
+
+/**
+ * HELPER: Calculate payment collection efficiency
+ */
+function calculatePaymentEfficiency(invoiceData) {
+    const saleDate = invoiceData.saleDate?.toDate ? invoiceData.saleDate.toDate() : new Date();
+    const lastPaymentDate = invoiceData.financials?.lastPaymentDate?.toDate ? 
+        invoiceData.financials.lastPaymentDate.toDate() : saleDate;
+    
+    const daysToCollection = Math.ceil((lastPaymentDate - saleDate) / (1000 * 60 * 60 * 24));
+    
+    if (daysToCollection === 0) return 'Immediate';
+    if (daysToCollection <= 7) return 'Fast';
+    if (daysToCollection <= 30) return 'Normal';
+    return 'Slow';
+}
+
+/**
+ * HELPER: Update sales invoices summary
+ */
+function updateSalesInvoicesSummary(metadata, invoices) {
+    console.log(`[PmtMgmt] 💳 SALES INVOICES ${metadata.mode.toUpperCase()} SUMMARY:`);
+    
+    if (metadata.mode === 'outstanding' && invoices.length > 0) {
+        // Collection management summary
+        const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
+        const overdueCount = invoices.filter(inv => inv.isOverdue).length;
+        const criticalCount = invoices.filter(inv => inv.collectionUrgency === 'critical').length;
+        const highPriorityCount = invoices.filter(inv => inv.collectionUrgency === 'high').length;
+        
+        console.log(`  💰 Total Outstanding: ${formatCurrency(totalOutstanding)}`);
+        console.log(`  ⚠️ Overdue Invoices: ${overdueCount}`);
+        console.log(`  🚨 Critical Collections: ${criticalCount}`);
+        console.log(`  📞 High Priority Follow-up: ${highPriorityCount}`);
+        
+        // Store breakdown
+        const storeBreakdown = {};
+        invoices.forEach(inv => {
+            const store = inv.store || 'Unknown';
+            if (!storeBreakdown[store]) {
+                storeBreakdown[store] = { count: 0, amount: 0 };
+            }
+            storeBreakdown[store].count += 1;
+            storeBreakdown[store].amount += (inv.balanceDue || 0);
+        });
+        
+        Object.entries(storeBreakdown).forEach(([store, data]) => {
+            console.log(`  🏪 ${store}: ${data.count} invoices, ${formatCurrency(data.amount)} outstanding`);
+        });
+        
+    } else if (metadata.mode === 'paid' && invoices.length > 0) {
+        // Payment success summary
+        const totalCollected = invoices.reduce((sum, inv) => sum + (inv.financials?.totalAmount || 0), 0);
+        const averageCollection = invoices.length > 0 ? totalCollected / invoices.length : 0;
+        
+        console.log(`  ✅ Total Collected: ${formatCurrency(totalCollected)}`);
+        console.log(`  📊 Average Invoice: ${formatCurrency(averageCollection)}`);
+        console.log(`  🎯 Collection Success Rate: 100% (all paid invoices)`);
+    }
+    
+    console.log(`  📋 Total Records: ${invoices.length}`);
+    console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
+}
+
 
 
 /**
