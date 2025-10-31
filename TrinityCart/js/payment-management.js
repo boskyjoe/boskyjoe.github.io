@@ -4952,20 +4952,22 @@ function updateSupplierFilterActiveState(activeButton) {
  * Sets up filter listeners for team payments tab
  */
 function setupTeamPaymentFilters() {
-        
     console.log('[PmtMgmt] Setting up OUTSTANDING vs VERIFIED team payment filters...');
-
-    // ✅ OUTSTANDING FILTER: Verification workflow focus
-    const outstandingFilter = document.getElementById('pmt-mgmt-team-filter-pending');
+    
+    // ✅ OUTSTANDING FILTER: Pending verification focus
+    const outstandingFilter = document.getElementById('pmt-mgmt-team-filter-outstanding');
     if (outstandingFilter) {
         outstandingFilter.addEventListener('click', () => {
-            console.log('[PmtMgmt] 👥 Outstanding team payments filter clicked');
+            console.log('[PmtMgmt] ⏳ Outstanding team payments filter clicked');
             updateTeamFilterActiveState(outstandingFilter);
             loadTeamPaymentsForMgmtTab('outstanding');
         });
+        console.log('[PmtMgmt] ✅ Outstanding team filter listener added');
+    } else {
+        console.error('[PmtMgmt] ❌ Outstanding team filter not found');
     }
     
-    // ✅ VERIFIED FILTER: Reference and audit focus  
+    // ✅ VERIFIED FILTER: Reference and success tracking
     const verifiedFilter = document.getElementById('pmt-mgmt-team-filter-verified');
     if (verifiedFilter) {
         verifiedFilter.addEventListener('click', () => {
@@ -4973,16 +4975,9 @@ function setupTeamPaymentFilters() {
             updateTeamFilterActiveState(verifiedFilter);
             loadTeamPaymentsForMgmtTab('verified');
         });
-    }
-
-    // Team search
-    const searchInput = document.getElementById('pmt-mgmt-team-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            if (pmtMgmtTeamGridApi) {
-                pmtMgmtTeamGridApi.setQuickFilter(e.target.value);
-            }
-        });
+        console.log('[PmtMgmt] ✅ Verified team filter listener added');
+    } else {
+        console.error('[PmtMgmt] ❌ Verified team filter not found');
     }
 
     // Team name filter dropdown
@@ -4990,14 +4985,18 @@ function setupTeamPaymentFilters() {
     if (teamFilter) {
         // Populate with team names from masterData
         teamFilter.innerHTML = '<option value="">All Teams</option>';
-        masterData.teams.forEach(team => {
-            const option = document.createElement('option');
-            option.value = team.teamName;
-            option.textContent = team.teamName;
-            teamFilter.appendChild(option);
-        });
+        if (masterData.teams && masterData.teams.length > 0) {
+            masterData.teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.teamName;
+                option.textContent = team.teamName;
+                teamFilter.appendChild(option);
+            });
+            console.log(`[PmtMgmt] ✅ Team filter populated with ${masterData.teams.length} teams`);
+        }
 
         teamFilter.addEventListener('change', (e) => {
+            console.log('[PmtMgmt] Team name filter changed:', e.target.value);
             if (pmtMgmtTeamGridApi) {
                 const filterValue = e.target.value;
                 if (filterValue) {
@@ -5011,16 +5010,38 @@ function setupTeamPaymentFilters() {
         });
     }
 
-    console.log('[PmtMgmt] ✅ Team payment filters setup');
-}
+    // Search functionality
+    const searchInput = document.getElementById('pmt-mgmt-team-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (pmtMgmtTeamGridApi) {
+                pmtMgmtTeamGridApi.setQuickFilter(e.target.value);
+            }
+        });
+    }
 
+    // ✅ REFRESH BUTTON: Use existing refreshSpecificGrid function
+    const refreshButton = document.getElementById('pmt-mgmt-team-refresh');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+            console.log(`[PmtMgmt] Manual team refresh using refreshSpecificGrid`);
+            refreshSpecificGrid('pmt-mgmt-team-grid', 'team');
+        });
+    }
+
+    console.log('[PmtMgmt] ✅ Team payment filters setup with Outstanding/Verified focus');
+}
 
 /**
  * HELPER: Get current team filter mode
  */
 function getCurrentTeamFilterMode() {
-    const outstandingFilter = document.getElementById('pmt-mgmt-team-filter-pending');
+    const outstandingFilter = document.getElementById('pmt-mgmt-team-filter-outstanding');
     const verifiedFilter = document.getElementById('pmt-mgmt-team-filter-verified');
+    
+    console.log('[PmtMgmt] 🔍 Checking current team filter mode:');
+    console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
+    console.log('  Verified active:', verifiedFilter?.classList.contains('active'));
     
     if (verifiedFilter?.classList.contains('active')) {
         return 'verified';
@@ -5028,6 +5049,7 @@ function getCurrentTeamFilterMode() {
         return 'outstanding'; // Default
     }
 }
+
 
 
 
@@ -5064,11 +5086,28 @@ function applyTeamPaymentFilter(filterType) {
  * Updates active state for team filter buttons
  */
 function updateTeamFilterActiveState(activeButton) {
+    console.log('[PmtMgmt] 🎨 Updating team filter state for button:', activeButton.id);
+    
+    // Remove active from all team filters
     document.querySelectorAll('.pmt-mgmt-team-filter').forEach(btn => {
-        btn.classList.remove('active');
+        btn.classList.remove('active', 'bg-yellow-100', 'text-yellow-800', 'border-yellow-300', 'bg-green-100', 'text-green-800', 'border-green-300', 'font-semibold');
+        btn.classList.add('bg-white', 'border-gray-300');
     });
-    activeButton.classList.add('active');
+    
+    // Add active state to clicked button
+    activeButton.classList.remove('bg-white', 'border-gray-300');
+    activeButton.classList.add('active', 'font-semibold');
+    
+    if (activeButton.id.includes('outstanding')) {
+        activeButton.classList.add('bg-yellow-100', 'text-yellow-800', 'border-yellow-300');
+    } else {
+        activeButton.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+    }
+    
+    console.log('[PmtMgmt] ✅ Team filter state updated');
 }
+
+
 
 /**
  * Sets up filter listeners for sales payments tab
