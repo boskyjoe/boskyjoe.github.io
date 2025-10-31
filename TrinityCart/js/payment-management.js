@@ -1289,7 +1289,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Invoice Total",
-            width: 120,
+            width: 200,
             
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
@@ -1313,7 +1313,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Amount Paid",
-            width: 120,
+            width: 200,
             field: "totalAmountPaid",
             
             filter: 'agNumberColumnFilter',
@@ -1334,7 +1334,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Balance Due",
-            width: 120,
+            width: 200,
             field: "balanceDue",
             
             filter: 'agNumberColumnFilter',
