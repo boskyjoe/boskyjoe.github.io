@@ -3540,7 +3540,7 @@ function initializeSalesPaymentsTab() {
     setTimeout(() => {
         // Set Collections filter as active
         const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-        const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+        const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-paid');
         
         if (collectionsFilter && paymentsFilter) {
             // Remove active from payments filter
@@ -4373,7 +4373,7 @@ function setupSalesPaymentFilters() {
  */
 function getCurrentSalesFilterMode() {
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-payments'); // ✅ Use actual HTML ID
+    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-paid'); // ✅ Use actual HTML ID
     
     console.log('[PmtMgmt] 🔍 Checking current filter mode:');
     console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
