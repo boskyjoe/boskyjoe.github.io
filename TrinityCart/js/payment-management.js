@@ -1549,7 +1549,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 250, // ✅ WIDER: Room for multiple customer collection actions
+            width: 250,
             
             filter: false,
             floatingFilter: false,
@@ -1569,9 +1569,17 @@ const pmtMgmtSalesGridOptions = {
             cellRenderer: params => {
                 const paymentStatus = params.data.paymentStatus || 'Unknown';
                 const balanceDue = params.data.balanceDue || 0;
-                const daysOverdue = params.value || 0; // From Days Outstanding column
-                const currentUser = appState.currentUser;
+                const invoiceDocId = params.data.id; // ✅ CRITICAL: Use document ID
+                const invoiceSystemId = params.data.saleId || invoiceDocId; // ✅ Display ID
                 
+                console.log(`[Grid] Creating action buttons for invoice:`, {
+                    docId: invoiceDocId,
+                    systemId: invoiceSystemId,
+                    customer: params.data.customerInfo?.name,
+                    balanceDue: formatCurrency(balanceDue)
+                });
+                
+                const currentUser = appState.currentUser;
                 const hasFinancialPermissions = currentUser && (
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
@@ -1583,20 +1591,20 @@ const pmtMgmtSalesGridOptions = {
                 let buttons = '';
                 
                 if (paymentStatus === 'Paid') {
-                    // ✅ PAID INVOICES: View and reference actions
+                    // ✅ PAID INVOICES: View and payment management actions
                     buttons = `<div class="flex space-x-1">
                                     <button class="pmt-mgmt-view-sales-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="View Invoice Details">
+                                        data-id="${invoiceDocId}"
+                                        title="View Invoice Details (${invoiceSystemId})">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
                                         <span>View Details</span>
                                     </button>
                                     <button class="pmt-mgmt-manage-sales-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="Manage Payment History">
+                                        data-id="${invoiceDocId}"
+                                        title="Manage Payment History">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
                                         </svg>
@@ -1605,20 +1613,23 @@ const pmtMgmtSalesGridOptions = {
                                 </div>`;
                 } else {
                     // ✅ OUTSTANDING INVOICES: Collection actions
+                    const daysOverdue = calculateDaysOverdue(params.data.saleDate);
                     const urgencyClass = daysOverdue > 45 ? 'animate-pulse' : '';
                     
                     buttons = `<div class="flex space-x-1">
                                     <button class="pmt-mgmt-collect-customer-payment bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700 font-semibold ${urgencyClass} flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="Collect Payment for ${formatCurrency(balanceDue)}">
+                                        data-id="${invoiceDocId}"
+                                        data-customer-name="${params.data.customerInfo?.name || 'Unknown'}"
+                                        data-balance-due="${balanceDue}"
+                                        title="Collect Payment for ${formatCurrency(balanceDue)} from ${params.data.customerInfo?.name}">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                                         </svg>
                                         <span>COLLECT ${formatCurrency(balanceDue)}</span>
                                     </button>
                                     <button class="pmt-mgmt-view-sales-invoice bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="View Invoice Details">
+                                        data-id="${invoiceDocId}"
+                                        title="View Invoice Details (${invoiceSystemId})">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -1628,6 +1639,7 @@ const pmtMgmtSalesGridOptions = {
                                 </div>`;
                 }
                 
+                console.log(`[Grid] ✅ Generated action buttons for invoice ${invoiceDocId} (${paymentStatus})`);
                 return buttons;
             }
         }
