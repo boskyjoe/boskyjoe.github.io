@@ -3067,7 +3067,7 @@ window.debugSalesFilterMode = function() {
     console.log('[DEBUG] Current sales filter mode:', currentMode);
     
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-paid');
     
     console.log('[DEBUG] Filter states:');
     console.log('  Outstanding classes:', outstandingFilter?.className);
@@ -4695,7 +4695,7 @@ function setupSalesPaymentFilters() {
     }
     
     // Paid filter  
-    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-paid');
     if (paidFilter) {
         paidFilter.addEventListener('click', () => {
             console.log('[PmtMgmt] ✅ Paid filter clicked');
@@ -4752,7 +4752,7 @@ function setupSalesPaymentFilters() {
  */
 function getCurrentSalesFilterMode() {
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments'); // Your actual HTML ID
+    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-paid'); // Your actual HTML ID
     
     console.log('[PmtMgmt] 🔍 Detecting current sales filter mode:');
     console.log('  Outstanding element found:', !!outstandingFilter);
@@ -4760,7 +4760,7 @@ function getCurrentSalesFilterMode() {
     console.log('  Payments element found:', !!paymentsFilter);
     console.log('  Payments active:', paymentsFilter?.classList.contains('active'));
     
-    // ✅ CORRECTED: Check if "Paid" filter (pmt-mgmt-sales-filter-payments) is active
+    // ✅ CORRECTED: Check if "Paid" filter (pmt-mgmt-sales-filter-paid) is active
     if (paymentsFilter?.classList.contains('active')) {
         console.log('[PmtMgmt] ✅ Detected Paid mode (payments filter active)');
         return 'paid'; // ✅ Maps to 'paid' mode in your loadSalesPaymentsForMgmtTab function
