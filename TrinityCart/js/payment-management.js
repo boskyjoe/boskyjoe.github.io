@@ -1161,7 +1161,7 @@ const pmtMgmtSalesGridOptions = {
     columnDefs: [
         {
             headerName: "Customer Name",
-            width: 180,
+            width: 200,
             pinned: 'left',
             
             filter: 'agTextColumnFilter',
@@ -1169,8 +1169,6 @@ const pmtMgmtSalesGridOptions = {
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
-
-            minWidth: 100,
             
             cellStyle: { 
                 fontWeight: 'bold', 
@@ -1217,7 +1215,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Store",
-            width: 120,
+            width: 200,
             field: "store",
             
             filter: 'agTextColumnFilter',
@@ -1366,7 +1364,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Days Outstanding",
-            width: 130,
+            width: 200,
             
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
@@ -1450,7 +1448,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Payment Status",
-            width: 140,
+            width: 200,
             field: "paymentStatus",
             
             filter: 'agTextColumnFilter',
@@ -1511,7 +1509,7 @@ const pmtMgmtSalesGridOptions = {
         },
         {
             headerName: "Customer Contact",
-            width: 200,
+            width: 250,
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
