@@ -3016,31 +3016,64 @@ function startCacheCountdown(gridId, cacheMinutes) {
  * BALANCED: Global refresh function for manual refresh buttons
  */
 window.refreshSpecificGrid = async function(gridId, gridType) {
-    console.log(`[PmtMgmt] 🔄 Manual refresh requested for ${gridType} grid`);
+    console.log(`[PmtMgmt] 🔄 Manual refresh requested for ${gridType} grid (${gridId})`);
     
     try {
         ProgressToast.show(`Refreshing ${gridType.charAt(0).toUpperCase() + gridType.slice(1)} Data`, 'info');
-        ProgressToast.updateProgress('Loading fresh data...', 75);
+        ProgressToast.updateProgress('Detecting current filter mode...', 25);
         
         switch (gridType) {
             case 'supplier':
-                const currentSupplierFilter = getCurrentSupplierFilterMode(); // You'd need to implement this
+                const currentSupplierFilter = getCurrentSupplierFilterMode();
+                console.log(`[PmtMgmt] 📤 Refreshing supplier grid in ${currentSupplierFilter} mode`);
+                ProgressToast.updateProgress(`Refreshing ${currentSupplierFilter} supplier data...`, 50);
                 await loadSupplierInvoicesForMgmtTab(currentSupplierFilter, { forceRefresh: true });
                 break;
                 
             case 'sales':
                 const currentSalesFilter = getCurrentSalesFilterMode();
+                console.log(`[PmtMgmt] 💳 Refreshing sales grid in ${currentSalesFilter} mode`);
+                ProgressToast.updateProgress(`Refreshing ${currentSalesFilter} sales data...`, 50);
                 await loadSalesPaymentsForMgmtTab(currentSalesFilter, { forceRefresh: true });
                 break;
+                
+            default:
+                throw new Error(`Unknown grid type: ${gridType}`);
         }
         
+        ProgressToast.updateProgress('Data refreshed successfully!', 100);
         ProgressToast.showSuccess('Data refreshed successfully!');
         setTimeout(() => ProgressToast.hide(300), 800);
+        
+        console.log(`[PmtMgmt] ✅ Manual refresh completed for ${gridType} grid`);
         
     } catch (error) {
         console.error(`[PmtMgmt] Manual refresh failed for ${gridType}:`, error);
         ProgressToast.showError('Refresh failed - please try again');
+        
+        setTimeout(() => {
+            showModal('error', 'Refresh Failed', 
+                `Could not refresh ${gridType} data.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Please try again or check your connection.`
+            );
+        }, 2000);
     }
+};
+
+// ✅ TEMPORARY DEBUG: Add this to test filter mode detection
+window.debugSalesFilterMode = function() {
+    const currentMode = getCurrentSalesFilterMode();
+    console.log('[DEBUG] Current sales filter mode:', currentMode);
+    
+    const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+    
+    console.log('[DEBUG] Filter states:');
+    console.log('  Outstanding classes:', outstandingFilter?.className);
+    console.log('  Payments classes:', paymentsFilter?.className);
+    
+    alert(`Current Mode: ${currentMode}\n\nOutstanding Active: ${outstandingFilter?.classList.contains('active')}\nPayments Active: ${paymentsFilter?.classList.contains('active')}`);
 };
 
 
@@ -4650,27 +4683,28 @@ function updateTeamFilterActiveState(activeButton) {
 function setupSalesPaymentFilters() {
     console.log('[PmtMgmt] Setting up OUTSTANDING vs PAID sales filters...');
     
-    // ✅ OUTSTANDING FILTER: Collection management focus
+    // Outstanding filter
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
     if (outstandingFilter) {
         outstandingFilter.addEventListener('click', () => {
-            console.log('[PmtMgmt] 📋 Switching to Outstanding invoices view...');
+            console.log('[PmtMgmt] 📋 Outstanding filter clicked');
             
-            updateSalesFilterActiveState(outstandingFilter);
-            loadSalesPaymentsForMgmtTab('outstanding');
+            updateSalesFilterActiveState(outstandingFilter); // ✅ Update state FIRST
+            loadSalesPaymentsForMgmtTab('outstanding');        // ✅ Then load data
         });
     }
     
-    // ✅ PAID FILTER: Success analysis and store grouping
-    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-paid');
+    // Paid filter  
+    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
     if (paidFilter) {
         paidFilter.addEventListener('click', () => {
-            console.log('[PmtMgmt] ✅ Switching to Paid invoices view with store grouping...');
+            console.log('[PmtMgmt] ✅ Paid filter clicked');
             
-            updateSalesFilterActiveState(paidFilter);
-            loadSalesPaymentsForMgmtTab('paid');
+            updateSalesFilterActiveState(paidFilter);    // ✅ Update state FIRST
+            loadSalesPaymentsForMgmtTab('paid');          // ✅ Then load paid data
         });
     }
+
 
     // Search functionality (works for both modes)
     const searchInput = document.getElementById('pmt-mgmt-sales-search');
@@ -4720,14 +4754,19 @@ function getCurrentSalesFilterMode() {
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
     const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments'); // Your actual HTML ID
     
-    console.log('[PmtMgmt] 🔍 Checking current sales filter mode:');
+    console.log('[PmtMgmt] 🔍 Detecting current sales filter mode:');
+    console.log('  Outstanding element found:', !!outstandingFilter);
     console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
+    console.log('  Payments element found:', !!paymentsFilter);
     console.log('  Payments active:', paymentsFilter?.classList.contains('active'));
     
+    // ✅ CORRECTED: Check if "Paid" filter (pmt-mgmt-sales-filter-payments) is active
     if (paymentsFilter?.classList.contains('active')) {
-        return 'paid'; // Maps to your 'paid' logic in loadSalesPaymentsForMgmtTab
+        console.log('[PmtMgmt] ✅ Detected Paid mode (payments filter active)');
+        return 'paid'; // ✅ Maps to 'paid' mode in your loadSalesPaymentsForMgmtTab function
     } else {
-        return 'outstanding'; // Default for sales
+        console.log('[PmtMgmt] ✅ Detected Outstanding mode (default)');
+        return 'outstanding'; // Default
     }
 }
 
@@ -4735,25 +4774,26 @@ function getCurrentSalesFilterMode() {
  * HELPER: Update active filter button state
  */
 function updateSalesFilterActiveState(activeButton) {
-    console.log('[PmtMgmt] Updating sales filter active state:', activeButton.id);
+    console.log('[PmtMgmt] 🎨 Updating sales filter state for button:', activeButton.id);
     
-    // Remove active from all sales filters
+    // Remove active from ALL sales filters
     document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300', 'font-semibold');
+        btn.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300', 'font-semibold');
         btn.classList.add('bg-white', 'border-gray-300');
+        console.log(`[PmtMgmt]   Removed active from: ${btn.id}`);
     });
     
-    // Add appropriate active style based on filter type
+    // Add active to clicked button with appropriate colors
     activeButton.classList.remove('bg-white', 'border-gray-300');
     activeButton.classList.add('active', 'font-semibold');
     
     if (activeButton.id.includes('outstanding')) {
         activeButton.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+        console.log('[PmtMgmt] ✅ Set Outstanding filter as active');
     } else {
         activeButton.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+        console.log('[PmtMgmt] ✅ Set Paid filter as active');
     }
-    
-    console.log('[PmtMgmt] ✅ Filter state updated for:', activeButton.id);
 }
 
 
