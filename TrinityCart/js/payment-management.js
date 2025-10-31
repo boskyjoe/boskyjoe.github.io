@@ -1156,7 +1156,6 @@ const pmtMgmtSalesGridOptions = {
     // ✅ STABILITY: Fixed row height like other grids
     rowHeight: 60,
 
-    suppressColumnVirtualisation: false,
     suppressSizeToFit: true, 
     
     columnDefs: [
