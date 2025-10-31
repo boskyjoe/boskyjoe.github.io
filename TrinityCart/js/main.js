@@ -6251,57 +6251,64 @@ async function handleSupplierPayOutstandingBalanceFromModal() {
 async function handlePmtMgmtCollectCustomerPayment(target) {
     console.log('[main.js] 💳 Collect customer payment handler called');
     
-    // ✅ USE: Working pattern from verification buttons
+    // ✅ FIX: Find the actual button element (not the span inside it)
     const actualTarget = arguments[0];
-    console.log('[main.js] 🔍 Using actualTarget:', actualTarget);
+    console.log('[main.js] 🔍 Raw target:', actualTarget);
+    console.log('[main.js] 🔍 Raw target tagName:', actualTarget?.tagName);
     
-    const invoiceId = actualTarget?.dataset?.id;
-    const customerName = actualTarget?.dataset?.customerName;
-    const balanceDue = actualTarget?.dataset?.balanceDue;
+    // ✅ CRITICAL: Find the button element that contains the data-id
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    console.log('[main.js] 🔍 Button element found:', buttonElement);
+    console.log('[main.js] 🔍 Button tagName:', buttonElement?.tagName);
+    console.log('[main.js] 🔍 Button classes:', buttonElement?.className);
+    console.log('[main.js] 🔍 Button dataset:', buttonElement?.dataset);
+    
+    const invoiceId = buttonElement?.dataset?.id;
+    const customerName = buttonElement?.dataset?.customerName;
+    const balanceDue = buttonElement?.dataset?.balanceDue;
     const user = appState.currentUser;
     
-    console.log('[main.js] 🔍 Extracted data:');
+    console.log('[main.js] 🔍 Extracted data from button:');
     console.log('  Invoice ID:', invoiceId);
     console.log('  Customer:', customerName);
     console.log('  Balance Due:', balanceDue);
     console.log('  User:', user?.email);
     
-    // ✅ DETAILED VALIDATION with specific error messages
     if (!user) {
-        console.error('[main.js] ❌ No user available');
         await showModal('error', 'Authentication Required', 'You must be logged in to collect payments.');
         return;
     }
     
     if (!invoiceId) {
-        console.error('[main.js] ❌ No invoice ID found in target dataset');
-        console.log('[main.js] 🔍 Target element HTML:', actualTarget?.outerHTML);
+        console.error('[main.js] ❌ No invoice ID found in button dataset');
+        console.log('[main.js] 🔍 Button HTML:', buttonElement?.outerHTML);
+        
         await showModal('error', 'Invoice ID Missing', 
-            'Could not find invoice ID for payment collection.\n\n' +
-            'This might be a button configuration issue. Please refresh the page and try again.'
+            'Could not find invoice ID in button data.\n\n' +
+            `Button found: ${buttonElement?.tagName}\n` +
+            `Dataset keys: ${Object.keys(buttonElement?.dataset || {}).join(', ')}\n\n` +
+            'This is a grid configuration issue. Please refresh and try again.'
         );
         return;
     }
     
-    console.log(`[main.js] ✅ Validation passed - proceeding with payment collection for invoice: ${invoiceId}`);
-    
+    console.log(`[main.js] ✅ Processing payment collection for invoice: ${invoiceId}`);
     
     try {
         ProgressToast.show('Loading Customer Invoice', 'info');
-        ProgressToast.updateProgress('Retrieving invoice details...', 50);
+        ProgressToast.updateProgress('Retrieving invoice details...', 60);
         
-        // ✅ GET: Sales invoice data (reuse existing function from api.js)
         const invoiceData = await getSalesInvoiceById(invoiceId);
         
         if (!invoiceData) {
             ProgressToast.hide(0);
-            await showModal('error', 'Invoice Not Found', 'Could not find the sales invoice. It may have been deleted.');
+            await showModal('error', 'Invoice Not Found', `Could not find sales invoice: ${invoiceId}`);
             return;
         }
         
-        const balanceDue = invoiceData.balanceDue || 0;
+        const actualBalanceDue = invoiceData.balanceDue || 0;
         
-        if (balanceDue <= 0) {
+        if (actualBalanceDue <= 0) {
             ProgressToast.hide(0);
             await showModal('info', 'Invoice Fully Paid', 
                 `This invoice has already been paid in full!\n\n` +
@@ -6312,33 +6319,26 @@ async function handlePmtMgmtCollectCustomerPayment(target) {
             return;
         }
         
-        console.log(`[main.js] ✅ Invoice balance confirmed: ${formatCurrency(balanceDue)} for ${invoiceData.customerInfo?.name}`);
+        ProgressToast.updateProgress('Opening payment collection modal...', 90);
         
-        ProgressToast.updateProgress('Opening payment collection interface...', 90);
-        
-        // ✅ REUSE: Your existing sales payment modal (from Sales Management)
         setTimeout(() => {
             ProgressToast.hide(300);
             
-            // Use your existing showRecordSalePaymentModal function
+            // ✅ OPEN: Customer payment collection modal
             showRecordSalePaymentModal(invoiceData);
             
-            console.log('[main.js] ✅ Opened customer payment collection modal');
+            console.log(`[main.js] ✅ Payment collection modal opened for ${invoiceData.customerInfo?.name} - ${formatCurrency(actualBalanceDue)}`);
         }, 500);
         
     } catch (error) {
-        console.error('[main.js] Error opening customer payment collection:', error);
-        
-        ProgressToast.showError(`Failed to open payment collection: ${error.message}`);
+        console.error('[main.js] Error in payment collection:', error);
+        ProgressToast.showError(`Payment collection failed: ${error.message}`);
         
         setTimeout(() => {
-            showModal('error', 'Payment Collection Error', 
-                `Could not open customer payment collection interface.\n\n` +
-                `Error: ${error.message}\n\n` +
-                `Please try:\n` +
-                `1. Refresh the Payment Management dashboard\n` +
-                `2. Select the customer invoice again\n` +
-                `3. Check your internet connection`
+            showModal('error', 'Payment Collection Error',
+                `Failed to open payment collection interface.\n\n` +
+                `Invoice ID: ${invoiceId}\n` +
+                `Error: ${error.message}`
             );
         }, 2000);
     }
@@ -6348,61 +6348,47 @@ async function handlePmtMgmtCollectCustomerPayment(target) {
  * ENHANCED: Handle view sales invoice details from Payment Management
  */
 async function handlePmtMgmtViewSalesInvoice(target) {
-    console.log('[main.js] 📋 DEBUG: View sales invoice called');
-    console.log('[main.js] 🔍 Target:', target);
+    console.log('[main.js] 📋 View sales invoice handler called');
     
+    // ✅ FIX: Find button element from any clicked child element
     const actualTarget = arguments[0];
-    const invoiceId = actualTarget?.dataset?.id;
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    
+    console.log('[main.js] 🔍 Button element for view:', buttonElement);
+    
+    const invoiceId = buttonElement?.dataset?.id;
     
     if (!invoiceId) {
-        await showModal('error', 'Missing Invoice ID', 'Could not find invoice ID for details view.');
+        await showModal('error', 'Invoice ID Missing', 'Could not find invoice ID for details view.');
         return;
     }
     
-    console.log(`[main.js] 📋 View sales invoice details: ${invoiceId}`);
+    console.log(`[main.js] 📋 Opening invoice details for: ${invoiceId}`);
     
     try {
         ProgressToast.show('Loading Invoice Details', 'info');
-        ProgressToast.updateProgress('Retrieving invoice and payment history...', 60);
         
-        // ✅ GET: Complete invoice data
         const invoiceData = await getSalesInvoiceById(invoiceId);
         
-        if (!invoiceData) {
-            ProgressToast.hide(0);
-            await showModal('error', 'Invoice Not Found', 'The requested sales invoice could not be found.');
-            return;
-        }
-        
-        ProgressToast.updateProgress('Opening invoice details...', 90);
-        
-        // ✅ REUSE: Your existing sales payment management modal
-        setTimeout(() => {
+        if (invoiceData) {
             ProgressToast.hide(300);
             
-            // Use your existing modal that shows invoice details + payment history
             showRecordSalePaymentModal(invoiceData);
             
-            // ✅ ENHANCEMENT: Switch to payment history tab by default for "view" action
+            // ✅ SWITCH: To payment history for view mode
             setTimeout(() => {
                 switchPaymentModalTab('tab-payment-history');
-                console.log('[main.js] ✅ Switched to payment history view for invoice details');
+                console.log('[main.js] ✅ Switched to payment history view');
             }, 500);
             
-        }, 500);
+        } else {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Not Found', 'Could not find the sales invoice details.');
+        }
         
     } catch (error) {
         console.error('[main.js] Error viewing sales invoice:', error);
-        
-        ProgressToast.showError(`Failed to load invoice details: ${error.message}`);
-        
-        setTimeout(() => {
-            showModal('error', 'Invoice Details Error', 
-                `Could not load sales invoice details.\n\n` +
-                `Invoice ID: ${invoiceId}\n` +
-                `Error: ${error.message}`
-            );
-        }, 2000);
+        ProgressToast.showError('Could not load invoice details');
     }
 }
 
