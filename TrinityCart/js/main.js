@@ -6249,15 +6249,44 @@ async function handleSupplierPayOutstandingBalanceFromModal() {
  * ENHANCED: Handle collect customer payment action from Payment Management
  */
 async function handlePmtMgmtCollectCustomerPayment(target) {
-    const invoiceId = target.dataset.id;
+    console.log('[main.js] 🔍 DEBUG: handlePmtMgmtCollectCustomerPayment called');
+    console.log('[main.js] 🔍 Target element:', target);
+    console.log('[main.js] 🔍 Target type:', typeof target);
+    console.log('[main.js] 🔍 Target tagName:', target?.tagName);
+    console.log('[main.js] 🔍 Target dataset:', target?.dataset);
+    
+    // ✅ DEBUG: Check if we're getting the target correctly
+    const actualTarget = arguments[0]; // Use the pattern that worked before
+    console.log('[main.js] 🔍 actualTarget:', actualTarget);
+    console.log('[main.js] 🔍 actualTarget dataset:', actualTarget?.dataset);
+    
+    const invoiceId = actualTarget?.dataset?.id;
     const user = appState.currentUser;
     
-    if (!user || !invoiceId) {
-        await showModal('error', 'Missing Information', 'Could not process payment collection request.');
+    console.log('[main.js] 🔍 Extracted data:');
+    console.log('  Invoice ID:', invoiceId);
+    console.log('  User:', user?.email);
+    console.log('  User role:', user?.role);
+    
+    // ✅ DETAILED VALIDATION with specific error messages
+    if (!user) {
+        console.error('[main.js] ❌ No user available');
+        await showModal('error', 'Authentication Required', 'You must be logged in to collect payments.');
         return;
     }
     
-    console.log(`[main.js] 💳 Collect customer payment for invoice: ${invoiceId}`);
+    if (!invoiceId) {
+        console.error('[main.js] ❌ No invoice ID found in target dataset');
+        console.log('[main.js] 🔍 Target element HTML:', actualTarget?.outerHTML);
+        await showModal('error', 'Invoice ID Missing', 
+            'Could not find invoice ID for payment collection.\n\n' +
+            'This might be a button configuration issue. Please refresh the page and try again.'
+        );
+        return;
+    }
+    
+    console.log(`[main.js] ✅ Validation passed - proceeding with payment collection for invoice: ${invoiceId}`);
+    
     
     try {
         ProgressToast.show('Loading Customer Invoice', 'info');
@@ -6321,7 +6350,11 @@ async function handlePmtMgmtCollectCustomerPayment(target) {
  * ENHANCED: Handle view sales invoice details from Payment Management
  */
 async function handlePmtMgmtViewSalesInvoice(target) {
-    const invoiceId = target.dataset.id;
+    console.log('[main.js] 📋 DEBUG: View sales invoice called');
+    console.log('[main.js] 🔍 Target:', target);
+    
+    const actualTarget = arguments[0];
+    const invoiceId = actualTarget?.dataset?.id;
     
     if (!invoiceId) {
         await showModal('error', 'Missing Invoice ID', 'Could not find invoice ID for details view.');
