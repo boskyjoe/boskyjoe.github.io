@@ -1595,7 +1595,7 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-view-supplier-invoice': async () => await handlePmtMgmtViewSupplierInvoice(target),
         '.pmt-mgmt-view-payments-history': async () => await handlePmtMgmtViewPaymentHistory(target),
 
-        '.pmt-mgmt-collect-customer-payment': async (target) => await handlePmtMgmtCollectCustomerPayment(target),
+        '.pmt-mgmt-collect-customer-payment': async () => await handlePmtMgmtCollectCustomerPayment(target),
         '.pmt-mgmt-view-sales-invoice': async (target) => await handlePmtMgmtViewSalesInvoice(target),
         '.pmt-mgmt-manage-sales-payments': async (target) => await handlePmtMgmtManageSalesPayments(target),
         '.pmt-mgmt-void-sales-payment': async (target) => await handlePmtMgmtVoidSalesPayment(target),
