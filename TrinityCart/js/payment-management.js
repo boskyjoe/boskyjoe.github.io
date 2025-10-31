@@ -3477,7 +3477,7 @@ function initializeTeamPaymentsTab() {
  * Initializes sales payments tab (placeholder)
  */
 function initializeSalesPaymentsTab() {
-    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with INVOICE-FOCUSED approach...');
+    console.log('[PmtMgmt] 💳 Initializing Sales Payments tab with COLLECTIONS-FOCUSED approach...');
 
     const gridContainer = document.getElementById('pmt-mgmt-sales-grid');
     if (!gridContainer) {
@@ -3490,10 +3490,28 @@ function initializeSalesPaymentsTab() {
         console.log('[PmtMgmt] ✅ Sales invoices grid created');
     }
 
-    // ✅ BUSINESS DEFAULT: Load outstanding invoices (collection targets)
+    // ✅ SET INITIAL FILTER STATE: Collections should be active
     setTimeout(() => {
-        loadSalesPaymentsForMgmtTab('outstanding'); // Default to collection focus
-    }, 200);
+        // Set Collections filter as active
+        const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+        const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
+        
+        if (collectionsFilter && paymentsFilter) {
+            // Remove active from payments filter
+            paymentsFilter.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+            paymentsFilter.classList.add('bg-white', 'border-gray-300');
+            
+            // Add active to collections filter  
+            collectionsFilter.classList.add('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+            collectionsFilter.classList.remove('bg-white', 'border-gray-300');
+            
+            console.log('[PmtMgmt] ✅ Set Collections filter as active by default');
+        }
+        
+        // Load outstanding invoices (matches the active filter)
+        loadSalesPaymentsForMgmtTab('outstanding');
+        
+    }, 300); // Slight delay to ensure DOM is ready
 
     setupSalesPaymentFilters();
 }
@@ -4088,12 +4106,13 @@ function updateTeamFilterActiveState(activeButton) {
 function setupSalesPaymentFilters() {
     console.log('[PmtMgmt] Setting up BUSINESS-SMART sales payment filters...');
     
-    // ✅ COLLECTIONS FILTER: Outstanding invoices for follow-up
+    // ✅ COLLECTIONS FILTER: Outstanding invoices (should be default active)
     const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
     if (collectionsFilter) {
         collectionsFilter.addEventListener('click', () => {
+            console.log('[PmtMgmt] Collections filter clicked');
             loadSalesPaymentsForMgmtTab('outstanding');
-            updateSalesFilterActiveState(collectionsFilter);
+            updateSalesFilterActiveState(collectionsFilter); // ✅ Update visual state
         });
     }
     
@@ -4101,8 +4120,9 @@ function setupSalesPaymentFilters() {
     const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
     if (paymentsFilter) {
         paymentsFilter.addEventListener('click', () => {
-            loadSalesPaymentsForMgmtTab('payments');
-            updateSalesFilterActiveState(paymentsFilter);
+            console.log('[PmtMgmt] Payments filter clicked');
+            loadSalesPaymentsForMgmtTab('payments'); // ✅ Future: Load payment transactions
+            updateSalesFilterActiveState(paymentsFilter); // ✅ Update visual state
         });
     }
 
@@ -4159,14 +4179,21 @@ function getCurrentSalesFilterMode() {
  * HELPER: Update active filter button state
  */
 function updateSalesFilterActiveState(activeButton) {
+    console.log('[PmtMgmt] Updating sales filter active state:', activeButton.id);
+    
+    // Remove active state from ALL sales filter buttons
     document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
         btn.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
         btn.classList.add('bg-white', 'border-gray-300');
+        console.log('[PmtMgmt] Removed active from:', btn.id);
     });
     
+    // Add active state to clicked button
+    activeButton.classList.remove('bg-white', 'border-gray-300');
     activeButton.classList.add('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+    
+    console.log('[PmtMgmt] ✅ Set active state on:', activeButton.id);
 }
-
 
 
 
