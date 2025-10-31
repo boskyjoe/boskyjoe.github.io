@@ -3643,7 +3643,7 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
             // ===================================================================
             console.log('[PmtMgmt] ✅ Loading PAID sales invoices for success analysis...');
 
-            onsole.log('[PmtMgmt] ✅ PAID MODE: Loading fully paid sales invoices...');
+            console.log('[PmtMgmt] ✅ PAID MODE: Loading fully paid sales invoices...');
             console.log('[PmtMgmt] Query collection:', SALES_COLLECTION_PATH);
             
             const paidQuery = db.collection(SALES_COLLECTION_PATH)
