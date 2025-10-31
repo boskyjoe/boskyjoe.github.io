@@ -1381,11 +1381,16 @@ const pmtMgmtSalesGridOptions = {
             
             // ✅ CORRECTED: Calculate days from invoice date
             valueGetter: params => {
-                const saleDate = params.data.saleDate?.toDate ? 
-                    params.data.saleDate.toDate() : 
-                    new Date(params.data.saleDate || Date.now());
-                const days = Math.ceil((new Date() - saleDate) / (1000 * 60 * 60 * 24));
-                return Math.max(0, days);
+                const processedSaleDate = params.data.saleDate; // This is now a proper Date object
+                
+                if (!processedSaleDate || !(processedSaleDate instanceof Date)) {
+                    return 0;
+                }
+                
+                const today = new Date();
+                const diffTime = today - processedSaleDate;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return Math.max(0, diffDays);
             },
             cellRenderer: params => {
                 const days = params.value || 0;
@@ -2469,7 +2474,34 @@ function calculateDaysOverdue(dueDate, currentDate = new Date()) {
     return Math.max(0, diffDays);
 }
 
-
+/**
+ * CORRECTED: Calculate days overdue from properly processed dates
+ */
+function calculateDaysOverdue(saleDate) {
+    if (!saleDate) return 0;
+    
+    try {
+        // Handle both processed Date objects and Firestore Timestamps
+        let saleDateObj;
+        
+        if (saleDate instanceof Date) {
+            saleDateObj = saleDate; // Already processed
+        } else if (saleDate.toDate && typeof saleDate.toDate === 'function') {
+            saleDateObj = saleDate.toDate(); // Firestore Timestamp
+        } else {
+            saleDateObj = new Date(saleDate); // String conversion
+        }
+        
+        const today = new Date();
+        const diffTime = today - saleDateObj;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+        
+    } catch (error) {
+        console.warn('[PmtMgmt] Error calculating days overdue:', error);
+        return 0;
+    }
+}
 
 /**
  * Determines payment priority based on amount, age, and status
@@ -3533,7 +3565,7 @@ function initializeSalesPaymentsTab() {
 async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
     const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
     
-    console.log(`[PmtMgmt] 💳 Loading sales INVOICES for ${focusMode} management...`);
+    console.log(`[PmtMgmt] 💳 Loading sales invoices for ${focusMode} management...`);
 
     if (!pmtMgmtSalesGridApi) {
         console.error('[PmtMgmt] ❌ Sales grid API not available');
@@ -3543,39 +3575,16 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
     try {
         pmtMgmtSalesGridApi.setGridOption('loading', true);
 
-        // ===================================================================
-        // CACHE CHECK FOR PERFORMANCE
-        // ===================================================================
-        
-        const cacheKey = `sales_invoices_${focusMode}`;
-        
-        if (useCache && !forceRefresh) {
-            const cached = getCachedPaymentMetrics(cacheKey, 5); // 5-minute cache
-            if (cached && cached.invoices) {
-                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} sales invoices - 0 Firestore reads`);
-                pmtMgmtSalesGridApi.setGridOption('rowData', cached.invoices);
-                pmtMgmtSalesGridApi.setGridOption('loading', false);
-                updateSalesInvoicesSummary(cached.metadata, cached.invoices);
-                return cached;
-            }
-        }
-
         const db = firebase.firestore();
         let totalReads = 0;
         let salesInvoices = [];
 
-        // ===================================================================
-        // BUSINESS-FOCUSED QUERIES: SALES INVOICES (NOT PAYMENTS)
-        // ===================================================================
-        
         if (focusMode === 'outstanding') {
-            // ✅ COLLECTION FOCUS: Outstanding customer balances
             console.log('[PmtMgmt] 🎯 COLLECTION FOCUS: Loading outstanding sales invoices...');
-            console.log('[PmtMgmt] Query collection:', SALES_COLLECTION_PATH);
             
             const outstandingSalesQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
-                .orderBy('saleDate', 'asc') // Oldest first for collection priority
+                .orderBy('saleDate', 'asc')
                 .limit(queryLimit);
 
             const snapshot = await outstandingSalesQuery.get();
@@ -3585,18 +3594,39 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
 
             salesInvoices = snapshot.docs.map(doc => {
                 const data = doc.data();
-                const daysOverdue = calculateDaysOverdue(data.saleDate);
+                
+                // ✅ FIX: ALWAYS process the date on initial load
+                let processedSaleDate = null;
+                try {
+                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
+                        processedSaleDate = data.saleDate.toDate(); // Convert Firestore Timestamp
+                    } else if (data.saleDate instanceof Date) {
+                        processedSaleDate = data.saleDate; // Already a Date
+                    } else if (data.saleDate) {
+                        processedSaleDate = new Date(data.saleDate); // Convert string
+                    } else {
+                        processedSaleDate = new Date(); // Fallback to current date
+                    }
+                } catch (dateError) {
+                    console.warn(`[PmtMgmt] Date processing error for invoice ${doc.id}:`, dateError);
+                    processedSaleDate = new Date(); // Safe fallback
+                }
+
+                const daysOverdue = calculateDaysOverdue(processedSaleDate);
                 
                 return {
                     id: doc.id,
                     ...data,
+                    
+                    // ✅ CRITICAL: Override saleDate with processed JavaScript Date
+                    saleDate: processedSaleDate, // This ensures AG-Grid gets a proper Date object
                     
                     // ✅ COLLECTION INTELLIGENCE
                     daysOverdue: daysOverdue,
                     isOverdue: daysOverdue > 30,
                     collectionUrgency: calculateCollectionUrgency(data.balanceDue || 0, daysOverdue),
                     
-                    // ✅ CUSTOMER CONTEXT (for collections)
+                    // ✅ CUSTOMER CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
                     customerEmail: data.customerInfo?.email || 'No Email',
                     customerPhone: data.customerInfo?.phone || 'No Phone',
@@ -3611,90 +3641,81 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
                     formattedBalance: formatCurrency(data.balanceDue || 0),
                     formattedAmountPaid: formatCurrency(data.totalAmountPaid || 0),
                     
-                    // ✅ COLLECTION ACTIONS
+                    // ✅ UI HELPERS
                     needsFollowUp: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
                     contactMethod: data.customerInfo?.phone ? 'Phone' : 
-                                 data.customerInfo?.email ? 'Email' : 'No Contact',
-                    paymentCompletionPercentage: calculatePaymentCompletion(data)
+                                 data.customerInfo?.email ? 'Email' : 'No Contact'
                 };
             });
 
         } else if (focusMode === 'paid') {
-            // ✅ REFERENCE FOCUS: Fully paid sales invoices
             console.log('[PmtMgmt] ✅ REFERENCE FOCUS: Loading paid sales invoices...');
             
             const paidSalesQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', '==', 'Paid')
-                .orderBy('saleDate', 'desc') // Recent paid first
+                .orderBy('saleDate', 'desc')
                 .limit(queryLimit);
 
             const snapshot = await paidSalesQuery.get();
             totalReads = snapshot.size;
 
-            console.log(`[PmtMgmt] Paid sales invoices snapshot size: ${snapshot.size}`);
-
             salesInvoices = snapshot.docs.map(doc => {
                 const data = doc.data();
+                
+                // ✅ FIX: Process date for paid invoices too
+                let processedSaleDate = null;
+                try {
+                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
+                        processedSaleDate = data.saleDate.toDate();
+                    } else if (data.saleDate instanceof Date) {
+                        processedSaleDate = data.saleDate;
+                    } else {
+                        processedSaleDate = new Date(data.saleDate || Date.now());
+                    }
+                } catch (dateError) {
+                    processedSaleDate = new Date();
+                }
                 
                 return {
                     id: doc.id,
                     ...data,
+                    
+                    // ✅ CRITICAL: Processed date
+                    saleDate: processedSaleDate,
                     
                     // ✅ REFERENCE CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
                     invoiceReference: data.saleId || doc.id,
                     store: data.store || 'Unknown Store',
                     
-                    // ✅ PAYMENT COMPLETION CONTEXT
+                    // ✅ SUCCESS METRICS
                     formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedAmountReceived: formatCurrency(data.totalAmountPaid || 0),
-                    paymentEfficiency: calculatePaymentEfficiency(data),
-                    
-                    // ✅ SUCCESS METRICS
-                    wasOverpayment: (data.totalAmountPaid || 0) > (data.financials?.totalAmount || 0),
                     collectionSuccess: 'Fully Collected'
                 };
             });
         }
 
-        // ===================================================================
-        // UPDATE UI WITH ENHANCED INVOICE DATA
-        // ===================================================================
-        
+        // ✅ IMPORTANT: Log processed data for verification
+        console.log('[PmtMgmt] ✅ Data processing completed:', {
+            mode: focusMode,
+            recordCount: salesInvoices.length,
+            firstRecordDate: salesInvoices[0]?.saleDate instanceof Date ? 'Valid Date' : 'Invalid Date',
+            sampleProcessedDate: salesInvoices[0]?.saleDate?.toLocaleDateString() || 'No date'
+        });
+
         pmtMgmtSalesGridApi.setGridOption('rowData', salesInvoices);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
 
-        // ✅ CACHE: Store enhanced data
-        if (useCache && totalReads > 0) {
-            cachePaymentMetrics(cacheKey, {
-                invoices: salesInvoices,
-                metadata: {
-                    mode: focusMode,
-                    totalRecords: salesInvoices.length,
-                    totalReads: totalReads,
-                    loadedAt: new Date().toISOString(),
-                    businessContext: focusMode === 'outstanding' ? 'Customer Collection Management' : 'Payment Success Reference'
-                }
-            });
-        }
-
-        // ✅ BUSINESS INTELLIGENCE SUMMARY
-        updateSalesInvoicesSummary({
-            mode: focusMode,
-            totalRecords: salesInvoices.length,
-            totalReads: totalReads
-        }, salesInvoices);
-
-        // Auto-fit columns
+        // ✅ FORCE: Column auto-sizing after data is loaded and processed
         setTimeout(() => {
             if (pmtMgmtSalesGridApi) {
                 pmtMgmtSalesGridApi.sizeColumnsToFit();
+                console.log('[PmtMgmt] ✅ Columns auto-fitted after data processing');
             }
-        }, 200);
+        }, 300);
 
-        console.log(`[PmtMgmt] ✅ Sales invoices (${focusMode}) loaded: ${salesInvoices.length} records (${totalReads} reads)`);
-
-        return { invoices: salesInvoices, metadata: { totalReads, mode: focusMode } };
+        console.log(`[PmtMgmt] ✅ Sales invoices (${focusMode}) loaded and processed: ${salesInvoices.length} records`);
 
     } catch (error) {
         console.error(`[PmtMgmt] ❌ Error loading sales invoices (${focusMode}):`, error);
@@ -3703,15 +3724,8 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
             pmtMgmtSalesGridApi.setGridOption('loading', false);
             pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
-        
-        showModal('error', `Sales ${focusMode === 'outstanding' ? 'Collections' : 'History'} Loading Failed`,
-            `Could not load ${focusMode} sales invoices.\n\n` +
-            `Error: ${error.message}\n\n` +
-            `Please refresh and try again.`
-        );
     }
 }
-
 
 /**
  * BUSINESS LOGIC: Calculate collection urgency for outstanding invoices
