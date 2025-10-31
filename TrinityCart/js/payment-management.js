@@ -1146,7 +1146,7 @@ function calculateDaysWaiting(submittedDate) {
 
 
 const pmtMgmtSalesGridOptions = {
-    theme: 'alpine', // ✅ CONSISTENT: Same theme as other grids
+    theme: 'legacy', // ✅ CONSISTENT: Same theme as other grids
     getRowId: params => params.data.id,
     
     pagination: true,
