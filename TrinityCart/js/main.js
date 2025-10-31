@@ -6249,24 +6249,22 @@ async function handleSupplierPayOutstandingBalanceFromModal() {
  * ENHANCED: Handle collect customer payment action from Payment Management
  */
 async function handlePmtMgmtCollectCustomerPayment(target) {
-    console.log('[main.js] 🔍 DEBUG: handlePmtMgmtCollectCustomerPayment called');
-    console.log('[main.js] 🔍 Target element:', target);
-    console.log('[main.js] 🔍 Target type:', typeof target);
-    console.log('[main.js] 🔍 Target tagName:', target?.tagName);
-    console.log('[main.js] 🔍 Target dataset:', target?.dataset);
+    console.log('[main.js] 💳 Collect customer payment handler called');
     
-    // ✅ DEBUG: Check if we're getting the target correctly
-    const actualTarget = arguments[0]; // Use the pattern that worked before
-    console.log('[main.js] 🔍 actualTarget:', actualTarget);
-    console.log('[main.js] 🔍 actualTarget dataset:', actualTarget?.dataset);
+    // ✅ USE: Working pattern from verification buttons
+    const actualTarget = arguments[0];
+    console.log('[main.js] 🔍 Using actualTarget:', actualTarget);
     
     const invoiceId = actualTarget?.dataset?.id;
+    const customerName = actualTarget?.dataset?.customerName;
+    const balanceDue = actualTarget?.dataset?.balanceDue;
     const user = appState.currentUser;
     
     console.log('[main.js] 🔍 Extracted data:');
     console.log('  Invoice ID:', invoiceId);
+    console.log('  Customer:', customerName);
+    console.log('  Balance Due:', balanceDue);
     console.log('  User:', user?.email);
-    console.log('  User role:', user?.role);
     
     // ✅ DETAILED VALIDATION with specific error messages
     if (!user) {
