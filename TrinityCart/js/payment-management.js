@@ -4372,8 +4372,18 @@ function setupSalesPaymentFilters() {
  * HELPER: Determine current sales filter mode
  */
 function getCurrentSalesFilterMode() {
-    const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    return collectionsFilter?.classList.contains('active') ? 'outstanding' : 'payments';
+    const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-payments'); // ✅ Use actual HTML ID
+    
+    console.log('[PmtMgmt] 🔍 Checking current filter mode:');
+    console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
+    console.log('  Paid active:', paidFilter?.classList.contains('active'));
+    
+    if (paidFilter?.classList.contains('active')) {
+        return 'paid';
+    } else {
+        return 'outstanding'; // Default
+    }
 }
 
 /**
