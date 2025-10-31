@@ -2464,7 +2464,7 @@ export function clearPaymentMgmtCache() {
 /**
  * Calculates days between two dates
  */
-function calculateDaysOverdue(dueDate, currentDate = new Date()) {
+/*function calculateDaysOverdue(dueDate, currentDate = new Date()) {
     if (!dueDate) return 0;
 
     const due = dueDate.toDate ? dueDate.toDate() : new Date(dueDate);
@@ -2472,7 +2472,8 @@ function calculateDaysOverdue(dueDate, currentDate = new Date()) {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return Math.max(0, diffDays);
-}
+}*/
+
 
 /**
  * CORRECTED: Calculate days overdue from properly processed dates
