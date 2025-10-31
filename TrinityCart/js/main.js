@@ -4535,14 +4535,43 @@ async function handleRecordSalePaymentSubmit(e) {
         ProgressToast.updateProgress('Validating invoice information...', 15, 'Step 1 of 6');
 
         const invoiceId = document.getElementById('record-sale-invoice-id').value;
-        const invoiceData = getSalesHistoryDataById(invoiceId);
+
+        let invoiceData = null;
+        
+        invoiceData = getSalesHistoryDataById(invoiceId);
 
         if (!invoiceData) {
-            ProgressToast.hide(0);
-            await showModal('error', 'Invoice Not Found', 'Cannot find the parent invoice data. Please close and reopen the payment modal.');
-            return;
+            console.log('[main.js] 🔍 Invoice not found in Sales History grid, trying API...');
+            
+            // Method 2: Get directly from database (Payment Management module)
+            try {
+                invoiceData = await getSalesInvoiceById(invoiceId);
+                console.log('[main.js] ✅ Invoice data retrieved from API:', invoiceData?.saleId);
+            } catch (apiError) {
+                console.error('[main.js] API call failed:', apiError);
+            }
+        } else {
+            console.log('[main.js] ✅ Invoice data found in Sales History grid:', invoiceData.saleId);
         }
 
+        // ✅ VALIDATION: Ensure we have invoice data from either source
+        if (!invoiceData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Data Not Available', 
+                `Cannot find invoice data for payment processing.\n\n` +
+                `Invoice ID: ${invoiceId}\n\n` +
+                `This can happen when:\n` +
+                `• Invoice was opened from Payment Management (not Sales Management)\n` +
+                `• Invoice was recently deleted or modified\n` +
+                `• Network connectivity issues\n\n` +
+                `Solutions:\n` +
+                `1. Close this modal and try again\n` +
+                `2. Use Sales Management → Manage Payments instead\n` +
+                `3. Refresh the page and try again`
+            );
+            return;
+        }
+        
         if (invoiceData.paymentStatus === 'Paid') {
             ProgressToast.hide(0);
             await showModal('error', 'Invoice Already Paid', 'This invoice has already been paid in full.');
