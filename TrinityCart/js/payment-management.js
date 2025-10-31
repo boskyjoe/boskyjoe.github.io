@@ -4049,7 +4049,12 @@ function calculateVerificationEfficiency(submittedDate, verifiedDate) {
 function updateTeamPaymentsSummary(metadata, teamData, focusMode) {
     console.log(`[PmtMgmt] 👥 TEAM ${focusMode.toUpperCase()} SUMMARY (Balanced Cache):`);
     console.log(`  ⏰ Data loaded at: ${metadata.loadedAt || 'Unknown'}`);
-    console.log(`  💾 Cache duration: ${focusMode === 'outstanding' ? BALANCED_CACHE_CONFIG.teamPayments : BALANCED_CACHE_CONFIG.teamPayments} minutes`);
+    
+    // ✅ CORRECTED: Access cache config properly
+    const cacheMinutes = focusMode === 'outstanding' ? 
+        (BALANCED_CACHE_CONFIG?.teamPayments || 3) : 
+        (BALANCED_CACHE_CONFIG?.teamPayments || 3);
+    console.log(`  💾 Cache duration: ${cacheMinutes} minutes`);
     
     if (focusMode === 'outstanding' && teamData.length > 0) {
         // Verification workflow intelligence
@@ -4063,15 +4068,23 @@ function updateTeamPaymentsSummary(metadata, teamData, focusMode) {
         teamData.forEach(payment => {
             const teamName = payment.teamName || 'Unknown Team';
             if (!teamBreakdown[teamName]) {
-                teamBreakdown[teamName] = { count: 0, amount: 0, donations: 0, avgDaysWaiting: 0, totalDaysWaiting: 0 };
+                teamBreakdown[teamName] = { 
+                    count: 0, 
+                    amount: 0, 
+                    donations: 0, 
+                    avgDaysWaiting: 0, 
+                    totalDaysWaiting: 0,
+                    maxDaysWaiting: 0
+                };
             }
             teamBreakdown[teamName].count += 1;
             teamBreakdown[teamName].amount += (payment.amountPaid || 0);
             teamBreakdown[teamName].donations += (payment.donationAmount || 0);
             teamBreakdown[teamName].totalDaysWaiting += (payment.daysWaiting || 0);
+            teamBreakdown[teamName].maxDaysWaiting = Math.max(teamBreakdown[teamName].maxDaysWaiting, payment.daysWaiting || 0);
         });
         
-        // Calculate averages
+        // Calculate team averages
         Object.values(teamBreakdown).forEach(team => {
             if (team.count > 0) {
                 team.avgDaysWaiting = team.totalDaysWaiting / team.count;
@@ -4081,10 +4094,13 @@ function updateTeamPaymentsSummary(metadata, teamData, focusMode) {
         console.log(`  💰 Total Pending Amount: ${formatCurrency(totalPendingAmount)}`);
         console.log(`  🎁 Total Donations: ${formatCurrency(totalDonations)}`);
         console.log(`  ⚠️ Urgent Verifications: ${urgentCount} payments`);
-        console.log(`  👥 Teams with Pending: ${uniqueTeams} teams`);
+        console.log(`  👥 Teams with Pending Payments: ${uniqueTeams} teams`);
         
+        console.log(`  🏆 TEAM BREAKDOWN:`);
         Object.entries(teamBreakdown).forEach(([teamName, data]) => {
-            console.log(`  🏆 ${teamName}: ${data.count} payments (${formatCurrency(data.amount)}${data.donations > 0 ? `, ${formatCurrency(data.donations)} donations` : ''}, avg ${data.avgDaysWaiting.toFixed(1)} days waiting)`);
+            const urgencyIndicator = data.maxDaysWaiting > 7 ? '🚨' : data.maxDaysWaiting > 3 ? '⚠️' : '✅';
+            console.log(`    ${urgencyIndicator} ${teamName}: ${data.count} payment${data.count > 1 ? 's' : ''} (${formatCurrency(data.amount)}${data.donations > 0 ? ` + ${formatCurrency(data.donations)} donations` : ''})`);
+            console.log(`       Avg waiting: ${data.avgDaysWaiting.toFixed(1)} days, Max waiting: ${data.maxDaysWaiting} days`);
         });
         
     } else if (focusMode === 'verified' && teamData.length > 0) {
@@ -4092,22 +4108,56 @@ function updateTeamPaymentsSummary(metadata, teamData, focusMode) {
         const totalVerifiedAmount = teamData.reduce((sum, payment) => sum + (payment.amountPaid || 0), 0);
         const totalTeamDonations = teamData.reduce((sum, payment) => sum + (payment.donationAmount || 0), 0);
         const uniqueVerifiedTeams = new Set(teamData.map(payment => payment.teamName)).size;
+        const uniqueVerifiers = new Set(teamData.map(payment => payment.verifiedBy)).size;
         
         // Verification efficiency analysis
-        const verificationEfficiencies = teamData.map(payment => payment.verificationEfficiency).filter(eff => eff !== 'Unknown');
-        const fastVerifications = verificationEfficiencies.filter(eff => eff.includes('Same Day') || eff.includes('Next Day')).length;
+        const verificationEfficiencies = teamData
+            .map(payment => payment.verificationEfficiency)
+            .filter(eff => eff && eff !== 'Unknown');
+        
+        const fastVerifications = verificationEfficiencies.filter(eff => 
+            eff.includes('Same Day') || eff.includes('Next Day')
+        ).length;
+        
+        // Team success breakdown
+        const teamSuccessBreakdown = {};
+        teamData.forEach(payment => {
+            const teamName = payment.teamName || 'Unknown Team';
+            if (!teamSuccessBreakdown[teamName]) {
+                teamSuccessBreakdown[teamName] = { 
+                    count: 0, 
+                    amount: 0, 
+                    donations: 0,
+                    fastVerifications: 0
+                };
+            }
+            teamSuccessBreakdown[teamName].count += 1;
+            teamSuccessBreakdown[teamName].amount += (payment.amountPaid || 0);
+            teamSuccessBreakdown[teamName].donations += (payment.donationAmount || 0);
+            
+            if (payment.verificationEfficiency && 
+                (payment.verificationEfficiency.includes('Same Day') || payment.verificationEfficiency.includes('Next Day'))) {
+                teamSuccessBreakdown[teamName].fastVerifications += 1;
+            }
+        });
         
         console.log(`  ✅ Total Verified Amount: ${formatCurrency(totalVerifiedAmount)}`);
         console.log(`  🎁 Total Team Donations: ${formatCurrency(totalTeamDonations)}`);
         console.log(`  👥 Teams with Verified Payments: ${uniqueVerifiedTeams}`);
+        console.log(`  👤 Unique Verifiers: ${uniqueVerifiers} admin${uniqueVerifiers > 1 ? 's' : ''}`);
         console.log(`  ⚡ Fast Verifications: ${fastVerifications}/${verificationEfficiencies.length} (${verificationEfficiencies.length > 0 ? ((fastVerifications / verificationEfficiencies.length) * 100).toFixed(1) : 0}%)`);
+        
+        console.log(`  🏆 TEAM SUCCESS BREAKDOWN:`);
+        Object.entries(teamSuccessBreakdown).forEach(([teamName, data]) => {
+            const efficiencyRate = data.count > 0 ? (data.fastVerifications / data.count * 100).toFixed(0) : 0;
+            console.log(`    ✅ ${teamName}: ${data.count} verified (${formatCurrency(data.amount)}${data.donations > 0 ? ` + ${formatCurrency(data.donations)} donations` : ''}, ${efficiencyRate}% fast processing)`);
+        });
     }
     
     console.log(`  📊 Total Records: ${teamData.length}`);
     console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
     console.log(`  ⚡ Cache Strategy: Balanced (${cacheMinutes}min cache)`);
 }
-
 
 /**
  * Initializes team payments tab (placeholder)
