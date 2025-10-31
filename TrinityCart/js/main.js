@@ -1595,6 +1595,12 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-view-supplier-invoice': async () => await handlePmtMgmtViewSupplierInvoice(target),
         '.pmt-mgmt-view-payments-history': async () => await handlePmtMgmtViewPaymentHistory(target),
 
+        '.pmt-mgmt-collect-customer-payment': async (target) => await handlePmtMgmtCollectCustomerPayment(target),
+        '.pmt-mgmt-view-sales-invoice': async (target) => await handlePmtMgmtViewSalesInvoice(target),
+        '.pmt-mgmt-manage-sales-payments': async (target) => await handlePmtMgmtManageSalesPayments(target),
+        '.pmt-mgmt-void-sales-payment': async (target) => await handlePmtMgmtVoidSalesPayment(target),
+        
+        
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
             
@@ -6233,6 +6239,246 @@ async function handleSupplierPayOutstandingBalanceFromModal() {
         ProgressToast.showError('Failed to open payment form');
     }
 }
+
+
+// ===================================================================
+// SALES PAYMENT ACTION HANDLERS 
+// ===================================================================
+
+/**
+ * ENHANCED: Handle collect customer payment action from Payment Management
+ */
+async function handlePmtMgmtCollectCustomerPayment(target) {
+    const invoiceId = target.dataset.id;
+    const user = appState.currentUser;
+    
+    if (!user || !invoiceId) {
+        await showModal('error', 'Missing Information', 'Could not process payment collection request.');
+        return;
+    }
+    
+    console.log(`[main.js] 💳 Collect customer payment for invoice: ${invoiceId}`);
+    
+    try {
+        ProgressToast.show('Loading Customer Invoice', 'info');
+        ProgressToast.updateProgress('Retrieving invoice details...', 50);
+        
+        // ✅ GET: Sales invoice data (reuse existing function from api.js)
+        const invoiceData = await getSalesInvoiceById(invoiceId);
+        
+        if (!invoiceData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Not Found', 'Could not find the sales invoice. It may have been deleted.');
+            return;
+        }
+        
+        const balanceDue = invoiceData.balanceDue || 0;
+        
+        if (balanceDue <= 0) {
+            ProgressToast.hide(0);
+            await showModal('info', 'Invoice Fully Paid', 
+                `This invoice has already been paid in full!\n\n` +
+                `• Customer: ${invoiceData.customerInfo?.name}\n` +
+                `• Invoice: ${invoiceData.saleId}\n` +
+                `• Status: ${invoiceData.paymentStatus}`
+            );
+            return;
+        }
+        
+        console.log(`[main.js] ✅ Invoice balance confirmed: ${formatCurrency(balanceDue)} for ${invoiceData.customerInfo?.name}`);
+        
+        ProgressToast.updateProgress('Opening payment collection interface...', 90);
+        
+        // ✅ REUSE: Your existing sales payment modal (from Sales Management)
+        setTimeout(() => {
+            ProgressToast.hide(300);
+            
+            // Use your existing showRecordSalePaymentModal function
+            showRecordSalePaymentModal(invoiceData);
+            
+            console.log('[main.js] ✅ Opened customer payment collection modal');
+        }, 500);
+        
+    } catch (error) {
+        console.error('[main.js] Error opening customer payment collection:', error);
+        
+        ProgressToast.showError(`Failed to open payment collection: ${error.message}`);
+        
+        setTimeout(() => {
+            showModal('error', 'Payment Collection Error', 
+                `Could not open customer payment collection interface.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Please try:\n` +
+                `1. Refresh the Payment Management dashboard\n` +
+                `2. Select the customer invoice again\n` +
+                `3. Check your internet connection`
+            );
+        }, 2000);
+    }
+}
+
+/**
+ * ENHANCED: Handle view sales invoice details from Payment Management
+ */
+async function handlePmtMgmtViewSalesInvoice(target) {
+    const invoiceId = target.dataset.id;
+    
+    if (!invoiceId) {
+        await showModal('error', 'Missing Invoice ID', 'Could not find invoice ID for details view.');
+        return;
+    }
+    
+    console.log(`[main.js] 📋 View sales invoice details: ${invoiceId}`);
+    
+    try {
+        ProgressToast.show('Loading Invoice Details', 'info');
+        ProgressToast.updateProgress('Retrieving invoice and payment history...', 60);
+        
+        // ✅ GET: Complete invoice data
+        const invoiceData = await getSalesInvoiceById(invoiceId);
+        
+        if (!invoiceData) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Invoice Not Found', 'The requested sales invoice could not be found.');
+            return;
+        }
+        
+        ProgressToast.updateProgress('Opening invoice details...', 90);
+        
+        // ✅ REUSE: Your existing sales payment management modal
+        setTimeout(() => {
+            ProgressToast.hide(300);
+            
+            // Use your existing modal that shows invoice details + payment history
+            showRecordSalePaymentModal(invoiceData);
+            
+            // ✅ ENHANCEMENT: Switch to payment history tab by default for "view" action
+            setTimeout(() => {
+                switchPaymentModalTab('tab-payment-history');
+                console.log('[main.js] ✅ Switched to payment history view for invoice details');
+            }, 500);
+            
+        }, 500);
+        
+    } catch (error) {
+        console.error('[main.js] Error viewing sales invoice:', error);
+        
+        ProgressToast.showError(`Failed to load invoice details: ${error.message}`);
+        
+        setTimeout(() => {
+            showModal('error', 'Invoice Details Error', 
+                `Could not load sales invoice details.\n\n` +
+                `Invoice ID: ${invoiceId}\n` +
+                `Error: ${error.message}`
+            );
+        }, 2000);
+    }
+}
+
+/**
+ * ENHANCED: Handle manage sales payments (for paid invoices)
+ */
+async function handlePmtMgmtManageSalesPayments(target) {
+    const invoiceId = target.dataset.id;
+    
+    console.log(`[main.js] 💰 Manage payments for sales invoice: ${invoiceId}`);
+    
+    try {
+        const invoiceData = await getSalesInvoiceById(invoiceId);
+        
+        if (invoiceData) {
+            // ✅ REUSE: Existing payment management modal
+            showRecordSalePaymentModal(invoiceData);
+            
+            // ✅ DEFAULT: Switch to payment history for management
+            setTimeout(() => {
+                switchPaymentModalTab('tab-payment-history');
+            }, 500);
+        }
+        
+    } catch (error) {
+        console.error('[main.js] Error managing sales payments:', error);
+        await showModal('error', 'Payment Management Error', 'Could not open payment management interface.');
+    }
+}
+
+/**
+ * ENHANCED: Handle void sales payment (admin only)
+ */
+async function handlePmtMgmtVoidSalesPayment(target) {
+    const paymentId = target.dataset.id;
+    const user = appState.currentUser;
+    
+    if (!user || user.role !== 'admin') {
+        await showModal('error', 'Permission Denied', 'Only administrators can void sales payments.');
+        return;
+    }
+    
+    console.log(`[main.js] ❌ Void sales payment: ${paymentId}`);
+    
+    try {
+        // ✅ GET: Payment data for confirmation
+        const paymentData = getSalesPaymentDataFromGridById(paymentId);
+        
+        if (!paymentData) {
+            await showModal('error', 'Payment Not Found', 'Could not find payment data for void operation.');
+            return;
+        }
+        
+        const confirmed = await showModal('confirm', 'Void Customer Payment',
+            `VOID this customer payment?\n\n` +
+            `• Customer: ${paymentData.customerName || 'Unknown'}\n` +
+            `• Amount: ${formatCurrency(paymentData.amountPaid || 0)}\n` +
+            `• Payment Mode: ${paymentData.paymentMode || 'Unknown'}\n\n` +
+            `This will:\n` +
+            `❌ Create a reversal entry\n` +
+            `❌ Update the invoice balance\n` +
+            `❌ Cannot be undone\n\n` +
+            `Are you sure you want to void this payment?`
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Voiding Customer Payment', 'warning');
+            
+            try {
+                ProgressToast.updateProgress('Creating void entries and updating invoice...', 75);
+                
+                await voidSalePayment(paymentId, user);
+                
+                ProgressToast.showSuccess('Customer payment voided successfully!');
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(500);
+                    
+                    await showModal('success', 'Payment Voided', 
+                        `Customer payment has been voided successfully!\n\n` +
+                        `✓ Original payment marked as VOIDED\n` +
+                        `✓ Reversal entry created for audit trail\n` +
+                        `✓ Invoice balance updated accordingly\n\n` +
+                        `The sales grids will refresh to show the changes.`
+                    );
+                    
+                    // ✅ REFRESH: Sales payment grid to show void entries
+                    setTimeout(() => {
+                        loadSalesPaymentsForMgmtTab('payments', { forceRefresh: true });
+                    }, 1000);
+                    
+                }, 1000);
+                
+            } catch (voidError) {
+                ProgressToast.showError(`Void failed: ${voidError.message}`);
+                setTimeout(() => {
+                    showModal('error', 'Void Failed', `Could not void the payment: ${voidError.message}`);
+                }, 2000);
+            }
+        }
+        
+    } catch (error) {
+        console.error('[main.js] Error in void sales payment:', error);
+        await showModal('error', 'Void Error', 'Could not process payment void request.');
+    }
+}
+
 
 
 // --- APPLICATION INITIALIZATION ---
