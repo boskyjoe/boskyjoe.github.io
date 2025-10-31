@@ -3563,23 +3563,19 @@ function initializeSalesPaymentsTab() {
 }
 
 /**
- * CORRECTED: Load sales INVOICES for Payment Management (not payment transactions).
- * 
- * This function focuses on sales invoices to show what customers owe (outstanding)
- * versus what has been fully collected (paid). This is the correct business view
- * for customer collection management and sales revenue tracking.
+ * ENHANCED: Load sales invoice data with Outstanding vs Paid business focus.
  * 
  * BUSINESS MODES:
- * - 'outstanding': Unpaid/Partially Paid sales invoices (customers who owe money) 
- * - 'paid': Fully paid sales invoices (successful collections for reference)
+ * - 'outstanding': Unpaid/Partially paid invoices for customer collection management
+ * - 'paid': Fully paid invoices grouped by store for success tracking and analysis
  * 
  * @param {string} [focusMode='outstanding'] - 'outstanding' or 'paid'
  * @param {Object} [options={}] - Configuration options
  */
 async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
-    const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
+    const { useCache = true, queryLimit = 100, forceRefresh = false } = options;
     
-    console.log(`[PmtMgmt] 💳 Loading sales invoices for ${focusMode} management...`);
+    console.log(`[PmtMgmt] 💳 Loading ${focusMode} sales invoices with store intelligence...`);
 
     if (!pmtMgmtSalesGridApi) {
         console.error('[PmtMgmt] ❌ Sales grid API not available');
@@ -3589,156 +3585,330 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
     try {
         pmtMgmtSalesGridApi.setGridOption('loading', true);
 
+        // Cache check
+        const cacheKey = `sales_invoices_${focusMode}_by_store`;
+        
+        if (useCache && !forceRefresh) {
+            const cached = getCachedPaymentMetrics(cacheKey, 5);
+            if (cached && cached.salesData) {
+                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} sales data - 0 Firestore reads`);
+                pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesData);
+                pmtMgmtSalesGridApi.setGridOption('loading', false);
+                updateSalesDataSummary(cached.metadata, cached.salesData, focusMode);
+                return cached;
+            }
+        }
+
         const db = firebase.firestore();
         let totalReads = 0;
-        let salesInvoices = [];
+        let salesData = [];
 
         if (focusMode === 'outstanding') {
-            console.log('[PmtMgmt] 🎯 COLLECTION FOCUS: Loading outstanding sales invoices...');
+            // ===================================================================
+            // OUTSTANDING: Customer collection targets
+            // ===================================================================
+            console.log('[PmtMgmt] 📋 Loading OUTSTANDING sales invoices for collection...');
             
-            const outstandingSalesQuery = db.collection(SALES_COLLECTION_PATH)
+            const outstandingQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
-                .orderBy('saleDate', 'asc')
+                .orderBy('saleDate', 'asc') // Oldest first for collection priority
                 .limit(queryLimit);
 
-            const snapshot = await outstandingSalesQuery.get();
+            const snapshot = await outstandingQuery.get();
             totalReads = snapshot.size;
 
-            console.log(`[PmtMgmt] Outstanding sales invoices snapshot size: ${snapshot.size}`);
-
-            salesInvoices = snapshot.docs.map(doc => {
+            salesData = snapshot.docs.map(doc => {
                 const data = doc.data();
-                
-                // ✅ FIX: ALWAYS process the date on initial load
-                let processedSaleDate = null;
-                try {
-                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
-                        processedSaleDate = data.saleDate.toDate(); // Convert Firestore Timestamp
-                    } else if (data.saleDate instanceof Date) {
-                        processedSaleDate = data.saleDate; // Already a Date
-                    } else if (data.saleDate) {
-                        processedSaleDate = new Date(data.saleDate); // Convert string
-                    } else {
-                        processedSaleDate = new Date(); // Fallback to current date
-                    }
-                } catch (dateError) {
-                    console.warn(`[PmtMgmt] Date processing error for invoice ${doc.id}:`, dateError);
-                    processedSaleDate = new Date(); // Safe fallback
-                }
-
-                const daysOverdue = calculateDaysOverdue(processedSaleDate);
+                const processedDate = processFirestoreDate(data.saleDate);
+                const daysOverdue = calculateDaysOverdue(processedDate);
                 
                 return {
                     id: doc.id,
                     ...data,
-                    
-                    // ✅ CRITICAL: Override saleDate with processed JavaScript Date
-                    saleDate: processedSaleDate, // This ensures AG-Grid gets a proper Date object
-                    
-                    // ✅ COLLECTION INTELLIGENCE
+                    saleDate: processedDate,
                     daysOverdue: daysOverdue,
                     isOverdue: daysOverdue > 30,
-                    collectionUrgency: calculateCollectionUrgency(data.balanceDue || 0, daysOverdue),
-                    
-                    // ✅ CUSTOMER CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
-                    customerEmail: data.customerInfo?.email || 'No Email',
-                    customerPhone: data.customerInfo?.phone || 'No Phone',
-                    
-                    // ✅ BUSINESS CONTEXT
-                    invoiceReference: data.saleId || doc.id,
-                    manualVoucherNumber: data.manualVoucherNumber || 'No Voucher',
                     store: data.store || 'Unknown Store',
-                    
-                    // ✅ FINANCIAL CONTEXT
-                    formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedBalance: formatCurrency(data.balanceDue || 0),
-                    formattedAmountPaid: formatCurrency(data.totalAmountPaid || 0),
-                    
-                    // ✅ UI HELPERS
-                    needsFollowUp: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
-                    contactMethod: data.customerInfo?.phone ? 'Phone' : 
-                                 data.customerInfo?.email ? 'Email' : 'No Contact'
+                    collectionPriority: calculateCollectionPriority(data.balanceDue || 0, daysOverdue)
                 };
             });
 
+            console.log(`[PmtMgmt] 📋 Outstanding loaded: ${salesData.length} invoices needing collection`);
+
         } else if (focusMode === 'paid') {
-            console.log('[PmtMgmt] ✅ REFERENCE FOCUS: Loading paid sales invoices...');
+            // ===================================================================
+            // ✅ NEW: PAID invoices with store grouping intelligence
+            // ===================================================================
+            console.log('[PmtMgmt] ✅ Loading PAID sales invoices for success analysis...');
             
-            const paidSalesQuery = db.collection(SALES_COLLECTION_PATH)
+            const paidQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', '==', 'Paid')
-                .orderBy('saleDate', 'desc')
+                .orderBy('saleDate', 'desc') // Recent successes first
                 .limit(queryLimit);
 
-            const snapshot = await paidSalesQuery.get();
+            const snapshot = await paidQuery.get();
             totalReads = snapshot.size;
 
-            salesInvoices = snapshot.docs.map(doc => {
+            salesData = snapshot.docs.map(doc => {
                 const data = doc.data();
-                
-                // ✅ FIX: Process date for paid invoices too
-                let processedSaleDate = null;
-                try {
-                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
-                        processedSaleDate = data.saleDate.toDate();
-                    } else if (data.saleDate instanceof Date) {
-                        processedSaleDate = data.saleDate;
-                    } else {
-                        processedSaleDate = new Date(data.saleDate || Date.now());
-                    }
-                } catch (dateError) {
-                    processedSaleDate = new Date();
-                }
+                const processedDate = processFirestoreDate(data.saleDate);
                 
                 return {
                     id: doc.id,
                     ...data,
+                    saleDate: processedDate,
                     
-                    // ✅ CRITICAL: Processed date
-                    saleDate: processedSaleDate,
-                    
-                    // ✅ REFERENCE CONTEXT
+                    // ✅ SUCCESS CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
-                    invoiceReference: data.saleId || doc.id,
                     store: data.store || 'Unknown Store',
                     
-                    // ✅ SUCCESS METRICS
+                    // ✅ FINANCIAL SUCCESS METRICS
                     formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedAmountReceived: formatCurrency(data.totalAmountPaid || 0),
-                    collectionSuccess: 'Fully Collected'
+                    
+                    // ✅ COLLECTION SUCCESS ANALYSIS
+                    wasOverpayment: (data.totalAmountPaid || 0) > (data.financials?.totalAmount || 0),
+                    donationGenerated: ((data.totalAmountPaid || 0) - (data.financials?.totalAmount || 0)) > 0,
+                    donationAmount: Math.max(0, (data.totalAmountPaid || 0) - (data.financials?.totalAmount || 0)),
+                    
+                    // ✅ COLLECTION EFFICIENCY
+                    daysToPayment: calculateDaysToFullPayment(data.saleDate, data.financials?.lastPaymentDate),
+                    collectionEfficiency: calculateCollectionEfficiency(data.saleDate, data.financials?.lastPaymentDate),
+                    
+                    // ✅ STORE GROUPING DATA
+                    storeGroup: data.store || 'Unknown Store',
+                    storeSuccess: 'Fully Collected'
                 };
+            });
+
+            console.log(`[PmtMgmt] ✅ Paid loaded: ${salesData.length} successful collections`);
+
+            // ✅ ENHANCED: Calculate store grouping intelligence
+            const storeBreakdown = calculateStoreGroupingIntelligence(salesData);
+            console.log('[PmtMgmt] 🏪 STORE SUCCESS BREAKDOWN:', storeBreakdown);
+        }
+
+        pmtMgmtSalesGridApi.setGridOption('rowData', salesData);
+        pmtMgmtSalesGridApi.setGridOption('loading', false);
+
+        // Cache results
+        if (useCache && totalReads > 0) {
+            cachePaymentMetrics(cacheKey, {
+                salesData: salesData,
+                metadata: {
+                    mode: focusMode,
+                    totalRecords: salesData.length,
+                    totalReads: totalReads,
+                    loadedAt: new Date().toISOString()
+                }
             });
         }
 
-        // ✅ IMPORTANT: Log processed data for verification
-        console.log('[PmtMgmt] ✅ Data processing completed:', {
+        // Update summary
+        updateSalesDataSummary({
             mode: focusMode,
-            recordCount: salesInvoices.length,
-            firstRecordDate: salesInvoices[0]?.saleDate instanceof Date ? 'Valid Date' : 'Invalid Date',
-            sampleProcessedDate: salesInvoices[0]?.saleDate?.toLocaleDateString() || 'No date'
-        });
+            totalRecords: salesData.length,
+            totalReads: totalReads
+        }, salesData, focusMode);
 
-        pmtMgmtSalesGridApi.setGridOption('rowData', salesInvoices);
-        pmtMgmtSalesGridApi.setGridOption('loading', false);
-
-        // ✅ FORCE: Column auto-sizing after data is loaded and processed
         setTimeout(() => {
             if (pmtMgmtSalesGridApi) {
                 pmtMgmtSalesGridApi.sizeColumnsToFit();
-                console.log('[PmtMgmt] ✅ Columns auto-fitted after data processing');
             }
-        }, 300);
+        }, 200);
 
-        console.log(`[PmtMgmt] ✅ Sales invoices (${focusMode}) loaded and processed: ${salesInvoices.length} records`);
+        console.log(`[PmtMgmt] ✅ ${focusMode} sales data loaded: ${salesData.length} records (${totalReads} reads)`);
 
     } catch (error) {
-        console.error(`[PmtMgmt] ❌ Error loading sales invoices (${focusMode}):`, error);
+        console.error(`[PmtMgmt] ❌ Error loading ${focusMode} sales data:`, error);
         
         if (pmtMgmtSalesGridApi) {
             pmtMgmtSalesGridApi.setGridOption('loading', false);
             pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
     }
+}
+
+// ===================================================================
+// HELPER FUNCTIONS FOR PAID MODE INTELLIGENCE
+// ===================================================================
+
+/**
+ * ENHANCED: Update sales data summary with store grouping intelligence
+ */
+function updateSalesDataSummary(metadata, salesData, focusMode) {
+    console.log(`[PmtMgmt] 💳 SALES ${focusMode.toUpperCase()} SUMMARY WITH STORE INTELLIGENCE:`);
+    
+    if (focusMode === 'outstanding' && salesData.length > 0) {
+        // Outstanding invoices analysis
+        const totalOutstanding = salesData.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
+        const overdueCount = salesData.filter(inv => inv.isOverdue).length;
+        const criticalCount = salesData.filter(inv => inv.collectionPriority === 'critical').length;
+        
+        // Store breakdown for outstanding
+        const storeOutstanding = {};
+        salesData.forEach(inv => {
+            const store = inv.store || 'Unknown';
+            if (!storeOutstanding[store]) {
+                storeOutstanding[store] = { count: 0, amount: 0, overdueCount: 0 };
+            }
+            storeOutstanding[store].count += 1;
+            storeOutstanding[store].amount += (inv.balanceDue || 0);
+            if (inv.isOverdue) storeOutstanding[store].overdueCount += 1;
+        });
+        
+        console.log(`  💰 Total Outstanding: ${formatCurrency(totalOutstanding)}`);
+        console.log(`  ⚠️ Overdue Customers: ${overdueCount} invoices`);
+        console.log(`  🚨 Critical Collections: ${criticalCount} customers`);
+        
+        Object.entries(storeOutstanding).forEach(([store, data]) => {
+            console.log(`  🏪 ${store}: ${data.count} outstanding (${formatCurrency(data.amount)}${data.overdueCount > 0 ? `, ${data.overdueCount} overdue` : ''})`);
+        });
+        
+    } else if (focusMode === 'paid' && salesData.length > 0) {
+        // ✅ PAID invoices analysis with store grouping
+        const totalRevenue = salesData.reduce((sum, inv) => sum + (inv.financials?.totalAmount || 0), 0);
+        const totalCollected = salesData.reduce((sum, inv) => sum + (inv.totalAmountPaid || 0), 0);
+        const totalDonations = salesData.reduce((sum, inv) => sum + (inv.donationAmount || 0), 0);
+        
+        // ✅ STORE GROUPING INTELLIGENCE
+        const storeSuccess = {};
+        salesData.forEach(inv => {
+            const store = inv.store || 'Unknown';
+            if (!storeSuccess[store]) {
+                storeSuccess[store] = { 
+                    count: 0, 
+                    revenue: 0, 
+                    collected: 0, 
+                    donations: 0,
+                    averageInvoice: 0,
+                    collectionRate: 100 // All paid invoices are 100% collected
+                };
+            }
+            storeSuccess[store].count += 1;
+            storeSuccess[store].revenue += (inv.financials?.totalAmount || 0);
+            storeSuccess[store].collected += (inv.totalAmountPaid || 0);
+            storeSuccess[store].donations += (inv.donationAmount || 0);
+        });
+        
+        // Calculate store averages
+        Object.values(storeSuccess).forEach(store => {
+            if (store.count > 0) {
+                store.averageInvoice = store.revenue / store.count;
+            }
+        });
+        
+        console.log(`  ✅ Total Revenue (Paid Invoices): ${formatCurrency(totalRevenue)}`);
+        console.log(`  💰 Total Amount Collected: ${formatCurrency(totalCollected)}`);
+        console.log(`  🎁 Total Donations Generated: ${formatCurrency(totalDonations)}`);
+        console.log(`  📊 Collection Success Rate: 100% (all selected invoices paid in full)`);
+        
+        console.log(`  🏪 STORE SUCCESS BREAKDOWN:`);
+        Object.entries(storeSuccess).forEach(([store, data]) => {
+            console.log(`    ${store}: ${data.count} paid invoices, ${formatCurrency(data.revenue)} revenue, ${formatCurrency(data.donations)} donations`);
+            console.log(`      Average invoice: ${formatCurrency(data.averageInvoice)}, Collection rate: ${data.collectionRate}%`);
+        });
+    }
+    
+    console.log(`  📊 Total Records: ${salesData.length}`);
+    console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
+}
+
+
+/**
+ * HELPER: Process Firestore date to JavaScript Date
+ */
+function processFirestoreDate(firestoreDate) {
+    if (!firestoreDate) return new Date();
+    
+    try {
+        if (firestoreDate.toDate && typeof firestoreDate.toDate === 'function') {
+            return firestoreDate.toDate();
+        } else if (firestoreDate instanceof Date) {
+            return firestoreDate;
+        } else {
+            return new Date(firestoreDate);
+        }
+    } catch (error) {
+        return new Date();
+    }
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate store grouping insights
+ */
+function calculateStoreGroupingIntelligence(paidInvoices) {
+    const storeGroups = {};
+    
+    paidInvoices.forEach(invoice => {
+        const store = invoice.store || 'Unknown Store';
+        
+        if (!storeGroups[store]) {
+            storeGroups[store] = {
+                count: 0,
+                totalRevenue: 0,
+                totalDonations: 0,
+                averageInvoice: 0,
+                successRate: 100 // All paid invoices are 100% successful
+            };
+        }
+        
+        storeGroups[store].count += 1;
+        storeGroups[store].totalRevenue += (invoice.financials?.totalAmount || 0);
+        storeGroups[store].totalDonations += (invoice.donationAmount || 0);
+    });
+    
+    // Calculate averages
+    Object.values(storeGroups).forEach(group => {
+        if (group.count > 0) {
+            group.averageInvoice = group.totalRevenue / group.count;
+        }
+    });
+    
+    return storeGroups;
+}
+
+/**
+ * HELPER: Calculate days from sale to full payment
+ */
+function calculateDaysToFullPayment(saleDate, lastPaymentDate) {
+    if (!saleDate || !lastPaymentDate) return 0;
+    
+    try {
+        const sale = processFirestoreDate(saleDate);
+        const payment = processFirestoreDate(lastPaymentDate);
+        
+        const diffTime = payment - sale;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    } catch (error) {
+        return 0;
+    }
+}
+
+/**
+ * HELPER: Calculate collection efficiency rating
+ */
+function calculateCollectionEfficiency(saleDate, lastPaymentDate) {
+    const days = calculateDaysToFullPayment(saleDate, lastPaymentDate);
+    
+    if (days === 0) return 'Immediate';
+    if (days <= 7) return 'Excellent';
+    if (days <= 30) return 'Good';
+    if (days <= 60) return 'Fair';
+    return 'Slow';
+}
+
+/**
+ * HELPER: Calculate collection priority
+ */
+function calculateCollectionPriority(balanceAmount, daysOverdue) {
+    if (balanceAmount > 15000 && daysOverdue > 60) return 'critical';
+    if (balanceAmount > 8000 || daysOverdue > 45) return 'high';
+    if (balanceAmount > 3000 || daysOverdue > 30) return 'medium';
+    return 'low';
 }
 
 /**
@@ -4132,25 +4302,27 @@ function updateTeamFilterActiveState(activeButton) {
  * Sets up filter listeners for sales payments tab
  */
 function setupSalesPaymentFilters() {
-    console.log('[PmtMgmt] Setting up BUSINESS-SMART sales payment filters...');
+    console.log('[PmtMgmt] Setting up OUTSTANDING vs PAID sales filters...');
     
-    // ✅ COLLECTIONS FILTER: Outstanding invoices (should be default active)
-    const collectionsFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    if (collectionsFilter) {
-        collectionsFilter.addEventListener('click', () => {
-            console.log('[PmtMgmt] Collections filter clicked');
+    // ✅ OUTSTANDING FILTER: Collection management focus
+    const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
+    if (outstandingFilter) {
+        outstandingFilter.addEventListener('click', () => {
+            console.log('[PmtMgmt] 📋 Switching to Outstanding invoices view...');
+            
+            updateSalesFilterActiveState(outstandingFilter);
             loadSalesPaymentsForMgmtTab('outstanding');
-            updateSalesFilterActiveState(collectionsFilter); // ✅ Update visual state
         });
     }
     
-    // ✅ PAYMENTS FILTER: Payment transactions for audit
-    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments');
-    if (paymentsFilter) {
-        paymentsFilter.addEventListener('click', () => {
-            console.log('[PmtMgmt] Payments filter clicked');
-            loadSalesPaymentsForMgmtTab('payments'); // ✅ Future: Load payment transactions
-            updateSalesFilterActiveState(paymentsFilter); // ✅ Update visual state
+    // ✅ PAID FILTER: Success analysis and store grouping
+    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-paid');
+    if (paidFilter) {
+        paidFilter.addEventListener('click', () => {
+            console.log('[PmtMgmt] ✅ Switching to Paid invoices view with store grouping...');
+            
+            updateSalesFilterActiveState(paidFilter);
+            loadSalesPaymentsForMgmtTab('paid');
         });
     }
 
@@ -4181,18 +4353,19 @@ function setupSalesPaymentFilters() {
         });
     }
 
-    // Refresh button
+    // Refresh button with current mode detection
     const refreshButton = document.getElementById('pmt-mgmt-sales-refresh');
     if (refreshButton) {
         refreshButton.addEventListener('click', () => {
-            const currentMode = getCurrentSalesFilterMode(); // Helper function
+            const currentMode = getCurrentSalesFilterMode();
             console.log(`[PmtMgmt] Manual refresh: ${currentMode} sales data`);
-            loadSalesPaymentsForMgmtTab(currentMode, { useCache: false }); // Force refresh
+            loadSalesPaymentsForMgmtTab(currentMode, { forceRefresh: true });
         });
     }
 
-    console.log('[PmtMgmt] ✅ Business-smart sales filters setup completed');
+    console.log('[PmtMgmt] ✅ Outstanding vs Paid filters setup completed');
 }
+
 
 
 /**
@@ -4209,21 +4382,24 @@ function getCurrentSalesFilterMode() {
 function updateSalesFilterActiveState(activeButton) {
     console.log('[PmtMgmt] Updating sales filter active state:', activeButton.id);
     
-    // Remove active state from ALL sales filter buttons
+    // Remove active from all sales filters
     document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+        btn.classList.remove('active', 'bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300', 'font-semibold');
         btn.classList.add('bg-white', 'border-gray-300');
-        console.log('[PmtMgmt] Removed active from:', btn.id);
     });
     
-    // Add active state to clicked button
+    // Add appropriate active style based on filter type
     activeButton.classList.remove('bg-white', 'border-gray-300');
-    activeButton.classList.add('active', 'bg-blue-100', 'text-blue-800', 'border-blue-300', 'font-semibold');
+    activeButton.classList.add('active', 'font-semibold');
     
-    console.log('[PmtMgmt] ✅ Set active state on:', activeButton.id);
+    if (activeButton.id.includes('outstanding')) {
+        activeButton.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+    } else {
+        activeButton.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+    }
+    
+    console.log('[PmtMgmt] ✅ Filter state updated for:', activeButton.id);
 }
-
-
 
 
 
