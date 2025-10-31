@@ -104,18 +104,17 @@ let pmtMgmtRealtimeListeners = {
 // ===================================================================
 
 const BALANCED_CACHE_CONFIG = {
-    // ✅ BALANCED: Responsive but efficient cache durations
-    supplierPayments: 3,        // 3 minutes - critical for supplier relationships
-    salesOutstanding: 3,        // 3 minutes - important for customer collections  
-    salesPaid: 8,              // 8 minutes - reference data, less time-sensitive
-    teamPayments: 3,           // 3 minutes - important for team settlements
-    dashboardMetrics: 3,       // 3 minutes - overview needs to be current
-    outstandingBalances: 5,    // 5 minutes - financial position changes slowly
+    // Cache durations optimized for balanced approach
+    supplierPayments: 3,        // 3 minutes - supplier relationship critical
+    salesOutstanding: 3,        // 3 minutes - customer collection critical  
+    salesPaid: 8,              // 8 minutes - reference data less time-sensitive
+    teamPayments: 3,           // 3 minutes - team settlement critical
+    dashboardMetrics: 3,       // 3 minutes - overview needs currency
     
-    // Visual indicators
+    // UI enhancements
     showFreshnessIndicators: true,
     enableManualRefresh: true,
-    notificationDuration: 2000  // 2 seconds for refresh notifications
+    refreshNotificationDuration: 2000
 };
 
 
@@ -2848,10 +2847,11 @@ function initializeSupplierPaymentsTab() {
 /**
  * BALANCED: Add data freshness indicator to grids
  */
+
 function addDataFreshnessIndicator(gridId, loadedTime, cacheMinutes) {
     if (!BALANCED_CACHE_CONFIG.showFreshnessIndicators) return;
     
-    console.log(`[PmtMgmt] 📊 Adding freshness indicator to ${gridId}`);
+    console.log(`[PmtMgmt] 📊 Adding balanced freshness indicator to ${gridId}`);
     
     const gridContainer = document.getElementById(gridId)?.parentElement;
     if (!gridContainer) {
@@ -2859,17 +2859,18 @@ function addDataFreshnessIndicator(gridId, loadedTime, cacheMinutes) {
         return;
     }
     
-    // Remove any existing indicator
+    // Remove existing indicator
     const existingIndicator = gridContainer.querySelector('.data-freshness-indicator');
     if (existingIndicator) {
         existingIndicator.remove();
     }
     
-    // Create freshness indicator
+    // Determine grid type for your existing refresh function
+    const gridType = gridId.includes('supplier') ? 'supplier' : 'sales';
+    
+    // Create balanced freshness indicator
     const indicator = document.createElement('div');
     indicator.className = 'data-freshness-indicator flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 text-sm';
-    
-    const expiryTime = new Date(Date.now() + cacheMinutes * 60 * 1000);
     
     indicator.innerHTML = `
         <div class="flex items-center space-x-3">
@@ -2877,31 +2878,96 @@ function addDataFreshnessIndicator(gridId, loadedTime, cacheMinutes) {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <span class="text-blue-800">
-                <strong>Data loaded:</strong> ${loadedTime}
+                <strong>Loaded:</strong> ${loadedTime}
             </span>
             <span class="text-blue-600 text-xs">
-                <strong>Cache:</strong> ${cacheMinutes} min | <strong>Expires:</strong> <span id="${gridId}-cache-countdown">${expiryTime.toLocaleTimeString()}</span>
+                <strong>Cache:</strong> ${cacheMinutes}min | 
+                <strong>Expires:</strong> <span id="${gridId}-cache-countdown" class="font-medium">calculating...</span>
             </span>
         </div>
         <div class="flex items-center space-x-2">
-            <span class="text-xs text-blue-600">
-                <span id="${gridId}-cache-status">✅ Fresh</span>
+            <span class="text-xs" id="${gridId}-cache-status">
+                <span class="text-green-600 font-medium">✅ Fresh Data</span>
             </span>
-            <button onclick="refreshSpecificGrid('${gridId}', '${gridId.includes('supplier') ? 'supplier' : 'sales'}')" 
+            <button onclick="refreshSpecificGrid('${gridId}', '${gridType}')" 
                    class="text-blue-600 hover:text-blue-800 underline text-xs font-medium px-2 py-1 hover:bg-blue-100 rounded transition-colors">
                 🔄 Refresh Now
             </button>
         </div>
     `;
     
-    // Insert at the top of the grid container
+    // Insert at top of grid container
     gridContainer.insertBefore(indicator, gridContainer.firstChild);
     
-    // Start countdown
-    startCacheCountdown(gridId, cacheMinutes);
+    // Start cache countdown
+    startBalancedCacheCountdown(gridId, cacheMinutes);
     
-    console.log(`[PmtMgmt] ✅ Freshness indicator added with ${cacheMinutes}-minute cache`);
+    console.log(`[PmtMgmt] ✅ Balanced freshness indicator added with ${cacheMinutes}-min cache using your refreshSpecificGrid function`);
 }
+
+/**
+ * BALANCED: Cache countdown with visual feedback
+ */
+function startBalancedCacheCountdown(gridId, cacheMinutes) {
+    let secondsRemaining = cacheMinutes * 60;
+    const countdownElement = document.getElementById(`${gridId}-cache-countdown`);
+    const statusElement = document.getElementById(`${gridId}-cache-status`);
+    
+    if (!countdownElement || !statusElement) return;
+    
+    const countdown = setInterval(() => {
+        const minutes = Math.floor(secondsRemaining / 60);
+        const seconds = secondsRemaining % 60;
+        
+        countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (secondsRemaining <= 0) {
+            // Cache expired - time for refresh
+            statusElement.innerHTML = '<span class="text-orange-600 font-semibold animate-pulse">⚠️ Cache Expired</span>';
+            countdownElement.textContent = 'Click Refresh for latest';
+            countdownElement.className = 'text-orange-600 font-semibold';
+            clearInterval(countdown);
+            
+        } else if (secondsRemaining <= 60) {
+            // Expiring soon
+            statusElement.innerHTML = '<span class="text-yellow-600 font-medium">🟡 Expiring Soon</span>';
+            countdownElement.className = 'text-yellow-600 font-medium';
+            
+        } else if (secondsRemaining <= 120) {
+            // Getting older  
+            statusElement.innerHTML = '<span class="text-blue-600">🔵 Aging</span>';
+            countdownElement.className = 'text-blue-600';
+            
+        } else {
+            // Still fresh
+            statusElement.innerHTML = '<span class="text-green-600 font-medium">✅ Fresh</span>';
+            countdownElement.className = 'text-blue-600';
+        }
+        
+        secondsRemaining--;
+    }, 1000);
+}
+
+
+/**
+ * HELPER: Get current supplier filter mode from UI state
+ */
+function getCurrentSupplierFilterMode() {
+    const outstandingFilter = document.getElementById('pmt-mgmt-supplier-filter-outstanding');
+    const paidFilter = document.getElementById('pmt-mgmt-supplier-filter-paid');
+    
+    console.log('[PmtMgmt] 🔍 Checking current supplier filter mode:');
+    console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
+    console.log('  Paid active:', paidFilter?.classList.contains('active'));
+    
+    if (paidFilter?.classList.contains('active')) {
+        return 'paid';
+    } else {
+        return 'outstanding'; // Default for suppliers
+    }
+}
+
+
 
 /**
  * BALANCED: Cache countdown with visual feedback
@@ -3719,19 +3785,15 @@ function initializeSalesPaymentsTab() {
 }
 
 /**
- * ENHANCED: Load sales invoice data with Outstanding vs Paid business focus.
- * 
- * BUSINESS MODES:
- * - 'outstanding': Unpaid/Partially paid invoices for customer collection management
- * - 'paid': Fully paid invoices grouped by store for success tracking and analysis
+ * ENHANCED: Load sales invoices with balanced caching and freshness indicators
  * 
  * @param {string} [focusMode='outstanding'] - 'outstanding' or 'paid'
  * @param {Object} [options={}] - Configuration options
  */
 async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
-    const { useCache = true, queryLimit = 100, forceRefresh = false } = options;
+    const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
     
-    console.log(`[PmtMgmt] 💳 Loading ${focusMode} sales invoices with store intelligence...`);
+    console.log(`[PmtMgmt] 💳 Loading ${focusMode} sales invoices with BALANCED caching...`);
 
     if (!pmtMgmtSalesGridApi) {
         console.error('[PmtMgmt] ❌ Sales grid API not available');
@@ -3741,20 +3803,32 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
     try {
         pmtMgmtSalesGridApi.setGridOption('loading', true);
 
-        // Cache check
-        const cacheKey = `sales_invoices_${focusMode}_by_store`;
+        // ✅ BALANCED: Cache configuration by mode
+        const cacheMinutes = focusMode === 'outstanding' ? 
+            BALANCED_CACHE_CONFIG.salesOutstanding :    // 3 minutes for outstanding (collection-critical)
+            BALANCED_CACHE_CONFIG.salesPaid;           // 8 minutes for paid (reference data)
         
+        const cacheKey = `pmt_mgmt_sales_${focusMode}_balanced`;
+        
+        // ✅ BALANCED: Cache check with mode-appropriate duration
         if (useCache && !forceRefresh) {
-            const cached = getCachedPaymentMetrics(cacheKey, 5);
+            const cached = getCachedPaymentMetrics(cacheKey, cacheMinutes);
             if (cached && cached.salesData) {
-                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} sales data - 0 Firestore reads`);
+                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} sales data (${cacheMinutes}min cache) - 0 reads`);
+                
                 pmtMgmtSalesGridApi.setGridOption('rowData', cached.salesData);
                 pmtMgmtSalesGridApi.setGridOption('loading', false);
                 updateSalesDataSummary(cached.metadata, cached.salesData, focusMode);
+                
+                // ✅ BALANCED: Add freshness indicator for cached data
+                addDataFreshnessIndicator('pmt-mgmt-sales-grid', cached.metadata.loadedAt, cacheMinutes);
+                
                 return cached;
             }
         }
 
+        console.log(`[PmtMgmt] 📊 Loading fresh ${focusMode} sales data (cache expired or forced refresh)...`);
+        
         const db = firebase.firestore();
         let totalReads = 0;
         let salesData = [];
@@ -3763,7 +3837,8 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
             // ===================================================================
             // OUTSTANDING: Customer collection targets
             // ===================================================================
-            console.log('[PmtMgmt] 📋 Loading OUTSTANDING sales invoices for collection...');
+            console.log('[PmtMgmt] 📋 COLLECTION FOCUS: Loading outstanding sales invoices...');
+            console.log('[PmtMgmt] Query collection:', SALES_COLLECTION_PATH);
             
             const outstandingQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
@@ -3773,34 +3848,83 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
             const snapshot = await outstandingQuery.get();
             totalReads = snapshot.size;
 
+            console.log(`[PmtMgmt] Outstanding sales invoices snapshot size: ${snapshot.size}`);
+
             salesData = snapshot.docs.map(doc => {
                 const data = doc.data();
-                const processedDate = processFirestoreDate(data.saleDate);
-                const daysOverdue = calculateDaysOverdue(processedDate);
+                
+                // ✅ PROCESS: Date conversion for grid compatibility
+                let processedSaleDate = null;
+                try {
+                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
+                        processedSaleDate = data.saleDate.toDate();
+                    } else if (data.saleDate instanceof Date) {
+                        processedSaleDate = data.saleDate;
+                    } else {
+                        processedSaleDate = new Date(data.saleDate || Date.now());
+                    }
+                } catch (dateError) {
+                    console.warn(`[PmtMgmt] Date processing error for invoice ${doc.id}`);
+                    processedSaleDate = new Date();
+                }
+
+                const daysOverdue = calculateDaysOverdue(processedSaleDate);
                 
                 return {
                     id: doc.id,
                     ...data,
-                    saleDate: processedDate,
+                    
+                    // ✅ PROCESSED: Date for grid compatibility
+                    saleDate: processedSaleDate,
+                    
+                    // ✅ COLLECTION INTELLIGENCE
                     daysOverdue: daysOverdue,
                     isOverdue: daysOverdue > 30,
+                    collectionUrgency: calculateCollectionUrgency(data.balanceDue || 0, daysOverdue),
+                    
+                    // ✅ CUSTOMER CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
+                    customerEmail: data.customerInfo?.email || 'No Email',
+                    customerPhone: data.customerInfo?.phone || 'No Phone',
+                    
+                    // ✅ BUSINESS CONTEXT
+                    invoiceReference: data.saleId || doc.id,
+                    manualVoucherNumber: data.manualVoucherNumber || 'No Voucher',
                     store: data.store || 'Unknown Store',
+                    
+                    // ✅ UI FORMATTING
+                    formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedBalance: formatCurrency(data.balanceDue || 0),
+                    formattedAmountPaid: formatCurrency(data.totalAmountPaid || 0),
+                    
+                    // ✅ ACTION CONTEXT
+                    needsFollowUp: daysOverdue > 30 || (data.balanceDue || 0) > 5000,
+                    contactMethod: data.customerInfo?.phone ? 'Phone' : 
+                                 data.customerInfo?.email ? 'Email' : 'No Contact',
                     collectionPriority: calculateCollectionPriority(data.balanceDue || 0, daysOverdue)
                 };
             });
 
-            console.log(`[PmtMgmt] 📋 Outstanding loaded: ${salesData.length} invoices needing collection`);
+            console.log(`[PmtMgmt] 📋 Outstanding processed: ${salesData.length} invoices for collection`);
 
         } else if (focusMode === 'paid') {
             // ===================================================================
-            // ✅ NEW: PAID invoices with store grouping intelligence
+            // PAID: Success analysis and reference data
             // ===================================================================
-            console.log('[PmtMgmt] ✅ Loading PAID sales invoices for success analysis...');
-
-            console.log('[PmtMgmt] ✅ PAID MODE: Loading fully paid sales invoices...');
+            console.log('[PmtMgmt] ✅ REFERENCE FOCUS: Loading paid sales invoices...');
             console.log('[PmtMgmt] Query collection:', SALES_COLLECTION_PATH);
+            
+            // ✅ DEBUG: First check if paid invoices exist
+            const debugQuery = db.collection(SALES_COLLECTION_PATH).limit(5);
+            const debugSnapshot = await debugQuery.get();
+            
+            console.log(`[PmtMgmt] 🔍 Sample sales invoices for status check:`, debugSnapshot.size);
+            const statusBreakdown = {};
+            debugSnapshot.docs.forEach(doc => {
+                const status = doc.data().paymentStatus || 'Unknown';
+                statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
+            });
+            console.log('[PmtMgmt] 🔍 Payment status breakdown:', statusBreakdown);
             
             const paidQuery = db.collection(SALES_COLLECTION_PATH)
                 .where('paymentStatus', '==', 'Paid')
@@ -3808,87 +3932,165 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
                 .limit(queryLimit);
 
             const snapshot = await paidQuery.get();
-            totalReads = snapshot.size;
+            totalReads = snapshot.size + debugSnapshot.size; // Include debug reads
+
+            console.log(`[PmtMgmt] Paid sales invoices snapshot size: ${snapshot.size}`);
+
+            if (snapshot.size === 0) {
+                console.log('[PmtMgmt] ℹ️ No paid sales invoices found');
+                
+                // ✅ HELPFUL: Show status breakdown in no-data message
+                pmtMgmtSalesGridApi.setGridOption('rowData', []);
+                pmtMgmtSalesGridApi.setGridOption('loading', false);
+                
+                setTimeout(() => {
+                    showModal('info', 'No Paid Invoices Available',
+                        `No fully paid sales invoices found for reference.\n\n` +
+                        `Current invoice status distribution:\n` +
+                        `${Object.entries(statusBreakdown).map(([status, count]) => 
+                            `• ${status}: ${count} invoice${count > 1 ? 's' : ''}`
+                        ).join('\n')}\n\n` +
+                        `To build payment history:\n` +
+                        `1. Complete outstanding customer collections\n` +
+                        `2. Process more direct sales transactions\n` +
+                        `3. Use Outstanding tab for active collection targets`
+                    );
+                }, 500);
+                
+                return { salesData: [], metadata: { totalReads, mode: focusMode } };
+            }
 
             salesData = snapshot.docs.map(doc => {
                 const data = doc.data();
-                const processedDate = processFirestoreDate(data.saleDate);
+                
+                // ✅ PROCESS: Date conversion for paid invoices
+                let processedSaleDate = null;
+                try {
+                    if (data.saleDate?.toDate && typeof data.saleDate.toDate === 'function') {
+                        processedSaleDate = data.saleDate.toDate();
+                    } else if (data.saleDate instanceof Date) {
+                        processedSaleDate = data.saleDate;
+                    } else {
+                        processedSaleDate = new Date(data.saleDate || Date.now());
+                    }
+                } catch (dateError) {
+                    console.warn(`[PmtMgmt] Date processing error for paid invoice ${doc.id}`);
+                    processedSaleDate = new Date();
+                }
                 
                 return {
                     id: doc.id,
                     ...data,
-                    saleDate: processedDate,
+                    
+                    // ✅ PROCESSED: Date for grid
+                    saleDate: processedSaleDate,
                     
                     // ✅ SUCCESS CONTEXT
                     customerName: data.customerInfo?.name || 'Unknown Customer',
+                    invoiceReference: data.saleId || doc.id,
                     store: data.store || 'Unknown Store',
                     
-                    // ✅ FINANCIAL SUCCESS METRICS
+                    // ✅ SUCCESS METRICS
                     formattedTotal: formatCurrency(data.financials?.totalAmount || 0),
                     formattedAmountReceived: formatCurrency(data.totalAmountPaid || 0),
                     
                     // ✅ COLLECTION SUCCESS ANALYSIS
                     wasOverpayment: (data.totalAmountPaid || 0) > (data.financials?.totalAmount || 0),
-                    donationGenerated: ((data.totalAmountPaid || 0) - (data.financials?.totalAmount || 0)) > 0,
-                    donationAmount: Math.max(0, (data.totalAmountPaid || 0) - (data.financials?.totalAmount || 0)),
+                    donationGenerated: Math.max(0, (data.totalAmountPaid || 0) - (data.financials?.totalAmount || 0)),
+                    collectionSuccess: 'Fully Collected',
                     
-                    // ✅ COLLECTION EFFICIENCY
-                    daysToPayment: calculateDaysToFullPayment(data.saleDate, data.financials?.lastPaymentDate),
-                    collectionEfficiency: calculateCollectionEfficiency(data.saleDate, data.financials?.lastPaymentDate),
-                    
-                    // ✅ STORE GROUPING DATA
-                    storeGroup: data.store || 'Unknown Store',
-                    storeSuccess: 'Fully Collected'
+                    // ✅ EFFICIENCY METRICS
+                    daysToCollection: calculateDaysToCollection(data.saleDate, data.financials?.lastPaymentDate),
+                    collectionEfficiency: calculateCollectionEfficiency(data.saleDate, data.financials?.lastPaymentDate)
                 };
             });
 
-            console.log(`[PmtMgmt] ✅ Paid loaded: ${salesData.length} successful collections`);
-
-            // ✅ ENHANCED: Calculate store grouping intelligence
-            const storeBreakdown = calculateStoreGroupingIntelligence(salesData);
-            console.log('[PmtMgmt] 🏪 STORE SUCCESS BREAKDOWN:', storeBreakdown);
+            console.log(`[PmtMgmt] ✅ Paid processed: ${salesData.length} successful collections`);
         }
 
+        // ===================================================================
+        // ✅ BALANCED: CACHE AND UPDATE UI WITH FRESHNESS
+        // ===================================================================
+        
         pmtMgmtSalesGridApi.setGridOption('rowData', salesData);
         pmtMgmtSalesGridApi.setGridOption('loading', false);
 
-        // Cache results
+        // ✅ BALANCED: Cache with metadata
         if (useCache && totalReads > 0) {
-            cachePaymentMetrics(cacheKey, {
+            const cacheData = {
                 salesData: salesData,
                 metadata: {
                     mode: focusMode,
                     totalRecords: salesData.length,
                     totalReads: totalReads,
-                    loadedAt: new Date().toISOString()
+                    loadedAt: new Date().toLocaleTimeString(), // ✅ ADD: Timestamp
+                    cacheExpiresAt: new Date(Date.now() + cacheMinutes * 60 * 1000).toLocaleTimeString(), // ✅ ADD: Expiry
+                    businessContext: focusMode === 'outstanding' ? 'Customer Collection Management' : 'Payment Success Analysis'
                 }
-            });
+            };
+            
+            cachePaymentMetrics(cacheKey, cacheData);
+            
+            // ✅ BALANCED: Add freshness indicator for fresh data
+            addDataFreshnessIndicator('pmt-mgmt-sales-grid', cacheData.metadata.loadedAt, cacheMinutes);
         }
 
-        // Update summary
+        // ✅ SUMMARY: Business intelligence
         updateSalesDataSummary({
             mode: focusMode,
             totalRecords: salesData.length,
-            totalReads: totalReads
+            totalReads: totalReads,
+            loadedAt: new Date().toLocaleTimeString()
         }, salesData, focusMode);
 
+        // Auto-fit columns
         setTimeout(() => {
             if (pmtMgmtSalesGridApi) {
                 pmtMgmtSalesGridApi.sizeColumnsToFit();
+                console.log(`[PmtMgmt] ✅ Columns auto-fitted for ${focusMode} mode`);
             }
         }, 200);
 
-        console.log(`[PmtMgmt] ✅ ${focusMode} sales data loaded: ${salesData.length} records (${totalReads} reads)`);
+        console.log(`[PmtMgmt] ✅ Sales ${focusMode} data loaded with ${cacheMinutes}-minute balanced cache: ${salesData.length} records (${totalReads} reads)`);
+
+        return { salesData: salesData, metadata: { mode: focusMode, totalReads, cacheMinutes } };
 
     } catch (error) {
-        console.error(`[PmtMgmt] ❌ Error loading ${focusMode} sales data:`, error);
+        console.error(`[PmtMgmt] ❌ Error loading sales ${focusMode} data:`, error);
         
         if (pmtMgmtSalesGridApi) {
             pmtMgmtSalesGridApi.setGridOption('loading', false);
             pmtMgmtSalesGridApi.showNoRowsOverlay();
         }
+        
+        showModal('error', `Sales ${focusMode === 'outstanding' ? 'Collections' : 'History'} Loading Failed`,
+            `Could not load ${focusMode} sales invoices.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Please use the refresh button to try again.`
+        );
     }
 }
+
+/**
+ * HELPER: Calculate days to collection completion
+ */
+function calculateDaysToCollection(saleDate, lastPaymentDate) {
+    if (!saleDate || !lastPaymentDate) return 0;
+    
+    try {
+        const sale = saleDate.toDate ? saleDate.toDate() : new Date(saleDate);
+        const payment = lastPaymentDate.toDate ? lastPaymentDate.toDate() : new Date(lastPaymentDate);
+        
+        const diffTime = payment - sale;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    } catch (error) {
+        return 0;
+    }
+}
+
+
+
 
 // ===================================================================
 // HELPER FUNCTIONS FOR PAID MODE INTELLIGENCE
@@ -3898,15 +4100,18 @@ async function loadSalesPaymentsForMgmtTab(focusMode = 'outstanding', options = 
  * ENHANCED: Update sales data summary with store grouping intelligence
  */
 function updateSalesDataSummary(metadata, salesData, focusMode) {
-    console.log(`[PmtMgmt] 💳 SALES ${focusMode.toUpperCase()} SUMMARY WITH STORE INTELLIGENCE:`);
+    console.log(`[PmtMgmt] 💳 SALES ${focusMode.toUpperCase()} SUMMARY (Balanced Cache):`)
+    console.log(`  ⏰ Data loaded at: ${metadata.loadedAt || 'Unknown'}`);
+    console.log(`  💾 Cache duration: ${metadata.mode === 'outstanding' ? BALANCED_CACHE_CONFIG.salesOutstanding : BALANCED_CACHE_CONFIG.salesPaid} minutes`);
     
     if (focusMode === 'outstanding' && salesData.length > 0) {
-        // Outstanding invoices analysis
+        // Collection management intelligence
         const totalOutstanding = salesData.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
         const overdueCount = salesData.filter(inv => inv.isOverdue).length;
-        const criticalCount = salesData.filter(inv => inv.collectionPriority === 'critical').length;
+        const criticalCount = salesData.filter(inv => inv.collectionUrgency === 'critical').length;
+        const highPriorityCount = salesData.filter(inv => inv.collectionPriority === 'high').length;
         
-        // Store breakdown for outstanding
+        // Store breakdown for outstanding collections
         const storeOutstanding = {};
         salesData.forEach(inv => {
             const store = inv.store || 'Unknown';
@@ -3921,58 +4126,45 @@ function updateSalesDataSummary(metadata, salesData, focusMode) {
         console.log(`  💰 Total Outstanding: ${formatCurrency(totalOutstanding)}`);
         console.log(`  ⚠️ Overdue Customers: ${overdueCount} invoices`);
         console.log(`  🚨 Critical Collections: ${criticalCount} customers`);
+        console.log(`  📞 High Priority Follow-up: ${highPriorityCount} customers`);
         
         Object.entries(storeOutstanding).forEach(([store, data]) => {
             console.log(`  🏪 ${store}: ${data.count} outstanding (${formatCurrency(data.amount)}${data.overdueCount > 0 ? `, ${data.overdueCount} overdue` : ''})`);
         });
         
     } else if (focusMode === 'paid' && salesData.length > 0) {
-        // ✅ PAID invoices analysis with store grouping
+        // Payment success analysis
         const totalRevenue = salesData.reduce((sum, inv) => sum + (inv.financials?.totalAmount || 0), 0);
         const totalCollected = salesData.reduce((sum, inv) => sum + (inv.totalAmountPaid || 0), 0);
-        const totalDonations = salesData.reduce((sum, inv) => sum + (inv.donationAmount || 0), 0);
+        const totalDonations = salesData.reduce((sum, inv) => sum + (inv.donationGenerated || 0), 0);
+        const averageCollection = salesData.length > 0 ? totalRevenue / salesData.length : 0;
         
-        // ✅ STORE GROUPING INTELLIGENCE
+        // Store success breakdown
         const storeSuccess = {};
         salesData.forEach(inv => {
             const store = inv.store || 'Unknown';
             if (!storeSuccess[store]) {
-                storeSuccess[store] = { 
-                    count: 0, 
-                    revenue: 0, 
-                    collected: 0, 
-                    donations: 0,
-                    averageInvoice: 0,
-                    collectionRate: 100 // All paid invoices are 100% collected
-                };
+                storeSuccess[store] = { count: 0, revenue: 0, donations: 0 };
             }
             storeSuccess[store].count += 1;
             storeSuccess[store].revenue += (inv.financials?.totalAmount || 0);
-            storeSuccess[store].collected += (inv.totalAmountPaid || 0);
-            storeSuccess[store].donations += (inv.donationAmount || 0);
+            storeSuccess[store].donations += (inv.donationGenerated || 0);
         });
         
-        // Calculate store averages
-        Object.values(storeSuccess).forEach(store => {
-            if (store.count > 0) {
-                store.averageInvoice = store.revenue / store.count;
-            }
-        });
+        console.log(`  ✅ Total Revenue (Paid): ${formatCurrency(totalRevenue)}`);
+        console.log(`  💰 Total Collected: ${formatCurrency(totalCollected)}`);
+        console.log(`  🎁 Total Donations: ${formatCurrency(totalDonations)}`);
+        console.log(`  📊 Average Invoice: ${formatCurrency(averageCollection)}`);
+        console.log(`  🎯 Collection Success: 100% (all selected invoices fully paid)`);
         
-        console.log(`  ✅ Total Revenue (Paid Invoices): ${formatCurrency(totalRevenue)}`);
-        console.log(`  💰 Total Amount Collected: ${formatCurrency(totalCollected)}`);
-        console.log(`  🎁 Total Donations Generated: ${formatCurrency(totalDonations)}`);
-        console.log(`  📊 Collection Success Rate: 100% (all selected invoices paid in full)`);
-        
-        console.log(`  🏪 STORE SUCCESS BREAKDOWN:`);
         Object.entries(storeSuccess).forEach(([store, data]) => {
-            console.log(`    ${store}: ${data.count} paid invoices, ${formatCurrency(data.revenue)} revenue, ${formatCurrency(data.donations)} donations`);
-            console.log(`      Average invoice: ${formatCurrency(data.averageInvoice)}, Collection rate: ${data.collectionRate}%`);
+            console.log(`  🏪 ${store}: ${data.count} paid (${formatCurrency(data.revenue)} revenue, ${formatCurrency(data.donations)} donations)`);
         });
     }
     
     console.log(`  📊 Total Records: ${salesData.length}`);
     console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
+    console.log(`  ⚡ Cache Strategy: Balanced (${metadata.mode === 'outstanding' ? '3min' : '8min'} cache)`);
 }
 
 
@@ -4279,13 +4471,8 @@ function setupSupplierPaymentFilters() {
     const refreshButton = document.getElementById('pmt-mgmt-supplier-refresh');
     if (refreshButton) {
         refreshButton.addEventListener('click', () => {
-            const currentFilter = supplierInvoicesPagination.currentFilter;
-            console.log(`[PmtMgmt] Manual refresh: ${currentFilter} invoices`);
-            
-            loadSupplierInvoicesForMgmtTab(currentFilter, {
-                page: 1, // Reset to first page
-                forceRefresh: true
-            });
+            console.log(`[PmtMgmt] Manual supplier refresh using existing refreshSpecificGrid`);
+            refreshSpecificGrid('pmt-mgmt-supplier-grid', 'supplier'); 
         });
     }
     
@@ -4516,9 +4703,8 @@ function setupSalesPaymentFilters() {
     const refreshButton = document.getElementById('pmt-mgmt-sales-refresh');
     if (refreshButton) {
         refreshButton.addEventListener('click', () => {
-            const currentMode = getCurrentSalesFilterMode();
-            console.log(`[PmtMgmt] Manual refresh: ${currentMode} sales data`);
-            loadSalesPaymentsForMgmtTab(currentMode, { forceRefresh: true });
+            console.log(`[PmtMgmt] Manual sales refresh using existing refreshSpecificGrid`);
+            refreshSpecificGrid('pmt-mgmt-sales-grid', 'sales'); // ✅ Use your existing function
         });
     }
 
@@ -4532,16 +4718,16 @@ function setupSalesPaymentFilters() {
  */
 function getCurrentSalesFilterMode() {
     const outstandingFilter = document.getElementById('pmt-mgmt-sales-filter-outstanding');
-    const paidFilter = document.getElementById('pmt-mgmt-sales-filter-paid'); // ✅ Use actual HTML ID
+    const paymentsFilter = document.getElementById('pmt-mgmt-sales-filter-payments'); // Your actual HTML ID
     
-    console.log('[PmtMgmt] 🔍 Checking current filter mode:');
+    console.log('[PmtMgmt] 🔍 Checking current sales filter mode:');
     console.log('  Outstanding active:', outstandingFilter?.classList.contains('active'));
-    console.log('  Paid active:', paidFilter?.classList.contains('active'));
+    console.log('  Payments active:', paymentsFilter?.classList.contains('active'));
     
-    if (paidFilter?.classList.contains('active')) {
-        return 'paid';
+    if (paymentsFilter?.classList.contains('active')) {
+        return 'paid'; // Maps to your 'paid' logic in loadSalesPaymentsForMgmtTab
     } else {
-        return 'outstanding'; // Default
+        return 'outstanding'; // Default for sales
     }
 }
 
