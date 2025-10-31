@@ -3974,15 +3974,6 @@ function applySalesPaymentFilter(filterType) {
 }
 
 
-/**
- * Updates active state for sales filter buttons
- */
-function updateSalesFilterActiveState(activeButton) {
-    document.querySelectorAll('.pmt-mgmt-sales-filter').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    activeButton.classList.add('active');
-}
 
 // Grid APIs for modal grids
 let pmtMgmtInvoiceLineItemsGridApi = null;
