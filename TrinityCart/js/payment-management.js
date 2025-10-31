@@ -99,6 +99,26 @@ let pmtMgmtRealtimeListeners = {
 };
 
 
+// ===================================================================
+// BALANCED CACHE CONFIGURATION
+// ===================================================================
+
+const BALANCED_CACHE_CONFIG = {
+    // ✅ BALANCED: Responsive but efficient cache durations
+    supplierPayments: 3,        // 3 minutes - critical for supplier relationships
+    salesOutstanding: 3,        // 3 minutes - important for customer collections  
+    salesPaid: 8,              // 8 minutes - reference data, less time-sensitive
+    teamPayments: 3,           // 3 minutes - important for team settlements
+    dashboardMetrics: 3,       // 3 minutes - overview needs to be current
+    outstandingBalances: 5,    // 5 minutes - financial position changes slowly
+    
+    // Visual indicators
+    showFreshnessIndicators: true,
+    enableManualRefresh: true,
+    notificationDuration: 2000  // 2 seconds for refresh notifications
+};
+
+
 /**
  * ENHANCED: Setup real-time listeners for Payment Management module
  * 
@@ -2826,6 +2846,140 @@ function initializeSupplierPaymentsTab() {
 }
 
 /**
+ * BALANCED: Add data freshness indicator to grids
+ */
+function addDataFreshnessIndicator(gridId, loadedTime, cacheMinutes) {
+    if (!BALANCED_CACHE_CONFIG.showFreshnessIndicators) return;
+    
+    console.log(`[PmtMgmt] 📊 Adding freshness indicator to ${gridId}`);
+    
+    const gridContainer = document.getElementById(gridId)?.parentElement;
+    if (!gridContainer) {
+        console.warn(`[PmtMgmt] Could not find container for ${gridId}`);
+        return;
+    }
+    
+    // Remove any existing indicator
+    const existingIndicator = gridContainer.querySelector('.data-freshness-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // Create freshness indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'data-freshness-indicator flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 text-sm';
+    
+    const expiryTime = new Date(Date.now() + cacheMinutes * 60 * 1000);
+    
+    indicator.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-blue-800">
+                <strong>Data loaded:</strong> ${loadedTime}
+            </span>
+            <span class="text-blue-600 text-xs">
+                <strong>Cache:</strong> ${cacheMinutes} min | <strong>Expires:</strong> <span id="${gridId}-cache-countdown">${expiryTime.toLocaleTimeString()}</span>
+            </span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="text-xs text-blue-600">
+                <span id="${gridId}-cache-status">✅ Fresh</span>
+            </span>
+            <button onclick="refreshSpecificGrid('${gridId}', '${gridId.includes('supplier') ? 'supplier' : 'sales'}')" 
+                   class="text-blue-600 hover:text-blue-800 underline text-xs font-medium px-2 py-1 hover:bg-blue-100 rounded transition-colors">
+                🔄 Refresh Now
+            </button>
+        </div>
+    `;
+    
+    // Insert at the top of the grid container
+    gridContainer.insertBefore(indicator, gridContainer.firstChild);
+    
+    // Start countdown
+    startCacheCountdown(gridId, cacheMinutes);
+    
+    console.log(`[PmtMgmt] ✅ Freshness indicator added with ${cacheMinutes}-minute cache`);
+}
+
+/**
+ * BALANCED: Cache countdown with visual feedback
+ */
+function startCacheCountdown(gridId, cacheMinutes) {
+    let secondsRemaining = cacheMinutes * 60;
+    const countdownElement = document.getElementById(`${gridId}-cache-countdown`);
+    const statusElement = document.getElementById(`${gridId}-cache-status`);
+    
+    if (!countdownElement || !statusElement) return;
+    
+    const countdown = setInterval(() => {
+        const minutes = Math.floor(secondsRemaining / 60);
+        const seconds = secondsRemaining % 60;
+        
+        countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (secondsRemaining <= 0) {
+            // Cache expired
+            statusElement.innerHTML = '⚠️ <span class="text-orange-600 font-semibold">Cache Expired</span>';
+            countdownElement.textContent = 'Click Refresh for latest data';
+            countdownElement.className = 'text-orange-600 font-semibold animate-pulse';
+            clearInterval(countdown);
+            
+        } else if (secondsRemaining <= 60) {
+            // Expiring soon
+            statusElement.innerHTML = '🟡 <span class="text-yellow-600">Expiring Soon</span>';
+            countdownElement.className = 'text-yellow-600 font-semibold';
+            
+        } else if (secondsRemaining <= 120) {
+            // Getting older
+            statusElement.innerHTML = '🟠 <span class="text-blue-600">Aging</span>';
+            countdownElement.className = 'text-blue-600';
+            
+        } else {
+            // Fresh
+            statusElement.innerHTML = '✅ <span class="text-green-600">Fresh</span>';
+            countdownElement.className = 'text-blue-600';
+        }
+        
+        secondsRemaining--;
+    }, 1000);
+}
+
+/**
+ * BALANCED: Global refresh function for manual refresh buttons
+ */
+window.refreshSpecificGrid = async function(gridId, gridType) {
+    console.log(`[PmtMgmt] 🔄 Manual refresh requested for ${gridType} grid`);
+    
+    try {
+        ProgressToast.show(`Refreshing ${gridType.charAt(0).toUpperCase() + gridType.slice(1)} Data`, 'info');
+        ProgressToast.updateProgress('Loading fresh data...', 75);
+        
+        switch (gridType) {
+            case 'supplier':
+                const currentSupplierFilter = getCurrentSupplierFilterMode(); // You'd need to implement this
+                await loadSupplierInvoicesForMgmtTab(currentSupplierFilter, { forceRefresh: true });
+                break;
+                
+            case 'sales':
+                const currentSalesFilter = getCurrentSalesFilterMode();
+                await loadSalesPaymentsForMgmtTab(currentSalesFilter, { forceRefresh: true });
+                break;
+        }
+        
+        ProgressToast.showSuccess('Data refreshed successfully!');
+        setTimeout(() => ProgressToast.hide(300), 800);
+        
+    } catch (error) {
+        console.error(`[PmtMgmt] Manual refresh failed for ${gridType}:`, error);
+        ProgressToast.showError('Refresh failed - please try again');
+    }
+};
+
+
+
+/**
  * BUSINESS-FOCUSED: Load supplier invoices based on payment operations needs
  * 
  * DEFAULT: Shows outstanding invoices (Unpaid/Partially Paid) - immediate action items
@@ -2862,6 +3016,10 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
                 pmtMgmtSupplierGridApi.setGridOption('rowData', cached.invoices);
                 pmtMgmtSupplierGridApi.setGridOption('loading', false);
                 updateSupplierInvoicesSummary(cached.metadata, cached.invoices);
+                
+                // ✅ BALANCED: Add freshness indicator
+                addDataFreshnessIndicator('pmt-mgmt-supplier-grid', cached.metadata.loadedAt || new Date().toLocaleTimeString(), cacheMinutes);
+                
                 return cached;
             }
         }
@@ -3018,10 +3176,16 @@ async function loadSupplierInvoicesForMgmtTab(filterStatus = 'outstanding', pagi
 
         // Cache enhanced data
         if (page === 1) {
-            cachePaymentMetrics(cacheKey, {
+            const cacheData = {
                 invoices: enhancedInvoicesWithPendingStatus,
-                metadata: businessMetrics
-            });
+                metadata: {
+                    ...businessMetrics,
+                    loadedAt: new Date().toLocaleTimeString(), // ✅ ADD: Timestamp
+                    cacheExpiresAt: new Date(Date.now() + cacheMinutes * 60 * 1000).toLocaleTimeString() // ✅ ADD: Expiry
+                }
+            };
+            cachePaymentMetrics(cacheKey, cacheData);
+            addDataFreshnessIndicator('pmt-mgmt-supplier-grid', cacheData.metadata.loadedAt, cacheMinutes);
         }
 
         // Update summary display
