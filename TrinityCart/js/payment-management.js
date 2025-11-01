@@ -3760,17 +3760,22 @@ async function loadSupplierPaymentsForMgmtTab() {
 
 
 /**
- * CORRECTED: Load consignment ORDERS for team settlement management (not payment transactions).
+ * ENHANCED: Load consignment orders for team settlement management with balanced caching.
  * 
- * This focuses on consignment orders that need settlement rather than individual payment records.
- * Much more business-relevant for team settlement management and cash flow tracking.
+ * This function focuses on consignment orders rather than payment transactions,
+ * providing better business context for team settlement management and cash flow tracking.
  * 
  * BUSINESS MODES:
- * - 'outstanding': Active consignment orders with balance due (teams owe settlements)
+ * - 'outstanding': Active consignment orders with balance due (teams owe settlements)  
  * - 'settled': Orders that have been fully settled (reference/success tracking)
  * 
  * @param {string} [focusMode='outstanding'] - 'outstanding' or 'settled'
  * @param {Object} [options={}] - Configuration options
+ * @param {boolean} [options.useCache=true] - Enable balanced caching
+ * @param {number} [options.queryLimit=50] - Max records per query
+ * @param {boolean} [options.forceRefresh=false] - Force fresh data load
+ * 
+ * @returns {Promise<Object>} Team settlement data with business intelligence
  */
 async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
     const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
@@ -3785,14 +3790,17 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
     try {
         pmtMgmtTeamGridApi.setGridOption('loading', true);
 
-        // ✅ CORRECTED: Cache for consignment orders (not payments)
+        // ===================================================================
+        // BALANCED CACHE CONFIGURATION
+        // ===================================================================
+        
         const cacheMinutes = focusMode === 'outstanding' ? 
             (BALANCED_CACHE_CONFIG?.teamPayments || 3) :      // 3 minutes for outstanding settlements
             (BALANCED_CACHE_CONFIG?.teamPayments || 8);       // 8 minutes for settled orders
         
         const cacheKey = `pmt_mgmt_consignment_orders_${focusMode}_balanced`;
         
-        // Cache check
+        // ✅ BALANCED: Cache check with mode-appropriate duration
         if (useCache && !forceRefresh) {
             const cached = getCachedPaymentMetrics(cacheKey, cacheMinutes);
             if (cached && cached.orderData) {
@@ -3802,6 +3810,7 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                 pmtMgmtTeamGridApi.setGridOption('loading', false);
                 updateTeamOrdersSummary(cached.metadata, cached.orderData, focusMode);
                 
+                // ✅ BALANCED: Add freshness indicator for cached data
                 setTimeout(() => {
                     addDataFreshnessIndicator('pmt-mgmt-team-grid', cached.metadata.loadedAt || 'Cached', cacheMinutes);
                 }, 300);
@@ -3810,7 +3819,7 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
             }
         }
 
-        console.log(`[PmtMgmt] 📊 Loading fresh ${focusMode} consignment orders...`);
+        console.log(`[PmtMgmt] 📊 Loading fresh ${focusMode} consignment orders (cache expired or forced refresh)...`);
         
         const db = firebase.firestore();
         let totalReads = 0;
@@ -3818,16 +3827,16 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
 
         if (focusMode === 'outstanding') {
             // ===================================================================
-            // ✅ CORRECTED: Outstanding consignment orders (teams owe money)
+            // OUTSTANDING: Active consignment orders with settlement balances
             // ===================================================================
             console.log('[PmtMgmt] 👥 SETTLEMENT FOCUS: Loading consignment orders with outstanding balances...');
             console.log('[PmtMgmt] Query collection:', CONSIGNMENT_ORDERS_COLLECTION_PATH);
             
-            // ✅ BUSINESS QUERY: Active consignment orders with money owed
+            // ✅ BUSINESS QUERY: Active consignment orders where teams owe money
             const outstandingOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
                 .where('status', '==', 'Active')
                 .where('balanceDue', '>', 0) // ✅ Teams owe settlement money
-                .orderBy('requestDate', 'asc') // Oldest orders first (priority)
+                .orderBy('requestDate', 'asc') // Oldest orders first (settlement priority)
                 .limit(queryLimit);
 
             const snapshot = await outstandingOrdersQuery.get();
@@ -3836,12 +3845,14 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
             console.log(`[PmtMgmt] Outstanding consignment orders snapshot size: ${snapshot.size}`);
 
             if (snapshot.size === 0) {
-                // ✅ DEBUG: Check if any consignment orders exist
-                const allOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                // ✅ DEBUG: Check if any consignment orders exist at all
+                console.log('[PmtMgmt] 🔍 No outstanding orders found, checking all active orders...');
+                
+                const allActiveOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
                     .where('status', '==', 'Active')
                     .limit(10);
                 
-                const allOrdersSnapshot = await allOrdersQuery.get();
+                const allOrdersSnapshot = await allActiveOrdersQuery.get();
                 totalReads += allOrdersSnapshot.size;
                 
                 console.log(`[PmtMgmt] 🔍 Total active consignment orders: ${allOrdersSnapshot.size}`);
@@ -3850,63 +3861,124 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                     console.log(`[PmtMgmt] 🔍 Sample order balances:`);
                     allOrdersSnapshot.docs.slice(0, 5).forEach((doc, index) => {
                         const orderData = doc.data();
-                        console.log(`  ${index + 1}. ${orderData.teamName}: Balance Due = ${formatCurrency(orderData.balanceDue || 0)}`);
+                        console.log(`  ${index + 1}. ${orderData.teamName}: Balance Due = ${formatCurrency(orderData.balanceDue || 0)}, Status = ${orderData.status}`);
                     });
+                    
+                    // Show helpful message about why no outstanding orders
+                    pmtMgmtTeamGridApi.setGridOption('rowData', []);
+                    pmtMgmtTeamGridApi.setGridOption('loading', false);
+                    
+                    setTimeout(() => {
+                        showModal('info', 'No Outstanding Team Settlements',
+                            `Found ${allOrdersSnapshot.size} active consignment orders, but none have outstanding balances.\n\n` +
+                            `This means:\n` +
+                            `✅ All active teams are current on settlements\n` +
+                            `✅ No collection actions required\n\n` +
+                            `To see team activity:\n` +
+                            `💡 Use "Settled" tab for completed settlements\n` +
+                            `💡 Check Consignment Management for active orders\n` +
+                            `💡 Teams may need to sell products before settlements are due`
+                        );
+                    }, 500);
+                } else {
+                    // No consignment orders exist at all
+                    pmtMgmtTeamGridApi.setGridOption('rowData', []);
+                    pmtMgmtTeamGridApi.setGridOption('loading', false);
+                    
+                    setTimeout(() => {
+                        showModal('info', 'No Consignment Orders Found',
+                            `No active consignment orders found in the system.\n\n` +
+                            `To generate team settlements:\n` +
+                            `1. Teams must first request consignments\n` +
+                            `2. Admin fulfills requests (gives products to teams)\n` +
+                            `3. Teams sell products and generate revenue\n` +
+                            `4. Teams owe settlement payments for sold products\n\n` +
+                            `Start in Consignment Management to create team orders.`
+                        );
+                    }, 500);
                 }
                 
-                pmtMgmtTeamGridApi.setGridOption('rowData', []);
-                pmtMgmtTeamGridApi.setGridOption('loading', false);
-                
+                // ✅ STILL ADD: Freshness indicator even for no data
                 setTimeout(() => {
-                    showModal('info', 'No Outstanding Team Settlements',
-                        `No consignment orders have outstanding balances.\n\n` +
-                        `Current situation:\n` +
-                        `• Active consignment orders: ${allOrdersSnapshot.size}\n` +
-                        `• Orders with outstanding balances: 0\n\n` +
-                        `This means:\n` +
-                        `✅ All active teams are current on settlements\n` +
-                        `💡 Check Consignment Management for team activity\n` +
-                        `💡 Use Settled tab to see completed settlements`
-                    );
-                }, 500);
+                    addDataFreshnessIndicator('pmt-mgmt-team-grid', new Date().toLocaleTimeString(), cacheMinutes);
+                }, 600);
                 
-                return { orderData: [], metadata: { totalReads, mode: focusMode } };
+                return { orderData: [], metadata: { totalReads, mode: focusMode, cacheMinutes } };
             }
 
-            orderData = snapshot.docs.map(doc => {
+            // ✅ PROCESS: Outstanding consignment orders with date conversion
+            console.log(`[PmtMgmt] 📋 Processing ${snapshot.size} outstanding consignment orders...`);
+            
+            orderData = snapshot.docs.map((doc, index) => {
                 const data = doc.data();
                 
-                // ✅ PROCESS: Date conversion
+                console.log(`[PmtMgmt] 🔍 Processing order ${index + 1}/${snapshot.size}:`);
+                console.log(`  Team: ${data.teamName}, Balance Due: ${formatCurrency(data.balanceDue || 0)}`);
+                console.log(`  Raw requestDate:`, data.requestDate);
+                console.log(`  Raw requestDate type:`, typeof data.requestDate);
+                console.log(`  Has toDate method:`, !!data.requestDate?.toDate);
+                
+                // ✅ CRITICAL: Process dates for grid compatibility
                 let processedRequestDate = null;
                 let processedCheckoutDate = null;
                 
                 try {
-                    if (data.requestDate?.toDate) {
+                    // Request Date processing
+                    if (data.requestDate?.toDate && typeof data.requestDate.toDate === 'function') {
                         processedRequestDate = data.requestDate.toDate();
+                        console.log(`  ✅ Converted requestDate from Firestore Timestamp:`, processedRequestDate.toLocaleDateString());
+                    } else if (data.requestDate instanceof Date) {
+                        processedRequestDate = data.requestDate;
+                        console.log(`  ✅ requestDate already Date object:`, processedRequestDate.toLocaleDateString());
+                    } else if (data.requestDate) {
+                        processedRequestDate = new Date(data.requestDate);
+                        console.log(`  ✅ Converted requestDate from string:`, processedRequestDate.toLocaleDateString());
                     } else {
-                        processedRequestDate = new Date(data.requestDate || Date.now());
+                        processedRequestDate = new Date();
+                        console.log(`  ⚠️ No requestDate found, using current date`);
                     }
                     
-                    if (data.checkoutDate?.toDate) {
+                    // Checkout Date processing
+                    if (data.checkoutDate?.toDate && typeof data.checkoutDate.toDate === 'function') {
                         processedCheckoutDate = data.checkoutDate.toDate();
+                        console.log(`  ✅ Converted checkoutDate from Firestore Timestamp:`, processedCheckoutDate.toLocaleDateString());
+                    } else if (data.checkoutDate instanceof Date) {
+                        processedCheckoutDate = data.checkoutDate;
+                        console.log(`  ✅ checkoutDate already Date object`);
+                    } else if (data.checkoutDate) {
+                        processedCheckoutDate = new Date(data.checkoutDate);
+                        console.log(`  ✅ Converted checkoutDate from string`);
                     } else {
-                        processedCheckoutDate = new Date(data.checkoutDate || Date.now());
+                        processedCheckoutDate = new Date();
+                        console.log(`  ⚠️ No checkoutDate found, using current date`);
                     }
+                    
                 } catch (dateError) {
-                    console.warn(`[PmtMgmt] Date processing error for order ${doc.id}`);
+                    console.error(`[PmtMgmt] ❌ Date processing error for order ${doc.id}:`, dateError);
                     processedRequestDate = new Date();
+                    processedCheckoutDate = new Date();
+                }
+
+                // ✅ VALIDATE: Ensure dates are valid JavaScript Date objects
+                if (!(processedRequestDate instanceof Date) || isNaN(processedRequestDate.getTime())) {
+                    console.warn(`[PmtMgmt] Invalid processed requestDate for order ${doc.id}, using fallback`);
+                    processedRequestDate = new Date();
+                }
+
+                if (!(processedCheckoutDate instanceof Date) || isNaN(processedCheckoutDate.getTime())) {
+                    console.warn(`[PmtMgmt] Invalid processed checkoutDate for order ${doc.id}, using fallback`);
                     processedCheckoutDate = new Date();
                 }
 
                 const daysOutstanding = calculateDaysOverdue(processedCheckoutDate);
                 
-                return {
+                const processedOrder = {
                     id: doc.id,
                     ...data,
                     
-                    // ✅ PROCESSED: Dates
-                    requestDate: processedRequestDate,
-                    checkoutDate: processedCheckoutDate,
+                    // ✅ CRITICAL: Override with processed JavaScript Dates
+                    requestDate: processedRequestDate,   // Grid will use this processed date
+                    checkoutDate: processedCheckoutDate, // Grid will use this processed date
                     
                     // ✅ SETTLEMENT INTELLIGENCE
                     daysOutstanding: daysOutstanding,
@@ -3928,19 +4000,31 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                     settlementUrgency: daysOutstanding > 90 ? 'critical' : 
                                       daysOutstanding > 60 ? 'high' : 'medium'
                 };
+                
+                console.log(`  ✅ Final processed order ${index + 1}:`, {
+                    id: processedOrder.id,
+                    team: processedOrder.teamName,
+                    requestDate: processedOrder.requestDate instanceof Date ? processedOrder.requestDate.toLocaleDateString() : 'NOT A DATE',
+                    checkoutDate: processedOrder.checkoutDate instanceof Date ? processedOrder.checkoutDate.toLocaleDateString() : 'NOT A DATE',
+                    balanceDue: processedOrder.formattedBalanceDue,
+                    daysOutstanding: processedOrder.daysOutstanding
+                });
+                
+                return processedOrder;
             });
 
-            console.log(`[PmtMgmt] 👥 Outstanding orders processed: ${orderData.length} teams need settlements`);
+            console.log(`[PmtMgmt] ✅ ALL OUTSTANDING ORDERS PROCESSED: ${orderData.length} orders with JavaScript dates`);
 
         } else if (focusMode === 'settled') {
             // ===================================================================
-            // ✅ SETTLED: Fully settled consignment orders (success reference)
+            // SETTLED: Fully settled consignment orders (reference data)
             // ===================================================================
             console.log('[PmtMgmt] ✅ SUCCESS FOCUS: Loading settled consignment orders...');
+            console.log('[PmtMgmt] Query collection:', CONSIGNMENT_ORDERS_COLLECTION_PATH);
             
             const settledOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
-                .where('status', '==', 'Active') // Still active but balance = 0
-                .where('balanceDue', '==', 0)    // ✅ Fully settled
+                .where('status', '==', 'Active') // Still active but fully settled
+                .where('balanceDue', '==', 0)    // ✅ Fully settled (no money owed)
                 .orderBy('requestDate', 'desc')  // Recent settlements first
                 .limit(queryLimit);
 
@@ -3949,20 +4033,85 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
 
             console.log(`[PmtMgmt] Settled orders snapshot size: ${snapshot.size}`);
 
-            orderData = snapshot.docs.map(doc => {
+            if (snapshot.size === 0) {
+                console.log('[PmtMgmt] ℹ️ No settled consignment orders found');
+                
+                pmtMgmtTeamGridApi.setGridOption('rowData', []);
+                pmtMgmtTeamGridApi.setGridOption('loading', false);
+                
+                setTimeout(() => {
+                    showModal('info', 'No Settled Orders Found',
+                        `No fully settled consignment orders found.\n\n` +
+                        `This could mean:\n` +
+                        `• Teams are still working on settlements\n` +
+                        `• Orders are still in progress\n` +
+                        `• No teams have completed full settlements yet\n\n` +
+                        `Check Outstanding tab for active settlement work.`
+                    );
+                }, 500);
+                
+                // ✅ STILL ADD: Freshness indicator
+                setTimeout(() => {
+                    addDataFreshnessIndicator('pmt-mgmt-team-grid', new Date().toLocaleTimeString(), cacheMinutes);
+                }, 600);
+                
+                return { orderData: [], metadata: { totalReads, mode: focusMode, cacheMinutes } };
+            }
+
+            // ✅ PROCESS: Settled orders with date conversion
+            orderData = snapshot.docs.map((doc, index) => {
                 const data = doc.data();
-                const processedRequestDate = data.requestDate?.toDate ? 
-                    data.requestDate.toDate() : new Date(data.requestDate || Date.now());
+                
+                console.log(`[PmtMgmt] 🔍 Processing settled order ${index + 1}/${snapshot.size}: ${data.teamName}`);
+                
+                // ✅ PROCESS: Date conversion for settled orders
+                let processedRequestDate = null;
+                let processedCheckoutDate = null;
+                
+                try {
+                    if (data.requestDate?.toDate && typeof data.requestDate.toDate === 'function') {
+                        processedRequestDate = data.requestDate.toDate();
+                    } else if (data.requestDate instanceof Date) {
+                        processedRequestDate = data.requestDate;
+                    } else {
+                        processedRequestDate = new Date(data.requestDate || Date.now());
+                    }
+                    
+                    if (data.checkoutDate?.toDate && typeof data.checkoutDate.toDate === 'function') {
+                        processedCheckoutDate = data.checkoutDate.toDate();
+                    } else if (data.checkoutDate instanceof Date) {
+                        processedCheckoutDate = data.checkoutDate;
+                    } else {
+                        processedCheckoutDate = new Date(data.checkoutDate || Date.now());
+                    }
+                    
+                } catch (dateError) {
+                    console.warn(`[PmtMgmt] Date processing error for settled order ${doc.id}:`, dateError);
+                    processedRequestDate = new Date();
+                    processedCheckoutDate = new Date();
+                }
                 
                 return {
                     id: doc.id,
                     ...data,
+                    
+                    // ✅ PROCESSED: Dates
                     requestDate: processedRequestDate,
+                    checkoutDate: processedCheckoutDate,
+                    
+                    // ✅ SUCCESS CONTEXT
                     teamName: data.teamName || 'Unknown Team',
+                    teamLeadName: data.requestingMemberName || 'Unknown Lead',
                     consignmentId: data.consignmentId || doc.id,
                     settlementSuccess: 'Fully Settled',
+                    
+                    // ✅ SUCCESS METRICS
                     formattedTotalSold: formatCurrency(data.totalValueSold || 0),
-                    formattedTotalPaid: formatCurrency(data.totalAmountPaid || 0)
+                    formattedTotalPaid: formatCurrency(data.totalAmountPaid || 0),
+                    
+                    // ✅ SETTLEMENT ANALYSIS
+                    settlementEfficiency: calculateSettlementEfficiency(data.checkoutDate, data.financials?.lastPaymentDate),
+                    wasSuccessful: true
                 };
             });
 
@@ -3970,13 +4119,25 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
         }
 
         // ===================================================================
-        // UPDATE UI AND CACHE
+        // FINAL VALIDATION OF PROCESSED DATA
+        // ===================================================================
+        
+        if (orderData.length > 0) {
+            console.log(`[PmtMgmt] 🔍 FINAL DATA VALIDATION:`);
+            const firstOrder = orderData[0];
+            console.log(`  First order requestDate type:`, typeof firstOrder.requestDate);
+            console.log(`  First order requestDate instanceof Date:`, firstOrder.requestDate instanceof Date);
+            console.log(`  First order can format date:`, firstOrder.requestDate instanceof Date ? firstOrder.requestDate.toLocaleDateString() : 'Cannot format');
+        }
+
+        // ===================================================================
+        // UPDATE UI WITH PROCESSED DATA
         // ===================================================================
         
         pmtMgmtTeamGridApi.setGridOption('rowData', orderData);
         pmtMgmtTeamGridApi.setGridOption('loading', false);
 
-        // Cache with proper metadata
+        // ✅ BALANCED: Cache with comprehensive metadata
         if (useCache && totalReads > 0) {
             const cacheData = {
                 orderData: orderData,
@@ -3985,47 +4146,70 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                     totalRecords: orderData.length,
                     totalReads: totalReads,
                     loadedAt: new Date().toLocaleTimeString(),
+                    cacheExpiresAt: new Date(Date.now() + cacheMinutes * 60 * 1000).toLocaleTimeString(),
+                    cacheMinutes: cacheMinutes,
                     businessContext: focusMode === 'outstanding' ? 'Team Settlement Management' : 'Settlement Success Tracking'
                 }
             };
             
             cachePaymentMetrics(cacheKey, cacheData);
+            console.log(`[PmtMgmt] ✅ Cached ${focusMode} team data for ${cacheMinutes} minutes`);
         }
 
-        // ✅ CORRECTED: Summary function with proper parameters
+        // ✅ SUMMARY: Business intelligence reporting
         updateTeamOrdersSummary({
             mode: focusMode,
             totalRecords: orderData.length,
             totalReads: totalReads,
             loadedAt: new Date().toLocaleTimeString(),
-            cacheMinutes: cacheMinutes // ✅ Pass cacheMinutes in metadata
+            cacheMinutes: cacheMinutes
         }, orderData, focusMode);
 
-        // Add freshness indicator
+        // ✅ BALANCED: ALWAYS add freshness indicator (with delay for grid stability)
         setTimeout(() => {
             addDataFreshnessIndicator('pmt-mgmt-team-grid', new Date().toLocaleTimeString(), cacheMinutes);
+            console.log(`[PmtMgmt] ✅ Team freshness indicator added for ${focusMode} data`);
         }, 500);
 
+        // Auto-fit columns after data and indicator are ready
         setTimeout(() => {
             if (pmtMgmtTeamGridApi) {
                 pmtMgmtTeamGridApi.sizeColumnsToFit();
+                console.log(`[PmtMgmt] ✅ Team columns auto-fitted for ${focusMode} mode`);
             }
-        }, 600);
+        }, 700);
 
-        console.log(`[PmtMgmt] ✅ Team ${focusMode} orders loaded: ${orderData.length} records (${totalReads} reads)`);
+        console.log(`[PmtMgmt] ✅ Team ${focusMode} orders loaded with balanced caching: ${orderData.length} records (${totalReads} reads)`);
 
-        return { orderData: orderData, metadata: { mode: focusMode, totalReads, cacheMinutes } };
+        return { 
+            orderData: orderData, 
+            metadata: { 
+                mode: focusMode, 
+                totalReads, 
+                cacheMinutes,
+                processedRecords: orderData.length,
+                dataProcessingComplete: true
+            } 
+        };
 
     } catch (error) {
-        console.error(`[PmtMgmt] ❌ Error loading team ${focusMode} data:`, error);
+        console.error(`[PmtMgmt] ❌ Error loading team ${focusMode} orders:`, error);
         
         if (pmtMgmtTeamGridApi) {
             pmtMgmtTeamGridApi.setGridOption('loading', false);
             pmtMgmtTeamGridApi.showNoRowsOverlay();
         }
+        
+        showModal('error', `Team ${focusMode === 'outstanding' ? 'Settlement' : 'History'} Loading Failed`,
+            `Could not load ${focusMode} consignment orders.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Collection: ${CONSIGNMENT_ORDERS_COLLECTION_PATH}\n\n` +
+            `Please use the refresh button to try again.`
+        );
+        
+        return { orderData: [], metadata: { totalReads: 0, mode: focusMode, error: error.message } };
     }
 }
-
 
 // ===================================================================
 // HELPER FUNCTIONS FOR TEAM PAYMENT BUSINESS INTELLIGENCE
