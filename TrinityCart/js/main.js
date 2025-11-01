@@ -143,7 +143,10 @@ import {
     handleSupplierPayOutstandingBalance,  
     getSupplierInvoiceFromMgmtGrid,
     showSupplierInvoicePaymentVerificationModal, 
-    buildActionRequiredList
+    buildActionRequiredList,
+    checkForPendingTeamPayments,              // For checking team payment status
+    showTeamPaymentVerificationModal,        // For team payment verification modal
+
 } from './payment-management.js';
 
 
