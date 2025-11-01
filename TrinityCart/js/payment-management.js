@@ -1132,7 +1132,7 @@ const pmtMgmtTeamGridOptions = {
  * @returns {Promise<Object>} Pending team payment status and details
  */
 export async function checkForPendingTeamPayments(consignmentOrderId) {
-    console.log(`[PmtMgmt] Checking pending team payments for consignment order: ${consignmentOrderId}`);
+    console.log(`[PmtMgmt] 🔍 DEBUG: Checking pending team payments for order: ${consignmentOrderId}`);
 
     try {
         const db = firebase.firestore();
@@ -1141,47 +1141,70 @@ export async function checkForPendingTeamPayments(consignmentOrderId) {
         let totalPendingAmount = 0;
         const pendingPaymentsList = [];
 
-        // ===================================================================
-        // QUERY: Team payments pending verification for this order
-        // ===================================================================
+        // ✅ DEBUG: Log the exact query being made
+        console.log(`[PmtMgmt] 🔍 Building query:`);
+        console.log(`  Collection: ${CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH}`);
+        console.log(`  Where orderId == "${consignmentOrderId}"`);
+        console.log(`  Where paymentStatus == "Pending Verification"`);
         
         const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .where('orderId', '==', consignmentOrderId)
             .where('paymentStatus', '==', 'Pending Verification')
             .orderBy('submittedOn', 'asc');
 
+        console.log(`[PmtMgmt] 🔍 Executing query...`);
         const teamPaymentsSnapshot = await teamPaymentsQuery.get();
         
-        teamPaymentsSnapshot.docs.forEach(doc => {
-            const payment = { id: doc.id, ...doc.data() };
+        console.log(`[PmtMgmt] 🔍 Query results:`);
+        console.log(`  Snapshot size: ${teamPaymentsSnapshot.size}`);
+        console.log(`  Snapshot empty: ${teamPaymentsSnapshot.empty}`);
+        
+        if (teamPaymentsSnapshot.size === 0) {
+            // ✅ DEBUG: If no results, check if payment exists with different criteria
+            console.log(`[PmtMgmt] 🔍 No results found - checking broader criteria...`);
             
-            if (payment.amountPaid && payment.amountPaid > 0) {
-                hasPendingPayments = true;
-                pendingPaymentsCount++;
-                totalPendingAmount += payment.amountPaid;
+            // Check if payment exists with ANY status
+            const broadQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+                .where('orderId', '==', consignmentOrderId)
+                .limit(5);
                 
-                pendingPaymentsList.push({
-                    id: payment.id,
-                    type: 'team_payment',
-                    paymentAmount: payment.amountPaid,
-                    donationAmount: payment.donationAmount || 0,
-                    teamName: payment.teamName || 'Unknown Team',
-                    teamLeadName: payment.teamLeadName || 'Unknown Lead',
-                    paymentMode: payment.paymentMode || 'Unknown',
-                    submittedDate: payment.submittedOn,
-                    submittedBy: payment.submittedBy || 'Unknown',
-                    paymentReference: payment.transactionRef || '',
-                    paymentReason: payment.paymentReason || 'Sales Revenue',
-                    daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date()),
-                    
-                    // ✅ TEAM PAYMENT CONTEXT
-                    relatedOrderId: consignmentOrderId,
-                    originalOrderId: consignmentOrderId
+            const broadSnapshot = await broadQuery.get();
+            console.log(`[PmtMgmt] 🔍 Broader search (any status): ${broadSnapshot.size} payments found`);
+            
+            if (broadSnapshot.size > 0) {
+                console.log(`[PmtMgmt] 🔍 Payment statuses for this order:`);
+                broadSnapshot.docs.forEach((doc, index) => {
+                    const payment = doc.data();
+                    console.log(`    ${index + 1}. Status: "${payment.paymentStatus}", Amount: ${formatCurrency(payment.amountPaid || 0)}, Submitted: ${payment.submittedBy}`);
                 });
+            } else {
+                console.log(`[PmtMgmt] ❌ No payments found for order ${consignmentOrderId} at all`);
             }
-        });
-
-        console.log(`[PmtMgmt] Found ${pendingPaymentsCount} pending team payments for order ${consignmentOrderId}`);
+        } else {
+            // Process found payments
+            teamPaymentsSnapshot.docs.forEach(doc => {
+                const payment = { id: doc.id, ...doc.data() };
+                
+                console.log(`[PmtMgmt] ✅ Found pending payment: ${payment.teamName}, ${formatCurrency(payment.amountPaid || 0)}`);
+                
+                if (payment.amountPaid && payment.amountPaid > 0) {
+                    hasPendingPayments = true;
+                    pendingPaymentsCount++;
+                    totalPendingAmount += payment.amountPaid;
+                    
+                    pendingPaymentsList.push({
+                        id: payment.id,
+                        type: 'team_payment',
+                        paymentAmount: payment.amountPaid,
+                        donationAmount: payment.donationAmount || 0,
+                        teamName: payment.teamName || 'Unknown Team',
+                        relatedOrderId: consignmentOrderId,
+                        originalOrderId: consignmentOrderId, // ✅ Add for grid buttons
+                        daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date())
+                    });
+                }
+            });
+        }
 
         const result = {
             consignmentOrderId: consignmentOrderId,
@@ -1189,27 +1212,23 @@ export async function checkForPendingTeamPayments(consignmentOrderId) {
             totalPendingCount: pendingPaymentsCount,
             totalPendingAmount: totalPendingAmount,
             pendingPaymentsList: pendingPaymentsList,
-            
-            // Summary for UI display
             summaryText: pendingPaymentsCount > 0 ? 
                 `${pendingPaymentsCount} team payment${pendingPaymentsCount > 1 ? 's' : ''} awaiting verification (${formatCurrency(totalPendingAmount)})` :
                 'No pending team payments for verification',
-                
-            // Action state for buttons
             actionState: pendingPaymentsCount > 0 ? 'verification_needed' : 'no_action_needed'
         };
 
-        console.log(`[PmtMgmt] Team payment check result:`, {
+        console.log(`[PmtMgmt] 🔍 checkForPendingTeamPayments FINAL RESULT for ${consignmentOrderId}:`, {
             hasPending: result.hasPendingPayments,
             count: result.totalPendingCount,
             amount: formatCurrency(result.totalPendingAmount),
-            teamPayments: pendingPaymentsList.map(p => `${p.teamName}: ${formatCurrency(p.paymentAmount)}`)
+            actionState: result.actionState
         });
         
         return result;
 
     } catch (error) {
-        console.error(`[PmtMgmt] Error checking pending team payments for order ${consignmentOrderId}:`, error);
+        console.error(`[PmtMgmt] ❌ Error checking pending team payments for order ${consignmentOrderId}:`, error);
         
         return {
             consignmentOrderId: consignmentOrderId,
