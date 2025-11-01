@@ -7673,7 +7673,7 @@ function assessOverallFinancialHealth(netPosition, cashFlowRisk) {
  * This function investigates why Action Required shows team payments needing
  * verification but the Team Grid doesn't show verify buttons.
  */
-export async function debugTeamPaymentDiscrepancy() {
+window.debugTeamPaymentDiscrepancy = async function() {
     console.log('[DEBUG] 🔍 Investigating team payment data discrepancy...');
     
     try {
@@ -7758,52 +7758,47 @@ export async function debugTeamPaymentDiscrepancy() {
         const paymentsWithoutGridOrders = paymentDetails.filter(payment => 
             !gridOrderIds.includes(payment.orderId)
         );
-        console.log(`[DEBUG] ❌ PAYMENTS WITHOUT GRID ORDERS (explains discrepancy):`);
-        paymentsWithoutGridOrders.forEach(payment => {
-            console.log(`    Payment ID: ${payment.paymentId}, Team: ${payment.teamName}, Order: ${payment.orderId}, Amount: ${formatCurrency(payment.amount)}`);
-        });
-        
-        // Find grid orders without payments (should not have verify buttons)
-        const ordersWithoutPayments = orderDetails.filter(order => 
-            !paymentOrderIds.includes(order.orderId)
-        );
-        console.log(`[DEBUG] ✅ ORDERS WITHOUT PAYMENTS (correctly no verify buttons):`);
-        ordersWithoutPayments.forEach(order => {
-            console.log(`    Order ID: ${order.orderId}, Team: ${order.teamName}, Balance: ${formatCurrency(order.balanceDue)}`);
+        console.log(`[DEBUG] ❌ PAYMENTS WITHOUT GRID ORDERS (explains discrepancy):`, paymentsWithoutGridOrders.length);
+        paymentsWithoutGridOrders.forEach((payment, index) => {
+            console.log(`    ${index + 1}. Payment ID: ${payment.paymentId}, Team: ${payment.teamName}, Order: ${payment.orderId}, Amount: ${formatCurrency(payment.amount)}`);
         });
         
         // ===================================================================
-        // CHECK 4: Investigate missing orders
+        // CHECK 4: Investigate missing orders in detail
         // ===================================================================
         if (paymentsWithoutGridOrders.length > 0) {
-            console.log(`[DEBUG] 🔍 STEP 4: Investigating why orders are missing from grid...`);
+            console.log(`[DEBUG] 🔍 STEP 4: Investigating why ${paymentsWithoutGridOrders.length} orders are missing from grid...`);
             
             for (const payment of paymentsWithoutGridOrders) {
-                console.log(`[DEBUG] 🔍 Checking order ${payment.orderId}...`);
+                console.log(`[DEBUG] 🔍 Checking order ${payment.orderId} (Team: ${payment.teamName})...`);
                 
                 try {
                     const orderDoc = await db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(payment.orderId).get();
                     
                     if (orderDoc.exists) {
                         const orderData = orderDoc.data();
-                        console.log(`    ✅ Order exists: Status="${orderData.status}", Balance=${formatCurrency(orderData.balanceDue || 0)}`);
+                        console.log(`    ✅ Order exists in database:`);
+                        console.log(`      Team: ${orderData.teamName}`);
+                        console.log(`      Status: "${orderData.status}"`);
+                        console.log(`      Balance Due: ${formatCurrency(orderData.balanceDue || 0)}`);
+                        console.log(`      Consignment ID: ${orderData.consignmentId}`);
                         
-                        // ✅ DIAGNOSIS: Why isn't this in grid query?
+                        // ✅ DIAGNOSIS: Check why it's not in grid query results
                         const isActive = orderData.status === 'Active';
                         const hasBalance = (orderData.balanceDue || 0) > 0;
                         
-                        console.log(`    🔍 Grid query conditions:`);
-                        console.log(`      status === 'Active': ${isActive} (actual: "${orderData.status}")`);
-                        console.log(`      balanceDue > 0: ${hasBalance} (actual: ${orderData.balanceDue})`);
+                        console.log(`    🔍 Grid inclusion criteria:`);
+                        console.log(`      ✅ status === 'Active': ${isActive} ${isActive ? '(PASSES)' : '(FAILS - not Active)'}`);
+                        console.log(`      ✅ balanceDue > 0: ${hasBalance} ${hasBalance ? '(PASSES)' : '(FAILS - no balance due)'}`);
                         
-                        if (!isActive) {
-                            console.log(`    ❌ REASON: Order status is "${orderData.status}" not "Active"`);
-                        }
-                        if (!hasBalance) {
-                            console.log(`    ❌ REASON: Order balance is ${formatCurrency(orderData.balanceDue || 0)} not > 0`);
+                        if (!isActive || !hasBalance) {
+                            console.log(`    🎯 REASON: Order doesn't meet grid criteria (status=${orderData.status}, balance=${orderData.balanceDue})`);
+                        } else {
+                            console.log(`    ⚠️ MYSTERY: Order meets criteria but wasn't returned by query!`);
                         }
                     } else {
-                        console.log(`    ❌ Order does not exist: ${payment.orderId}`);
+                        console.log(`    ❌ ORDER DOES NOT EXIST: ${payment.orderId}`);
+                        console.log(`    🎯 REASON: Team payment refers to non-existent order`);
                     }
                 } catch (orderCheckError) {
                     console.error(`    ❌ Error checking order ${payment.orderId}:`, orderCheckError);
@@ -7812,13 +7807,23 @@ export async function debugTeamPaymentDiscrepancy() {
         }
         
         // ===================================================================
-        // SUMMARY REPORT
+        // FINAL SUMMARY
         // ===================================================================
-        console.log(`[DEBUG] 🎯 DISCREPANCY ANALYSIS SUMMARY:`);
-        console.log(`  📤 Pending Team Payments: ${teamPaymentsSnapshot.size}`);
-        console.log(`  📋 Outstanding Orders in Grid: ${ordersSnapshot.size}`);
-        console.log(`  ✅ Orders that Match: ${matchingOrders.length} (should have verify buttons)`);
-        console.log(`  ❌ Payments Missing from Grid: ${paymentsWithoutGridOrders.length} (causes discrepancy)`);
+        console.log(`[DEBUG] 🎯 DISCREPANCY ANALYSIS COMPLETE:`);
+        console.log(`  📤 Total Pending Team Payments: ${teamPaymentsSnapshot.size}`);
+        console.log(`  📋 Total Outstanding Orders in Grid: ${ordersSnapshot.size}`);
+        console.log(`  ✅ Orders that Should Show Verify Buttons: ${matchingOrders.length}`);
+        console.log(`  ❌ Discrepancy (Payments without Grid Orders): ${paymentsWithoutGridOrders.length}`);
+        
+        if (paymentsWithoutGridOrders.length > 0) {
+            console.log(`[DEBUG] 💡 SOLUTION: The discrepancy is caused by team payments that refer to orders that either:`);
+            console.log(`    • Are not in 'Active' status`);
+            console.log(`    • Have balanceDue = 0 (already settled)`);
+            console.log(`    • Don't exist in the database`);
+            console.log(`    • Have data inconsistencies`);
+        } else {
+            console.log(`[DEBUG] ✅ NO DISCREPANCY: All payments have corresponding grid orders`);
+        }
         
         return {
             pendingPayments: teamPaymentsSnapshot.size,
@@ -7829,9 +7834,9 @@ export async function debugTeamPaymentDiscrepancy() {
         };
         
     } catch (error) {
-        console.error('[DEBUG] ❌ Error in discrepancy analysis:', error);
-        return null;
+        console.error('[DEBUG] ❌ Error in team payment discrepancy analysis:', error);
+        return { error: error.message };
     }
-}
+};
 
 console.log('[PmtMgmt] 💳 Payment Management Module loaded successfully');
