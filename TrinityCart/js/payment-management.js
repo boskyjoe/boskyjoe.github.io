@@ -3704,23 +3704,24 @@ async function loadSupplierPaymentsForMgmtTab() {
     }
 }
 
+
 /**
- * ENHANCED: Load team payment data with balanced caching and business intelligence.
+ * CORRECTED: Load consignment ORDERS for team settlement management (not payment transactions).
  * 
- * Manages consignment team payments for verification workflow and settlement tracking.
- * Uses balanced caching approach with freshness indicators for optimal user experience.
+ * This focuses on consignment orders that need settlement rather than individual payment records.
+ * Much more business-relevant for team settlement management and cash flow tracking.
  * 
  * BUSINESS MODES:
- * - 'outstanding': Team payments pending verification (admin action needed)
- * - 'verified': Successfully processed team payments (reference/audit)
+ * - 'outstanding': Active consignment orders with balance due (teams owe settlements)
+ * - 'settled': Orders that have been fully settled (reference/success tracking)
  * 
- * @param {string} [focusMode='outstanding'] - 'outstanding' or 'verified'
+ * @param {string} [focusMode='outstanding'] - 'outstanding' or 'settled'
  * @param {Object} [options={}] - Configuration options
  */
 async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {}) {
     const { useCache = true, queryLimit = 50, forceRefresh = false } = options;
     
-    console.log(`[PmtMgmt] 👥 Loading ${focusMode} team payments with BALANCED caching...`);
+    console.log(`[PmtMgmt] 👥 Loading ${focusMode} CONSIGNMENT ORDERS for team settlement management...`);
 
     if (!pmtMgmtTeamGridApi) {
         console.error('[PmtMgmt] ❌ Team grid API not available');
@@ -3730,24 +3731,23 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
     try {
         pmtMgmtTeamGridApi.setGridOption('loading', true);
 
-        // ✅ BALANCED: Cache configuration by mode
+        // ✅ CORRECTED: Cache for consignment orders (not payments)
         const cacheMinutes = focusMode === 'outstanding' ? 
-            (BALANCED_CACHE_CONFIG?.teamPayments || 3) :      // 3 minutes for pending (verification-critical)
-            (BALANCED_CACHE_CONFIG?.teamPayments || 8);       // 8 minutes for verified (reference data)
+            (BALANCED_CACHE_CONFIG?.teamPayments || 3) :      // 3 minutes for outstanding settlements
+            (BALANCED_CACHE_CONFIG?.teamPayments || 8);       // 8 minutes for settled orders
         
-        const cacheKey = `pmt_mgmt_team_${focusMode}_balanced`;
+        const cacheKey = `pmt_mgmt_consignment_orders_${focusMode}_balanced`;
         
-        // ✅ BALANCED: Cache check with mode-appropriate duration
+        // Cache check
         if (useCache && !forceRefresh) {
             const cached = getCachedPaymentMetrics(cacheKey, cacheMinutes);
-            if (cached && cached.teamData) {
-                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} team data (${cacheMinutes}min cache) - 0 reads`);
+            if (cached && cached.orderData) {
+                console.log(`[PmtMgmt] ✅ Using cached ${focusMode} consignment orders (${cacheMinutes}min cache) - 0 reads`);
                 
-                pmtMgmtTeamGridApi.setGridOption('rowData', cached.teamData);
+                pmtMgmtTeamGridApi.setGridOption('rowData', cached.orderData);
                 pmtMgmtTeamGridApi.setGridOption('loading', false);
-                updateTeamPaymentsSummary(cached.metadata, cached.teamData, focusMode);
+                updateTeamOrdersSummary(cached.metadata, cached.orderData, focusMode);
                 
-                // ✅ BALANCED: Add freshness indicator for cached data
                 setTimeout(() => {
                     addDataFreshnessIndicator('pmt-mgmt-team-grid', cached.metadata.loadedAt || 'Cached', cacheMinutes);
                 }, 300);
@@ -3756,237 +3756,211 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
             }
         }
 
-        console.log(`[PmtMgmt] 📊 Loading fresh ${focusMode} team payment data (cache expired or forced refresh)...`);
+        console.log(`[PmtMgmt] 📊 Loading fresh ${focusMode} consignment orders...`);
         
         const db = firebase.firestore();
         let totalReads = 0;
-        let teamData = [];
+        let orderData = [];
 
         if (focusMode === 'outstanding') {
             // ===================================================================
-            // OUTSTANDING: Team payments pending verification
+            // ✅ CORRECTED: Outstanding consignment orders (teams owe money)
             // ===================================================================
-            console.log('[PmtMgmt] 👥 VERIFICATION FOCUS: Loading pending team payments...');
-            console.log('[PmtMgmt] Query collection:', CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH);
+            console.log('[PmtMgmt] 👥 SETTLEMENT FOCUS: Loading consignment orders with outstanding balances...');
+            console.log('[PmtMgmt] Query collection:', CONSIGNMENT_ORDERS_COLLECTION_PATH);
             
-            const pendingTeamQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-                .where('paymentStatus', '==', 'Pending Verification')
-                .orderBy('submittedOn', 'asc') // Oldest submissions first (priority)
+            // ✅ BUSINESS QUERY: Active consignment orders with money owed
+            const outstandingOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                .where('status', '==', 'Active')
+                .where('balanceDue', '>', 0) // ✅ Teams owe settlement money
+                .orderBy('requestDate', 'asc') // Oldest orders first (priority)
                 .limit(queryLimit);
 
-            const snapshot = await pendingTeamQuery.get();
+            const snapshot = await outstandingOrdersQuery.get();
             totalReads = snapshot.size;
 
-            console.log(`[PmtMgmt] Pending team payments snapshot size: ${snapshot.size}`);
-
-            teamData = snapshot.docs.map(doc => {
-                const data = doc.data();
-                
-                // ✅ PROCESS: Date conversion for grid compatibility
-                let processedPaymentDate = null;
-                let processedSubmittedDate = null;
-                
-                try {
-                    // Payment date
-                    if (data.paymentDate?.toDate && typeof data.paymentDate.toDate === 'function') {
-                        processedPaymentDate = data.paymentDate.toDate();
-                    } else if (data.paymentDate instanceof Date) {
-                        processedPaymentDate = data.paymentDate;
-                    } else {
-                        processedPaymentDate = new Date(data.paymentDate || Date.now());
-                    }
-                    
-                    // Submitted date
-                    if (data.submittedOn?.toDate && typeof data.submittedOn.toDate === 'function') {
-                        processedSubmittedDate = data.submittedOn.toDate();
-                    } else if (data.submittedOn instanceof Date) {
-                        processedSubmittedDate = data.submittedOn;
-                    } else {
-                        processedSubmittedDate = new Date(data.submittedOn || Date.now());
-                    }
-                } catch (dateError) {
-                    console.warn(`[PmtMgmt] Date processing error for team payment ${doc.id}`);
-                    processedPaymentDate = new Date();
-                    processedSubmittedDate = new Date();
-                }
-
-                const daysWaiting = calculateDaysWaiting(processedSubmittedDate);
-                
-                return {
-                    id: doc.id,
-                    ...data,
-                    
-                    // ✅ PROCESSED: Dates for grid compatibility
-                    paymentDate: processedPaymentDate,
-                    submittedOn: processedSubmittedDate,
-                    
-                    // ✅ VERIFICATION INTELLIGENCE
-                    daysWaiting: daysWaiting,
-                    isUrgent: daysWaiting > 5 || (data.amountPaid || 0) > 10000,
-                    verificationPriority: calculateTeamVerificationPriority(data.amountPaid || 0, daysWaiting),
-                    
-                    // ✅ TEAM CONTEXT
-                    teamName: data.teamName || 'Unknown Team',
-                    teamLeadName: data.teamLeadName || 'Unknown Lead',
-                    consignmentOrderId: data.orderId || 'Unknown Order',
-                    
-                    // ✅ SETTLEMENT CONTEXT
-                    paymentReason: data.paymentReason || 'Sales Revenue',
-                    paymentMode: data.paymentMode || 'Unknown Mode',
-                    transactionRef: data.transactionRef || 'No Reference',
-                    
-                    // ✅ UI FORMATTING
-                    formattedAmount: formatCurrency(data.amountPaid || 0),
-                    formattedDonation: formatCurrency(data.donationAmount || 0),
-                    formattedTotal: formatCurrency((data.amountPaid || 0) + (data.donationAmount || 0)),
-                    
-                    // ✅ VERIFICATION CONTEXT
-                    submittedBy: data.submittedBy || 'Unknown User',
-                    needsVerification: true,
-                    verificationUrgency: daysWaiting > 7 ? 'high' : daysWaiting > 3 ? 'medium' : 'low'
-                };
-            });
-
-            console.log(`[PmtMgmt] 👥 Outstanding processed: ${teamData.length} team payments awaiting verification`);
-
-        } else if (focusMode === 'verified') {
-            // ===================================================================
-            // VERIFIED: Successfully processed team payments (reference)
-            // ===================================================================
-            console.log('[PmtMgmt] ✅ REFERENCE FOCUS: Loading verified team payments...');
-            console.log('[PmtMgmt] Query collection:', CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH);
-            
-            const verifiedTeamQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-                .where('paymentStatus', '==', 'Verified')
-                .orderBy('verifiedOn', 'desc') // Recent verifications first
-                .limit(queryLimit);
-
-            const snapshot = await verifiedTeamQuery.get();
-            totalReads = snapshot.size;
-
-            console.log(`[PmtMgmt] Verified team payments snapshot size: ${snapshot.size}`);
+            console.log(`[PmtMgmt] Outstanding consignment orders snapshot size: ${snapshot.size}`);
 
             if (snapshot.size === 0) {
-                console.log('[PmtMgmt] ℹ️ No verified team payments found');
+                // ✅ DEBUG: Check if any consignment orders exist
+                const allOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                    .where('status', '==', 'Active')
+                    .limit(10);
+                
+                const allOrdersSnapshot = await allOrdersQuery.get();
+                totalReads += allOrdersSnapshot.size;
+                
+                console.log(`[PmtMgmt] 🔍 Total active consignment orders: ${allOrdersSnapshot.size}`);
+                
+                if (allOrdersSnapshot.size > 0) {
+                    console.log(`[PmtMgmt] 🔍 Sample order balances:`);
+                    allOrdersSnapshot.docs.slice(0, 5).forEach((doc, index) => {
+                        const orderData = doc.data();
+                        console.log(`  ${index + 1}. ${orderData.teamName}: Balance Due = ${formatCurrency(orderData.balanceDue || 0)}`);
+                    });
+                }
                 
                 pmtMgmtTeamGridApi.setGridOption('rowData', []);
                 pmtMgmtTeamGridApi.setGridOption('loading', false);
                 
                 setTimeout(() => {
-                    showModal('info', 'No Verified Team Payments',
-                        `No verified team payments found for reference.\n\n` +
-                        `To build team payment history:\n` +
-                        `1. Process outstanding team payment verifications\n` +
-                        `2. Complete consignment settlements\n` +
-                        `3. Use Outstanding tab for pending verifications`
+                    showModal('info', 'No Outstanding Team Settlements',
+                        `No consignment orders have outstanding balances.\n\n` +
+                        `Current situation:\n` +
+                        `• Active consignment orders: ${allOrdersSnapshot.size}\n` +
+                        `• Orders with outstanding balances: 0\n\n` +
+                        `This means:\n` +
+                        `✅ All active teams are current on settlements\n` +
+                        `💡 Check Consignment Management for team activity\n` +
+                        `💡 Use Settled tab to see completed settlements`
                     );
                 }, 500);
                 
-                return { teamData: [], metadata: { totalReads, mode: focusMode } };
+                return { orderData: [], metadata: { totalReads, mode: focusMode } };
             }
 
-            teamData = snapshot.docs.map(doc => {
+            orderData = snapshot.docs.map(doc => {
                 const data = doc.data();
                 
-                // ✅ PROCESS: Date conversion for verified payments
-                let processedVerifiedDate = null;
-                let processedPaymentDate = null;
+                // ✅ PROCESS: Date conversion
+                let processedRequestDate = null;
+                let processedCheckoutDate = null;
                 
                 try {
-                    if (data.verifiedOn?.toDate && typeof data.verifiedOn.toDate === 'function') {
-                        processedVerifiedDate = data.verifiedOn.toDate();
+                    if (data.requestDate?.toDate) {
+                        processedRequestDate = data.requestDate.toDate();
                     } else {
-                        processedVerifiedDate = new Date(data.verifiedOn || Date.now());
+                        processedRequestDate = new Date(data.requestDate || Date.now());
                     }
                     
-                    if (data.paymentDate?.toDate && typeof data.paymentDate.toDate === 'function') {
-                        processedPaymentDate = data.paymentDate.toDate();
+                    if (data.checkoutDate?.toDate) {
+                        processedCheckoutDate = data.checkoutDate.toDate();
                     } else {
-                        processedPaymentDate = new Date(data.paymentDate || Date.now());
+                        processedCheckoutDate = new Date(data.checkoutDate || Date.now());
                     }
                 } catch (dateError) {
-                    console.warn(`[PmtMgmt] Date processing error for verified team payment ${doc.id}`);
-                    processedVerifiedDate = new Date();
-                    processedPaymentDate = new Date();
+                    console.warn(`[PmtMgmt] Date processing error for order ${doc.id}`);
+                    processedRequestDate = new Date();
+                    processedCheckoutDate = new Date();
                 }
+
+                const daysOutstanding = calculateDaysOverdue(processedCheckoutDate);
                 
                 return {
                     id: doc.id,
                     ...data,
                     
-                    // ✅ PROCESSED: Dates for grid
-                    verifiedOn: processedVerifiedDate,
-                    paymentDate: processedPaymentDate,
+                    // ✅ PROCESSED: Dates
+                    requestDate: processedRequestDate,
+                    checkoutDate: processedCheckoutDate,
                     
-                    // ✅ SUCCESS CONTEXT
+                    // ✅ SETTLEMENT INTELLIGENCE
+                    daysOutstanding: daysOutstanding,
+                    isOverdue: daysOutstanding > 60, // Longer cycle for consignments
+                    settlementPriority: calculateSettlementPriority(data.balanceDue || 0, daysOutstanding),
+                    
+                    // ✅ TEAM CONTEXT
                     teamName: data.teamName || 'Unknown Team',
-                    teamLeadName: data.teamLeadName || 'Unknown Lead',
-                    consignmentOrderId: data.orderId || 'Unknown Order',
+                    teamLeadName: data.requestingMemberName || 'Unknown Lead',
+                    consignmentId: data.consignmentId || doc.id,
                     
-                    // ✅ VERIFICATION SUCCESS METRICS
-                    verifiedBy: data.verifiedBy || 'Unknown Admin',
-                    originalSubmittedBy: data.submittedBy || 'Unknown User',
-                    verificationSuccess: 'Successfully Verified',
+                    // ✅ FINANCIAL CONTEXT
+                    formattedBalanceDue: formatCurrency(data.balanceDue || 0),
+                    formattedTotalSold: formatCurrency(data.totalValueSold || 0),
+                    formattedTotalPaid: formatCurrency(data.totalAmountPaid || 0),
                     
-                    // ✅ UI FORMATTING
-                    formattedAmount: formatCurrency(data.amountPaid || 0),
-                    formattedDonation: formatCurrency(data.donationAmount || 0),
-                    verificationEfficiency: calculateVerificationEfficiency(data.submittedOn, data.verifiedOn)
+                    // ✅ SETTLEMENT ACTIONS
+                    needsSettlement: (data.balanceDue || 0) > 0,
+                    settlementUrgency: daysOutstanding > 90 ? 'critical' : 
+                                      daysOutstanding > 60 ? 'high' : 'medium'
                 };
             });
 
-            console.log(`[PmtMgmt] ✅ Verified processed: ${teamData.length} successful team verifications`);
+            console.log(`[PmtMgmt] 👥 Outstanding orders processed: ${orderData.length} teams need settlements`);
+
+        } else if (focusMode === 'settled') {
+            // ===================================================================
+            // ✅ SETTLED: Fully settled consignment orders (success reference)
+            // ===================================================================
+            console.log('[PmtMgmt] ✅ SUCCESS FOCUS: Loading settled consignment orders...');
+            
+            const settledOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                .where('status', '==', 'Active') // Still active but balance = 0
+                .where('balanceDue', '==', 0)    // ✅ Fully settled
+                .orderBy('requestDate', 'desc')  // Recent settlements first
+                .limit(queryLimit);
+
+            const snapshot = await settledOrdersQuery.get();
+            totalReads = snapshot.size;
+
+            console.log(`[PmtMgmt] Settled orders snapshot size: ${snapshot.size}`);
+
+            orderData = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const processedRequestDate = data.requestDate?.toDate ? 
+                    data.requestDate.toDate() : new Date(data.requestDate || Date.now());
+                
+                return {
+                    id: doc.id,
+                    ...data,
+                    requestDate: processedRequestDate,
+                    teamName: data.teamName || 'Unknown Team',
+                    consignmentId: data.consignmentId || doc.id,
+                    settlementSuccess: 'Fully Settled',
+                    formattedTotalSold: formatCurrency(data.totalValueSold || 0),
+                    formattedTotalPaid: formatCurrency(data.totalAmountPaid || 0)
+                };
+            });
+
+            console.log(`[PmtMgmt] ✅ Settled orders processed: ${orderData.length} successful settlements`);
         }
 
         // ===================================================================
-        // UPDATE UI WITH ENHANCED DATA AND FRESHNESS
+        // UPDATE UI AND CACHE
         // ===================================================================
         
-        pmtMgmtTeamGridApi.setGridOption('rowData', teamData);
+        pmtMgmtTeamGridApi.setGridOption('rowData', orderData);
         pmtMgmtTeamGridApi.setGridOption('loading', false);
 
-        // ✅ BALANCED: Cache with metadata
+        // Cache with proper metadata
         if (useCache && totalReads > 0) {
             const cacheData = {
-                teamData: teamData,
+                orderData: orderData,
                 metadata: {
                     mode: focusMode,
-                    totalRecords: teamData.length,
+                    totalRecords: orderData.length,
                     totalReads: totalReads,
                     loadedAt: new Date().toLocaleTimeString(),
-                    cacheExpiresAt: new Date(Date.now() + cacheMinutes * 60 * 1000).toLocaleTimeString(),
-                    businessContext: focusMode === 'outstanding' ? 'Team Payment Verification' : 'Team Payment History'
+                    businessContext: focusMode === 'outstanding' ? 'Team Settlement Management' : 'Settlement Success Tracking'
                 }
             };
             
             cachePaymentMetrics(cacheKey, cacheData);
         }
 
-        // ✅ SUMMARY: Team payment intelligence
-        updateTeamPaymentsSummary({
+        // ✅ CORRECTED: Summary function with proper parameters
+        updateTeamOrdersSummary({
             mode: focusMode,
-            totalRecords: teamData.length,
+            totalRecords: orderData.length,
             totalReads: totalReads,
-            loadedAt: new Date().toLocaleTimeString()
-        }, teamData, focusMode);
+            loadedAt: new Date().toLocaleTimeString(),
+            cacheMinutes: cacheMinutes // ✅ Pass cacheMinutes in metadata
+        }, orderData, focusMode);
 
-        // ✅ BALANCED: ALWAYS add freshness indicator (with delay)
+        // Add freshness indicator
         setTimeout(() => {
             addDataFreshnessIndicator('pmt-mgmt-team-grid', new Date().toLocaleTimeString(), cacheMinutes);
-            console.log(`[PmtMgmt] ✅ Team freshness indicator added for ${focusMode} data`);
         }, 500);
 
-        // Auto-fit columns
         setTimeout(() => {
             if (pmtMgmtTeamGridApi) {
                 pmtMgmtTeamGridApi.sizeColumnsToFit();
-                console.log(`[PmtMgmt] ✅ Team columns auto-fitted for ${focusMode} mode`);
             }
         }, 600);
 
-        console.log(`[PmtMgmt] ✅ Team ${focusMode} data loaded with balanced caching: ${teamData.length} records (${totalReads} reads)`);
+        console.log(`[PmtMgmt] ✅ Team ${focusMode} orders loaded: ${orderData.length} records (${totalReads} reads)`);
 
-        return { teamData: teamData, metadata: { mode: focusMode, totalReads, cacheMinutes } };
+        return { orderData: orderData, metadata: { mode: focusMode, totalReads, cacheMinutes } };
 
     } catch (error) {
         console.error(`[PmtMgmt] ❌ Error loading team ${focusMode} data:`, error);
@@ -3995,12 +3969,6 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
             pmtMgmtTeamGridApi.setGridOption('loading', false);
             pmtMgmtTeamGridApi.showNoRowsOverlay();
         }
-        
-        showModal('error', `Team ${focusMode === 'outstanding' ? 'Verification' : 'History'} Loading Failed`,
-            `Could not load ${focusMode} team payments.\n\n` +
-            `Error: ${error.message}\n\n` +
-            `Please use the refresh button to try again.`
-        );
     }
 }
 
@@ -4008,6 +3976,93 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
 // ===================================================================
 // HELPER FUNCTIONS FOR TEAM PAYMENT BUSINESS INTELLIGENCE
 // ===================================================================
+
+
+/**
+ * CORRECTED: Update to focus on consignment orders (renamed function)
+ */
+function updateTeamOrdersSummary(metadata, orderData, focusMode) {
+    console.log(`[PmtMgmt] 👥 TEAM ${focusMode.toUpperCase()} ORDERS SUMMARY (Balanced Cache):`);
+    console.log(`  ⏰ Data loaded at: ${metadata.loadedAt || 'Unknown'}`);
+    console.log(`  💾 Cache duration: ${metadata.cacheMinutes || 3} minutes`);
+    
+    if (focusMode === 'outstanding' && orderData.length > 0) {
+        // Settlement management intelligence
+        const totalOutstandingBalance = orderData.reduce((sum, order) => sum + (order.balanceDue || 0), 0);
+        const totalValueSold = orderData.reduce((sum, order) => sum + (order.totalValueSold || 0), 0);
+        const urgentCount = orderData.filter(order => order.settlementUrgency === 'critical' || order.settlementUrgency === 'high').length;
+        const overdueCount = orderData.filter(order => order.isOverdue).length;
+        const uniqueTeams = new Set(orderData.map(order => order.teamName)).size;
+        
+        console.log(`  💰 Total Outstanding Balances: ${formatCurrency(totalOutstandingBalance)}`);
+        console.log(`  📈 Total Value Sold by Teams: ${formatCurrency(totalValueSold)}`);
+        console.log(`  ⚠️ Urgent Settlements: ${urgentCount} orders`);
+        console.log(`  🚨 Overdue Settlements: ${overdueCount} orders`);
+        console.log(`  👥 Teams with Outstanding: ${uniqueTeams} teams`);
+        
+        // Team settlement breakdown
+        const teamSettlementBreakdown = {};
+        orderData.forEach(order => {
+            const teamName = order.teamName || 'Unknown Team';
+            if (!teamSettlementBreakdown[teamName]) {
+                teamSettlementBreakdown[teamName] = { 
+                    orderCount: 0, 
+                    totalOwed: 0, 
+                    totalSold: 0,
+                    avgDaysOutstanding: 0,
+                    totalDaysOutstanding: 0
+                };
+            }
+            teamSettlementBreakdown[teamName].orderCount += 1;
+            teamSettlementBreakdown[teamName].totalOwed += (order.balanceDue || 0);
+            teamSettlementBreakdown[teamName].totalSold += (order.totalValueSold || 0);
+            teamSettlementBreakdown[teamName].totalDaysOutstanding += (order.daysOutstanding || 0);
+        });
+        
+        // Calculate team averages
+        Object.values(teamSettlementBreakdown).forEach(team => {
+            if (team.orderCount > 0) {
+                team.avgDaysOutstanding = team.totalDaysOutstanding / team.orderCount;
+            }
+        });
+        
+        console.log(`  🏆 TEAM SETTLEMENT BREAKDOWN:`);
+        Object.entries(teamSettlementBreakdown).forEach(([teamName, data]) => {
+            const urgencyIndicator = data.avgDaysOutstanding > 90 ? '🚨' : 
+                                   data.avgDaysOutstanding > 60 ? '⚠️' : '✅';
+            console.log(`    ${urgencyIndicator} ${teamName}: ${data.orderCount} order${data.orderCount > 1 ? 's' : ''} (${formatCurrency(data.totalOwed)} owed from ${formatCurrency(data.totalSold)} sold)`);
+            console.log(`       Average outstanding: ${data.avgDaysOutstanding.toFixed(1)} days`);
+        });
+        
+    } else if (focusMode === 'settled' && orderData.length > 0) {
+        // Settlement success analysis
+        const totalSettledValue = orderData.reduce((sum, order) => sum + (order.totalValueSold || 0), 0);
+        const totalSettlementPayments = orderData.reduce((sum, order) => sum + (order.totalAmountPaid || 0), 0);
+        const uniqueSettledTeams = new Set(orderData.map(order => order.teamName)).size;
+        
+        console.log(`  ✅ Total Settled Value: ${formatCurrency(totalSettledValue)}`);
+        console.log(`  💰 Total Settlement Payments: ${formatCurrency(totalSettlementPayments)}`);
+        console.log(`  👥 Teams with Settled Orders: ${uniqueSettledTeams}`);
+        console.log(`  🎯 Settlement Success Rate: 100% (all selected orders fully settled)`);
+    }
+    
+    console.log(`  📊 Total Orders: ${orderData.length}`);
+    console.log(`  🔥 Firestore Reads: ${metadata.totalReads || 0}`);
+    console.log(`  ⚡ Cache Strategy: Balanced (${metadata.cacheMinutes || 3}min cache)`);
+}
+
+
+
+/**
+ * HELPER: Calculate settlement priority for consignment orders
+ */
+function calculateSettlementPriority(balanceAmount, daysOutstanding) {
+    if (balanceAmount > 20000 && daysOutstanding > 90) return 'critical';
+    if (balanceAmount > 10000 || daysOutstanding > 75) return 'high';
+    if (balanceAmount > 5000 || daysOutstanding > 60) return 'medium';
+    return 'low';
+}
+
 
 /**
  * BUSINESS LOGIC: Calculate team verification priority
