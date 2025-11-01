@@ -1015,6 +1015,15 @@ const pmtMgmtTeamGridOptions = {
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
                 
+
+                // ✅ DEBUG: Log what cellRenderer receives
+                console.log(`[Grid cellRenderer] Processing actions for: ${params.data.teamName} (${params.data.id})`);
+                console.log(`  Balance Due: ${formatCurrency(balanceDue)}`);
+                console.log(`  Has Pending Payments: ${hasPendingPayments}`);
+                console.log(`  Pending Count: ${pendingCount}`);
+                console.log(`  Should show VERIFY: ${hasPendingPayments && pendingCount > 0 ? 'YES' : 'NO'}`);
+
+
                 if (!hasFinancialPermissions) {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
@@ -4149,6 +4158,15 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
 
             // ✅ CRITICAL: Wait for all async operations to complete
             orderData = await Promise.all(orderDataPromises);
+
+            console.log(`[PmtMgmt] 🔍 DEBUGGING PROCESSED ORDER DATA:`);
+            orderData.forEach((order, index) => {
+                console.log(`[DEBUG] Order ${index + 1}: ${order.teamName} (${order.id})`);
+                console.log(`  hasPendingPayments: ${order.hasPendingPayments}`);
+                console.log(`  pendingPaymentsCount: ${order.pendingPaymentsCount}`);
+                console.log(`  pendingPaymentsAmount: ${formatCurrency(order.pendingPaymentsAmount || 0)}`);
+                console.log(`  Should show VERIFY button: ${order.hasPendingPayments && order.pendingPaymentsCount > 0 ? 'YES' : 'NO'}`);
+            });
 
             console.log(`[PmtMgmt] ✅ ALL OUTSTANDING ORDERS PROCESSED: ${orderData.length} orders with pending payment verification status`);
 
