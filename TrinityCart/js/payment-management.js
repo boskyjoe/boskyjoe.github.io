@@ -986,7 +986,8 @@ const pmtMgmtTeamGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 280, // ✅ WIDER: Room for verification + settlement actions
+            width: 320, // ✅ INCREASED: From 280 to 320 for 3 buttons
+            minWidth: 300, // ✅ MINIMUM: Ensure buttons don't get crushed
             
             filter: false,
             floatingFilter: false,
@@ -994,18 +995,19 @@ const pmtMgmtTeamGridOptions = {
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
-            suppressSizeToFit: true,
+            suppressSizeToFit: true, // ✅ CRITICAL: Don't let auto-sizing shrink this column
             
             cellStyle: {
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
+                justifyContent: 'flex-start', // ✅ CHANGED: Left align to prevent centering issues
+                gap: '2px', // ✅ REDUCED: Smaller gap between buttons
+                padding: '4px', // ✅ REDUCED: Less padding for more space
+                overflow: 'visible' // ✅ ALLOW: Buttons to be visible
             },
             
             cellRenderer: params => {
                 const balanceDue = params.data.balanceDue || 0;
-                const daysOutstanding = calculateDaysOverdue(params.data.checkoutDate);
                 const hasPendingPayments = params.data.hasPendingPayments || false;
                 const pendingCount = params.data.pendingPaymentsCount || 0;
                 const pendingAmount = params.data.pendingPaymentsAmount || 0;
@@ -1015,80 +1017,56 @@ const pmtMgmtTeamGridOptions = {
                     currentUser.role === 'admin' || currentUser.role === 'finance'
                 );
                 
-
-                // ✅ DEBUG: Log what cellRenderer receives
-                console.log(`[Grid cellRenderer] Processing actions for: ${params.data.teamName} (${params.data.id})`);
-                console.log(`  Balance Due: ${formatCurrency(balanceDue)}`);
-                console.log(`  Has Pending Payments: ${hasPendingPayments}`);
-                console.log(`  Pending Count: ${pendingCount}`);
-                console.log(`  Should show VERIFY: ${hasPendingPayments && pendingCount > 0 ? 'YES' : 'NO'}`);
-
-
                 if (!hasFinancialPermissions) {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
                 
                 let buttons = '';
                 
-                // ✅ PRIORITY 1: Team payment verification (highest priority)
+                // ✅ PRIORITY 1: Verification button (highest priority - first)
                 if (hasPendingPayments && pendingCount > 0) {
-                    buttons += `<button class="pmt-mgmt-verify-team-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse flex items-center space-x-1"
+                    buttons += `<button class="pmt-mgmt-verify-team-payments bg-green-500 text-white px-1 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse flex items-center space-x-1"
                                         data-order-id="${params.data.id}"
                                         data-team-name="${params.data.teamName}"
-                                        title="Verify ${pendingCount} Pending Team Payment${pendingCount > 1 ? 's' : ''} (${formatCurrency(pendingAmount)})">
+                                        title="Verify ${pendingCount} Pending Payment${pendingCount > 1 ? 's' : ''} (${formatCurrency(pendingAmount)})">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    <span>VERIFY (${pendingCount})</span>
-                                </button> `;
+                                    <span class="hidden sm:inline">VERIFY</span>
+                                    <span class="sm:hidden">${pendingCount}</span>
+                                </button>`;
                 }
                 
                 if (balanceDue > 0) {
-                    // ✅ OUTSTANDING SETTLEMENT: Collection actions
+                    // ✅ SETTLEMENT ACTION: More compact button
+                    const daysOutstanding = calculateDaysOverdue(params.data.checkoutDate);
                     const urgencyClass = daysOutstanding > 90 ? 'animate-pulse' : '';
                     
-                    buttons += `<button class="pmt-mgmt-collect-team-settlement bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
+                    buttons += `<button class="pmt-mgmt-collect-team-settlement bg-red-500 text-white px-1 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
                                     data-id="${params.data.id}" 
                                     data-team-name="${params.data.teamName}"
                                     data-balance-due="${balanceDue}"
-                                    title="Follow up on Settlement for ${formatCurrency(balanceDue)}">
+                                    title="Follow up on Settlement (${formatCurrency(balanceDue)})">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                                     </svg>
-                                    <span>FOLLOW UP ${formatCurrency(balanceDue)}</span>
-                                </button> `;
-                    
-                    buttons += `<button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                    data-id="${params.data.id}" 
-                                    title="View Consignment Order Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
-                                    </svg>
-                                    <span>View Order</span>
+                                    <span class="hidden md:inline">FOLLOW UP</span>
+                                    <span class="md:hidden">💰</span>
                                 </button>`;
-                } else {
-                    // ✅ SETTLED ORDERS: Reference actions only
-                    buttons = `<div class="flex space-x-1">
-                                    <button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                        data-id="${params.data.id}" 
-                                        title="View Settled Order Details">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
-                                        </svg>
-                                        <span>View Order</span>
-                                    </button>
-                                    <button class="pmt-mgmt-view-settlement-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                        data-id="${params.data.id}" 
-                                        title="View Settlement History">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                                        </svg>
-                                        <span>Settlement History</span>
-                                    </button>
-                                </div>`;
                 }
                 
-                return `<div class="flex space-x-1 flex-wrap gap-y-1">${buttons}</div>`;
+                // ✅ VIEW ORDER: Always available, most compact
+                buttons += `<button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-1 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                data-id="${params.data.id}" 
+                                title="View Consignment Order Details">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                </svg>
+                                <span class="hidden lg:inline">Order</span>
+                                <span class="lg:hidden">📋</span>
+                            </button>`;
+                
+                return `<div class="flex space-x-1 items-center justify-start min-w-full">${buttons}</div>`;
             }
         }
     ],
