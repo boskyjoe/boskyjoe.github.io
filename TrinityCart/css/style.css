@@ -430,3 +430,30 @@ main {
 #custom-modal > div:last-child {
     z-index: 10101 !important;
 }
+
+/* ===================================================================== */
+/* PAYMENT MANAGEMENT GRID ACTION BUTTONS SCROLLING */
+/* ===================================================================== */
+
+#pmt-mgmt-team-grid .ag-cell[col-id="actions"] {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+}
+
+#pmt-mgmt-team-grid .ag-cell[col-id="actions"]::-webkit-scrollbar {
+    height: 4px;
+}
+
+#pmt-mgmt-team-grid .ag-cell[col-id="actions"]::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+#pmt-mgmt-team-grid .ag-cell[col-id="actions"]::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+#pmt-mgmt-team-grid .ag-cell[col-id="actions"]::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
