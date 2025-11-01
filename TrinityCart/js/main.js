@@ -6539,12 +6539,23 @@ async function handlePmtMgmtVoidSalesPayment(target) {
  * ENHANCED: Handle team payment verification for consignment orders
  */
 async function handlePmtMgmtVerifyTeamPayments(target) {
+    console.log('[main.js] 👥 Team payment verification handler called');
+    
+    // ✅ FIX: Find the actual button element (not the span inside it)
     const actualTarget = arguments[0];
-    const orderId = actualTarget?.dataset?.orderId;
-    const teamName = actualTarget?.dataset?.teamName;
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    
+    console.log('[main.js] 🔍 Button element found:', buttonElement);
+    console.log('[main.js] 🔍 Button dataset:', buttonElement?.dataset);
+    
+    const orderId = buttonElement?.dataset?.orderId;
+    const teamName = buttonElement?.dataset?.teamName;
     const user = appState.currentUser;
     
-    console.log(`[main.js] 👥 Verify team payments for order: ${orderId} (${teamName})`);
+    console.log('[main.js] 🔍 Extracted data from button:');
+    console.log('  Order ID:', orderId);
+    console.log('  Team Name:', teamName);
+    console.log('  User:', user?.email);
     
     if (!user || !['admin', 'finance'].includes(user.role)) {
         await showModal('error', 'Permission Denied', 'Only admin and finance users can verify team payments.');
@@ -6552,13 +6563,23 @@ async function handlePmtMgmtVerifyTeamPayments(target) {
     }
     
     if (!orderId) {
-        await showModal('error', 'Order ID Missing', 'Could not find consignment order ID for verification.');
+        console.error('[main.js] ❌ No order ID found in button dataset');
+        console.log('[main.js] 🔍 Button HTML:', buttonElement?.outerHTML);
+        
+        await showModal('error', 'Order ID Missing', 
+            'Could not find consignment order ID in button data.\n\n' +
+            `Button found: ${buttonElement?.tagName}\n` +
+            `Dataset keys: ${Object.keys(buttonElement?.dataset || {}).join(', ')}\n\n` +
+            'This is a grid configuration issue. Please refresh and try again.'
+        );
         return;
     }
     
+    console.log(`[main.js] ✅ Processing team payment verification for order: ${orderId}`);
+    
     try {
         ProgressToast.show('Loading Team Payment Verification', 'info');
-        ProgressToast.updateProgress('Checking for pending team payments...', 50);
+        ProgressToast.updateProgress('Checking for pending team payments...', 60);
         
         // ✅ CHECK: Pending team payments for this order
         const pendingStatus = await checkForPendingTeamPayments(orderId);
@@ -6569,42 +6590,65 @@ async function handlePmtMgmtVerifyTeamPayments(target) {
                 `This consignment order has no team payments pending verification.\n\n` +
                 `Order: ${orderId}\n` +
                 `Team: ${teamName}\n\n` +
-                `All payments for this order have been processed or no payments have been submitted.`
+                `All payments for this order have been processed.`
             );
             return;
         }
         
-        ProgressToast.updateProgress('Opening team payment verification interface...', 90);
+        ProgressToast.updateProgress('Opening verification interface...', 90);
         
         setTimeout(() => {
             ProgressToast.hide(300);
             
-            // ✅ OPEN: Team payment verification modal (similar to supplier)
-            showTeamPaymentVerificationModal(orderId, pendingStatus);
+            // ✅ OPEN: Team payment verification modal
+            showTeamPaymentVerificationModal(orderId, teamName, pendingStatus);
+            
+            console.log(`[main.js] ✅ Team payment verification modal opened for ${teamName}`);
             
         }, 500);
         
     } catch (error) {
         console.error('[main.js] Error opening team payment verification:', error);
-        ProgressToast.showError(`Failed to open team verification: ${error.message}`);
+        ProgressToast.showError(`Verification failed: ${error.message}`);
+        
+        setTimeout(() => {
+            showModal('error', 'Team Verification Error',
+                `Could not open team payment verification.\n\n` +
+                `Order: ${orderId}\n` +
+                `Error: ${error.message}`
+            );
+        }, 2000);
     }
 }
+
 
 /**
  * ENHANCED: Handle team settlement follow-up
  */
 async function handlePmtMgmtCollectTeamSettlement(target) {
-    const actualTarget = arguments[0];
-    const orderId = actualTarget?.dataset?.id;
-    const teamName = actualTarget?.dataset?.teamName;
-    const balanceDue = parseFloat(actualTarget?.dataset?.balanceDue || 0);
+    console.log('[main.js] 💰 Team settlement collection handler called');
     
-    console.log(`[main.js] 💰 Team settlement follow-up: ${teamName} owes ${formatCurrency(balanceDue)}`);
+    // ✅ FIX: Find button element from any clicked child
+    const actualTarget = arguments[0];
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    
+    const orderId = buttonElement?.dataset?.id;
+    const teamName = buttonElement?.dataset?.teamName;
+    const balanceDue = parseFloat(buttonElement?.dataset?.balanceDue || 0);
+    
+    console.log('[main.js] 🔍 Team settlement data:');
+    console.log('  Order ID:', orderId);
+    console.log('  Team Name:', teamName);
+    console.log('  Balance Due:', formatCurrency(balanceDue));
     
     if (!orderId) {
-        await showModal('error', 'Order ID Missing', 'Could not find consignment order for settlement.');
+        await showModal('error', 'Order ID Missing', 
+            'Could not find consignment order ID for settlement follow-up.'
+        );
         return;
     }
+    
+    console.log(`[main.js] 💰 Team settlement follow-up: ${teamName} owes ${formatCurrency(balanceDue)}`);
     
     await showModal('info', 'Team Settlement Follow-up',
         `Team settlement follow-up for outstanding balance:\n\n` +
@@ -6613,9 +6657,10 @@ async function handlePmtMgmtCollectTeamSettlement(target) {
         `• Consignment Order: ${orderId}\n\n` +
         `Recommended actions:\n` +
         `📞 Contact team lead to discuss settlement\n` +
-        `📊 Review consignment order activity\n` +
-        `💰 Set up payment plan if needed\n\n` +
-        `Use "View Order" to see detailed consignment information.`
+        `📊 Review consignment order activity and sales\n` +
+        `💰 Set up payment plan if needed\n` +
+        `📋 Use "View Order" to see detailed consignment information\n\n` +
+        `Teams can submit payments through their Consignment interface.`
     );
 }
 
@@ -6623,21 +6668,25 @@ async function handlePmtMgmtCollectTeamSettlement(target) {
  * ENHANCED: Handle view consignment order details
  */
 async function handlePmtMgmtViewConsignmentOrder(target) {
-    const actualTarget = arguments[0];
-    const orderId = actualTarget?.dataset?.id;
+    console.log('[main.js] 📋 View consignment order handler called');
     
-    console.log(`[main.js] 📋 View consignment order: ${orderId}`);
+    // ✅ FIX: Find button element from any clicked child  
+    const actualTarget = arguments[0];
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    
+    const orderId = buttonElement?.dataset?.id;
+    
+    console.log('[main.js] 🔍 Order ID for view:', orderId);
     
     if (!orderId) {
-        await showModal('error', 'Order ID Missing', 'Could not find consignment order ID.');
+        await showModal('error', 'Order ID Missing', 'Could not find consignment order ID for details view.');
         return;
     }
     
     try {
-        // ✅ ROUTE: To existing Consignment Management with selected order
-        console.log('[main.js] ✅ Routing to Consignment Management for order details');
+        console.log('[main.js] 📋 Routing to Consignment Management for order:', orderId);
         
-        // Set the selected consignment ID for the Consignment Management module
+        // ✅ ROUTE: To existing Consignment Management with selected order
         appState.selectedConsignmentId = orderId;
         
         // Navigate to Consignment Management
@@ -6645,14 +6694,14 @@ async function handlePmtMgmtViewConsignmentOrder(target) {
         
         // Show navigation confirmation
         setTimeout(() => {
-            showModal('info', 'Navigation Complete',
-                `Switched to Consignment Management to view order details.\n\n` +
+            showModal('success', 'Navigation Complete',
+                `Switched to Consignment Management for order details.\n\n` +
                 `Order: ${orderId}\n\n` +
                 `You can now:\n` +
                 `✅ View complete order details\n` +
                 `✅ See team activity history\n` +
                 `✅ Review items and settlements\n` +
-                `✅ Access payment management for this order`
+                `✅ Manage payments for this specific order`
             );
         }, 1000);
         
@@ -6662,44 +6711,86 @@ async function handlePmtMgmtViewConsignmentOrder(target) {
     }
 }
 
+
 /**
  * ENHANCED: Handle view settlement history
  */
+
 async function handlePmtMgmtViewSettlementHistory(target) {
-    const actualTarget = arguments[0];
-    const orderId = actualTarget?.dataset?.id;
+    console.log('[main.js] 💰 Settlement history handler called');
     
-    console.log(`[main.js] 💰 View settlement history: ${orderId}`);
+    // ✅ FIX: Find button element properly
+    const actualTarget = arguments[0];
+    const buttonElement = actualTarget.closest('button') || actualTarget;
+    
+    const orderId = buttonElement?.dataset?.id;
+    
+    if (!orderId) {
+        await showModal('error', 'Order ID Missing', 'Could not find order ID for settlement history.');
+        return;
+    }
     
     try {
-        // ✅ GET: Settlement history for this order
+        console.log(`[main.js] 💰 Loading settlement history for order: ${orderId}`);
+        
+        ProgressToast.show('Loading Settlement History', 'info');
+        
+        // ✅ GET: Settlement payment history for this order
         const db = firebase.firestore();
         const paymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
             .where('orderId', '==', orderId)
             .orderBy('paymentDate', 'desc');
         
         const paymentsSnapshot = await paymentsQuery.get();
-        const payments = paymentsSnapshot.docs.map(doc => doc.data());
+        const payments = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
+        ProgressToast.hide(300);
+        
+        if (payments.length === 0) {
+            await showModal('info', 'No Payment History',
+                `No settlement payments found for this consignment order.\n\n` +
+                `Order: ${orderId}\n\n` +
+                `This could mean:\n` +
+                `• Team has not submitted any payments yet\n` +
+                `• Payments are still in progress\n` +
+                `• Settlement process hasn't started`
+            );
+            return;
+        }
+        
+        // ✅ ANALYZE: Payment history
         const totalPaid = payments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
         const totalDonations = payments.reduce((sum, p) => sum + (p.donationAmount || 0), 0);
+        const verifiedPayments = payments.filter(p => p.paymentStatus === 'Verified').length;
+        const pendingPayments = payments.filter(p => p.paymentStatus === 'Pending Verification').length;
         
         await showModal('info', 'Settlement Payment History',
-            `Settlement history for consignment order:\n\n` +
-            `Order ID: ${orderId}\n` +
-            `Total Payments: ${payments.length}\n` +
-            `Total Amount Paid: ${formatCurrency(totalPaid)}\n` +
-            `Total Donations: ${formatCurrency(totalDonations)}\n\n` +
-            `Payment Details:\n` +
+            `Complete settlement history for consignment order:\n\n` +
+            `📋 Order ID: ${orderId}\n` +
+            `📊 Total Payments: ${payments.length}\n` +
+            `💰 Total Amount Paid: ${formatCurrency(totalPaid)}\n` +
+            `🎁 Total Donations: ${formatCurrency(totalDonations)}\n` +
+            `✅ Verified Payments: ${verifiedPayments}\n` +
+            `⏳ Pending Verification: ${pendingPayments}\n\n` +
+            `Recent Payment Details:\n` +
             `${payments.slice(0, 5).map((p, i) => 
-                `${i + 1}. ${formatCurrency(p.amountPaid || 0)} on ${p.paymentDate?.toDate?.()?.toLocaleDateString() || 'Unknown date'} (${p.paymentStatus})`
+                `${i + 1}. ${formatCurrency(p.amountPaid || 0)} on ${p.paymentDate?.toDate?.()?.toLocaleDateString() || 'Unknown'} (${p.paymentStatus})`
             ).join('\n')}` +
-            `${payments.length > 5 ? `\n... and ${payments.length - 5} more payments` : ''}`
+            `${payments.length > 5 ? `\n... and ${payments.length - 5} more payments` : ''}\n\n` +
+            `Use "View Order" to see complete consignment details.`
         );
         
     } catch (error) {
-        console.error('[main.js] Error viewing settlement history:', error);
-        await showModal('error', 'Settlement History Error', 'Could not load settlement payment history.');
+        console.error('[main.js] Error loading settlement history:', error);
+        ProgressToast.showError('Could not load settlement history');
+        
+        setTimeout(() => {
+            showModal('error', 'Settlement History Error', 
+                `Could not load settlement payment history.\n\n` +
+                `Order: ${orderId}\n` +
+                `Error: ${error.message}`
+            );
+        }, 2000);
     }
 }
 
