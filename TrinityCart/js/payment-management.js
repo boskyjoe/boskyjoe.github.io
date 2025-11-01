@@ -986,7 +986,7 @@ const pmtMgmtTeamGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 220, // ✅ WIDER: Room for consignment order actions
+            width: 280, // ✅ WIDER: Room for verification + settlement actions
             
             filter: false,
             floatingFilter: false,
@@ -1006,6 +1006,9 @@ const pmtMgmtTeamGridOptions = {
             cellRenderer: params => {
                 const balanceDue = params.data.balanceDue || 0;
                 const daysOutstanding = calculateDaysOverdue(params.data.checkoutDate);
+                const hasPendingPayments = params.data.hasPendingPayments || false;
+                const pendingCount = params.data.pendingPaymentsCount || 0;
+                const pendingAmount = params.data.pendingPaymentsAmount || 0;
                 const currentUser = appState.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
@@ -1018,44 +1021,56 @@ const pmtMgmtTeamGridOptions = {
                 
                 let buttons = '';
                 
+                // ✅ PRIORITY 1: Team payment verification (highest priority)
+                if (hasPendingPayments && pendingCount > 0) {
+                    buttons += `<button class="pmt-mgmt-verify-team-payments bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold animate-pulse flex items-center space-x-1"
+                                        data-order-id="${params.data.id}"
+                                        data-team-name="${params.data.teamName}"
+                                        title="Verify ${pendingCount} Pending Team Payment${pendingCount > 1 ? 's' : ''} (${formatCurrency(pendingAmount)})">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>VERIFY (${pendingCount})</span>
+                                </button> `;
+                }
+                
                 if (balanceDue > 0) {
-                    // ✅ OUTSTANDING SETTLEMENT: Collection and management actions
+                    // ✅ OUTSTANDING SETTLEMENT: Collection actions
                     const urgencyClass = daysOutstanding > 90 ? 'animate-pulse' : '';
                     
-                    buttons = `<div class="flex space-x-1">
-                                    <button class="pmt-mgmt-collect-team-settlement bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700 font-semibold ${urgencyClass} flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          data-team-name="${params.data.teamName}"
-                                          data-balance-due="${balanceDue}"
-                                          title="Collect Settlement for ${formatCurrency(balanceDue)}">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                        </svg>
-                                        <span>SETTLE ${formatCurrency(balanceDue)}</span>
-                                    </button>
-                                    <button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="View Consignment Order Details">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
-                                        </svg>
-                                        <span>View Order</span>
-                                    </button>
-                                </div>`;
+                    buttons += `<button class="pmt-mgmt-collect-team-settlement bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
+                                    data-id="${params.data.id}" 
+                                    data-team-name="${params.data.teamName}"
+                                    data-balance-due="${balanceDue}"
+                                    title="Follow up on Settlement for ${formatCurrency(balanceDue)}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    <span>FOLLOW UP ${formatCurrency(balanceDue)}</span>
+                                </button> `;
+                    
+                    buttons += `<button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                    data-id="${params.data.id}" 
+                                    title="View Consignment Order Details">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                    </svg>
+                                    <span>View Order</span>
+                                </button>`;
                 } else {
-                    // ✅ SETTLED ORDERS: Reference and audit actions
+                    // ✅ SETTLED ORDERS: Reference actions only
                     buttons = `<div class="flex space-x-1">
                                     <button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="View Settled Order Details">
+                                        data-id="${params.data.id}" 
+                                        title="View Settled Order Details">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
                                         </svg>
                                         <span>View Order</span>
                                     </button>
                                     <button class="pmt-mgmt-view-settlement-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                          data-id="${params.data.id}" 
-                                          title="View Settlement History">
+                                        data-id="${params.data.id}" 
+                                        title="View Settlement History">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
                                         </svg>
@@ -1064,7 +1079,7 @@ const pmtMgmtTeamGridOptions = {
                                 </div>`;
                 }
                 
-                return buttons;
+                return `<div class="flex space-x-1 flex-wrap gap-y-1">${buttons}</div>`;
             }
         }
     ],
@@ -1096,6 +1111,111 @@ const pmtMgmtTeamGridOptions = {
         }, 200);
     }
 };
+
+
+/**
+ * ENHANCED: Check if a consignment order has team payments pending verification
+ * 
+ * Similar to checkForPendingPayments() but focused on team payments from 
+ * consignment settlements. Critical for admin verification workflow.
+ * 
+ * @param {string} consignmentOrderId - The consignment order ID to check
+ * @returns {Promise<Object>} Pending team payment status and details
+ */
+export async function checkForPendingTeamPayments(consignmentOrderId) {
+    console.log(`[PmtMgmt] Checking pending team payments for consignment order: ${consignmentOrderId}`);
+
+    try {
+        const db = firebase.firestore();
+        let hasPendingPayments = false;
+        let pendingPaymentsCount = 0;
+        let totalPendingAmount = 0;
+        const pendingPaymentsList = [];
+
+        // ===================================================================
+        // QUERY: Team payments pending verification for this order
+        // ===================================================================
+        
+        const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('orderId', '==', consignmentOrderId)
+            .where('paymentStatus', '==', 'Pending Verification')
+            .orderBy('submittedOn', 'asc');
+
+        const teamPaymentsSnapshot = await teamPaymentsQuery.get();
+        
+        teamPaymentsSnapshot.docs.forEach(doc => {
+            const payment = { id: doc.id, ...doc.data() };
+            
+            if (payment.amountPaid && payment.amountPaid > 0) {
+                hasPendingPayments = true;
+                pendingPaymentsCount++;
+                totalPendingAmount += payment.amountPaid;
+                
+                pendingPaymentsList.push({
+                    id: payment.id,
+                    type: 'team_payment',
+                    paymentAmount: payment.amountPaid,
+                    donationAmount: payment.donationAmount || 0,
+                    teamName: payment.teamName || 'Unknown Team',
+                    teamLeadName: payment.teamLeadName || 'Unknown Lead',
+                    paymentMode: payment.paymentMode || 'Unknown',
+                    submittedDate: payment.submittedOn,
+                    submittedBy: payment.submittedBy || 'Unknown',
+                    paymentReference: payment.transactionRef || '',
+                    paymentReason: payment.paymentReason || 'Sales Revenue',
+                    daysWaiting: calculateDaysWaiting(payment.submittedOn || new Date()),
+                    
+                    // ✅ TEAM PAYMENT CONTEXT
+                    relatedOrderId: consignmentOrderId,
+                    originalOrderId: consignmentOrderId
+                });
+            }
+        });
+
+        console.log(`[PmtMgmt] Found ${pendingPaymentsCount} pending team payments for order ${consignmentOrderId}`);
+
+        const result = {
+            consignmentOrderId: consignmentOrderId,
+            hasPendingPayments: hasPendingPayments,
+            totalPendingCount: pendingPaymentsCount,
+            totalPendingAmount: totalPendingAmount,
+            pendingPaymentsList: pendingPaymentsList,
+            
+            // Summary for UI display
+            summaryText: pendingPaymentsCount > 0 ? 
+                `${pendingPaymentsCount} team payment${pendingPaymentsCount > 1 ? 's' : ''} awaiting verification (${formatCurrency(totalPendingAmount)})` :
+                'No pending team payments for verification',
+                
+            // Action state for buttons
+            actionState: pendingPaymentsCount > 0 ? 'verification_needed' : 'no_action_needed'
+        };
+
+        console.log(`[PmtMgmt] Team payment check result:`, {
+            hasPending: result.hasPendingPayments,
+            count: result.totalPendingCount,
+            amount: formatCurrency(result.totalPendingAmount),
+            teamPayments: pendingPaymentsList.map(p => `${p.teamName}: ${formatCurrency(p.paymentAmount)}`)
+        });
+        
+        return result;
+
+    } catch (error) {
+        console.error(`[PmtMgmt] Error checking pending team payments for order ${consignmentOrderId}:`, error);
+        
+        return {
+            consignmentOrderId: consignmentOrderId,
+            hasPendingPayments: false,
+            totalPendingCount: 0,
+            totalPendingAmount: 0,
+            pendingPaymentsList: [],
+            summaryText: 'Error checking team payment status',
+            actionState: 'error',
+            errorMessage: error.message
+        };
+    }
+}
+
+
 
 /**
  * ENHANCED: Check if invoice has pending payments awaiting verification
@@ -3971,6 +4091,20 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                 }
 
                 const daysOutstanding = calculateDaysOverdue(processedCheckoutDate);
+
+                // ✅ NEW: Check for pending team payments for this order
+                let pendingPaymentStatus = {
+                    hasPendingPayments: false,
+                    totalPendingCount: 0,
+                    totalPendingAmount: 0,
+                    summaryText: 'No pending payments'
+                };
+                
+                try {
+                    pendingPaymentStatus = await checkForPendingTeamPayments(doc.id);
+                } catch (paymentCheckError) {
+                    console.warn(`[PmtMgmt] Could not check pending payments for order ${doc.id}:`, paymentCheckError);
+                }
                 
                 const processedOrder = {
                     id: doc.id,
@@ -3979,7 +4113,13 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
                     // ✅ CRITICAL: Override with processed JavaScript Dates
                     requestDate: processedRequestDate,   // Grid will use this processed date
                     checkoutDate: processedCheckoutDate, // Grid will use this processed date
-                    
+
+                    // ✅ PENDING PAYMENT STATUS (for verification buttons)
+                    hasPendingPayments: pendingPaymentStatus.hasPendingPayments,
+                    pendingPaymentsCount: pendingPaymentStatus.totalPendingCount,
+                    pendingPaymentsAmount: pendingPaymentStatus.totalPendingAmount,
+                    pendingPaymentsSummary: pendingPaymentStatus.summaryText,
+                            
                     // ✅ SETTLEMENT INTELLIGENCE
                     daysOutstanding: daysOutstanding,
                     isOverdue: daysOutstanding > 60, // Longer cycle for consignments
