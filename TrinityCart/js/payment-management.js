@@ -7663,62 +7663,175 @@ function assessOverallFinancialHealth(netPosition, cashFlowRisk) {
 }
 
 
+// ===================================================================
+// DEBUG FUNCTIONS (Add this section to payment-management.js)
+// ===================================================================
+
 /**
- * DEBUG: Compare Action Required vs Grid data sources
+ * DEBUG: Compare Action Required vs Grid data sources to find discrepancy
+ * 
+ * This function investigates why Action Required shows team payments needing
+ * verification but the Team Grid doesn't show verify buttons.
  */
-async function debugTeamPaymentDiscrepancy() {
+export async function debugTeamPaymentDiscrepancy() {
     console.log('[DEBUG] 🔍 Investigating team payment data discrepancy...');
     
-    const db = firebase.firestore();
-    
-    // ✅ CHECK 1: Direct team payments (what Action Required sees)
-    const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-        .where('paymentStatus', '==', 'Pending Verification')
-        .limit(10);
-    
-    const teamPaymentsSnapshot = await teamPaymentsQuery.get();
-    
-    console.log(`[DEBUG] 📊 DIRECT TEAM PAYMENTS QUERY:`);
-    console.log(`  Found: ${teamPaymentsSnapshot.size} pending team payments`);
-    
-    teamPaymentsSnapshot.docs.forEach((doc, index) => {
-        const payment = doc.data();
-        console.log(`  ${index + 1}. Team: ${payment.teamName}, Order: ${payment.orderId}, Amount: ${formatCurrency(payment.amountPaid || 0)}`);
-    });
-    
-    // ✅ CHECK 2: Consignment orders (what Team Grid sees)
-    const consignmentOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
-        .where('status', '==', 'Active')
-        .where('balanceDue', '>', 0)
-        .limit(10);
-    
-    const ordersSnapshot = await consignmentOrdersQuery.get();
-    
-    console.log(`[DEBUG] 📋 CONSIGNMENT ORDERS QUERY:`);
-    console.log(`  Found: ${ordersSnapshot.size} outstanding consignment orders`);
-    
-    ordersSnapshot.docs.forEach((doc, index) => {
-        const order = doc.data();
-        console.log(`  ${index + 1}. Team: ${order.teamName}, Order ID: ${doc.id}, Balance: ${formatCurrency(order.balanceDue || 0)}`);
-    });
-    
-    // ✅ CHECK 3: Cross-reference the data
-    console.log(`[DEBUG] 🔍 CROSS-REFERENCE CHECK:`);
-    const paymentOrderIds = teamPaymentsSnapshot.docs.map(doc => doc.data().orderId);
-    const gridOrderIds = ordersSnapshot.docs.map(doc => doc.id);
-    
-    console.log(`  Payment Order IDs: ${paymentOrderIds}`);
-    console.log(`  Grid Order IDs: ${gridOrderIds}`);
-    
-    const matchingOrders = paymentOrderIds.filter(paymentOrderId => 
-        gridOrderIds.includes(paymentOrderId)
-    );
-    
-    console.log(`  Matching Orders: ${matchingOrders} (should have verify buttons)`);
-    const missingFromGrid = paymentOrderIds.filter(paymentOrderId => 
-        !gridOrderIds.includes(paymentOrderId)
-    );
-    console.log(`  Missing from Grid: ${missingFromGrid} (explains the discrepancy)`);
+    try {
+        const db = firebase.firestore();
+        
+        // ===================================================================
+        // CHECK 1: Direct team payments (what Action Required sees)
+        // ===================================================================
+        console.log('[DEBUG] 📊 STEP 1: Checking direct team payments (Action Required source)...');
+        
+        const teamPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('paymentStatus', '==', 'Pending Verification')
+            .limit(10);
+        
+        const teamPaymentsSnapshot = await teamPaymentsQuery.get();
+        
+        console.log(`[DEBUG] 📤 DIRECT TEAM PAYMENTS FOUND: ${teamPaymentsSnapshot.size}`);
+        
+        const paymentDetails = [];
+        teamPaymentsSnapshot.docs.forEach((doc, index) => {
+            const payment = doc.data();
+            const paymentInfo = {
+                paymentId: doc.id,
+                teamName: payment.teamName,
+                orderId: payment.orderId,
+                amount: payment.amountPaid || 0,
+                status: payment.paymentStatus,
+                submittedBy: payment.submittedBy
+            };
+            
+            paymentDetails.push(paymentInfo);
+            console.log(`    ${index + 1}. Team: ${payment.teamName}, Order: ${payment.orderId}, Amount: ${formatCurrency(payment.amountPaid || 0)}`);
+        });
+        
+        // ===================================================================
+        // CHECK 2: Consignment orders (what Team Grid sees)
+        // ===================================================================
+        console.log('[DEBUG] 📋 STEP 2: Checking consignment orders (Team Grid source)...');
+        
+        const consignmentOrdersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+            .where('status', '==', 'Active')
+            .where('balanceDue', '>', 0)
+            .limit(10);
+        
+        const ordersSnapshot = await consignmentOrdersQuery.get();
+        
+        console.log(`[DEBUG] 👥 OUTSTANDING CONSIGNMENT ORDERS FOUND: ${ordersSnapshot.size}`);
+        
+        const orderDetails = [];
+        ordersSnapshot.docs.forEach((doc, index) => {
+            const order = doc.data();
+            const orderInfo = {
+                orderId: doc.id,
+                consignmentId: order.consignmentId,
+                teamName: order.teamName,
+                balanceDue: order.balanceDue || 0,
+                status: order.status
+            };
+            
+            orderDetails.push(orderInfo);
+            console.log(`    ${index + 1}. Team: ${order.teamName}, Order ID: ${doc.id}, Balance: ${formatCurrency(order.balanceDue || 0)}`);
+        });
+        
+        // ===================================================================
+        // CHECK 3: Cross-reference analysis
+        // ===================================================================
+        console.log(`[DEBUG] 🔍 STEP 3: Cross-reference analysis...`);
+        
+        const paymentOrderIds = paymentDetails.map(p => p.orderId);
+        const gridOrderIds = orderDetails.map(o => o.orderId);
+        
+        console.log(`[DEBUG] 📤 Payment Order IDs: [${paymentOrderIds.join(', ')}]`);
+        console.log(`[DEBUG] 📋 Grid Order IDs: [${gridOrderIds.join(', ')}]`);
+        
+        // Find matches (orders that should show verify buttons)
+        const matchingOrders = paymentOrderIds.filter(paymentOrderId => 
+            gridOrderIds.includes(paymentOrderId)
+        );
+        console.log(`[DEBUG] ✅ MATCHING ORDERS (should show verify buttons): [${matchingOrders.join(', ')}]`);
+        
+        // Find payments without corresponding grid orders (explains discrepancy)
+        const paymentsWithoutGridOrders = paymentDetails.filter(payment => 
+            !gridOrderIds.includes(payment.orderId)
+        );
+        console.log(`[DEBUG] ❌ PAYMENTS WITHOUT GRID ORDERS (explains discrepancy):`);
+        paymentsWithoutGridOrders.forEach(payment => {
+            console.log(`    Payment ID: ${payment.paymentId}, Team: ${payment.teamName}, Order: ${payment.orderId}, Amount: ${formatCurrency(payment.amount)}`);
+        });
+        
+        // Find grid orders without payments (should not have verify buttons)
+        const ordersWithoutPayments = orderDetails.filter(order => 
+            !paymentOrderIds.includes(order.orderId)
+        );
+        console.log(`[DEBUG] ✅ ORDERS WITHOUT PAYMENTS (correctly no verify buttons):`);
+        ordersWithoutPayments.forEach(order => {
+            console.log(`    Order ID: ${order.orderId}, Team: ${order.teamName}, Balance: ${formatCurrency(order.balanceDue)}`);
+        });
+        
+        // ===================================================================
+        // CHECK 4: Investigate missing orders
+        // ===================================================================
+        if (paymentsWithoutGridOrders.length > 0) {
+            console.log(`[DEBUG] 🔍 STEP 4: Investigating why orders are missing from grid...`);
+            
+            for (const payment of paymentsWithoutGridOrders) {
+                console.log(`[DEBUG] 🔍 Checking order ${payment.orderId}...`);
+                
+                try {
+                    const orderDoc = await db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(payment.orderId).get();
+                    
+                    if (orderDoc.exists) {
+                        const orderData = orderDoc.data();
+                        console.log(`    ✅ Order exists: Status="${orderData.status}", Balance=${formatCurrency(orderData.balanceDue || 0)}`);
+                        
+                        // ✅ DIAGNOSIS: Why isn't this in grid query?
+                        const isActive = orderData.status === 'Active';
+                        const hasBalance = (orderData.balanceDue || 0) > 0;
+                        
+                        console.log(`    🔍 Grid query conditions:`);
+                        console.log(`      status === 'Active': ${isActive} (actual: "${orderData.status}")`);
+                        console.log(`      balanceDue > 0: ${hasBalance} (actual: ${orderData.balanceDue})`);
+                        
+                        if (!isActive) {
+                            console.log(`    ❌ REASON: Order status is "${orderData.status}" not "Active"`);
+                        }
+                        if (!hasBalance) {
+                            console.log(`    ❌ REASON: Order balance is ${formatCurrency(orderData.balanceDue || 0)} not > 0`);
+                        }
+                    } else {
+                        console.log(`    ❌ Order does not exist: ${payment.orderId}`);
+                    }
+                } catch (orderCheckError) {
+                    console.error(`    ❌ Error checking order ${payment.orderId}:`, orderCheckError);
+                }
+            }
+        }
+        
+        // ===================================================================
+        // SUMMARY REPORT
+        // ===================================================================
+        console.log(`[DEBUG] 🎯 DISCREPANCY ANALYSIS SUMMARY:`);
+        console.log(`  📤 Pending Team Payments: ${teamPaymentsSnapshot.size}`);
+        console.log(`  📋 Outstanding Orders in Grid: ${ordersSnapshot.size}`);
+        console.log(`  ✅ Orders that Match: ${matchingOrders.length} (should have verify buttons)`);
+        console.log(`  ❌ Payments Missing from Grid: ${paymentsWithoutGridOrders.length} (causes discrepancy)`);
+        
+        return {
+            pendingPayments: teamPaymentsSnapshot.size,
+            outstandingOrders: ordersSnapshot.size,
+            matchingOrders: matchingOrders.length,
+            discrepancyCount: paymentsWithoutGridOrders.length,
+            missingOrderDetails: paymentsWithoutGridOrders
+        };
+        
+    } catch (error) {
+        console.error('[DEBUG] ❌ Error in discrepancy analysis:', error);
+        return null;
+    }
 }
 
 console.log('[PmtMgmt] 💳 Payment Management Module loaded successfully');
