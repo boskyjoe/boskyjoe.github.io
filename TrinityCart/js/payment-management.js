@@ -7854,4 +7854,139 @@ window.debugTeamPaymentDiscrepancy = async function() {
     }
 };
 
+
+
+/**
+ * ENHANCED: Show team payment verification modal for consignment order payments.
+ * 
+ * Opens verification interface for team payments submitted against consignment orders.
+ * Similar to supplier payment verification but focused on team settlements.
+ * 
+ * @param {string} consignmentOrderId - The consignment order ID to verify payments for
+ * @param {string} teamName - Team name for modal header context
+ * @param {Object} pendingStatus - Pending payment status from checkForPendingTeamPayments()
+ */
+export async function showTeamPaymentVerificationModal(consignmentOrderId, teamName, pendingStatus) {
+    console.log(`[PmtMgmt] 👥 Opening team payment verification modal for order: ${consignmentOrderId}`);
+    
+    // For now, we'll use a comprehensive modal dialog instead of a separate modal
+    // This is simpler and reuses your existing modal system
+    
+    try {
+        if (!pendingStatus || !pendingStatus.hasPendingPayments) {
+            await showModal('info', 'No Team Payments to Verify',
+                `No team payments are pending verification for this order.\n\n` +
+                `Order: ${consignmentOrderId}\n` +
+                `Team: ${teamName}\n\n` +
+                `All payments have been processed or no payments submitted.`
+            );
+            return;
+        }
+        
+        // ✅ BUILD: Detailed verification information
+        const paymentDetails = pendingStatus.pendingPaymentsList.map((payment, index) => 
+            `${index + 1}. ${formatCurrency(payment.paymentAmount)} ${payment.donationAmount > 0 ? `+ ${formatCurrency(payment.donationAmount)} donation` : ''}\n` +
+            `   Mode: ${payment.paymentMode}, Reference: ${payment.paymentReference || 'No reference'}\n` +
+            `   Submitted: ${payment.submittedDate?.toDate?.()?.toLocaleDateString() || 'Unknown date'} by ${payment.submittedBy}\n` +
+            `   Waiting: ${payment.daysWaiting} days`
+        ).join('\n\n');
+        
+        const confirmed = await showModal('confirm', 'Verify Team Payments',
+            `Verify all pending team payments for this consignment order?\n\n` +
+            `🏆 TEAM: ${teamName}\n` +
+            `📋 ORDER: ${consignmentOrderId}\n` +
+            `💰 TOTAL AMOUNT: ${formatCurrency(pendingStatus.totalPendingAmount)}\n` +
+            `📊 PAYMENT COUNT: ${pendingStatus.totalPendingCount}\n\n` +
+            `PAYMENT DETAILS:\n${paymentDetails}\n\n` +
+            `This will:\n` +
+            `✅ Verify all ${pendingStatus.totalPendingCount} payment${pendingStatus.totalPendingCount > 1 ? 's' : ''}\n` +
+            `✅ Update consignment order balance\n` +
+            `✅ Complete team settlement process\n` +
+            `✅ Notify team of verification\n\n` +
+            `Proceed with verification?`
+        );
+
+        if (confirmed) {
+            ProgressToast.show('Verifying Team Payments', 'info');
+            
+            try {
+                // ✅ PROCESS: Verify each team payment
+                let verifiedCount = 0;
+                let totalVerifiedAmount = 0;
+                
+                for (const payment of pendingStatus.pendingPaymentsList) {
+                    ProgressToast.updateProgress(
+                        `Verifying payment ${verifiedCount + 1} of ${pendingStatus.totalPendingCount}...`, 
+                        ((verifiedCount + 1) / pendingStatus.totalPendingCount) * 80,
+                        `Processing ${payment.teamName} payment`
+                    );
+                    
+                    await verifyConsignmentPayment(payment.id, appState.currentUser);
+                    
+                    verifiedCount++;
+                    totalVerifiedAmount += payment.paymentAmount;
+                    
+                    console.log(`[PmtMgmt] ✅ Verified team payment ${verifiedCount}/${pendingStatus.totalPendingCount}: ${formatCurrency(payment.paymentAmount)}`);
+                }
+                
+                ProgressToast.updateProgress('All team payments verified successfully!', 100, 'Verification Complete');
+                ProgressToast.showSuccess(`${verifiedCount} team payments verified (${formatCurrency(totalVerifiedAmount)})!`);
+                
+                setTimeout(async () => {
+                    ProgressToast.hide(800);
+                    
+                    await showModal('success', 'Team Payment Verification Complete',
+                        `All team payments have been verified successfully!\n\n` +
+                        `🏆 Team: ${teamName}\n` +
+                        `📋 Order: ${consignmentOrderId}\n` +
+                        `✅ Payments Verified: ${verifiedCount}\n` +
+                        `💰 Total Amount: ${formatCurrency(totalVerifiedAmount)}\n\n` +
+                        `Results:\n` +
+                        `✓ Consignment order balance updated\n` +
+                        `✓ Team settlement progress recorded\n` +
+                        `✓ Payment status changed to verified\n` +
+                        `✓ Team notified of successful verification\n\n` +
+                        `The team grids will refresh to show updated status.`
+                    );
+                    
+                    // ✅ REFRESH: Team payment grid and action items
+                    setTimeout(async () => {
+                        // Clear cache to force fresh data
+                        clearPaymentMgmtCache();
+                        
+                        // Refresh team grid if active
+                        if (document.getElementById('pmt-mgmt-teams-content')?.classList.contains('active')) {
+                            await loadTeamPaymentsForMgmtTab('outstanding', { forceRefresh: true });
+                        }
+                        
+                        // Refresh action items
+                        await buildActionRequiredList({ forceRefresh: true });
+                        
+                        console.log('[PmtMgmt] ✅ Team payment grids and action items refreshed after verification');
+                    }, 1000);
+                    
+                }, 1200);
+                
+            } catch (verificationError) {
+                console.error('[PmtMgmt] Error in team payment verification:', verificationError);
+                ProgressToast.showError(`Team verification failed: ${verificationError.message}`);
+                
+                setTimeout(() => {
+                    showModal('error', 'Team Verification Failed',
+                        `Failed to verify team payments.\n\n` +
+                        `Error: ${verificationError.message}\n\n` +
+                        `Please try again or verify payments individually.`
+                    );
+                }, 2000);
+            }
+        }
+        
+    } catch (error) {
+        console.error('[PmtMgmt] Error in team payment verification modal:', error);
+        showModal('error', 'Verification Modal Error',
+            `Could not open team payment verification.\n\n` +
+            `Error: ${error.message}`
+        );
+    }
+}
 console.log('[PmtMgmt] 💳 Payment Management Module loaded successfully');
