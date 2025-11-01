@@ -661,26 +661,26 @@ const pmtMgmtSupplierGridOptions = {
     }
 };
 
+
+
 const pmtMgmtTeamGridOptions = {
-    theme: 'alpine', // ✅ CONSISTENT: Same theme as supplier grid
+    theme: 'alpine',
     getRowId: params => params.data.id,
     
     pagination: true,
-    paginationPageSize: 25, // ✅ CONSISTENT: Same as supplier grid
+    paginationPageSize: 25,
     paginationPageSizeSelector: [10, 25, 50, 100],
     
-    // ✅ STABILITY: Fixed row height like supplier grid
     rowHeight: 60,
     domLayout: 'normal',
     
     columnDefs: [
         {
             headerName: "Team Name",
-            width: 180,
+            width: 160,
             pinned: 'left',
             field: "teamName",
             
-            // ✅ CONSISTENCY: Same filter setup as supplier grid
             filter: 'agTextColumnFilter',
             floatingFilter: true,
             
@@ -697,8 +697,8 @@ const pmtMgmtTeamGridOptions = {
             }
         },
         {
-            headerName: "Order Reference",
-            width: 160,
+            headerName: "Consignment ID",
+            width: 140,
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
@@ -716,18 +716,16 @@ const pmtMgmtTeamGridOptions = {
                 lineHeight: '1.4'
             },
             valueGetter: params => {
-                const orderId = params.data.orderId;
-                return orderId ? orderId : 'Unknown Order';
+                return params.data.consignmentId || params.data.id || 'Unknown';
             },
             valueFormatter: params => {
-                const orderId = params.value || 'Unknown';
-                return orderId.length > 15 ? orderId.substring(0, 15) + '...' : orderId;
+                const consignmentId = params.value || 'Unknown';
+                return consignmentId.length > 15 ? consignmentId.substring(0, 12) + '...' : consignmentId;
             }
         },
         {
             headerName: "Team Lead",
-            width: 160,
-            field: "teamLeadName",
+            width: 140,
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
@@ -738,14 +736,16 @@ const pmtMgmtTeamGridOptions = {
             cellStyle: {
                 display: 'flex',
                 alignItems: 'center',
-                whiteSpace: 'normal',
-                lineHeight: '1.4'
+                fontSize: '12px'
+            },
+            valueGetter: params => {
+                return params.data.requestingMemberName || params.data.teamLeadName || 'Unknown Lead';
             }
         },
         {
-            headerName: "Payment Date",
-            width: 130,
-            field: "paymentDate",
+            headerName: "Request Date",
+            width: 120,
+            field: "requestDate",
             
             filter: 'agDateColumnFilter',
             floatingFilter: true,
@@ -759,17 +759,23 @@ const pmtMgmtTeamGridOptions = {
             },
             valueFormatter: params => {
                 try {
-                    const date = params.value?.toDate ? params.value.toDate() : new Date(params.value);
-                    return date.toLocaleDateString();
+                    const date = params.value;
+                    if (!date) return 'Unknown';
+                    
+                    if (date instanceof Date) {
+                        return date.toLocaleDateString();
+                    } else {
+                        return 'Invalid Date';
+                    }
                 } catch {
-                    return 'Unknown Date';
+                    return 'Date Error';
                 }
             }
         },
         {
-            headerName: "Amount Paid",
+            headerName: "Total Sold",
             width: 120,
-            field: "amountPaid",
+            field: "totalValueSold",
             
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
@@ -779,7 +785,7 @@ const pmtMgmtTeamGridOptions = {
             
             valueFormatter: params => formatCurrency(params.value || 0),
             cellStyle: { 
-                color: '#059669', // Green for inbound payments
+                color: '#059669', // Green for revenue generated
                 fontWeight: 'bold',
                 textAlign: 'right',
                 display: 'flex',
@@ -788,25 +794,9 @@ const pmtMgmtTeamGridOptions = {
             }
         },
         {
-            headerName: "Payment Mode",
+            headerName: "Amount Paid",
             width: 120,
-            field: "paymentMode",
-            
-            filter: 'agTextColumnFilter',
-            floatingFilter: true,
-            
-            wrapHeaderText: true,
-            autoHeaderHeight: true,
-            
-            cellStyle: { 
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '12px'
-            }
-        },
-        {
-            headerName: "Days Since Submitted",
-            width: 140,
+            field: "totalAmountPaid",
             
             filter: 'agNumberColumnFilter',
             floatingFilter: true,
@@ -814,63 +804,136 @@ const pmtMgmtTeamGridOptions = {
             wrapHeaderText: true,
             autoHeaderHeight: true,
             
-            cellStyle: {
-                textAlign: 'center',
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellStyle: { 
+                color: '#2563eb', // Blue for payments received
+                fontWeight: 'bold',
+                textAlign: 'right',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end'
+            }
+        },
+        {
+            headerName: "Balance Due",
+            width: 120,
+            field: "balanceDue",
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            valueFormatter: params => formatCurrency(params.value || 0),
+            cellStyle: params => {
+                const balance = params.value || 0;
+                const baseStyle = {
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end'
+                };
+                
+                if (balance > 15000) return { ...baseStyle, color: '#dc2626' }; // High amount - red
+                if (balance > 8000) return { ...baseStyle, color: '#ea580c' };  // Medium amount - orange
+                if (balance > 0) return { ...baseStyle, color: '#dc2626' };     // Any outstanding - red
+                return { ...baseStyle, color: '#059669' };                     // Settled - green
+            }
+        },
+        {
+            headerName: "Days Outstanding",
+            width: 130,
+            
+            filter: 'agNumberColumnFilter',
+            floatingFilter: true,
+            
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            
+            cellStyle: { 
+                textAlign: 'center', 
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
             },
+            
+            // ✅ CONSIGNMENT LOGIC: Days from checkout date (when team got products)
             valueGetter: params => {
-                const submittedDate = params.data.submittedOn?.toDate ? 
-                    params.data.submittedOn.toDate() : 
-                    (params.data.paymentDate?.toDate ? params.data.paymentDate.toDate() : new Date());
-                const days = Math.ceil((new Date() - submittedDate) / (1000 * 60 * 60 * 24));
-                return Math.max(0, days);
+                const checkoutDate = params.data.checkoutDate;
+                if (!checkoutDate) return 0;
+                
+                try {
+                    const checkout = checkoutDate instanceof Date ? 
+                        checkoutDate : 
+                        (checkoutDate.toDate ? checkoutDate.toDate() : new Date(checkoutDate));
+                    
+                    const days = Math.ceil((new Date() - checkout) / (1000 * 60 * 60 * 24));
+                    return Math.max(0, days);
+                } catch {
+                    return 0;
+                }
             },
             cellRenderer: params => {
                 const days = params.value || 0;
-                let colorClass, statusText, statusIcon;
+                const balance = params.data.balanceDue || 0;
                 
-                if (days > 5) {
-                    colorClass = 'text-red-700 bg-red-100 border-red-300';
-                    statusText = 'DELAYED';
-                    statusIcon = `<svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                  </svg>`;
-                } else if (days > 2) {
-                    colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
-                    statusText = 'PENDING';
-                    statusIcon = `<svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                  </svg>`;
-                } else {
+                let colorClass, urgencyText, urgencyIcon;
+                
+                if (balance === 0) {
+                    // Fully settled
                     colorClass = 'text-green-700 bg-green-100 border-green-300';
-                    statusText = 'RECENT';
-                    statusIcon = `<svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                  </svg>`;
+                    urgencyText = 'SETTLED';
+                    urgencyIcon = `<svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                   </svg>`;
+                } else if (days > 90 || (balance > 15000 && days > 60)) {
+                    // Critical settlement issue
+                    colorClass = 'text-red-700 bg-red-100 border-red-300';
+                    urgencyText = 'CRITICAL';
+                    urgencyIcon = `<svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                   </svg>`;
+                } else if (days > 60 || balance > 10000) {
+                    // High priority settlement
+                    colorClass = 'text-orange-700 bg-orange-100 border-orange-300';
+                    urgencyText = 'HIGH';
+                    urgencyIcon = `<svg class="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
+                } else if (days > 45) {
+                    // Medium priority
+                    colorClass = 'text-yellow-700 bg-yellow-100 border-yellow-300';
+                    urgencyText = 'MEDIUM';
+                    urgencyIcon = `<svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
+                } else {
+                    // Recent or normal timeline
+                    colorClass = 'text-blue-700 bg-blue-100 border-blue-300';
+                    urgencyText = 'CURRENT';
+                    urgencyIcon = `<svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                   </svg>`;
                 }
                 
                 return `<div class="flex flex-col items-center justify-center h-full gap-1">
                             <div class="font-bold text-sm">${days}d</div>
                             <div class="flex items-center space-x-1 text-xs px-2 py-1 rounded-full border ${colorClass}">
-                                ${statusIcon}
-                                <span>${statusText}</span>
+                                ${urgencyIcon}
+                                <span>${urgencyText}</span>
                             </div>
                         </div>`;
             }
         },
         {
-            field: "paymentStatus",
-            headerName: "Status",
-            width: 130,
+            headerName: "Settlement Status",
+            width: 140,
             
             filter: 'agTextColumnFilter',
             floatingFilter: true,
-            filterParams: {
-                values: ['Pending Verification', 'Verified', 'Cancelled']
-            },
             
             wrapHeaderText: true,
             autoHeaderHeight: true,
@@ -881,50 +944,49 @@ const pmtMgmtTeamGridOptions = {
                 justifyContent: 'center'
             },
             
+            // ✅ SETTLEMENT STATUS: Based on balance due
             cellRenderer: params => {
-                const status = params.value || 'Pending Verification';
+                const balanceDue = params.data.balanceDue || 0;
+                const totalSold = params.data.totalValueSold || 0;
+                const totalPaid = params.data.totalAmountPaid || 0;
                 
-                const statusConfig = {
-                    'Verified': { 
+                let statusConfig;
+                
+                if (balanceDue === 0) {
+                    statusConfig = { 
                         class: 'bg-green-100 text-green-800 border-green-300', 
                         icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                </svg>`, 
-                        text: 'VERIFIED' 
-                    },
-                    'Pending Verification': { 
+                        text: 'SETTLED' 
+                    };
+                } else if (totalPaid > 0) {
+                    statusConfig = { 
                         class: 'bg-yellow-100 text-yellow-800 border-yellow-300', 
                         icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                               </svg>`, 
+                        text: 'PARTIAL' 
+                    };
+                } else {
+                    statusConfig = { 
+                        class: 'bg-red-100 text-red-800 border-red-300', 
+                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/>
                                </svg>`, 
                         text: 'PENDING' 
-                    },
-                    'Cancelled': { 
-                        class: 'bg-gray-100 text-gray-800 border-gray-300', 
-                        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                               </svg>`, 
-                        text: 'CANCELLED' 
-                    }
-                };
+                    };
+                }
                 
-                const config = statusConfig[status] || { 
-                    class: 'bg-blue-100 text-blue-800 border-blue-300', 
-                    icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                           </svg>`, 
-                    text: status 
-                };
-                
-                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-bold rounded-full border ${config.class}">
-                            ${config.icon}
-                            <span>${config.text}</span>
+                return `<span class="inline-flex items-center space-x-1 px-2 py-1 text-xs font-bold rounded-full border ${statusConfig.class}">
+                            ${statusConfig.icon}
+                            <span>${statusConfig.text}</span>
                         </span>`;
             }
         },
         {
             headerName: "Actions",
-            width: 180,
+            width: 220, // ✅ WIDER: Room for consignment order actions
             
             filter: false,
             floatingFilter: false,
@@ -942,7 +1004,8 @@ const pmtMgmtTeamGridOptions = {
             },
             
             cellRenderer: params => {
-                const paymentStatus = params.data.paymentStatus || 'Pending Verification';
+                const balanceDue = params.data.balanceDue || 0;
+                const daysOutstanding = calculateDaysOverdue(params.data.checkoutDate);
                 const currentUser = appState.currentUser;
                 
                 const hasFinancialPermissions = currentUser && (
@@ -953,67 +1016,59 @@ const pmtMgmtTeamGridOptions = {
                     return `<span class="text-xs text-gray-500 italic">View only</span>`;
                 }
                 
-                if (paymentStatus === 'Verified') {
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-view-team-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Payment Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    <span>View Details</span>
-                                </button>
-                                <button class="pmt-mgmt-view-team-order bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
-                                      data-id="${params.data.orderId}" 
-                                      title="View Consignment Order">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
-                                    </svg>
-                                    <span>Order</span>
-                                </button>
-                            </div>`;
-                } else if (paymentStatus === 'Pending Verification') {
-                    // Pending payments - verify action
-                    const daysWaiting = params.data.daysWaiting || 0;
-                    const urgencyClass = daysWaiting > 5 ? 'animate-pulse' : '';
+                let buttons = '';
+                
+                if (balanceDue > 0) {
+                    // ✅ OUTSTANDING SETTLEMENT: Collection and management actions
+                    const urgencyClass = daysOutstanding > 90 ? 'animate-pulse' : '';
                     
-                    return `<div class="flex space-x-1">
-                                <button class="pmt-mgmt-verify-team-payment bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 font-semibold ${urgencyClass} flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="Verify Team Payment of ${formatCurrency(params.data.amountPaid || 0)}">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    <span>VERIFY ${formatCurrency(params.data.amountPaid || 0)}</span>
-                                </button>
-                                <button class="pmt-mgmt-view-team-payment bg-gray-500 text-white px-2 py-1 text-xs rounded hover:bg-gray-600 flex items-center space-x-1" 
-                                      data-id="${params.data.id}" 
-                                      title="View Payment Details">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    <span>View</span>
-                                </button>
-                            </div>`;
+                    buttons = `<div class="flex space-x-1">
+                                    <button class="pmt-mgmt-collect-team-settlement bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700 font-semibold ${urgencyClass} flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          data-team-name="${params.data.teamName}"
+                                          data-balance-due="${balanceDue}"
+                                          title="Collect Settlement for ${formatCurrency(balanceDue)}">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                        </svg>
+                                        <span>SETTLE ${formatCurrency(balanceDue)}</span>
+                                    </button>
+                                    <button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="View Consignment Order Details">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                        </svg>
+                                        <span>View Order</span>
+                                    </button>
+                                </div>`;
                 } else {
-                    // Other statuses - view only
-                    return `<button class="pmt-mgmt-view-team-payment bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
-                                  data-id="${params.data.id}" 
-                                  title="View Payment Details">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                <span>View Details</span>
-                            </button>`;
+                    // ✅ SETTLED ORDERS: Reference and audit actions
+                    buttons = `<div class="flex space-x-1">
+                                    <button class="pmt-mgmt-view-consignment-order bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="View Settled Order Details">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V9a2 2 0 00-2-2H9a2 2 0 00-2 2v2.25"/>
+                                        </svg>
+                                        <span>View Order</span>
+                                    </button>
+                                    <button class="pmt-mgmt-view-settlement-history bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 flex items-center space-x-1" 
+                                          data-id="${params.data.id}" 
+                                          title="View Settlement History">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                        </svg>
+                                        <span>Settlement History</span>
+                                    </button>
+                                </div>`;
                 }
+                
+                return buttons;
             }
         }
     ],
     
-    // ✅ CONSISTENT: Same defaultColDef as supplier grid (without autoHeight)
     defaultColDef: {
         resizable: true,
         sortable: true,
@@ -1034,14 +1089,13 @@ const pmtMgmtTeamGridOptions = {
    
     onGridReady: (params) => {
         pmtMgmtTeamGridApi = params.api;
-        console.log("[PmtMgmt] ✅ Business-Smart Team Payments Grid ready with SVG icons");
+        console.log("[PmtMgmt] ✅ Team CONSIGNMENT ORDERS Grid ready for settlement management");
         
         setTimeout(() => {
-            loadTeamPaymentsForMgmtTab();
+            loadTeamPaymentsForMgmtTab('outstanding'); // Load outstanding settlements
         }, 200);
     }
 };
-
 
 /**
  * ENHANCED: Check if invoice has pending payments awaiting verification
