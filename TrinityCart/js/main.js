@@ -6654,9 +6654,9 @@ async function handlePmtMgmtCollectTeamSettlement(target) {
     console.log(`[main.js] 💰 Team settlement follow-up: ${teamName} owes ${formatCurrency(balanceDue)}`);
     
     await showModal('info', 'Team Settlement Follow-up',
-        `Team settlement follow-up for outstanding balance:<br>` +
-        `• Team: ${teamName}<br>` +
-        `• Outstanding Balance: ${formatCurrency(balanceDue)}<br>` +
+        `Team settlement follow-up for outstanding balance:\n\n` +
+        `• Team: ${teamName}\n` +
+        `• Outstanding Balance: ${formatCurrency(balanceDue)}\n\n` +
         `• Consignment Order: ${orderId}\n\n` +
         `Recommended actions:\n` +
         `📞 Contact team lead to discuss settlement\n` +
