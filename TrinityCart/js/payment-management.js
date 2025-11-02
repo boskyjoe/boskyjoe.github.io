@@ -999,6 +999,7 @@ const pmtMgmtTeamGridOptions = {
             autoHeaderHeight: true,
             
             suppressSizeToFit: true, // ✅ CRITICAL: Don't let auto-sizing shrink this column
+            suppressAutoSize: true,
             
             cellStyle: {
                 display: 'flex',
@@ -1082,6 +1083,9 @@ const pmtMgmtTeamGridOptions = {
         
         wrapHeaderText: true,
         autoHeaderHeight: true,
+
+        suppressAutoSize: false, 
+        suppressSizeToFit: false, 
         
         cellStyle: {
             display: 'flex',
