@@ -61,7 +61,20 @@ export function showModal(options, title, message) {
 
         // Populate modal content (using textContent for security)
         modalTitle.textContent = config.title || 'Notification';
-        modalMessage.textContent = config.message || ''; // SECURITY FIX: Use textContent instead of innerHTML
+        //modalMessage.textContent = config.message || ''; // SECURITY FIX: Use textContent instead of innerHTML
+        if (config.message) {
+            // Escape HTML but preserve line breaks
+            const escapedMessage = config.message
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+                .replace(/\n/g, '<br>');
+            modalMessage.innerHTML = escapedMessage;
+        } else {
+            modalMessage.textContent = '';
+        }
         modalIcon.innerHTML = iconMap[config.type] || iconMap.info;
         modalButtons.innerHTML = '';
 
