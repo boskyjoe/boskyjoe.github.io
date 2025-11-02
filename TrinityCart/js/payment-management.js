@@ -761,16 +761,40 @@ const pmtMgmtTeamGridOptions = {
                 alignItems: 'center'
             },
             valueFormatter: params => {
+                const requestDate = params.value;
+                
+                console.log(`[Team Grid] Formatting requestDate:`, requestDate, 'Type:', typeof requestDate);
+                
+                if (!requestDate) return 'No Date';
+                
                 try {
-                    const date = params.value;
-                    if (!date) return 'Unknown';
+                    let dateObj;
                     
-                    if (date instanceof Date) {
-                        return date.toLocaleDateString();
+                    if (requestDate instanceof Date) {
+                        // ✅ EXPECTED: Processed JavaScript Date from loadTeamPaymentsForMgmtTab
+                        dateObj = requestDate;
+                    } else if (requestDate.toDate && typeof requestDate.toDate === 'function') {
+                        // ✅ FALLBACK: Raw Firestore Timestamp (shouldn't happen but safe fallback)
+                        dateObj = requestDate.toDate();
+                        console.warn('[Team Grid] Processing raw Firestore Timestamp in grid - data processing may have failed');
+                    } else if (typeof requestDate === 'string' || typeof requestDate === 'number') {
+                        // ✅ FALLBACK: String or timestamp number
+                        dateObj = new Date(requestDate);
                     } else {
+                        console.warn('[Team Grid] Unknown date type:', typeof requestDate, requestDate);
+                        return 'Unknown Date';
+                    }
+                    
+                    // ✅ VALIDATION: Ensure date is valid
+                    if (isNaN(dateObj.getTime())) {
+                        console.warn('[Team Grid] Invalid date object created from:', requestDate);
                         return 'Invalid Date';
                     }
-                } catch {
+                    
+                    return dateObj.toLocaleDateString();
+                    
+                } catch (error) {
+                    console.error('[Team Grid] Date formatting error:', error, 'for value:', requestDate);
                     return 'Date Error';
                 }
             }
