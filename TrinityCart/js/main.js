@@ -6640,7 +6640,7 @@ async function handlePmtMgmtCollectTeamSettlement(target) {
     const balanceDue = parseFloat(buttonElement?.dataset?.balanceDue || 0);
     
     console.log('[main.js] 🔍 Team settlement data:');
-    console.log('  Order ID:', orderId);
+    console.log('  Order Document ID:', orderId);
     console.log('  Team Name:', teamName);
     console.log('  Balance Due:', formatCurrency(balanceDue));
     
@@ -6651,20 +6651,61 @@ async function handlePmtMgmtCollectTeamSettlement(target) {
         return;
     }
     
-    console.log(`[main.js] 💰 Team settlement follow-up: ${teamName} owes ${formatCurrency(balanceDue)}`);
-    
-    await showModal('info', 'Team Settlement Follow-up',
-        `Team settlement follow-up for outstanding balance:\n\n` +
-        `• Team: ${teamName}\n` +
-        `• Outstanding Balance: ${formatCurrency(balanceDue)}\n\n` +
-        `• Consignment Order: ${orderId}\n\n` +
-        `Recommended actions:\n` +
-        `📞 Contact team lead to discuss settlement\n` +
-        `📊 Review consignment order activity and sales\n` +
-        `💰 Set up payment plan if needed\n` +
-        `📋 Use "View Order" to see detailed consignment information\n\n` +
-        `Teams can submit payments through their Consignment interface.`
-    );
+    try {
+        // ✅ ENHANCEMENT: Get the user-friendly consignment ID
+        console.log(`[main.js] 🔍 Getting consignment details for user-friendly display...`);
+        
+        const orderData = await getConsignmentOrderById(orderId);
+        const consignmentId = orderData?.consignmentId || orderId; // Fallback to document ID if consignmentId missing
+        const teamLeadName = orderData?.requestingMemberName || 'Unknown Lead';
+        const totalSold = orderData?.totalValueSold || 0;
+        const totalPaid = orderData?.totalAmountPaid || 0;
+        
+        console.log(`[main.js] ✅ Enhanced team settlement context:`, {
+            consignmentId: consignmentId,
+            teamLead: teamLeadName,
+            totalSold: formatCurrency(totalSold),
+            totalPaid: formatCurrency(totalPaid),
+            balance: formatCurrency(balanceDue)
+        });
+        
+        await showModal('info', 'Team Settlement Follow-up',
+            `Team settlement follow-up for outstanding balance:\n\n` +
+            `🏆 Team: ${teamName}\n` +
+            `👤 Team Lead: ${teamLeadName}\n` +
+            `📋 Consignment: ${consignmentId}\n` +
+            `💰 Outstanding Balance: ${formatCurrency(balanceDue)}\n\n` +
+            `📊 Financial Summary:\n` +
+            `• Total Value Sold: ${formatCurrency(totalSold)}\n` +
+            `• Amount Paid So Far: ${formatCurrency(totalPaid)}\n` +
+            `• Remaining Balance: ${formatCurrency(balanceDue)}\n\n` +
+            `Recommended actions:\n` +
+            `📞 Contact ${teamLeadName} to discuss settlement timeline\n` +
+            `📊 Review consignment order activity and sales performance\n` +
+            `💰 Discuss payment plan or settlement schedule\n` +
+            `📋 Use "View Order" to see detailed consignment activity\n\n` +
+            `💡 Teams can submit settlement payments through the Consignment Management interface.`
+        );
+        
+    } catch (error) {
+        console.error('[main.js] Error getting consignment details:', error);
+        
+        // ✅ FALLBACK: Show dialog with basic information
+        console.log(`[main.js] 💰 Fallback - team settlement follow-up with basic info`);
+        
+        await showModal('info', 'Team Settlement Follow-up',
+            `Team settlement follow-up for outstanding balance:\n\n` +
+            `• Team: ${teamName}\n` +
+            `• Outstanding Balance: ${formatCurrency(balanceDue)}\n` +
+            `• Order Reference: ${orderId}\n\n` +
+            `Recommended actions:\n` +
+            `📞 Contact team lead to discuss settlement\n` +
+            `📊 Review consignment order activity\n` +
+            `💰 Set up payment plan if needed\n` +
+            `📋 Use "View Order" to see detailed information\n\n` +
+            `Teams can submit payments through their Consignment interface.`
+        );
+    }
 }
 
 /**
