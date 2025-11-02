@@ -673,6 +673,9 @@ const pmtMgmtTeamGridOptions = {
     
     rowHeight: 60,
     domLayout: 'normal',
+    suppressColumnVirtualisation: false,
+    suppressAutoSize: true,   
+    suppressSizeToFit: false,
     
     columnDefs: [
         {
