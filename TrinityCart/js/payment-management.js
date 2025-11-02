@@ -4329,12 +4329,12 @@ async function loadTeamPaymentsForMgmtTab(focusMode = 'outstanding', options = {
         }, 500);
 
         // Auto-fit columns after data and indicator are ready
-        setTimeout(() => {
+        /*setTimeout(() => {
             if (pmtMgmtTeamGridApi) {
                 pmtMgmtTeamGridApi.sizeColumnsToFit();
                 console.log(`[PmtMgmt] ✅ Team columns auto-fitted for ${focusMode} mode`);
             }
-        }, 700);
+        }, 700);*/
 
         console.log(`[PmtMgmt] ✅ Team ${focusMode} orders loaded with verification status: ${orderData.length} records (${totalReads} reads)`);
 
