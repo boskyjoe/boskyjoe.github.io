@@ -10024,6 +10024,7 @@ export class ProgressToast {
         const toast = document.getElementById('progress-toast');
         const container = document.getElementById('toast-container');
         const iconContainer = document.getElementById('toast-icon-container');
+        const backdrop = document.getElementById('toast-backdrop');
         const titleElement = document.getElementById('toast-title');
         
         if (!toast || !container) {
