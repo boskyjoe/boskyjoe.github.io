@@ -10033,6 +10033,14 @@ export class ProgressToast {
 
         console.log(`[Toast] Showing ${theme} toast: ${title}`);
 
+        // Show backdrop
+        if (backdrop) {
+            backdrop.classList.remove('hidden');
+            setTimeout(() => {
+                backdrop.style.opacity = '1';
+            }, 50);
+        }
+
         // Apply theme
         this.applyTheme(theme);
         
@@ -10134,12 +10142,14 @@ export class ProgressToast {
         }
     }
 
+    
     /**
      * Hides the toast with animation
      * @param {number} delay - Delay before hiding (ms)
      */
     static hide(delay = 1500) {
         const toast = document.getElementById('progress-toast');
+        const backdrop = document.getElementById('toast-backdrop');
         if (!toast) return;
 
         setTimeout(() => {
@@ -10147,9 +10157,15 @@ export class ProgressToast {
             
             toast.style.transform = 'translateX(100%)';
             toast.style.opacity = '0';
+
+            // Hide backdrop
+            if (backdrop) {
+                backdrop.style.opacity = '0';
+            }
             
             setTimeout(() => {
                 toast.classList.add('hidden');
+                if (backdrop) backdrop.classList.add('hidden');
                 this.reset(); // Reset for next use
             }, 300);
         }, delay);
