@@ -6097,6 +6097,7 @@ async function handlePmtMgmtPayAllOutstanding() {
 /**
  * Handle supplier tab refresh
  */
+
 async function handlePmtMgmtSupplierRefresh() {
     console.log('[main.js] Refresh supplier payments tab');
     
@@ -6728,33 +6729,93 @@ async function handlePmtMgmtViewConsignmentOrder(target) {
     }
     
     try {
-        console.log('[main.js] 📋 Routing to Consignment Management for order:', orderId);
+        // ✅ ENHANCEMENT: Get order details for context in confirmation
+        console.log('[main.js] 🔍 Getting order details for navigation confirmation...');
         
-        // ✅ ROUTE: To existing Consignment Management with selected order
-        appState.selectedConsignmentId = orderId;
+        const orderData = await getConsignmentOrderById(orderId);
+        const consignmentId = orderData?.consignmentId || orderId;
+        const teamName = orderData?.teamName || 'Unknown Team';
+        const balanceDue = orderData?.balanceDue || 0;
+        const totalSold = orderData?.totalValueSold || 0;
         
-        // Navigate to Consignment Management
-        showConsignmentView();
+        // ✅ CONFIRM: Ask user before navigation
+        const confirmed = await showModal('confirm', 'View Consignment Order Details',
+            `Switch to Consignment Management to view order details?\n\n` +
+            `🏆 Team: ${teamName}\n` +
+            `📋 Consignment: ${consignmentId}\n` +
+            `💰 Outstanding Balance: ${formatCurrency(balanceDue)}\n` +
+            `📈 Total Value Sold: ${formatCurrency(totalSold)}\n\n` +
+            `This will take you to Consignment Management where you can:\n` +
+            `✅ View complete order details and timeline\n` +
+            `✅ See team activity history and item sales\n` +
+            `✅ Review settlement history and payment records\n` +
+            `✅ Manage payments specific to this consignment\n\n` +
+            `Continue to Consignment Management?`
+        );
         
-        // Show navigation confirmation
-        setTimeout(() => {
-            showModal('success', 'Navigation Complete',
-                `Switched to Consignment Management for order details.\n\n` +
-                `Order: ${orderId}\n\n` +
-                `You can now:\n` +
-                `✅ View complete order details\n` +
-                `✅ See team activity history\n` +
-                `✅ Review items and settlements\n` +
-                `✅ Manage payments for this specific order`
-            );
-        }, 1000);
+        if (confirmed) {
+            console.log('[main.js] ✅ User confirmed navigation - switching to Consignment Management...');
+            
+            // ✅ SHOW: Loading progress during navigation
+            ProgressToast.show('Opening Consignment Details', 'info');
+            ProgressToast.updateProgress('Switching to Consignment Management...', 75, 'Navigation');
+            
+            // ✅ NAVIGATE: Set selected order and switch view
+            appState.selectedConsignmentId = orderId;
+            showConsignmentView();
+            
+            // ✅ SUCCESS: Show completion after view loads
+            setTimeout(() => {
+                ProgressToast.showSuccess('Consignment details loaded successfully!');
+                
+                setTimeout(() => {
+                    ProgressToast.hide(500);
+                    
+                    // ✅ OPTIONAL: Brief success confirmation (non-blocking)
+                    setTimeout(() => {
+                        showModal('success', 'Navigation Complete',
+                            `Successfully opened consignment order details!\n\n` +
+                            `🏆 Team: ${teamName}\n` +
+                            `📋 Consignment: ${consignmentId}\n\n` +
+                            `You are now in Consignment Management where you can:\n` +
+                            `• Review complete order activity\n` +
+                            `• Monitor team sales performance\n` +
+                            `• Manage settlement payments\n\n` +
+                            `Use Payment Management tab to return to overview.`
+                        );
+                    }, 800);
+                    
+                }, 1000);
+            }, 1200);
+            
+        } else {
+            console.log('[main.js] ❌ User cancelled navigation to Consignment Management');
+        }
         
     } catch (error) {
-        console.error('[main.js] Error viewing consignment order:', error);
-        await showModal('error', 'Navigation Error', 'Could not open consignment order details.');
+        console.error('[main.js] Error preparing consignment order navigation:', error);
+        
+        // ✅ FALLBACK: Show basic confirmation if order details fail
+        const basicConfirmed = await showModal('confirm', 'View Consignment Order',
+            `Switch to Consignment Management to view order details?\n\n` +
+            `Order: ${orderId}\n\n` +
+            `Note: Could not load order details for preview, but you can view them in Consignment Management.\n\n` +
+            `Continue to Consignment Management?`
+        );
+        
+        if (basicConfirmed) {
+            appState.selectedConsignmentId = orderId;
+            showConsignmentView();
+            
+            setTimeout(() => {
+                showModal('info', 'Navigation Complete',
+                    'Switched to Consignment Management.\n\n' +
+                    'If order details don\'t load automatically, please select the order from the grid.'
+                );
+            }, 1000);
+        }
     }
 }
-
 
 /**
  * ENHANCED: Handle view settlement history
