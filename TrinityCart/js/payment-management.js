@@ -989,8 +989,8 @@ const pmtMgmtTeamGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 320, // ✅ INCREASED: From 280 to 320 for 3 buttons
-            minWidth: 300, // ✅ MINIMUM: Ensure buttons don't get crushed
+            width: 250, // ✅ INCREASED: From 280 to 320 for 3 buttons
+            minWidth: 250, // ✅ MINIMUM: Ensure buttons don't get crushed
             
             filter: false,
             floatingFilter: false,
