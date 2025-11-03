@@ -6817,6 +6817,7 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     document.getElementById('executive-top-team-revenue').textContent = highlights.topTeamRevenue;
     document.getElementById('executive-best-product').textContent = highlights.bestProduct;
     const productPerformanceElement = document.getElementById('executive-product-performance');
+
     if (productPerformanceElement) {
         const topProduct = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
         
