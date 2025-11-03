@@ -6816,9 +6816,122 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     document.getElementById('executive-top-team').textContent = highlights.topTeam;
     document.getElementById('executive-top-team-revenue').textContent = highlights.topTeamRevenue;
     document.getElementById('executive-best-product').textContent = highlights.bestProduct;
+    const productPerformanceElement = document.getElementById('executive-product-performance');
+    if (productPerformanceElement) {
+        // ✅ ENHANCED: Show actual product performance details
+        const productData = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
+        if (productData) {
+            productPerformanceElement.textContent = `${productData.formattedRevenue} revenue, ${productData.totalQuantity} sold`;
+        } else {
+            productPerformanceElement.textContent = 'Top selling item';
+        }
+    }
     
     // ✅ BUSINESS INSIGHTS
     updateExecutiveInsightsDisplay(dashboardData.businessInsights || []);
+
+
+
+    // ✅ DIRECT SALES CHANNEL
+    const channelAnalysis = dashboardData.channelAnalysis;
+    const directSalesChannel = channelAnalysis?.directSalesChannel;
+    
+    if (directSalesChannel) {
+        // Direct sales contribution percentage
+        const directContributionElement = document.getElementById('direct-sales-contribution');
+        if (directContributionElement) {
+            directContributionElement.textContent = `${directSalesChannel.percentage}%`;
+        }
+        
+        // Store breakdown within direct sales
+        const storeBreakdown = directSalesChannel.storeBreakdown || [];
+        
+        // Church Store
+        const churchStore = storeBreakdown.find(store => store.storeName === 'Church Store');
+        if (churchStore) {
+            const churchRevenueElement = document.getElementById('church-store-executive-revenue');
+            const churchTransactionsElement = document.getElementById('church-store-executive-transactions');
+            
+            if (churchRevenueElement) {
+                churchRevenueElement.textContent = churchStore.formattedRevenue || formatCurrency(churchStore.revenue || 0);
+            }
+            if (churchTransactionsElement) {
+                churchTransactionsElement.textContent = `${churchStore.transactions || 0} transactions`;
+            }
+        } else {
+            // Fallback if no church store data
+            const churchRevenueElement = document.getElementById('church-store-executive-revenue');
+            const churchTransactionsElement = document.getElementById('church-store-executive-transactions');
+            
+            if (churchRevenueElement) churchRevenueElement.textContent = formatCurrency(directSalesChannel.revenue * 0.6); // Estimate
+            if (churchTransactionsElement) churchTransactionsElement.textContent = 'Data unavailable';
+        }
+        
+        // Tasty Treats
+        const tastyTreats = storeBreakdown.find(store => store.storeName === 'Tasty Treats');
+        if (tastyTreats) {
+            const tastyRevenueElement = document.getElementById('tasty-treats-executive-revenue');
+            const tastyTransactionsElement = document.getElementById('tasty-treats-executive-transactions');
+            
+            if (tastyRevenueElement) {
+                tastyRevenueElement.textContent = tastyTreats.formattedRevenue || formatCurrency(tastyTreats.revenue || 0);
+            }
+            if (tastyTransactionsElement) {
+                tastyTransactionsElement.textContent = `${tastyTreats.transactions || 0} transactions`;
+            }
+        } else {
+            // Fallback if no tasty treats data
+            const tastyRevenueElement = document.getElementById('tasty-treats-executive-revenue');
+            const tastyTransactionsElement = document.getElementById('tasty-treats-executive-transactions');
+            
+            if (tastyRevenueElement) tastyRevenueElement.textContent = formatCurrency(directSalesChannel.revenue * 0.4); // Estimate
+            if (tastyTransactionsElement) tastyTransactionsElement.textContent = 'Data unavailable';
+        }
+        
+        console.log('[ui.js] ✅ Direct sales channel updated:', {
+            percentage: directSalesChannel.percentage + '%',
+            revenue: directSalesChannel.formattedRevenue,
+            storeCount: storeBreakdown.length
+        });
+    }
+    
+    // ✅ CONSIGNMENT CHANNEL
+    const consignmentChannel = channelAnalysis?.consignmentChannel;
+    
+    if (consignmentChannel) {
+        // Consignment contribution percentage
+        const consignmentContributionElement = document.getElementById('consignment-contribution');
+        if (consignmentContributionElement) {
+            consignmentContributionElement.textContent = `${consignmentChannel.percentage}%`;
+        }
+        
+        // Consignment metrics
+        const activeOrdersElement = document.getElementById('executive-active-orders');
+        const activeTeamsElement = document.getElementById('executive-active-teams');
+        const avgOrderValueElement = document.getElementById('executive-avg-order-value');
+        const consignmentTotalElement = document.getElementById('executive-consignment-total');
+        
+        if (activeOrdersElement) {
+            activeOrdersElement.textContent = consignmentChannel.activeOrders?.toString() || '0';
+        }
+        if (activeTeamsElement) {
+            activeTeamsElement.textContent = consignmentChannel.teamBreakdown?.length?.toString() || '0';
+        }
+        if (avgOrderValueElement) {
+            avgOrderValueElement.textContent = consignmentChannel.averageOrderValue || '₹0';
+        }
+        if (consignmentTotalElement) {
+            consignmentTotalElement.textContent = consignmentChannel.formattedRevenue;
+        }
+        
+        console.log('[ui.js] ✅ Consignment channel updated:', {
+            percentage: consignmentChannel.percentage + '%',
+            revenue: consignmentChannel.formattedRevenue,
+            activeOrders: consignmentChannel.activeOrders,
+            teams: consignmentChannel.teamBreakdown?.length || 0
+        });
+    }
+
 
     // ✅ NEW: KEY BUSINESS METRICS (Collection Rate and Growth Trend)
     updateKeyBusinessMetrics(dashboardData.executiveIntelligence);
@@ -6835,7 +6948,28 @@ function updateExecutiveDashboardDisplay(dashboardData) {
  */
 function updateKeyBusinessMetrics(executiveIntelligence) {
     console.log('[ui.js] 📈 Updating key business metrics...');
-    console.log('[ui.js] 🔍 executiveIntelligence received:', executiveIntelligence);
+    console.log('[ui.js] 🔍 executiveIntelligence full object:', executiveIntelligence);
+    
+    // ✅ COLLECTION RATE DETAILED DEBUG
+    console.log('[ui.js] 🔍 Collection efficiency object:', executiveIntelligence.collectionEfficiency);
+    
+    if (executiveIntelligence.collectionEfficiency) {
+        console.log('[ui.js] 🔍 Collection efficiency keys:', Object.keys(executiveIntelligence.collectionEfficiency));
+        console.log('[ui.js] 🔍 formattedRate value:', executiveIntelligence.collectionEfficiency.formattedRate);
+    } else {
+        console.error('[ui.js] ❌ collectionEfficiency is null/undefined');
+    }
+    
+    // ✅ GROWTH TREND DETAILED DEBUG
+    console.log('[ui.js] 🔍 Growth trend analysis object:', executiveIntelligence.growthTrendAnalysis);
+    
+    if (executiveIntelligence.growthTrendAnalysis) {
+        console.log('[ui.js] 🔍 Growth trend keys:', Object.keys(executiveIntelligence.growthTrendAnalysis));
+        console.log('[ui.js] 🔍 trend value:', executiveIntelligence.growthTrendAnalysis.trend);
+        console.log('[ui.js] 🔍 direction value:', executiveIntelligence.growthTrendAnalysis.direction);
+    } else {
+        console.error('[ui.js] ❌ growthTrendAnalysis is null/undefined');
+    }
     
     // ✅ FINANCIAL HEALTH
     const financialHealth = executiveIntelligence.financialHealthScore;
