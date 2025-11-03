@@ -4192,6 +4192,24 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
             useCache: true,
             detailedAnalysis: true // Get detailed breakdown for dashboard
         });
+
+        console.log('[Reports] 🔍 Business summary structure check:');
+        console.log('  businessSummary keys:', Object.keys(businessSummary));
+        console.log('  detailedBreakdown exists:', !!businessSummary.detailedBreakdown);
+
+
+        if (businessSummary.detailedBreakdown) {
+            console.log('  detailedBreakdown keys:', Object.keys(businessSummary.detailedBreakdown));
+            
+            if (businessSummary.detailedBreakdown.directSalesData) {
+                console.log('  directSalesData keys:', Object.keys(businessSummary.detailedBreakdown.directSalesData));
+                const productPerf = businessSummary.detailedBreakdown.directSalesData.productPerformance;
+                console.log('  productPerformance array length:', productPerf?.length || 0);
+                if (productPerf && productPerf.length > 0) {
+                    console.log('  Top product details:', productPerf[0]);
+                }
+            }
+        }
         
         // ✅ ENHANCE: Add executive-specific intelligence
         const executiveDashboardData = {
