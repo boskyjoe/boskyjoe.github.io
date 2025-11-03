@@ -4201,8 +4201,8 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
             executiveIntelligence: {
                 overallPerformanceRating: calculateOverallPerformanceRating(businessSummary),
                 financialHealthScore: calculateFinancialHealthScore(businessSummary),
-                collectionEfficiency: calculateCollectionEfficiencyMetrics(businessSummary),
-                growthTrendAnalysis: calculateGrowthTrendAnalysis(businessSummary),
+                collectionEfficiency: calculateCollectionEfficiencyMetrics(businessSummary), // ✅ This calls our function
+                growthTrendAnalysis: calculateGrowthTrendAnalysis(businessSummary),          // ✅ This calls our function
                 riskAssessment: calculateBusinessRiskAssessment(businessSummary)
             },
             
