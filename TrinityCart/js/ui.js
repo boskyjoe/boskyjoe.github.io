@@ -6818,12 +6818,22 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     document.getElementById('executive-best-product').textContent = highlights.bestProduct;
     const productPerformanceElement = document.getElementById('executive-product-performance');
     if (productPerformanceElement) {
-        // ✅ ENHANCED: Show actual product performance details
-        const productData = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
-        if (productData) {
-            productPerformanceElement.textContent = `${productData.formattedRevenue} revenue, ${productData.totalQuantity} sold`;
+        const topProduct = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
+        
+        if (topProduct) {
+            // ✅ ENHANCED: Show comprehensive product performance
+            const performanceText = `${topProduct.formattedRevenue} revenue • ${topProduct.totalQuantity} sold • ${topProduct.transactionCount} orders`;
+            productPerformanceElement.textContent = performanceText;
+            
+            console.log('[ui.js] ✅ Top product performance updated:', {
+                product: topProduct.productName,
+                revenue: topProduct.formattedRevenue,
+                quantity: topProduct.totalQuantity,
+                transactions: topProduct.transactionCount
+            });
         } else {
-            productPerformanceElement.textContent = 'Top selling item';
+            productPerformanceElement.textContent = 'Performance data unavailable';
+            console.warn('[ui.js] ⚠️ No product performance data available');
         }
     }
     
