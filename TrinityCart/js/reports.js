@@ -4299,43 +4299,6 @@ function calculateOverallPerformanceRating(businessSummary) {
 }
 
 
-
-/**
- * BUSINESS INTELLIGENCE: Calculate overall performance rating
- */
-function calculateOverallPerformanceRating(businessSummary) {
-    console.log('[Reports] 💊 calculateOverallPerformanceRating...');
-    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
-    const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
-    const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
-    
-    let rating, description, color;
-    
-    if (totalRevenue > 100000 && outstandingPercentage < 5) {
-        rating = 'Exceptional';
-        description = 'Outstanding revenue with excellent collections';
-        color = 'green';
-    } else if (totalRevenue > 50000 && outstandingPercentage < 10) {
-        rating = 'Excellent';
-        description = 'Strong revenue with good collection efficiency';
-        color = 'green';
-    } else if (totalRevenue > 20000 && outstandingPercentage < 20) {
-        rating = 'Good';
-        description = 'Healthy performance with room for improvement';
-        color = 'blue';
-    } else if (totalRevenue > 5000) {
-        rating = 'Fair';
-        description = 'Moderate performance, focus on growth';
-        color = 'yellow';
-    } else {
-        rating = 'Developing';
-        description = 'Early stage, concentrate on revenue growth';
-        color = 'orange';
-    }
-    
-    return { rating, description, color, outstandingPercentage: outstandingPercentage.toFixed(1) };
-}
-
 /**
  * BUSINESS INTELLIGENCE: Calculate financial health score
  */
