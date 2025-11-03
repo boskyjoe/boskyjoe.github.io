@@ -4168,3 +4168,254 @@ function getProductSupplier(productId) {
     // For now, return placeholder - can be enhanced later
     return 'Multiple Suppliers'; // Simplified for initial implementation
 }
+
+
+/**
+ * EXECUTIVE DASHBOARD: Complete business intelligence for executive view
+ * 
+ * Generates comprehensive executive dashboard data using existing optimized functions
+ * and provides structured data for UI rendering. All business logic contained here.
+ * 
+ * @param {number} [daysBack=30] - Analysis period in days
+ * @param {Object} [options={}] - Configuration options
+ * @returns {Promise<Object>} Complete executive dashboard data
+ */
+export async function generateExecutiveDashboardData(daysBack = 30, options = {}) {
+    console.log(`[Reports] 📊 Generating executive dashboard data for ${daysBack} days...`);
+    
+    try {
+        // ✅ USE: Your existing optimized business summary
+        const businessSummary = await generateBusinessSummaryOptimized(daysBack, {
+            useCache: true,
+            detailedAnalysis: true // Get detailed breakdown for dashboard
+        });
+        
+        // ✅ ENHANCE: Add executive-specific intelligence
+        const executiveDashboardData = {
+            // Core business metrics
+            executiveSummary: businessSummary.executiveSummary,
+            performanceHighlights: businessSummary.performanceHighlights,
+            businessInsights: businessSummary.businessInsights,
+            
+            // ✅ EXECUTIVE ENHANCEMENTS: Additional intelligence
+            executiveIntelligence: {
+                overallPerformanceRating: calculateOverallPerformanceRating(businessSummary),
+                financialHealthScore: calculateFinancialHealthScore(businessSummary),
+                collectionEfficiency: calculateCollectionEfficiencyMetrics(businessSummary),
+                growthTrendAnalysis: calculateGrowthTrendAnalysis(businessSummary),
+                riskAssessment: calculateBusinessRiskAssessment(businessSummary)
+            },
+            
+            // ✅ CHANNEL BREAKDOWN: Enhanced channel analysis
+            channelAnalysis: {
+                directSalesChannel: {
+                    revenue: businessSummary.executiveSummary.directSalesRevenue,
+                    formattedRevenue: formatCurrency(businessSummary.executiveSummary.directSalesRevenue),
+                    percentage: businessSummary.executiveSummary.channelMix.directPercentage,
+                    storeBreakdown: businessSummary.detailedBreakdown?.directSalesData?.storeBreakdown || [],
+                    performance: businessSummary.executiveSummary.directSalesRevenue > 20000 ? 'Strong' : 
+                                businessSummary.executiveSummary.directSalesRevenue > 10000 ? 'Good' : 'Developing'
+                },
+                
+                consignmentChannel: {
+                    revenue: businessSummary.executiveSummary.consignmentRevenue,
+                    formattedRevenue: formatCurrency(businessSummary.executiveSummary.consignmentRevenue),
+                    percentage: businessSummary.executiveSummary.channelMix.consignmentPercentage,
+                    teamBreakdown: businessSummary.detailedBreakdown?.consignmentData?.teamPerformance || [],
+                    activeOrders: businessSummary.detailedBreakdown?.consignmentData?.summary?.activeOrders || 0,
+                    averageOrderValue: businessSummary.detailedBreakdown?.consignmentData?.summary?.formattedAverageOrderValue || '₹0',
+                    performance: businessSummary.executiveSummary.consignmentRevenue > 15000 ? 'Excellent' :
+                                businessSummary.executiveSummary.consignmentRevenue > 5000 ? 'Good' : 'Growing'
+                }
+            },
+            
+            // ✅ EXECUTIVE ACTIONS: Recommended next steps
+            recommendedActions: generateExecutiveRecommendedActions(businessSummary),
+            
+            // Metadata with executive context
+            metadata: {
+                ...businessSummary.metadata,
+                dashboardType: 'executive',
+                dataComprehensiveness: 'full',
+                executiveInsightsGenerated: new Date().toISOString()
+            }
+        };
+        
+        console.log(`[Reports] ✅ Executive dashboard data generated using ${businessSummary.metadata.totalFirestoreReads} Firestore reads`);
+        
+        return executiveDashboardData;
+        
+    } catch (error) {
+        console.error('[Reports] Error generating executive dashboard data:', error);
+        throw new Error(`Executive dashboard data generation failed: ${error.message}`);
+    }
+}
+
+// ===================================================================
+// EXECUTIVE INTELLIGENCE HELPER FUNCTIONS
+// ===================================================================
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate overall performance rating
+ */
+function calculateOverallPerformanceRating(businessSummary) {
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
+    const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
+    
+    let rating, description, color;
+    
+    if (totalRevenue > 100000 && outstandingPercentage < 5) {
+        rating = 'Exceptional';
+        description = 'Outstanding revenue with excellent collections';
+        color = 'green';
+    } else if (totalRevenue > 50000 && outstandingPercentage < 10) {
+        rating = 'Excellent';
+        description = 'Strong revenue with good collection efficiency';
+        color = 'green';
+    } else if (totalRevenue > 20000 && outstandingPercentage < 20) {
+        rating = 'Good';
+        description = 'Healthy performance with room for improvement';
+        color = 'blue';
+    } else if (totalRevenue > 5000) {
+        rating = 'Fair';
+        description = 'Moderate performance, focus on growth';
+        color = 'yellow';
+    } else {
+        rating = 'Developing';
+        description = 'Early stage, concentrate on revenue growth';
+        color = 'orange';
+    }
+    
+    return { rating, description, color, outstandingPercentage: outstandingPercentage.toFixed(1) };
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate financial health score
+ */
+function calculateFinancialHealthScore(businessSummary) {
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
+    
+    const healthScore = totalRevenue > 0 ? Math.max(0, 100 - ((totalOutstanding / totalRevenue) * 100)) : 0;
+    
+    return {
+        score: Math.round(healthScore),
+        status: healthScore > 90 ? 'Excellent' : 
+                healthScore > 70 ? 'Good' : 
+                healthScore > 50 ? 'Fair' : 'Needs Attention',
+        recommendation: healthScore < 70 ? 'Focus on outstanding balance collection' : 'Maintain current collection practices'
+    };
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics
+ */
+function calculateCollectionEfficiencyMetrics(businessSummary) {
+    const detailedData = businessSummary.detailedBreakdown;
+    let overallCollectionRate = 0;
+    
+    if (detailedData?.directSalesData?.paymentAnalysis) {
+        overallCollectionRate = detailedData.directSalesData.paymentAnalysis.collectionRate || 0;
+    }
+    
+    return {
+        collectionRate: overallCollectionRate.toFixed(1),
+        efficiency: overallCollectionRate > 90 ? 'Excellent' : 
+                   overallCollectionRate > 75 ? 'Good' : 
+                   overallCollectionRate > 50 ? 'Fair' : 'Needs Improvement',
+        recommendation: overallCollectionRate < 75 ? 'Implement collection follow-up procedures' : 'Maintain collection excellence'
+    };
+}
+
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate growth trend analysis
+ */
+function calculateGrowthTrendAnalysis(businessSummary) {
+    // This could be enhanced with period-over-period comparison
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    
+    return {
+        trend: totalRevenue > 50000 ? 'Strong Growth' : 
+               totalRevenue > 20000 ? 'Steady Growth' : 
+               totalRevenue > 5000 ? 'Moderate Growth' : 'Early Development',
+        direction: '📈', // Could be calculated from period comparison
+        confidence: 'Medium' // Based on data quality and completeness
+    };
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate business risk assessment
+ */
+function calculateBusinessRiskAssessment(businessSummary) {
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
+    const outstandingRatio = totalRevenue > 0 ? totalOutstanding / totalRevenue : 0;
+    
+    let riskLevel, riskDescription, riskColor;
+    
+    if (outstandingRatio > 0.3) { // 30%+ outstanding
+        riskLevel = 'High';
+        riskDescription = 'High outstanding balances require immediate attention';
+        riskColor = 'red';
+    } else if (outstandingRatio > 0.15) { // 15%+ outstanding
+        riskLevel = 'Medium';
+        riskDescription = 'Outstanding balances need monitoring';
+        riskColor = 'yellow';
+    } else {
+        riskLevel = 'Low';
+        riskDescription = 'Financial position is stable';
+        riskColor = 'green';
+    }
+    
+    return { riskLevel, riskDescription, riskColor, outstandingRatio: (outstandingRatio * 100).toFixed(1) };
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Generate executive recommended actions
+ */
+function generateExecutiveRecommendedActions(businessSummary) {
+    const actions = [];
+    const insights = businessSummary.businessInsights || [];
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
+    
+    // Revenue-based recommendations
+    if (totalRevenue < 10000) {
+        actions.push({
+            priority: 'high',
+            action: 'Focus on Revenue Growth',
+            description: 'Implement strategies to increase both direct and consignment sales',
+            targetModule: 'sales-reports-view'
+        });
+    }
+    
+    // Outstanding balance recommendations
+    if (totalOutstanding > totalRevenue * 0.2) {
+        actions.push({
+            priority: 'high', 
+            action: 'Improve Collections',
+            description: 'Outstanding balances are high - focus on payment collection',
+            targetModule: 'pmt-mgmt-view'
+        });
+    }
+    
+    // Channel balance recommendations
+    const directPercentage = businessSummary.executiveSummary.channelMix.directPercentage;
+    if (directPercentage > 85) {
+        actions.push({
+            priority: 'medium',
+            action: 'Expand Consignment Program',
+            description: 'Consider growing team-based consignment sales for diversification',
+            targetModule: 'consignment-view'
+        });
+    }
+    
+    return actions.length > 0 ? actions : [{
+        priority: 'info',
+        action: 'Continue Current Strategy',
+        description: 'Business operations are performing well - maintain current approach',
+        targetModule: null
+    }];
+}
