@@ -4182,6 +4182,7 @@ function getProductSupplier(productId) {
  * @param {Object} [options={}] - Configuration options
  * @returns {Promise<Object>} Complete executive dashboard data
  */
+
 export async function generateExecutiveDashboardData(daysBack = 30, options = {}) {
     console.log(`[Reports] 📊 Generating executive dashboard data for ${daysBack} days...`);
     
