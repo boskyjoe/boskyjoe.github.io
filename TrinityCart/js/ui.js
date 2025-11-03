@@ -50,7 +50,7 @@ import {
     refreshStorePerformanceData,       
     calculateSalesTrends,
     calculateCustomerInsights,
-    calculateInventoryAnalysis,generateExecutiveDashboardData,calculateTrueBusinessRevenue,
+    calculateInventoryAnalysis,generateExecutiveDashboardData,calculateTrueBusinessRevenue,calculateFinancialHealthScore,
     REPORT_CONFIGS 
 } from './reports.js';
 
@@ -6835,13 +6835,17 @@ function updateExecutiveDashboardDisplay(dashboardData) {
  */
 function updateKeyBusinessMetrics(executiveIntelligence) {
     console.log('[ui.js] 📈 Updating key business metrics...');
+    console.log('[ui.js] 🔍 executiveIntelligence received:', executiveIntelligence);
     
     // ✅ FINANCIAL HEALTH
     const financialHealth = executiveIntelligence.financialHealthScore;
+    console.log('[ui.js] 🔍 financialHealth object:', financialHealth);
+
     const financialHealthElement = document.getElementById('executive-financial-health');
     const healthDetailsElement = document.getElementById('executive-health-details');
     
     if (financialHealthElement) {
+        console.log('[ui.js] 🔍 Setting dashboard card to:', financialHealth.status);
         financialHealthElement.textContent = financialHealth.status;
         
         // Color coding based on health
@@ -6856,6 +6860,7 @@ function updateKeyBusinessMetrics(executiveIntelligence) {
     }
     
     if (healthDetailsElement) {
+        console.log('[ui.js] 🔍 Setting health details to:', `${financialHealth.score}% health score`);
         healthDetailsElement.textContent = `${financialHealth.score}% health score`;
     }
     
@@ -10589,7 +10594,16 @@ window.showFinancialHealthBreakdownModal = async function() {
  * UI FUNCTION: Update financial health modal content with detailed breakdown
  */
 function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary) {
+
     console.log('[ui.js] 💊 Updating financial health modal content...');
+    console.log('[ui.js] 🔍 MODAL DEBUG - Full businessSummary structure:');
+    console.log('  businessSummary keys:', Object.keys(businessSummary));
+    console.log('  businessSummary.executiveIntelligence:', businessSummary.executiveIntelligence);
+    
+    if (businessSummary.executiveIntelligence) {
+        console.log('  executiveIntelligence keys:', Object.keys(businessSummary.executiveIntelligence));
+        console.log('  financialHealthScore:', businessSummary.executiveIntelligence.financialHealthScore);
+    }
     
     // ===================================================================
     // EXECUTIVE SUMMARY SECTION
@@ -10597,8 +10611,13 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
     
     // Health score
     const healthScoreElement = document.getElementById('modal-health-score');
+
+    
     if (healthScoreElement) {
         const financialHealth = businessSummary.executiveIntelligence?.financialHealthScore || { score: 0, status: 'Unknown' };
+        console.log('[ui.js] 🔍 Modal health score data:', financialHealth);
+        console.log('[ui.js] 🔍 Setting modal score to:', `${financialHealth.score}/100`);
+        
         healthScoreElement.textContent = `${financialHealth.score}/100`;
     }
     
@@ -10654,7 +10673,53 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
     
     const healthFactorsElement = document.getElementById('modal-health-factors');
     if (healthFactorsElement) {
-        const financialHealth = businessSummary.executiveIntelligence?.financialHealthScore || {};
+        let financialHealth = null;
+
+        if (businessSummary.executiveIntelligence?.financialHealthScore) {
+            financialHealth = businessSummary.executiveIntelligence.financialHealthScore;
+            console.log('[ui.js] ✅ Found financial health in executiveIntelligence:', financialHealth);
+        }
+        // ✅ TRY: Alternative path
+        else if (businessSummary.financialHealthScore) {
+            financialHealth = businessSummary.financialHealthScore;
+            console.log('[ui.js] ✅ Found financial health in root:', financialHealth);
+        }
+        // ✅ TRY: Direct calculation if not found
+        else {
+            console.log('[ui.js] ⚠️ Financial health not found in data, calculating directly...');
+            
+            try {
+                // ✅ FALLBACK: Calculate directly for modal
+                financialHealth = calculateFinancialHealthScore(businessSummary);
+                console.log('[ui.js] ✅ Calculated financial health directly:', financialHealth);
+            } catch (calcError) {
+                console.error('[ui.js] ❌ Direct calculation failed:', calcError);
+                financialHealth = { score: 0, status: 'Error' };
+            }
+        }
+
+        // ✅ UPDATE: Modal with found/calculated data
+        if (financialHealth) {
+            console.log('[ui.js] ✅ Setting modal health score to:', `${financialHealth.score}/100`);
+            healthScoreElement.textContent = `${financialHealth.score}/100`;
+            
+            // Color coding based on score
+            const scoreColorClasses = {
+                'Excellent': 'text-green-700',
+                'Good': 'text-blue-700',
+                'Fair': 'text-yellow-700',
+                'Poor': 'text-orange-700',
+                'Critical': 'text-red-700'
+            };
+            
+            healthScoreElement.className = `text-2xl font-bold ${scoreColorClasses[financialHealth.status] || 'text-gray-700'}`;
+        } else {
+            console.error('[ui.js] ❌ Could not get financial health data for modal');
+            healthScoreElement.textContent = 'Error/100';
+            healthScoreElement.className = 'text-2xl font-bold text-red-700';
+        }
+
+
         const outstandingRatio = trueRevenueAnalysis.breakdown.consignment.losses.amount > 0 ? 
             ((businessSummary.executiveSummary.totalOutstanding / trueRevenueAnalysis.trueTotalRevenue) * 100).toFixed(1) : 0;
         
