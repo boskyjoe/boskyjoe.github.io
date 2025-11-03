@@ -4258,6 +4258,48 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
 // EXECUTIVE INTELLIGENCE HELPER FUNCTIONS
 // ===================================================================
 
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate overall performance rating (MISSING FUNCTION)
+ */
+function calculateOverallPerformanceRating(businessSummary) {
+    console.log('[Reports] 🏆 Calculating overall performance rating...');
+    
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
+    const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
+    
+    let rating, description, color;
+    
+    if (totalRevenue > 100000 && outstandingPercentage < 5) {
+        rating = 'Exceptional';
+        description = 'Outstanding revenue with excellent collections';
+        color = 'green';
+    } else if (totalRevenue > 50000 && outstandingPercentage < 10) {
+        rating = 'Excellent';
+        description = 'Strong revenue with good collection efficiency';
+        color = 'green';
+    } else if (totalRevenue > 20000 && outstandingPercentage < 20) {
+        rating = 'Good';
+        description = 'Healthy performance with room for improvement';
+        color = 'blue';
+    } else if (totalRevenue > 5000) {
+        rating = 'Fair';
+        description = 'Moderate performance, focus on growth';
+        color = 'yellow';
+    } else {
+        rating = 'Developing';
+        description = 'Early stage, concentrate on revenue growth';
+        color = 'orange';
+    }
+    
+    console.log('[Reports] 🏆 Performance rating calculated:', { rating, description });
+    
+    return { rating, description, color, outstandingPercentage: outstandingPercentage.toFixed(1) };
+}
+
+
+
 /**
  * BUSINESS INTELLIGENCE: Calculate overall performance rating
  */
@@ -4461,7 +4503,7 @@ export function calculateFinancialHealthScore (businessSummary) {
 /**
  * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics
  */
-export async  function calculateCollectionEfficiencyMetrics(businessSummary) {
+export function calculateCollectionEfficiencyMetrics(businessSummary) {
     console.log('[Reports] 📊 Calculating collection efficiency metrics...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
@@ -4539,7 +4581,7 @@ export async  function calculateCollectionEfficiencyMetrics(businessSummary) {
 /**
  * BUSINESS INTELLIGENCE: Calculate growth trend analysis
  */
-export async function calculateGrowthTrendAnalysis(businessSummary) {
+export function calculateGrowthTrendAnalysis(businessSummary) {
     console.log('[Reports] 📈 Calculating growth trend analysis...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
@@ -4656,6 +4698,8 @@ function getDaysFromPeriodLabel(periodLabel) {
  * BUSINESS INTELLIGENCE: Calculate business risk assessment
  */
 function calculateBusinessRiskAssessment(businessSummary) {
+    console.log('[Reports] ⚠️ Calculating business risk assessment...');
+    
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
     const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
     const outstandingRatio = totalRevenue > 0 ? totalOutstanding / totalRevenue : 0;
@@ -4676,8 +4720,13 @@ function calculateBusinessRiskAssessment(businessSummary) {
         riskColor = 'green';
     }
     
+    console.log('[Reports] ⚠️ Risk assessment calculated:', { riskLevel, riskDescription });
+    
     return { riskLevel, riskDescription, riskColor, outstandingRatio: (outstandingRatio * 100).toFixed(1) };
 }
+
+
+
 
 /**
  * BUSINESS INTELLIGENCE: Generate executive recommended actions
