@@ -50,7 +50,7 @@ import {
     refreshStorePerformanceData,       
     calculateSalesTrends,
     calculateCustomerInsights,
-    calculateInventoryAnalysis,
+    calculateInventoryAnalysis,generateExecutiveDashboardData,
     REPORT_CONFIGS 
 } from './reports.js';
 
@@ -6535,56 +6535,35 @@ function displayOperationalInsights() {
 }
 
 /**
- * Loads and displays executive dashboard with comprehensive business overview.
+ * SIMPLIFIED: Load executive dashboard (UI coordination only)
  * 
- * Creates high-level executive summary using optimized data retrieval and
- * intelligent caching. Focuses on KPIs most relevant to business leadership
- * while maintaining strict control over Firestore read usage.
- * 
- * EXECUTIVE FOCUS:
- * - Total business performance across all channels
- * - Key trends and growth indicators  
- * - Critical alerts and recommendations
- * - Strategic insights for decision making
- * 
- * @private
- * @since 1.0.0
+ * This function only handles UI coordination - all business logic is in reports.js
  */
 export async function loadExecutiveDashboard() {
-    console.log('[ui.js] 📊 Loading executive dashboard with business intelligence...');
+    console.log('[ui.js] 📊 Loading executive dashboard UI...');
     
     try {
-        // Show loading state
         showExecutiveDashboardLoading();
         
-        // Get dashboard period from selector
         const periodSelector = document.getElementById('executive-dashboard-period');
         const daysBack = parseInt(periodSelector?.value || '30');
         
-        console.log(`[ui.js] Loading executive dashboard for ${daysBack} days...`);
+        // ✅ PROPER SEPARATION: Call reports.js for all business logic
+        const dashboardData = await generateExecutiveDashboardData(daysBack);
         
-        // ✅ CALL: Your optimized business summary function
-        const businessSummary = await generateBusinessSummaryOptimized(daysBack, {
-            useCache: true,
-            detailedAnalysis: true // Get detailed breakdown for dashboard
-        });
+        // ✅ UI ONLY: Update DOM elements
+        updateExecutiveDashboardDisplay(dashboardData);
         
-        console.log('[ui.js] ✅ Business summary loaded:', businessSummary);
-        
-        // Update all dashboard elements
-        updateExecutiveSummaryCards(businessSummary);
-        updateExecutivePerformanceHighlights(businessSummary);
-        updateExecutiveChannelBreakdown(businessSummary);
-        updateExecutiveBusinessInsights(businessSummary);
-        updateExecutiveMetadata(businessSummary);
-        
-        console.log(`[ui.js] ✅ Executive dashboard updated using ${businessSummary.metadata.totalFirestoreReads} Firestore reads`);
+        console.log(`[ui.js] ✅ Executive dashboard updated`);
         
     } catch (error) {
         console.error('[ui.js] Error loading executive dashboard:', error);
         showExecutiveDashboardError(error);
     }
 }
+
+
+
 
 function showExecutiveDashboardError(error) {
     console.error('[ui.js] Displaying executive dashboard error state:', error);
@@ -6746,27 +6725,25 @@ function showExecutiveDashboardError(error) {
     console.error('[ui.js] ✅ Executive dashboard error state displayed with troubleshooting options');
 }
 
-
 /**
- * HELPER: Show loading state for dashboard
+ * UI ONLY: Show loading state
  */
 function showExecutiveDashboardLoading() {
-    // Update all loading elements
     document.getElementById('executive-total-revenue').textContent = 'Loading...';
     document.getElementById('executive-outstanding-total').textContent = 'Loading...';
     document.getElementById('executive-performance-rating').textContent = 'Loading...';
     
-    // Show loading in insights section
     const insightsContainer = document.getElementById('executive-business-insights');
     if (insightsContainer) {
         insightsContainer.innerHTML = `
             <div class="text-center py-8">
                 <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                <p class="text-gray-500">Analyzing business data for insights...</p>
+                <p class="text-gray-500">Analyzing business data...</p>
             </div>
         `;
     }
 }
+
 
 /**
  * HELPER: Update executive summary cards
@@ -6810,93 +6787,90 @@ function updateExecutiveSummaryCards(businessSummary) {
     }
 }
 
+
 /**
- * HELPER: Calculate overall performance rating
+ * UI ONLY: Update dashboard display with data from reports.js
  */
-function calculateOverallPerformanceRating(businessSummary) {
-    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
-    const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
-    const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
+function updateExecutiveDashboardDisplay(dashboardData) {
+    console.log('[ui.js] 🎨 Updating executive dashboard display...');
     
-    if (totalRevenue > 50000 && outstandingPercentage < 10) {
-        return { rating: 'Excellent', description: 'Strong revenue, low outstanding' };
-    } else if (totalRevenue > 20000 && outstandingPercentage < 20) {
-        return { rating: 'Good', description: 'Healthy performance' };
-    } else if (totalRevenue > 5000) {
-        return { rating: 'Fair', description: 'Room for improvement' };
-    } else {
-        return { rating: 'Developing', description: 'Focus on growth' };
-    }
+    // ✅ EXECUTIVE SUMMARY CARDS
+    const executiveSummary = dashboardData.executiveSummary;
+    
+    document.getElementById('executive-total-revenue').textContent = executiveSummary.formattedTotalRevenue;
+    document.getElementById('executive-outstanding-total').textContent = executiveSummary.formattedOutstanding;
+    
+    // Performance rating from executive intelligence
+    const performanceRating = dashboardData.executiveIntelligence.overallPerformanceRating;
+    document.getElementById('executive-performance-rating').textContent = performanceRating.rating;
+    document.getElementById('executive-performance-trend').textContent = performanceRating.description;
+    
+    // ✅ CHANNEL BREAKDOWN  
+    document.getElementById('executive-direct-percentage').textContent = `${executiveSummary.channelMix.directPercentage}%`;
+    document.getElementById('executive-consignment-percentage').textContent = `${executiveSummary.channelMix.consignmentPercentage}%`;
+    
+    // ✅ PERFORMANCE HIGHLIGHTS
+    const highlights = dashboardData.performanceHighlights;
+    document.getElementById('executive-top-store').textContent = highlights.topStore;
+    document.getElementById('executive-top-store-revenue').textContent = highlights.topStoreRevenue;
+    document.getElementById('executive-top-team').textContent = highlights.topTeam;
+    document.getElementById('executive-top-team-revenue').textContent = highlights.topTeamRevenue;
+    document.getElementById('executive-best-product').textContent = highlights.bestProduct;
+    
+    // ✅ BUSINESS INSIGHTS
+    updateExecutiveInsightsDisplay(dashboardData.businessInsights || []);
+    
+    // ✅ METADATA
+    updateExecutiveMetadataDisplay(dashboardData.metadata);
+    
+    console.log('[ui.js] ✅ Executive dashboard display updated');
 }
-
-
 
 
 /**
- * Updates executive dashboard display elements with calculated business data.
- * 
- * Takes the optimized business summary data and updates specific DOM elements
- * in the executive dashboard view. Handles currency formatting, trend indicators,
- * and visual styling for executive presentation.
- * 
- * @param {Object} executiveData - Processed business summary from reports module
- * @private
- * @since 1.0.0
+ * UI ONLY: Update insights display
  */
-function updateExecutiveDashboardDisplay(executiveData) {
-    try {
-        // Update main revenue metric
-        const totalRevenueElement = document.querySelector('#executive-total-revenue');
-        if (totalRevenueElement) {
-            totalRevenueElement.textContent = executiveData.executiveSummary.formattedTotalRevenue;
-        }
-        
-        // Update channel mix display
-        const channelMixElement = document.querySelector('#executive-channel-mix');
-        if (channelMixElement) {
-            channelMixElement.innerHTML = `
-                <div class="flex justify-between">
-                    <span>Direct Sales:</span>
-                    <span class="font-semibold">${executiveData.executiveSummary.channelMix.directPercentage}%</span>
+function updateExecutiveInsightsDisplay(insights) {
+    const container = document.getElementById('executive-business-insights');
+    if (!container) return;
+    
+    if (insights.length === 0) {
+        container.innerHTML = `
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <h4 class="text-lg font-semibold text-green-800 mb-3">✅ Operations Running Smoothly</h4>
+                <p class="text-green-700">No critical issues detected in business operations</p>
+            </div>
+        `;
+    } else {
+        const insightsHTML = insights.map(insight => `
+            <div class="border rounded-lg p-4 bg-${insight.priority === 'high' ? 'red' : insight.priority === 'medium' ? 'yellow' : 'blue'}-50">
+                <div class="flex items-start space-x-3">
+                    <div class="text-2xl">${insight.priority === 'high' ? '🚨' : insight.priority === 'medium' ? '⚠️' : 'ℹ️'}</div>
+                    <div class="flex-1">
+                        <h5 class="font-semibold text-sm">${insight.type.replace('-', ' ').toUpperCase()}</h5>
+                        <p class="text-sm">${insight.message}</p>
+                    </div>
                 </div>
-                <div class="flex justify-between">
-                    <span>Consignment:</span>
-                    <span class="font-semibold">${executiveData.executiveSummary.channelMix.consignmentPercentage}%</span>
-                </div>
-            `;
-        }
+            </div>
+        `).join('');
         
-        // Update performance highlights
-        const highlightsElement = document.querySelector('#executive-highlights');
-        if (highlightsElement) {
-            highlightsElement.innerHTML = `
-                <div class="space-y-2">
-                    <div><strong>Top Store:</strong> ${executiveData.performanceHighlights.topStore}</div>
-                    <div><strong>Top Team:</strong> ${executiveData.performanceHighlights.topTeam}</div>
-                    <div><strong>Best Product:</strong> ${executiveData.performanceHighlights.bestProduct}</div>
-                </div>
-            `;
-        }
-        
-        // Display business insights
-        const insightsElement = document.querySelector('#executive-insights');
-        if (insightsElement && executiveData.businessInsights) {
-            const insightsHTML = executiveData.businessInsights.map(insight => `
-                <div class="alert alert-${insight.priority} p-3 rounded border-l-4">
-                    <div class="font-semibold">${insight.type.replace('-', ' ').toUpperCase()}</div>
-                    <div class="text-sm">${insight.message}</div>
-                </div>
-            `).join('');
-            
-            insightsElement.innerHTML = insightsHTML;
-        }
-        
-        console.log("[ui.js] Executive dashboard display updated successfully");
-        
-    } catch (error) {
-        console.warn('[ui.js] Error updating executive dashboard display:', error);
+        container.innerHTML = insightsHTML;
     }
 }
+
+/**
+ * UI ONLY: Update metadata display
+ */
+function updateExecutiveMetadataDisplay(metadata) {
+    document.getElementById('executive-generated-time').textContent = new Date(metadata.generatedAt).toLocaleTimeString();
+    document.getElementById('executive-firestore-reads').textContent = metadata.totalFirestoreReads.toString();
+    document.getElementById('executive-execution-time').textContent = `${metadata.executionTimeMs}ms`;
+    
+    const cacheStatus = metadata.totalFirestoreReads === 0 ? '✅ Cached' : '🔄 Fresh';
+    document.getElementById('executive-cache-status').textContent = cacheStatus;
+}
+
+
 
 /**
  * Fallback function to display basic executive metrics from cached data only.
