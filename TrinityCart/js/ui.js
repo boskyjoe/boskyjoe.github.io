@@ -10583,3 +10583,147 @@ window.showFinancialHealthBreakdownModal = async function() {
         `;
     }
 };
+
+
+/**
+ * UI FUNCTION: Update financial health modal content with detailed breakdown
+ */
+function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary) {
+    console.log('[ui.js] 💊 Updating financial health modal content...');
+    
+    // ===================================================================
+    // EXECUTIVE SUMMARY SECTION
+    // ===================================================================
+    
+    // Health score
+    const healthScoreElement = document.getElementById('modal-health-score');
+    if (healthScoreElement) {
+        const financialHealth = businessSummary.executiveIntelligence?.financialHealthScore || { score: 0, status: 'Unknown' };
+        healthScoreElement.textContent = `${financialHealth.score}/100`;
+    }
+    
+    // Actual revenue
+    const actualRevenueElement = document.getElementById('modal-actual-revenue');
+    if (actualRevenueElement) {
+        actualRevenueElement.textContent = trueRevenueAnalysis.formattedTrueTotalRevenue;
+    }
+    
+    // Revenue efficiency
+    const revenueEfficiencyElement = document.getElementById('modal-revenue-efficiency');
+    if (revenueEfficiencyElement) {
+        revenueEfficiencyElement.textContent = trueRevenueAnalysis.revenueEfficiency.toFixed(1) + '%';
+    }
+    
+    // ===================================================================
+    // DIRECT SALES BREAKDOWN
+    // ===================================================================
+    
+    const directBreakdown = trueRevenueAnalysis.breakdown.directSales;
+    
+    document.getElementById('modal-church-cash').textContent = directBreakdown.churchStore.formatted;
+    document.getElementById('modal-tasty-cash').textContent = directBreakdown.tastyTreats.formatted;
+    document.getElementById('modal-direct-total').textContent = directBreakdown.total.formatted;
+    
+    // ===================================================================
+    // CONSIGNMENT BREAKDOWN
+    // ===================================================================
+    
+    const consignmentBreakdown = trueRevenueAnalysis.breakdown.consignment;
+    
+    document.getElementById('modal-consignment-theoretical').textContent = consignmentBreakdown.theoretical.formatted;
+    document.getElementById('modal-consignment-actual').textContent = consignmentBreakdown.actualCash.formatted;
+    document.getElementById('modal-consignment-losses').textContent = consignmentBreakdown.losses.formatted;
+    document.getElementById('modal-consignment-efficiency').textContent = consignmentBreakdown.efficiency;
+    
+    // ===================================================================
+    // DONATION ANALYSIS
+    // ===================================================================
+    
+    const donationBreakdown = trueRevenueAnalysis.breakdown.donations;
+    
+    document.getElementById('modal-total-donations').textContent = donationBreakdown.total.formatted;
+    document.getElementById('modal-donation-percentage').textContent = donationBreakdown.percentage;
+    
+    // Donation sources count (approximate)
+    const donationSources = ['Store Overpayments', 'Team Donations', 'Direct Contributions'].length;
+    document.getElementById('modal-donation-sources').textContent = donationSources.toString();
+    
+    // ===================================================================
+    // FINANCIAL HEALTH FACTORS
+    // ===================================================================
+    
+    const healthFactorsElement = document.getElementById('modal-health-factors');
+    if (healthFactorsElement) {
+        const financialHealth = businessSummary.executiveIntelligence?.financialHealthScore || {};
+        const outstandingRatio = trueRevenueAnalysis.breakdown.consignment.losses.amount > 0 ? 
+            ((businessSummary.executiveSummary.totalOutstanding / trueRevenueAnalysis.trueTotalRevenue) * 100).toFixed(1) : 0;
+        
+        const factors = [
+            {
+                factor: 'Revenue Scale',
+                value: trueRevenueAnalysis.trueTotalRevenue > 50000 ? 'Strong' : 
+                       trueRevenueAnalysis.trueTotalRevenue > 20000 ? 'Good' : 'Developing',
+                impact: trueRevenueAnalysis.trueTotalRevenue > 50000 ? 'positive' : 
+                       trueRevenueAnalysis.trueTotalRevenue > 20000 ? 'neutral' : 'negative'
+            },
+            {
+                factor: 'Outstanding Balances',
+                value: `${outstandingRatio}% of revenue`,
+                impact: outstandingRatio < 10 ? 'positive' : outstandingRatio < 20 ? 'neutral' : 'negative'
+            },
+            {
+                factor: 'Channel Diversification', 
+                value: Math.abs(businessSummary.executiveSummary.channelMix.directPercentage - 50) < 30 ? 'Balanced' : 'Concentrated',
+                impact: Math.abs(businessSummary.executiveSummary.channelMix.directPercentage - 50) < 30 ? 'positive' : 'neutral'
+            },
+            {
+                factor: 'Consignment Efficiency',
+                value: trueRevenueAnalysis.revenueEfficiency.toFixed(1) + '%',
+                impact: trueRevenueAnalysis.revenueEfficiency > 80 ? 'positive' : 
+                       trueRevenueAnalysis.revenueEfficiency > 60 ? 'neutral' : 'negative'
+            },
+            {
+                factor: 'Donation Generation',
+                value: donationBreakdown.percentage,
+                impact: parseFloat(donationBreakdown.percentage) > 5 ? 'positive' : 'neutral'
+            }
+        ];
+        
+        const factorsHTML = factors.map(factor => {
+            const impactColors = {
+                'positive': 'text-green-600 bg-green-50',
+                'neutral': 'text-blue-600 bg-blue-50', 
+                'negative': 'text-red-600 bg-red-50'
+            };
+            
+            const impactIcons = {
+                'positive': '✅',
+                'neutral': '➖',
+                'negative': '⚠️'
+            };
+            
+            return `
+                <div class="flex justify-between items-center p-2 rounded ${impactColors[factor.impact]}">
+                    <span class="flex items-center space-x-2">
+                        <span>${impactIcons[factor.impact]}</span>
+                        <span class="font-medium">${factor.factor}</span>
+                    </span>
+                    <span class="font-semibold">${factor.value}</span>
+                </div>
+            `;
+        }).join('');
+        
+        healthFactorsElement.innerHTML = factorsHTML;
+    }
+    
+    // ===================================================================
+    // ANALYSIS PERIOD
+    // ===================================================================
+    
+    const analysisPeriodElement = document.getElementById('modal-analysis-period');
+    if (analysisPeriodElement) {
+        analysisPeriodElement.textContent = businessSummary.executiveSummary.reportPeriod || 'Unknown period';
+    }
+    
+    console.log('[ui.js] ✅ Financial health modal content updated with true revenue analysis');
+}
