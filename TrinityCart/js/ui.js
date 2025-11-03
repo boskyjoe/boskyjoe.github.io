@@ -6550,28 +6550,126 @@ function displayOperationalInsights() {
  * @private
  * @since 1.0.0
  */
-async function loadExecutiveDashboard() {
+export async function loadExecutiveDashboard() {
+    console.log('[ui.js] 📊 Loading executive dashboard with business intelligence...');
+    
     try {
-        console.log("[ui.js] Loading executive dashboard with optimization");
+        // Show loading state
+        showExecutiveDashboardLoading();
         
-        // Use cached business summary to minimize reads
-        const executiveData = await generateBusinessSummaryOptimized(30, { 
-            useCache: true, 
-            detailedAnalysis: false  // Executive level - high level only
+        // Get dashboard period from selector
+        const periodSelector = document.getElementById('executive-dashboard-period');
+        const daysBack = parseInt(periodSelector?.value || '30');
+        
+        console.log(`[ui.js] Loading executive dashboard for ${daysBack} days...`);
+        
+        // ✅ CALL: Your optimized business summary function
+        const businessSummary = await generateBusinessSummaryOptimized(daysBack, {
+            useCache: true,
+            detailedAnalysis: true // Get detailed breakdown for dashboard
         });
         
-        console.log(`[ui.js] Executive dashboard loaded using ${executiveData.metadata.totalFirestoreReads} Firestore reads`);
+        console.log('[ui.js] ✅ Business summary loaded:', businessSummary);
         
-        // Update executive dashboard elements
-        updateExecutiveDashboardDisplay(executiveData);
+        // Update all dashboard elements
+        updateExecutiveSummaryCards(businessSummary);
+        updateExecutivePerformanceHighlights(businessSummary);
+        updateExecutiveChannelBreakdown(businessSummary);
+        updateExecutiveBusinessInsights(businessSummary);
+        updateExecutiveMetadata(businessSummary);
+        
+        console.log(`[ui.js] ✅ Executive dashboard updated using ${businessSummary.metadata.totalFirestoreReads} Firestore reads`);
         
     } catch (error) {
         console.error('[ui.js] Error loading executive dashboard:', error);
-        
-        // Fallback: Show basic metrics from masterData cache
-        displayBasicExecutiveMetrics();
+        showExecutiveDashboardError(error);
     }
 }
+
+/**
+ * HELPER: Show loading state for dashboard
+ */
+function showExecutiveDashboardLoading() {
+    // Update all loading elements
+    document.getElementById('executive-total-revenue').textContent = 'Loading...';
+    document.getElementById('executive-outstanding-total').textContent = 'Loading...';
+    document.getElementById('executive-performance-rating').textContent = 'Loading...';
+    
+    // Show loading in insights section
+    const insightsContainer = document.getElementById('executive-business-insights');
+    if (insightsContainer) {
+        insightsContainer.innerHTML = `
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p class="text-gray-500">Analyzing business data for insights...</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * HELPER: Update executive summary cards
+ */
+function updateExecutiveSummaryCards(businessSummary) {
+    const executiveSummary = businessSummary.executiveSummary;
+    
+    // Total Revenue
+    const totalRevenueElement = document.getElementById('executive-total-revenue');
+    if (totalRevenueElement) {
+        totalRevenueElement.textContent = executiveSummary.formattedTotalRevenue;
+    }
+    
+    // Channel Percentages
+    const directPercentElement = document.getElementById('executive-direct-percentage');
+    const consignmentPercentElement = document.getElementById('executive-consignment-percentage');
+    
+    if (directPercentElement) {
+        directPercentElement.textContent = `${executiveSummary.channelMix.directPercentage}%`;
+    }
+    if (consignmentPercentElement) {
+        consignmentPercentElement.textContent = `${executiveSummary.channelMix.consignmentPercentage}%`;
+    }
+    
+    // Outstanding Balances
+    const outstandingElement = document.getElementById('executive-outstanding-total');
+    if (outstandingElement) {
+        outstandingElement.textContent = executiveSummary.formattedOutstanding;
+    }
+    
+    // Performance Rating (calculated)
+    const performanceElement = document.getElementById('executive-performance-rating');
+    if (performanceElement) {
+        const rating = calculateOverallPerformanceRating(businessSummary);
+        performanceElement.textContent = rating.rating;
+        
+        const trendElement = document.getElementById('executive-performance-trend');
+        if (trendElement) {
+            trendElement.textContent = rating.description;
+        }
+    }
+}
+
+/**
+ * HELPER: Calculate overall performance rating
+ */
+function calculateOverallPerformanceRating(businessSummary) {
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
+    const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
+    
+    if (totalRevenue > 50000 && outstandingPercentage < 10) {
+        return { rating: 'Excellent', description: 'Strong revenue, low outstanding' };
+    } else if (totalRevenue > 20000 && outstandingPercentage < 20) {
+        return { rating: 'Good', description: 'Healthy performance' };
+    } else if (totalRevenue > 5000) {
+        return { rating: 'Fair', description: 'Room for improvement' };
+    } else {
+        return { rating: 'Developing', description: 'Focus on growth' };
+    }
+}
+
+
+
 
 /**
  * Updates executive dashboard display elements with calculated business data.
