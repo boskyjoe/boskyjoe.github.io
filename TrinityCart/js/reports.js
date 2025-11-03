@@ -1,3 +1,5 @@
+//reports.js
+
 /**
  * TrinityCart Reporting Module - Firestore Free Tier Optimized
  * 
@@ -4294,7 +4296,7 @@ function calculateOverallPerformanceRating(businessSummary) {
 /**
  * BUSINESS INTELLIGENCE: Calculate financial health score
  */
-function calculateFinancialHealthScore(businessSummary) {
+export function calculateFinancialHealthScore (businessSummary) {
     console.log('[Reports] 💊 Calculating ENHANCED financial health score...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
@@ -4458,7 +4460,7 @@ function calculateFinancialHealthScore(businessSummary) {
 /**
  * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics
  */
-function calculateCollectionEfficiencyMetrics(businessSummary) {
+export async  function calculateCollectionEfficiencyMetrics(businessSummary) {
     console.log('[Reports] 📊 Calculating collection efficiency metrics...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
@@ -4536,7 +4538,7 @@ function calculateCollectionEfficiencyMetrics(businessSummary) {
 /**
  * BUSINESS INTELLIGENCE: Calculate growth trend analysis
  */
-function calculateGrowthTrendAnalysis(businessSummary) {
+export async function calculateGrowthTrendAnalysis(businessSummary) {
     console.log('[Reports] 📈 Calculating growth trend analysis...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
