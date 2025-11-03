@@ -2344,20 +2344,22 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                             <!-- Financial Health -->
-                            <div class="text-center p-4 bg-blue-50 rounded-lg">
-                                <div
-                                    class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <div class="text-center p-4 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                                onclick="showFinancialHealthBreakdownModal()"
+                                title="Click for detailed revenue breakdown">
+                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                 </div>
                                 <h4 class="font-semibold text-blue-800 mb-2">Financial Health</h4>
-                                <p id="executive-financial-health" class="text-2xl font-bold text-blue-900">Excellent
-                                </p>
-                                <p class="text-xs text-blue-600 mt-2" id="executive-health-details">Strong cash position
-                                </p>
+                                <p id="executive-financial-health" class="text-2xl font-bold text-blue-900">Loading...</p>
+                                <p class="text-xs text-blue-600 mt-2" id="executive-health-details">Click for breakdown</p>
+                                
+                                <!-- ✅ ADD: Click indicator -->
+                                <div class="mt-2 text-xs text-blue-500 font-medium">
+                                    📊 Click for detailed analysis
+                                </div>
                             </div>
 
                             <!-- Collection Efficiency -->
@@ -5018,6 +5020,175 @@
         </div>
     </div>
 
+
+
+    <!-- ===================================== -->
+    <!-- FINANCIAL HEALTH BREAKDOWN MODAL     -->
+    <!-- ===================================== -->
+    <div id="financial-health-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col" style="z-index: 51;">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">💊 Financial Health Breakdown</h3>
+                        <p class="text-sm text-gray-600">Theoretical sales vs actual cash received analysis</p>
+                    </div>
+                </div>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                <!-- Executive Summary -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                    <h4 class="text-lg font-semibold text-blue-800 mb-4">💰 Financial Health Summary</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-900" id="modal-health-score">Loading...</div>
+                            <div class="text-sm text-blue-700">Health Score</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-700" id="modal-actual-revenue">Loading...</div>
+                            <div class="text-sm text-gray-600">Actual Cash Received</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-700" id="modal-revenue-efficiency">Loading...</div>
+                            <div class="text-sm text-gray-600">Revenue Efficiency</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue Channel Analysis -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- Direct Sales Breakdown -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span>Direct Store Sales</span>
+                        </h5>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-purple-50 rounded">
+                                <span class="text-purple-700 font-medium">Church Store</span>
+                                <div class="text-right">
+                                    <div id="modal-church-cash" class="font-bold text-purple-800">Loading...</div>
+                                    <div class="text-xs text-purple-600">Cash received</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center p-3 bg-orange-50 rounded">
+                                <span class="text-orange-700 font-medium">Tasty Treats</span>
+                                <div class="text-right">
+                                    <div id="modal-tasty-cash" class="font-bold text-orange-800">Loading...</div>
+                                    <div class="text-xs text-orange-600">Cash received</div>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t pt-3">
+                                <div class="flex justify-between items-center font-semibold">
+                                    <span class="text-gray-700">Direct Sales Total</span>
+                                    <span id="modal-direct-total" class="text-gray-900">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consignment Analysis -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                            <span>Consignment Performance</span>
+                        </h5>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Theoretical Sales</span>
+                                <span id="modal-consignment-theoretical" class="font-semibold text-gray-800">Loading...</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Actual Cash Received</span>
+                                <span id="modal-consignment-actual" class="font-semibold text-green-700">Loading...</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Returns/Damages/Commission</span>
+                                <span id="modal-consignment-losses" class="font-semibold text-red-600">Loading...</span>
+                            </div>
+                            <div class="border-t pt-3">
+                                <div class="flex justify-between items-center font-semibold">
+                                    <span class="text-gray-700">Consignment Efficiency</span>
+                                    <span id="modal-consignment-efficiency" class="text-green-700">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Donation Analysis -->
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
+                    <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                        <span>Donation Revenue</span>
+                    </h5>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center p-3 bg-white rounded border border-purple-200">
+                            <div id="modal-total-donations" class="text-xl font-bold text-purple-700">Loading...</div>
+                            <div class="text-xs text-purple-600 mt-1">Total Donations</div>
+                        </div>
+                        <div class="text-center p-3 bg-white rounded border border-purple-200">
+                            <div id="modal-donation-percentage" class="text-xl font-bold text-purple-700">Loading...</div>
+                            <div class="text-xs text-purple-600 mt-1">% of Total Revenue</div>
+                        </div>
+                        <div class="text-center p-3 bg-white rounded border border-purple-200">
+                            <div id="modal-donation-sources" class="text-xl font-bold text-purple-700">Loading...</div>
+                            <div class="text-xs text-purple-600 mt-1">Donation Sources</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Health Factors -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h5 class="font-semibold text-gray-800 mb-4">🔍 Financial Health Factors</h5>
+                    <div id="modal-health-factors" class="space-y-2 text-sm">
+                        <!-- Dynamic health factors will be populated here -->
+                        <div class="text-gray-500">Loading financial health analysis...</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+                <div class="text-sm text-gray-500">
+                    <span>Analysis period: <span id="modal-analysis-period">--</span></span>
+                </div>
+                <button type="button" class="modal-btn modal-btn-primary modal-close-trigger">
+                    Close Analysis
+                </button>
+            </div>
+        </div>
+    </div>
 
 
 
