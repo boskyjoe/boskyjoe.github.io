@@ -1617,26 +1617,6 @@ function handleStandaloneButtons(target, event) {
             await loadExecutiveDashboard();
         },
         
-        '.executive-action-card': (target) => {
-            const action = target.dataset.action || target.closest('[data-action]')?.dataset.action;
-            
-            switch (action) {
-                case 'view-detailed-sales':
-                    showSalesReportsView();
-                    break;
-                case 'manage-collections':
-                    showPaymentManagementView();
-                    break;
-                case 'team-performance':
-                    showTeamReportsView();
-                    break;
-                case 'financial-overview':
-                    showFinancialReportsView();
-                    break;
-                default:
-                    console.warn('[main.js] Unknown executive action:', action);
-            }
-        },
 
         
         '.action-btn-remove-from-cart': () => {
