@@ -6586,6 +6586,167 @@ export async function loadExecutiveDashboard() {
     }
 }
 
+function showExecutiveDashboardError(error) {
+    console.error('[ui.js] Displaying executive dashboard error state:', error);
+    
+    // ===================================================================
+    // UPDATE SUMMARY CARDS WITH ERROR STATE
+    // ===================================================================
+    
+    const errorElements = [
+        'executive-total-revenue',
+        'executive-outstanding-total', 
+        'executive-performance-rating'
+    ];
+    
+    errorElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = 'Error';
+            element.className = element.className.replace(/text-\w+-\d+/, 'text-red-600');
+        }
+    });
+    
+    // ===================================================================
+    // UPDATE CHANNEL BREAKDOWN WITH ERROR STATE
+    // ===================================================================
+    
+    const channelElements = [
+        'executive-direct-percentage',
+        'executive-consignment-percentage',
+        'church-store-executive-revenue',
+        'tasty-treats-executive-revenue',
+        'executive-consignment-total'
+    ];
+    
+    channelElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = 'Error';
+        }
+    });
+    
+    // ===================================================================
+    // SHOW COMPREHENSIVE ERROR IN INSIGHTS SECTION
+    // ===================================================================
+    
+    const insightsContainer = document.getElementById('executive-business-insights');
+    if (insightsContainer) {
+        insightsContainer.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-red-800">Executive Dashboard Error</h4>
+                        <p class="text-sm text-red-600">Could not load business intelligence data</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg p-4 border border-red-200">
+                    <h5 class="font-semibold text-red-800 mb-2">Error Details:</h5>
+                    <p class="text-sm text-red-700 mb-4">${error.message || 'Unknown error occurred'}</p>
+                    
+                    <h5 class="font-semibold text-red-800 mb-2">Possible Causes:</h5>
+                    <ul class="text-sm text-red-700 space-y-1 mb-4">
+                        <li>• Network connectivity issues</li>
+                        <li>• Firestore quota limits reached</li>
+                        <li>• Insufficient data for analysis period</li>
+                        <li>• Database permission restrictions</li>
+                        <li>• Missing sales or consignment data</li>
+                    </ul>
+                    
+                    <h5 class="font-semibold text-red-800 mb-2">Recommended Actions:</h5>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="loadExecutiveDashboard()" 
+                               class="bg-red-600 text-white px-3 py-2 text-sm rounded hover:bg-red-700 flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span>Retry Dashboard</span>
+                        </button>
+                        
+                        <button onclick="document.getElementById('executive-dashboard-period').value = '7'; loadExecutiveDashboard();" 
+                               class="bg-blue-600 text-white px-3 py-2 text-sm rounded hover:bg-blue-700">
+                            Try Shorter Period (7 days)
+                        </button>
+                        
+                        <button onclick="showView('reports-hub-view')" 
+                               class="bg-gray-600 text-white px-3 py-2 text-sm rounded hover:bg-gray-700">
+                            Back to Reports
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Technical Details for Debugging -->
+                <div class="mt-4 p-3 bg-red-100 rounded border border-red-200">
+                    <details class="text-xs text-red-800">
+                        <summary class="cursor-pointer font-medium">Technical Details (for support)</summary>
+                        <div class="mt-2 space-y-1">
+                            <div><strong>Error Type:</strong> ${error.constructor.name}</div>
+                            <div><strong>Error Message:</strong> ${error.message}</div>
+                            <div><strong>Timestamp:</strong> ${new Date().toLocaleString()}</div>
+                            <div><strong>User Agent:</strong> ${navigator.userAgent}</div>
+                            <div><strong>Current View:</strong> executive-dashboard-view</div>
+                            ${error.stack ? `<div><strong>Stack Trace:</strong><br><pre class="text-xs mt-1 whitespace-pre-wrap">${error.stack}</pre></div>` : ''}
+                        </div>
+                    </details>
+                </div>
+            </div>
+        `;
+    }
+    
+    // ===================================================================
+    // UPDATE METADATA WITH ERROR INFO
+    // ===================================================================
+    
+    const metadataElements = {
+        'executive-generated-time': new Date().toLocaleTimeString(),
+        'executive-firestore-reads': 'Error',
+        'executive-execution-time': 'N/A',
+        'executive-cache-status': '❌ Error',
+        'executive-next-refresh': 'Manual retry needed'
+    };
+    
+    Object.entries(metadataElements).forEach(([elementId, value]) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+            if (elementId === 'executive-cache-status') {
+                element.className = 'text-red-600 font-medium';
+            }
+        }
+    });
+    
+    // ===================================================================
+    // SHOW MAIN ERROR MODAL FOR IMMEDIATE USER FEEDBACK
+    // ===================================================================
+    
+    setTimeout(() => {
+        showModal('error', 'Executive Dashboard Error',
+            `Failed to load executive dashboard data.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `This could be due to:\n` +
+            `• Network connectivity issues\n` +
+            `• Insufficient data for the selected period\n` +
+            `• Firestore quota or permission limits\n` +
+            `• Database query complexity\n\n` +
+            `Recommended solutions:\n` +
+            `1. Check your internet connection\n` +
+            `2. Try a shorter analysis period (7 days)\n` +
+            `3. Wait a few minutes and retry\n` +
+            `4. Contact support if the issue persists\n\n` +
+            `The dashboard shows detailed troubleshooting options.`
+        );
+    }, 1000);
+    
+    console.error('[ui.js] ✅ Executive dashboard error state displayed with troubleshooting options');
+}
+
+
 /**
  * HELPER: Show loading state for dashboard
  */
