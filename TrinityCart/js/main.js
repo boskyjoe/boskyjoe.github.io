@@ -127,7 +127,7 @@ import {
     showFinancialReportsView,
     showTeamReportsView, 
     showOperationsReportsView, 
-    showExecutiveDashboardView,
+    showExecutiveDashboardView,loadExecutiveDashboard,
     handleReportCardClick,
     showSalesTrendsDetailView,showCustomerInsightsDetailView
 } from './ui.js';
