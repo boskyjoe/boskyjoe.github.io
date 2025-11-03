@@ -6819,6 +6819,9 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     
     // ✅ BUSINESS INSIGHTS
     updateExecutiveInsightsDisplay(dashboardData.businessInsights || []);
+
+    // ✅ NEW: KEY BUSINESS METRICS (Collection Rate and Growth Trend)
+    updateKeyBusinessMetrics(dashboardData.executiveIntelligence);
     
     // ✅ METADATA
     updateExecutiveMetadataDisplay(dashboardData.metadata);
@@ -6826,6 +6829,89 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     console.log('[ui.js] ✅ Executive dashboard display updated');
 }
 
+
+/**
+ * UI ONLY: Update key business metrics section
+ */
+function updateKeyBusinessMetrics(executiveIntelligence) {
+    console.log('[ui.js] 📈 Updating key business metrics...');
+    
+    // ✅ FINANCIAL HEALTH
+    const financialHealth = executiveIntelligence.financialHealthScore;
+    const financialHealthElement = document.getElementById('executive-financial-health');
+    const healthDetailsElement = document.getElementById('executive-health-details');
+    
+    if (financialHealthElement) {
+        financialHealthElement.textContent = financialHealth.status;
+        
+        // Color coding based on health
+        const healthColorClasses = {
+            'Excellent': 'text-green-900',
+            'Good': 'text-blue-900',
+            'Fair': 'text-yellow-900',
+            'Needs Attention': 'text-red-900'
+        };
+        
+        financialHealthElement.className = `text-2xl font-bold ${healthColorClasses[financialHealth.status] || 'text-gray-900'}`;
+    }
+    
+    if (healthDetailsElement) {
+        healthDetailsElement.textContent = `${financialHealth.score}% health score`;
+    }
+    
+    // ✅ COLLECTION RATE
+    const collectionMetrics = executiveIntelligence.collectionEfficiency;
+    const collectionRateElement = document.getElementById('executive-collection-rate');
+    const collectionDetailsElement = document.getElementById('executive-collection-details');
+    
+    if (collectionRateElement) {
+        collectionRateElement.textContent = collectionMetrics.formattedRate;
+        
+        // Color coding based on efficiency
+        const collectionColorClasses = {
+            'Excellent': 'text-green-900',
+            'Good': 'text-blue-900', 
+            'Fair': 'text-yellow-900',
+            'Needs Improvement': 'text-red-900'
+        };
+        
+        collectionRateElement.className = `text-2xl font-bold ${collectionColorClasses[collectionMetrics.efficiency] || 'text-gray-900'}`;
+    }
+    
+    if (collectionDetailsElement) {
+        collectionDetailsElement.textContent = collectionMetrics.details || 'Payment efficiency';
+    }
+    
+    // ✅ GROWTH TREND
+    const growthTrend = executiveIntelligence.growthTrendAnalysis;
+    const growthTrendElement = document.getElementById('executive-growth-trend');
+    const growthDetailsElement = document.getElementById('executive-growth-details');
+    
+    if (growthTrendElement) {
+        growthTrendElement.textContent = `${growthTrend.direction} ${growthTrend.trend}`;
+        
+        // Color coding based on trend
+        const trendColorClasses = {
+            'Strong Growth': 'text-green-900',
+            'Steady Growth': 'text-blue-900',
+            'Moderate Growth': 'text-indigo-900', 
+            'Early Development': 'text-yellow-900',
+            'Startup Phase': 'text-orange-900'
+        };
+        
+        growthTrendElement.className = `text-2xl font-bold ${trendColorClasses[growthTrend.trend] || 'text-gray-900'}`;
+    }
+    
+    if (growthDetailsElement) {
+        growthDetailsElement.textContent = growthTrend.trendDescription || 'Trend analysis';
+    }
+    
+    console.log('[ui.js] ✅ Key business metrics updated:', {
+        financialHealth: financialHealth.status,
+        collectionRate: collectionMetrics.formattedRate,
+        growthTrend: growthTrend.trend
+    });
+}
 
 /**
  * UI ONLY: Update insights display
