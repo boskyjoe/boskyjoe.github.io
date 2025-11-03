@@ -598,7 +598,11 @@ const EventHandlers = {
         'financial-reports-view': showFinancialReportsView,
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
-        'executive-dashboard-view': showExecutiveDashboardView,
+        //'executive-dashboard-view': showExecutiveDashboardView,
+        'executive-dashboard-view': async () => {
+            showView('executive-dashboard-view');
+            await loadExecutiveDashboard(); // ✅ Load dashboard data when view opens
+        },
         'store-performance-detail-view': () => showStorePerformanceDetailView(),
         'sales-trends-detail-view': () => showSalesTrendsDetailView(),
         'customer-insights-detail-view': () => showCustomerInsightsDetailView(),
@@ -1607,6 +1611,32 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-collect-team-settlement': async (target) => await handlePmtMgmtCollectTeamSettlement(target),
         '.pmt-mgmt-view-consignment-order': async (target) => await handlePmtMgmtViewConsignmentOrder(target),
         '.pmt-mgmt-view-settlement-history': async (target) => await handlePmtMgmtViewSettlementHistory(target),
+
+        '#refresh-executive-dashboard': async () => {
+            console.log('[main.js] Executive dashboard manual refresh');
+            await loadExecutiveDashboard();
+        },
+        
+        '.executive-action-card': (target) => {
+            const action = target.dataset.action || target.closest('[data-action]')?.dataset.action;
+            
+            switch (action) {
+                case 'view-detailed-sales':
+                    showSalesReportsView();
+                    break;
+                case 'manage-collections':
+                    showPaymentManagementView();
+                    break;
+                case 'team-performance':
+                    showTeamReportsView();
+                    break;
+                case 'financial-overview':
+                    showFinancialReportsView();
+                    break;
+                default:
+                    console.warn('[main.js] Unknown executive action:', action);
+            }
+        },
 
         
         '.action-btn-remove-from-cart': () => {
@@ -5743,6 +5773,15 @@ function setupInputListeners() {
             const newPeriod = parseInt(e.target.value);
             console.log(`[main.js] Store report period changed to ${newPeriod} days`);
             loadStorePerformanceDetailData(newPeriod);
+        });
+    }
+
+    const executivePeriodSelector = document.getElementById('executive-dashboard-period');
+    if (executivePeriodSelector) {
+        executivePeriodSelector.addEventListener('change', async (e) => {
+            const newPeriod = parseInt(e.target.value);
+            console.log(`[main.js] Executive dashboard period changed to ${newPeriod} days`);
+            await loadExecutiveDashboard();
         });
     }
 
