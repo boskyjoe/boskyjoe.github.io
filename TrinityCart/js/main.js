@@ -1995,6 +1995,17 @@ function handleStandaloneButtons(target, event) {
         return true;
     }
 
+    if (target.closest('#financial-health-modal .modal-close-trigger')) {
+        const modal = document.getElementById('financial-health-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+        return true;
+    }
+
     // Check all button handlers
     /*for (const [selector, handler] of Object.entries(buttonHandlers)) {
         if (target.closest(selector)) {
