@@ -4259,6 +4259,7 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
  * BUSINESS INTELLIGENCE: Calculate overall performance rating
  */
 function calculateOverallPerformanceRating(businessSummary) {
+    console.log('[Reports] 💊 calculateOverallPerformanceRating...');
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
     const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
     const outstandingPercentage = totalRevenue > 0 ? (outstandingAmount / totalRevenue) * 100 : 0;
@@ -4294,14 +4295,20 @@ function calculateOverallPerformanceRating(businessSummary) {
  * BUSINESS INTELLIGENCE: Calculate financial health score
  */
 function calculateFinancialHealthScore(businessSummary) {
-    console.log('[Reports] 💊 Calculating financial health score...');
+    console.log('[Reports] 💊 Calculating ENHANCED financial health score...');
     
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
     const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
-    const directRevenue = businessSummary.executiveSummary.directSalesRevenue;
-    const consignmentRevenue = businessSummary.executiveSummary.consignmentRevenue;
+    const directRevenue = businessSummary.executiveSummary.directSalesRevenue;      // ✅ NOW USING
+    const consignmentRevenue = businessSummary.executiveSummary.consignmentRevenue; // ✅ NOW USING
     
-    // ✅ FINANCIAL HEALTH CALCULATION
+    console.log('[Reports] 🔍 Revenue breakdown for health calculation:');
+    console.log(`  Total Revenue: ${formatCurrency(totalRevenue)}`);
+    console.log(`  Direct Revenue: ${formatCurrency(directRevenue)}`);
+    console.log(`  Consignment Revenue: ${formatCurrency(consignmentRevenue)}`);
+    console.log(`  Outstanding: ${formatCurrency(totalOutstanding)}`);
+    
+    // ✅ FINANCIAL HEALTH CALCULATION (Enhanced)
     const outstandingRatio = totalRevenue > 0 ? (totalOutstanding / totalRevenue) * 100 : 0;
     const channelDiversification = Math.min(
         businessSummary.executiveSummary.channelMix.directPercentage,
@@ -4311,37 +4318,85 @@ function calculateFinancialHealthScore(businessSummary) {
     // Calculate composite financial health score (0-100)
     let healthScore = 100;
     
-    // Penalize high outstanding balances
-    healthScore -= outstandingRatio; // Subtract outstanding percentage directly
+    // PENALTY 1: Outstanding balances (main factor)
+    healthScore -= outstandingRatio;
+    console.log(`[Reports] 🔍 After outstanding penalty (${outstandingRatio.toFixed(1)}%): ${healthScore.toFixed(1)}`);
     
-    // Reward channel diversification (balanced channels = healthier)
-    if (channelDiversification > 30) {
-        healthScore += 5; // Bonus for good diversification
-    } else if (channelDiversification < 10) {
+    // ✅ ENHANCED: Channel-specific health analysis
+    
+    // PENALTY 2: Poor channel diversification  
+    if (channelDiversification < 10) {
         healthScore -= 10; // Penalty for over-concentration
+        console.log(`[Reports] 🔍 Channel concentration penalty applied: -10 points`);
+    } else if (channelDiversification > 30) {
+        healthScore += 5; // Bonus for good diversification
+        console.log(`[Reports] 🔍 Channel diversification bonus applied: +5 points`);
     }
     
-    // Reward revenue scale
-    if (totalRevenue > 100000) {
-        healthScore += 5; // Bonus for high revenue
+    // ✅ NEW: Direct sales performance analysis
+    if (directRevenue > 0) {
+        if (directRevenue > 75000) {
+            healthScore += 5; // Strong direct sales
+            console.log(`[Reports] 🔍 Strong direct sales bonus: +5 points`);
+        } else if (directRevenue < 5000) {
+            healthScore -= 5; // Weak direct sales
+            console.log(`[Reports] 🔍 Weak direct sales penalty: -5 points`);
+        }
+    }
+    
+    // ✅ NEW: Consignment performance analysis
+    if (consignmentRevenue > 0) {
+        const consignmentEfficiency = consignmentRevenue / (consignmentRevenue + 1000); // Placeholder calculation
+        
+        if (consignmentRevenue > 50000) {
+            healthScore += 5; // Strong consignment program
+            console.log(`[Reports] 🔍 Strong consignment bonus: +5 points`);
+        } else if (consignmentRevenue > 0 && consignmentRevenue < 2000) {
+            healthScore -= 3; // Underperforming consignment
+            console.log(`[Reports] 🔍 Underperforming consignment penalty: -3 points`);
+        }
+    }
+    
+    // ✅ NEW: Channel balance health
+    const revenueImbalance = Math.abs(directRevenue - consignmentRevenue);
+    const totalRevenue_check = directRevenue + consignmentRevenue;
+    
+    if (totalRevenue_check > 0) {
+        const imbalanceRatio = (revenueImbalance / totalRevenue_check) * 100;
+        
+        if (imbalanceRatio > 80) { // One channel dominates 90%+
+            healthScore -= 5;
+            console.log(`[Reports] 🔍 Severe channel imbalance penalty: -5 points (${imbalanceRatio.toFixed(1)}% imbalance)`);
+        }
+    }
+    
+    // ✅ REVENUE SCALE ANALYSIS (Enhanced)
+    if (totalRevenue > 150000) {
+        healthScore += 10; // Exceptional revenue scale
+        console.log(`[Reports] 🔍 Exceptional revenue bonus: +10 points`);
+    } else if (totalRevenue > 100000) {
+        healthScore += 5; // Strong revenue scale
+        console.log(`[Reports] 🔍 Strong revenue bonus: +5 points`);
     } else if (totalRevenue < 5000) {
-        healthScore -= 10; // Penalty for very low revenue
+        healthScore -= 10; // Very low revenue
+        console.log(`[Reports] 🔍 Low revenue penalty: -10 points`);
     }
     
-    // Ensure score stays within bounds
+    // ✅ CRITICAL: Ensure score stays within bounds
     healthScore = Math.max(0, Math.min(100, healthScore));
+    console.log(`[Reports] 🔍 Final capped health score: ${healthScore.toFixed(1)}`);
     
-    // Determine status and details
+    // ✅ DETERMINE: Status based on final score
     let status, details, recommendation, color;
     
     if (healthScore >= 90) {
         status = 'Excellent';
-        details = 'Strong financial position';
+        details = 'Outstanding financial position';
         recommendation = 'Maintain current financial practices';
         color = 'green';
     } else if (healthScore >= 75) {
         status = 'Good';  
-        details = 'Healthy financial metrics';
+        details = 'Strong financial health';
         recommendation = 'Monitor and maintain performance';
         color = 'blue';
     } else if (healthScore >= 60) {
@@ -4362,31 +4417,43 @@ function calculateFinancialHealthScore(businessSummary) {
     }
     
     const result = {
-        score: Math.round(healthScore),
+        score: Math.round(healthScore), // ✅ Should be 0-100
         status,
         details,
         recommendation,
         color,
         
+        // ✅ ENHANCED: Now includes channel-specific analysis
+        channelAnalysis: {
+            directSalesHealth: directRevenue > 50000 ? 'Strong' : directRevenue > 20000 ? 'Good' : directRevenue > 5000 ? 'Fair' : 'Weak',
+            consignmentHealth: consignmentRevenue > 30000 ? 'Strong' : consignmentRevenue > 10000 ? 'Good' : consignmentRevenue > 2000 ? 'Fair' : 'Developing',
+            channelBalance: revenueImbalance > totalRevenue * 0.8 ? 'Imbalanced' : 'Balanced'
+        },
+        
         // Detailed breakdown for analysis
         breakdown: {
             totalRevenue: formatCurrency(totalRevenue),
+            directRevenue: formatCurrency(directRevenue),        // ✅ NOW INCLUDED
+            consignmentRevenue: formatCurrency(consignmentRevenue), // ✅ NOW INCLUDED
             totalOutstanding: formatCurrency(totalOutstanding),
             outstandingRatio: outstandingRatio.toFixed(1) + '%',
             channelDiversification: channelDiversification.toFixed(1) + '%',
-            revenueScale: totalRevenue > 50000 ? 'High' : totalRevenue > 20000 ? 'Medium' : 'Low'
+            revenueScale: totalRevenue > 100000 ? 'High' : totalRevenue > 20000 ? 'Medium' : 'Low'
         }
     };
     
-    console.log('[Reports] 💊 Financial health calculated:', {
+    console.log('[Reports] 💊 ENHANCED Financial health calculated:', {
         score: result.score,
         status: result.status,
-        outstandingRatio: result.breakdown.outstandingRatio,
-        details: result.details
+        directHealth: result.channelAnalysis.directSalesHealth,
+        consignmentHealth: result.channelAnalysis.consignmentHealth,
+        finalScore: `${result.score}/100`
     });
     
     return result;
 }
+
+
 
 /**
  * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics
