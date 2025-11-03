@@ -4294,55 +4294,292 @@ function calculateOverallPerformanceRating(businessSummary) {
  * BUSINESS INTELLIGENCE: Calculate financial health score
  */
 function calculateFinancialHealthScore(businessSummary) {
+    console.log('[Reports] 💊 Calculating financial health score...');
+    
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
     const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
+    const directRevenue = businessSummary.executiveSummary.directSalesRevenue;
+    const consignmentRevenue = businessSummary.executiveSummary.consignmentRevenue;
     
-    const healthScore = totalRevenue > 0 ? Math.max(0, 100 - ((totalOutstanding / totalRevenue) * 100)) : 0;
+    // ✅ FINANCIAL HEALTH CALCULATION
+    const outstandingRatio = totalRevenue > 0 ? (totalOutstanding / totalRevenue) * 100 : 0;
+    const channelDiversification = Math.min(
+        businessSummary.executiveSummary.channelMix.directPercentage,
+        businessSummary.executiveSummary.channelMix.consignmentPercentage
+    );
     
-    return {
+    // Calculate composite financial health score (0-100)
+    let healthScore = 100;
+    
+    // Penalize high outstanding balances
+    healthScore -= outstandingRatio; // Subtract outstanding percentage directly
+    
+    // Reward channel diversification (balanced channels = healthier)
+    if (channelDiversification > 30) {
+        healthScore += 5; // Bonus for good diversification
+    } else if (channelDiversification < 10) {
+        healthScore -= 10; // Penalty for over-concentration
+    }
+    
+    // Reward revenue scale
+    if (totalRevenue > 100000) {
+        healthScore += 5; // Bonus for high revenue
+    } else if (totalRevenue < 5000) {
+        healthScore -= 10; // Penalty for very low revenue
+    }
+    
+    // Ensure score stays within bounds
+    healthScore = Math.max(0, Math.min(100, healthScore));
+    
+    // Determine status and details
+    let status, details, recommendation, color;
+    
+    if (healthScore >= 90) {
+        status = 'Excellent';
+        details = 'Strong financial position';
+        recommendation = 'Maintain current financial practices';
+        color = 'green';
+    } else if (healthScore >= 75) {
+        status = 'Good';  
+        details = 'Healthy financial metrics';
+        recommendation = 'Monitor and maintain performance';
+        color = 'blue';
+    } else if (healthScore >= 60) {
+        status = 'Fair';
+        details = 'Financial metrics need attention'; 
+        recommendation = 'Focus on reducing outstanding balances';
+        color = 'yellow';
+    } else if (healthScore >= 40) {
+        status = 'Poor';
+        details = 'Financial health requires immediate action';
+        recommendation = 'Urgent: Address outstanding balances and revenue';
+        color = 'orange';
+    } else {
+        status = 'Critical';
+        details = 'Critical financial situation';
+        recommendation = 'Emergency: Immediate financial management needed';
+        color = 'red';
+    }
+    
+    const result = {
         score: Math.round(healthScore),
-        status: healthScore > 90 ? 'Excellent' : 
-                healthScore > 70 ? 'Good' : 
-                healthScore > 50 ? 'Fair' : 'Needs Attention',
-        recommendation: healthScore < 70 ? 'Focus on outstanding balance collection' : 'Maintain current collection practices'
+        status,
+        details,
+        recommendation,
+        color,
+        
+        // Detailed breakdown for analysis
+        breakdown: {
+            totalRevenue: formatCurrency(totalRevenue),
+            totalOutstanding: formatCurrency(totalOutstanding),
+            outstandingRatio: outstandingRatio.toFixed(1) + '%',
+            channelDiversification: channelDiversification.toFixed(1) + '%',
+            revenueScale: totalRevenue > 50000 ? 'High' : totalRevenue > 20000 ? 'Medium' : 'Low'
+        }
     };
+    
+    console.log('[Reports] 💊 Financial health calculated:', {
+        score: result.score,
+        status: result.status,
+        outstandingRatio: result.breakdown.outstandingRatio,
+        details: result.details
+    });
+    
+    return result;
 }
 
 /**
  * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics
  */
 function calculateCollectionEfficiencyMetrics(businessSummary) {
+    console.log('[Reports] 📊 Calculating collection efficiency metrics...');
+    
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const totalOutstanding = businessSummary.executiveSummary.totalOutstanding;
     const detailedData = businessSummary.detailedBreakdown;
-    let overallCollectionRate = 0;
+    
+    let collectionRate = 0;
+    let collectionDetails = '';
+    let efficiency = '';
+    let recommendation = '';
+    
+    // ✅ PRIMARY CALCULATION: Based on revenue vs outstanding
+    if (totalRevenue > 0) {
+        const collectedAmount = totalRevenue - totalOutstanding;
+        collectionRate = (collectedAmount / totalRevenue) * 100;
+        
+        collectionDetails = `${formatCurrency(collectedAmount)} collected of ${formatCurrency(totalRevenue)}`;
+        
+        if (collectionRate >= 95) {
+            efficiency = 'Excellent';
+            recommendation = 'Outstanding collection performance - maintain practices';
+        } else if (collectionRate >= 85) {
+            efficiency = 'Good';
+            recommendation = 'Strong collection rate - monitor for consistency';
+        } else if (collectionRate >= 70) {
+            efficiency = 'Fair';
+            recommendation = 'Improve collection follow-up procedures';
+        } else {
+            efficiency = 'Needs Improvement';
+            recommendation = 'Urgent: Implement systematic collection processes';
+        }
+        
+        console.log('[Reports] 📊 Collection efficiency calculated:', {
+            collectedAmount: formatCurrency(collectedAmount),
+            totalRevenue: formatCurrency(totalRevenue),
+            collectionRate: collectionRate.toFixed(1) + '%',
+            efficiency
+        });
+        
+    } else {
+        collectionDetails = 'Insufficient revenue data';
+        efficiency = 'No Data';
+        recommendation = 'Generate revenue to measure collection efficiency';
+    }
+    
+    // ✅ ENHANCED: Channel-specific collection analysis
+    const channelEfficiency = {
+        direct: 'Unknown',
+        consignment: 'Unknown'
+    };
     
     if (detailedData?.directSalesData?.paymentAnalysis) {
-        overallCollectionRate = detailedData.directSalesData.paymentAnalysis.collectionRate || 0;
+        const directCollection = detailedData.directSalesData.paymentAnalysis.collectionRate || 0;
+        channelEfficiency.direct = directCollection > 80 ? 'Good' : 'Needs Work';
+    }
+    
+    if (detailedData?.consignmentData?.settlementAnalysis) {
+        const consignmentCollection = detailedData.consignmentData.settlementAnalysis.collectionEfficiency || 0;
+        channelEfficiency.consignment = consignmentCollection > 80 ? 'Good' : 'Needs Work';
     }
     
     return {
-        collectionRate: overallCollectionRate.toFixed(1),
-        efficiency: overallCollectionRate > 90 ? 'Excellent' : 
-                   overallCollectionRate > 75 ? 'Good' : 
-                   overallCollectionRate > 50 ? 'Fair' : 'Needs Improvement',
-        recommendation: overallCollectionRate < 75 ? 'Implement collection follow-up procedures' : 'Maintain collection excellence'
+        collectionRate: Math.round(collectionRate),
+        formattedRate: collectionRate.toFixed(1) + '%',
+        efficiency,
+        details: collectionDetails,
+        recommendation,
+        channelEfficiency,
+        
+        // Additional metrics
+        outstandingRatio: totalRevenue > 0 ? ((totalOutstanding / totalRevenue) * 100).toFixed(1) + '%' : '0%'
     };
 }
-
 
 /**
  * BUSINESS INTELLIGENCE: Calculate growth trend analysis
  */
 function calculateGrowthTrendAnalysis(businessSummary) {
-    // This could be enhanced with period-over-period comparison
+    console.log('[Reports] 📈 Calculating growth trend analysis...');
+    
     const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const directRevenue = businessSummary.executiveSummary.directSalesRevenue;
+    const consignmentRevenue = businessSummary.executiveSummary.consignmentRevenue;
+    const reportPeriod = businessSummary.executiveSummary.reportPeriod;
+    
+    // Extract period information
+    const periodDays = getDaysFromPeriodLabel(reportPeriod);
+    const dailyAverage = periodDays > 0 ? totalRevenue / periodDays : 0;
+    const weeklyAverage = dailyAverage * 7;
+    const monthlyProjection = dailyAverage * 30;
+    
+    // ✅ GROWTH TREND ANALYSIS
+    let trend, direction, confidence, trendDescription, trendColor;
+    
+    if (totalRevenue > 150000) {
+        trend = 'Exceptional';
+        direction = '🚀';
+        confidence = 'Very High';
+        trendDescription = `Outstanding performance (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'green';
+    } else if (totalRevenue > 75000) {
+        trend = 'Strong Growth';
+        direction = '📈';
+        confidence = 'High';
+        trendDescription = `Strong performance (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'green';
+    } else if (totalRevenue > 35000) {
+        trend = 'Steady Growth';
+        direction = '📊';
+        confidence = 'High';
+        trendDescription = `Solid foundation (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'blue';
+    } else if (totalRevenue > 15000) {
+        trend = 'Moderate Growth';
+        direction = '📊';
+        confidence = 'Medium';
+        trendDescription = `Building momentum (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'indigo';
+    } else if (totalRevenue > 5000) {
+        trend = 'Early Development';
+        direction = '📈';
+        confidence = 'Medium';
+        trendDescription = `Growing foundation (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'yellow';
+    } else {
+        trend = 'Startup Phase';
+        direction = '🌱';
+        confidence = 'Low';
+        trendDescription = `Early stage (${formatCurrency(dailyAverage)}/day)`;
+        trendColor = 'orange';
+    }
+    
+    // ✅ CHANNEL ANALYSIS
+    const channelBalance = {
+        isBalanced: Math.abs(directRevenue - consignmentRevenue) < (totalRevenue * 0.3),
+        dominantChannel: directRevenue > consignmentRevenue ? 'Direct Sales' : 'Consignment',
+        diversificationScore: Math.min(
+            businessSummary.executiveSummary.channelMix.directPercentage,
+            businessSummary.executiveSummary.channelMix.consignmentPercentage
+        )
+    };
+    
+    console.log('[Reports] 📈 Growth trend calculated:', {
+        trend,
+        totalRevenue: formatCurrency(totalRevenue),
+        dailyAverage: formatCurrency(dailyAverage),
+        monthlyProjection: formatCurrency(monthlyProjection),
+        dominantChannel: channelBalance.dominantChannel,
+        isBalanced: channelBalance.isBalanced
+    });
     
     return {
-        trend: totalRevenue > 50000 ? 'Strong Growth' : 
-               totalRevenue > 20000 ? 'Steady Growth' : 
-               totalRevenue > 5000 ? 'Moderate Growth' : 'Early Development',
-        direction: '📈', // Could be calculated from period comparison
-        confidence: 'Medium' // Based on data quality and completeness
+        trend,
+        direction,
+        confidence,
+        trendDescription,
+        trendColor,
+        
+        // ✅ GROWTH METRICS
+        dailyAverage: formatCurrency(dailyAverage),
+        weeklyAverage: formatCurrency(weeklyAverage),
+        monthlyProjection: formatCurrency(monthlyProjection),
+        
+        // ✅ CHANNEL ANALYSIS
+        channelBalance,
+        
+        // ✅ GROWTH INSIGHTS
+        growthInsights: {
+            revenueScale: totalRevenue > 50000 ? 'High Volume' : totalRevenue > 20000 ? 'Medium Volume' : 'Growing Volume',
+            channelDiversification: channelBalance.isBalanced ? 'Well Diversified' : 'Channel Concentrated',
+            growthSustainability: confidence === 'High' ? 'Sustainable' : 'Monitor Closely'
+        }
     };
+}
+
+function getDaysFromPeriodLabel(periodLabel) {
+    if (!periodLabel) return 30;
+    
+    const dayMatches = periodLabel.match(/(\d+)\s*day/i);
+    if (dayMatches) return parseInt(dayMatches[1]);
+    
+    if (periodLabel.toLowerCase().includes('today')) return 1;
+    if (periodLabel.toLowerCase().includes('week')) return 7;
+    if (periodLabel.toLowerCase().includes('month')) return 30;
+    if (periodLabel.toLowerCase().includes('quarter')) return 90;
+    if (periodLabel.toLowerCase().includes('year')) return 365;
+    
+    return 30;
 }
 
 /**
