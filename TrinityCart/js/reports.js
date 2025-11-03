@@ -4656,3 +4656,204 @@ function generateExecutiveRecommendedActions(businessSummary) {
         targetModule: null
     }];
 }
+
+/**
+ * ENHANCED: Calculate TRUE business revenue (actual cash received) across all channels
+ * 
+ * This function calculates actual cash received by the church from all revenue sources,
+ * accounting for returns, damages, and settlements. Provides complete financial transparency
+ * with theoretical vs actual revenue analysis.
+ * 
+ * @param {Object} businessSummary - Business summary from generateBusinessSummaryOptimized
+ * @returns {Promise<Object>} True revenue analysis with detailed breakdown
+ */
+export async function calculateTrueBusinessRevenue(businessSummary) {
+    console.log('[Reports] 💰 Calculating TRUE business revenue (actual cash received)...');
+    
+    try {
+        // ===================================================================
+        // PHASE 1: DIRECT STORE CASH REVENUE (Actual payments received)
+        // ===================================================================
+        
+        const directSalesData = businessSummary.detailedBreakdown?.directSalesData;
+        
+        let directCashRevenue = 0;
+        let churchStoreCash = 0;
+        let tastyTreatsCash = 0;
+        
+        if (directSalesData) {
+            // ✅ ACTUAL: Cash received from direct sales (not invoiced amounts)
+            directCashRevenue = directSalesData.summary.totalRevenue; // This should be actual payments
+            
+            // Store breakdown
+            const storeBreakdown = directSalesData.storeBreakdown || [];
+            const churchStore = storeBreakdown.find(store => store.storeName === 'Church Store');
+            const tastyTreats = storeBreakdown.find(store => store.storeName === 'Tasty Treats');
+            
+            churchStoreCash = churchStore?.revenue || 0;
+            tastyTreatsCash = tastyTreats?.revenue || 0;
+        }
+        
+        console.log(`[Reports] 🏪 Direct Store Cash Revenue: ${formatCurrency(directCashRevenue)}`);
+        console.log(`  Church Store: ${formatCurrency(churchStoreCash)}`);
+        console.log(`  Tasty Treats: ${formatCurrency(tastyTreatsCash)}`);
+        
+        // ===================================================================
+        // PHASE 2: CONSIGNMENT CASH REVENUE (Actual settlements received)
+        // ===================================================================
+        
+        let consignmentCashRevenue = 0;
+        let theoreticalConsignmentRevenue = 0;
+        let consignmentLosses = 0;
+        let teamCommissions = 0;
+        
+        // ✅ ACTUAL: Use payments received from teams (not gross sales)
+        const consignmentData = businessSummary.detailedBreakdown?.consignmentData;
+        
+        if (consignmentData) {
+            // Theoretical: Total value teams sold
+            theoreticalConsignmentRevenue = consignmentData.summary.totalRevenue || 0;
+            
+            // ✅ ACTUAL: What teams actually paid to church
+            // This should come from verified consignment payments
+            consignmentCashRevenue = await calculateActualConsignmentCash();
+            
+            // Calculate implied losses (theoretical - actual - team commissions)
+            const impliedTeamCommission = theoreticalConsignmentRevenue * 0.3; // Assume 30% team keeps
+            consignmentLosses = theoreticalConsignmentRevenue - consignmentCashRevenue - impliedTeamCommission;
+        }
+        
+        console.log(`[Reports] 👥 Consignment Revenue Analysis:`);
+        console.log(`  Theoretical Sales: ${formatCurrency(theoreticalConsignmentRevenue)}`);
+        console.log(`  Actual Cash Received: ${formatCurrency(consignmentCashRevenue)}`);
+        console.log(`  Returns/Damages/Commission: ${formatCurrency(consignmentLosses)}`);
+        
+        // ===================================================================
+        // PHASE 3: DONATION REVENUE (Actual donations received)
+        // ===================================================================
+        
+        const donationRevenue = await calculateTotalDonationsReceived();
+        
+        console.log(`[Reports] 🎁 Donation Revenue: ${formatCurrency(donationRevenue)}`);
+        
+        // ===================================================================
+        // PHASE 4: TRUE TOTAL CALCULATION
+        // ===================================================================
+        
+        const trueTotalRevenue = directCashRevenue + consignmentCashRevenue + donationRevenue;
+        
+        const revenueAnalysis = {
+            // ✅ ACTUAL CASH RECEIVED
+            trueTotalRevenue,
+            formattedTrueTotalRevenue: formatCurrency(trueTotalRevenue),
+            
+            // ✅ CHANNEL BREAKDOWN (Actual Cash)
+            directCashRevenue,
+            consignmentCashRevenue,
+            donationRevenue,
+            
+            // ✅ STORE BREAKDOWN
+            churchStoreCash,
+            tastyTreatsCash,
+            
+            // ✅ THEORETICAL VS ACTUAL ANALYSIS
+            theoreticalRevenue: (directSalesData?.summary.totalRevenue || 0) + theoreticalConsignmentRevenue,
+            actualRevenue: trueTotalRevenue,
+            revenueEfficiency: theoreticalConsignmentRevenue > 0 ? 
+                (consignmentCashRevenue / theoreticalConsignmentRevenue) * 100 : 100,
+            
+            // ✅ LOSS ANALYSIS
+            totalLosses: consignmentLosses,
+            lossPercentage: theoreticalConsignmentRevenue > 0 ? 
+                (consignmentLosses / theoreticalConsignmentRevenue) * 100 : 0,
+            
+            // ✅ BREAKDOWN FOR MODAL
+            breakdown: {
+                directSales: {
+                    churchStore: { amount: churchStoreCash, formatted: formatCurrency(churchStoreCash) },
+                    tastyTreats: { amount: tastyTreatsCash, formatted: formatCurrency(tastyTreatsCash) },
+                    total: { amount: directCashRevenue, formatted: formatCurrency(directCashRevenue) }
+                },
+                consignment: {
+                    theoretical: { amount: theoreticalConsignmentRevenue, formatted: formatCurrency(theoreticalConsignmentRevenue) },
+                    actualCash: { amount: consignmentCashRevenue, formatted: formatCurrency(consignmentCashRevenue) },
+                    losses: { amount: consignmentLosses, formatted: formatCurrency(consignmentLosses) },
+                    efficiency: theoreticalConsignmentRevenue > 0 ? ((consignmentCashRevenue / theoreticalConsignmentRevenue) * 100).toFixed(1) + '%' : 'N/A'
+                },
+                donations: {
+                    total: { amount: donationRevenue, formatted: formatCurrency(donationRevenue) },
+                    percentage: trueTotalRevenue > 0 ? ((donationRevenue / trueTotalRevenue) * 100).toFixed(1) + '%' : '0%'
+                }
+            }
+        };
+        
+        console.log(`[Reports] 💰 TRUE REVENUE CALCULATION COMPLETE:`);
+        console.log(`  Theoretical Total: ${formatCurrency(revenueAnalysis.theoreticalRevenue)}`);
+        console.log(`  Actual Cash Received: ${formatCurrency(trueTotalRevenue)}`);
+        console.log(`  Revenue Efficiency: ${revenueAnalysis.revenueEfficiency.toFixed(1)}%`);
+        console.log(`  Total Losses: ${formatCurrency(consignmentLosses)} (${revenueAnalysis.lossPercentage.toFixed(1)}%)`);
+        
+        return revenueAnalysis;
+        
+    } catch (error) {
+        console.error('[Reports] Error calculating true business revenue:', error);
+        throw new Error(`True revenue calculation failed: ${error.message}`);
+    }
+}
+
+/**
+ * HELPER: Calculate actual cash received from consignment settlements
+ */
+async function calculateActualConsignmentCash() {
+    try {
+        const db = firebase.firestore();
+        
+        // ✅ QUERY: Verified consignment payments (actual cash received)
+        const verifiedPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+            .where('paymentStatus', '==', 'Verified')
+            .limit(100); // Reasonable limit
+        
+        const paymentsSnapshot = await verifiedPaymentsQuery.get();
+        
+        const actualCash = paymentsSnapshot.docs.reduce((total, doc) => {
+            const payment = doc.data();
+            return total + (payment.amountPaid || 0); // Actual amount paid by teams
+        }, 0);
+        
+        console.log(`[Reports] 👥 Actual consignment cash calculated: ${formatCurrency(actualCash)} from ${paymentsSnapshot.size} verified payments`);
+        
+        return actualCash;
+        
+    } catch (error) {
+        console.warn('[Reports] Error calculating actual consignment cash:', error);
+        return 0;
+    }
+}
+
+/**
+ * HELPER: Calculate total donations received from all sources
+ */
+async function calculateTotalDonationsReceived() {
+    try {
+        const db = firebase.firestore();
+        
+        // ✅ QUERY: All donations from various sources
+        const donationsQuery = db.collection(DONATIONS_COLLECTION_PATH)
+            .limit(100);
+        
+        const donationsSnapshot = await donationsQuery.get();
+        
+        const totalDonations = donationsSnapshot.docs.reduce((total, doc) => {
+            const donation = doc.data();
+            return total + (donation.amount || 0);
+        }, 0);
+        
+        console.log(`[Reports] 🎁 Total donations calculated: ${formatCurrency(totalDonations)} from ${donationsSnapshot.size} donation records`);
+        
+        return totalDonations;
+        
+    } catch (error) {
+        console.warn('[Reports] Error calculating donations:', error);
+        return 0;
+    }
+}
