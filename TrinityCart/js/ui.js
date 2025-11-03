@@ -10542,3 +10542,44 @@ export class ProgressToast {
     }
 }
 
+
+/**
+ * UI FUNCTION: Show financial health breakdown modal with detailed analysis
+ */
+window.showFinancialHealthBreakdownModal = async function() {
+    console.log('[ui.js] 💊 Opening financial health breakdown modal...');
+    
+    const modal = document.getElementById('financial-health-modal');
+    if (!modal) {
+        console.error('[ui.js] Financial health modal not found');
+        return;
+    }
+    
+    try {
+        // Show modal immediately
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('visible'), 10);
+        
+        // ✅ GET: Detailed revenue analysis
+        const periodSelector = document.getElementById('executive-dashboard-period');
+        const daysBack = parseInt(periodSelector?.value || '30');
+        
+        // Load true revenue analysis
+        const businessSummary = await generateBusinessSummaryOptimized(daysBack, { detailedAnalysis: true });
+        const trueRevenueAnalysis = await calculateTrueBusinessRevenue(businessSummary);
+        
+        // ✅ UPDATE: Modal with detailed breakdown
+        updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading financial health breakdown:', error);
+        
+        // Show error in modal
+        document.getElementById('modal-health-factors').innerHTML = `
+            <div class="text-red-600 text-center py-4">
+                <p class="font-semibold">Error loading financial analysis</p>
+                <p class="text-sm">${error.message}</p>
+            </div>
+        `;
+    }
+};
