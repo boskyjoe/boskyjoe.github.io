@@ -78,6 +78,86 @@ const sellingPriceDisplay = document.getElementById('sellingPrice-display');
 const rolesList = ['admin', 'sales_staff', 'inventory_manager', 'finance', 'team_lead', 'guest'];
 
 
+// ===================================================================
+// APPLICATION DASHBOARD CACHING SYSTEM
+// ===================================================================
+
+const DASHBOARD_CACHE_CONFIG = {
+    CACHE_DURATION_MINUTES: 10,        // 10-minute cache for financial accuracy
+    CACHE_KEY_PREFIX: 'app_dashboard_',
+    VISUAL_INDICATORS: true
+};
+
+
+/**
+ * ENHANCED: Get cached dashboard data with timestamp tracking
+ */
+function getCachedDashboardData(cacheKey) {
+    try {
+        const fullKey = DASHBOARD_CACHE_CONFIG.CACHE_KEY_PREFIX + cacheKey;
+        const cached = localStorage.getItem(fullKey);
+        
+        if (!cached) return null;
+        
+        const { data, timestamp } = JSON.parse(cached);
+        const ageMinutes = (Date.now() - timestamp) / (1000 * 60);
+        
+        console.log(`[Dashboard Cache] Checking cache age: ${ageMinutes.toFixed(1)} minutes old`);
+        
+        if (ageMinutes > DASHBOARD_CACHE_CONFIG.CACHE_DURATION_MINUTES) {
+            console.log(`[Dashboard Cache] Cache expired, removing...`);
+            localStorage.removeItem(fullKey);
+            return null;
+        }
+        
+        console.log(`[Dashboard Cache] Using cached data (${ageMinutes.toFixed(1)} minutes old)`);
+        return { data, timestamp, ageMinutes };
+        
+    } catch (error) {
+        console.warn(`[Dashboard Cache] Error reading cache:`, error);
+        return null;
+    }
+}
+
+/**
+ * ENHANCED: Store dashboard data with timestamp
+ */
+function setCachedDashboardData(cacheKey, data) {
+    try {
+        const fullKey = DASHBOARD_CACHE_CONFIG.CACHE_KEY_PREFIX + cacheKey;
+        const cacheObject = {
+            data,
+            timestamp: Date.now(),
+            cacheKey: cacheKey
+        };
+        
+        localStorage.setItem(fullKey, JSON.stringify(cacheObject));
+        console.log(`[Dashboard Cache] Data cached for ${DASHBOARD_CACHE_CONFIG.CACHE_DURATION_MINUTES} minutes`);
+        
+    } catch (error) {
+        console.warn(`[Dashboard Cache] Error storing cache:`, error);
+    }
+}
+
+/**
+ * ENHANCED: Clear dashboard cache (for refresh button)
+ */
+function clearDashboardCache() {
+    try {
+        const keys = Object.keys(localStorage);
+        const dashboardKeys = keys.filter(key => key.startsWith(DASHBOARD_CACHE_CONFIG.CACHE_KEY_PREFIX));
+        
+        dashboardKeys.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`[Dashboard Cache] Cleared cache: ${key}`);
+        });
+        
+        console.log(`[Dashboard Cache] ✅ All dashboard cache cleared (${dashboardKeys.length} entries)`);
+        
+    } catch (error) {
+        console.warn('[Dashboard Cache] Error clearing cache:', error);
+    }
+}
 
 
 /**
@@ -10981,7 +11061,7 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
  * 
  * @returns {Promise<void>}
  */
-export async function loadApplicationDashboard() {
+export async function loadApplicationDashboard(forceRefresh = false)  {
     console.log('[ui.js] 🏠 Loading application landing dashboard...');
     
     const currentUser = appState.currentUser;
@@ -10991,6 +11071,13 @@ export async function loadApplicationDashboard() {
     }
     
     try {
+
+        if (forceRefresh) {
+            console.log('[ui.js] 🗑️ Force refresh - clearing dashboard cache...');
+            clearDashboardCache();
+        }
+
+
         // Show loading state for all cards
         showApplicationDashboardLoading();
         
@@ -11026,12 +11113,18 @@ export async function loadApplicationDashboard() {
 /**
  * ADMIN LANDING DASHBOARD: Complete system metrics and financial overview
  */
-async function loadAdminLandingDashboard(user) {
+
+async function loadAdminLandingDashboard(user, forceRefresh = false) {
     console.log('[ui.js] 👑 Loading admin landing dashboard with expanded metrics...');
     
     document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - System Operations Overview';
     
     try {
+        // ===================================================================
+        // ✅ SINGLE CALL: Get outstanding metrics once with proper cache handling
+        // ===================================================================
+        const outstandingMetrics = await getOutstandingBalancesForDashboard(forceRefresh);
+
         // ===================================================================
         // ROW 1: CORE DAILY METRICS
         // ===================================================================
@@ -11061,13 +11154,21 @@ async function loadAdminLandingDashboard(user) {
         document.getElementById('dashboard-active-teams').textContent = teamsActive.toString();
         document.getElementById('dashboard-teams-details').textContent = `${teamsActive} teams participating`;
         
+        // Total products
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        const totalProducts = activeProducts.length;
+        const productsInStock = activeProducts.filter(p => (p.inventoryCount || 0) > 0).length;
+        
+        document.getElementById('dashboard-total-products').textContent = totalProducts.toString();
+        document.getElementById('dashboard-products-details').textContent = `${productsInStock} in stock, ${totalProducts - productsInStock} out of stock`;
+        
         // System health
         const systemHealth = calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts);
         document.getElementById('dashboard-performance-value').textContent = systemHealth.rating;
         document.getElementById('dashboard-performance-details').textContent = systemHealth.description;
-        
+
         // ===================================================================
-        // ROW 2: FINANCIAL METRICS (Admin Only)
+        // ROW 2: FINANCIAL METRICS (Using the single outstandingMetrics call)
         // ===================================================================
         
         // Show financial section for admin
@@ -11076,21 +11177,30 @@ async function loadAdminLandingDashboard(user) {
             financialSection.style.display = 'grid';
         }
         
-        // Get outstanding balance metrics (reuse payment management logic)
-        const outstandingMetrics = await getOutstandingBalancesForDashboard();
+        // ✅ CUSTOMER RECEIVABLES: Complete three-channel breakdown
+        document.getElementById('dashboard-customer-receivables').textContent = outstandingMetrics.formattedTotalReceivables;
         
-        // Customer receivables
-        document.getElementById('dashboard-customer-receivables').textContent = formatCurrency(outstandingMetrics.totalReceivables);
-        document.getElementById('dashboard-receivables-details').textContent = `${outstandingMetrics.receivablesCount} outstanding invoices`;
+        // ✅ ENHANCED DETAILS: Show breakdown by channel
+        const receivablesDetails = document.getElementById('dashboard-receivables-details');
+        if (receivablesDetails) {
+            const breakdown = outstandingMetrics.receivablesBreakdown;
+            receivablesDetails.innerHTML = `
+                <div class="text-xs space-y-1">
+                    <div>🏛️ Church: ${breakdown.churchStore.formatted}</div>
+                    <div>🍰 Tasty: ${breakdown.tastyTreats.formatted}</div>
+                    <div>👥 Teams: ${breakdown.consignment.formatted}</div>
+                </div>
+            `;
+        }
         
         // Supplier payables  
-        document.getElementById('dashboard-supplier-payables').textContent = formatCurrency(outstandingMetrics.totalPayables);
-        document.getElementById('dashboard-payables-details').textContent = `${outstandingMetrics.payablesCount} outstanding invoices`;
+        document.getElementById('dashboard-supplier-payables').textContent = outstandingMetrics.formattedTotalPayables;
+        document.getElementById('dashboard-payables-details').textContent = `${outstandingMetrics.payablesCount} supplier invoices`;
         
         // Net cash position
         const netPosition = outstandingMetrics.totalReceivables - outstandingMetrics.totalPayables;
         document.getElementById('dashboard-net-position').textContent = formatCurrency(netPosition);
-        document.getElementById('dashboard-net-details').textContent = netPosition >= 0 ? 'Positive position' : 'Negative position';
+        document.getElementById('dashboard-net-details').textContent = netPosition >= 0 ? 'Positive position' : 'Monitor cash flow';
         
         // Color coding for net position
         const netPositionCard = document.getElementById('dashboard-net-position');
@@ -11104,36 +11214,23 @@ async function loadAdminLandingDashboard(user) {
             netPositionCard.className = 'text-2xl font-bold text-red-900';
         }
         
-        const activeProducts = masterData.products.filter(p => p.isActive);
-        const totalProducts = activeProducts.length;
-        const productsInStock = activeProducts.filter(p => (p.inventoryCount || 0) > 0).length;
-        
-        document.getElementById('dashboard-total-products').textContent = totalProducts.toString();
-        document.getElementById('dashboard-products-details').textContent = `${productsInStock} in stock, ${totalProducts - productsInStock} out of stock`;
-        
-        console.log('[ui.js] ✅ Total products updated:', {
-            totalProducts,
-            inStock: productsInStock,
-            outOfStock: totalProducts - productsInStock
-        });
-        
-
-
         // Inventory value
         const inventoryValue = calculateCurrentInventoryValue();
         document.getElementById('dashboard-inventory-value').textContent = formatCurrency(inventoryValue.totalValue);
-        document.getElementById('dashboard-inventory-details').textContent = `${inventoryValue.productCount} products in stock`;
+        document.getElementById('dashboard-inventory-details').textContent = `${inventoryValue.productCount} products valued`;
 
-        console.log('[ui.js] ✅ Admin dashboard metrics updated:', {
+        console.log('[ui.js] ✅ Admin dashboard with complete financial overview:', {
             todaySales: todayMetrics.todayRevenue,
             weekSales: formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue),
             pendingActions: pendingActions.total,
+            totalProducts: totalProducts,
+            totalReceivables: outstandingMetrics.formattedTotalReceivables,
+            totalPayables: outstandingMetrics.formattedTotalPayables,
             netPosition: formatCurrency(netPosition),
-            inventoryValue: formatCurrency(inventoryValue.totalValue)
+            inventoryValue: formatCurrency(inventoryValue.totalValue),
+            cacheStatus: outstandingMetrics.metadata?.dataAccuracy || 'Unknown'
         });
         
-        
-
         // ===================================================================
         // ADMIN ACTIVITY & ALERTS  
         // ===================================================================
@@ -11184,51 +11281,316 @@ function getEnhancedInventoryAlerts() {
 /**
  * HELPER: Get outstanding balances for dashboard (simplified version)
  */
-async function getOutstandingBalancesForDashboard() {
+async function getOutstandingBalancesForDashboard(forceRefresh = false) {
+    const cacheKey = 'complete_outstanding_balances';
+    
+    // ✅ CACHE CHECK: 10-minute cache for financial data
+    if (!forceRefresh) {
+        const cached = getCachedDashboardData(cacheKey);
+        if (cached) {
+            console.log('[ui.js] ✅ Using cached outstanding balances - 0 Firestore reads');
+            
+            // Update cache indicators with cached data
+            updateDashboardCacheIndicators(cached);
+            
+            return cached.data;
+        }
+    }
+    
     try {
-        console.log('[ui.js] 💰 Getting outstanding balances for dashboard...');
+        console.log('[ui.js] 💰 Loading COMPLETE outstanding balances (NO LIMITS)...');
         
+        const startTime = Date.now();
         const db = firebase.firestore();
         
-        // Simple queries for dashboard (limited reads)
-        const [supplierInvoices, salesInvoices] = await Promise.all([
+        // ===================================================================
+        // ✅ CRITICAL: NO LIMITS - Get ALL outstanding records for accuracy
+        // ===================================================================
+        
+        const [directSalesInvoices, consignmentOrders, supplierInvoices] = await Promise.all([
+            // ✅ ALL direct sales outstanding (Church Store + Tasty Treats)
+            db.collection(SALES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                .get(), // ✅ NO LIMIT: Complete accuracy required
+                
+            // ✅ ALL consignment team settlements outstanding
+            db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
+                .where('status', '==', 'Active')
+                .where('balanceDue', '>', 0)
+                .get(), // ✅ NO LIMIT: Complete accuracy required
+                
+            // ✅ ALL supplier payables outstanding
             db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
                 .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
-                .limit(25)
-                .get(),
-            db.collection(SALES_COLLECTION_PATH)
-                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])  
-                .limit(25)
-                .get()
+                .get()  // ✅ NO LIMIT: Complete accuracy required
         ]);
         
-        const totalPayables = supplierInvoices.docs.reduce((sum, doc) => 
-            sum + (doc.data().balanceDue || 0), 0);
-        const totalReceivables = salesInvoices.docs.reduce((sum, doc) => 
-            sum + (doc.data().balanceDue || 0), 0);
+        const executionTime = Date.now() - startTime;
+        const totalReads = directSalesInvoices.size + consignmentOrders.size + supplierInvoices.size;
         
-        console.log('[ui.js] ✅ Outstanding balances calculated:', {
-            payables: formatCurrency(totalPayables),
-            receivables: formatCurrency(totalReceivables),
-            netPosition: formatCurrency(totalReceivables - totalPayables)
+        console.log(`[ui.js] 📊 COMPLETE FINANCIAL DATA RETRIEVED (${executionTime}ms):`);
+        console.log(`  📋 Direct Sales Outstanding: ${directSalesInvoices.size} invoices`);
+        console.log(`  👥 Consignment Outstanding: ${consignmentOrders.size} orders`);
+        console.log(`  📤 Supplier Outstanding: ${supplierInvoices.size} invoices`);
+        console.log(`  🔥 Total Firestore Reads: ${totalReads} (complete dataset)`);
+        
+        // ===================================================================
+        // ACCURATE CALCULATIONS (All data included)
+        // ===================================================================
+        
+        // Direct sales breakdown by store
+        let churchStoreReceivables = 0;
+        let tastyTreatsReceivables = 0;
+        let churchStoreCount = 0;
+        let tastyTreatsCount = 0;
+        
+        directSalesInvoices.docs.forEach(doc => {
+            const invoice = doc.data();
+            const balanceDue = invoice.balanceDue || 0;
+            const store = invoice.store || 'Unknown Store';
+            
+            if (store === 'Church Store') {
+                churchStoreReceivables += balanceDue;
+                churchStoreCount++;
+            } else if (store === 'Tasty Treats') {
+                tastyTreatsReceivables += balanceDue;
+                tastyTreatsCount++;
+            }
         });
         
-        return {
-            totalPayables,
+        // Consignment receivables with team analysis
+        let consignmentReceivables = 0;
+        const uniqueTeams = new Set();
+        
+        consignmentOrders.docs.forEach(doc => {
+            const order = doc.data();
+            const balanceDue = order.balanceDue || 0;
+            const teamName = order.teamName || 'Unknown Team';
+            
+            consignmentReceivables += balanceDue;
+            uniqueTeams.add(teamName);
+        });
+        
+        // Supplier payables
+        const totalPayables = supplierInvoices.docs.reduce((sum, doc) => 
+            sum + (doc.data().balanceDue || 0), 0);
+        
+        // Calculate totals
+        const totalReceivables = churchStoreReceivables + tastyTreatsReceivables + consignmentReceivables;
+        const netPosition = totalReceivables - totalPayables;
+        
+        const completeResult = {
+            // ✅ ACCURATE TOTALS
             totalReceivables,
-            payablesCount: supplierInvoices.size,
-            receivablesCount: salesInvoices.size
+            formattedTotalReceivables: formatCurrency(totalReceivables),
+            totalPayables,
+            formattedTotalPayables: formatCurrency(totalPayables),
+            netPosition,
+            formattedNetPosition: formatCurrency(netPosition),
+            
+            // ✅ COMPLETE BREAKDOWN
+            receivablesBreakdown: {
+                churchStore: {
+                    amount: churchStoreReceivables,
+                    formatted: formatCurrency(churchStoreReceivables),
+                    percentage: totalReceivables > 0 ? (churchStoreReceivables / totalReceivables * 100).toFixed(1) + '%' : '0%',
+                    invoiceCount: churchStoreCount
+                },
+                tastyTreats: {
+                    amount: tastyTreatsReceivables,
+                    formatted: formatCurrency(tastyTreatsReceivables),
+                    percentage: totalReceivables > 0 ? (tastyTreatsReceivables / totalReceivables * 100).toFixed(1) + '%' : '0%',
+                    invoiceCount: tastyTreatsCount
+                },
+                consignment: {
+                    amount: consignmentReceivables,
+                    formatted: formatCurrency(consignmentReceivables),
+                    percentage: totalReceivables > 0 ? (consignmentReceivables / totalReceivables * 100).toFixed(1) + '%' : '0%',
+                    orderCount: consignmentOrders.size,
+                    teamCount: uniqueTeams.size
+                }
+            },
+            
+            // ✅ METADATA: Complete transparency
+            metadata: {
+                calculatedAt: new Date().toISOString(),
+                loadedAt: new Date().toLocaleTimeString(),
+                executionTimeMs: executionTime,
+                totalFirestoreReads: totalReads,
+                dataAccuracy: '100% - Complete dataset (no limits)',
+                cacheKey: cacheKey,
+                cacheDurationMinutes: DASHBOARD_CACHE_CONFIG.CACHE_DURATION_MINUTES
+            }
         };
         
+        // ✅ CACHE: Store complete result for 10 minutes
+        setCachedDashboardData(cacheKey, completeResult);
+        
+        // Update cache indicators with fresh data
+        updateDashboardCacheIndicators({
+            timestamp: Date.now(),
+            ageMinutes: 0,
+            data: completeResult
+        });
+        
+        return completeResult;
+        
     } catch (error) {
-        console.warn('[ui.js] Error getting outstanding balances:', error);
-        return {
-            totalPayables: 0,
-            totalReceivables: 0,
-            payablesCount: 0,
-            receivablesCount: 0
-        };
+        console.error('[ui.js] Error calculating complete outstanding balances:', error);
+        throw error;
     }
+}
+
+
+**
+ * ENHANCED: Update dashboard cache indicators with visual status
+ */
+function updateDashboardCacheIndicators(cacheInfo) {
+    console.log('[ui.js] 🎨 Updating dashboard cache indicators...');
+    
+    if (!DASHBOARD_CACHE_CONFIG.VISUAL_INDICATORS) return;
+    
+    const ageMinutes = cacheInfo.ageMinutes || 0;
+    const loadedTime = cacheInfo.data?.metadata?.loadedAt || new Date().toLocaleTimeString();
+    const cacheDuration = DASHBOARD_CACHE_CONFIG.CACHE_DURATION_MINUTES;
+    
+    // ===================================================================
+    // ADD CACHE INDICATOR TO WELCOME HEADER
+    // ===================================================================
+    
+    const welcomeHeader = document.querySelector('#dashboard-view .bg-white.rounded-lg.shadow-lg.p-6.mb-8');
+    if (welcomeHeader) {
+        // Remove existing indicator
+        const existingIndicator = welcomeHeader.querySelector('.cache-status-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Create new indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'cache-status-indicator mt-4 p-3 rounded-lg border text-sm';
+        
+        // ✅ VISUAL STATUS: Determine cache health and styling
+        let statusClass, statusIcon, statusText, countdownClass;
+        
+        if (ageMinutes === 0) {
+            // Fresh data
+            statusClass = 'bg-green-50 border-green-200 text-green-800';
+            statusIcon = '✅';
+            statusText = 'Fresh Data';
+            countdownClass = 'text-green-600';
+        } else if (ageMinutes < cacheDuration * 0.5) {
+            // Good cache (less than 50% of duration)
+            statusClass = 'bg-blue-50 border-blue-200 text-blue-800';
+            statusIcon = '🔵';
+            statusText = 'Good Cache';
+            countdownClass = 'text-blue-600';
+        } else if (ageMinutes < cacheDuration * 0.8) {
+            // Aging cache (50-80% of duration)
+            statusClass = 'bg-yellow-50 border-yellow-200 text-yellow-800';
+            statusIcon = '🟡';
+            statusText = 'Aging Cache';
+            countdownClass = 'text-yellow-600';
+        } else if (ageMinutes < cacheDuration) {
+            // Expires soon (80-100% of duration)
+            statusClass = 'bg-orange-50 border-orange-200 text-orange-800';
+            statusIcon = '🟠';
+            statusText = 'Expires Soon';
+            countdownClass = 'text-orange-600 animate-pulse';
+        } else {
+            // Expired
+            statusClass = 'bg-red-50 border-red-200 text-red-800';
+            statusIcon = '🔴';
+            statusText = 'Cache Expired';
+            countdownClass = 'text-red-600 animate-pulse';
+        }
+        
+        indicator.className += ` ${statusClass}`;
+        
+        const expiryTime = new Date(cacheInfo.timestamp + (cacheDuration * 60 * 1000));
+        
+        indicator.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-lg">${statusIcon}</span>
+                        <span class="font-semibold">${statusText}</span>
+                    </div>
+                    <div class="text-xs space-x-3">
+                        <span><strong>Loaded:</strong> ${loadedTime}</span>
+                        <span><strong>Duration:</strong> ${cacheDuration} min</span>
+                        <span><strong>Expires:</strong> <span id="cache-expiry-countdown" class="${countdownClass}">${expiryTime.toLocaleTimeString()}</span></span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="text-xs ${countdownClass}">
+                        <span id="cache-time-remaining">Calculating...</span>
+                    </div>
+                    <button onclick="refreshApplicationDashboard(true)" 
+                           class="px-3 py-1 bg-white bg-opacity-50 hover:bg-opacity-75 rounded text-xs font-medium transition-colors">
+                        🔄 Refresh Now
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Insert cache indicator
+        welcomeHeader.appendChild(indicator);
+        
+        // Start countdown timer
+        startDashboardCacheCountdown(cacheInfo.timestamp, cacheDuration);
+    }
+    
+    console.log('[ui.js] ✅ Cache indicators updated with visual status');
+}
+
+
+/**
+ * ENHANCED: Cache countdown with real-time updates
+ */
+function startDashboardCacheCountdown(cacheTimestamp, durationMinutes) {
+    const countdownElement = document.getElementById('cache-time-remaining');
+    const expiryCountdownElement = document.getElementById('cache-expiry-countdown');
+    
+    if (!countdownElement) return;
+    
+    const countdown = setInterval(() => {
+        const now = Date.now();
+        const ageMs = now - cacheTimestamp;
+        const ageMinutes = ageMs / (1000 * 60);
+        const remainingMinutes = durationMinutes - ageMinutes;
+        
+        if (remainingMinutes <= 0) {
+            // Cache expired
+            countdownElement.textContent = '⚠️ Cache Expired';
+            countdownElement.className = 'text-xs text-red-600 font-semibold animate-pulse';
+            
+            if (expiryCountdownElement) {
+                expiryCountdownElement.textContent = 'Expired - Refresh Recommended';
+                expiryCountdownElement.className = 'text-red-600 font-semibold animate-pulse';
+            }
+            
+            clearInterval(countdown);
+            
+        } else {
+            // Show remaining time
+            const minutes = Math.floor(remainingMinutes);
+            const seconds = Math.floor((remainingMinutes - minutes) * 60);
+            
+            countdownElement.textContent = `${minutes}m ${seconds}s remaining`;
+            
+            // Visual feedback based on time remaining
+            if (remainingMinutes <= 2) {
+                countdownElement.className = 'text-xs text-red-600 font-semibold animate-pulse';
+            } else if (remainingMinutes <= 4) {
+                countdownElement.className = 'text-xs text-orange-600 font-medium';
+            } else if (remainingMinutes <= 7) {
+                countdownElement.className = 'text-xs text-yellow-600';
+            } else {
+                countdownElement.className = 'text-xs text-green-600';
+            }
+        }
+    }, 1000); // Update every second
 }
 
 
