@@ -6988,7 +6988,7 @@ function updateExecutiveDashboardDisplay(dashboardData) {
             const churchTransactionsElement = document.getElementById('church-store-executive-transactions');
             
             if (churchRevenueElement) churchRevenueElement.textContent = formatCurrency(directSalesChannel.revenue * 0.6); // Estimate
-            if (churchTransactionsElement) churchTransactionsElement.textContent = 'Data unavailable';
+            if (churchTransactionsElement) churchTransactionsElement.textContent = 'Data unavailable:Number is a projection which is 60% of the Store Revenue';
         }
         
         // Tasty Treats
