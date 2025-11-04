@@ -11020,97 +11020,105 @@ export async function loadApplicationDashboard() {
 }
 
 /**
- * ADMIN LANDING DASHBOARD: Comprehensive system overview for administrators
+ * ADMIN LANDING DASHBOARD: Complete system metrics and financial overview
  */
 async function loadAdminLandingDashboard(user) {
-    console.log('[ui.js] 👑 Loading admin landing dashboard...');
+    console.log('[ui.js] 👑 Loading admin landing dashboard with expanded metrics...');
     
-    // Update welcome subtitle
-    document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - Complete System Overview';
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - System Operations Overview';
     
     try {
         // ===================================================================
-        // METRIC 1: TODAY'S SALES (All channels)
+        // ROW 1: CORE DAILY METRICS
         // ===================================================================
         
+        // Today's sales
         const todayMetrics = await getDailyDashboardOptimized();
-        
         document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
         document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
         
-        console.log('[ui.js] ✅ Today\'s sales updated:', todayMetrics.todayRevenue);
+        // This week's sales
+        const weekMetrics = await generateBusinessSummaryOptimized(7, { useCache: true });
+        document.getElementById('dashboard-week-sales').textContent = formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue);
+        document.getElementById('dashboard-week-details').textContent = 'All channels combined';
         
-        // ===================================================================
-        // METRIC 2: PENDING ACTIONS (Payment verifications, approvals)
-        // ===================================================================
-        
+        // Pending actions
         const pendingActions = await getAdminPendingActions();
-        
         document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
         document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
         
-        // Color coding based on urgency
-        const actionsCard = document.getElementById('dashboard-pending-actions');
-        if (pendingActions.total > 5) {
-            actionsCard.className = 'text-3xl font-bold text-red-900 animate-pulse';
-        } else if (pendingActions.total > 0) {
-            actionsCard.className = 'text-3xl font-bold text-yellow-900';
-        } else {
-            actionsCard.className = 'text-3xl font-bold text-green-900';
-        }
-        
-        console.log('[ui.js] ✅ Pending actions updated:', pendingActions.total);
-        
-        // ===================================================================
-        // METRIC 3: LOW STOCK ALERT (Inventory management)
-        // ===================================================================
-        
-        const inventoryAlerts = getInventoryAlerts();
-        
+        // Low stock alert
+        const inventoryAlerts = getEnhancedInventoryAlerts();
         document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
         document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.description;
         
-        console.log('[ui.js] ✅ Low stock updated:', inventoryAlerts.lowStockCount);
+        // Active teams
+        const teamsActive = masterData.teams.filter(team => team.isActive).length;
+        document.getElementById('dashboard-active-teams').textContent = teamsActive.toString();
+        document.getElementById('dashboard-teams-details').textContent = `${teamsActive} teams participating`;
         
-        // ===================================================================
-        // METRIC 4: SYSTEM PERFORMANCE (Overall health)
-        // ===================================================================
-        
-        document.getElementById('dashboard-performance-title').textContent = 'System Health';
-        
+        // System health
         const systemHealth = calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts);
         document.getElementById('dashboard-performance-value').textContent = systemHealth.rating;
         document.getElementById('dashboard-performance-details').textContent = systemHealth.description;
         
-        // Color coding for system health
-        const performanceCard = document.getElementById('dashboard-performance-value');
-        const healthColors = {
-            'Excellent': 'text-3xl font-bold text-green-900',
-            'Good': 'text-3xl font-bold text-blue-900',
-            'Fair': 'text-3xl font-bold text-yellow-900',
-            'Attention Needed': 'text-3xl font-bold text-red-900'
-        };
-        performanceCard.className = healthColors[systemHealth.rating] || 'text-3xl font-bold text-gray-900';
-        
         // ===================================================================
-        // ADMIN QUICK ACTIONS
+        // ROW 2: FINANCIAL METRICS (Admin Only)
         // ===================================================================
         
-        updateQuickActions([
-            { icon: '💳', title: 'Payments', action: 'showPaymentManagementView()', color: 'red', description: 'Verify payments' },
-            { icon: '🏪', title: 'New Sale', action: 'showSalesView()', color: 'green', description: 'Process sales' },
-            { icon: '📦', title: 'Inventory', action: 'showProductsView()', color: 'orange', description: 'Manage products' },
-            { icon: '👥', title: 'Teams', action: 'showChurchTeamsView()', color: 'purple', description: 'Manage teams' },
-            { icon: '🛒', title: 'Purchases', action: 'showPurchasesView()', color: 'blue', description: 'Supplier orders' },
-            { icon: '📊', title: 'Reports', action: 'showExecutiveDashboardView()', color: 'indigo', description: 'Analytics' }
-        ]);
+        // Show financial section for admin
+        const financialSection = document.getElementById('dashboard-financial-section');
+        if (financialSection) {
+            financialSection.style.display = 'grid';
+        }
+        
+        // Get outstanding balance metrics (reuse payment management logic)
+        const outstandingMetrics = await getOutstandingBalancesForDashboard();
+        
+        // Customer receivables
+        document.getElementById('dashboard-customer-receivables').textContent = formatCurrency(outstandingMetrics.totalReceivables);
+        document.getElementById('dashboard-receivables-details').textContent = `${outstandingMetrics.receivablesCount} outstanding invoices`;
+        
+        // Supplier payables  
+        document.getElementById('dashboard-supplier-payables').textContent = formatCurrency(outstandingMetrics.totalPayables);
+        document.getElementById('dashboard-payables-details').textContent = `${outstandingMetrics.payablesCount} outstanding invoices`;
+        
+        // Net cash position
+        const netPosition = outstandingMetrics.totalReceivables - outstandingMetrics.totalPayables;
+        document.getElementById('dashboard-net-position').textContent = formatCurrency(netPosition);
+        document.getElementById('dashboard-net-details').textContent = netPosition >= 0 ? 'Positive position' : 'Negative position';
+        
+        // Color coding for net position
+        const netPositionCard = document.getElementById('dashboard-net-position');
+        if (netPosition > 10000) {
+            netPositionCard.className = 'text-2xl font-bold text-green-900';
+        } else if (netPosition >= 0) {
+            netPositionCard.className = 'text-2xl font-bold text-teal-900';
+        } else if (netPosition > -10000) {
+            netPositionCard.className = 'text-2xl font-bold text-yellow-900';
+        } else {
+            netPositionCard.className = 'text-2xl font-bold text-red-900';
+        }
+        
+        // Inventory value
+        const inventoryValue = calculateCurrentInventoryValue();
+        document.getElementById('dashboard-inventory-value').textContent = formatCurrency(inventoryValue.totalValue);
+        document.getElementById('dashboard-inventory-details').textContent = `${inventoryValue.productCount} products in stock`;
+        
+        console.log('[ui.js] ✅ Admin dashboard metrics updated:', {
+            todaySales: todayMetrics.todayRevenue,
+            weekSales: formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue),
+            pendingActions: pendingActions.total,
+            netPosition: formatCurrency(netPosition),
+            inventoryValue: formatCurrency(inventoryValue.totalValue)
+        });
         
         // ===================================================================
-        // ADMIN ACTIVITY & ALERTS
+        // ADMIN ACTIVITY & ALERTS  
         // ===================================================================
         
         await updateRecentActivity('admin', user);
-        await updateSystemAlerts('admin', user, { pendingActions, inventoryAlerts, systemHealth });
+        await updateSystemAlerts('admin', user, { pendingActions, inventoryAlerts, systemHealth, outstandingMetrics });
         
     } catch (error) {
         console.error('[ui.js] Error loading admin landing dashboard:', error);
@@ -11119,57 +11127,171 @@ async function loadAdminLandingDashboard(user) {
 }
 
 
+// ===================================================================
+// ENHANCED HELPER FUNCTIONS  
+// ===================================================================
+
 /**
- * TEAM LEAD LANDING DASHBOARD: Team-focused metrics and consignment actions
+ * HELPER: Enhanced inventory alerts with more intelligence
+ */
+function getEnhancedInventoryAlerts() {
+    const lowThreshold = 10;
+    const criticalThreshold = 0;
+    
+    const activeProducts = masterData.products.filter(p => p.isActive);
+    const criticalStock = activeProducts.filter(p => (p.inventoryCount || 0) === criticalThreshold);
+    const lowStock = activeProducts.filter(p => {
+        const count = p.inventoryCount || 0;
+        return count > criticalThreshold && count <= lowThreshold;
+    });
+    
+    const totalAlert = criticalStock.length + lowStock.length;
+    
+    return {
+        lowStockCount: totalAlert,
+        criticalCount: criticalStock.length,
+        lowCount: lowStock.length,
+        healthRating: criticalStock.length > 0 ? 'Critical' : 
+                     totalAlert > 15 ? 'Poor' : 
+                     totalAlert > 5 ? 'Fair' : 'Good',
+        description: totalAlert > 0 ? 
+            `${totalAlert} product${totalAlert > 1 ? 's' : ''} need attention` :
+            'All inventory levels healthy'
+    };
+}
+
+/**
+ * HELPER: Get outstanding balances for dashboard (simplified version)
+ */
+async function getOutstandingBalancesForDashboard() {
+    try {
+        console.log('[ui.js] 💰 Getting outstanding balances for dashboard...');
+        
+        const db = firebase.firestore();
+        
+        // Simple queries for dashboard (limited reads)
+        const [supplierInvoices, salesInvoices] = await Promise.all([
+            db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])
+                .limit(25)
+                .get(),
+            db.collection(SALES_COLLECTION_PATH)
+                .where('paymentStatus', 'in', ['Unpaid', 'Partially Paid'])  
+                .limit(25)
+                .get()
+        ]);
+        
+        const totalPayables = supplierInvoices.docs.reduce((sum, doc) => 
+            sum + (doc.data().balanceDue || 0), 0);
+        const totalReceivables = salesInvoices.docs.reduce((sum, doc) => 
+            sum + (doc.data().balanceDue || 0), 0);
+        
+        console.log('[ui.js] ✅ Outstanding balances calculated:', {
+            payables: formatCurrency(totalPayables),
+            receivables: formatCurrency(totalReceivables),
+            netPosition: formatCurrency(totalReceivables - totalPayables)
+        });
+        
+        return {
+            totalPayables,
+            totalReceivables,
+            payablesCount: supplierInvoices.size,
+            receivablesCount: salesInvoices.size
+        };
+        
+    } catch (error) {
+        console.warn('[ui.js] Error getting outstanding balances:', error);
+        return {
+            totalPayables: 0,
+            totalReceivables: 0,
+            payablesCount: 0,
+            receivablesCount: 0
+        };
+    }
+}
+
+
+/**
+ * HELPER: Calculate current inventory value
+ */
+function calculateCurrentInventoryValue() {
+    const activeProducts = masterData.products.filter(p => p.isActive);
+    
+    let totalValue = 0;
+    let productCount = 0;
+    
+    activeProducts.forEach(product => {
+        const stock = product.inventoryCount || 0;
+        const unitPrice = product.unitPrice || 0;
+        
+        if (stock > 0 && unitPrice > 0) {
+            totalValue += stock * unitPrice;
+            productCount++;
+        }
+    });
+    
+    return {
+        totalValue,
+        productCount,
+        averageValue: productCount > 0 ? totalValue / productCount : 0
+    };
+}
+
+
+
+
+
+
+/**
+ * TEAM LEAD DASHBOARD: Team-focused metrics (hide financial details)
  */
 async function loadTeamLeadLandingDashboard(user) {
-    console.log('[ui.js] 👥 Loading team lead landing dashboard...');
+    console.log('[ui.js] 👥 Loading team lead dashboard...');
     
-    document.getElementById('dashboard-welcome-subtitle').textContent = 'Team Lead Dashboard - Your Team Management';
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Team Lead Dashboard - Your Team Operations';
+    
+    // Hide financial section for team leads
+    const financialSection = document.getElementById('dashboard-financial-section');
+    if (financialSection) {
+        financialSection.style.display = 'none';
+    }
     
     try {
-        // ✅ TEAM-SPECIFIC METRICS
+        const todayMetrics = await getDailyDashboardOptimized();
         const teamMetrics = await getTeamLeadMetrics(user.email);
         
-        // Today's team activity
-        document.getElementById('dashboard-today-sales').textContent = formatCurrency(teamMetrics.teamSalesToday || 0);
-        document.getElementById('dashboard-today-transactions').textContent = `${teamMetrics.teamActivitiesToday || 0} activities`;
+        // Update cards with team context
+        document.getElementById('dashboard-today-sales').textContent = formatCurrency(teamMetrics.teamContribution || 0);
+        document.getElementById('dashboard-today-transactions').textContent = `Team contribution today`;
         
-        // Team actions
-        document.getElementById('dashboard-actions-title').textContent = 'My Team Actions';
+        document.getElementById('dashboard-week-sales').textContent = formatCurrency(teamMetrics.weeklyTeamSales || 0);
+        document.getElementById('dashboard-week-details').textContent = 'Team sales this week';
+        
+        document.getElementById('dashboard-actions-title').textContent = 'Team Actions';
         document.getElementById('dashboard-pending-actions').textContent = teamMetrics.pendingTeamActions?.toString() || '0';
-        document.getElementById('dashboard-actions-details').textContent = teamMetrics.teamActionsDescription || 'No pending actions';
+        document.getElementById('dashboard-actions-details').textContent = 'Consignment activities';
         
-        // Team inventory (consignment items)
-        document.getElementById('dashboard-low-stock').textContent = teamMetrics.lowConsignmentItems?.toString() || '0';
+        document.getElementById('dashboard-low-stock').textContent = teamMetrics.consignmentItemsLow?.toString() || '0';
         document.getElementById('dashboard-low-stock-details').textContent = 'Consignment items low';
         
-        // Team performance  
-        document.getElementById('dashboard-performance-title').textContent = 'Team Performance';
-        document.getElementById('dashboard-performance-value').textContent = teamMetrics.performanceRating || 'Good';
-        document.getElementById('dashboard-performance-details').textContent = teamMetrics.performanceDetails || 'Active team member';
+        document.getElementById('dashboard-active-teams').textContent = '1';
+        document.getElementById('dashboard-teams-details').textContent = 'Your team';
         
-        // Team-specific quick actions
-        updateQuickActions([
-            { icon: '📋', title: 'New Request', action: 'showConsignmentView()', color: 'green', description: 'Request products' },
-            { icon: '💰', title: 'Submit Payment', action: 'showConsignmentView()', color: 'blue', description: 'Team settlement' },
-            { icon: '📊', title: 'Team Reports', action: 'showTeamReportsView()', color: 'purple', description: 'Team analytics' },
-            { icon: '👥', title: 'My Team', action: 'showChurchTeamsView()', color: 'indigo', description: 'Team management' }
-        ]);
+        document.getElementById('dashboard-performance-title').textContent = 'Team Performance';
+        document.getElementById('dashboard-performance-value').textContent = teamMetrics.performanceRating || 'Active';
+        document.getElementById('dashboard-performance-details').textContent = teamMetrics.performanceDetails || 'Team operations';
         
         await updateRecentActivity('team_lead', user);
         await updateSystemAlerts('team_lead', user, { teamMetrics });
         
     } catch (error) {
-        console.error('[ui.js] Error loading team lead dashboard:', error);
-        
-        // Fallback to basic team dashboard
-        document.getElementById('dashboard-today-sales').textContent = 'Team Focus';
-        document.getElementById('dashboard-pending-actions').textContent = '0';
-        document.getElementById('dashboard-low-stock').textContent = 'N/A';
-        document.getElementById('dashboard-performance-value').textContent = 'Active';
+        console.error('[ui.js] Team lead dashboard error:', error);
+        throw error;
     }
 }
+
+
+
 
 /**
  * SALES STAFF LANDING DASHBOARD: Sales-focused metrics and actions
@@ -11277,15 +11399,19 @@ async function loadInventoryManagerLandingDashboard(user) {
  * HELPER: Show loading state for all dashboard elements
  */
 function showApplicationDashboardLoading() {
+    // Core metrics
     document.getElementById('dashboard-today-sales').textContent = 'Loading...';
+    document.getElementById('dashboard-week-sales').textContent = 'Loading...';
     document.getElementById('dashboard-pending-actions').textContent = 'Loading...';
     document.getElementById('dashboard-low-stock').textContent = 'Loading...';
+    document.getElementById('dashboard-active-teams').textContent = 'Loading...';
     document.getElementById('dashboard-performance-value').textContent = 'Loading...';
     
-    document.getElementById('dashboard-today-transactions').textContent = 'Loading...';
-    document.getElementById('dashboard-actions-details').textContent = 'Checking actions...';
-    document.getElementById('dashboard-low-stock-details').textContent = 'Checking inventory...';
-    document.getElementById('dashboard-performance-details').textContent = 'Analyzing...';
+    // Financial metrics (if visible)
+    document.getElementById('dashboard-customer-receivables').textContent = 'Loading...';
+    document.getElementById('dashboard-supplier-payables').textContent = 'Loading...';
+    document.getElementById('dashboard-net-position').textContent = 'Loading...';
+    document.getElementById('dashboard-inventory-value').textContent = 'Loading...';
 }
 
 /**
