@@ -457,3 +457,22 @@ main {
 #pmt-mgmt-team-grid .ag-cell[col-id="actions"]::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+
+
+/* ===================================================================== */
+/* Landing page style 
+/* ===================================================================== */
+
+/* This ensures our landing page styles are isolated */
+.landing-page-content .landing-features-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile: 1 column */
+    gap: 2rem; /* Corresponds to gap-8 */
+}
+
+/* Apply 3-column layout only on medium screens and up */
+@media (min-width: 768px) {
+    .landing-page-content .landing-features-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)); /* Desktop: 3 columns */
+    }
+}
