@@ -601,10 +601,6 @@ const EventHandlers = {
         //'executive-dashboard-view': showExecutiveDashboardView,
         'dashboard-view': async () => {
             showView('dashboard-view');
-            await loadApplicationDashboard(); // ✅ Load application landing dashboard
-        },
-        '#refresh-landing-dashboard': async () => {
-            console.log('[main.js] Application dashboard refresh requested');
             await loadApplicationDashboard();
         },
         'executive-dashboard-view': async () => {
@@ -1624,7 +1620,10 @@ function handleStandaloneButtons(target, event) {
             console.log('[main.js] Executive dashboard manual refresh');
             await loadExecutiveDashboard();
         },
-        
+        '#refresh-landing-dashboard': async () => {
+            console.log('[main.js] Application dashboard refresh requested');
+            await refreshApplicationDashboard(true); // Force refresh
+        },
 
         
         '.action-btn-remove-from-cart': () => {
@@ -6936,6 +6935,38 @@ async function handlePmtMgmtViewSettlementHistory(target) {
         }, 2000);
     }
 }
+
+/**
+ * GLOBAL: Refresh application dashboard (accessible from onclick handlers)
+ */
+window.refreshApplicationDashboard = async function(forceRefresh = false) {
+    console.log(`[main.js] 🔄 Global dashboard refresh (force: ${forceRefresh})`);
+    
+    try {
+        ProgressToast.show('Refreshing Dashboard', 'info');
+        ProgressToast.updateProgress('Clearing cache and loading fresh data...', 50);
+        
+        await loadApplicationDashboard(forceRefresh);
+        
+        ProgressToast.updateProgress('Dashboard refreshed successfully!', 100);
+        ProgressToast.showSuccess('Dashboard updated with latest data!');
+        
+        setTimeout(() => ProgressToast.hide(300), 800);
+        
+    } catch (error) {
+        console.error('[main.js] Dashboard refresh failed:', error);
+        ProgressToast.showError('Dashboard refresh failed - please try again');
+        
+        setTimeout(() => {
+            showModal('error', 'Dashboard Refresh Failed', 
+                `Could not refresh dashboard data.\n\n` +
+                `Error: ${error.message}\n\n` +
+                `Please check your connection and try again.`
+            );
+        }, 2000);
+    }
+};
+
 
 // --- APPLICATION INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
