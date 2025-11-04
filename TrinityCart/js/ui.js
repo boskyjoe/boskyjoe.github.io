@@ -2300,6 +2300,8 @@ function loadBulkProductsData() {
         // Get active products and load into grid
         const activeProducts = masterData.products.filter(p => p.isActive);
         console.log(`[ui.js] Loading ${activeProducts.length} products:`, activeProducts.slice(0, 2));
+        console.log('Active products count:', activeProducts.length);
+        console.log('Products in stock:', activeProducts.filter(p => (p.inventoryCount || 0) > 0).length);
         
         bulkAddProductsGridApi.setGridOption('loading', true);
         bulkAddProductsGridApi.setGridOption('rowData', activeProducts);
@@ -11102,11 +11104,26 @@ async function loadAdminLandingDashboard(user) {
             netPositionCard.className = 'text-2xl font-bold text-red-900';
         }
         
+        const activeProducts = masterData.products.filter(p => p.isActive);
+        const totalProducts = activeProducts.length;
+        const productsInStock = activeProducts.filter(p => (p.inventoryCount || 0) > 0).length;
+        
+        document.getElementById('dashboard-total-products').textContent = totalProducts.toString();
+        document.getElementById('dashboard-products-details').textContent = `${productsInStock} in stock, ${totalProducts - productsInStock} out of stock`;
+        
+        console.log('[ui.js] ✅ Total products updated:', {
+            totalProducts,
+            inStock: productsInStock,
+            outOfStock: totalProducts - productsInStock
+        });
+        
+
+
         // Inventory value
         const inventoryValue = calculateCurrentInventoryValue();
         document.getElementById('dashboard-inventory-value').textContent = formatCurrency(inventoryValue.totalValue);
         document.getElementById('dashboard-inventory-details').textContent = `${inventoryValue.productCount} products in stock`;
-        
+
         console.log('[ui.js] ✅ Admin dashboard metrics updated:', {
             todaySales: todayMetrics.todayRevenue,
             weekSales: formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue),
@@ -11115,6 +11132,8 @@ async function loadAdminLandingDashboard(user) {
             inventoryValue: formatCurrency(inventoryValue.totalValue)
         });
         
+        
+
         // ===================================================================
         // ADMIN ACTIVITY & ALERTS  
         // ===================================================================
@@ -11401,19 +11420,29 @@ async function loadInventoryManagerLandingDashboard(user) {
  * HELPER: Show loading state for all dashboard elements
  */
 function showApplicationDashboardLoading() {
-    // Core metrics
+    // Row 1: Core metrics
     document.getElementById('dashboard-today-sales').textContent = 'Loading...';
     document.getElementById('dashboard-week-sales').textContent = 'Loading...';
     document.getElementById('dashboard-pending-actions').textContent = 'Loading...';
     document.getElementById('dashboard-low-stock').textContent = 'Loading...';
     document.getElementById('dashboard-active-teams').textContent = 'Loading...';
+    document.getElementById('dashboard-total-products').textContent = 'Loading...'; // ✅ ADD: This was missing
     document.getElementById('dashboard-performance-value').textContent = 'Loading...';
     
-    // Financial metrics (if visible)
+    // Row 2: Financial metrics (if visible)
     document.getElementById('dashboard-customer-receivables').textContent = 'Loading...';
     document.getElementById('dashboard-supplier-payables').textContent = 'Loading...';
     document.getElementById('dashboard-net-position').textContent = 'Loading...';
     document.getElementById('dashboard-inventory-value').textContent = 'Loading...';
+    
+    // Details
+    document.getElementById('dashboard-today-transactions').textContent = 'Loading...';
+    document.getElementById('dashboard-week-details').textContent = 'Loading...';
+    document.getElementById('dashboard-actions-details').textContent = 'Checking actions...';
+    document.getElementById('dashboard-low-stock-details').textContent = 'Checking inventory...';
+    document.getElementById('dashboard-teams-details').textContent = 'Loading...';
+    document.getElementById('dashboard-products-details').textContent = 'Loading...'; // ✅ ADD: This was missing
+    document.getElementById('dashboard-performance-details').textContent = 'Analyzing...';
 }
 
 /**
