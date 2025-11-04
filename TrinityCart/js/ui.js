@@ -10967,280 +10967,45 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
 }
 
 
-
-
-/**
- * APPLICATION DASHBOARD: Load role-based landing dashboard (transactional focus)
- * 
- * This is different from Executive Dashboard - it's a transactional landing page
- * that shows today's key metrics, pending actions, and role-based quick actions.
- */
 export async function loadApplicationDashboard() {
-    console.log('[ui.js] 🏠 Loading application landing dashboard...');
+    console.log('[ui.js] 🏠 Loading simple application dashboard...');
     
     const currentUser = appState.currentUser;
-    if (!currentUser) {
-        console.log('[ui.js] No user logged in - showing login prompt');
-        return;
-    }
+    if (!currentUser) return;
     
     try {
-        // Show loading state
-        showApplicationDashboardLoading();
+        // ✅ SIMPLE: Update your existing 4 cards
+        const cards = document.querySelectorAll('#dashboard-view .admin-card');
         
-        // ✅ ROLE-BASED: Different data for different users
         if (currentUser.role === 'admin' || currentUser.role === 'finance') {
-            await loadAdminDashboard(currentUser);
-        } else if (currentUser.role === 'team_lead') {
-            await loadTeamLeadDashboard(currentUser);
-        } else if (currentUser.role === 'sales_staff' || currentUser.role === 'inventory_manager') {
-            await loadStaffDashboard(currentUser);
+            // Get today's sales
+            const todayMetrics = await getDailyDashboardOptimized();
+            
+            // Update card 1: Today's Sales
+            if (cards[0]) {
+                cards[0].querySelector('p').textContent = todayMetrics.todayRevenue;
+            }
+            
+            // Update card 2: Low Stock  
+            const lowStockCount = masterData.products.filter(p => (p.inventoryCount || 0) <= 10).length;
+            if (cards[1]) {
+                cards[1].querySelector('p').textContent = lowStockCount.toString();
+            }
+            
+            // Update card 3 & 4: Set to basic values for now
+            if (cards[2]) cards[2].querySelector('p').textContent = '₹0.00';
+            if (cards[3]) cards[3].querySelector('p').textContent = '₹0.00';
+            
         } else {
-            await loadGuestDashboard(currentUser);
+            // Non-admin users get limited view
+            if (cards[0]) cards[0].querySelector('p').textContent = 'Limited Access';
+            if (cards[1]) cards[1].querySelector('p').textContent = 'N/A';
+            if (cards[2]) cards[2].querySelector('p').textContent = 'N/A';
+            if (cards[3]) cards[3].querySelector('p').textContent = 'N/A';
         }
         
-        // Update refresh timestamp
-        document.getElementById('dashboard-last-refresh').textContent = new Date().toLocaleTimeString();
-        
-        console.log(`[ui.js] ✅ Application dashboard loaded for ${currentUser.role}`);
-        
     } catch (error) {
-        console.error('[ui.js] Error loading application dashboard:', error);
-        showApplicationDashboardError(error);
+        console.error('[ui.js] Dashboard error:', error);
     }
 }
 
-/**
- * ADMIN DASHBOARD: Comprehensive system overview
- */
-async function loadAdminDashboard(user) {
-    console.log('[ui.js] 👑 Loading admin dashboard with comprehensive metrics...');
-    
-    // Update welcome message
-    document.getElementById('dashboard-welcome-title').textContent = `Welcome back, ${user.displayName}`;
-    document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - System Overview';
-    
-    try {
-        // ✅ TODAY'S METRICS: Get today's performance
-        const todayMetrics = await getDailyDashboardOptimized();
-        
-        // Update today's sales
-        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
-        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
-        
-        // ✅ ADMIN ACTIONS: Payment verifications, system management
-        const pendingActions = await getAdminPendingActions();
-        document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
-        document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
-        
-        // ✅ INVENTORY: Low stock analysis
-        const inventoryAlerts = getInventoryAlerts();
-        document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
-        document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.description;
-        
-        // ✅ PERFORMANCE: Overall system health
-        document.getElementById('dashboard-performance-title').textContent = 'System Health';
-        document.getElementById('dashboard-performance-value').textContent = 'Excellent';
-        document.getElementById('dashboard-performance-details').textContent = 'All systems operational';
-        
-        // ✅ QUICK ACTIONS: Admin-specific actions
-        updateQuickActions([
-            { icon: '💳', title: 'Payment Management', action: 'showPaymentManagementView()', color: 'blue' },
-            { icon: '📊', title: 'Executive Reports', action: 'showExecutiveDashboardView()', color: 'purple' },
-            { icon: '🏪', title: 'Sales Management', action: 'showSalesView()', color: 'green' },
-            { icon: '📦', title: 'Inventory', action: 'showProductsView()', color: 'orange' },
-            { icon: '👥', title: 'Team Management', action: 'showChurchTeamsView()', color: 'indigo' },
-            { icon: '🛒', title: 'Purchase Orders', action: 'showPurchasesView()', color: 'red' }
-        ]);
-        
-        // ✅ RECENT ACTIVITY: System-wide activity
-        await updateRecentActivity('admin', user);
-        
-        // ✅ ALERTS: System alerts and notifications
-        await updateSystemAlerts('admin', user);
-        
-    } catch (error) {
-        console.error('[ui.js] Error loading admin dashboard:', error);
-        throw error;
-    }
-}
-
-/**
- * TEAM LEAD DASHBOARD: Team-focused metrics and actions
- */
-async function loadTeamLeadDashboard(user) {
-    console.log('[ui.js] 👥 Loading team lead dashboard...');
-    
-    document.getElementById('dashboard-welcome-title').textContent = `Welcome, ${user.displayName}`;
-    document.getElementById('dashboard-welcome-subtitle').textContent = 'Team Lead Dashboard - Your Team Performance';
-    
-    try {
-        // ✅ TEAM-SPECIFIC: Today's team performance
-        const teamMetrics = await getTeamLeadMetrics(user.email);
-        
-        // Update metrics for team context
-        document.getElementById('dashboard-today-sales').textContent = teamMetrics.teamSalesToday || '₹0';
-        document.getElementById('dashboard-today-transactions').textContent = `${teamMetrics.teamActivitiesToday || 0} activities`;
-        
-        // Team actions (consignment requests, settlements)
-        document.getElementById('dashboard-actions-title').textContent = 'Team Actions';
-        document.getElementById('dashboard-pending-actions').textContent = teamMetrics.pendingTeamActions.toString();
-        document.getElementById('dashboard-actions-details').textContent = teamMetrics.teamActionsDescription;
-        
-        // Team inventory (consignment items)
-        document.getElementById('dashboard-low-stock').textContent = teamMetrics.consignmentItemsLow?.toString() || '0';
-        document.getElementById('dashboard-low-stock-details').textContent = 'Consignment items running low';
-        
-        // Team performance
-        document.getElementById('dashboard-performance-title').textContent = 'My Team Performance';
-        document.getElementById('dashboard-performance-value').textContent = teamMetrics.teamPerformanceRating;
-        document.getElementById('dashboard-performance-details').textContent = teamMetrics.teamPerformanceDetails;
-        
-        // Team-specific quick actions
-        updateQuickActions([
-            { icon: '📋', title: 'Request Consignment', action: 'showConsignmentView()', color: 'green' },
-            { icon: '💰', title: 'Submit Payment', action: 'showConsignmentView()', color: 'blue' },
-            { icon: '📊', title: 'Team Reports', action: 'showTeamReportsView()', color: 'purple' },
-            { icon: '👥', title: 'My Team', action: 'showChurchTeamsView()', color: 'indigo' }
-        ]);
-        
-        await updateRecentActivity('team_lead', user);
-        await updateSystemAlerts('team_lead', user);
-        
-    } catch (error) {
-        console.error('[ui.js] Error loading team lead dashboard:', error);
-        throw error;
-    }
-}
-
-/**
- * STAFF DASHBOARD: Operations-focused metrics  
- */
-async function loadStaffDashboard(user) {
-    console.log('[ui.js] 👤 Loading staff dashboard...');
-    
-    document.getElementById('dashboard-welcome-title').textContent = `Welcome, ${user.displayName}`;
-    document.getElementById('dashboard-welcome-subtitle').textContent = `${user.role.replace('_', ' ').toUpperCase()} Dashboard`;
-    
-    // Staff-specific metrics and actions based on role
-    const roleActions = {
-        'sales_staff': [
-            { icon: '🏪', title: 'New Sale', action: 'showSalesView()', color: 'green' },
-            { icon: '💳', title: 'Collect Payment', action: 'showSalesView()', color: 'blue' },
-            { icon: '📊', title: 'Sales Reports', action: 'showSalesReportsView()', color: 'purple' }
-        ],
-        'inventory_manager': [
-            { icon: '📦', title: 'Manage Inventory', action: 'showProductsView()', color: 'orange' },
-            { icon: '🛒', title: 'Purchase Orders', action: 'showPurchasesView()', color: 'red' },
-            { icon: '📋', title: 'Stock Reports', action: 'showInventoryReportsView()', color: 'indigo' }
-        ]
-    };
-    
-    updateQuickActions(roleActions[user.role] || []);
-    await updateRecentActivity(user.role, user);
-    await updateSystemAlerts(user.role, user);
-}
-
-/**
- * HELPER: Show loading state for application dashboard
- */
-function showApplicationDashboardLoading() {
-    document.getElementById('dashboard-today-sales').textContent = 'Loading...';
-    document.getElementById('dashboard-pending-actions').textContent = 'Loading...';
-    document.getElementById('dashboard-low-stock').textContent = 'Loading...';
-    document.getElementById('dashboard-performance-value').textContent = 'Loading...';
-}
-
-/**
- * HELPER: Update quick actions based on user role
- */
-function updateQuickActions(actions) {
-    const container = document.getElementById('dashboard-quick-actions');
-    if (!container) return;
-    
-    const actionsHTML = actions.map(action => `
-        <button onclick="${action.action}" class="bg-${action.color}-500 hover:bg-${action.color}-600 text-white p-4 rounded-lg shadow-md transition-all hover:scale-105 text-center">
-            <div class="text-2xl mb-2">${action.icon}</div>
-            <div class="text-sm font-semibold">${action.title}</div>
-        </button>
-    `).join('');
-    
-    container.innerHTML = actionsHTML;
-}
-
-/**
- * HELPER: Get admin pending actions (reuse payment management logic)
- */
-async function getAdminPendingActions() {
-    try {
-        // ✅ REUSE: Your existing buildActionRequiredList function
-        const actionSummary = await buildActionRequiredList({ forceRefresh: false });
-        
-        return {
-            total: actionSummary.totalActionItems || 0,
-            description: actionSummary.totalActionItems > 0 ? 
-                `${actionSummary.totalActionItems} verification${actionSummary.totalActionItems > 1 ? 's' : ''} needed` :
-                'All actions completed'
-        };
-    } catch (error) {
-        console.warn('[ui.js] Could not get admin actions:', error);
-        return { total: 0, description: 'Could not load actions' };
-    }
-}
-
-/**
- * HELPER: Get inventory alerts from master data
- */
-function getInventoryAlerts() {
-    const lowStockThreshold = 10;
-    const lowStockProducts = masterData.products.filter(p => 
-        p.isActive && (p.inventoryCount || 0) <= lowStockThreshold
-    );
-    
-    return {
-        lowStockCount: lowStockProducts.length,
-        description: lowStockProducts.length > 0 ? 
-            `${lowStockProducts.length} product${lowStockProducts.length > 1 ? 's' : ''} need reorder` :
-            'Inventory levels healthy'
-    };
-}
-
-/**
- * HELPER: Update recent activity (placeholder)
- */
-async function updateRecentActivity(roleType, user) {
-    const container = document.getElementById('dashboard-recent-activity');
-    if (!container) return;
-    
-    // ✅ SIMPLE: Show recent activity based on role
-    const activities = [
-        `✅ Dashboard loaded at ${new Date().toLocaleTimeString()}`,
-        `👤 Logged in as ${roleType.replace('_', ' ')}`,
-        `📊 System status: All modules operational`
-    ];
-    
-    const activitiesHTML = activities.map((activity, index) => `
-        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded">
-            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span class="text-sm text-gray-700">${activity}</span>
-        </div>
-    `).join('');
-    
-    container.innerHTML = activitiesHTML;
-}
-
-/**
- * HELPER: Update system alerts (placeholder)
- */
-async function updateSystemAlerts(roleType, user) {
-    const container = document.getElementById('dashboard-alerts');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-            <div class="text-green-600 text-2xl mb-2">✅</div>
-            <p class="text-sm text-green-700 font-medium">All Systems Operational</p>
-            <p class="text-xs text-green-600 mt-1">No critical alerts at this time</p>
-        </div>
-    `;
-}
