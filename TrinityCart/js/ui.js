@@ -56,6 +56,22 @@ import {
 
 import {detachPaymentManagementRealtimeSync} from './payment-management.js'
 
+import { 
+    showPaymentManagementView,        
+    switchPaymentMgmtTab,            
+    clearPaymentMgmtCache,           
+    refreshPaymentManagementDashboard,
+    showSupplierInvoiceDetailsModal,  
+    closeSupplierInvoiceDetailsModal,   
+    handleSupplierPayOutstandingBalance,  
+    getSupplierInvoiceFromMgmtGrid,
+    showSupplierInvoicePaymentVerificationModal,
+    buildActionRequiredList,         
+    checkForPendingTeamPayments,
+    debugTeamPaymentDiscrepancy,
+    showTeamPaymentVerificationModal
+} from './payment-management.js';
+
 // --- DOM ELEMENT REFERENCES ---
 const views = document.querySelectorAll('.view');
 const authContainer = document.getElementById('auth-container');
