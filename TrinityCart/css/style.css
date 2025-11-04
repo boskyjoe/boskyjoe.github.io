@@ -476,3 +476,33 @@ main {
         grid-template-columns: repeat(3, minmax(0, 1fr)); /* Desktop: 3 columns */
     }
 }
+
+/* Scoped styles for the landing page grids */
+.landing-page-content .landing-workflow-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile: 1 column */
+    gap: 2rem;
+}
+
+.landing-page-content .landing-module-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile: 1 column */
+    gap: 2rem;
+}
+
+/* Responsive grid layouts for larger screens */
+@media (min-width: 768px) { /* md breakpoint */
+    .landing-page-content .landing-workflow-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)); /* 4 columns on desktop */
+    }
+    .landing-page-content .landing-module-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 columns on desktop */
+    }
+}
+
+@media (min-width: 1024px) { /* lg breakpoint */
+    .landing-page-content .landing-module-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)); /* 3 columns on large screens */
+    }
+}
+
