@@ -4218,6 +4218,8 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
             performanceHighlights: businessSummary.performanceHighlights,
             businessInsights: businessSummary.businessInsights,
             
+            detailedBreakdown: businessSummary.detailedBreakdown, 
+            
             // ✅ EXECUTIVE ENHANCEMENTS: Additional intelligence
             executiveIntelligence: {
                 overallPerformanceRating: calculateOverallPerformanceRating(businessSummary),
