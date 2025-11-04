@@ -100,6 +100,45 @@
         }
     </style>
 
+    <style type="text/tailwindcss">
+        @layer components {
+        /* ... your existing nav-link, admin-card, etc. styles ... */
+        
+        /* ✅ ADD THESE NEW STYLES FOR THE LANDING PAGE */
+        .workflow-step {
+            @apply text-center;
+        }
+        .workflow-icon {
+            @apply w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4;
+        }
+        .workflow-icon svg {
+            @apply w-8 h-8;
+        }
+        .workflow-title {
+            @apply text-lg font-semibold text-gray-800 mb-2;
+        }
+        .workflow-description {
+            @apply text-sm text-gray-600;
+        }
+
+        .module-card {
+            @apply bg-gray-50 p-6 rounded-lg border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all;
+        }
+        .module-icon {
+            @apply w-12 h-12 rounded-lg flex items-center justify-center mb-4;
+        }
+        .module-icon svg {
+            @apply w-6 h-6;
+        }
+        .module-title {
+            @apply text-xl font-bold text-gray-900 mb-2;
+        }
+        .module-description {
+            @apply text-sm text-gray-600 leading-relaxed;
+        }
+    }
+</style>
+
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
@@ -199,58 +238,240 @@
                     <p class="text-gray-600">Please log in to continue.</p>
                 </div>-->
 
+                <!-- login-view div with this enhanced version -->
                 <div id="login-view" class="view active">
-                    <!-- ✅ NEW: Wrapper div to scope our styles -->
-                    <div class="landing-page-content"> 
-                        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-                            <!-- 1. Hero Section (No changes here) -->
-                            <section class="text-center mb-16">
+                    <div class="landing-page-content">
+                        <!-- Section 1: Hero -->
+                        <section class="text-center pt-12 pb-16 bg-white">
+                            <div class="max-w-4xl mx-auto px-4">
                                 <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
-                                    Welcome to <span class="bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">MONETA</span>
+                                    Welcome to <span
+                                        class="bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">MONETA</span>
                                 </h1>
-                                <p class="max-w-2xl mx-auto text-lg text-gray-600">
-                                    Your all-in-one solution for Point of Sale, Inventory Management, and Financial Reporting.
+                                <p class="max-w-2xl mx-auto text-lg text-gray-600 mb-8">
+                                    Your all-in-one solution for Point of Sale, Inventory Management, and Financial
+                                    Reporting.
                                 </p>
-                                <div class="mt-8">
-                                    <button id="login-button" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
-                                        Login with Google to Get Started
-                                    </button>
+                                <button id="login-button"
+                                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                                    Login with Google to Get Started
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Section 2: Core Workflow -->
+                        <section class="py-16 bg-gray-50">
+                            <div class="max-w-6xl mx-auto px-4">
+                                <div class="text-center mb-12">
+                                    <h2 class="text-3xl font-bold text-gray-800">A Seamless Workflow</h2>
+                                    <p class="text-gray-500 mt-2">From product creation to final sale, MONETA
+                                        streamlines every step.</p>
                                 </div>
-                            </section>
-
-                            <!-- 2. Feature Showcase -->
-                            <section class="mb-16">
-                                <!-- ✅ CHANGED: This div no longer uses Tailwind's `grid` class directly. -->
-                                <!-- We will apply the grid layout via our custom CSS class. -->
-                                <div class="landing-features-grid">
-                                    <!-- Feature 1: Sales & POS -->
-                                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
-                                        <!-- ... content is the same ... -->
+                                <div class="landing-workflow-grid">
+                                    <!-- Step 1 -->
+                                    <div class="workflow-step">
+                                        <div class="workflow-icon bg-blue-100 text-blue-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="workflow-title">1. Create & Organize</h3>
+                                        <p class="workflow-description">Define master products and group them into
+                                            strategic sales catalogues.</p>
                                     </div>
-
-                                    <!-- Feature 2: Inventory Management -->
-                                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500">
-                                        <!-- ... content is the same ... -->
+                                    <!-- Step 2 -->
+                                    <div class="workflow-step">
+                                        <div class="workflow-icon bg-purple-100 text-purple-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="workflow-title">2. Procure & Stock</h3>
+                                        <p class="workflow-description">Manage suppliers and record purchase invoices to
+                                            automatically update inventory levels.</p>
                                     </div>
-
-                                    <!-- Feature 3: Reporting & Analytics -->
-                                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
-                                        <!-- ... content is the same ... -->
+                                    <!-- Step 3 -->
+                                    <div class="workflow-step">
+                                        <div class="workflow-icon bg-green-100 text-green-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="workflow-title">3. Sell & Distribute</h3>
+                                        <p class="workflow-description">Handle direct POS sales and manage bulk
+                                            consignment checkouts for your teams.</p>
+                                    </div>
+                                    <!-- Step 4 -->
+                                    <div class="workflow-step">
+                                        <div class="workflow-icon bg-pink-100 text-pink-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="workflow-title">4. Analyze & Grow</h3>
+                                        <p class="workflow-description">Track payments, manage finances, and generate
+                                            powerful reports to drive growth.</p>
                                     </div>
                                 </div>
-                            </section>
+                            </div>
+                        </section>
 
-                            <!-- 3. Visual Element (No changes here) -->
-                            <section class="bg-white rounded-lg shadow-xl p-4 border">
-                                <img src="path/to/your/dashboard-screenshot.png" alt="MONETA Dashboard Screenshot" class="rounded-md shadow-lg">
-                            </section>
+                        <!-- Section 3: Detailed Modules -->
+                        <section class="py-16 bg-white">
+                            <div class="max-w-6xl mx-auto px-4">
+                                <div class="text-center mb-12">
+                                    <h2 class="text-3xl font-bold text-gray-800">Explore the Modules</h2>
+                                    <p class="text-gray-500 mt-2">A complete suite of tools to run your business
+                                        efficiently.</p>
+                                </div>
+                                <div class="landing-module-grid">
+                                    <!-- Product Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-purple-100 text-purple-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Product Management</h3>
+                                        <p class="module-description">Centrally create, categorize, and manage your
+                                            master product catalog, from unit costs to selling prices.</p>
+                                    </div>
+                                    <!-- Sales Catalogue -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-indigo-100 text-indigo-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M6 6h.008v.008H6V6z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Sales Catalogue</h3>
+                                        <p class="module-description">Design curated catalogues for different seasons
+                                            and events, defining which products are available for sale and at what
+                                            price.</p>
+                                    </div>
+                                    <!-- Purchase Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-orange-100 text-orange-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Purchase Management</h3>
+                                        <p class="module-description">Streamline procurement by creating purchase
+                                            invoices from suppliers, which automatically updates your stock levels upon
+                                            receipt.</p>
+                                    </div>
+                                    <!-- Sales Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-green-100 text-green-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Sales Management</h3>
+                                        <p class="module-description">Run your daily sales operations for multiple
+                                            storefronts like 'Church Store' and 'Tasty Treats' through a fast and
+                                            intuitive POS interface.</p>
+                                    </div>
+                                    <!-- Consignment Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-teal-100 text-teal-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                                            </svg></div>
+                                        <h3 class="module-title">Consignment Management</h3>
+                                        <p class="module-description">Empower your teams by allowing them to check out
+                                            products in bulk, manage their own sales, and report back on activity and
+                                            payments.</p>
+                                    </div>
+                                    <!-- Supplier Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-amber-100 text-amber-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Supplier Management</h3>
+                                        <p class="module-description">Maintain a comprehensive database of your
+                                            suppliers, including contact details and credit terms, to streamline your
+                                            supply chain.</p>
+                                    </div>
+                                    <!-- Payment Management -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-emerald-100 text-emerald-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Payment Management</h3>
+                                        <p class="module-description">A central hub for Finance and Admins to manage,
+                                            verify, and track all inbound and outbound payments across the entire
+                                            system.</p>
+                                    </div>
+                                    <!-- Admin Module -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-red-100 text-red-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75-.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124-.072.044-.146.087-.22.128-.332.183-.582.495-.644.869l-.214 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Admin Controls</h3>
+                                        <p class="module-description">Manage core application settings, user roles,
+                                            permissions, and master data like categories, payment modes, and sales
+                                            seasons.</p>
+                                    </div>
+                                    <!-- Reporting & Analytics -->
+                                    <div class="module-card">
+                                        <div class="module-icon bg-pink-100 text-pink-600"><svg
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                            </svg></div>
+                                        <h3 class="module-title">Reporting & Analytics</h3>
+                                        <p class="module-description">Access a powerful suite of reports, from
+                                            high-level executive dashboards to detailed transaction analysis, to make
+                                            data-driven decisions.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
 
-                        </div>
+                        <!-- Section 4: Final CTA -->
+                        <section class="py-16 bg-gray-800">
+                            <div class="max-w-4xl mx-auto px-4 text-center">
+                                <h2 class="text-3xl font-bold text-white">Ready to Streamline Your Operations?</h2>
+                                <p class="text-gray-300 mt-4 mb-8">Log in now to access your dashboard and take control
+                                    of your business.</p>
+                                <button id="login-button-bottom"
+                                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                                    Login with Google
+                                </button>
+                            </div>
+                        </section>
                     </div>
                 </div>
 
-    
 
 
 
@@ -259,21 +480,25 @@
                 <!--  APPLICATION DASHBOARD  -->
                 <!-- ======================= -->
                 <div id="dashboard-view" class="view">
-                    
+
                     <!-- Welcome Header (Role-based) -->
                     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h2 id="dashboard-welcome-title" class="text-2xl font-bold text-gray-900">Welcome to TrinityCart</h2>
-                                <p id="dashboard-welcome-subtitle" class="text-gray-600 mt-1">Loading your dashboard...</p>
+                                <h2 id="dashboard-welcome-title" class="text-2xl font-bold text-gray-900">Welcome to
+                                    TrinityCart</h2>
+                                <p id="dashboard-welcome-subtitle" class="text-gray-600 mt-1">Loading your dashboard...
+                                </p>
                             </div>
                             <div class="flex items-center space-x-3">
                                 <div class="text-sm text-gray-500">
                                     Last updated: <span id="dashboard-last-refresh">--:--</span>
                                 </div>
-                                <button id="refresh-landing-dashboard" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2">
+                                <button id="refresh-landing-dashboard"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
                                     <span>Refresh</span>
                                 </button>
@@ -281,23 +506,27 @@
                         </div>
                     </div>
 
-                    
-                    
+
+
                     <!-- Enhanced Key Metrics Cards (More Business Intelligence) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-                        
+
                         <!-- Row 1: Core Daily Metrics -->
-                        
+
                         <!-- Today's Sales -->
-                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                        <div
+                            class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border-l-4 border-green-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-green-800">Today's Sales</h3>
-                                    <p id="dashboard-today-sales" class="text-2xl font-bold text-green-900">Loading...</p>
+                                    <p id="dashboard-today-sales" class="text-2xl font-bold text-green-900">Loading...
+                                    </p>
                                 </div>
                                 <div class="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/>
+                                    <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" />
                                     </svg>
                                 </div>
                             </div>
@@ -307,15 +536,18 @@
                         </div>
 
                         <!-- This Week's Sales -->
-                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                        <div
+                            class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border-l-4 border-blue-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-blue-800">This Week</h3>
                                     <p id="dashboard-week-sales" class="text-2xl font-bold text-blue-900">Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                    <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                 </div>
                             </div>
@@ -325,15 +557,20 @@
                         </div>
 
                         <!-- Pending Actions (Role-based) -->
-                        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                        <div
+                            class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-sm font-medium text-yellow-800" id="dashboard-actions-title">Pending Actions</h3>
-                                    <p id="dashboard-pending-actions" class="text-2xl font-bold text-yellow-900">Loading...</p>
+                                    <h3 class="text-sm font-medium text-yellow-800" id="dashboard-actions-title">Pending
+                                        Actions</h3>
+                                    <p id="dashboard-pending-actions" class="text-2xl font-bold text-yellow-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-yellow-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                             </div>
@@ -344,16 +581,19 @@
 
                         <!-- Row 2: Operational Metrics -->
 
-                        <!-- Low Stock Alert -->  
-                        <div class="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border-l-4 border-red-500">
+                        <!-- Low Stock Alert -->
+                        <div
+                            class="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border-l-4 border-red-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-red-800">Low Stock Alert</h3>
                                     <p id="dashboard-low-stock" class="text-2xl font-bold text-red-900">Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-red-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+                                    <svg class="w-5 h-5 text-red-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01" />
                                     </svg>
                                 </div>
                             </div>
@@ -363,15 +603,19 @@
                         </div>
 
                         <!-- Active Teams -->
-                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                        <div
+                            class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border-l-4 border-purple-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-purple-800">Active Teams</h3>
-                                    <p id="dashboard-active-teams" class="text-2xl font-bold text-purple-900">Loading...</p>
+                                    <p id="dashboard-active-teams" class="text-2xl font-bold text-purple-900">Loading...
+                                    </p>
                                 </div>
                                 <div class="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
                             </div>
@@ -381,15 +625,20 @@
                         </div>
 
                         <!-- System Performance -->
-                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
+                        <div
+                            class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-sm font-medium text-indigo-800" id="dashboard-performance-title">System Health</h3>
-                                    <p id="dashboard-performance-value" class="text-2xl font-bold text-indigo-900">Loading...</p>
+                                    <h3 class="text-sm font-medium text-indigo-800" id="dashboard-performance-title">
+                                        System Health</h3>
+                                    <p id="dashboard-performance-value" class="text-2xl font-bold text-indigo-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-indigo-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <svg class="w-5 h-5 text-indigo-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                             </div>
@@ -401,36 +650,46 @@
                     </div>
 
                     <!-- Row 2: Financial Overview Cards (Admin Only) -->
-                    <div id="dashboard-financial-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
-                        
+                    <div id="dashboard-financial-section"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
+
                         <!-- Outstanding Receivables -->
-                        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
+                        <div
+                            class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-emerald-800">Customer Receivables</h3>
-                                    <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">Loading...</p>
+                                    <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                                     </svg>
                                 </div>
                             </div>
                             <div class="mt-2 text-sm">
-                                <span class="text-emerald-700" id="dashboard-receivables-details">Money owed to us</span>
+                                <span class="text-emerald-700" id="dashboard-receivables-details">Money owed to
+                                    us</span>
                             </div>
                         </div>
 
                         <!-- Outstanding Payables -->
-                        <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+                        <div
+                            class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-orange-800">Supplier Payables</h3>
-                                    <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">Loading...</p>
+                                    <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3"/>
+                                    <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 16l4-4m0 0l-4-4m4 4H3" />
                                     </svg>
                                 </div>
                             </div>
@@ -440,15 +699,19 @@
                         </div>
 
                         <!-- Net Cash Position -->
-                        <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
+                        <div
+                            class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-teal-800">Net Position</h3>
-                                    <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...</p>
+                                    <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...
+                                    </p>
                                 </div>
                                 <div class="w-10 h-10 bg-teal-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                    <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                 </div>
                             </div>
@@ -458,15 +721,19 @@
                         </div>
 
                         <!-- Total Products -->
-                        <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg shadow-md border-l-4 border-gray-500">
+                        <div
+                            class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg shadow-md border-l-4 border-gray-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-gray-800">Total Products</h3>
-                                    <p id="dashboard-total-products" class="text-2xl font-bold text-gray-900">Loading...</p>
+                                    <p id="dashboard-total-products" class="text-2xl font-bold text-gray-900">Loading...
+                                    </p>
                                 </div>
                                 <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
                                 </div>
                             </div>
@@ -478,54 +745,69 @@
                     </div>
 
                     <!-- Row 2: Financial Overview Cards (Admin/Finance Only) -->
-                    <div id="dashboard-financial-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
-                        
+                    <div id="dashboard-financial-section"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
+
                         <!-- Outstanding Receivables -->
-                        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
+                        <div
+                            class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-emerald-800">Customer Receivables</h3>
-                                    <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">Loading...</p>
+                                    <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                                     </svg>
                                 </div>
                             </div>
                             <div class="mt-2 text-sm">
-                                <span class="text-emerald-700" id="dashboard-receivables-details">Outstanding invoices</span>
+                                <span class="text-emerald-700" id="dashboard-receivables-details">Outstanding
+                                    invoices</span>
                             </div>
                         </div>
 
                         <!-- Outstanding Payables -->
-                        <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+                        <div
+                            class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-orange-800">Supplier Payables</h3>
-                                    <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">Loading...</p>
+                                    <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3"/>
+                                    <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 16l4-4m0 0l-4-4m4 4H3" />
                                     </svg>
                                 </div>
                             </div>
                             <div class="mt-2 text-sm">
-                                <span class="text-orange-700" id="dashboard-payables-details">Outstanding invoices</span>
+                                <span class="text-orange-700" id="dashboard-payables-details">Outstanding
+                                    invoices</span>
                             </div>
                         </div>
 
                         <!-- Net Cash Position -->
-                        <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
+                        <div
+                            class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-teal-800">Net Cash Position</h3>
-                                    <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...</p>
+                                    <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...
+                                    </p>
                                 </div>
                                 <div class="w-10 h-10 bg-teal-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                    <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
                                 </div>
                             </div>
@@ -535,15 +817,19 @@
                         </div>
 
                         <!-- Total Inventory Value -->
-                        <div class="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-lg shadow-md border-l-4 border-pink-500">
+                        <div
+                            class="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-lg shadow-md border-l-4 border-pink-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-sm font-medium text-pink-800">Inventory Value</h3>
-                                    <p id="dashboard-inventory-value" class="text-2xl font-bold text-pink-900">Loading...</p>
+                                    <p id="dashboard-inventory-value" class="text-2xl font-bold text-pink-900">
+                                        Loading...</p>
                                 </div>
                                 <div class="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-pink-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    <svg class="w-5 h-5 text-pink-700" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
                                 </div>
                             </div>
@@ -553,18 +839,18 @@
                         </div>
 
                     </div>
-                    
+
 
                     <!-- Recent Activity & Alerts (Role-based) -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        
+
                         <!-- Recent Activity -->
                         <div class="bg-white rounded-lg shadow-lg p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-lg font-semibold text-gray-800">📋 Recent Activity</h3>
                                 <span class="text-xs text-gray-500" id="dashboard-activity-scope">Your activity</span>
                             </div>
-                            
+
                             <div id="dashboard-recent-activity" class="space-y-3">
                                 <!-- Dynamic recent activity will be populated here -->
                                 <div class="text-center text-gray-500 py-8">
@@ -576,7 +862,7 @@
                         <!-- Alerts & Notifications -->
                         <div class="bg-white rounded-lg shadow-lg p-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">🔔 Alerts & Notifications</h3>
-                            
+
                             <div id="dashboard-alerts" class="space-y-3">
                                 <!-- Dynamic alerts will be populated here -->
                                 <div class="text-center text-gray-500 py-8">
@@ -2716,15 +3002,20 @@
                             <div class="text-center p-4 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
                                 onclick="showFinancialHealthBreakdownModal()"
                                 title="Click for detailed revenue breakdown">
-                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <div
+                                    class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                                 <h4 class="font-semibold text-blue-800 mb-2">Financial Health</h4>
-                                <p id="executive-financial-health" class="text-2xl font-bold text-blue-900">Loading...</p>
-                                <p class="text-xs text-blue-600 mt-2" id="executive-health-details">Click for breakdown</p>
-                                
+                                <p id="executive-financial-health" class="text-2xl font-bold text-blue-900">Loading...
+                                </p>
+                                <p class="text-xs text-blue-600 mt-2" id="executive-health-details">Click for breakdown
+                                </p>
+
                                 <!-- ✅ ADD: Click indicator -->
                                 <div class="mt-2 text-xs text-blue-500 font-medium">
                                     📊 Click for detailed analysis
@@ -2767,17 +3058,21 @@
                     </div>
 
                     <!-- Section 6  Performance Metadata -->
-                     <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
                         <div class="flex justify-between items-center text-sm text-gray-600">
                             <div class="flex items-center space-x-4">
-                                <span>Dashboard generated: <span id="executive-generated-time" class="font-medium">--</span></span>
-                                <span>Firestore reads: <span id="executive-firestore-reads" class="font-medium">--</span></span>
-                                <span>Execution time: <span id="executive-execution-time" class="font-medium">--</span></span>
+                                <span>Dashboard generated: <span id="executive-generated-time"
+                                        class="font-medium">--</span></span>
+                                <span>Firestore reads: <span id="executive-firestore-reads"
+                                        class="font-medium">--</span></span>
+                                <span>Execution time: <span id="executive-execution-time"
+                                        class="font-medium">--</span></span>
                             </div>
-                            
+
                             <div class="flex items-center space-x-2">
                                 <span class="text-green-600" id="executive-cache-status">✅ Optimized</span>
-                                <span>Next refresh: <span id="executive-next-refresh" class="font-medium">--</span></span>
+                                <span>Next refresh: <span id="executive-next-refresh"
+                                        class="font-medium">--</span></span>
                             </div>
                         </div>
                     </div>
@@ -5396,14 +5691,16 @@
     <!-- ===================================== -->
     <div id="financial-health-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger" style="z-index: 50;"></div>
-        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col" style="z-index: 51;">
-            
+        <div class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col"
+            style="z-index: 51;">
+
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                         </svg>
                     </div>
                     <div>
@@ -5413,14 +5710,15 @@
                 </div>
                 <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
                     </svg>
                 </button>
             </div>
 
             <!-- Modal Body (Scrollable) -->
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                
+
                 <!-- Executive Summary -->
                 <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                     <h4 class="text-lg font-semibold text-blue-800 mb-4">💰 Financial Health Summary</h4>
@@ -5434,7 +5732,8 @@
                             <div class="text-sm text-gray-600">Actual Cash Received</div>
                         </div>
                         <div class="text-center">
-                            <div class="text-2xl font-bold text-purple-700" id="modal-revenue-efficiency">Loading...</div>
+                            <div class="text-2xl font-bold text-purple-700" id="modal-revenue-efficiency">Loading...
+                            </div>
                             <div class="text-sm text-gray-600">Revenue Efficiency</div>
                         </div>
                     </div>
@@ -5442,16 +5741,17 @@
 
                 <!-- Revenue Channel Analysis -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
+
                     <!-- Direct Sales Breakdown -->
                     <div class="bg-white border border-gray-200 rounded-lg p-6">
                         <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
                             <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                             <span>Direct Store Sales</span>
                         </h5>
-                        
+
                         <div class="space-y-3">
                             <div class="flex justify-between items-center p-3 bg-purple-50 rounded">
                                 <span class="text-purple-700 font-medium">Church Store</span>
@@ -5460,7 +5760,7 @@
                                     <div class="text-xs text-purple-600">Cash received</div>
                                 </div>
                             </div>
-                            
+
                             <div class="flex justify-between items-center p-3 bg-orange-50 rounded">
                                 <span class="text-orange-700 font-medium">Tasty Treats</span>
                                 <div class="text-right">
@@ -5468,7 +5768,7 @@
                                     <div class="text-xs text-orange-600">Cash received</div>
                                 </div>
                             </div>
-                            
+
                             <div class="border-t pt-3">
                                 <div class="flex justify-between items-center font-semibold">
                                     <span class="text-gray-700">Direct Sales Total</span>
@@ -5482,19 +5782,22 @@
                     <div class="bg-white border border-gray-200 rounded-lg p-6">
                         <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
                             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                             <span>Consignment Performance</span>
                         </h5>
-                        
+
                         <div class="space-y-3">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-gray-600">Theoretical Sales</span>
-                                <span id="modal-consignment-theoretical" class="font-semibold text-gray-800">Loading...</span>
+                                <span id="modal-consignment-theoretical"
+                                    class="font-semibold text-gray-800">Loading...</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-gray-600">Actual Cash Received</span>
-                                <span id="modal-consignment-actual" class="font-semibold text-green-700">Loading...</span>
+                                <span id="modal-consignment-actual"
+                                    class="font-semibold text-green-700">Loading...</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-gray-600">Returns/Damages/Commission</span>
@@ -5515,18 +5818,20 @@
                 <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
                     <h5 class="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
                         <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
                         <span>Donation Revenue</span>
                     </h5>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="text-center p-3 bg-white rounded border border-purple-200">
                             <div id="modal-total-donations" class="text-xl font-bold text-purple-700">Loading...</div>
                             <div class="text-xs text-purple-600 mt-1">Total Donations</div>
                         </div>
                         <div class="text-center p-3 bg-white rounded border border-purple-200">
-                            <div id="modal-donation-percentage" class="text-xl font-bold text-purple-700">Loading...</div>
+                            <div id="modal-donation-percentage" class="text-xl font-bold text-purple-700">Loading...
+                            </div>
                             <div class="text-xs text-purple-600 mt-1">% of Total Revenue</div>
                         </div>
                         <div class="text-center p-3 bg-white rounded border border-purple-200">
