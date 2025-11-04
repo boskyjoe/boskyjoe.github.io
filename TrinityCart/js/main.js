@@ -603,6 +603,10 @@ const EventHandlers = {
             showView('dashboard-view');
             await loadApplicationDashboard(); // ✅ Load application landing dashboard
         },
+        '#refresh-landing-dashboard': async () => {
+            console.log('[main.js] Application dashboard refresh requested');
+            await loadApplicationDashboard();
+        },
         'executive-dashboard-view': async () => {
             showView('executive-dashboard-view');
             await loadExecutiveDashboard(); // ✅ Load dashboard data when view opens
