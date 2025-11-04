@@ -11442,9 +11442,10 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
 }
 
 
-**
+/**
  * ENHANCED: Update dashboard cache indicators with visual status
  */
+
 function updateDashboardCacheIndicators(cacheInfo) {
     console.log('[ui.js] 🎨 Updating dashboard cache indicators...');
     
