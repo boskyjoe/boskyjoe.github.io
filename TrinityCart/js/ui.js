@@ -10967,45 +10967,639 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
 }
 
 
+
+/**
+ * APPLICATION LANDING DASHBOARD: Role-based transactional landing page
+ * 
+ * This is the main application landing page that users see when they log in.
+ * Shows today's key metrics, pending actions, and role-appropriate quick actions.
+ * Different from Executive Dashboard - this is operational/transactional focused.
+ * 
+ * @returns {Promise<void>}
+ */
 export async function loadApplicationDashboard() {
-    console.log('[ui.js] 🏠 Loading simple application dashboard...');
+    console.log('[ui.js] 🏠 Loading application landing dashboard...');
     
     const currentUser = appState.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('[ui.js] No user logged in - showing login prompt');
+        return;
+    }
     
     try {
-        // ✅ SIMPLE: Update your existing 4 cards
-        const cards = document.querySelectorAll('#dashboard-view .admin-card');
+        // Show loading state for all cards
+        showApplicationDashboardLoading();
+        
+        // ✅ ROLE-BASED: Load different dashboard content based on user role
+        console.log(`[ui.js] Loading dashboard for role: ${currentUser.role}`);
+        
+        // Update welcome message
+        document.getElementById('dashboard-welcome-title').textContent = `Welcome, ${currentUser.displayName}`;
         
         if (currentUser.role === 'admin' || currentUser.role === 'finance') {
-            // Get today's sales
-            const todayMetrics = await getDailyDashboardOptimized();
-            
-            // Update card 1: Today's Sales
-            if (cards[0]) {
-                cards[0].querySelector('p').textContent = todayMetrics.todayRevenue;
-            }
-            
-            // Update card 2: Low Stock  
-            const lowStockCount = masterData.products.filter(p => (p.inventoryCount || 0) <= 10).length;
-            if (cards[1]) {
-                cards[1].querySelector('p').textContent = lowStockCount.toString();
-            }
-            
-            // Update card 3 & 4: Set to basic values for now
-            if (cards[2]) cards[2].querySelector('p').textContent = '₹0.00';
-            if (cards[3]) cards[3].querySelector('p').textContent = '₹0.00';
-            
+            await loadAdminLandingDashboard(currentUser);
+        } else if (currentUser.role === 'team_lead') {
+            await loadTeamLeadLandingDashboard(currentUser);
+        } else if (currentUser.role === 'sales_staff') {
+            await loadSalesStaffLandingDashboard(currentUser);
+        } else if (currentUser.role === 'inventory_manager') {
+            await loadInventoryManagerLandingDashboard(currentUser);
         } else {
-            // Non-admin users get limited view
-            if (cards[0]) cards[0].querySelector('p').textContent = 'Limited Access';
-            if (cards[1]) cards[1].querySelector('p').textContent = 'N/A';
-            if (cards[2]) cards[2].querySelector('p').textContent = 'N/A';
-            if (cards[3]) cards[3].querySelector('p').textContent = 'N/A';
+            await loadLimitedAccessDashboard(currentUser);
         }
         
+        // Update refresh timestamp
+        document.getElementById('dashboard-last-refresh').textContent = new Date().toLocaleTimeString();
+        
+        console.log(`[ui.js] ✅ Application landing dashboard loaded for ${currentUser.role}`);
+        
     } catch (error) {
-        console.error('[ui.js] Dashboard error:', error);
+        console.error('[ui.js] Error loading application dashboard:', error);
+        showApplicationDashboardError(error);
     }
+}
+
+/**
+ * ADMIN LANDING DASHBOARD: Comprehensive system overview for administrators
+ */
+async function loadAdminLandingDashboard(user) {
+    console.log('[ui.js] 👑 Loading admin landing dashboard...');
+    
+    // Update welcome subtitle
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - Complete System Overview';
+    
+    try {
+        // ===================================================================
+        // METRIC 1: TODAY'S SALES (All channels)
+        // ===================================================================
+        
+        const todayMetrics = await getDailyDashboardOptimized();
+        
+        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
+        
+        console.log('[ui.js] ✅ Today\'s sales updated:', todayMetrics.todayRevenue);
+        
+        // ===================================================================
+        // METRIC 2: PENDING ACTIONS (Payment verifications, approvals)
+        // ===================================================================
+        
+        const pendingActions = await getAdminPendingActions();
+        
+        document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
+        document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
+        
+        // Color coding based on urgency
+        const actionsCard = document.getElementById('dashboard-pending-actions');
+        if (pendingActions.total > 5) {
+            actionsCard.className = 'text-3xl font-bold text-red-900 animate-pulse';
+        } else if (pendingActions.total > 0) {
+            actionsCard.className = 'text-3xl font-bold text-yellow-900';
+        } else {
+            actionsCard.className = 'text-3xl font-bold text-green-900';
+        }
+        
+        console.log('[ui.js] ✅ Pending actions updated:', pendingActions.total);
+        
+        // ===================================================================
+        // METRIC 3: LOW STOCK ALERT (Inventory management)
+        // ===================================================================
+        
+        const inventoryAlerts = getInventoryAlerts();
+        
+        document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
+        document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.description;
+        
+        console.log('[ui.js] ✅ Low stock updated:', inventoryAlerts.lowStockCount);
+        
+        // ===================================================================
+        // METRIC 4: SYSTEM PERFORMANCE (Overall health)
+        // ===================================================================
+        
+        document.getElementById('dashboard-performance-title').textContent = 'System Health';
+        
+        const systemHealth = calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts);
+        document.getElementById('dashboard-performance-value').textContent = systemHealth.rating;
+        document.getElementById('dashboard-performance-details').textContent = systemHealth.description;
+        
+        // Color coding for system health
+        const performanceCard = document.getElementById('dashboard-performance-value');
+        const healthColors = {
+            'Excellent': 'text-3xl font-bold text-green-900',
+            'Good': 'text-3xl font-bold text-blue-900',
+            'Fair': 'text-3xl font-bold text-yellow-900',
+            'Attention Needed': 'text-3xl font-bold text-red-900'
+        };
+        performanceCard.className = healthColors[systemHealth.rating] || 'text-3xl font-bold text-gray-900';
+        
+        // ===================================================================
+        // ADMIN QUICK ACTIONS
+        // ===================================================================
+        
+        updateQuickActions([
+            { icon: '💳', title: 'Payments', action: 'showPaymentManagementView()', color: 'red', description: 'Verify payments' },
+            { icon: '🏪', title: 'New Sale', action: 'showSalesView()', color: 'green', description: 'Process sales' },
+            { icon: '📦', title: 'Inventory', action: 'showProductsView()', color: 'orange', description: 'Manage products' },
+            { icon: '👥', title: 'Teams', action: 'showChurchTeamsView()', color: 'purple', description: 'Manage teams' },
+            { icon: '🛒', title: 'Purchases', action: 'showPurchasesView()', color: 'blue', description: 'Supplier orders' },
+            { icon: '📊', title: 'Reports', action: 'showExecutiveDashboardView()', color: 'indigo', description: 'Analytics' }
+        ]);
+        
+        // ===================================================================
+        // ADMIN ACTIVITY & ALERTS
+        // ===================================================================
+        
+        await updateRecentActivity('admin', user);
+        await updateSystemAlerts('admin', user, { pendingActions, inventoryAlerts, systemHealth });
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading admin landing dashboard:', error);
+        throw error;
+    }
+}
+
+
+/**
+ * TEAM LEAD LANDING DASHBOARD: Team-focused metrics and consignment actions
+ */
+async function loadTeamLeadLandingDashboard(user) {
+    console.log('[ui.js] 👥 Loading team lead landing dashboard...');
+    
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Team Lead Dashboard - Your Team Management';
+    
+    try {
+        // ✅ TEAM-SPECIFIC METRICS
+        const teamMetrics = await getTeamLeadMetrics(user.email);
+        
+        // Today's team activity
+        document.getElementById('dashboard-today-sales').textContent = formatCurrency(teamMetrics.teamSalesToday || 0);
+        document.getElementById('dashboard-today-transactions').textContent = `${teamMetrics.teamActivitiesToday || 0} activities`;
+        
+        // Team actions
+        document.getElementById('dashboard-actions-title').textContent = 'My Team Actions';
+        document.getElementById('dashboard-pending-actions').textContent = teamMetrics.pendingTeamActions?.toString() || '0';
+        document.getElementById('dashboard-actions-details').textContent = teamMetrics.teamActionsDescription || 'No pending actions';
+        
+        // Team inventory (consignment items)
+        document.getElementById('dashboard-low-stock').textContent = teamMetrics.lowConsignmentItems?.toString() || '0';
+        document.getElementById('dashboard-low-stock-details').textContent = 'Consignment items low';
+        
+        // Team performance  
+        document.getElementById('dashboard-performance-title').textContent = 'Team Performance';
+        document.getElementById('dashboard-performance-value').textContent = teamMetrics.performanceRating || 'Good';
+        document.getElementById('dashboard-performance-details').textContent = teamMetrics.performanceDetails || 'Active team member';
+        
+        // Team-specific quick actions
+        updateQuickActions([
+            { icon: '📋', title: 'New Request', action: 'showConsignmentView()', color: 'green', description: 'Request products' },
+            { icon: '💰', title: 'Submit Payment', action: 'showConsignmentView()', color: 'blue', description: 'Team settlement' },
+            { icon: '📊', title: 'Team Reports', action: 'showTeamReportsView()', color: 'purple', description: 'Team analytics' },
+            { icon: '👥', title: 'My Team', action: 'showChurchTeamsView()', color: 'indigo', description: 'Team management' }
+        ]);
+        
+        await updateRecentActivity('team_lead', user);
+        await updateSystemAlerts('team_lead', user, { teamMetrics });
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading team lead dashboard:', error);
+        
+        // Fallback to basic team dashboard
+        document.getElementById('dashboard-today-sales').textContent = 'Team Focus';
+        document.getElementById('dashboard-pending-actions').textContent = '0';
+        document.getElementById('dashboard-low-stock').textContent = 'N/A';
+        document.getElementById('dashboard-performance-value').textContent = 'Active';
+    }
+}
+
+/**
+ * SALES STAFF LANDING DASHBOARD: Sales-focused metrics and actions
+ */
+async function loadSalesStaffLandingDashboard(user) {
+    console.log('[ui.js] 🏪 Loading sales staff landing dashboard...');
+    
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Sales Staff Dashboard - Today\'s Sales Operations';
+    
+    try {
+        // Get today's sales metrics
+        const todayMetrics = await getDailyDashboardOptimized();
+        
+        // Sales-focused metrics
+        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} sales today`;
+        
+        // Sales actions (outstanding collections)
+        document.getElementById('dashboard-actions-title').textContent = 'Collections Due';
+        document.getElementById('dashboard-pending-actions').textContent = '0'; // Could calculate outstanding sales
+        document.getElementById('dashboard-actions-details').textContent = 'Outstanding customer payments';
+        
+        // Inventory relevant to sales
+        const inventoryAlerts = getInventoryAlerts();
+        document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
+        document.getElementById('dashboard-low-stock-details').textContent = 'Products need restock';
+        
+        // Sales performance
+        document.getElementById('dashboard-performance-title').textContent = 'Sales Performance';
+        document.getElementById('dashboard-performance-value').textContent = todayMetrics.todayTransactions > 5 ? 'Excellent' : 'Good';
+        document.getElementById('dashboard-performance-details').textContent = `${todayMetrics.todayTransactions} transactions today`;
+        
+        // Sales-specific actions
+        updateQuickActions([
+            { icon: '🏪', title: 'New Sale', action: 'showSalesView()', color: 'green', description: 'Process sale' },
+            { icon: '💳', title: 'Collect Payment', action: 'showSalesView()', color: 'blue', description: 'Customer payment' },
+            { icon: '📊', title: 'Sales Reports', action: 'showSalesReportsView()', color: 'purple', description: 'Performance data' },
+            { icon: '👥', title: 'Customers', action: 'showSalesView()', color: 'teal', description: 'Customer management' }
+        ]);
+        
+        await updateRecentActivity('sales_staff', user);
+        await updateSystemAlerts('sales_staff', user);
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading sales staff dashboard:', error);
+        throw error;
+    }
+}
+
+/**
+ * INVENTORY MANAGER DASHBOARD: Inventory-focused metrics and actions
+ */
+async function loadInventoryManagerLandingDashboard(user) {
+    console.log('[ui.js] 📦 Loading inventory manager dashboard...');
+    
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Inventory Manager Dashboard - Stock & Purchase Operations';
+    
+    try {
+        const todayMetrics = await getDailyDashboardOptimized();
+        const inventoryAlerts = getInventoryAlerts();
+        
+        // Inventory-focused metrics
+        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} sales (inventory impact)`;
+        
+        // Inventory actions
+        document.getElementById('dashboard-actions-title').textContent = 'Reorder Actions';
+        document.getElementById('dashboard-pending-actions').textContent = inventoryAlerts.reorderNeeded?.toString() || '0';
+        document.getElementById('dashboard-actions-details').textContent = 'Products need purchase orders';
+        
+        // Stock alerts (main focus)
+        document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
+        document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.criticalCount > 0 ? 
+            `${inventoryAlerts.criticalCount} critical, ${inventoryAlerts.lowStockCount - inventoryAlerts.criticalCount} low` :
+            `${inventoryAlerts.lowStockCount} products need attention`;
+        
+        // Inventory performance
+        document.getElementById('dashboard-performance-title').textContent = 'Inventory Health';
+        document.getElementById('dashboard-performance-value').textContent = inventoryAlerts.healthRating;
+        document.getElementById('dashboard-performance-details').textContent = inventoryAlerts.healthDescription;
+        
+        // Inventory-specific actions
+        updateQuickActions([
+            { icon: '📦', title: 'Manage Products', action: 'showProductsView()', color: 'orange', description: 'Product catalog' },
+            { icon: '🛒', title: 'Purchase Orders', action: 'showPurchasesView()', color: 'red', description: 'Supplier orders' },
+            { icon: '📋', title: 'Stock Reports', action: 'showInventoryReportsView()', color: 'blue', description: 'Inventory analytics' },
+            { icon: '🏭', title: 'Suppliers', action: 'showSuppliersView()', color: 'gray', description: 'Supplier management' }
+        ]);
+        
+        await updateRecentActivity('inventory_manager', user);
+        await updateSystemAlerts('inventory_manager', user, { inventoryAlerts });
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading inventory manager dashboard:', error);
+        throw error;
+    }
+}
+
+
+// ===================================================================
+// HELPER FUNCTIONS FOR DASHBOARD DATA
+// ===================================================================
+
+/**
+ * HELPER: Show loading state for all dashboard elements
+ */
+function showApplicationDashboardLoading() {
+    document.getElementById('dashboard-today-sales').textContent = 'Loading...';
+    document.getElementById('dashboard-pending-actions').textContent = 'Loading...';
+    document.getElementById('dashboard-low-stock').textContent = 'Loading...';
+    document.getElementById('dashboard-performance-value').textContent = 'Loading...';
+    
+    document.getElementById('dashboard-today-transactions').textContent = 'Loading...';
+    document.getElementById('dashboard-actions-details').textContent = 'Checking actions...';
+    document.getElementById('dashboard-low-stock-details').textContent = 'Checking inventory...';
+    document.getElementById('dashboard-performance-details').textContent = 'Analyzing...';
+}
+
+/**
+ * HELPER: Get admin pending actions (reuse payment management logic)
+ */
+async function getAdminPendingActions() {
+    try {
+        // ✅ REUSE: Your existing payment management action logic
+        const actionSummary = await buildActionRequiredList({ forceRefresh: false });
+        
+        let urgencyLevel = 'normal';
+        if (actionSummary.totalActionItems > 10) urgencyLevel = 'high';
+        else if (actionSummary.totalActionItems > 5) urgencyLevel = 'medium';
+        
+        return {
+            total: actionSummary.totalActionItems || 0,
+            urgency: urgencyLevel,
+            description: actionSummary.totalActionItems > 0 ? 
+                `${actionSummary.totalActionItems} verification${actionSummary.totalActionItems > 1 ? 's' : ''} needed` :
+                'All actions completed ✅'
+        };
+    } catch (error) {
+        console.warn('[ui.js] Could not get admin actions:', error);
+        return { total: 0, urgency: 'normal', description: 'Could not load actions' };
+    }
+}
+
+/**
+ * HELPER: Get inventory alerts from master data (ENHANCED)
+ */
+function getInventoryAlerts() {
+    const lowStockThreshold = 10;
+    const criticalStockThreshold = 0;
+    
+    const allProducts = masterData.products.filter(p => p.isActive);
+    const criticalStock = allProducts.filter(p => (p.inventoryCount || 0) === criticalStockThreshold);
+    const lowStock = allProducts.filter(p => (p.inventoryCount || 0) > criticalStockThreshold && (p.inventoryCount || 0) <= lowStockThreshold);
+    
+    let healthRating, healthDescription;
+    const totalLowStock = criticalStock.length + lowStock.length;
+    
+    if (criticalStock.length > 0) {
+        healthRating = 'Critical';
+        healthDescription = `${criticalStock.length} out of stock`;
+    } else if (totalLowStock > 20) {
+        healthRating = 'Poor';
+        healthDescription = `${totalLowStock} products need restock`;
+    } else if (totalLowStock > 5) {
+        healthRating = 'Fair';
+        healthDescription = `${totalLowStock} products getting low`;
+    } else {
+        healthRating = 'Excellent';
+        healthDescription = 'Inventory levels healthy';
+    }
+    
+    return {
+        lowStockCount: totalLowStock,
+        criticalCount: criticalStock.length,
+        reorderNeeded: totalLowStock,
+        healthRating,
+        healthDescription,
+        description: totalLowStock > 0 ? 
+            `${totalLowStock} product${totalLowStock > 1 ? 's' : ''} need reorder` :
+            'Inventory levels healthy'
+    };
+}
+
+/**
+ * HELPER: Calculate overall system health  
+ */
+function calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts) {
+    let healthScore = 100;
+    
+    // Factor in pending actions
+    if (pendingActions.total > 10) healthScore -= 20;
+    else if (pendingActions.total > 5) healthScore -= 10;
+    else if (pendingActions.total > 0) healthScore -= 5;
+    
+    // Factor in inventory health
+    if (inventoryAlerts.criticalCount > 0) healthScore -= 25;
+    else if (inventoryAlerts.lowStockCount > 20) healthScore -= 15;
+    else if (inventoryAlerts.lowStockCount > 10) healthScore -= 10;
+    
+    // Factor in today's sales activity
+    if (todayMetrics.todayTransactions === 0) healthScore -= 15;
+    else if (todayMetrics.todayTransactions > 10) healthScore += 5;
+    
+    let rating, description;
+    
+    if (healthScore >= 90) {
+        rating = 'Excellent';
+        description = 'All systems operating optimally';
+    } else if (healthScore >= 75) {
+        rating = 'Good';
+        description = 'Systems operating well';
+    } else if (healthScore >= 60) {
+        rating = 'Fair';
+        description = 'Some attention needed';
+    } else {
+        rating = 'Attention Needed';
+        description = 'Multiple issues require attention';
+    }
+    
+    return { rating, description, score: healthScore };
+}
+
+/**
+ * HELPER: Update quick actions grid
+ */
+function updateQuickActions(actions) {
+    const container = document.getElementById('dashboard-quick-actions');
+    if (!container) return;
+    
+    const actionsHTML = actions.map(action => `
+        <button onclick="${action.action}" 
+               class="bg-${action.color}-500 hover:bg-${action.color}-600 text-white p-4 rounded-lg shadow-md transition-all hover:scale-105 text-center group">
+            <div class="text-2xl mb-2">${action.icon}</div>
+            <div class="text-sm font-semibold">${action.title}</div>
+            <div class="text-xs opacity-75 mt-1 group-hover:opacity-100">${action.description}</div>
+        </button>
+    `).join('');
+    
+    container.innerHTML = actionsHTML;
+    
+    console.log(`[ui.js] ✅ Quick actions updated: ${actions.length} actions`);
+}
+
+/**
+ * HELPER: Update recent activity section
+ */
+async function updateRecentActivity(roleType, user) {
+    const container = document.getElementById('dashboard-recent-activity');
+    if (!container) return;
+    
+    // ✅ ROLE-BASED: Different activity feeds
+    let activities = [];
+    
+    if (roleType === 'admin') {
+        activities = [
+            { icon: '👑', text: 'Accessed administrator dashboard', time: 'Just now', color: 'blue' },
+            { icon: '💳', text: 'Payment management available', time: '2 min ago', color: 'green' },
+            { icon: '📊', text: 'System reports updated', time: '5 min ago', color: 'purple' }
+        ];
+    } else if (roleType === 'team_lead') {
+        activities = [
+            { icon: '👥', text: 'Accessed team dashboard', time: 'Just now', color: 'green' },
+            { icon: '📋', text: 'Consignment requests available', time: '1 min ago', color: 'blue' },
+            { icon: '💰', text: 'Settlement options ready', time: '3 min ago', color: 'purple' }
+        ];
+    } else {
+        activities = [
+            { icon: '🏪', text: 'Accessed sales dashboard', time: 'Just now', color: 'green' },
+            { icon: '📦', text: 'Inventory system available', time: '1 min ago', color: 'orange' }
+        ];
+    }
+    
+    const activitiesHTML = activities.map(activity => `
+        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div class="w-8 h-8 bg-${activity.color}-100 rounded-full flex items-center justify-center text-${activity.color}-600">
+                ${activity.icon}
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-gray-800">${activity.text}</p>
+                <p class="text-xs text-gray-500">${activity.time}</p>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = activitiesHTML;
+    
+    const scopeElement = document.getElementById('dashboard-activity-scope');
+    if (scopeElement) {
+        scopeElement.textContent = roleType === 'admin' ? 'System activity' : 'Your activity';
+    }
+}
+
+/**
+ * HELPER: Update alerts section  
+ */
+async function updateSystemAlerts(roleType, user, contextData = {}) {
+    const container = document.getElementById('dashboard-alerts');
+    if (!container) return;
+    
+    const alerts = [];
+    
+    // ✅ ROLE-BASED ALERTS
+    if (roleType === 'admin') {
+        if (contextData.pendingActions?.total > 0) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: 'Payment Verifications Needed',
+                message: `${contextData.pendingActions.total} payments awaiting verification`,
+                action: 'showPaymentManagementView()',
+                actionText: 'Verify Now'
+            });
+        }
+        
+        if (contextData.inventoryAlerts?.criticalCount > 0) {
+            alerts.push({
+                type: 'error', 
+                icon: '🚨',
+                title: 'Critical Stock Alert',
+                message: `${contextData.inventoryAlerts.criticalCount} products out of stock`,
+                action: 'showProductsView()',
+                actionText: 'Manage Inventory'
+            });
+        }
+    } else if (roleType === 'team_lead') {
+        alerts.push({
+            type: 'info',
+            icon: '💡',
+            title: 'Team Leadership Tip',
+            message: 'Regular consignment requests help maintain team engagement',
+            action: 'showConsignmentView()',
+            actionText: 'Create Request'
+        });
+    }
+    
+    // Default state if no alerts
+    if (alerts.length === 0) {
+        alerts.push({
+            type: 'success',
+            icon: '✅',
+            title: 'All Systems Operational',
+            message: 'No critical alerts at this time',
+            action: null,
+            actionText: null
+        });
+    }
+    
+    const alertsHTML = alerts.map(alert => {
+        const alertStyles = {
+            'success': 'bg-green-50 border-green-200 text-green-800',
+            'info': 'bg-blue-50 border-blue-200 text-blue-800',
+            'warning': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+            'error': 'bg-red-50 border-red-200 text-red-800'
+        };
+        
+        const style = alertStyles[alert.type] || alertStyles['info'];
+        
+        return `
+            <div class="border rounded-lg p-4 ${style}">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="text-xl">${alert.icon}</div>
+                        <div class="flex-1">
+                            <h5 class="font-semibold text-sm">${alert.title}</h5>
+                            <p class="text-sm mt-1">${alert.message}</p>
+                        </div>
+                    </div>
+                    ${alert.action ? 
+                        `<button onclick="${alert.action}" class="text-xs px-3 py-1 rounded bg-white bg-opacity-50 hover:bg-opacity-75 font-medium">
+                            ${alert.actionText}
+                        </button>` : ''
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = alertsHTML;
+}
+
+/**
+ * HELPER: Get team lead specific metrics (placeholder)
+ */
+async function getTeamLeadMetrics(userEmail) {
+    // ✅ PLACEHOLDER: Could be enhanced to get actual team data
+    return {
+        teamSalesToday: 0,
+        teamActivitiesToday: 0,
+        pendingTeamActions: 0,
+        teamActionsDescription: 'No team actions pending',
+        lowConsignmentItems: 0,
+        performanceRating: 'Active',
+        performanceDetails: 'Team member in good standing'
+    };
+}
+
+/**
+ * HELPER: Show error state for application dashboard
+ */
+function showApplicationDashboardError(error) {
+    console.error('[ui.js] Application dashboard error:', error);
+    
+    // Set error states on cards
+    document.getElementById('dashboard-today-sales').textContent = 'Error';
+    document.getElementById('dashboard-pending-actions').textContent = 'Error';
+    document.getElementById('dashboard-low-stock').textContent = 'Error';
+    document.getElementById('dashboard-performance-value').textContent = 'Error';
+    
+    // Show error in quick actions
+    const container = document.getElementById('dashboard-quick-actions');
+    if (container) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-8 bg-red-50 rounded-lg border border-red-200">
+                <div class="text-red-600 text-2xl mb-2">⚠️</div>
+                <p class="text-red-700 font-semibold">Dashboard Loading Error</p>
+                <p class="text-red-600 text-sm mt-1">${error.message}</p>
+                <button onclick="loadApplicationDashboard()" class="mt-3 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700">
+                    Retry Dashboard
+                </button>
+            </div>
+        `;
+    }
+    
+    // Show error modal
+    setTimeout(() => {
+        showModal('error', 'Dashboard Error',
+            `Could not load application dashboard.\n\n` +
+            `Error: ${error.message}\n\n` +
+            `Please refresh the page or try again.`
+        );
+    }, 1000);
 }
 
