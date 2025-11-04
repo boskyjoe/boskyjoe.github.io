@@ -1,3 +1,5 @@
+<!-- index.html-->
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -192,10 +194,86 @@
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
 
                 <!-- View 1: Login Prompt (Default View) -->
-                <div id="login-view" class="view active text-center">
+                <!--<div id="login-view" class="view active text-center">
                     <h2 class="text-2xl font-semibold mb-4">Welcome to TrinityCart</h2>
                     <p class="text-gray-600">Please log in to continue.</p>
+                </div>-->
+
+                <div id="login-view" class="view active">
+                    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+                        <!-- 1. Hero Section -->
+                        <section class="text-center mb-16">
+                            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+                                Welcome to <span class="bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">MONETA</span>
+                            </h1>
+                            <p class="max-w-2xl mx-auto text-lg text-gray-600">
+                                Your all-in-one solution for Point of Sale, Inventory Management, and Financial Reporting.
+                            </p>
+                            <div class="mt-8">
+                                <button id="login-button" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                                    Login with Google to Get Started
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- 2. Feature Showcase -->
+                        <section class="mb-16">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <!-- Feature 1: Sales & POS -->
+                                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
+                                    <div class="flex items-center space-x-4 mb-3">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                            <!-- Icon: Cash Register -->
+                                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-800">Effortless Point of Sale</h3>
+                                    </div>
+                                    <p class="text-gray-600 text-sm">
+                                        Process sales quickly with an intuitive interface for both direct and consignment transactions. Manage payments, invoices, and customer data seamlessly.
+                                    </p>
+                                </div>
+
+                                <!-- Feature 2: Inventory Management -->
+                                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500">
+                                    <div class="flex items-center space-x-4 mb-3">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <!-- Icon: Package/Box -->
+                                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-800">Real-Time Inventory Control</h3>
+                                    </div>
+                                    <p class="text-gray-600 text-sm">
+                                        Track stock levels automatically with every purchase and sale. Manage your product catalogue, suppliers, and purchase orders with ease.
+                                    </p>
+                                </div>
+
+                                <!-- Feature 3: Reporting & Analytics -->
+                                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                                    <div class="flex items-center space-x-4 mb-3">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <!-- Icon: Bar Chart -->
+                                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-800">Powerful Business Insights</h3>
+                                    </div>
+                                    <p class="text-gray-600 text-sm">
+                                        Generate detailed reports on sales, inventory, and financial performance. Make data-driven decisions with an executive-level dashboard.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 3. Visual Element -->
+                        <section class="bg-white rounded-lg shadow-xl p-4 border">
+                            <img src="path/to/your/dashboard-screenshot.png" alt="MONETA Dashboard Screenshot" class="rounded-md shadow-lg">
+                        </section>
+
+                    </div>
                 </div>
+
+
+
 
                 <!-- ======================= -->
                 <!--  APPLICATION DASHBOARD  -->
