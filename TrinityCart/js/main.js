@@ -599,6 +599,10 @@ const EventHandlers = {
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
         //'executive-dashboard-view': showExecutiveDashboardView,
+        'dashboard-view': async () => {
+            showView('dashboard-view');
+            await loadApplicationDashboard(); // ✅ Load application landing dashboard
+        },
         'executive-dashboard-view': async () => {
             showView('executive-dashboard-view');
             await loadExecutiveDashboard(); // ✅ Load dashboard data when view opens
