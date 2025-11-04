@@ -6875,6 +6875,7 @@ function updateExecutiveSummaryCards(businessSummary) {
 /**
  * UI ONLY: Update dashboard display with data from reports.js
  */
+
 function updateExecutiveDashboardDisplay(dashboardData) {
     console.log('[ui.js] 🎨 Updating executive dashboard display...');
     console.log('[ui.js] 🔍 FULL Dashboard data debug:');
@@ -7008,7 +7009,7 @@ function updateExecutiveDashboardDisplay(dashboardData) {
             const tastyTransactionsElement = document.getElementById('tasty-treats-executive-transactions');
             
             if (tastyRevenueElement) tastyRevenueElement.textContent = formatCurrency(directSalesChannel.revenue * 0.4); // Estimate
-            if (tastyTransactionsElement) tastyTransactionsElement.textContent = 'Data unavailable';
+            if (tastyTransactionsElement) tastyTransactionsElement.textContent = 'Data unavailable:Number is a projection which is 40% of the Church Store Revenue';
         }
         
         console.log('[ui.js] ✅ Direct sales channel updated:', {
