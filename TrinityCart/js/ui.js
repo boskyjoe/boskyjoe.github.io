@@ -6793,6 +6793,25 @@ function updateExecutiveSummaryCards(businessSummary) {
  */
 function updateExecutiveDashboardDisplay(dashboardData) {
     console.log('[ui.js] 🎨 Updating executive dashboard display...');
+    console.log('[ui.js] 🔍 FULL Dashboard data debug:');
+    console.log('  dashboardData keys:', Object.keys(dashboardData));
+    console.log('  dashboardData.detailedBreakdown:', dashboardData.detailedBreakdown);
+    
+    if (dashboardData.detailedBreakdown) {
+        console.log('  detailedBreakdown keys:', Object.keys(dashboardData.detailedBreakdown));
+        console.log('  directSalesData:', dashboardData.detailedBreakdown.directSalesData);
+        
+        if (dashboardData.detailedBreakdown.directSalesData) {
+            console.log('  directSalesData keys:', Object.keys(dashboardData.detailedBreakdown.directSalesData));
+            console.log('  productPerformance:', dashboardData.detailedBreakdown.directSalesData.productPerformance);
+            
+            if (dashboardData.detailedBreakdown.directSalesData.productPerformance) {
+                console.log('  productPerformance length:', dashboardData.detailedBreakdown.directSalesData.productPerformance.length);
+                console.log('  First product:', dashboardData.detailedBreakdown.directSalesData.productPerformance[0]);
+            }
+        }
+    }
+    
     
     // ✅ EXECUTIVE SUMMARY CARDS
     const executiveSummary = dashboardData.executiveSummary;
@@ -6819,22 +6838,38 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     const productPerformanceElement = document.getElementById('executive-product-performance');
 
     if (productPerformanceElement) {
-        const topProduct = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
+        console.log('[ui.js] 🔍 Looking for product performance data...');
+        
+        // ✅ TRY MULTIPLE PATHS:
+        let topProduct = null;
+        
+        // Path 1: Detailed breakdown
+        if (dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0]) {
+            topProduct = dashboardData.detailedBreakdown.directSalesData.productPerformance[0];
+            console.log('[ui.js] ✅ Found product via detailed breakdown path:', topProduct);
+        }
+        // Path 2: Performance highlights (fallback)
+        else if (dashboardData.performanceHighlights?.bestProduct) {
+            console.log('[ui.js] 🔍 Found product name but no performance data, creating fallback...');
+            topProduct = {
+                productName: dashboardData.performanceHighlights.bestProduct,
+                totalRevenue: 0,
+                formattedRevenue: '₹0',
+                totalQuantity: 0,
+                transactionCount: 0
+            };
+        }
         
         if (topProduct) {
-            // ✅ ENHANCED: Show comprehensive product performance
-            const performanceText = `${topProduct.formattedRevenue} revenue • ${topProduct.totalQuantity} sold • ${topProduct.transactionCount} orders`;
+            const performanceText = topProduct.totalRevenue > 0 
+                ? `${topProduct.formattedRevenue} revenue • ${topProduct.totalQuantity} sold • ${topProduct.transactionCount} orders`
+                : 'Performance data calculating...';
+                
             productPerformanceElement.textContent = performanceText;
-            
-            console.log('[ui.js] ✅ Top product performance updated:', {
-                product: topProduct.productName,
-                revenue: topProduct.formattedRevenue,
-                quantity: topProduct.totalQuantity,
-                transactions: topProduct.transactionCount
-            });
+            console.log('[ui.js] ✅ Top product performance set to:', performanceText);
         } else {
-            productPerformanceElement.textContent = 'Performance data unavailable';
-            console.warn('[ui.js] ⚠️ No product performance data available');
+            productPerformanceElement.textContent = 'No product data available';
+            console.log('[ui.js] ⚠️ No product performance data found in any path');
         }
     }
     
