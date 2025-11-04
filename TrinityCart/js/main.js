@@ -101,7 +101,7 @@ import {
     removeItemFromCart, showRecordSalePaymentModal,
     closeRecordSalePaymentModal, getSalesHistoryDataById,
     getSalePaymentDataFromGridById, switchPaymentModalTab, resetSalePaymentForm,
-    refreshSalePaymentModal,
+    refreshSalePaymentModal,loadApplicationDashboard,
     showBulkAddProductsModal,        
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility
