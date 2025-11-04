@@ -6836,40 +6836,33 @@ function updateExecutiveDashboardDisplay(dashboardData) {
     document.getElementById('executive-top-team-revenue').textContent = highlights.topTeamRevenue;
     document.getElementById('executive-best-product').textContent = highlights.bestProduct;
     const productPerformanceElement = document.getElementById('executive-product-performance');
-
     if (productPerformanceElement) {
         console.log('[ui.js] 🔍 Looking for product performance data...');
+        console.log('[ui.js] 🔍 dashboardData.detailedBreakdown:', !!dashboardData.detailedBreakdown);
+        console.log('[ui.js] 🔍 directSalesData:', !!dashboardData.detailedBreakdown?.directSalesData);
+        console.log('[ui.js] 🔍 productPerformance:', dashboardData.detailedBreakdown?.directSalesData?.productPerformance);
         
-        // ✅ TRY MULTIPLE PATHS:
-        let topProduct = null;
+        // ✅ CORRECTED: Use the exact path from your debug
+        const topProduct = dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0];
         
-        // Path 1: Detailed breakdown
-        if (dashboardData.detailedBreakdown?.directSalesData?.productPerformance?.[0]) {
-            topProduct = dashboardData.detailedBreakdown.directSalesData.productPerformance[0];
-            console.log('[ui.js] ✅ Found product via detailed breakdown path:', topProduct);
-        }
-        // Path 2: Performance highlights (fallback)
-        else if (dashboardData.performanceHighlights?.bestProduct) {
-            console.log('[ui.js] 🔍 Found product name but no performance data, creating fallback...');
-            topProduct = {
-                productName: dashboardData.performanceHighlights.bestProduct,
-                totalRevenue: 0,
-                formattedRevenue: '₹0',
-                totalQuantity: 0,
-                transactionCount: 0
-            };
-        }
+        console.log('[ui.js] 🔍 Top product found:', topProduct);
         
         if (topProduct) {
-            const performanceText = topProduct.totalRevenue > 0 
-                ? `${topProduct.formattedRevenue} revenue • ${topProduct.totalQuantity} sold • ${topProduct.transactionCount} orders`
-                : 'Performance data calculating...';
-                
+            // ✅ CREATE: Comprehensive performance text using available data
+            const performanceText = `${topProduct.formattedRevenue} revenue • ${topProduct.totalQuantity} units • ${topProduct.transactionCount} transaction${topProduct.transactionCount > 1 ? 's' : ''}`;
+            
             productPerformanceElement.textContent = performanceText;
-            console.log('[ui.js] ✅ Top product performance set to:', performanceText);
+            
+            console.log('[ui.js] ✅ Top product performance updated:', {
+                product: topProduct.productName,
+                revenue: topProduct.formattedRevenue,
+                quantity: topProduct.totalQuantity,
+                transactions: topProduct.transactionCount,
+                displayText: performanceText
+            });
         } else {
-            productPerformanceElement.textContent = 'No product data available';
-            console.log('[ui.js] ⚠️ No product performance data found in any path');
+            productPerformanceElement.textContent = 'Product performance data not accessible';
+            console.error('[ui.js] ❌ Could not access product performance data even though it exists');
         }
     }
     
