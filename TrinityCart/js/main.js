@@ -673,7 +673,8 @@ function setupGlobalClickHandler() {
         
 
         // Authentication
-        if (target.closest('#login-button')) return EventHandlers.auth.login();
+        //if (target.closest('#login-button')) return EventHandlers.auth.login();
+        if (target.closest('#login-button, #login-button-bottom')) return EventHandlers.auth.login();
         if (target.closest('#logout-button')) return EventHandlers.auth.logout();
 
         // Navigation
