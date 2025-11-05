@@ -4219,7 +4219,7 @@ export async function generateExecutiveDashboardData(daysBack = 30, options = {}
             businessInsights: businessSummary.businessInsights,
             
             detailedBreakdown: businessSummary.detailedBreakdown, 
-            
+
             // ✅ EXECUTIVE ENHANCEMENTS: Additional intelligence
             executiveIntelligence: {
                 overallPerformanceRating: calculateOverallPerformanceRating(businessSummary),
@@ -4769,6 +4769,7 @@ function generateExecutiveRecommendedActions(businessSummary) {
  * @param {Object} businessSummary - Business summary from generateBusinessSummaryOptimized
  * @returns {Promise<Object>} True revenue analysis with detailed breakdown
  */
+
 export async function calculateTrueBusinessRevenue(businessSummary) {
     console.log('[Reports] 💰 Calculating TRUE business revenue (actual cash received)...');
     
@@ -4821,8 +4822,8 @@ export async function calculateTrueBusinessRevenue(businessSummary) {
             consignmentCashRevenue = await calculateActualConsignmentCash();
             
             // Calculate implied losses (theoretical - actual - team commissions)
-            const impliedTeamCommission = theoreticalConsignmentRevenue * 0.3; // Assume 30% team keeps
-            consignmentLosses = theoreticalConsignmentRevenue - consignmentCashRevenue - impliedTeamCommission;
+            //const impliedTeamCommission = theoreticalConsignmentRevenue * 0.3; // Assume 30% team keeps
+            consignmentLosses = theoreticalConsignmentRevenue - consignmentCashRevenue ;
         }
         
         console.log(`[Reports] 👥 Consignment Revenue Analysis:`);
