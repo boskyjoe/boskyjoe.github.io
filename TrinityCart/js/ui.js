@@ -12065,7 +12065,7 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                 icon: '⚠️',
                 title: 'Payment Verifications Needed',
                 message: `${contextData.pendingActions.total} payments are awaiting your approval`,
-                action: "showView('pmt-mgmt-view')", // Use showView for SPA navigation
+                action: 'pmt-mgmt-view', // Use showView for SPA navigation
                 actionText: 'Verify Now'
             });
         }
@@ -12077,7 +12077,7 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                 icon: '🚨',
                 title: 'Critical Stock Alert',
                 message: `${contextData.inventoryAlerts.criticalCount} product(s) are out of stock`,
-                action: "showView('products-view')",
+                action: 'products-view',
                 actionText: 'Manage Inventory'
             });
         }
@@ -12115,13 +12115,20 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                 icon: alertIcon,
                 title: alertTitle,
                 message: alertMessage,
-                action: "showView('pmt-mgmt-view')",
+                action: 'pmt-mgmt-view',
                 actionText: 'Manage Payables'
             });
         }
 
     } else if (roleType === 'team_lead') {
-        // ... (your existing team_lead logic remains the same)
+        alerts.push({
+            type: 'info',
+            icon: '💡',
+            title: 'Team Leadership Tip',
+            message: 'Regular consignment requests help maintain team engagement',
+            action: 'showConsignmentView()',
+            actionText: 'Create Request'
+        });
     }
     
     // Default state if no alerts
@@ -12165,7 +12172,7 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                     </div>
                     ${alert.action ? 
                         // ✅ CORRECTED: Use a proper onclick attribute that calls a global function
-                        `<button onclick="window.handleAlertAction('${alert.action}')" class="text-xs px-3 py-1 rounded bg-white bg-opacity-50 hover:bg-opacity-75 font-medium">
+                        `<button data-action-view="${alert.action}" class="alert-action-button text-xs px-3 py-1 rounded bg-white bg-opacity-50 hover:bg-opacity-75 font-medium">
                             ${alert.actionText}
                         </button>` : ''
                     }
@@ -12179,16 +12186,6 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
 
 
 
-// ✅ NEW: Add this global helper function to your ui.js file
-// This makes the onclick attribute in the HTML work correctly.
-window.handleAlertAction = function(actionString) {
-    try {
-        // A safe way to execute the string function
-        eval(actionString);
-    } catch (e) {
-        console.error("Error executing alert action:", e);
-    }
-}
 
 /**
  * HELPER: Get team lead specific metrics (placeholder)
