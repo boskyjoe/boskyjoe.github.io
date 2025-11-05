@@ -3926,42 +3926,84 @@ async function handleConsignmentRequestSubmit(e) {
 }
 
 
-
 async function handleActivityReportSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    if (!user) return;
+    if (!user) {
+        // Use your modal system for better feedback
+        return showModal('error', 'Not Logged In', 'You must be logged in to report activity.');
+    }
 
+    // --- Step 1: Gather and Validate Form Data ---
     const orderId = document.getElementById('activity-order-id').value;
-    const productValue = document.getElementById('activity-product-select').value;
+    const productSelect = document.getElementById('activity-product-select');
+    const productValue = productSelect.value;
+    const activityType = document.getElementById('activity-type-select').value;
+    const quantity = parseInt(document.getElementById('activity-quantity-input').value, 10);
+    const notes = document.getElementById('activity-notes-input').value;
+    const salesEventId = document.getElementById('activity-event-select').value || null;
 
     if (!orderId || !productValue) {
-        return alert("Missing order or product information.");
+        return showModal('error', 'Missing Information', 'Missing order or product information. Please close the modal and try again.');
+    }
+    if (!activityType) {
+        return showModal('error', 'Missing Information', 'Please select an activity type (Sale, Return, or Damage).');
+    }
+    if (!quantity || quantity <= 0) {
+        return showModal('error', 'Invalid Quantity', 'Please enter a valid quantity greater than zero.');
     }
 
+    // Safely parse the product data from the dropdown
     const { itemId, productId, sellingPrice } = JSON.parse(productValue);
+    const productName = productSelect.options[productSelect.selectedIndex].text.split(' (')[0]; // Get clean product name
 
-    const activityData = {
-        activityType: document.getElementById('activity-type-select').value,
-        quantity: parseInt(document.getElementById('activity-quantity-input').value, 10),
-        notes: document.getElementById('activity-notes-input').value,
-        productId,
-        salesEventId: document.getElementById('activity-type-select').value === 'Sale'
-            ? document.getElementById('activity-event-select').value || null
-            : null
-    };
-
-    if (!activityData.quantity || activityData.quantity <= 0) {
-        return alert("Please enter a valid quantity greater than zero.");
-    }
+    // --- Step 2: Start the Operation with User Feedback ---
+    ProgressToast.show('Logging Consignment Activity', 'info');
 
     try {
-        await logActivityAndUpdateConsignment(orderId, itemId, activityData, sellingPrice, user);
-        alert("Activity logged successfully!");
-        closeReportActivityModal();
+        ProgressToast.updateProgress('Preparing activity data...', 30, 'Step 1 of 3');
+
+        // ✅ REFACTORED: Assemble the single activityData object for the new API signature
+        const activityData = {
+            orderId,
+            itemId,
+            productId,
+            productName,
+            activityType,
+            quantityDelta: quantity, // The API expects the change amount
+            sellingPrice,
+            notes,
+            salesEventId: activityType === 'Sale' ? salesEventId : null,
+            correctionDetails: null // This is not a correction, so it's null
+        };
+
+        ProgressToast.updateProgress('Saving to database & updating totals...', 70, 'Step 2 of 3');
+
+        // ✅ REFACTORED: Call the updated, single-argument API function
+        await logActivityAndUpdateConsignment(activityData, user);
+
+        ProgressToast.showSuccess('Activity logged successfully!');
+
+        // --- Step 3: Final Confirmation ---
+        setTimeout(() => {
+            ProgressToast.hide(500); // Hide toast quickly
+            closeReportActivityModal();
+            showModal('success', 'Activity Logged', 
+                `Successfully logged ${quantity} unit(s) of "${productName}" as a ${activityType}.\n\nThe consignment order's totals have been updated.`
+            );
+        }, 1200);
+
     } catch (error) {
         console.error("Error logging activity:", error);
-        alert(`Failed to log activity: ${error.message}`);
+        // Use the toast to show a concise error, then a modal for details
+        ProgressToast.showError(`Failed to log activity: ${error.message}`);
+        setTimeout(() => {
+            showModal('error', 'Logging Failed', 
+                `The activity could not be logged. Please check the details and try again.\n\n` +
+                `Common Reason: The quantity reported may exceed the available items on hand for this consignment.\n\n` +
+                `Error: ${error.message}`
+            );
+        }, 2000);
     }
 }
 
