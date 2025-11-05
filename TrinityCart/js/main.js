@@ -487,24 +487,31 @@ async function handleRequestConsignmentClick() {
  */
 let isFulfilling = false;
 async function handleFulfillConsignmentClick() {
-
     if (isFulfilling) {
         console.warn("Fulfillment is already in progress. Ignoring duplicate click.");
         return;
     }
 
-
     const user = appState.currentUser;
-    if (user.role !== 'admin') return alert("Only admins can fulfill orders.");
-
-    // selectedConsignmentId is a global variable set by the UI when a row is selected
-    const orderId = appState.selectedConsignmentId;
-
-    if (!orderId) {
-        return alert("No consignment order selected.");
+    if (user.role !== 'admin') {
+        // Use your modal system for better feedback than an alert
+        await showModal('error', 'Permission Denied', 'Only administrators can fulfill consignment orders.');
+        return;
     }
 
-    if (!confirm("This will decrement main store inventory and activate the consignment. This action cannot be undone. Are you sure?")) {
+    const orderId = appState.selectedConsignmentId;
+    if (!orderId) {
+        await showModal('warning', 'No Order Selected', 'Please select a consignment order from the grid to fulfill.');
+        return;
+    }
+
+    // Use the promise-based modal for confirmation
+    const confirmed = await showModal('confirm', 'Confirm Fulfillment', 
+        'This will decrement main store inventory and activate the consignment order.\n\nThis action cannot be undone. Are you sure you want to proceed?'
+    );
+
+    if (!confirmed) {
+        console.log("User cancelled fulfillment.");
         return;
     }
 
@@ -512,48 +519,62 @@ async function handleFulfillConsignmentClick() {
     const fulfillButton = document.getElementById('fulfill-checkout-btn');
     if (fulfillButton) {
         fulfillButton.disabled = true;
-        fulfillButton.textContent = 'Fulfilling...';
+        fulfillButton.textContent = 'Processing...';
     }
 
-
-    // Use our new helper function to get the final data from the UI
-    const finalItems = getFulfillmentItems();
-
-    if (finalItems.length === 0) {
-        alert("There are no items with a quantity greater than zero to fulfill in this order.");
-        isFulfilling = false;
-        if (fulfillButton) {
-            fulfillButton.disabled = false;
-            fulfillButton.textContent = 'Fulfill & Check Out';
-        }
-        return;
-    }
-
+    // ✅ START: Show the progress toast
+    ProgressToast.show('Fulfilling Consignment Order', 'info');
 
     try {
-        await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
-        alert("Success! Consignment is now active and inventory has been updated.");
+        // Step 1: Get data from the UI
+        ProgressToast.updateProgress('Validating items to fulfill...', 20, 'Step 1 of 5');
+        const finalItems = getFulfillmentItems();
 
-        // 1. Directly fetch the fresh, updated order data from the database.
+        if (finalItems.length === 0) {
+            // Use showError and hide the toast before showing the modal
+            ProgressToast.showError('No items with a quantity greater than zero were found.');
+            setTimeout(() => showModal('warning', 'No Items to Fulfill', 'There are no items with a quantity greater than zero in this order.'), 1000);
+            throw new Error("Empty fulfillment list."); // Throw an error to go to the finally block
+        }
+
+        // Step 2: Main API call (the longest step)
+        ProgressToast.updateProgress('Updating inventory & activating order...', 50, 'Step 2 of 5');
+        await fulfillConsignmentAndUpdateInventory(orderId, finalItems, user);
+
+        // Step 3: Fetch updated data for UI refresh
+        ProgressToast.updateProgress('Retrieving updated order details...', 80, 'Step 3 of 5');
         const updatedOrderData = await getConsignmentOrderById(orderId);
 
-        // 2. If the data was fetched successfully, call the UI function to render the panel.
+        // Step 4: Final UI update
+        ProgressToast.updateProgress('Rendering updated consignment details...', 95, 'Step 4 of 5');
         if (updatedOrderData) {
             renderConsignmentDetail(updatedOrderData);
         } else {
-            // If something went wrong, just hide the panel to be safe.
+            // If fetching the updated data failed, hide the panel to prevent stale data
             hideConsignmentDetailPanel();
         }
+        
+        // Note: The call to refreshConsignmentDetailPanel(orderId) is redundant
+        // because renderConsignmentDetail(updatedOrderData) already accomplishes the same goal
+        // with fresher data. It has been safely removed.
 
+        // Step 5: Show success state
+        ProgressToast.showSuccess('Fulfillment complete! Consignment is now active.');
 
-        refreshConsignmentDetailPanel(orderId);
-
+        // Hide the toast after a short delay and show a final confirmation modal
+        setTimeout(() => {
+            ProgressToast.hide(500); // Hide toast quickly
+            showModal('success', 'Fulfillment Successful', 'The consignment order is now active and inventory has been updated.');
+        }, 1500);
 
     } catch (error) {
         console.error("Fulfillment failed:", error);
-        alert(`Fulfillment failed: ${error.message}`);
-    } finally {
+        // Use the toast to show the error, then a modal for more detail
+        ProgressToast.showError(`Fulfillment failed: ${error.message}`);
+        setTimeout(() => showModal('error', 'Fulfillment Failed', `The operation could not be completed. Please check the console for details or try again.\n\nError: ${error.message}`), 2000);
 
+    } finally {
+        // This block will always run, whether the try block succeeded or failed
         isFulfilling = false;
         if (fulfillButton) {
             fulfillButton.disabled = false;
