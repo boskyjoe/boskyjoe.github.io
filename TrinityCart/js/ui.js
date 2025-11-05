@@ -12083,7 +12083,19 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
         }
 
         // ✅ NEW: Alert 3 - Overdue Supplier Invoices
+
+        console.log('[Debug Alert] Checking for overdue supplier payables...');
         const supplierPayables = contextData.outstandingMetrics?.supplierPayables;
+
+        console.log('[Debug Alert] supplierPayables object received:', supplierPayables);
+
+        if (supplierPayables) {
+            console.log('[Debug Alert] Overdue Count:', supplierPayables.overdueCount);
+        }
+
+
+
+
         if (supplierPayables && supplierPayables.overdueCount > 0) {
             let alertType = 'warning';
             let alertIcon = '🧾';
@@ -12167,7 +12179,6 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
 
 
 
-
 // ✅ NEW: Add this global helper function to your ui.js file
 // This makes the onclick attribute in the HTML work correctly.
 window.handleAlertAction = function(actionString) {
@@ -12178,7 +12189,6 @@ window.handleAlertAction = function(actionString) {
         console.error("Error executing alert action:", e);
     }
 }
-
 
 /**
  * HELPER: Get team lead specific metrics (placeholder)
