@@ -3806,10 +3806,15 @@ async function handleConsignmentRequestSubmit(e) {
         const catalogueSelect = document.getElementById('request-catalogue-select');
         const eventSelect = document.getElementById('request-event-select');
 
+        const manualVoucherNumber = document.getElementById('consignment-voucher-number').value.trim();
+
         if (!catalogueSelect.value) {
             ProgressToast.hide(0);
-            await showModal('error', 'No Catalogue Selected', 'Please select a sales catalogue for this consignment request.');
-            return;
+            return showModal('error', 'No Catalogue Selected', 'Please select a sales catalogue for this consignment request.');
+        }
+        if (!manualVoucherNumber) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Voucher Number Required', 'Please enter a manual voucher number for this request.');
         }
 
         // Step 3: Product Selection Validation
@@ -3844,7 +3849,8 @@ async function handleConsignmentRequestSubmit(e) {
             salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
             requestingMemberId,
             requestingMemberName,
-            requestingMemberEmail
+            requestingMemberEmail,
+            manualVoucherNumber: manualVoucherNumber
         };
 
         // Step 5: Inventory Availability Check (Optional Enhancement)
