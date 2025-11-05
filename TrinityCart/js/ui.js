@@ -11284,6 +11284,7 @@ function getEnhancedInventoryAlerts() {
 /**
  * HELPER: Get outstanding balances for dashboard (simplified version)
  */
+
 async function getOutstandingBalancesForDashboard(forceRefresh = false) {
     const cacheKey = 'complete_outstanding_balances';
     
@@ -11390,6 +11391,8 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
             formattedTotalPayables: formatCurrency(totalPayables),
             netPosition,
             formattedNetPosition: formatCurrency(netPosition),
+
+            payablesCount: supplierInvoices.size,
             
             // ✅ COMPLETE BREAKDOWN
             receivablesBreakdown: {
@@ -12125,4 +12128,3 @@ function showApplicationDashboardError(error) {
         );
     }, 1000);
 }
-
