@@ -12186,6 +12186,16 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
 
 
 
+// ✅ NEW: Add this global helper function to your ui.js file
+// This makes the onclick attribute in the HTML work correctly.
+window.handleAlertAction = function(actionString) {
+    try {
+        // A safe way to execute the string function
+        eval(actionString);
+    } catch (e) {
+        console.error("Error executing alert action:", e);
+    }
+}
 
 /**
  * HELPER: Get team lead specific metrics (placeholder)
