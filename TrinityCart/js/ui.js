@@ -2950,6 +2950,8 @@ export function showPurchasesView() {
     addLineItem();
     calculateAllTotals();
 
+    document.getElementById('purchase-date').valueAsDate = new Date();
+
     const waitForGrid = setInterval(() => {
         if (purchaseInvoicesGridApi) {
             clearInterval(waitForGrid);
@@ -3019,7 +3021,7 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
 
 
     // Populate Header Fields
-    document.getElementById('purchase-date').valueAsDate = invoiceData.purchaseDate?.toDate() || new Date();
+    document.getElementById('purchase-date').valueAsDate = invoiceData.purchaseDate.toDate();
     document.getElementById('purchase-supplier').value = invoiceData.supplierId;
     document.getElementById('supplier-invoice-no').value = invoiceData.supplierInvoiceNo;
 
