@@ -11375,9 +11375,25 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
             uniqueTeams.add(teamName);
         });
         
-        // Supplier payables
-        const totalPayables = supplierInvoices.docs.reduce((sum, doc) => 
-            sum + (doc.data().balanceDue || 0), 0);
+        // ===================================================================
+        // ✅ ENHANCED SUPPLIER PAYABLES CALCULATION
+        // ===================================================================
+        const processedPayables = supplierInvoices.docs.map(doc => {
+            const data = doc.data();
+            const daysOutstanding = calculateDaysOutstanding(data.purchaseDate);
+            return {
+                balanceDue: data.balanceDue || 0,
+                isOverdue: daysOutstanding > 30,
+                isCritical: daysOutstanding > 45 || (data.balanceDue || 0) > 15000
+            };
+        });
+
+        const totalPayables = processedPayables.reduce((sum, inv) => sum + inv.balanceDue, 0);
+        const overdueCount = processedPayables.filter(inv => inv.isOverdue).length;
+        const overdueAmount = processedPayables.filter(inv => inv.isOverdue).reduce((sum, inv) => sum + inv.balanceDue, 0);
+        const criticalCount = processedPayables.filter(inv => inv.isCritical).length;
+        // ===================================================================
+
         
         // Calculate totals
         const totalReceivables = churchStoreReceivables + tastyTreatsReceivables + consignmentReceivables;
@@ -11393,6 +11409,15 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
             formattedNetPosition: formatCurrency(netPosition),
 
             payablesCount: supplierInvoices.size,
+
+            // ✅ NEW: Structured supplierPayables object
+            supplierPayables: {
+                invoiceCount: supplierInvoices.size,
+                totalOutstanding: totalPayables,
+                overdueCount: overdueCount,
+                overdueAmount: overdueAmount,
+                criticalCount: criticalCount
+            },
             
             // ✅ COMPLETE BREAKDOWN
             receivablesBreakdown: {
