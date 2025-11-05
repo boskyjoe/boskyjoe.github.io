@@ -663,6 +663,8 @@ export async function calculateConsignmentMetricsOptimized(startDate, endDate, u
                     : 0
             },
 
+            orders: orders,
+
             metadata: {
                 calculatedAt: new Date().toISOString(),
                 firestoreReadsUsed: totalReads,
@@ -4815,19 +4817,9 @@ export async function calculateTrueBusinessRevenue(businessSummary) {
         
         if (consignmentData) {
             // Theoretical: Total value teams checkout
-            theoreticalConsignmentRevenue = consignmentData.teamPerformance.reduce((sum, team) => {
-                // Assuming each 'team' object in teamPerformance represents an order with this data.
-                // If not, we may need to adjust where we get this from.
-                // Let's look for `totalValueCheckedOut` on the order object.
-                const order = businessSummary.detailedBreakdown.consignmentData.orders.find(o => o.teamName === team.teamName);
-                return sum + (order?.totalValueCheckedOut || 0);
+            theoreticalConsignmentRevenue = consignmentData.orders.reduce((sum, order) => {
+                return sum + (order.totalValueCheckedOut || 0);
             }, 0);
-
-            // If the above reduce doesn't work, a safer way is to use the raw orders if they are passed.
-            // Let's assume `consignmentData.orders` is available from a more detailed report.
-            if (consignmentData.orders) {
-                 theoreticalConsignmentRevenue = consignmentData.orders.reduce((sum, order) => sum + (order.totalValueCheckedOut || 0), 0);
-            }
             
             // ✅ ACTUAL: What teams actually paid to church
             // This should come from verified consignment payments
