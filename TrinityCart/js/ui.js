@@ -11380,7 +11380,7 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
         // ===================================================================
         const processedPayables = supplierInvoices.docs.map(doc => {
             const data = doc.data();
-            const daysOutstanding = calculateDaysOutstanding(data.purchaseDate);
+            const daysOutstanding = calculateDaysOutstandingSupplierInvoice(data.purchaseDate);
             return {
                 balanceDue: data.balanceDue || 0,
                 isOverdue: daysOutstanding > 30,
@@ -11469,6 +11469,39 @@ async function getOutstandingBalancesForDashboard(forceRefresh = false) {
     } catch (error) {
         console.error('[ui.js] Error calculating complete outstanding balances:', error);
         throw error;
+    }
+}
+
+
+/**
+ * HELPER: Calculates days outstanding for a supplier invoice purchase date.
+ * Safely handles Firestore Timestamps, JS Dates, and strings.
+ * @param {firebase.firestore.Timestamp | Date | string} purchaseDate - The date of the purchase.
+ * @returns {number} The number of days outstanding.
+ */
+function calculateDaysOutstandingSupplierInvoice(purchaseDate) {
+    if (!purchaseDate) return 0;
+
+    try {
+        // Safely convert Firestore Timestamp or string to a JS Date object
+        const invoiceDate = purchaseDate.toDate ? purchaseDate.toDate() : new Date(purchaseDate);
+        
+        // Ensure the date is valid before proceeding
+        if (isNaN(invoiceDate.getTime())) {
+            console.warn("Invalid date provided to calculateDaysOutstandingSupplierInvoice:", purchaseDate);
+            return 0;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize today to the start of the day for accurate comparison
+
+        const diffTime = today - invoiceDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return Math.max(0, diffDays); // Return 0 if the date is in the future
+    } catch (error) {
+        console.error("Error in calculateDaysOutstandingSupplierInvoice:", error);
+        return 0; // Return 0 on any error
     }
 }
 
