@@ -12096,7 +12096,7 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
 
 
 
-        if (supplierPayables && supplierPayables.overdueCount > 0) {
+        if (supplierPayables && supplierPayables.overdueCount >= 0) {
             let alertType = 'warning';
             let alertIcon = '🧾';
             let alertTitle = `${supplierPayables.overdueCount} Supplier Invoice(s) Overdue`;
