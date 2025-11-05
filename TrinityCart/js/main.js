@@ -149,6 +149,8 @@ import {
 
 } from './payment-management.js';
 
+import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; /
+
 
 // --- FIREBASE INITIALIZATION ---
 firebase.initializeApp(firebaseConfig);
@@ -691,7 +693,22 @@ function setupGlobalClickHandler() {
             targetClasses: target.className
         });
 
-        
+        const alertButton = target.closest('.alert-action-button');
+        if (alertButton && alertButton.dataset.actionView) {
+            const viewId = alertButton.dataset.actionView;
+            console.log(`Alert button clicked, navigating to: ${viewId}`);
+            showView(viewId);
+            return; // Action handled, stop further processing
+        }
+
+        const generateInvoiceButton = target.closest('.action-btn-generate-invoice');
+        if (generateInvoiceButton) {
+            const invoiceId = generateInvoiceButton.dataset.id;
+            if (invoiceId) {
+                await handleGenerateInvoice(invoiceId);
+            }
+            return; // Action handled
+        }
 
         // Authentication
         //if (target.closest('#login-button')) return EventHandlers.auth.login();
@@ -7036,6 +7053,113 @@ window.refreshApplicationDashboard = async function(forceRefresh = false) {
         }, 2000);
     }
 };
+
+
+/**
+ * Generates a PDF invoice for a given sale ID and initiates download.
+ * @param {string} invoiceId The document ID of the sales invoice.
+ */
+async function handleGenerateInvoice(invoiceId) {
+    ProgressToast.show('Generating PDF Invoice...', 'info');
+    
+    try {
+        // Step 1: Fetch the full invoice data
+        ProgressToast.updateProgress('Fetching invoice data...', 25);
+        const invoiceData = await getSalesInvoiceById(invoiceId);
+        if (!invoiceData) {
+            throw new Error("Invoice data could not be found.");
+        }
+
+        // Step 2: Get the HTML and CSS templates
+        ProgressToast.updateProgress('Preparing invoice template...', 50);
+        const templateHtml = getInvoiceSample3HTML();
+        const templateCss = getInvoiceSample3CSS();
+
+        // Step 3: Populate the template with real data
+        let populatedHtml = templateHtml;
+        
+        // Handle the "PAID" stamp conditionally
+        let paidStampHtml = '';
+        if (invoiceData.paymentStatus === 'Paid') {
+            paidStampHtml = '<div class="paid-stamp">PAID</div>';
+        }
+        populatedHtml = populatedHtml.replace('{{paidStamp}}', paidStampHtml);
+
+        // Determine the correct CSS class for the payment status
+        let paymentStatusClass = 'unpaid';
+        if (invoiceData.paymentStatus === 'Paid') {
+            paymentStatusClass = 'paid';
+        } else if (invoiceData.paymentStatus === 'Partially Paid') {
+            paymentStatusClass = 'partially-paid';
+        }
+        
+        // Define all placeholders and their values
+        const placeholders = {
+            '{{logoUrl}}': masterData.systemSetups?.logoUrl || 'https://placehold.co/100x40?text=MONETA',
+            '{{companyName}}': appState.ChurchName,
+            '{{companyAddress}}': masterData.systemSetups?.address || '123 Main St, Anytown, USA',
+            '{{companyEmail}}': masterData.systemSetups?.email || 'contact@moneta.com',
+            '{{invoiceId}}': invoiceData.saleId,
+            '{{voucherNumber}}': invoiceData.manualVoucherNumber,
+            '{{invoiceDate}}': invoiceData.saleDate.toDate().toLocaleDateString(),
+            '{{customerName}}': invoiceData.customerInfo.name,
+            '{{customerEmail}}': invoiceData.customerInfo.email,
+            '{{subtotal}}': formatCurrency(invoiceData.financials.itemsSubtotal),
+            '{{totalItemTax}}': formatCurrency(invoiceData.financials.totalItemLevelTax || 0),
+            '{{invoiceDiscount}}': formatCurrency(invoiceData.financials.orderDiscountAmount),
+            '{{orderTax}}': formatCurrency(invoiceData.financials.orderTaxAmount || 0),
+            '{{grandTotal}}': formatCurrency(invoiceData.financials.totalAmount),
+            '{{amountPaid}}': formatCurrency(invoiceData.totalAmountPaid || 0),
+            '{{balanceDue}}': formatCurrency(invoiceData.balanceDue || 0),
+            '{{paymentStatus}}': invoiceData.paymentStatus,
+            '{{paymentStatusClass}}': paymentStatusClass
+        };
+
+        // Replace all placeholders
+        for (const [key, value] of Object.entries(placeholders)) {
+            populatedHtml = populatedHtml.replace(new RegExp(key, 'g'), String(value));
+        }
+
+        // Generate and replace line item rows
+        const itemRows = invoiceData.lineItems.map((item) => `
+            <tr>
+                <td>${item.productName}</td>
+                <td>${formatCurrency(item.unitPrice)}</td>
+                <td>${item.quantity}</td>
+                <td>${formatCurrency(item.discountAmount || 0)}</td>
+                <td>${formatCurrency(item.taxAmount || 0)}</td>
+                <td>${formatCurrency(item.lineTotal)}</td>
+            </tr>
+        `).join('');
+        populatedHtml = populatedHtml.replace('{{lineItems}}', itemRows);
+
+        // Step 4: Generate the PDF
+        ProgressToast.updateProgress('Rendering PDF...', 75);
+        const invoiceContainer = document.getElementById('invoice-template-container');
+        invoiceContainer.innerHTML = `<style>${templateCss}</style>${populatedHtml}`;
+        
+        const elementToPrint = invoiceContainer.querySelector('.invoice-wrapper');
+
+        const opt = {
+            margin:       0.5,
+            filename:     `Invoice-${invoiceData.saleId}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        await html2pdf().from(elementToPrint).set(opt).save();
+
+        ProgressToast.showSuccess('Invoice downloaded successfully!');
+        setTimeout(() => ProgressToast.hide(500), 1200);
+
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        ProgressToast.showError(`PDF Generation Failed: ${error.message}`);
+    }
+}
+
+
 
 
 // --- APPLICATION INITIALIZATION ---
