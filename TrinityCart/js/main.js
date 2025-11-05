@@ -149,7 +149,7 @@ import {
 
 } from './payment-management.js';
 
-import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; /
+import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; 
 
 
 // --- FIREBASE INITIALIZATION ---
