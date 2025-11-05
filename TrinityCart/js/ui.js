@@ -11991,6 +11991,7 @@ async function updateRecentActivity(roleType, user) {
 /**
  * HELPER: Update alerts section  
  */
+
 async function updateSystemAlerts(roleType, user, contextData = {}) {
     const container = document.getElementById('dashboard-alerts');
     if (!container) return;
@@ -11998,7 +11999,7 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
     const alerts = [];
     
     // ✅ ROLE-BASED ALERTS
-    if (roleType === 'admin') {
+    if (roleType === 'admin' || roleType === 'finance')  {
         if (contextData.pendingActions?.total > 0) {
             alerts.push({
                 type: 'warning',
@@ -12020,6 +12021,33 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                 actionText: 'Manage Inventory'
             });
         }
+
+        // ✅ NEW: Alert 3 - Overdue Supplier Invoices
+        const supplierPayables = contextData.outstandingMetrics?.supplierPayables;
+        if (supplierPayables && supplierPayables.overdueCount > 0) {
+            let alertType = 'warning';
+            let alertIcon = '🧾';
+            let alertTitle = `${supplierPayables.overdueCount} Supplier Invoice(s) Overdue`;
+            let alertMessage = `Totaling ${formatCurrency(supplierPayables.overdueAmount)}. Pay soon to maintain good supplier relations.`;
+
+            // Make the alert more urgent if there are critical invoices
+            if (supplierPayables.criticalCount > 0) {
+                alertType = 'error';
+                alertIcon = '🔥';
+                alertTitle = `${supplierPayables.criticalCount} Critical Invoice(s) Need Immediate Payment`;
+                alertMessage = `${supplierPayables.overdueCount} total invoices are overdue, with some requiring urgent attention.`;
+            }
+
+            alerts.push({
+                type: alertType,
+                icon: alertIcon,
+                title: alertTitle,
+                message: alertMessage,
+                action: "showView('pmt-mgmt-view')",
+                actionText: 'Manage Payables'
+            });
+        }
+
     } else if (roleType === 'team_lead') {
         alerts.push({
             type: 'info',
@@ -12043,6 +12071,10 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
         });
     }
     
+    // Sort alerts by severity: error > warning > info > success
+    const severityOrder = { 'error': 1, 'warning': 2, 'info': 3, 'success': 4 };
+    alerts.sort((a, b) => (severityOrder[a.type] || 5) - (severityOrder[b.type] || 5));
+
     const alertsHTML = alerts.map(alert => {
         const alertStyles = {
             'success': 'bg-green-50 border-green-200 text-green-800',
@@ -12053,6 +12085,9 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
         
         const style = alertStyles[alert.type] || alertStyles['info'];
         
+        // Use a unique ID for each button if you plan to add more specific event listeners
+        const buttonId = `alert-action-${alert.action?.replace(/['()]/g, '')}`;
+
         return `
             <div class="border rounded-lg p-4 ${style}">
                 <div class="flex items-start justify-between">
@@ -12064,7 +12099,8 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
                         </div>
                     </div>
                     ${alert.action ? 
-                        `<button onclick="${alert.action}" class="text-xs px-3 py-1 rounded bg-white bg-opacity-50 hover:bg-opacity-75 font-medium">
+                        // ✅ CORRECTED: Use a proper onclick attribute that calls a global function
+                        `<button onclick="window.handleAlertAction('${alert.action}')" class="text-xs px-3 py-1 rounded bg-white bg-opacity-50 hover:bg-opacity-75 font-medium">
                             ${alert.actionText}
                         </button>` : ''
                     }
@@ -12075,6 +12111,19 @@ async function updateSystemAlerts(roleType, user, contextData = {}) {
     
     container.innerHTML = alertsHTML;
 }
+
+
+// ✅ NEW: Add this global helper function to your ui.js file
+// This makes the onclick attribute in the HTML work correctly.
+window.handleAlertAction = function(actionString) {
+    try {
+        // A safe way to execute the string function
+        eval(actionString);
+    } catch (e) {
+        console.error("Error executing alert action:", e);
+    }
+}
+
 
 /**
  * HELPER: Get team lead specific metrics (placeholder)
