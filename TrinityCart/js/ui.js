@@ -12402,8 +12402,9 @@ const expensesGridOptions = {
                 const rowId = params.node.id;
 
                 if (params.data.isNew) {
-                    const saveIcon = `<svg>...</svg>`; // Your save icon
-                    const cancelIcon = `<svg>...</svg>`; // Your cancel icon
+                    const saveIcon = `<svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>`;
+                    const cancelIcon = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
+                    
                     return `
                         <button class="action-btn-icon action-btn-save-expense" data-id="${rowId}" title="Save New Expense">${saveIcon}</button>
                         <button class="action-btn-icon action-btn-cancel-expense" data-id="${rowId}" title="Cancel">${cancelIcon}</button>
