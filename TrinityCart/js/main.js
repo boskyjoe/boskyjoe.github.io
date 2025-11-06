@@ -7063,31 +7063,27 @@ async function handleGenerateInvoice(invoiceId) {
     ProgressToast.show('Generating PDF Invoice...', 'info');
     
     try {
-        // Step 1: Fetch the full invoice data
         ProgressToast.updateProgress('Fetching invoice data...', 25);
         const invoiceData = await getSalesInvoiceById(invoiceId);
-        
-        // --- 🔴 DEBUG POINT 1: INSPECT THE RAW DATA ---
-        // This is the most important step. It shows us the exact structure of the data from Firestore.
-        console.log("--- PDF Generation Debug ---");
-        console.log("1. RAW INVOICE DATA FROM FIRESTORE:");
-        console.log(JSON.parse(JSON.stringify(invoiceData))); // A trick to get a clean, expandable object in the console
-
         if (!invoiceData) {
             throw new Error("Invoice data could not be found.");
         }
 
         ProgressToast.updateProgress('Preparing invoice template...', 50);
+        
         const templateHtml = getInvoiceSample3HTML();
         const templateCss = getInvoiceSample3CSS();
 
         let populatedHtml = templateHtml;
+        
+        // Handle the "PAID" stamp
         let paidStampHtml = '';
         if (invoiceData.paymentStatus === 'Paid') {
             paidStampHtml = '<div class="paid-stamp">PAID</div>';
         }
         populatedHtml = populatedHtml.replace('{{paidStamp}}', paidStampHtml);
 
+        // Determine the correct CSS class for the payment status
         let paymentStatusClass = 'unpaid';
         if (invoiceData.paymentStatus === 'Paid') {
             paymentStatusClass = 'paid';
@@ -7095,8 +7091,7 @@ async function handleGenerateInvoice(invoiceId) {
             paymentStatusClass = 'partially-paid';
         }
         
-        // --- 🔴 DEBUG POINT 2: CHECK THE VALUES BEING USED ---
-        // We use optional chaining (?.) and a fallback (|| 0) to prevent errors.
+        // Define all placeholders and their values
         const placeholders = {
             '{{logoUrl}}': masterData.systemSetups?.logoUrl || 'https://placehold.co/100x40?text=MONETA',
             '{{companyName}}': appState.ChurchName,
@@ -7116,22 +7111,33 @@ async function handleGenerateInvoice(invoiceId) {
             '{{paymentStatus}}': invoiceData.paymentStatus,
             '{{paymentStatusClass}}': paymentStatusClass
         };
-        console.log("2. VALUES BEING USED FOR PLACEHOLDERS:");
-        console.log(placeholders);
 
+        // Replace all placeholders
         for (const [key, value] of Object.entries(placeholders)) {
             populatedHtml = populatedHtml.replace(new RegExp(key, 'g'), String(value));
         }
 
-        const itemRows = invoiceData.lineItems.map((item) => `...`).join(''); // This part is likely fine
+        // ===================================================================
+        // ✅ THIS IS THE MISSING PIECE
+        // This code loops through each item in the invoice and generates an HTML table row.
+        // ===================================================================
+        const itemRows = invoiceData.lineItems.map((item) => `
+            <tr>
+                <td>${item.productName}</td>
+                <td>${formatCurrency(item.unitPrice)}</td>
+                <td>${item.quantity}</td>
+                <td>${formatCurrency(item.discountAmount || 0)}</td>
+                <td>${formatCurrency(item.taxAmount || 0)}</td>
+                <td>${formatCurrency(item.lineTotal)}</td>
+            </tr>
+        `).join(''); // .join('') combines all the rows into a single string
+
+        // Now, we replace the placeholder with the generated HTML string
         populatedHtml = populatedHtml.replace('{{lineItems}}', itemRows);
+        // ===================================================================
 
-        // --- 🔴 DEBUG POINT 3: INSPECT THE FINAL HTML ---
-        console.log("3. FINAL HTML BEFORE PDF CONVERSION:");
-        console.log(populatedHtml);
-
+        // The rest of the function for PDF generation
         ProgressToast.updateProgress('Rendering PDF...', 75);
-        
         const invoiceContainer = document.getElementById('invoice-template-container');
         invoiceContainer.innerHTML = `<style>${templateCss}</style>${populatedHtml}`;
         
@@ -7155,7 +7161,6 @@ async function handleGenerateInvoice(invoiceId) {
         ProgressToast.showError(`PDF Generation Failed: ${error.message}`);
     }
 }
-
 
 
 
