@@ -150,6 +150,8 @@ import {
 } from './payment-management.js';
 
 import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; 
+import { storeConfig } from './config.js'; 
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -7070,6 +7072,8 @@ async function handleGenerateInvoice(invoiceId) {
         }
 
         ProgressToast.updateProgress('Preparing invoice template...', 50);
+
+        const storeDetails = storeConfig[invoiceData.store] || storeConfig['default'];
         
         const templateHtml = getInvoiceSample3HTML();
         const templateCss = getInvoiceSample3CSS();
@@ -7095,8 +7099,13 @@ async function handleGenerateInvoice(invoiceId) {
         const placeholders = {
             '{{logoUrl}}': masterData.systemSetups?.logoUrl || 'https://placehold.co/100x40?text=MONETA',
             '{{companyName}}': appState.ChurchName,
-            '{{companyAddress}}': masterData.systemSetups?.address || '123 Main St, Anytown, USA',
-            '{{companyEmail}}': masterData.systemSetups?.email || 'contact@moneta.com',
+            '{{companyAddress}}': storeDetails.address,
+            '{{companyTaxId}}': storeDetails.taxId,
+            '{{signatoryName}}': storeDetails.signatoryName,
+            '{{signatoryTitle}}': storeDetails.signatoryTitle,
+            
+            '{{companyEmail}}': storeDetails.email,
+
             '{{invoiceId}}': invoiceData.saleId,
             '{{voucherNumber}}': invoiceData.manualVoucherNumber,
             '{{invoiceDate}}': invoiceData.saleDate.toDate().toLocaleDateString(),
