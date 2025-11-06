@@ -30,6 +30,8 @@ export function getInvoiceSample3HTML() {
                     <p>{{customerName}}<br>{{customerEmail}}</p>
                 </div>
             </div>
+            
+            <!-- ✅ CHANGED: The main body now only contains the items table -->
             <div class="invoice-body">
                 <table class="line-items-table">
                     <thead>
@@ -46,6 +48,10 @@ export function getInvoiceSample3HTML() {
                         {{lineItems}}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- ✅ NEW: A new section specifically for the totals, placed AFTER the items -->
+            <div class="invoice-summary-section">
                 <div class="payment-sidebar">
                     <h4>Summary</h4>
                     <div class="summary-item"><span>Subtotal</span><span>{{subtotal}}</span></div>
@@ -60,6 +66,7 @@ export function getInvoiceSample3HTML() {
                     <div class="summary-item balance-due {{paymentStatusClass}}"><span>Balance Due</span><span>{{balanceDue}}</span></div>
                 </div>
             </div>
+
             <div class="invoice-footer">
                 <p>Thank you for your business! All payments are final.</p>
             </div>
