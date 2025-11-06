@@ -90,13 +90,13 @@ export function getInvoiceSample3CSS() {
         .invoice-info p span{color:#6b7280;}
         .invoice-parties{display:flex;justify-content:space-between;margin-bottom:40px;border-top:1px solid #eee;border-bottom:1px solid #eee;padding:20px 0;}
         .invoice-parties h3{font-size:12px;color:#6b7280;text-transform:uppercase;margin-bottom:5px;}
-        .invoice-body{display:flex;justify-content:space-between;gap:30px;}
+        .invoice-body{display:block;}
         .line-items-table{width:100%;flex-grow:1;border-collapse:collapse;}
         .line-items-table th, .line-items-table td{padding:10px;text-align:left;border-bottom:1px solid #eee;}
         .line-items-table thead{background:#f8fafc;}
         .line-items-table th{font-weight:bold;font-size:12px;text-transform:uppercase;}
         .line-items-table td:nth-child(n+2){text-align:right;}
-        .payment-sidebar{width:280px;flex-shrink:0;background:#f8fafc;padding:20px;border-radius:8px;}
+        .payment-sidebar{width:320px;flex-shrink:0;background:#f8fafc;padding:20px;border-radius:8px;}
         .payment-sidebar h4{font-weight:bold;margin-bottom:10px;border-bottom:1px solid #e2e8f0;padding-bottom:5px;}
         .payment-sidebar .summary-item{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px;}
         .payment-sidebar .grand-total{font-size:18px;font-weight:bold;margin-top:10px;}
@@ -109,6 +109,11 @@ export function getInvoiceSample3CSS() {
         .status-badge.unpaid{background-color:#fee2e2;color:#991b1b;}
         .status-badge.partially-paid{background-color:#fef3c7;color:#b45309;}
         .invoice-footer{margin-top:40px;text-align:center;font-size:12px;color:#9ca3b8;border-top:1px solid #eee;padding-top:20px;}
+        .invoice-summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
     `;
 }
 
