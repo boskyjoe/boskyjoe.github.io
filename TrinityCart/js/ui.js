@@ -12269,6 +12269,10 @@ let newExpenseCounter = 0;
 const expensesGridOptions = {
     // Use the row's 'id' field as its unique identifier
     getRowId: params => params.data.id,
+    theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
     
     columnDefs: [
         // Column 1: Expense ID (Read-only)
