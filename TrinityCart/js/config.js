@@ -115,11 +115,14 @@ export const expenseTypes = [
     'Utilities',
     'Salaries & Wages',
     'Rent',
+    'Food',
     'Supplies',
     'Travel',
     'Other'
 ];
 
+
+export const EXPENSE_RECEIPTS_STORAGE_PATH = 'MONETA/expense_receipts/';
 
 
 
