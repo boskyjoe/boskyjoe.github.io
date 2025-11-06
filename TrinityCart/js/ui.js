@@ -12273,6 +12273,31 @@ const expensesGridOptions = {
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
+    onRowDataUpdated: (params) => {
+        // Check if a "new item" row already exists
+        let hasNewRow = false;
+        params.api.forEachNode(node => {
+            if (node.data && node.data.isNew) {
+                hasNewRow = true;
+            }
+        });
+
+        // If no new row exists, add one to the top.
+        if (!hasNewRow) {
+            newExpenseCounter++;
+            const newRow = {
+                id: `new_${newExpenseCounter}`,
+                isNew: true,
+                expenseDate: new Date(),
+                status: 'Draft'
+            };
+            params.api.applyTransaction({
+                add: [newRow],
+                addIndex: 0
+            });
+        }
+    },
+
     
     columnDefs: [
         // Column 1: Expense ID (Read-only)
