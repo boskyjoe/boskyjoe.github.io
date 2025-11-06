@@ -78,6 +78,39 @@ export const DONATION_SOURCES = {
     SUPPLIER_CREDIT: 'Supplier Credit/Refund'
 };
 
+
+export const storeConfig = {
+    // Default or fallback information
+    'default': {
+        address: '123 Moneta Lane, Anytown, USA 12345',
+        taxId: 'GSTIN-DEFAULT-12345',
+        signatoryName: 'Moneta Finance Department',
+        signatoryTitle: 'Authorized Signatory',
+        email:'church@gmail.com'
+    },
+    // Specific details for Church Store
+    'Church Store': {
+        address: 'St. Thomas Church, 123 Church St, Indiranagar, Bangalore 560038',
+        taxId: 'GSTIN-CHURCH-54321',
+        signatoryName: 'Mr. John Matthews',
+        signatoryTitle: 'Church Treasurer',
+        email:'church@gmail.com'
+    },
+    // Specific details for Tasty Treats
+    'Tasty Treats': {
+        address: 'Tasty Treats Bake Shop, 456 Bakery Rd, Koramangala, Bangalore 560034',
+        taxId: 'GSTIN-TASTY-67890',
+        signatoryName: 'Ms. Mary Joseph',
+        signatoryTitle: 'Proprietor, Tasty Treats',
+        email:'tt@gmail.com'
+    }
+};
+
+
+
+
+
+
 // ✅ ADD: Helper function to get donation source by store
 export function getDonationSourceByStore(storeName) {
     switch (storeName) {
