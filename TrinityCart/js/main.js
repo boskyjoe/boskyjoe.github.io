@@ -7105,12 +7105,11 @@ async function handleGenerateInvoice(invoiceId) {
             '{{customerName}}': invoiceData.customerInfo.name,
             '{{customerEmail}}': invoiceData.customerInfo.email,
             '{{subtotal}}': formatCurrency(invoiceData.financials.itemsSubtotal),
-            '{{totalItemTax}}': formatCurrency(invoiceData.financials.totalItemLevelTax || 0),
             '{{invoiceDiscount}}': formatCurrency(invoiceData.financials.orderDiscountAmount),
-            '{{orderTax}}': formatCurrency(invoiceData.financials.orderTaxAmount || 0),
+            '{{totalTax}}': formatCurrency(invoiceData.financials.totalTax), // Uses the correct field
             '{{grandTotal}}': formatCurrency(invoiceData.financials.totalAmount),
             '{{amountPaid}}': formatCurrency(invoiceData.totalAmountPaid || 0),
-            '{{balanceDue}}': formatCurrency(invoiceData.balanceDue || 0),
+            '{{balanceDue}}': formatCurrency(invoiceData.balanceDue || 0), // Correctly accesses top-level field
             '{{paymentStatus}}': invoiceData.paymentStatus,
             '{{paymentStatusClass}}': paymentStatusClass
         };
