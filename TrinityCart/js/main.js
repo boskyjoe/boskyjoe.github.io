@@ -152,6 +152,10 @@ import {
 import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; 
 import { storeConfig } from './config.js'; 
 
+import { showExpensesView } from './ui.js';
+import { addExpense, updateExpense, deleteExpense } from './api.js';
+import { expenseTypes } from './config.js'; //
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -613,6 +617,7 @@ const EventHandlers = {
         'users-view': showUsersView,
         'purchases-view': showPurchasesView,
         'church-teams-view': showChurchTeamsView,
+        'expenses-view': showExpensesView,
         'consignment-view': showConsignmentView,
         'sales-view': showSalesView,
         'pmt-mgmt-view': showPaymentManagementView, // ✅ FROM: payment-management.js
@@ -660,6 +665,7 @@ const EventHandlers = {
         'sales-events-grid': handleSalesEventsGrid,
         'users-grid': handleUsersGrid,
         'products-catalogue-grid': handleProductsCatalogueGrid,
+        'expenses-grid': handleExpensesGrid,
         'pmt-mgmt-supplier-grid': handlePmtMgmtSupplierGrid
     }
 };
@@ -1421,6 +1427,66 @@ async function handleConsignmentPaymentsGrid(button, docId, user) {
     }
 }
 
+
+/**
+ * Handles all CRUD actions triggered from within the expenses grid.
+ */
+async function handleExpensesGrid(button, docId, user) {
+    // Find the specific row node in the grid using its ID
+    const rowNode = expensesGridApi.getRowNode(docId);
+    if (!rowNode) {
+        console.error("Could not find grid row with ID:", docId);
+        return;
+    }
+
+    // --- SAVE ACTION (for new rows) ---
+    if (button.classList.contains('action-btn-save-expense')) {
+        const expenseData = rowNode.data;
+
+        // Validate the data before saving
+        if (!expenseData.seasonId || !expenseData.expenseType || !expenseData.expenseDate || !expenseData.description || !expenseData.amount) {
+            return showModal('error', 'Missing Information', 'Please fill out all required fields (Season, Type, Date, Description, Amount) before saving.');
+        }
+        if (expenseData.amount <= 0) {
+            return showModal('error', 'Invalid Amount', 'The expense amount must be greater than zero.');
+        }
+
+        ProgressToast.show('Saving Expense...', 'info');
+        try {
+            // Remove the temporary 'isNew' flag before saving
+            delete expenseData.isNew;
+            await addExpense(expenseData, user);
+            ProgressToast.showSuccess('Expense saved successfully!');
+            // The real-time listener will automatically update the grid, no manual refresh needed.
+        } catch (error) {
+            console.error("Error saving new expense:", error);
+            ProgressToast.showError('Save failed. Please try again.');
+        }
+    }
+    // --- CANCEL ACTION (for new rows) ---
+    else if (button.classList.contains('action-btn-cancel-expense')) {
+        // Simply remove the temporary row from the grid
+        expensesGridApi.applyTransaction({ remove: [rowNode.data] });
+    }
+    // --- DELETE ACTION (for existing rows) ---
+    else if (button.classList.contains('action-btn-delete-expense')) {
+        const confirmed = await showModal('confirm', 'Confirm Deletion', 
+            `Are you sure you want to permanently delete this expense?\n\nDescription: "${rowNode.data.description}"`
+        );
+        if (confirmed) {
+            ProgressToast.show('Deleting Expense...', 'warning');
+            try {
+                await deleteExpense(docId);
+                ProgressToast.showSuccess('Expense deleted.');
+                // The real-time listener will automatically remove the row from the grid.
+            } catch (error) {
+                console.error("Error deleting expense:", error);
+                ProgressToast.showError('Deletion failed. Please try again.');
+            }
+        }
+    }
+}
+
 async function handleSalesHistoryGrid(button, docId) {
     if (!button.classList.contains('action-btn-manage-payments')) return;
 
@@ -1666,6 +1732,30 @@ function handleStandaloneButtons(target, event) {
             await refreshApplicationDashboard(true); // Force refresh
         },
 
+        '#add-expense-row-btn': () => {
+            if (!expensesGridApi) return;
+            
+            newExpenseCounter++;
+            const newRow = {
+                // Use a temporary, client-side ID
+                id: `new_${newExpenseCounter}`, 
+                isNew: true, // A flag to identify this as an unsaved row
+                expenseDate: new Date(), // Default to today's date
+                status: 'Draft'
+            };
+            
+            // Add the new row to the top of the grid
+            expensesGridApi.applyTransaction({
+                add: [newRow],
+                addIndex: 0 
+            });
+
+            // Automatically start editing the "Season" cell of the new row
+            expensesGridApi.startEditingCell({
+                rowIndex: 0,
+                colKey: 'seasonId',
+            });
+        },
         
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
