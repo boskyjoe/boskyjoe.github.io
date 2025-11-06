@@ -49,9 +49,8 @@ export function getInvoiceSample3HTML() {
                 <div class="payment-sidebar">
                     <h4>Summary</h4>
                     <div class="summary-item"><span>Subtotal</span><span>{{subtotal}}</span></div>
-                    <div class="summary-item"><span>Total Item Tax</span><span>{{totalItemTax}}</span></div>
                     <div class="summary-item"><span>Invoice Discount</span><span>-{{invoiceDiscount}}</span></div>
-                    <div class="summary-item"><span>Additional Order Tax</span><span>{{orderTax}}</span></div>
+                    <div class="summary-item"><span>Total Tax</span><span>{{totalTax}}</span></div>
                     <hr>
                     <div class="summary-item grand-total"><span>Grand Total</span><span>{{grandTotal}}</span></div>
                     <hr>
