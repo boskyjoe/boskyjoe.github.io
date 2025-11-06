@@ -1,5 +1,6 @@
 // js/api.js
 
+
 import { SUPPLIERS_COLLECTION_PATH } from './config.js';
 import { CATEGORIES_COLLECTION_PATH } from './config.js';
 import { SALE_TYPES_COLLECTION_PATH } from './config.js';
@@ -18,7 +19,7 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
         CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
     SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
     DONATION_SOURCES,          
-    getDonationSourceByStore 
+    getDonationSourceByStore,EXPENSES_COLLECTION_PATH
 } from './config.js';
 
 import { masterData } from './masterData.js';
@@ -4335,3 +4336,61 @@ export async function getPricingStatistics() {
     }
 }
 
+
+// =======================================================
+// --- EXPENSE MANAGEMENT API FUNCTIONS ---
+// =======================================================
+
+/**
+ * Creates a new expense document in Firestore.
+ * @param {object} expenseData - The data for the new expense.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<DocumentReference>} A promise that resolves with the new document reference.
+ */
+export async function addExpense(expenseData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const expenseId = `EXP-${Date.now()}`;
+
+    // Use the new path constant
+    return db.collection(EXPENSES_COLLECTION_PATH).add({
+        ...expenseData,
+        expenseId: expenseId,
+        status: 'Logged', // Set a default status
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+/**
+ * Updates an existing expense document in Firestore.
+ * @param {string} docId - The Firestore document ID of the expense to update.
+ * @param {object} updatedData - An object containing the fields to update.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>} A promise that resolves when the update is complete.
+ */
+export async function updateExpense(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    // Use the new path constant
+    return db.collection(EXPENSES_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+/**
+ * Deletes an expense document from Firestore.
+ * @param {string} docId - The Firestore document ID of the expense to delete.
+ * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+ */
+export async function deleteExpense(docId) {
+    const db = firebase.firestore();
+    
+    // Use the new path constant
+    return db.collection(EXPENSES_COLLECTION_PATH).doc(docId).delete();
+}
