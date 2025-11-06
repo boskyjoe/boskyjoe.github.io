@@ -12254,3 +12254,189 @@ function showApplicationDashboardError(error) {
         );
     }, 1000);
 }
+
+//Expense module 
+
+let expensesGridApi = null;
+let isExpensesGridInitialized = false;
+let unsubscribeExpensesListener = null;
+
+// This counter is used to give new, unsaved rows a temporary unique ID
+let newExpenseCounter = 0;
+
+// ✅ NEW: The complete grid options for the Expense Ledger
+const expensesGridOptions = {
+    // Use the row's 'id' field as its unique identifier
+    getRowId: params => params.data.id,
+    
+    columnDefs: [
+        // Column 1: Expense ID (Read-only)
+        { 
+            field: "expenseId", 
+            headerName: "Expense ID", 
+            width: 180, 
+            editable: false, 
+            cellStyle: { fontFamily: 'monospace', color: '#6b7280' } 
+        },
+        // Column 2: Sales Season (Editable Dropdown)
+        {
+            field: "seasonId",
+            headerName: "Sales Season",
+            flex: 1,
+            minWidth: 200,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                // Populate the dropdown with active seasons from masterData
+                values: () => masterData.seasons.map(s => s.id),
+                // Show season names in the dropdown list, not IDs
+                cellRenderer: (params) => {
+                    const season = masterData.seasons.find(s => s.id === params.value);
+                    return season ? season.seasonName : params.value;
+                }
+            },
+            // Display the season name in the grid cell, not the ID
+            valueFormatter: params => {
+                const season = masterData.seasons.find(s => s.id === params.value);
+                return season ? season.seasonName : 'Select Season';
+            }
+        },
+        // Column 3: Expense Type (Editable Dropdown)
+        {
+            field: "expenseType",
+            headerName: "Type",
+            width: 150,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            // Get values from our new config object
+            cellEditorParams: { values: expenseTypes } 
+        },
+        // Column 4: Date (Editable Date Picker)
+        {
+            field: "expenseDate",
+            headerName: "Date",
+            width: 130,
+            editable: true,
+            cellEditor: 'agDateCellEditor',
+            // Display date in a readable format
+            valueFormatter: p => p.value ? (p.value.toDate ? p.value.toDate() : new Date(p.value)).toLocaleDateString() : ''
+        },
+        // Column 5: Description (Editable Text)
+        { 
+            field: "description", 
+            headerName: "Description", 
+            flex: 2, 
+            minWidth: 250,
+            editable: true 
+        },
+        // Column 6: Amount (Editable Number)
+        {
+            field: "amount",
+            headerName: "Amount",
+            width: 130,
+            editable: true,
+            type: 'rightAligned',
+            cellEditor: 'agNumberCellEditor',
+            valueParser: p => parseFloat(p.newValue) || 0,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            cellStyle: { fontWeight: 'bold' }
+        },
+        // Column 7: Voucher Number (Editable Text)
+        { 
+            field: "voucherNumber", 
+            headerName: "Voucher #", 
+            width: 150, 
+            editable: true 
+        },
+        // Column 8: Status (Read-only)
+        { 
+            field: "status", 
+            headerName: "Status", 
+            width: 120, 
+            editable: false,
+            cellRenderer: p => p.value ? `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${p.value}</span>` : 'Draft'
+        },
+        // Column 9: Actions (Save, Cancel, Delete)
+        {
+            headerName: "Actions",
+            width: 120,
+            editable: false,
+            cellClass: 'flex items-center justify-center space-x-2',
+            cellRenderer: params => {
+                // If it's a new, unsaved row, show Save and Cancel buttons
+                if (params.data.isNew) {
+                    const saveIcon = `<svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>`;
+                    const cancelIcon = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
+                    return `
+                        <button class="action-btn-icon action-btn-save-expense" data-id="${params.data.id}" title="Save New Expense">${saveIcon}</button>
+                        <button class="action-btn-icon action-btn-cancel-expense" data-id="${params.data.id}" title="Cancel">${cancelIcon}</button>
+                    `;
+                }
+                // For existing rows, show a Delete button
+                else {
+                    const deleteIcon = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                    return `<button class="action-btn-icon action-btn-delete action-btn-delete-expense" data-id="${params.data.id}" title="Delete Expense">${deleteIcon}</button>`;
+                }
+            }
+        }
+    ],
+    defaultColDef: {
+        sortable: true,
+        filter: true,
+        resizable: true
+    },
+    // This event is triggered after a user edits a cell in an *existing* row
+    onCellValueChanged: (params) => {
+        // Do not trigger update for new, unsaved rows
+        if (params.data.isNew) {
+            return;
+        }
+        const docId = params.data.id;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+        
+        // Dispatch a custom event for main.js to handle the API call
+        document.dispatchEvent(new CustomEvent('updateExpense', {
+            detail: { docId, updatedData: { [field]: newValue } }
+        }));
+    },
+    onGridReady: (params) => {
+        expensesGridApi = params.api;
+        console.log("[ui.js] Expenses Grid is ready.");
+    }
+};
+
+// Standard initialization and view functions
+export function initializeExpensesGrid() {
+    if (isExpensesGridInitialized) return;
+    const gridDiv = document.getElementById('expenses-grid');
+    if (gridDiv) {
+        createGrid(gridDiv, expensesGridOptions);
+        isExpensesGridInitialized = true;
+    }
+}
+
+export function showExpensesView() {
+    showView('expenses-view');
+    initializeExpensesGrid();
+
+    // Attach a real-time listener to the expenses collection
+    const waitForGrid = setInterval(() => {
+        if (expensesGridApi) {
+            clearInterval(waitForGrid);
+            const db = firebase.firestore();
+            expensesGridApi.setGridOption('loading', true);
+
+            unsubscribeExpensesListener = db.collection(EXPENSES_COLLECTION_PATH)
+                .orderBy('expenseDate', 'desc')
+                .onSnapshot(snapshot => {
+                    const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    expensesGridApi.setGridOption('rowData', expenses);
+                    expensesGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error listening to expenses:", error);
+                    expensesGridApi.setGridOption('loading', false);
+                });
+        }
+    }, 50);
+}
