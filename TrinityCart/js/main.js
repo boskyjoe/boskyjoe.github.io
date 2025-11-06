@@ -1721,6 +1721,29 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-collect-team-settlement': async (target) => await handlePmtMgmtCollectTeamSettlement(target),
         '.pmt-mgmt-view-consignment-order': async (target) => await handlePmtMgmtViewConsignmentOrder(target),
         '.pmt-mgmt-view-settlement-history': async (target) => await handlePmtMgmtViewSettlementHistory(target),
+        '#add-expense-row-btn': () => {
+            if (!expensesGridApi) return;
+            
+            newExpenseCounter++;
+            const newRow = {
+                id: `new_${newExpenseCounter}`, 
+                isNew: true,
+                expenseDate: new Date(),
+                status: 'Draft'
+            };
+            
+            // Add the new row to the top of the grid
+            expensesGridApi.applyTransaction({
+                add: [newRow],
+                addIndex: 0 
+            });
+
+            // Automatically start editing the "Season" cell of the new row
+            expensesGridApi.startEditingCell({
+                rowIndex: 0,
+                colKey: 'seasonId',
+            });
+        },
 
         '#refresh-executive-dashboard': async () => {
             console.log('[main.js] Executive dashboard manual refresh');
