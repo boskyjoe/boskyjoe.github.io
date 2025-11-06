@@ -154,7 +154,6 @@ import { storeConfig } from './config.js';
 
 import { showExpensesView } from './ui.js';
 import { addExpense, updateExpense, deleteExpense } from './api.js';
-import { expenseTypes } from './config.js'; //
 
 
 
