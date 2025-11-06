@@ -152,7 +152,13 @@ import {
 import { getInvoiceSample3HTML, getInvoiceSample3CSS } from './invoice-templates.js'; 
 import { storeConfig } from './config.js'; 
 
-import { showExpensesView } from './ui.js';
+import { 
+    showExpensesView, 
+    getExpenseRowData, // ✅ ADD
+    removeExpenseRow,   // ✅ ADD
+    addNewExpenseRow    // ✅ ADD
+} from './ui.js';
+
 import { addExpense, updateExpense, deleteExpense } from './api.js';
 
 
@@ -1431,20 +1437,15 @@ async function handleConsignmentPaymentsGrid(button, docId, user) {
  * Handles all CRUD actions triggered from within the expenses grid.
  */
 async function handleExpensesGrid(button, docId, user) {
-    // Find the specific row node in the grid using its ID
-    const rowNode = expensesGridApi.getRowNode(docId);
-    if (!rowNode) {
-        console.error("Could not find grid row with ID:", docId);
-        return;
-    }
-
-    // --- SAVE ACTION (for new rows) ---
+    // --- SAVE ACTION ---
     if (button.classList.contains('action-btn-save-expense')) {
-        const expenseData = rowNode.data;
+        // Get the data for the row from our UI helper function
+        const expenseData = getExpenseRowData(docId);
+        if (!expenseData) return;
 
-        // Validate the data before saving
+        // Validation remains the same
         if (!expenseData.seasonId || !expenseData.expenseType || !expenseData.expenseDate || !expenseData.description || !expenseData.amount) {
-            return showModal('error', 'Missing Information', 'Please fill out all required fields (Season, Type, Date, Description, Amount) before saving.');
+            return showModal('error', 'Missing Information', 'Please fill out all required fields before saving.');
         }
         if (expenseData.amount <= 0) {
             return showModal('error', 'Invalid Amount', 'The expense amount must be greater than zero.');
@@ -1452,32 +1453,30 @@ async function handleExpensesGrid(button, docId, user) {
 
         ProgressToast.show('Saving Expense...', 'info');
         try {
-            // Remove the temporary 'isNew' flag before saving
-            delete expenseData.isNew;
+            delete expenseData.isNew; // Remove temporary flag
             await addExpense(expenseData, user);
             ProgressToast.showSuccess('Expense saved successfully!');
-            // The real-time listener will automatically update the grid, no manual refresh needed.
         } catch (error) {
             console.error("Error saving new expense:", error);
             ProgressToast.showError('Save failed. Please try again.');
         }
     }
-    // --- CANCEL ACTION (for new rows) ---
+    // --- CANCEL ACTION ---
     else if (button.classList.contains('action-btn-cancel-expense')) {
-        // Simply remove the temporary row from the grid
-        expensesGridApi.applyTransaction({ remove: [rowNode.data] });
+        // Call the UI helper function to remove the row
+        removeExpenseRow(docId);
     }
-    // --- DELETE ACTION (for existing rows) ---
+    // --- DELETE ACTION ---
     else if (button.classList.contains('action-btn-delete-expense')) {
+        const expenseData = getExpenseRowData(docId); // Get data for the confirmation modal
         const confirmed = await showModal('confirm', 'Confirm Deletion', 
-            `Are you sure you want to permanently delete this expense?\n\nDescription: "${rowNode.data.description}"`
+            `Are you sure you want to permanently delete this expense?\n\nDescription: "${expenseData.description}"`
         );
         if (confirmed) {
             ProgressToast.show('Deleting Expense...', 'warning');
             try {
                 await deleteExpense(docId);
                 ProgressToast.showSuccess('Expense deleted.');
-                // The real-time listener will automatically remove the row from the grid.
             } catch (error) {
                 console.error("Error deleting expense:", error);
                 ProgressToast.showError('Deletion failed. Please try again.');
@@ -1485,6 +1484,7 @@ async function handleExpensesGrid(button, docId, user) {
         }
     }
 }
+
 
 async function handleSalesHistoryGrid(button, docId) {
     if (!button.classList.contains('action-btn-manage-payments')) return;
@@ -1721,29 +1721,7 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-collect-team-settlement': async (target) => await handlePmtMgmtCollectTeamSettlement(target),
         '.pmt-mgmt-view-consignment-order': async (target) => await handlePmtMgmtViewConsignmentOrder(target),
         '.pmt-mgmt-view-settlement-history': async (target) => await handlePmtMgmtViewSettlementHistory(target),
-        '#add-expense-row-btn': () => {
-            if (!expensesGridApi) return;
-            
-            newExpenseCounter++;
-            const newRow = {
-                id: `new_${newExpenseCounter}`, 
-                isNew: true,
-                expenseDate: new Date(),
-                status: 'Draft'
-            };
-            
-            // Add the new row to the top of the grid
-            expensesGridApi.applyTransaction({
-                add: [newRow],
-                addIndex: 0 
-            });
-
-            // Automatically start editing the "Season" cell of the new row
-            expensesGridApi.startEditingCell({
-                rowIndex: 0,
-                colKey: 'seasonId',
-            });
-        },
+        '#add-expense-row-btn': () => addNewExpenseRow(),
 
         '#refresh-executive-dashboard': async () => {
             console.log('[main.js] Executive dashboard manual refresh');
@@ -1754,30 +1732,7 @@ function handleStandaloneButtons(target, event) {
             await refreshApplicationDashboard(true); // Force refresh
         },
 
-        '#add-expense-row-btn': () => {
-            if (!expensesGridApi) return;
-            
-            newExpenseCounter++;
-            const newRow = {
-                // Use a temporary, client-side ID
-                id: `new_${newExpenseCounter}`, 
-                isNew: true, // A flag to identify this as an unsaved row
-                expenseDate: new Date(), // Default to today's date
-                status: 'Draft'
-            };
-            
-            // Add the new row to the top of the grid
-            expensesGridApi.applyTransaction({
-                add: [newRow],
-                addIndex: 0 
-            });
-
-            // Automatically start editing the "Season" cell of the new row
-            expensesGridApi.startEditingCell({
-                rowIndex: 0,
-                colKey: 'seasonId',
-            });
-        },
+        '#add-expense-row-btn': () => addNewExpenseRow(),
         
         '.action-btn-remove-from-cart': () => {
             console.log('[main.js] Remove from cart clicked');
