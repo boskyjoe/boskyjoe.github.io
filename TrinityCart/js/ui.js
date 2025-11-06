@@ -12316,16 +12316,21 @@ const expensesGridOptions = {
             minWidth: 200,
             editable: true,
             cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                // Populate the dropdown with active seasons from masterData
-                values: () => masterData.seasons.map(s => s.id),
-                // Show season names in the dropdown list, not IDs
-                cellRenderer: (params) => {
-                    const season = masterData.seasons.find(s => s.id === params.value);
-                    return season ? season.seasonName : params.value;
-                }
+            cellEditorParams: (params) => {
+                // This function runs at the moment the user clicks the cell.
+                // By this time, masterData.seasons is fully loaded.
+                const seasonIds = masterData.seasons.map(s => s.id);
+                
+                // We return an object containing the actual array of values.
+                return {
+                    values: seasonIds,
+                    cellRenderer: (cellParams) => {
+                        const season = masterData.seasons.find(s => s.id === cellParams.value);
+                        return season ? season.seasonName : cellParams.value;
+                    }
+                };
             },
-            // Display the season name in the grid cell, not the ID
+            // (The valueFormatter remains the same and is correct)
             valueFormatter: params => {
                 const season = masterData.seasons.find(s => s.id === params.value);
                 return season ? season.seasonName : 'Select Season';
@@ -12393,19 +12398,19 @@ const expensesGridOptions = {
             editable: false,
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
-                // If it's a new, unsaved row, show Save and Cancel buttons
+                // ✅ CHANGED: We now use params.node.id, which gets the ID from getRowId
+                const rowId = params.node.id;
+
                 if (params.data.isNew) {
-                    const saveIcon = `<svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>`;
-                    const cancelIcon = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
+                    const saveIcon = `<svg>...</svg>`; // Your save icon
+                    const cancelIcon = `<svg>...</svg>`; // Your cancel icon
                     return `
-                        <button class="action-btn-icon action-btn-save-expense" data-id="${params.data.id}" title="Save New Expense">${saveIcon}</button>
-                        <button class="action-btn-icon action-btn-cancel-expense" data-id="${params.data.id}" title="Cancel">${cancelIcon}</button>
+                        <button class="action-btn-icon action-btn-save-expense" data-id="${rowId}" title="Save New Expense">${saveIcon}</button>
+                        <button class="action-btn-icon action-btn-cancel-expense" data-id="${rowId}" title="Cancel">${cancelIcon}</button>
                     `;
-                }
-                // For existing rows, show a Delete button
-                else {
-                    const deleteIcon = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
-                    return `<button class="action-btn-icon action-btn-delete action-btn-delete-expense" data-id="${params.data.id}" title="Delete Expense">${deleteIcon}</button>`;
+                } else {
+                    const deleteIcon = `<svg>...</svg>`; // Your delete icon
+                    return `<button class="action-btn-icon action-btn-delete action-btn-delete-expense" data-id="${rowId}" title="Delete Expense">${deleteIcon}</button>`;
                 }
             }
         }
@@ -12435,6 +12440,59 @@ const expensesGridOptions = {
         console.log("[ui.js] Expenses Grid is ready.");
     }
 };
+
+/**
+ * Retrieves the data for a specific row from the expenses grid.
+ * @param {string} rowId The unique ID of the row.
+ * @returns {object|null} The row's data object, or null if not found.
+ */
+export function getExpenseRowData(rowId) {
+    if (!expensesGridApi) {
+        console.error("Expenses grid is not initialized.");
+        return null;
+    }
+    const rowNode = expensesGridApi.getRowNode(rowId);
+    return rowNode ? rowNode.data : null;
+}
+
+/**
+ * Removes a specific row from the expenses grid.
+ * Used for canceling a new, unsaved expense.
+ * @param {string} rowId The unique ID of the row to remove.
+ */
+export function removeExpenseRow(rowId) {
+    if (!expensesGridApi) return;
+    const rowNode = expensesGridApi.getRowNode(rowId);
+    if (rowNode) {
+        expensesGridApi.applyTransaction({ remove: [rowNode.data] });
+    }
+}
+
+/**
+ * Adds a new, blank row to the top of the expenses grid for data entry.
+ */
+export function addNewExpenseRow() {
+    if (!expensesGridApi) return;
+    
+    newExpenseCounter++;
+    const newRow = {
+        id: `new_${newExpenseCounter}`, 
+        isNew: true,
+        expenseDate: new Date(),
+        status: 'Draft'
+    };
+    
+    expensesGridApi.applyTransaction({
+        add: [newRow],
+        addIndex: 0 
+    });
+
+    // Automatically start editing the first editable cell of the new row
+    expensesGridApi.startEditingCell({
+        rowIndex: 0,
+        colKey: 'seasonId', // The first editable column
+    });
+}
 
 // Standard initialization and view functions
 export function initializeExpensesGrid() {
