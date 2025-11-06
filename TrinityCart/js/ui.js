@@ -12398,20 +12398,36 @@ const expensesGridOptions = {
             editable: false,
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
-                // ✅ CHANGED: We now use params.node.id, which gets the ID from getRowId
-                const rowId = params.node.id;
-
+                // For new, unsaved rows, always show Save and Cancel
                 if (params.data.isNew) {
                     const saveIcon = `<svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>`;
                     const cancelIcon = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
-                    
                     return `
-                        <button class="action-btn-icon action-btn-save-expense" data-id="${rowId}" title="Save New Expense">${saveIcon}</button>
-                        <button class="action-btn-icon action-btn-cancel-expense" data-id="${rowId}" title="Cancel">${cancelIcon}</button>
+                        <button class="action-btn-icon action-btn-save-expense" data-id="${params.data.id}" title="Save New Expense">${saveIcon}</button>
+                        <button class="action-btn-icon action-btn-cancel-expense" data-id="${params.data.id}" title="Cancel">${cancelIcon}</button>
                     `;
-                } else {
-                    const deleteIcon = `<svg>...</svg>`; // Your delete icon
-                    return `<button class="action-btn-icon action-btn-delete action-btn-delete-expense" data-id="${rowId}" title="Delete Expense">${deleteIcon}</button>`;
+                }
+                // For existing, saved rows, apply the new security logic
+                else {
+                    // ✅ 1. Get the current user's role and email from the global appState
+                    const currentUser = appState.currentUser;
+                    const userRole = currentUser?.role;
+                    const userEmail = currentUser?.email;
+
+                    // ✅ 2. Get the email of the user who created this specific expense row
+                    const createdByEmail = params.data.createdBy;
+
+                    // ✅ 3. Determine if the current user has permission to delete this row
+                    const canDelete = (userRole === 'admin') || (userEmail === createdByEmail);
+
+                    // ✅ 4. Only render the delete button if the user has permission
+                    if (canDelete) {
+                        const deleteIcon = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                        return `<button class="action-btn-icon action-btn-delete action-btn-delete-expense" data-id="${params.data.id}" title="Delete Expense">${deleteIcon}</button>`;
+                    }
+
+                    // ✅ 5. If the user does not have permission, render an empty cell
+                    return ''; 
                 }
             }
         }
