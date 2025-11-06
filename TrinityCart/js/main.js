@@ -1460,6 +1460,7 @@ async function handleExpensesGrid(button, docId, user) {
             console.error("Error saving new expense:", error);
             ProgressToast.showError('Save failed. Please try again.');
         }
+        ProgressToast.hide(300);
     }
     // --- CANCEL ACTION ---
     else if (button.classList.contains('action-btn-cancel-expense')) {
@@ -1480,7 +1481,7 @@ async function handleExpensesGrid(button, docId, user) {
             } catch (error) {
                 console.error("Error deleting expense:", error);
                 ProgressToast.showError('Deletion failed. Please try again.');
-            }
+            } finally { ProgressToast.hide(300);}
         }
     }
 }
