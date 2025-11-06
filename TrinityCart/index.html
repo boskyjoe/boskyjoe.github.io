@@ -997,6 +997,26 @@
                 </div>
 
 
+                <!-- ============================= -->
+                <!--      VIEW: EXPENSE MANAGEMENT -->
+                <!-- ============================= -->
+                <div id="expenses-view" class="view space-y-8">
+
+                    <!-- Main Card for the Expense Ledger -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <!-- Card Header with Title -->
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Business Expense Ledger</h3>
+                            <p class="text-sm text-gray-500 mt-1">Log, edit, and manage all operational expenses directly in the grid below.</p>
+                        </div>
+                        
+                        <!-- Card Body containing the AG-Grid -->
+                        <div class="p-2">
+                            <!-- This is where the grid and its toolbar will be rendered -->
+                            <div id="expenses-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
 
 
 
@@ -3436,7 +3456,6 @@
                         </div>
                     </div>
                 </div>
-
 
                 <!-- ======================= -->
                 <!--   SALES REPORTS VIEW    -->
