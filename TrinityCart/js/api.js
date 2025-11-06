@@ -19,7 +19,7 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
         CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
     SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
     DONATION_SOURCES,          
-    getDonationSourceByStore,EXPENSES_COLLECTION_PATH
+    getDonationSourceByStore,EXPENSES_COLLECTION_PATH,EXPENSE_RECEIPTS_STORAGE_PATH
 } from './config.js';
 
 import { masterData } from './masterData.js';
@@ -4342,26 +4342,59 @@ export async function getPricingStatistics() {
 // =======================================================
 
 /**
- * Creates a new expense document in Firestore.
- * @param {object} expenseData - The data for the new expense.
+ * ✅ ENHANCED: Creates a new expense, uploading a receipt file if provided.
+ * @param {object} expenseData - The data for the new expense, may include a 'receiptFile' property.
  * @param {object} user - The currently authenticated user object.
- * @returns {Promise<DocumentReference>} A promise that resolves with the new document reference.
+ * @returns {Promise<DocumentReference>}
  */
 export async function addExpense(expenseData, user) {
     const db = firebase.firestore();
+    const storage = firebase.storage(); // Get a reference to the storage service
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const expenseId = `EXP-${Date.now()}`;
 
-    // Use the new path constant
-    return db.collection(EXPENSES_COLLECTION_PATH).add({
-        ...expenseData,
+    let receiptUrl = null;
+    let receiptPath = null;
+
+    // --- File Upload Logic ---
+    if (expenseData.receiptFile) {
+        const file = expenseData.receiptFile;
+        // Create a unique path for the file in Firebase Storage
+        receiptPath = `${EXPENSE_RECEIPTS_STORAGE_PATH}${user.uid}/${Date.now()}_${file.name}`;
+        const fileRef = storage.ref(receiptPath);
+
+        // Upload the file
+        console.log(`Uploading receipt to: ${receiptPath}`);
+        const uploadTask = await fileRef.put(file);
+
+        // Get the public download URL
+        receiptUrl = await uploadTask.ref.getDownloadURL();
+        console.log('Receipt uploaded successfully. URL:', receiptUrl);
+    }
+
+    // --- Prepare Data for Firestore ---
+    // Create a new object with only the data we want to save.
+    // We must remove the 'receiptFile' object itself.
+    const dataToSave = {
         expenseId: expenseId,
-        status: 'Logged', // Set a default status
+        seasonId: expenseData.seasonId,
+        expenseType: expenseData.expenseType,
+        expenseDate: expenseData.expenseDate,
+        description: expenseData.description,
+        amount: expenseData.amount,
+        voucherNumber: expenseData.voucherNumber,
+        status: 'Logged',
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
         updatedOn: now,
-    });
+        // Add the URL and path to the document
+        receiptUrl: receiptUrl,
+        receiptPath: receiptPath
+    };
+    
+    // Save the structured data to Firestore
+    return db.collection(EXPENSES_COLLECTION_PATH).add(dataToSave);
 }
 
 /**
