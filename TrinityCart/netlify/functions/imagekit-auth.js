@@ -13,31 +13,35 @@ const imagekit = new ImageKit({
 });
 
 exports.handler = async (event, context) => {
-    try {
-        const authenticationParameters = imagekit.getAuthenticationParameters();
+    // Only allow POST requests for security
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
+    }
 
-        // ✅ THIS IS THE FIX
-        // We are explicitly adding the required CORS headers to the response.
+    try {
+        const { fileId } = JSON.parse(event.body);
+        if (!fileId) {
+            return { statusCode: 400, body: 'Missing fileId' };
+        }
+
+        console.log(`Attempting to delete file from ImageKit: ${fileId}`);
+        await imagekit.deleteFile(fileId);
+        console.log(`Successfully deleted file: ${fileId}`);
+
         return {
             statusCode: 200,
-            headers: {
-                "Access-Control-Allow-Origin": "*", // Allow requests from any origin
-                "Access-Control-Allow-Headers": "Content-Type",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
-            },
-            body: JSON.stringify(authenticationParameters),
+            body: JSON.stringify({ message: 'File deleted successfully' })
         };
-
     } catch (error) {
-        console.error("Error generating ImageKit authentication parameters:", error);
-        
-        // Also add CORS headers to error responses
+        console.error("Error deleting file from ImageKit:", error);
+        // Return a success even if the file doesn't exist on ImageKit,
+        // so the Firestore deletion can still proceed.
+        if (error.name === 'NotFoundError') {
+            return { statusCode: 200, body: JSON.stringify({ message: 'File not found on ImageKit, proceeding.' }) };
+        }
         return {
             statusCode: 500,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-            },
-            body: JSON.stringify({ message: "Could not generate authentication parameters." }),
+            body: JSON.stringify({ message: 'Could not delete file.' })
         };
     }
 };
