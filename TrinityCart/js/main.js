@@ -1461,6 +1461,29 @@ async function handleExpensesGrid(button, docId, user) {
             ProgressToast.showError('Save failed. Please try again.');
         }
         ProgressToast.hide(300);
+    } 
+    else if (button.classList.contains('action-btn-upload-existing-receipt')) {
+        // Create a temporary file input to trigger the browser's file selector
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*,.pdf';
+        
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                ProgressToast.show('Uploading Receipt...', 'info');
+                try {
+                    await uploadReceiptForExistingExpense(docId, file, user);
+                    ProgressToast.showSuccess('Receipt uploaded and linked successfully!');
+                    // The real-time listener will automatically update the grid.
+                } catch (error) {
+                    console.error("Error uploading existing receipt:", error);
+                    ProgressToast.showError('Upload failed. Please try again.');
+                }
+            }
+        };
+        
+        fileInput.click(); // Open the file selection dialog
     }
     // --- CANCEL ACTION ---
     else if (button.classList.contains('action-btn-cancel-expense')) {
@@ -1476,7 +1499,7 @@ async function handleExpensesGrid(button, docId, user) {
         if (confirmed) {
             ProgressToast.show('Deleting Expense...', 'warning');
             try {
-                await deleteExpense(docId);
+                await deleteExpense(docId, expenseData.receiptFileId);
                 ProgressToast.showSuccess('Expense deleted.');
             } catch (error) {
                 console.error("Error deleting expense:", error);
@@ -1484,6 +1507,28 @@ async function handleExpensesGrid(button, docId, user) {
             } finally { ProgressToast.hide(300);}
         }
     }
+    else if (button.classList.contains('action-btn-approve-expense')) {
+        const confirmed = await showModal('confirm', 'Approve Expense', 'Are you sure you want to approve this expense?');
+        if (confirmed) {
+            ProgressToast.show('Approving Expense...', 'info');
+            await processExpense(docId, 'Approved', 'Expense approved.', user);
+            ProgressToast.showSuccess('Expense Approved!');
+        }
+    }
+    else if (button.classList.contains('action-btn-reject-expense')) {
+        // Use a prompt-style modal to get the justification
+        const justification = prompt("Please provide a reason for rejecting this expense:");
+        if (justification) { // Only proceed if the user provides a reason
+            ProgressToast.show('Rejecting Expense...', 'warning');
+            await processExpense(docId, 'Rejected', justification, user);
+            ProgressToast.showSuccess('Expense Rejected.');
+        }
+    }
+
+
+
+
+
 }
 
 
