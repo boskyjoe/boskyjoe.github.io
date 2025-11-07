@@ -12269,10 +12269,10 @@ let newExpenseCounter = 0;
 class FileUploadCellRenderer {
     // This method is called when the component is created
     init(params) {
-        // Create the main container element for our cell
         this.eGui = document.createElement('div');
+        this.params = params;
 
-        // This is the key: only show the file input if it's a new, unsaved row
+        // Condition 1: For new, unsaved rows
         if (params.data.isNew) {
             this.eGui.innerHTML = `
                 <label class="bg-white border border-gray-300 rounded-md px-3 py-1 text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
@@ -12281,26 +12281,21 @@ class FileUploadCellRenderer {
                 </label>
             `;
             this.eInput = this.eGui.querySelector('input');
-            
-            // This is the most critical part:
-            // When the user selects a file, we attach the file object directly to the row's data.
-            this.eInput.addEventListener('change', (event) => {
-                if (event.target.files.length > 0) {
-                    // Store the actual file object on the row data
-                    params.data.receiptFile = event.target.files[0];
-                    // Update the button text to show the selected file name
-                    this.eGui.querySelector('span').textContent = event.target.files[0].name;
-                } else {
-                    // If the user cancels, remove the file from the data
-                    delete params.data.receiptFile;
-                    this.eGui.querySelector('span').textContent = 'Select File';
-                }
-            });
-        }
+            this.eInput.addEventListener('change', this.onFileSelected.bind(this));
+        } 
+        // Condition 2: For existing rows that have NO receipt
         else if (!params.data.receiptUrl) {
             this.eGui.innerHTML = `
                 <button class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-md hover:bg-blue-200 action-btn-upload-existing-receipt" data-id="${params.node.id}">
                     Upload
+                </button>
+            `;
+        }
+        // ✅ NEW: Condition 3 - For existing rows that ALREADY HAVE a receipt
+        else if (params.data.receiptUrl) {
+            this.eGui.innerHTML = `
+                <button class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-md hover:bg-yellow-200 action-btn-change-receipt" data-id="${params.node.id}">
+                    Change
                 </button>
             `;
         }
