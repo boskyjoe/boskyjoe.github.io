@@ -4364,7 +4364,7 @@ export async function addExpense(expenseData, user) {
             publicKey: imageKitConfig.publicKey,
             urlEndpoint: imageKitConfig.urlEndpoint,
             // This tells the SDK to fetch a security token from a special URL
-            authenticationEndpoint: "https://www.imagekit.io/temp/auth" // Temporary public endpoint for testing
+            authenticationEndpoint: "https://moneta007.netlify.app/" // Temporary public endpoint for testing
         });
 
         console.log(`Uploading receipt to ImageKit...`);
