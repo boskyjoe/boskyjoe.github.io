@@ -4555,3 +4555,62 @@ export async function processExpense(docId, action, justification, user) {
         activityLog: firebase.firestore.FieldValue.arrayUnion(logEntry)
     });
 }
+
+/**
+ * ✅ NEW: Replaces an existing receipt file. Deletes the old file from ImageKit,
+ * uploads the new one, and updates the Firestore document.
+ * @param {string} docId - The Firestore document ID of the expense.
+ * @param {object} expenseData - The full data object for the row, containing the old file ID.
+ * @param {File} newFile - The new receipt file to upload.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>}
+ */
+export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
+    const oldFileId = expenseData.receiptFileId;
+
+    // --- Step 1: Delete the OLD file from ImageKit, if it exists ---
+    if (oldFileId) {
+        console.log(`Replacing receipt. Deleting old file from ImageKit: ${oldFileId}`);
+        try {
+            const deleteUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-delete`;
+            await fetch(deleteUrl, {
+                method: 'POST',
+                body: JSON.stringify({ fileId: oldFileId })
+            });
+            console.log("Old receipt file marked for deletion.");
+        } catch (error) {
+            // Log the error but don't stop the process. It's okay if the old file can't be deleted.
+            console.warn("Could not delete old receipt file, proceeding with upload:", error);
+        }
+    }
+
+    // --- Step 2: Upload the NEW file to ImageKit ---
+    const imagekit = new ImageKit({ /* ... your config ... */ });
+    const authenticator = async () => { /* ... your authenticator function ... */ };
+
+    console.log(`Uploading new receipt: ${newFile.name}`);
+    const result = await imagekit.upload({
+        file: newFile,
+        fileName: newFile.name,
+        folder: `MONETA/expense_receipts/${user.uid}/`,
+        useUniqueFileName: true,
+        authenticator: authenticator
+    });
+
+    // --- Step 3: Update the Firestore document with the NEW file's URL and ID ---
+    const db = firebase.firestore();
+    const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
+    return expenseRef.update({
+        receiptUrl: result.url,
+        receiptFileId: result.fileId,
+        updatedBy: user.email,
+        updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
+        // Also log this important change
+        activityLog: firebase.firestore.FieldValue.arrayUnion({
+            action: 'Receipt Changed',
+            user: user.email,
+            timestamp: new Date(),
+            details: `Replaced receipt. New file: ${newFile.name}`
+        })
+    });
+}
