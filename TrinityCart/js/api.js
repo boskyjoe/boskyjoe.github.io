@@ -4419,7 +4419,8 @@ export async function addExpense(expenseData, user) {
         description: expenseData.description,
         amount: expenseData.amount,
         voucherNumber: expenseData.voucherNumber,
-        status: 'Logged',
+        status: 'Pending', // New expenses now start as 'Pending'
+        activityLog: [],   // Initialize with an empty array
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
@@ -4454,13 +4455,103 @@ export async function updateExpense(docId, updatedData, user) {
 }
 
 /**
- * Deletes an expense document from Firestore.
+ * ✅ ENHANCED: Deletes an expense document and its associated receipt file from ImageKit.
  * @param {string} docId - The Firestore document ID of the expense to delete.
- * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+ * @param {string|null} receiptFileId - The fileId of the receipt in ImageKit, if it exists.
+ * @returns {Promise<void>}
  */
-export async function deleteExpense(docId) {
+export async function deleteExpense(docId, receiptFileId) {
     const db = firebase.firestore();
-    
-    // Use the new path constant
+
+    // --- Step 1: Delete the file from ImageKit first (if it exists) ---
+    if (receiptFileId) {
+        console.log(`Deleting receipt file from ImageKit: ${receiptFileId}`);
+        try {
+            // Call our new secure serverless function to perform the deletion
+            const deleteUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-delete`;
+            const response = await fetch(deleteUrl, {
+                method: 'POST',
+                body: JSON.stringify({ fileId: receiptFileId })
+            });
+
+            if (!response.ok) {
+                // Log the error but don't stop the process. We still want to delete the Firestore doc.
+                console.warn(`Failed to delete receipt from ImageKit. Status: ${response.status}. Proceeding with Firestore deletion.`);
+            } else {
+                console.log("Receipt successfully deleted from ImageKit.");
+            }
+        } catch (error) {
+            console.error("Error calling the delete file function:", error);
+        }
+    }
+
+    // --- Step 2: Delete the document from Firestore ---
+    console.log(`Deleting expense document from Firestore: ${docId}`);
     return db.collection(EXPENSES_COLLECTION_PATH).doc(docId).delete();
+}
+
+
+/**
+ * ✅ NEW: Uploads a receipt for an existing expense and updates the document.
+ * @param {string} docId - The Firestore document ID of the expense.
+ * @param {File} file - The receipt file to upload.
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>}
+ */
+export async function uploadReceiptForExistingExpense(docId, file, user) {
+    const storage = firebase.storage();
+    const db = firebase.firestore();
+
+    // 1. Upload the file to ImageKit (using the same secure method)
+    const imagekit = new ImageKit({
+        publicKey: imageKitConfig.publicKey,
+        urlEndpoint: imageKitConfig.urlEndpoint,
+    });
+    const authenticator = async () => { /* ... your existing authenticator function ... */ };
+
+    const result = await imagekit.upload({
+        file: file,
+        fileName: file.name,
+        folder: `MONETA/expense_receipts/${user.uid}/`,
+        useUniqueFileName: true,
+        authenticator: authenticator
+    });
+
+    // 2. Update the existing Firestore document with the new URL
+    const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
+    return expenseRef.update({
+        receiptUrl: result.url,
+        receiptFileId: result.fileId,
+        updatedBy: user.email,
+        updatedOn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
+
+/**
+ * ✅ NEW: Approves or rejects an expense, updating its status and logging the activity.
+ * @param {string} docId - The Firestore document ID of the expense.
+ * @param {string} action - The action to perform ('Approved' or 'Rejected').
+ * @param {string} justification - The reason for the action (especially for rejections).
+ * @param {object} user - The currently authenticated user object.
+ * @returns {Promise<void>}
+ */
+export async function processExpense(docId, action, justification, user) {
+    const db = firebase.firestore();
+    const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
+    const now = new Date(); // Use a client-side timestamp for consistency in the log
+
+    const logEntry = {
+        action: action,
+        user: user.email,
+        timestamp: now,
+        details: justification || `Expense ${action.toLowerCase()} by ${user.email}.`
+    };
+
+    // Use Firestore's arrayUnion to atomically add the new log entry
+    return expenseRef.update({
+        status: action, // Update the status to 'Approved' or 'Rejected'
+        updatedBy: user.email,
+        updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
+        activityLog: firebase.firestore.FieldValue.arrayUnion(logEntry)
+    });
 }
