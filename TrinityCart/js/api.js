@@ -19,7 +19,7 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
         CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
     SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
     DONATION_SOURCES,          
-    getDonationSourceByStore,EXPENSES_COLLECTION_PATH,EXPENSE_RECEIPTS_STORAGE_PATH
+    getDonationSourceByStore,EXPENSES_COLLECTION_PATH,EXPENSE_RECEIPTS_STORAGE_PATH,imageKitConfig
 } from './config.js';
 
 import { masterData } from './masterData.js';
@@ -4342,34 +4342,55 @@ export async function getPricingStatistics() {
 // =======================================================
 
 /**
- * ✅ ENHANCED: Creates a new expense, uploading a receipt file if provided.
+ * ENHANCED: Creates a new expense, uploading a receipt file to ImageKit if provided.
  * @param {object} expenseData - The data for the new expense, may include a 'receiptFile' property.
  * @param {object} user - The currently authenticated user object.
  * @returns {Promise<DocumentReference>}
  */
 export async function addExpense(expenseData, user) {
     const db = firebase.firestore();
-    const storage = firebase.storage(); // Get a reference to the storage service
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const expenseId = `EXP-${Date.now()}`;
 
     let receiptUrl = null;
-    let receiptPath = null;
+    let receiptFileId = null; // ImageKit provides a unique ID for each file
 
-    // --- File Upload Logic ---
+    // --- File Upload Logic using ImageKit ---
     if (expenseData.receiptFile) {
         const file = expenseData.receiptFile;
-        // Create a unique path for the file in Firebase Storage
-        receiptPath = `${EXPENSE_RECEIPTS_STORAGE_PATH}${user.uid}/${Date.now()}_${file.name}`;
-        const fileRef = storage.ref(receiptPath);
 
-        // Upload the file
-        console.log(`Uploading receipt to: ${receiptPath}`);
-        const uploadTask = await fileRef.put(file);
+        // Initialize the ImageKit SDK with your public key and URL
+        const imagekit = new ImageKit({
+            publicKey: imageKitConfig.publicKey,
+            urlEndpoint: imageKitConfig.urlEndpoint,
+            // This tells the SDK to fetch a security token from a special URL
+            authenticationEndpoint: "https://www.imagekit.io/temp/auth" // Temporary public endpoint for testing
+        });
 
-        // Get the public download URL
-        receiptUrl = await uploadTask.ref.getDownloadURL();
-        console.log('Receipt uploaded successfully. URL:', receiptUrl);
+        console.log(`Uploading receipt to ImageKit...`);
+
+        // Prepare the upload options, including your desired folder structure
+        const uploadOptions = {
+            file: file,
+            fileName: file.name,
+            folder: `MONETA/expense_receipts/${user.uid}/`,
+            useUniqueFileName: true // Recommended to prevent overwrites
+        };
+
+        try {
+            // Perform the upload
+            const result = await imagekit.upload(uploadOptions);
+            
+            receiptUrl = result.url;       // The public URL of the file
+            receiptFileId = result.fileId; // A unique ID for managing the file later
+
+            console.log('Receipt uploaded successfully to ImageKit. URL:', receiptUrl);
+
+        } catch (error) {
+            console.error("ImageKit Upload Error:", error);
+            // Throw a user-friendly error to be caught by the main handler
+            throw new Error("Receipt upload failed. Please check the file or try again.");
+        }
     }
 
     // --- Prepare Data for Firestore ---
@@ -4388,9 +4409,9 @@ export async function addExpense(expenseData, user) {
         createdOn: now,
         updatedBy: user.email,
         updatedOn: now,
-        // Add the URL and path to the document
+        // Add the ImageKit URL and file ID to the document
         receiptUrl: receiptUrl,
-        receiptPath: receiptPath
+        receiptFileId: receiptFileId
     };
     
     // Save the structured data to Firestore
