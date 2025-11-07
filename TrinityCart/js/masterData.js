@@ -16,117 +16,175 @@ export const masterData = {
     teams: [],
     salesEvents: [],
     systemSetups: {},
+    isDataReady: false 
 };
 
 /**
  * Sets up real-time listeners for all master data collections.
  * This should be called once when the application starts.
  */
+
+
+// Add at the top with other variables
+let isInitialized = false;
+const unsubscribeFunctions = [];
+
+/**
+ * Sets up real-time listeners for all master data collections.
+ * It tracks the initial load of essential data and dispatches a 'masterDataReady'
+ * event once core collections are populated, preventing race conditions in the UI.
+ */
 export function initializeMasterDataListeners() {
+    if (isInitialized) {
+        console.warn("Master data listeners are already initialized.");
+        return;
+    }
+    
+    console.log("Initializing master data listeners...");
     const db = firebase.firestore();
 
-    // Listener for Product Categories
-    db.collection(CATEGORIES_COLLECTION_PATH).onSnapshot(snapshot => {
+    // Flags to track the first data snapshot from each essential collection.
+    let seasonsLoaded = false;
+    let categoriesLoaded = false;
+    let productsLoaded = false;
+    let suppliersLoaded = false;
+    let paymentModesLoaded = false;
+    let teamsLoaded = false;
+
+    /**
+     * Checks if all essential data has been loaded. If so, it sets the global
+     * `isDataReady` flag and dispatches a one-time event to the application.
+     */
+    const checkDataReady = () => {
+        // This function will only execute its logic once.
+        if (masterData.isDataReady) return;
+
+        // Check if all required collections have received their first snapshot.
+        if (seasonsLoaded && categoriesLoaded && productsLoaded && suppliersLoaded && paymentModesLoaded && teamsLoaded) {
+            console.log("✅✅✅ All essential master data is now ready!");
+            masterData.isDataReady = true;
+            // Dispatch the special 'masterDataReady' event that other modules can listen for.
+            document.dispatchEvent(new CustomEvent('masterDataReady'));
+        }
+    };
+
+    // --- Real-time Listeners ---
+
+    const categoriesUnsub = db.collection(CATEGORIES_COLLECTION_PATH).onSnapshot(snapshot => {
         const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        masterData.categories = categories.filter(c => c.isActive); // Store only active ones
-        console.log("Master data updated: Categories", masterData.categories);
-        
-        // Dispatch a custom event to notify the app that data has changed
+        masterData.categories = categories.filter(c => c.isActive);
+        console.log("Master data updated: Categories", masterData.categories.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'categories' } }));
-    }, error => {
-        console.error("Error listening to categories collection:", error);
-    });
-
-    // Listener for Sales Seasons
-    db.collection(SEASONS_COLLECTION_PATH).onSnapshot(snapshot => {
-        const seasons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        masterData.seasons = seasons.filter(s => s.isActive); // Store only active ones
-        console.log("Master data updated: Seasons", masterData.seasons);
         
+        if (!categoriesLoaded) {
+            categoriesLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to categories:", error));
+    unsubscribeFunctions.push(categoriesUnsub);
+
+    const seasonsUnsub = db.collection(SEASONS_COLLECTION_PATH).onSnapshot(snapshot => {
+        const seasons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        masterData.seasons = seasons.filter(s => s.isActive);
+        console.log("Master data updated: Seasons", masterData.seasons.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'seasons' } }));
-    }, error => {
-        console.error("Error listening to seasons collection:", error);
-    });
 
+        if (!seasonsLoaded) {
+            seasonsLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to seasons:", error));
+    unsubscribeFunctions.push(seasonsUnsub);
 
-    // Listener for Products
-    db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).onSnapshot(snapshot => {
+    const productsUnsub = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).onSnapshot(snapshot => {
         const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         masterData.products = products.filter(p => p.isActive);
-        console.log("Master data updated: Products", masterData.products);
+        console.log("Master data updated: Products", masterData.products.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'products' } }));
-    });
 
-    // Listener for Suppliers
-    db.collection(SUPPLIERS_COLLECTION_PATH).onSnapshot(snapshot => {
+        if (!productsLoaded) {
+            productsLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to products:", error));
+    unsubscribeFunctions.push(productsUnsub);
+
+    const suppliersUnsub = db.collection(SUPPLIERS_COLLECTION_PATH).onSnapshot(snapshot => {
         const suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         masterData.suppliers = suppliers.filter(s => s.isActive);
-        console.log("Master data updated: Suppliers", masterData.suppliers);
+        console.log("Master data updated: Suppliers", masterData.suppliers.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'suppliers' } }));
-    });
 
-    //Listener for Payment Modes ---
-    db.collection(PAYMENT_MODES_COLLECTION_PATH).onSnapshot(snapshot => {
+        if (!suppliersLoaded) {
+            suppliersLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to suppliers:", error));
+    unsubscribeFunctions.push(suppliersUnsub);
+
+    const paymentModesUnsub = db.collection(PAYMENT_MODES_COLLECTION_PATH).onSnapshot(snapshot => {
         const paymentModes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        masterData.paymentModes = paymentModes.filter(p => p.isActive); // Store only active ones
-        console.log("Master data updated: Payment Modes", masterData.paymentModes);
-        
-        // Dispatch a custom event to notify the app that data has changed
+        masterData.paymentModes = paymentModes.filter(p => p.isActive);
+        console.log("Master data updated: Payment Modes", masterData.paymentModes.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'paymentModes' } }));
-    }, error => {
-        console.error("Error listening to paymentModes collection:", error);
-    });
 
-    // Listener for Sales Catalogues
-    db.collection(SALES_CATALOGUES_COLLECTION_PATH).onSnapshot(snapshot => {
-        const catalogues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        masterData.salesCatalogues = catalogues.filter(sc => sc.isActive); // Store only active ones
-        console.log("Master data updated: Sales Catalogues", masterData.salesCatalogues);
-        
-        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'salesCatalogues' } }));
-    }, error => {
-        console.error("Error listening to salesCatalogues collection:", error);
-    });
+        if (!paymentModesLoaded) {
+            paymentModesLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to paymentModes:", error));
+    unsubscribeFunctions.push(paymentModesUnsub);
 
-    // Listener for Church Teams
-    db.collection(CHURCH_TEAMS_COLLECTION_PATH).onSnapshot(snapshot => {
-        const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // For teams, we might want to show all of them, not just active ones,
-        // so the admin can see and reactivate them. We'll filter in the UI if needed.
-        masterData.teams = teams; 
-        console.log("Master data updated: Teams", masterData.teams);
-        
-        // Dispatch an event in case any UI component needs to react to team changes.
+    const teamsUnsub = db.collection(CHURCH_TEAMS_COLLECTION_PATH).onSnapshot(snapshot => {
+        masterData.teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Master data updated: Teams", masterData.teams.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'teams' } }));
-    }, error => {
-        console.error("Error listening to churchTeams collection:", error);
-    });
 
-    // Listener for events
-    db.collection(EVENTS_COLLECTION_PATH).onSnapshot(snapshot => {
+        if (!teamsLoaded) {
+            teamsLoaded = true;
+            checkDataReady();
+        }
+    }, error => console.error("Error listening to churchTeams:", error));
+    unsubscribeFunctions.push(teamsUnsub);
+
+    // --- Non-essential listeners (don't need to be part of the 'ready' check) ---
+
+    const salesCataloguesUnsub = db.collection(SALES_CATALOGUES_COLLECTION_PATH).onSnapshot(snapshot => {
+        masterData.salesCatalogues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(sc => sc.isActive);
+        console.log("Master data updated: Sales Catalogues", masterData.salesCatalogues.length);
+        document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'salesCatalogues' } }));
+    }, error => console.error("Error listening to salesCatalogues:", error));
+    unsubscribeFunctions.push(salesCataloguesUnsub);
+
+    const salesEventsUnsub = db.collection(EVENTS_COLLECTION_PATH).onSnapshot(snapshot => {
         masterData.salesEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("Master data updated: Sales Events", masterData.salesEvents);
+        console.log("Master data updated: Sales Events", masterData.salesEvents.length);
         document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'salesEvents' } }));
-    }, error => {
-        console.error("Error listening to salesEvents collection:", error);
-    });
+    }, error => console.error("Error listening to salesEvents:", error));
+    unsubscribeFunctions.push(salesEventsUnsub);
 
-    // [NEW] Listener for System Setups
-    db.collection(SYSTEM_SETUPS_COLLECTION_PATH).doc('mainConfig').onSnapshot(doc => {
+    const systemSetupsUnsub = db.collection(SYSTEM_SETUPS_COLLECTION_PATH).doc('mainConfig').onSnapshot(doc => {
         if (doc.exists) {
             masterData.systemSetups = doc.data();
             console.log("Master data updated: System Setups", masterData.systemSetups);
-            
-            // Dispatch a general event so any part of the app can react if needed
             document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'systemSetups' } }));
         } else {
             console.warn("System Setups document ('mainConfig') not found in Firestore!");
-            masterData.systemSetups = {}; // Reset to empty if document is deleted
+            masterData.systemSetups = {};
         }
-    }, error => {
-        console.error("Error listening to systemSetups document:", error);
-    });
+    }, error => console.error("Error listening to systemSetups document:", error));
+    unsubscribeFunctions.push(systemSetupsUnsub);
 
+    isInitialized = true;
+}
 
-    // Add more listeners here for payment modes, banks, etc.
+/**
+ * Detaches all active Firestore listeners to prevent memory leaks on logout.
+ */
+export function detachMasterDataListeners() {
+    console.log(`Detaching ${unsubscribeFunctions.length} master data listeners.`);
+    unsubscribeFunctions.forEach(unsub => unsub());
+    unsubscribeFunctions.length = 0; // Clear the array
+    isInitialized = false;
+    masterData.isDataReady = false; // Reset the ready flag for the next login
 }
