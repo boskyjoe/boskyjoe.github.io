@@ -4347,7 +4347,6 @@ export async function getPricingStatistics() {
  * @param {object} user - The currently authenticated user object.
  * @returns {Promise<DocumentReference>}
  */
-
 export async function addExpense(expenseData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -4359,62 +4358,60 @@ export async function addExpense(expenseData, user) {
     if (expenseData.receiptFile) {
         const file = expenseData.receiptFile;
 
-        // The authenticator function provides the most control and best error handling.
-        const authenticator = async () => {
-            try {
-                console.log("Authenticator function called. Fetching new security token...");
-                
-                // ✅ CRUCIAL FIX: Add a cache-busting parameter.
-                // This adds a unique timestamp to the URL every time, forcing the browser
-                // to make a fresh request and preventing any caching issues.
-                const authUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-auth?t=${Date.now()}`;
-                
-                console.log("Fetching from URL:", authUrl);
-                const response = await fetch(authUrl);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Authentication server responded with ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log("Authenticator received security token successfully:", data);
-                return data;
-
-            } catch (error) {
-                console.error("Error within ImageKit authenticator function:", error);
-                // This will cause the upload to fail with a clear message in the main catch block.
-                throw error;
-            }
-        };
-
-        // Initialize ImageKit without the authenticationEndpoint.
-        // The authenticator function will be passed during the upload itself.
+        // Initialize ImageKit SDK (no auth details needed here)
         const imagekit = new ImageKit({
             publicKey: imageKitConfig.publicKey,
             urlEndpoint: imageKitConfig.urlEndpoint,
         });
 
-        console.log(`Preparing to upload receipt: ${file.name}`);
+        console.log(`Uploading receipt to ImageKit...`);
 
         try {
+            // ===================================================================
+            // ✅ NEW APPROACH: Manually fetch the authentication token first
+            // ===================================================================
+            console.log("Step 1: Manually fetching security token...");
+            const authUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-auth?t=${Date.now()}`;
+            const authResponse = await fetch(authUrl);
+
+            if (!authResponse.ok) {
+                throw new Error(`Authentication server failed with status ${authResponse.status}`);
+            }
+            const authenticationParameters = await authResponse.json();
+            console.log("Step 2: Security token received successfully:", authenticationParameters);
+
+            // Validate that we received all the necessary parts
+            if (!authenticationParameters.token || !authenticationParameters.expire || !authenticationParameters.signature) {
+                throw new Error("Incomplete authentication token received from the server.");
+            }
+
+            // ===================================================================
+            // ✅ STEP 3: Perform the upload, passing the raw token details
+            // ===================================================================
+            console.log("Step 3: Calling imagekit.upload with manual token...");
             const result = await imagekit.upload({
                 file: file,
                 fileName: file.name,
                 folder: `MONETA/expense_receipts/${user.uid}/`,
                 useUniqueFileName: true,
-                authenticator: authenticator // ✅ Provide the authenticator function here.
+                // Pass the parameters directly instead of using the authenticator function
+                token: authenticationParameters.token,
+                expire: authenticationParameters.expire,
+                signature: authenticationParameters.signature,
             });
+            
             receiptUrl = result.url;
             receiptFileId = result.fileId;
-            console.log('Receipt uploaded successfully to ImageKit. URL:', receiptUrl);
+            console.log('Step 4: Receipt uploaded successfully to ImageKit. URL:', receiptUrl);
+
         } catch (error) {
             console.error("ImageKit Upload Error:", error);
-            throw new Error("Receipt upload failed. The authentication token could not be retrieved or was invalid. Please check the browser console for details.");
+            throw new Error("Receipt upload failed. Please check the browser console for details.");
         }
     }
 
     const dataToSave = {
+        // ... your data to save
         expenseId,
         seasonId: expenseData.seasonId,
         expenseType: expenseData.expenseType,
