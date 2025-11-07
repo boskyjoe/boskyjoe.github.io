@@ -159,7 +159,7 @@ import {
     addNewExpenseRow    // ✅ ADD
 } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense } from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt } from './api.js';
 
 
 
