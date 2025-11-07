@@ -1524,6 +1524,32 @@ async function handleExpensesGrid(button, docId, user) {
             ProgressToast.showSuccess('Expense Rejected.');
         }
     }
+    else if (button.classList.contains('action-btn-change-receipt')) {
+        const expenseData = getExpenseRowData(docId);
+        if (!expenseData) return;
+
+        // Create a temporary file input to trigger the browser's file selector
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*,.pdf';
+        
+        fileInput.onchange = async (e) => {
+            const newFile = e.target.files[0];
+            if (newFile) {
+                ProgressToast.show('Replacing Receipt...', 'info');
+                try {
+                    // Call our new API function to handle the replacement
+                    await replaceExpenseReceipt(docId, expenseData, newFile, user);
+                    ProgressToast.showSuccess('Receipt replaced successfully!');
+                } catch (error) {
+                    console.error("Error replacing receipt:", error);
+                    ProgressToast.showError('Replacement failed. Please try again.');
+                }
+            }
+        };
+        
+        fileInput.click(); // Open the file selection dialog
+    }
 
 
 
