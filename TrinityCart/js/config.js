@@ -125,6 +125,12 @@ export const expenseTypes = [
 export const EXPENSE_RECEIPTS_STORAGE_PATH = 'MONETA/expense_receipts/';
 
 
+export const imageKitConfig = {
+    publicKey: "public_c36ykO3NmGBX4Hf/e4mPAX3lBiE=",
+    urlEndpoint: "https://ik.imagekit.io/MONETA"
+};
+
+
 
 
 
