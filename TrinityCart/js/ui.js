@@ -12267,32 +12267,50 @@ let newExpenseCounter = 0;
 
 // ✅ NEW: Create a custom Cell Renderer component for the file input
 class FileUploadCellRenderer {
+    // This method is called when the component is created
     init(params) {
+        // Create the main container element for our cell
         this.eGui = document.createElement('div');
-        // Only show the input for new, unsaved rows
+
+        // This is the key: only show the file input if it's a new, unsaved row
         if (params.data.isNew) {
             this.eGui.innerHTML = `
-                <input type="file" class="expense-receipt-upload" data-row-id="${params.node.id}" accept="image/*,.pdf">
+                <label class="bg-white border border-gray-300 rounded-md px-3 py-1 text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+                    <span>Select File</span>
+                    <input type="file" class="hidden expense-receipt-upload" data-row-id="${params.node.id}" accept="image/*,.pdf">
+                </label>
             `;
             this.eInput = this.eGui.querySelector('input');
             
-            // Store the selected file on the row's data object when it changes
+            // This is the most critical part:
+            // When the user selects a file, we attach the file object directly to the row's data.
             this.eInput.addEventListener('change', (event) => {
                 if (event.target.files.length > 0) {
+                    // Store the actual file object on the row data
                     params.data.receiptFile = event.target.files[0];
+                    // Update the button text to show the selected file name
+                    this.eGui.querySelector('span').textContent = event.target.files[0].name;
                 } else {
+                    // If the user cancels, remove the file from the data
                     delete params.data.receiptFile;
+                    this.eGui.querySelector('span').textContent = 'Select File';
                 }
             });
         }
     }
+
+    // This method returns the HTML element to be displayed in the cell
     getGui() {
         return this.eGui;
     }
+
+    // This method is required by AG-Grid
     refresh() {
         return false;
     }
 }
+
+
 
 // ✅ NEW: The complete grid options for the Expense Ledger
 const expensesGridOptions = {
@@ -12486,6 +12504,9 @@ const expensesGridOptions = {
             }
         }
     ],
+    components: {
+        fileUploadCellRenderer: FileUploadCellRenderer,
+    },
     defaultColDef: {
         sortable: true,
         filter: true,
