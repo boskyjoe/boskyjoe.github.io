@@ -12265,6 +12265,35 @@ let unsubscribeExpensesListener = null;
 // This counter is used to give new, unsaved rows a temporary unique ID
 let newExpenseCounter = 0;
 
+// ✅ NEW: Create a custom Cell Renderer component for the file input
+class FileUploadCellRenderer {
+    init(params) {
+        this.eGui = document.createElement('div');
+        // Only show the input for new, unsaved rows
+        if (params.data.isNew) {
+            this.eGui.innerHTML = `
+                <input type="file" class="expense-receipt-upload" data-row-id="${params.node.id}" accept="image/*,.pdf">
+            `;
+            this.eInput = this.eGui.querySelector('input');
+            
+            // Store the selected file on the row's data object when it changes
+            this.eInput.addEventListener('change', (event) => {
+                if (event.target.files.length > 0) {
+                    params.data.receiptFile = event.target.files[0];
+                } else {
+                    delete params.data.receiptFile;
+                }
+            });
+        }
+    }
+    getGui() {
+        return this.eGui;
+    }
+    refresh() {
+        return false;
+    }
+}
+
 // ✅ NEW: The complete grid options for the Expense Ledger
 const expensesGridOptions = {
     // Use the row's 'id' field as its unique identifier
@@ -12382,6 +12411,31 @@ const expensesGridOptions = {
             headerName: "Voucher #", 
             width: 150, 
             editable: true 
+        },
+        // ✅ NEW: A column specifically for uploading the receipt file on new rows
+        {
+            headerName: "Upload Receipt",
+            width: 150,
+            editable: false,
+            cellRenderer: 'fileUploadCellRenderer' // Use our custom component
+        },
+
+        // ✅ NEW: A column to display the link to the saved receipt
+        {
+            headerName: "Receipt",
+            width: 120,
+            editable: false,
+            cellRenderer: params => {
+                // If a receiptUrl exists, render a clickable link
+                if (params.data.receiptUrl) {
+                    return `<a href="${params.data.receiptUrl}" target="_blank" class="text-blue-600 hover:underline">View/Download</a>`;
+                }
+                // If the row is new and has a file selected, show its name
+                if (params.data.isNew && params.data.receiptFile) {
+                    return `<span class="text-gray-500 italic">${params.data.receiptFile.name}</span>`;
+                }
+                return ''; // Otherwise, the cell is blank
+            }
         },
         // Column 8: Status (Read-only)
         { 
