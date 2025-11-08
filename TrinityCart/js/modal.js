@@ -55,8 +55,9 @@ export function showModal(options, title, message) {
 
     // **NEW: Calculate and set z-index higher than all other elements**
     const highestZIndex = getHighestZIndex();
+    console.log(`[model.js] highestZIndex:`,highestZIndex);
     modalElement.style.zIndex = highestZIndex + 1;
-    
+
     isModalOpen = true;
 
     return new Promise((resolve) => {
