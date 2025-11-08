@@ -4495,23 +4495,45 @@ export async function deleteExpense(docId, receiptFileId) {
 
 
 /**
- * ✅ NEW: Uploads a receipt for an existing expense and updates the document.
+ * ✅ NEW & CORRECTED: Uploads a receipt for an existing expense and updates the document.
  * @param {string} docId - The Firestore document ID of the expense.
  * @param {File} file - The receipt file to upload.
  * @param {object} user - The currently authenticated user object.
  * @returns {Promise<void>}
  */
 export async function uploadReceiptForExistingExpense(docId, file, user) {
-    const storage = firebase.storage();
     const db = firebase.firestore();
 
-    // 1. Upload the file to ImageKit (using the same secure method)
-    const imagekit = new ImageKit({
+     // Initialize ImageKit SDK (no auth details needed here)
+    const imagekit = new imagekit({
         publicKey: imageKitConfig.publicKey,
         urlEndpoint: imageKitConfig.urlEndpoint,
     });
-    const authenticator = async () => { /* ... your existing authenticator function ... */ };
 
+    // --- Step 1: Upload the file to ImageKit ---
+    
+    // This is the robust authenticator function that fetches a security token.
+    const authenticator = async () => {
+        try {
+            console.log("Authenticator called for existing expense. Fetching token...");
+            // Use your live Vercel function URL with a cache-busting parameter.
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const response = await fetch(authUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Authentication server failed with status ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error("Error in ImageKit authenticator:", error);
+            throw error;
+        }
+    };
+
+    console.log(`Uploading new receipt for existing expense: ${file.name}`);
+    
+    // Perform the upload using the authenticator.
     const result = await imagekit.upload({
         file: file,
         fileName: file.name,
@@ -4520,13 +4542,21 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
         authenticator: authenticator
     });
 
-    // 2. Update the existing Firestore document with the new URL
+    // --- Step 2: Update the existing Firestore document ---
+    console.log(`Updating Firestore document ${docId} with new receipt URL.`);
     const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
     return expenseRef.update({
         receiptUrl: result.url,
         receiptFileId: result.fileId,
         updatedBy: user.email,
-        updatedOn: firebase.firestore.FieldValue.serverTimestamp()
+        updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
+        // It's good practice to log this important change
+        activityLog: firebase.firestore.FieldValue.arrayUnion({
+            action: 'Receipt Uploaded',
+            user: user.email,
+            timestamp: new Date(),
+            details: `Uploaded new receipt: ${file.name}`
+        })
     });
 }
 
@@ -4588,8 +4618,28 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
     }
 
     // --- Step 2: Upload the NEW file to ImageKit ---
-    const imagekit = new ImageKit({ /* ... your config ... */ });
-    const authenticator = async () => { /* ... your authenticator function ... */ };
+   const imagekit = new imagekit({
+        publicKey: imageKitConfig.publicKey,
+        urlEndpoint: imageKitConfig.urlEndpoint,
+    });
+
+    const authenticator = async () => {
+        try {
+            console.log("Authenticator called for existing expense. Fetching token...");
+            // Use your live Vercel function URL with a cache-busting parameter.
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const response = await fetch(authUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Authentication server failed with status ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error("Error in ImageKit authenticator:", error);
+            throw error;
+        }
+    };
 
     console.log(`Uploading new receipt: ${newFile.name}`);
     const result = await imagekit.upload({
