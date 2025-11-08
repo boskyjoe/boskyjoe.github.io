@@ -4992,6 +4992,7 @@ export async function generatePLStatement(startDate, endDate) {
     let consignmentSalesRevenue = 0;
     consignmentSnapshot.docs.forEach(doc => {
         const activities = doc.data().activityLog || [];
+        console.log("[report.js]-activities",activities);
         activities.forEach(activity => {
             // We still check if it's a 'Sale' and if it's within the date range
             console.log("[report.js]-activityType",activity.activityType);
