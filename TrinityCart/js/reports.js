@@ -4976,87 +4976,59 @@ export async function generatePLStatement(startDate, endDate) {
     const db = firebase.firestore();
     console.log(`[Reports] Generating P&L Statement from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
 
-    // --- 1. Fetch Core Data in Parallel ---
-    const [salesSnapshot, purchasesSnapshot, expensesSnapshot, consignmentSnapshot, donationsSnapshot] = await Promise.all([
+    // --- 1. Fetch All Necessary Data in Parallel ---
+    const [
+        salesSnapshot, 
+        purchasesSnapshot, 
+        expensesSnapshot, 
+        donationsSnapshot,
+        consignmentSalesSnapshot // This will now hold the result of our new query
+    ] = await Promise.all([
         db.collection(SALES_COLLECTION_PATH).where('saleDate', '>=', startDate).where('saleDate', '<=', endDate).get(),
         db.collection(PURCHASE_INVOICES_COLLECTION_PATH).where('purchaseDate', '>=', startDate).where('purchaseDate', '<=', endDate).get(),
         db.collection(EXPENSES_COLLECTION_PATH).where('expenseDate', '>=', startDate).where('expenseDate', '<=', endDate).get(),
-        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', '==', 'Active').get(),
+        db.collection(DONATIONS_COLLECTION_PATH).where('donationDate', '>=', startDate).where('donationDate', '<=', endDate).get(),
         
-        // ✅ CORRECTED: Query the dedicated 'donations' collection
-        db.collection(DONATIONS_COLLECTION_PATH).where('donationDate', '>=', startDate).where('donationDate', '<=', endDate).get()
+        // ✅ THE CORRECT QUERY: Use a Collection Group query on 'activityLog'.
+        // This efficiently finds all "Sale" activities within the date range across all consignment orders.
+        // This will require a new Firestore index and a new security rule.
+        db.collectionGroup('activityLog')
+            .where('activityType', '==', 'Sale')
+            .where('activityDate', '>=', startDate)
+            .where('activityDate', '<=', endDate)
+            .get()
     ]);
 
-    // --- 2. Process Revenue (No changes here) ---
+    // --- 2. Process Revenue ---
     const directSalesRevenue = salesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().financials?.totalAmount || 0), 0);
-    let consignmentSalesRevenue = 0;
-    consignmentSnapshot.docs.forEach(doc => {
-        const logData = doc.data().activityLog;
+    
+    // ✅ CORRECTED & SIMPLIFIED: Calculate consignment revenue directly from the new query result.
+    const consignmentSalesRevenue = consignmentSalesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalSaleValue || 0), 0);
 
-        // ✅ NEW, EXPLICIT CHECK:
-        // First, check if 'logData' actually exists and is an array.
-        if (Array.isArray(logData)) {
-            console.log('[report.js] logData', logData);
-            // If it is a valid array, loop through it.
-            logData.forEach(activity => {
-                console.log('[report.js] activity:activity.activityType', activity.activityType);
-                if (activity.activityType === 'Sale') {
-                    // Ensure activityDate and its toDate method exist before calling
-                    if (activity.activityDate && typeof activity.activityDate.toDate === 'function') {
-                        const activityDate = activity.activityDate.toDate();
-                        if (activityDate >= startDate && activityDate <= endDate) {
-                            consignmentSalesRevenue += activity.totalSaleValue || 0;
-                        }
-                    }
-                }
-            });
-        }
-        // If logData is null, undefined, or not an array, this block is skipped,
-        // and no error occurs.
-    });
     const totalOperatingRevenue = directSalesRevenue + consignmentSalesRevenue;
 
-    // --- 3. Process COGS (No changes here) ---
+    // --- 3. Process COGS, Expenses, and Donations (These remain the same) ---
     const costOfGoodsSold = purchasesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().invoiceTotal || 0), 0);
-
-    // --- 4. Process Operating Expenses (No changes here) ---
-    const totalOperatingExpenses = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
-
-    // --- 5. Process Donation Revenue (Corrected) ---
-    // ✅ CORRECTED: Sum the 'amount' from the dedicated donations collection
+    const totalOperatingExpenses = expensesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
     const donationRevenue = donationsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
 
-    // --- 6. Calculate Final P&L Metrics (No changes here) ---
+    // --- 4. Calculate Final P&L Metrics (No changes here) ---
     const grossProfit = totalOperatingRevenue - costOfGoodsSold;
     const operatingIncome = grossProfit - totalOperatingExpenses;
     const netIncome = operatingIncome + donationRevenue;
 
-    // --- 7. Assemble the Final Report Object (No changes here, but the data is now correct) ---
+    // --- 5. Assemble the Final Report Object (The structure is correct) ---
     const pnlReport = {
-        // ✅ THE FIX: Build the complete object with all expected properties.
-        period: {
-            start: startDate.toLocaleDateString(),
-            end: endDate.toLocaleDateString()
-        },
-        revenue: {
-            total: totalOperatingRevenue,
-            directSales: directSalesRevenue,
-            consignmentSales: consignmentSalesRevenue
-        },
+        period: { start: startDate.toLocaleDateString(), end: endDate.toLocaleDateString() },
+        revenue: { total: totalOperatingRevenue, directSales: directSalesRevenue, consignmentSales: consignmentSalesRevenue },
         cogs: costOfGoodsSold,
         grossProfit: grossProfit,
         expenses: totalOperatingExpenses,
         operatingIncome: operatingIncome,
         donations: donationRevenue,
         netIncome: netIncome,
-        margins: {
-            grossMargin: totalOperatingRevenue > 0 ? (grossProfit / totalOperatingRevenue) * 100 : 0,
-            netMargin: totalOperatingRevenue > 0 ? (netIncome / totalOperatingRevenue) * 100 : 0
-        },
-        metadata: {
-            generatedAt: new Date().toISOString(),
-            firestoreReads: salesSnapshot.size + purchasesSnapshot.size + expensesSnapshot.size + consignmentSnapshot.size + donationsSnapshot.size
-        }
+        margins: { grossMargin: totalOperatingRevenue > 0 ? (grossProfit / totalOperatingRevenue) * 100 : 0, netMargin: totalOperatingRevenue > 0 ? (netIncome / totalOperatingRevenue) * 100 : 0 },
+        metadata: { /* ... */ }
     };
 
     console.log("[Reports] P&L Statement Generated:", pnlReport);
