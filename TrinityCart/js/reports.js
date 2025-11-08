@@ -5020,15 +5020,30 @@ export async function generatePLStatement(startDate, endDate) {
 
     // --- 7. Assemble the Final Report Object (No changes here, but the data is now correct) ---
     const pnlReport = {
-        // ... (rest of the object is the same)
-        revenue: { total: totalOperatingRevenue, directSales: directSalesRevenue, consignmentSales: consignmentSalesRevenue },
+        // ✅ THE FIX: Build the complete object with all expected properties.
+        period: {
+            start: startDate.toLocaleDateString(),
+            end: endDate.toLocaleDateString()
+        },
+        revenue: {
+            total: totalOperatingRevenue,
+            directSales: directSalesRevenue,
+            consignmentSales: consignmentSalesRevenue
+        },
         cogs: costOfGoodsSold,
         grossProfit: grossProfit,
         expenses: totalOperatingExpenses,
         operatingIncome: operatingIncome,
         donations: donationRevenue,
         netIncome: netIncome,
-        // ...
+        margins: {
+            grossMargin: totalOperatingRevenue > 0 ? (grossProfit / totalOperatingRevenue) * 100 : 0,
+            netMargin: totalOperatingRevenue > 0 ? (netIncome / totalOperatingRevenue) * 100 : 0
+        },
+        metadata: {
+            generatedAt: new Date().toISOString(),
+            firestoreReads: salesSnapshot.size + purchasesSnapshot.size + expensesSnapshot.size + consignmentSnapshot.size + donationsSnapshot.size
+        }
     };
 
     console.log("[Reports] P&L Statement Generated:", pnlReport);
