@@ -4595,6 +4595,7 @@ export async function processExpense(docId, action, justification, user) {
  * @param {object} user - The currently authenticated user object.
  * @returns {Promise<void>}
  */
+
 export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
     const oldFileId = expenseData.receiptFileId;
 
@@ -4605,6 +4606,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
             const deleteUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-delete`;
             const response = await fetch(deleteUrl, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, // Ensure header is here too
                 body: JSON.stringify({ fileId: oldFileId })
             });
             if (!response.ok) {
@@ -4618,8 +4620,6 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
     }
 
     // --- Step 2: Upload the NEW file ---
-
-    // ✅ CORRECTED: Use a capital 'I' for the class name
     const imagekit = new ImageKit({
         publicKey: imageKitConfig.publicKey,
         urlEndpoint: imageKitConfig.urlEndpoint,
@@ -4627,39 +4627,49 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
 
     const authenticator = async () => {
         try {
-            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            // ✅ THE FIX: Add a unique timestamp to the URL to prevent caching.
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth?t=${Date.now()}`;
             const response = await fetch(authUrl);
+            
             if (!response.ok) {
                 throw new Error(`Authentication server failed with status ${response.status}`);
             }
             return await response.json();
         } catch (error) {
+            // Re-throw the error to be caught by the main try...catch block
             throw error;
         }
     };
 
     console.log(`Uploading new receipt: ${newFile.name}`);
-    const result = await imagekit.upload({
-        file: newFile,
-        fileName: newFile.name,
-        folder: `MONETA/expense_receipts/${user.uid}/`,
-        useUniqueFileName: true,
-        authenticator: authenticator
-    });
+    try {
+        const result = await imagekit.upload({
+            file: newFile,
+            fileName: newFile.name,
+            folder: `MONETA/expense_receipts/${user.uid}/`,
+            useUniqueFileName: true,
+            authenticator: authenticator
+        });
 
-    // --- Step 3: Update the Firestore document ---
-    const db = firebase.firestore();
-    const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
-    return expenseRef.update({
-        receiptUrl: result.url,
-        receiptFileId: result.fileId,
-        updatedBy: user.email,
-        updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
-        activityLog: firebase.firestore.FieldValue.arrayUnion({
-            action: 'Receipt Changed',
-            user: user.email,
-            timestamp: new Date(),
-            details: `Replaced receipt. Old File ID: ${oldFileId || 'none'}. New File: ${newFile.name}`
-        })
-    });
+        // --- Step 3: Update the Firestore document ---
+        const db = firebase.firestore();
+        const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
+        return expenseRef.update({
+            receiptUrl: result.url,
+            receiptFileId: result.fileId,
+            updatedBy: user.email,
+            updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
+            activityLog: firebase.firestore.FieldValue.arrayUnion({
+                action: 'Receipt Changed',
+                user: user.email,
+                timestamp: new Date(),
+                details: `Replaced receipt. Old File ID: ${oldFileId || 'none'}. New File: ${newFile.name}`
+            })
+        });
+
+    } catch (uploadError) {
+        // This will catch the "Missing token" error if the authenticator fails
+        console.error("ImageKit Upload Error during replacement:", uploadError);
+        throw new Error("Failed to replace receipt. The authentication token could not be retrieved.");
+    }
 }
