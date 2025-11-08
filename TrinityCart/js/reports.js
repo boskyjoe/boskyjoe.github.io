@@ -4993,10 +4993,13 @@ export async function generatePLStatement(startDate, endDate) {
     consignmentSnapshot.docs.forEach(doc => {
         const activities = doc.data().activityLog || [];
         activities.forEach(activity => {
+            // We still check if it's a 'Sale' and if it's within the date range
             if (activity.activityType === 'Sale') {
                 const activityDate = activity.timestamp.toDate();
                 if (activityDate >= startDate && activityDate <= endDate) {
-                    consignmentSalesRevenue += activity.sellingPrice * activity.quantityDelta;
+                    // Use the pre-calculated totalSaleValue directly.
+                    // The '|| 0' handles cases where the field might be missing on very old records.
+                    consignmentSalesRevenue += activity.totalSaleValue || 0;
                 }
             }
         });
