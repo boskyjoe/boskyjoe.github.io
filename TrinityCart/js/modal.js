@@ -53,6 +53,10 @@ export function showModal(options, title, message) {
         }
     }
 
+    // **NEW: Calculate and set z-index higher than all other elements**
+    const highestZIndex = getHighestZIndex();
+    modalElement.style.zIndex = highestZIndex + 1;
+    
     isModalOpen = true;
 
     return new Promise((resolve) => {
@@ -188,6 +192,26 @@ export function showModal(options, title, message) {
     });
 }
 
+// **NEW: Helper function to find the highest z-index**
+function getHighestZIndex() {
+    const allElements = document.querySelectorAll('*');
+    let highest = 0;
+
+    allElements.forEach(element => {
+        const zIndex = window.getComputedStyle(element).zIndex;
+        
+        // Check if z-index is a valid number (not 'auto')
+        if (zIndex !== 'auto' && !isNaN(zIndex)) {
+            const numericZIndex = parseInt(zIndex, 10);
+            if (numericZIndex > highest) {
+                highest = numericZIndex;
+            }
+        }
+    });
+
+    // Return at least 1000 to ensure it's above most content
+    return Math.max(highest, 999);
+}
 /**
  * Enhanced showModal with preset configurations for common use cases
  */
