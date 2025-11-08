@@ -4160,7 +4160,17 @@ const consignmentItemsGridOptions = {
             width: 100,
             cellStyle: { 'font-weight': 'bold' },
             // The valueGetter remains the same and will auto-recalculate
-            valueGetter: p => p.data.quantityCheckedOut - (p.data.quantitySold + p.data.quantityReturned + p.data.quantityDamaged)
+            //valueGetter: p => p.data.quantityCheckedOut - (p.data.quantitySold + p.data.quantityReturned + p.data.quantityDamaged)
+            valueGetter: p => {
+                const checkedOut = p.data.quantityCheckedOut || 0;
+                const sold = p.data.quantitySold || 0;
+                const returned = p.data.quantityReturned || 0;
+                const damaged = p.data.quantityDamaged || 0;
+                const gifted = p.data.quantityGifted || 0; // Get the gifted quantity
+
+                // Subtract all accounted-for quantities from the initial checkout amount
+                return checkedOut - (sold + returned + damaged + gifted);
+            }
         }
     ],
     onGridReady: params => { consignmentItemsGridApi = params.api; },
