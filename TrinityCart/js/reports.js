@@ -5004,7 +5004,7 @@ export async function generatePLStatement(startDate, endDate) {
     const totalOperatingRevenue = directSalesRevenue + consignmentSalesRevenue;
 
     // --- 3. Process COGS (No changes here) ---
-    const costOfGoodsSold = purchasesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalAmountDue || 0), 0);
+    const costOfGoodsSold = purchasesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().invoiceTotal || 0), 0);
 
     // --- 4. Process Operating Expenses (No changes here) ---
     const totalOperatingExpenses = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
