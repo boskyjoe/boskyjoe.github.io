@@ -159,7 +159,7 @@ import {
     addNewExpenseRow    // ✅ ADD
 } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt } from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
 
 
 
@@ -1541,9 +1541,11 @@ async function handleExpensesGrid(button, docId, user) {
                     // Call our new API function to handle the replacement
                     await replaceExpenseReceipt(docId, expenseData, newFile, user);
                     ProgressToast.showSuccess('Receipt replaced successfully!');
+                    ProgressToast.hide(300);
                 } catch (error) {
                     console.error("Error replacing receipt:", error);
                     ProgressToast.showError('Replacement failed. Please try again.');
+                    ProgressToast.hide(300);
                 }
             }
         };
