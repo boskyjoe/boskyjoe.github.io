@@ -1,4 +1,5 @@
 // In api/imagekit-auth.js
+
 const ImageKit = require("imagekit");
 
 // These will be read from Vercel's environment variables
