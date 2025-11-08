@@ -12666,3 +12666,151 @@ export function showExpensesView() {
         }
     }, 50);
 }
+
+/**
+ * Renders the generated P&L data into a beautiful statement in the view.
+ * @param {Object} pnlData The data from generatePLStatement.
+ */
+function renderPNLReport(pnlData) {
+    const container = document.getElementById('pnl-report-container');
+    
+    // Helper to format numbers and wrap negative values in parentheses
+    const formatValue = (value) => {
+        const formatted = formatCurrency(value);
+        return value < 0 ? `<span class="text-red-600">(${formatted.replace('-', '')})</span>` : formatted;
+    };
+
+    container.innerHTML = `
+        <style>
+            .pnl-statement .pnl-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+            .pnl-statement .sub-item { margin-left: 2rem; }
+            .pnl-statement .total-row { border-top: 2px solid #e5e7eb; font-weight: 600; }
+            .pnl-statement .final-total { font-size: 1.125rem; border-top: 3px double #9ca3af; }
+            .pnl-statement .margin-row { text-align: right; font-size: 0.8rem; color: #6b7280; font-style: italic; padding-right: 0.5rem; }
+        </style>
+        <div class="pnl-statement">
+            <div class="text-center mb-8">
+                <h3 class="text-xl font-bold text-gray-900">Profit & Loss Statement</h3>
+                <p class="text-sm text-gray-500">For the period ${pnlData.period.start} to ${pnlData.period.end}</p>
+            </div>
+
+            <!-- Revenue Section -->
+            <div class="pnl-row">
+                <span class="font-bold">Operating Revenue</span>
+                <span></span>
+            </div>
+            <div class="pnl-row sub-item">
+                <span>Direct Sales Revenue</span>
+                <span>${formatValue(pnlData.revenue.directSales)}</span>
+            </div>
+            <div class="pnl-row sub-item">
+                <span>Consignment Sales Revenue</span>
+                <span>${formatValue(pnlData.revenue.consignmentSales)}</span>
+            </div>
+            <div class="pnl-row total-row">
+                <span>Total Operating Revenue</span>
+                <span>${formatValue(pnlData.revenue.total)}</span>
+            </div>
+
+            <!-- COGS Section -->
+            <div class="pnl-row">
+                <span class="font-bold">Cost of Goods Sold (COGS)</span>
+                <span>${formatValue(pnlData.cogs * -1)}</span>
+            </div>
+
+            <!-- Gross Profit -->
+            <div class="pnl-row total-row">
+                <span class="font-extrabold">Gross Profit</span>
+                <span class="font-extrabold">${formatValue(pnlData.grossProfit)}</span>
+            </div>
+            <div class="margin-row">Gross Margin: ${pnlData.margins.grossMargin.toFixed(1)}%</div>
+
+            <!-- Expenses Section -->
+            <div class="pnl-row">
+                <span class="font-bold">Operating Expenses</span>
+                <span>${formatValue(pnlData.expenses * -1)}</span>
+            </div>
+
+            <!-- Operating Income -->
+            <div class="pnl-row total-row">
+                <span class="font-extrabold">Operating Income</span>
+                <span class="font-extrabold">${formatValue(pnlData.operatingIncome)}</span>
+            </div>
+
+            <!-- Non-Operating Income -->
+            <div class="pnl-row">
+                <span class="font-bold">Non-Operating Income</span>
+                <span></span>
+            </div>
+            <div class="pnl-row sub-item">
+                <span>Donation Revenue</span>
+                <span>${formatValue(pnlData.donations)}</span>
+            </div>
+
+            <!-- Net Income -->
+            <div class="pnl-row total-row final-total">
+                <span class="font-extrabold text-blue-600">Net Income</span>
+                <span class="font-extrabold text-blue-600">${formatValue(pnlData.netIncome)}</span>
+            </div>
+            <div class="margin-row">Net Margin: ${pnlData.margins.netMargin.toFixed(1)}%</div>
+
+            <p class="text-xs text-gray-400 text-center mt-8">Report generated at ${new Date(pnlData.metadata.generatedAt).toLocaleString()}</p>
+        </div>
+    `;
+}
+
+/**
+ * ✅ NEW & CORRECTED: Shows the P&L Report view and sets up all its internal logic.
+ */
+export function showPNLReportView() {
+    // 1. Show the correct view
+    showView('pnl-report-view');
+    
+    const startDateInput = document.getElementById('pnl-start-date');
+    const endDateInput = document.getElementById('pnl-end-date');
+    const generateBtn = document.getElementById('generate-pnl-report-btn');
+    const reportContainer = document.getElementById('pnl-report-container');
+
+    // 2. Set default dates for user convenience
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    endDateInput.valueAsDate = today;
+    startDateInput.valueAsDate = thirtyDaysAgo;
+
+    // 3. Clear any previous report and show the initial prompt
+    reportContainer.innerHTML = `
+        <div class="text-center py-16 text-gray-500">
+             <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <p class="font-semibold">Defaulting to the last 30 days. Click "Generate Report" to view.</p>
+        </div>`;
+
+    // 4. Define the report generation logic as a local function
+    const generateReport = async () => {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
+            return showModal('error', 'Invalid Date Range', 'Please select a valid start and end date.');
+        }
+        
+        ProgressToast.show('Generating P&L Report...', 'info');
+        try {
+            const pnlData = await generatePLStatement(startDate, endDate);
+            renderPNLReport(pnlData); // This function should also be in ui.js
+            ProgressToast.hide(500);
+        } catch (error) {
+            ProgressToast.showError('Failed to generate report.');
+            console.error("Error generating P&L Statement:", error);
+            reportContainer.innerHTML = `<div class="text-center text-red-500 p-8"><strong>Error:</strong> Could not generate the report. Please check the console for details. You may need to create a Firestore index by clicking the link in the error message.</div>`;
+        }
+    };
+
+    // 5. Attach the event listener directly to the button.
+    // We use a trick to ensure we don't add multiple listeners if the view is revisited.
+    generateBtn.replaceWith(generateBtn.cloneNode(true));
+    document.getElementById('generate-pnl-report-btn').addEventListener('click', generateReport);
+}
