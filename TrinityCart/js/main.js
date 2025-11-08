@@ -129,7 +129,7 @@ import {
     showOperationsReportsView, 
     showExecutiveDashboardView,loadExecutiveDashboard,
     handleReportCardClick,
-    showSalesTrendsDetailView,showCustomerInsightsDetailView
+    showSalesTrendsDetailView,showCustomerInsightsDetailView,showPNLReportView
 } from './ui.js';
 
 
