@@ -23,7 +23,8 @@ import {
     CONSIGNMENT_ORDERS_COLLECTION_PATH,
     PURCHASE_INVOICES_COLLECTION_PATH,
     SALES_CATALOGUES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,
-    CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH
+    CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
+    EXPENSES_COLLECTION_PATH
 } from './config.js';
 import { formatCurrency } from './ui.js';
 import { masterData } from './masterData.js';
@@ -4963,4 +4964,89 @@ async function calculateTotalDonationsReceived() {
         console.warn('[Reports] Error calculating donations:', error);
         return 0;
     }
+}
+
+/**
+ * Generates a complete Profit & Loss statement for a given period using accrual basis accounting.
+ * @param {Date} startDate The start of the reporting period.
+ * @param {Date} endDate The end of the reporting period.
+ * @returns {Promise<Object>} An object containing the full P&L breakdown.
+ */
+export async function generatePLStatement(startDate, endDate) {
+    const db = firebase.firestore();
+    console.log(`[Reports] Generating P&L Statement from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+
+    // --- 1. Fetch Core Data in Parallel (Sales, Purchases, Expenses) ---
+    const [salesSnapshot, purchasesSnapshot, expensesSnapshot, consignmentSnapshot] = await Promise.all([
+        db.collection(SALES_COLLECTION_PATH).where('saleDate', '>=', startDate).where('saleDate', '<=', endDate).get(),
+        db.collection(PURCHASE_INVOICES_COLLECTION_PATH).where('purchaseDate', '>=', startDate).where('purchaseDate', '<=', endDate).get(),
+        db.collection(EXPENSES_COLLECTION_PATH).where('expenseDate', '>=', startDate).where('expenseDate', '<=', endDate).get(),
+        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).get() // Get all for activity log analysis
+    ]);
+
+    // --- 2. Process Revenue ---
+    const directSalesRevenue = salesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().financials?.totalAmount || 0), 0);
+    
+    // Process consignment sales revenue from activity logs
+    let consignmentSalesRevenue = 0;
+    consignmentSnapshot.docs.forEach(doc => {
+        const activities = doc.data().activityLog || [];
+        activities.forEach(activity => {
+            if (activity.activityType === 'Sale') {
+                const activityDate = activity.timestamp.toDate();
+                if (activityDate >= startDate && activityDate <= endDate) {
+                    consignmentSalesRevenue += activity.sellingPrice * activity.quantityDelta;
+                }
+            }
+        });
+    });
+    const totalOperatingRevenue = directSalesRevenue + consignmentSalesRevenue;
+
+    // --- 3. Process Cost of Goods Sold (COGS) ---
+    const costOfGoodsSold = purchasesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalAmountDue || 0), 0);
+
+    // --- 4. Process Operating Expenses ---
+    const totalOperatingExpenses = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+
+    // --- 5. Fetch and Process Donation Revenue ---
+    // This requires a collection group query. Firestore will prompt you to create the index.
+    const paymentsSnapshot = await db.collectionGroup('payments')
+        .where('paymentDate', '>=', startDate)
+        .where('paymentDate', '<=', endDate).get();
+    const donationRevenue = paymentsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().overpaymentAsDonation || 0), 0);
+
+    // --- 6. Calculate Final P&L Metrics ---
+    const grossProfit = totalOperatingRevenue - costOfGoodsSold;
+    const operatingIncome = grossProfit - totalOperatingExpenses;
+    const netIncome = operatingIncome + donationRevenue;
+
+    // --- 7. Assemble the Final Report Object ---
+    const pnlReport = {
+        period: {
+            start: startDate.toLocaleDateString(),
+            end: endDate.toLocaleDateString()
+        },
+        revenue: {
+            total: totalOperatingRevenue,
+            directSales: directSalesRevenue,
+            consignmentSales: consignmentSalesRevenue
+        },
+        cogs: costOfGoodsSold,
+        grossProfit: grossProfit,
+        expenses: totalOperatingExpenses,
+        operatingIncome: operatingIncome,
+        donations: donationRevenue,
+        netIncome: netIncome,
+        margins: {
+            grossMargin: totalOperatingRevenue > 0 ? (grossProfit / totalOperatingRevenue) * 100 : 0,
+            netMargin: totalOperatingRevenue > 0 ? (netIncome / totalOperatingRevenue) * 100 : 0
+        },
+        metadata: {
+            generatedAt: new Date().toISOString(),
+            firestoreReads: salesSnapshot.size + purchasesSnapshot.size + expensesSnapshot.size + consignmentSnapshot.size + paymentsSnapshot.size
+        }
+    };
+
+    console.log("[Reports] P&L Statement Generated:", pnlReport);
+    return pnlReport;
 }
