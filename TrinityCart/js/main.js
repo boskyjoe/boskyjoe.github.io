@@ -175,17 +175,6 @@ const db = firebase.firestore();
  */
 function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(error => {
-        console.error("Google Sign-In Error:", error);
-        alert("Login failed. Please try again.");
-    });
-}
-
-/**
- * Signs the user out of Firebase.
- */
-function handleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
 
     // ✅ THE FIX: Add a custom parameter to always prompt for account selection.
     provider.setCustomParameters({
@@ -202,6 +191,12 @@ function handleLogin() {
     });
 }
 
+/**
+ * Signs the user out of Firebase.
+ */
+function handleLogout() {
+    auth.signOut();
+}
 
 /**
  * This is the main authentication listener.
