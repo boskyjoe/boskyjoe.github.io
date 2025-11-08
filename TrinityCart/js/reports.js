@@ -4996,7 +4996,10 @@ export async function generatePLStatement(startDate, endDate) {
             // We still check if it's a 'Sale' and if it's within the date range
             if (activity.activityType === 'Sale') {
                 const activityDate = activity.activityDate.toDate(); 
+                console.log("[report.js]-activityDate",activityDate);
                 if (activityDate >= startDate && activityDate <= endDate) {
+                    console.log("[report.js]-totalSaleValue",activity.totalSaleValue);
+
                     // Use the pre-calculated totalSaleValue directly.
                     // The '|| 0' handles cases where the field might be missing on very old records.
                     consignmentSalesRevenue += activity.totalSaleValue || 0;
