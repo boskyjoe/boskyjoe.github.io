@@ -4621,14 +4621,14 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
 
     // --- Step 2: Upload the NEW file ---
     const imagekit = new ImageKit({
-            publicKey: imageKitConfig.publicKey,
-            urlEndpoint: imageKitConfig.urlEndpoint,
+        publicKey: imageKitConfig.publicKey,
+        urlEndpoint: imageKitConfig.urlEndpoint,
     });
 
     const authenticator = async () => {
         try {
             // ✅ THE FIX: Add a unique timestamp to the URL to prevent caching.
-            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth?t=${Date.now()}`;
             const response = await fetch(authUrl);
             
             if (!response.ok) {
