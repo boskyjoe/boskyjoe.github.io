@@ -2245,6 +2245,8 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             fieldToUpdate = 'quantityReturned';
         } else if (activityType === 'Damage') {
             fieldToUpdate = 'quantityDamaged';
+        } else if (activityType === 'Gift') {
+            fieldToUpdate = 'quantityGifted';
         }
         if (!fieldToUpdate) throw new Error(`Invalid activity type: ${activityType}`);
 
@@ -2287,6 +2289,12 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
         } else if (fieldToUpdate === 'quantityDamaged') {
             transaction.update(orderRef, {
                 totalValueDamaged: firebase.firestore.FieldValue.increment(activityValueDelta),
+                balanceDue: firebase.firestore.FieldValue.increment(-activityValueDelta)
+            });
+        } else if (fieldToUpdate === 'quantityGifted') {
+            // Treat 'Gift' financially the same as 'Damage' or 'Return'
+            transaction.update(orderRef, {
+                totalValueGifted: firebase.firestore.FieldValue.increment(activityValueDelta),
                 balanceDue: firebase.firestore.FieldValue.increment(-activityValueDelta)
             });
         }
