@@ -4994,6 +4994,7 @@ export async function generatePLStatement(startDate, endDate) {
         const activities = doc.data().activityLog || [];
         activities.forEach(activity => {
             // We still check if it's a 'Sale' and if it's within the date range
+            console.log("[report.js]-activityType",activity.activityType);
             if (activity.activityType === 'Sale') {
                 const activityDate = activity.activityDate.toDate(); 
                 console.log("[report.js]-activityDate",activityDate);
