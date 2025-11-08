@@ -6232,27 +6232,6 @@ export function showFinancialReportsView() {
     //loadFinancialSummary();
 }
 
-// Function to show the new P&L Report View
-export function showPNLReportView() {
-    showView('pnl-report-view');
-    
-    // Set default dates to the last 30 days for user convenience
-    const endDateInput = document.getElementById('pnl-end-date');
-    const startDateInput = document.getElementById('pnl-start-date');
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    endDateInput.valueAsDate = today;
-    startDateInput.valueAsDate = thirtyDaysAgo;
-
-    // Clear any previous report from the container
-    document.getElementById('pnl-report-container').innerHTML = `
-        <div class="text-center py-16 text-gray-500">
-             <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <p class="font-semibold">Defaulting to the last 30 days. Click "Generate Report" to view.</p>
-        </div>`;
-}
-
 
 
 /**
