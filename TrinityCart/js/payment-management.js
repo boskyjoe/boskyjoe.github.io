@@ -43,9 +43,7 @@ import {
     getConsignmentPaymentDataFromGridById,
 
     // Existing helper functions
-    resetPaymentForm,
-    loadPaymentsForSelectedInvoice
-
+    resetPaymentForm
 } from './ui.js';
 
 // API functions (existing - call without modification)
@@ -8020,4 +8018,165 @@ export async function showTeamPaymentVerificationModal(consignmentOrderId, teamN
         );
     }
 }
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate collection efficiency metrics (ENHANCED)
+ */
+function calculateCollectionEfficiencyMetrics(businessSummary) {
+    console.log('[Reports] 📊 Calculating collection efficiency metrics...');
+    
+    const detailedData = businessSummary.detailedBreakdown;
+    let overallCollectionRate = 0;
+    let collectionDetails = 'Calculating...';
+    
+    // Get collection data from direct sales
+    if (detailedData?.directSalesData?.paymentAnalysis) {
+        const paymentAnalysis = detailedData.directSalesData.paymentAnalysis;
+        overallCollectionRate = paymentAnalysis.collectionRate || 0;
+        
+        const totalTransactions = detailedData.directSalesData.summary.totalTransactions;
+        const paidTransactions = paymentAnalysis.paidTransactions || 0;
+        
+        collectionDetails = `${paidTransactions}/${totalTransactions} invoices collected`;
+        
+        console.log('[Reports] 📊 Collection efficiency calculated:', {
+            collectionRate: overallCollectionRate.toFixed(1) + '%',
+            paidTransactions,
+            totalTransactions
+        });
+    } else {
+        // Fallback calculation if detailed analysis not available
+        const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+        const outstandingAmount = businessSummary.executiveSummary.totalOutstanding;
+        
+        if (totalRevenue > 0) {
+            overallCollectionRate = ((totalRevenue - outstandingAmount) / totalRevenue) * 100;
+            collectionDetails = `${formatCurrency(totalRevenue - outstandingAmount)} of ${formatCurrency(totalRevenue)} collected`;
+        } else {
+            collectionDetails = 'Insufficient data';
+        }
+        
+        console.log('[Reports] 📊 Fallback collection calculation:', {
+            totalRevenue: formatCurrency(totalRevenue),
+            outstanding: formatCurrency(outstandingAmount),
+            calculatedRate: overallCollectionRate.toFixed(1) + '%'
+        });
+    }
+    
+    return {
+        collectionRate: Math.round(overallCollectionRate),
+        formattedRate: overallCollectionRate.toFixed(1) + '%',
+        efficiency: overallCollectionRate > 90 ? 'Excellent' : 
+                   overallCollectionRate > 75 ? 'Good' : 
+                   overallCollectionRate > 50 ? 'Fair' : 'Needs Improvement',
+        details: collectionDetails,
+        recommendation: overallCollectionRate < 75 ? 'Focus on improving payment collection processes' : 'Maintain excellent collection practices'
+    };
+}
+
+/**
+ * BUSINESS INTELLIGENCE: Calculate growth trend analysis (ENHANCED)
+ */
+function calculateGrowthTrendAnalysis(businessSummary) {
+    console.log('[Reports] 📈 Calculating growth trend analysis...');
+    
+    const totalRevenue = businessSummary.executiveSummary.totalBusinessRevenue;
+    const directRevenue = businessSummary.executiveSummary.directSalesRevenue;
+    const consignmentRevenue = businessSummary.executiveSummary.consignmentRevenue;
+    const reportPeriod = businessSummary.executiveSummary.reportPeriod;
+    
+    // Calculate daily average for trend context
+    const periodDays = getDaysFromPeriodLabel(reportPeriod);
+    const dailyAverage = periodDays > 0 ? totalRevenue / periodDays : 0;
+    
+    // Determine trend based on revenue performance and channel mix
+    let trend, direction, confidence, trendDescription;
+    
+    if (totalRevenue > 100000) {
+        trend = 'Strong Growth';
+        direction = '📈';
+        confidence = 'High';
+        trendDescription = `Exceptional performance (${formatCurrency(dailyAverage)} daily average)`;
+    } else if (totalRevenue > 50000) {
+        trend = 'Steady Growth';
+        direction = '📊';
+        confidence = 'High';
+        trendDescription = `Solid performance (${formatCurrency(dailyAverage)} daily average)`;
+    } else if (totalRevenue > 20000) {
+        trend = 'Moderate Growth';
+        direction = '📊';
+        confidence = 'Medium';
+        trendDescription = `Good foundation (${formatCurrency(dailyAverage)} daily average)`;
+    } else if (totalRevenue > 5000) {
+        trend = 'Early Development';
+        direction = '📈';
+        confidence = 'Medium';
+        trendDescription = `Building momentum (${formatCurrency(dailyAverage)} daily average)`;
+    } else {
+        trend = 'Startup Phase';
+        direction = '🌱';
+        confidence = 'Low';
+        trendDescription = `Early stage development`;
+    }
+    
+    // Channel diversification analysis
+    const channelDiversification = Math.min(
+        businessSummary.executiveSummary.channelMix.directPercentage,
+        businessSummary.executiveSummary.channelMix.consignmentPercentage
+    );
+    
+    const diversificationHealth = channelDiversification > 30 ? 'Well Diversified' : 
+                                 channelDiversification > 15 ? 'Moderately Diversified' : 'Channel Concentrated';
+    
+    console.log('[Reports] 📈 Growth trend calculated:', {
+        trend,
+        totalRevenue: formatCurrency(totalRevenue),
+        dailyAverage: formatCurrency(dailyAverage),
+        channelDiversification: diversificationHealth,
+        confidence
+    });
+    
+    return {
+        trend,
+        direction,
+        confidence,
+        trendDescription,
+        dailyAverage: formatCurrency(dailyAverage),
+        channelDiversification: diversificationHealth,
+        
+        // Detailed breakdown
+        breakdown: {
+            directRevenue: formatCurrency(directRevenue),
+            consignmentRevenue: formatCurrency(consignmentRevenue),
+            directPercentage: businessSummary.executiveSummary.channelMix.directPercentage,
+            consignmentPercentage: businessSummary.executiveSummary.channelMix.consignmentPercentage
+        }
+    };
+}
+
+/**
+ * HELPER: Extract days from period label
+ */
+function getDaysFromPeriodLabel(periodLabel) {
+    if (!periodLabel) return 30; // Default
+    
+    const dayMatches = periodLabel.match(/(\d+)\s*day/i);
+    if (dayMatches) return parseInt(dayMatches[1]);
+    
+    if (periodLabel.toLowerCase().includes('today')) return 1;
+    if (periodLabel.toLowerCase().includes('yesterday')) return 1;
+    if (periodLabel.toLowerCase().includes('week')) return 7;
+    if (periodLabel.toLowerCase().includes('month')) return 30;
+    if (periodLabel.toLowerCase().includes('quarter')) return 90;
+    if (periodLabel.toLowerCase().includes('year')) return 365;
+    
+    return 30; // Default fallback
+}
+
+
+
+
+
+
+
 console.log('[PmtMgmt] 💳 Payment Management Module loaded successfully');
