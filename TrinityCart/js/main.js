@@ -631,7 +631,6 @@ const EventHandlers = {
         'sales-reports-view': showSalesReportsView,
         'inventory-reports-view': showInventoryReportsView,
         'financial-reports-view': showFinancialReportsView,
-        'pnl-report-view': showPNLReportView,
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
         //'executive-dashboard-view': showExecutiveDashboardView,
@@ -648,6 +647,7 @@ const EventHandlers = {
         'customer-insights-detail-view': () => showCustomerInsightsDetailView(),
         'stock-status-detail-view': () => showStockStatusDetailView(),
         'inventory-valuation-detail-view': () => showInventoryValuationDetailView(),
+        'pnl-report-view': () => showPNLReportView(),
         
     },
 
