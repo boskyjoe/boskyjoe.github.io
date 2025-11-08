@@ -50,7 +50,7 @@ import {
     refreshStorePerformanceData,       
     calculateSalesTrends,
     calculateCustomerInsights,
-    calculateInventoryAnalysis,generateExecutiveDashboardData,calculateTrueBusinessRevenue,calculateFinancialHealthScore,
+    calculateInventoryAnalysis,generateExecutiveDashboardData,calculateTrueBusinessRevenue,calculateFinancialHealthScore,generatePLStatement,
     REPORT_CONFIGS 
 } from './reports.js';
 
