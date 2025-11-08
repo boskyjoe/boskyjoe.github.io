@@ -4996,8 +4996,10 @@ export async function generatePLStatement(startDate, endDate) {
         // ✅ NEW, EXPLICIT CHECK:
         // First, check if 'logData' actually exists and is an array.
         if (Array.isArray(logData)) {
+            console.log('[report.js] logData', logData);
             // If it is a valid array, loop through it.
             logData.forEach(activity => {
+                console.log('[report.js] activity:activity.activityType', activity.activityType);
                 if (activity.activityType === 'Sale') {
                     // Ensure activityDate and its toDate method exist before calling
                     if (activity.activityDate && typeof activity.activityDate.toDate === 'function') {
