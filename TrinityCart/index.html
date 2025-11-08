@@ -5516,22 +5516,19 @@
     <!--   CUSTOM MODAL DIALOG   -->
     <!-- ======================= -->
     <div id="custom-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- Modal Overlay - This is just the background. It should have a lower z-index. -->
-        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-60" style="z-index: 50;"></div>
-
-        <!-- Modal Panel - This is the content. It must have a HIGHER z-index to be on top. -->
+        <!-- Modal Overlay - This is just the background. z-index set dynamically by JS -->
+        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-60"></div>
+        <!-- Modal Panel - This is the content. z-index set dynamically by JS -->
         <div id="modal-panel" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-auto relative">
             <div class="flex items-start space-x-4">
                 <!-- Icon will be inserted here by JS -->
                 <div id="modal-icon" class="flex-shrink-0"></div>
-
                 <!-- Content -->
                 <div class="flex-1">
                     <h3 id="modal-title" class="text-lg font-bold text-gray-900">Modal Title</h3>
                     <p id="modal-message" class="text-sm text-gray-600 mt-1">Modal message goes here.</p>
                 </div>
             </div>
-
             <!-- Buttons will be inserted here by JS -->
             <div id="modal-buttons" class="mt-6 flex justify-end space-x-3"></div>
         </div>
