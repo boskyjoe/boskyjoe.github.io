@@ -4891,6 +4891,7 @@ async function handleRecordSalePaymentSubmit(e) {
 
         let donationAmount = 0;
         if (amountPaidInput > balanceDue) {
+            ProgressToast.hide(100);
             donationAmount = amountPaidInput - balanceDue;
             
             const confirmOverpayment = await showModal('confirm', 'Overpayment - Record as Donation?', 
