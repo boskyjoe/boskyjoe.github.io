@@ -631,6 +631,7 @@ const EventHandlers = {
         'sales-reports-view': showSalesReportsView,
         'inventory-reports-view': showInventoryReportsView,
         'financial-reports-view': showFinancialReportsView,
+        'pnl-report-view': showPNLReportView,
         'team-reports-view': showTeamReportsView,
         'operations-reports-view': showOperationsReportsView,
         //'executive-dashboard-view': showExecutiveDashboardView,
@@ -1513,6 +1514,8 @@ async function handleExpensesGrid(button, docId, user) {
             ProgressToast.show('Approving Expense...', 'info');
             await processExpense(docId, 'Approved', 'Expense approved.', user);
             ProgressToast.showSuccess('Expense Approved!');
+            ProgressToast.hide(300);
+            
         }
     }
     else if (button.classList.contains('action-btn-reject-expense')) {
@@ -1522,6 +1525,7 @@ async function handleExpensesGrid(button, docId, user) {
             ProgressToast.show('Rejecting Expense...', 'warning');
             await processExpense(docId, 'Rejected', justification, user);
             ProgressToast.showSuccess('Expense Rejected.');
+            ProgressToast.hide(300);
         }
     }
     else if (button.classList.contains('action-btn-change-receipt')) {
