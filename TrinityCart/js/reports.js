@@ -4981,7 +4981,7 @@ export async function generatePLStatement(startDate, endDate) {
         db.collection(SALES_COLLECTION_PATH).where('saleDate', '>=', startDate).where('saleDate', '<=', endDate).get(),
         db.collection(PURCHASE_INVOICES_COLLECTION_PATH).where('purchaseDate', '>=', startDate).where('purchaseDate', '<=', endDate).get(),
         db.collection(EXPENSES_COLLECTION_PATH).where('expenseDate', '>=', startDate).where('expenseDate', '<=', endDate).get(),
-        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).get(),
+        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', '==', 'Active').get(),
         
         // ✅ CORRECTED: Query the dedicated 'donations' collection
         db.collection(DONATIONS_COLLECTION_PATH).where('donationDate', '>=', startDate).where('donationDate', '<=', endDate).get()
@@ -4991,23 +4991,26 @@ export async function generatePLStatement(startDate, endDate) {
     const directSalesRevenue = salesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().financials?.totalAmount || 0), 0);
     let consignmentSalesRevenue = 0;
     consignmentSnapshot.docs.forEach(doc => {
-        const activities = doc.data().activityLog || [];
-        console.log("[report.js]-activities",activities);
-        activities.forEach(activity => {
-            // We still check if it's a 'Sale' and if it's within the date range
-            console.log("[report.js]-activityType",activity.activityType);
-            if (activity.activityType === 'Sale') {
-                const activityDate = activity.activityDate.toDate(); 
-                console.log("[report.js]-activityDate",activityDate);
-                if (activityDate >= startDate && activityDate <= endDate) {
-                    console.log("[report.js]-totalSaleValue",activity.totalSaleValue);
+        const logData = doc.data().activityLog;
 
-                    // Use the pre-calculated totalSaleValue directly.
-                    // The '|| 0' handles cases where the field might be missing on very old records.
-                    consignmentSalesRevenue += activity.totalSaleValue || 0;
+        // ✅ NEW, EXPLICIT CHECK:
+        // First, check if 'logData' actually exists and is an array.
+        if (Array.isArray(logData)) {
+            // If it is a valid array, loop through it.
+            logData.forEach(activity => {
+                if (activity.activityType === 'Sale') {
+                    // Ensure activityDate and its toDate method exist before calling
+                    if (activity.activityDate && typeof activity.activityDate.toDate === 'function') {
+                        const activityDate = activity.activityDate.toDate();
+                        if (activityDate >= startDate && activityDate <= endDate) {
+                            consignmentSalesRevenue += activity.totalSaleValue || 0;
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
+        // If logData is null, undefined, or not an array, this block is skipped,
+        // and no error occurs.
     });
     const totalOperatingRevenue = directSalesRevenue + consignmentSalesRevenue;
 
