@@ -4131,6 +4131,15 @@ const consignmentItemsGridOptions = {
             cellEditorParams: { min: 0, precision: 0 }
         },
         {
+            field: "quantityGifted",
+            headerName: "Gifted Qty",
+            width: 100,
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: { min: 0, precision: 0 },
+            cellStyle: { color: '#4f46e5', fontWeight: '500' } // Distinct purple color
+        },
+        {
             field: "quantityReturned",
             headerName: "Returned Qty",
             width: 100,
@@ -4169,6 +4178,7 @@ const consignmentItemsGridOptions = {
         if (colId !== 'quantitySold') otherFieldsTotal += (data.quantitySold || 0);
         if (colId !== 'quantityReturned') otherFieldsTotal += (data.quantityReturned || 0);
         if (colId !== 'quantityDamaged') otherFieldsTotal += (data.quantityDamaged || 0);
+        if (colId !== 'quantityGifted') otherFieldsTotal += (data.quantityGifted || 0);
 
         const newTotalAccountedFor = otherFieldsTotal + newValue;
 
@@ -4201,6 +4211,7 @@ const consignmentItemsGridOptions = {
         if (colId === 'quantitySold') activityType = 'Sale';
         else if (colId === 'quantityReturned') activityType = 'Return';
         else if (colId === 'quantityDamaged') activityType = 'Damage';
+        else if (colId === 'quantityGifted') activityType = 'Gift';
         else return;
 
         const isCorrection = delta < 0;
@@ -4218,7 +4229,8 @@ const consignmentItemsGridOptions = {
                 correctionDetails: isCorrection ? {
                     correctedField: colId,
                     from: oldValue,
-                    to: newValue
+                    to: newValue,
+                    reason: `Corrected ${activityType} quantity.`
                 } : null
             }
         }));
