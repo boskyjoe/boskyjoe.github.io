@@ -4463,6 +4463,7 @@ export async function updateExpense(docId, updatedData, user) {
  * @param {string|null} receiptFileId - The fileId of the receipt in ImageKit, if it exists.
  * @returns {Promise<void>}
  */
+
 export async function deleteExpense(docId, receiptFileId) {
     const db = firebase.firestore();
 
@@ -4504,19 +4505,16 @@ export async function deleteExpense(docId, receiptFileId) {
 export async function uploadReceiptForExistingExpense(docId, file, user) {
     const db = firebase.firestore();
 
-     // Initialize ImageKit SDK (no auth details needed here)
-    const imagekit = new imagekit({
+    // ✅ CORRECTED: Use a capital 'I' for the class name "ImageKit"
+    const imagekit = new ImageKit({
         publicKey: imageKitConfig.publicKey,
         urlEndpoint: imageKitConfig.urlEndpoint,
     });
 
-    // --- Step 1: Upload the file to ImageKit ---
-    
-    // This is the robust authenticator function that fetches a security token.
+    // --- Step 1: Get an authentication token ---
     const authenticator = async () => {
         try {
             console.log("Authenticator called for existing expense. Fetching token...");
-            // Use your live Vercel function URL with a cache-busting parameter.
             const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
             const response = await fetch(authUrl);
             
@@ -4531,9 +4529,9 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
         }
     };
 
+    // --- Step 2: Upload the file using the authenticator ---
     console.log(`Uploading new receipt for existing expense: ${file.name}`);
     
-    // Perform the upload using the authenticator.
     const result = await imagekit.upload({
         file: file,
         fileName: file.name,
@@ -4542,7 +4540,7 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
         authenticator: authenticator
     });
 
-    // --- Step 2: Update the existing Firestore document ---
+    // --- Step 3: Update the existing Firestore document ---
     console.log(`Updating Firestore document ${docId} with new receipt URL.`);
     const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
     return expenseRef.update({
@@ -4550,7 +4548,6 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
         receiptFileId: result.fileId,
         updatedBy: user.email,
         updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
-        // It's good practice to log this important change
         activityLog: firebase.firestore.FieldValue.arrayUnion({
             action: 'Receipt Uploaded',
             user: user.email,
@@ -4601,42 +4598,42 @@ export async function processExpense(docId, action, justification, user) {
 export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
     const oldFileId = expenseData.receiptFileId;
 
-    // --- Step 1: Delete the OLD file from ImageKit, if it exists ---
+    // --- Step 1: Delete the OLD file from ImageKit first ---
     if (oldFileId) {
-        console.log(`Replacing receipt. Deleting old file from ImageKit: ${oldFileId}`);
+        console.log(`Replacing receipt. Requesting deletion of old file: ${oldFileId}`);
         try {
             const deleteUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-delete`;
-            await fetch(deleteUrl, {
+            const response = await fetch(deleteUrl, {
                 method: 'POST',
                 body: JSON.stringify({ fileId: oldFileId })
             });
-            console.log("Old receipt file marked for deletion.");
+            if (!response.ok) {
+                console.warn(`Deletion of old file may have failed (Status: ${response.status}). Proceeding anyway.`);
+            } else {
+                console.log("Old receipt successfully deleted from ImageKit.");
+            }
         } catch (error) {
-            // Log the error but don't stop the process. It's okay if the old file can't be deleted.
-            console.warn("Could not delete old receipt file, proceeding with upload:", error);
+            console.error("Error calling the delete file function, but proceeding with upload:", error);
         }
     }
 
-    // --- Step 2: Upload the NEW file to ImageKit ---
-   const imagekit = new imagekit({
+    // --- Step 2: Upload the NEW file ---
+
+    // ✅ CORRECTED: Use a capital 'I' for the class name
+    const imagekit = new ImageKit({
         publicKey: imageKitConfig.publicKey,
         urlEndpoint: imageKitConfig.urlEndpoint,
     });
 
     const authenticator = async () => {
         try {
-            console.log("Authenticator called for existing expense. Fetching token...");
-            // Use your live Vercel function URL with a cache-busting parameter.
             const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
             const response = await fetch(authUrl);
-            
             if (!response.ok) {
                 throw new Error(`Authentication server failed with status ${response.status}`);
             }
-            
             return await response.json();
         } catch (error) {
-            console.error("Error in ImageKit authenticator:", error);
             throw error;
         }
     };
@@ -4650,7 +4647,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
         authenticator: authenticator
     });
 
-    // --- Step 3: Update the Firestore document with the NEW file's URL and ID ---
+    // --- Step 3: Update the Firestore document ---
     const db = firebase.firestore();
     const expenseRef = db.collection(EXPENSES_COLLECTION_PATH).doc(docId);
     return expenseRef.update({
@@ -4658,12 +4655,11 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
         receiptFileId: result.fileId,
         updatedBy: user.email,
         updatedOn: firebase.firestore.FieldValue.serverTimestamp(),
-        // Also log this important change
         activityLog: firebase.firestore.FieldValue.arrayUnion({
             action: 'Receipt Changed',
             user: user.email,
             timestamp: new Date(),
-            details: `Replaced receipt. New file: ${newFile.name}`
+            details: `Replaced receipt. Old File ID: ${oldFileId || 'none'}. New File: ${newFile.name}`
         })
     });
 }
