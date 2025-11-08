@@ -4347,6 +4347,7 @@ export async function getPricingStatistics() {
  * @param {object} user - The currently authenticated user object.
  * @returns {Promise<DocumentReference>}
  */
+
 export async function addExpense(expenseData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -4606,7 +4607,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
             const deleteUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-delete`;
             const response = await fetch(deleteUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // Ensure header is here too
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fileId: oldFileId })
             });
             if (!response.ok) {
@@ -4619,37 +4620,42 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
         }
     }
 
-    // --- Step 2: Upload the NEW file ---
-    const imagekit = new ImageKit({
-        publicKey: imageKitConfig.publicKey,
-        urlEndpoint: imageKitConfig.urlEndpoint,
-    });
-
-    const authenticator = async () => {
-        try {
-            // ✅ THE FIX: Add a unique timestamp to the URL to prevent caching.
-            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth?t=${Date.now()}`;
-            const response = await fetch(authUrl);
-            
-            if (!response.ok) {
-                throw new Error(`Authentication server failed with status ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            // Re-throw the error to be caught by the main try...catch block
-            throw error;
-        }
-    };
-
-    console.log(`Uploading new receipt: ${newFile.name}`);
+    // --- Step 2: Upload the NEW file (using the same pattern as addExpense) ---
     try {
+        // Initialize the ImageKit SDK
+        const imagekit = new ImageKit({
+            publicKey: imageKitConfig.publicKey,
+            urlEndpoint: imageKitConfig.urlEndpoint,
+        });
+
+        // Manually fetch the authentication token first
+        console.log("Step A: Manually fetching security token for replacement...");
+        const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+        const authResponse = await fetch(authUrl);
+
+        if (!authResponse.ok) {
+            throw new Error(`Authentication server failed with status ${authResponse.status}`);
+        }
+        const authenticationParameters = await authResponse.json();
+        console.log("Step B: Security token received successfully for replacement:", authenticationParameters);
+
+        if (!authenticationParameters.token || !authenticationParameters.expire || !authenticationParameters.signature) {
+            throw new Error("Incomplete authentication token received from the server.");
+        }
+
+        // Perform the upload, passing the raw token details directly
+        console.log("Step C: Calling imagekit.upload with manual token for replacement...");
         const result = await imagekit.upload({
             file: newFile,
             fileName: newFile.name,
             folder: `MONETA/expense_receipts/${user.uid}/`,
             useUniqueFileName: true,
-            authenticator: authenticator
+            token: authenticationParameters.token,
+            expire: authenticationParameters.expire,
+            signature: authenticationParameters.signature,
         });
+        
+        console.log('Step D: New receipt uploaded successfully. URL:', result.url);
 
         // --- Step 3: Update the Firestore document ---
         const db = firebase.firestore();
@@ -4667,9 +4673,8 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
             })
         });
 
-    } catch (uploadError) {
-        // This will catch the "Missing token" error if the authenticator fails
-        console.error("ImageKit Upload Error during replacement:", uploadError);
-        throw new Error("Failed to replace receipt. The authentication token could not be retrieved.");
+    } catch (error) {
+        console.error("ImageKit Upload Error during replacement:", error);
+        throw new Error("Failed to replace receipt. The authentication token could not be retrieved or was invalid.");
     }
 }
