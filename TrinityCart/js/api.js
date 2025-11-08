@@ -2095,7 +2095,8 @@ export async function createConsignmentRequest(requestData, items, user) {
             quantityCheckedOut: 0, // Will be set during fulfillment
             quantitySold: 0,
             quantityReturned: 0,
-            quantityDamaged: 0
+            quantityDamaged: 0,
+            quantityGifted: 0
         });
     });
 
@@ -2175,6 +2176,7 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
             totalValueSold: 0,
             totalValueReturned: 0,
             totalValueDamaged: 0,
+            totalValueGifted: 0,
             totalAmountPaid: 0,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now
