@@ -4371,7 +4371,10 @@ export async function addExpense(expenseData, user) {
             // ✅ NEW APPROACH: Manually fetch the authentication token first
             // ===================================================================
             console.log("Step 1: Manually fetching security token...");
-            const authUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-auth?t=${Date.now()}`;
+            //const authUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-auth?t=${Date.now()}`;
+
+            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+
             const authResponse = await fetch(authUrl);
 
             if (!authResponse.ok) {
