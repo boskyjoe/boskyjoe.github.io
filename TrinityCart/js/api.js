@@ -4471,7 +4471,7 @@ export async function deleteExpense(docId, receiptFileId) {
         console.log(`Deleting receipt file from ImageKit: ${receiptFileId}`);
         try {
             // Call our new secure serverless function to perform the deletion
-            const deleteUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-delete`;
+            const deleteUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-delete`;
             const response = await fetch(deleteUrl, {
                 method: 'POST',
                 body: JSON.stringify({ fileId: receiptFileId })
@@ -4575,7 +4575,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
     if (oldFileId) {
         console.log(`Replacing receipt. Deleting old file from ImageKit: ${oldFileId}`);
         try {
-            const deleteUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-delete`;
+            const deleteUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-delete`;
             await fetch(deleteUrl, {
                 method: 'POST',
                 body: JSON.stringify({ fileId: oldFileId })
