@@ -211,7 +211,7 @@ function getHighestZIndex() {
     });
 
     // Return at least 1000 to ensure it's above most content
-    return Math.max(highest, 999);
+    return Math.max(highest, 10000);
 }
 /**
  * Enhanced showModal with preset configurations for common use cases
