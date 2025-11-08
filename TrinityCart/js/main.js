@@ -4602,8 +4602,9 @@ async function handleNewSaleSubmit(e) {
 
             // Handle overpayment/donation
             if (amountReceived > grandTotal) {
+                ProgressToast.hide(0); 
                 donationAmount = amountReceived - grandTotal;
-                ProgressToast.hide(0);
+                
                 const confirmDonation = await showModal('confirm', 'Overpayment - Record as Donation?', 
                     `Amount received: ${formatCurrency(amountReceived)}\n` +
                     `Total amount: ${formatCurrency(grandTotal)}\n` +
@@ -4881,6 +4882,8 @@ async function handleRecordSalePaymentSubmit(e) {
         let donationAmount = 0;
         if (amountPaidInput > balanceDue) {
             donationAmount = amountPaidInput - balanceDue;
+
+            ProgressToast.hide(0);
             
             const confirmOverpayment = await showModal('confirm', 'Overpayment - Record as Donation?', 
                 `Payment amount: ${formatCurrency(amountPaidInput)}\n` +
