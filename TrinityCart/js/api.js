@@ -4515,7 +4515,7 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
     const authenticator = async () => {
         try {
             console.log("Authenticator called for existing expense. Fetching token...");
-            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
             const response = await fetch(authUrl);
             
             if (!response.ok) {
@@ -4627,7 +4627,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
 
     const authenticator = async () => {
         try {
-            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
             const response = await fetch(authUrl);
             if (!response.ok) {
                 throw new Error(`Authentication server failed with status ${response.status}`);
