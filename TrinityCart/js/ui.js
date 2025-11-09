@@ -1860,6 +1860,7 @@ let unsubscribePaymentsListener = null;
 
 
 // Grid for the main list of invoices
+
 const purchaseInvoicesGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
@@ -1870,7 +1871,7 @@ const purchaseInvoicesGridOptions = {
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "invoiceName", headerName: "Invoice Name", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
-        { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
+        { field: "supplierName", headerName: "Supplier", width: 250 },
         { field: "purchaseDate", headerName: "Purchase Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 150 },
         { field: "invoiceTotal", headerName: "Total", valueFormatter: p => formatCurrency(p.value)  },
         { field: "balanceDue", headerName: "Balance", valueFormatter: p => formatCurrency(p.value) },
