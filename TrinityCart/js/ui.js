@@ -1868,6 +1868,7 @@ const purchaseInvoicesGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     columnDefs: [
         { field: "invoiceId", headerName: "Invoice ID", width: 150 },
+        { field: "invoiceName", headerName: "Invoice Name", width: 150 },
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
         { field: "supplierName", headerName: "Supplier", flex: 1, width: 150 },
         { field: "purchaseDate", headerName: "Purchase Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 150 },
