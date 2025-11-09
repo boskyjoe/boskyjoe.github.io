@@ -19,7 +19,7 @@ import { showCategoriesView,ProgressToast } from './ui.js';
 import { showModal } from './modal.js';
 
 
-import { addSupplier, updateSupplier, setSupplierStatus } from './api.js';
+import { addSupplier, updateSupplier, setSupplierStatus,createUserRecord } from './api.js';
 import { addCategory, updateCategory, setCategoryStatus } from './api.js';
 
 import { showSaleTypesView } from './ui.js';
@@ -173,6 +173,7 @@ const db = firebase.firestore();
 /**
  * Initiates the Google Sign-In popup flow.
  */
+
 function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -203,47 +204,75 @@ function handleLogout() {
  * It fires when the app loads and whenever the user's login state changes.
  */
 auth.onAuthStateChanged(async (user) => {
+
     if (user) {
-        // User is signed in. Now, let's get their role from Firestore.
+        // --- USER IS LOGGED IN ---
         console.log("Firebase user signed in:", user.email);
 
         const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
         const docSnap = await userDocRef.get();
 
-        // THE FIX: Changed docSnap.exists() to docSnap.exists
-        if (docSnap.exists && docSnap.data().isActive) {
-            // User exists in our DB and is active.
+        if (docSnap.exists) {
+            // --- CASE 1: USER EXISTS IN FIRESTORE ---
             const userData = docSnap.data();
-            appState.currentUser = {
-                uid: user.uid,
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                role: userData.role // The crucial role from Firestore!
-            };
-            console.log("User role set to:", appState.currentUser.role);
-        } else {
-            // User is not in our DB or is inactive. Treat as a guest.
-            if (!docSnap.exists) {
-                console.warn("User document not found in Firestore for UID:", user.uid);
+
+            if (userData.isActive) {
+                // --- Sub-case 1a: User is Active ---
+                console.log(`Existing, active user. Role: ${userData.role}`);
+                appState.currentUser = {
+                    uid: user.uid,
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    role: userData.role,
+                    teamId: userData.teamId || null
+                };
+                // Load the dashboard data in the background
+                await loadApplicationDashboard();
             } else {
+                // --- Sub-case 1b: User is Inactive ---
                 console.warn("User is marked as inactive in Firestore.");
+                appState.currentUser = null; // Treat as logged out
+                await auth.signOut(); // Force sign out
+                showModal('error', 'Account Deactivated', 'Your account has been deactivated. Please contact an administrator.');
             }
-            appState.currentUser = {
-                uid: user.uid,
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                role: 'guest' // Assign a non-privileged guest role
-            };
-            alert("Your account is not authorized for this application or has been deactivated. Please contact an administrator.");
+        } else {
+            // --- CASE 2: NEW USER (Document does not exist) ---
+            console.log(`New user detected: ${user.email}. Provisioning as 'guest'.`);
+            
+            try {
+                // Create the user record in Firestore with the 'guest' role
+                await createUserRecord(user, 'guest');
+
+                // Set the current user state for this session
+                appState.currentUser = {
+                    uid: user.uid,
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    role: 'guest' // Assign the default guest role
+                };
+                
+                // Show a success message. The user will be redirected by updateUI().
+                showModal('success', 'Account Created Successfully!', 
+                    'Your account has been created with guest access. Please contact an administrator to have your role assigned.'
+                );
+
+            } catch (error) {
+                console.error("Failed to create new user record:", error);
+                appState.currentUser = null;
+                await auth.signOut();
+                showModal('error', 'Account Creation Failed', 'There was an error creating your user record. Please try again.');
+            }
         }
     } else {
-        // User is signed out.
+        // --- USER IS LOGGED OUT ---
         console.log("User signed out.");
         appState.currentUser = null;
     }
-    // Update the entire UI based on the new state (logged in or out).
+
+    // This is the final step that runs regardless of the outcome.
+    // It will correctly show the dashboard for authorized users or the login page for guests/logged-out users.
     updateUI();
 });
 
