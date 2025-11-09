@@ -32,7 +32,7 @@ import { SEASONS_COLLECTION_PATH } from './config.js';
 import { EVENTS_COLLECTION_PATH } from './config.js';
 import { PRODUCTS_CATALOGUE_COLLECTION_PATH } from './config.js';
 
-import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
+import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH ,creditTermOptions} from './config.js';
 import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 import {
@@ -541,12 +541,37 @@ export function formatCurrency(value) {
 }
 
 
+/**
+ * ✅ NEW: Populates the credit term dropdown and sets the default value.
+ */
+function populateCreditTermDropdown() {
+    const selectElement = document.getElementById('creditTerm-select');
+    if (!selectElement) return;
+
+    // Clear any existing options
+    selectElement.innerHTML = '';
+
+    // Create and append each option from the config
+    creditTermOptions.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.label;
+        selectElement.appendChild(optionElement);
+    });
+
+    // Set the default value to 'Net 30' as requested
+    selectElement.value = 'Net 30';
+}
+
+
 export async function showSuppliersView() {
     console.log("[ui.js] showSuppliersView() called. Attempting to fetch data...");
     showView('suppliers-view');
 
     // 1. Initialize the grid if it's the first time viewing this page.
     initializeSuppliersGrid();
+
+    populateCreditTermDropdown();
 
     const waitForGrid = setInterval(() => {
         if (suppliersGridApi) {
