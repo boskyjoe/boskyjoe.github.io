@@ -300,10 +300,9 @@ async function handleSavePurchaseInvoice() {
         const invoiceName = document.getElementById('purchase-invoice-name').value;
 
 
-        if (!purchaseDate || !supplierId) {
-            // ✅ HIDE toast before showing error modal
+        if (!purchaseDate || !supplierId || !invoiceName) { 
             ProgressToast.hide(0);
-            await showModal('error', 'Missing Information', 'Please select a Purchase Date and a Supplier.');
+            await showModal('error', 'Missing Information', 'Please select a Purchase Date, a Supplier, and provide an Invoice Name.');
             return;
         }
 
