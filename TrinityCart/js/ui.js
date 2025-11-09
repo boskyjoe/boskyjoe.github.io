@@ -1955,7 +1955,7 @@ const purchasePaymentsGridOptions = {
         },
         {
             headerName: "Supplier",
-            width: 200,
+            width: 300,
             pinned: 'left',
             valueGetter: params => {
                 if (!params.data) return '';
