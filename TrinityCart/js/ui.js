@@ -3434,7 +3434,13 @@ const catalogueItemsGridOptions = {
     getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     columnDefs: [
         { field: "productName", headerName: "Product Name", flex: 1 },
-        { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => p.value ? `$${p.value.toFixed(2)}` : '' },
+        { 
+            field: "costPrice", 
+            headerName: "Cost Price", 
+            width: 120, 
+            // Use the global formatCurrency function for consistency
+            valueFormatter: p => p.value ? formatCurrency(p.value) : '' 
+        },
         { field: "marginPercentage", headerName: "Margin %", width: 110, valueFormatter: p => p.value ? `${p.value}%` : '' },
         {
             field: "sellingPrice",
