@@ -5273,6 +5273,13 @@ const salesHistoryGridOptions = {
             valueFormatter: p => p.value.toDate().toLocaleDateString(),
             filter: 'agDateColumnFilter'
         },
+        {
+            field: "manualVoucherNumber",
+            headerName: "Manual Voucher#",
+            width: 140,
+            flex: 1,
+            filter: 'agTextColumnFilter'
+        },
         { field: "customerInfo.name", headerName: "Customer", width: 150, flex: 1, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
         {
