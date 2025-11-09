@@ -1138,23 +1138,27 @@
 
                             <!-- Part 1: Invoice Header Details -->
                             <div class="p-6 border-b border-gray-200">
-                                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <!-- ✅ CHANGED: Updated grid columns from 4 to 3 for better layout -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
-                                        <label for="purchase-date" class="form-label">Purchase Date<span
-                                                class="text-red-500">*</span></label>
+                                        <label for="purchase-date" class="form-label">Purchase Date<span class="text-red-500">*</span></label>
                                         <input type="date" id="purchase-date" class="form-input w-full" required>
                                     </div>
-                                    <div class="md:col-span-2">
-                                        <label for="purchase-supplier" class="form-label">Supplier<span
-                                                class="text-red-500">*</span></label>
+                                    <div>
+                                        <label for="purchase-supplier" class="form-label">Supplier<span class="text-red-500">*</span></label>
                                         <select id="purchase-supplier" class="form-input w-full" required>
                                             <option value="" disabled selected>Select a supplier...</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="supplier-invoice-no" class="form-label">Supplier Invoice #<span
-                                                class="text-red-500">*</span></label>
+                                        <label for="supplier-invoice-no" class="form-label">Supplier Invoice #<span class="text-red-500">*</span></label>
                                         <input type="text" id="supplier-invoice-no" class="form-input w-full">
+                                    </div>
+                                    
+                                    <!-- ✅ NEW: Add the Invoice Name field, spanning the full width -->
+                                    <div class="md:col-span-3">
+                                        <label for="purchase-invoice-name" class="form-label">Invoice Name / Description<span class="text-red-500">*</span></label>
+                                        <input type="text" id="purchase-invoice-name" class="form-input w-full" placeholder="e.g., Weekly Bakery Restock, Christmas Supplies Order" required>
                                     </div>
                                 </div>
                             </div>
