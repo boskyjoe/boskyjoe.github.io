@@ -6171,6 +6171,7 @@ export function renderUserProfile(user) {
     }
 }
 
+
 export function updateUI() {
     const user = appState.currentUser;
     renderUserProfile(user);
@@ -11140,6 +11141,70 @@ export async function loadApplicationDashboard(forceRefresh = false)  {
     } catch (error) {
         console.error('[ui.js] Error loading application dashboard:', error);
         showApplicationDashboardError(error);
+    }
+}
+
+
+/**
+ * ✅ NEW: Loads a limited, welcoming dashboard for users with the 'guest' role.
+ * This function provides a clear message about their status and next steps.
+ * @param {object} user - The currently authenticated user object.
+ */
+export async function loadLimitedAccessDashboard(user) {
+    console.log('[dashboard.js] 🔒 Loading limited access dashboard for guest user...');
+
+    // --- 1. Update the Welcome Header ---
+    document.getElementById('dashboard-welcome-title').textContent = `Welcome, ${user.displayName}!`;
+    document.getElementById('dashboard-welcome-subtitle').textContent = 'Your account is pending administrator approval.';
+    document.getElementById('refresh-landing-dashboard').style.display = 'none'; // Hide the refresh button
+
+    // --- 2. Hide All Metric Cards ---
+    // Hide the main metrics row
+    const metricsSection = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3.xl\\:grid-cols-6');
+    if (metricsSection) {
+        metricsSection.style.display = 'none';
+    }
+    // Hide the financial metrics row
+    const financialSection = document.getElementById('dashboard-financial-section');
+    if (financialSection) {
+        financialSection.style.display = 'none';
+    }
+
+    // --- 3. Customize the Activity & Alerts Section for Guests ---
+    const activityContainer = document.getElementById('dashboard-recent-activity');
+    const alertsContainer = document.getElementById('dashboard-alerts');
+
+    // Display a friendly message in the "Recent Activity" panel
+    if (activityContainer) {
+        activityContainer.innerHTML = `
+            <div class="text-center py-8 text-gray-600">
+                <svg class="w-12 h-12 mx-auto text-blue-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <h4 class="font-semibold text-lg">Your Account is Almost Ready!</h4>
+                <p class="text-sm mt-1">Thank you for joining. Your account has been created successfully.</p>
+            </div>
+        `;
+    }
+
+    // Display a clear "next step" message in the "Alerts" panel
+    if (alertsContainer) {
+        alertsContainer.innerHTML = `
+            <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="font-bold">Next Step: Role Assignment</h5>
+                        <p class="text-sm mt-1">
+                            An administrator has been notified. Once they assign a role to your account, you will gain full access to the application's features upon your next login.
+                        </p>
+                        <p class="text-xs mt-3">
+                            No further action is required from you at this time. Thank you for your patience!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 
