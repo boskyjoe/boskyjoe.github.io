@@ -2855,7 +2855,7 @@ async function handleSupplierSubmit(e) {
             address: document.getElementById('address-input').value.trim(),
             contactNo: document.getElementById('contactNo-input').value.trim(),
             contactEmail: contactEmail,
-            creditTerm: document.getElementById('creditTerm-input').value.trim()
+            creditTerm: document.getElementById('creditTerm-select').value,
         };
 
         console.log(`[main.js] Creating supplier: ${supplierData.supplierName}`);
