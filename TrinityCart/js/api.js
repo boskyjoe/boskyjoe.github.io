@@ -26,7 +26,39 @@ import { masterData } from './masterData.js';
 
 
 
+/**
+ * Creates a new user document in the 'users' collection.
+ * This is called the first time a user logs in.
+ * @param {object} user - The user object from Firebase Authentication.
+ * @param {string} role - The initial role to assign (e.g., 'guest').
+ */
+export async function createUserRecord(user, role) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    // Use the user's UID as the document ID, as per your data model.
+    const userRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
 
+    console.log(`Creating new user record for ${user.email} with role: ${role}`);
+    
+    // Use set() to create the document with a specific ID and all required fields.
+    return userRef.set({
+        // --- Your specified fields ---
+        UID: user.uid,
+        displayName: user.displayName,
+        email: user.email,
+        role: role,
+        isActive: true, // Default new users to active
+
+        // --- Your specified audit fields ---
+        // Since the user is creating their own record upon first login,
+        // they are the 'createdBy' and 'updatedBy' user.
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
 
 
 
