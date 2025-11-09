@@ -297,6 +297,9 @@ async function handleSavePurchaseInvoice() {
         const supplierName = supplierSelect.options[supplierSelect.selectedIndex].text;
         const supplierInvoiceNo = document.getElementById('supplier-invoice-no').value;
 
+        const invoiceName = document.getElementById('purchase-invoice-name').value;
+
+
         if (!purchaseDate || !supplierId) {
             // ✅ HIDE toast before showing error modal
             ProgressToast.hide(0);
@@ -363,7 +366,7 @@ async function handleSavePurchaseInvoice() {
         ProgressToast.updateProgress('Preparing invoice data...', 60, 'Step 4 of 6');
         
         const invoiceData = {
-            purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,
+            purchaseDate: new Date(purchaseDate), supplierId, supplierName, supplierInvoiceNo,invoiceName: invoiceName,
             lineItems, itemsSubtotal, invoiceDiscountType, invoiceDiscountValue, invoiceDiscountAmount,
             taxableAmountForInvoice, totalItemLevelTax, invoiceTaxPercentage, invoiceLevelTaxAmount,
             totalTaxAmount, invoiceTotal,
