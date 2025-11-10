@@ -5264,9 +5264,7 @@ const salesHistoryGridOptions = {
     paginationPageSize: 50, // A reasonable default for a history grid
     paginationPageSizeSelector: [25, 50, 100],
 
-    autoHeaderHeight: true,
-    wrapHeaderText: true,
-
+    
     defaultColDef: {
         resizable: true,
         sortable: true,
@@ -5305,7 +5303,7 @@ const salesHistoryGridOptions = {
         //{ field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
         {
             field: "saleDate",
-            headerName: "Date",
+            headerName: "Sale Date",
             width: 140,
             valueFormatter: p => p.value.toDate().toLocaleDateString(),
             filter: 'agDateColumnFilter'
