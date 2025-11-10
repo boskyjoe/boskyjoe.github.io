@@ -5288,14 +5288,6 @@ const salesHistoryGridOptions = {
                 `;
             }
         },
-        { field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
-        {
-            field: "saleDate",
-            headerName: "Date",
-            width: 140,
-            valueFormatter: p => p.value.toDate().toLocaleDateString(),
-            filter: 'agDateColumnFilter'
-        },
         {
             field: "manualVoucherNumber",
             headerName: "Manual Voucher#",
@@ -5303,11 +5295,26 @@ const salesHistoryGridOptions = {
             flex: 1,
             filter: 'agTextColumnFilter'
         },
+        //{ field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
+        {
+            field: "saleDate",
+            headerName: "Date",
+            width: 140,
+            valueFormatter: p => p.value.toDate().toLocaleDateString(),
+            filter: 'agDateColumnFilter'
+        },
+        
         { field: "customerInfo.name", headerName: "Customer", width: 150, flex: 1, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
         {
             field: "financials.totalAmount",
             headerName: "Total",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value)
+        },
+        {
+            field: "financials.amountTendered",
+            headerName: "Paid",
             width: 120,
             valueFormatter: p => formatCurrency(p.value)
         },
