@@ -2500,13 +2500,13 @@ function handleAddToCart(target) {
         
         // Give user feedback without closing the modal
         ProgressToast.show(`Added "${product.itemName}"`, 'success', 1500);
+        
 
     } catch (error) {
         console.error('[main.js] Failed to parse product data from button:', error);
         showModal('error', 'Error', 'Could not add product due to a data error.');
         closeAddProductModal(); // Close modal on critical error
-    }
-
+    } finally {ProgressToast.hide(300) ;}
     // Do not close the modal on success, so the user can add more items.
     // closeAddProductModal(); 
 }
