@@ -8,5 +8,5 @@ export const appState = {
     isLocalUpdateInProgress:null,
     draftCatalogueItems: [],
     selectedConsignmentId: null,
-    ChurchName: 'St. Thomas Church Indiranagar',
+    ChurchName: 'St. Sebastians Shurch (Indiranagar & Halasuru)',
 };
