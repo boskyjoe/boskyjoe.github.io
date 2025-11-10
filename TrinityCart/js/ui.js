@@ -1873,8 +1873,9 @@ const purchaseInvoicesGridOptions = {
         { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", width: 150 },
         { field: "supplierName", headerName: "Supplier", width: 250 },
         { field: "purchaseDate", headerName: "Purchase Date", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '', width: 150 },
-        { field: "invoiceTotal", headerName: "Total", valueFormatter: p => formatCurrency(p.value)  },
-        { field: "balanceDue", headerName: "Balance", valueFormatter: p => formatCurrency(p.value) },
+        { field: "invoiceTotal", headerName: "Total", width:150, valueFormatter: p => formatCurrency(p.value)  },
+        { field: "totalAmountPaid", headerName: "Paid", width:150, valueFormatter: p => formatCurrency(p.value)  },
+        { field: "balanceDue", headerName: "Balance", width:150, valueFormatter: p => formatCurrency(p.value) },
         {
             field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
                 const status = p.value;
