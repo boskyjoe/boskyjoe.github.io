@@ -5256,6 +5256,7 @@ const addProductModalGridOptions = {
 };
 
 // Grid for the "Sales History"
+
 const salesHistoryGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
@@ -5291,8 +5292,7 @@ const salesHistoryGridOptions = {
         {
             field: "manualVoucherNumber",
             headerName: "Manual Voucher#",
-            width: 140,
-            flex: 1,
+            width: 200,
             filter: 'agTextColumnFilter'
         },
         //{ field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
