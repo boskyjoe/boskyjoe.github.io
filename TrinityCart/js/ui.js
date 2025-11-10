@@ -5215,6 +5215,16 @@ const addProductModalGridOptions = {
             suppressMenu: true,
             suppressHeaderFilterButton: true
         },
+        { 
+            field: "sellingPrice", 
+            headerName: "Price", 
+            width: 120,
+            filter: 'agNumberColumnFilter', // Allow filtering by price
+            floatingFilter: true,
+            suppressMenu: true,
+            // Use your global formatCurrency function for consistent display
+            valueFormatter: p => formatCurrency(p.value) 
+        },
         { field: "inventoryCount", headerName: "Stock", width: 100,filter:false,floatingFilter: true, // Enable floating filter
             suppressMenu: true },
         {
@@ -5527,6 +5537,7 @@ export function showAddProductModal() {
 /**
  * ENHANCED: Load products from specific ACTIVE sales catalogue with legend update
  */
+
 async function loadProductsForSelectedCatalogue(catalogueId) {
     if (!addProductModalGridApi) {
         console.error('[ui.js] Add product modal grid not ready');
