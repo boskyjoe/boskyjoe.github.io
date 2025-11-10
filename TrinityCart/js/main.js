@@ -2419,11 +2419,15 @@ function handleConsignmentNext() {
 }
 
 
-function handleAddToCart(target) {
+function handleAddToCartBKP(target) {
     console.log('[main.js] handleAddToCart called');
     
     // Find the button element (in case SVG was clicked)
     const buttonElement = target.closest('button[data-id]') || target;
+    if (!buttonElement) {
+        console.error('[main.js] Could not find product button with data.');
+        return;
+    }
     const productId = buttonElement.dataset?.id;
     
     if (!productId) {
@@ -2451,6 +2455,60 @@ function handleAddToCart(target) {
     }
 
     closeAddProductModal();
+}
+
+function handleAddToCart(target) {
+    console.log('[main.js] handleAddToCart called');
+    
+    // Find the button element that was clicked
+    const buttonElement = target.closest('button[data-product]');
+    if (!buttonElement) {
+        console.error('[main.js] Could not find product button with data.');
+        return;
+    }
+
+    try {
+        // ✅ THE FIX:
+        // 1. Get the JSON string from the 'data-product' attribute.
+        const productDataString = buttonElement.dataset.product;
+        
+        // 2. Parse the JSON string back into a complete product object.
+        //    This 'product' object now contains the CORRECT catalogue price.
+        const product = JSON.parse(productDataString);
+        console.log('[main.js] Found product from data attribute:', product);
+
+        // 3. Check for stock (this is good practice).
+        if ((product.inventoryCount || 0) <= 0) {
+            showModal('error', 'Out of Stock', `"${product.itemName}" is currently out of stock.`);
+            return; // Stay in the modal to let the user choose another item.
+        }
+
+        // 4. Create the new cart item using the CORRECT data from the parsed object.
+        const newItem = {
+            productId: product.id,
+            productName: product.itemName,
+            quantity: 1,
+            // Use the correct sellingPrice from the parsed object
+            unitPrice: product.sellingPrice || 0,
+            costPrice: product.costPrice || 0, // Pass the cost price for P&L reporting
+            discountPercentage: 0,
+            taxPercentage: 0
+        };
+        
+        console.log('[main.js] Adding item to cart:', newItem);
+        addItemToCart(newItem); // Your existing function to add to the shopping cart grid
+        
+        // Give user feedback without closing the modal
+        ProgressToast.show(`Added "${product.itemName}"`, 'success', 1500);
+
+    } catch (error) {
+        console.error('[main.js] Failed to parse product data from button:', error);
+        showModal('error', 'Error', 'Could not add product due to a data error.');
+        closeAddProductModal(); // Close modal on critical error
+    }
+
+    // Do not close the modal on success, so the user can add more items.
+    // closeAddProductModal(); 
 }
 
 // ============================================================================
