@@ -3060,7 +3060,7 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
     lineItemCounter = 0; // Reset counter
 
     invoiceData.lineItems.forEach(item => {
-        addLineItem(); // Creates a new blank row
+        //addLineItem(); // Creates a new blank row
         const newRow = document.getElementById(`line-item-${lineItemCounter}`);
 
         // Populate the fields in the new row
