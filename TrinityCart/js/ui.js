@@ -4148,6 +4148,7 @@ const fulfillmentItemsGridOptions = {
 };
 
 // DETAIL GRID 2: Items on Hand (for Active orders)
+
 const consignmentItemsGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
@@ -4156,6 +4157,14 @@ const consignmentItemsGridOptions = {
     paginationPageSizeSelector: [10, 50, 100, 200],
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agTextColumnFilter', suppressMovable: true },
+        {
+            field: "sellingPrice",
+            headerName: "Selling Price",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right', suppressMovable: true 
+        },
         { field: "quantityCheckedOut", headerName: "Checked Out", width: 120, suppressMovable: true },
         {
             field: "quantitySold",
@@ -4206,7 +4215,23 @@ const consignmentItemsGridOptions = {
                 // Subtract all accounted-for quantities from the initial checkout amount
                 return checkedOut - (sold + returned + damaged + gifted);
             }
-        }
+        },
+        {
+            headerName: "Balance Amt",
+            width: 140,
+            cellStyle: { 'font-weight': 'bold' },
+            valueGetter: p => {
+                const sellingPrice = p.data.sellingPrice || 0;
+                const sold = p.data.quantitySold || 0;
+                const returned = p.data.quantityReturned || 0;
+                const damaged = p.data.quantityDamaged || 0;
+                const gifted = p.data.quantityGifted || 0;
+                
+                return sellingPrice * (sold + returned + damaged + gifted);
+            },
+            valueFormatter: p => formatCurrency(p.value || 0),
+            cellClass: 'text-right'
+        },
     ],
     onGridReady: params => { consignmentItemsGridApi = params.api; },
     onCellEditingStopped: (params) => {
