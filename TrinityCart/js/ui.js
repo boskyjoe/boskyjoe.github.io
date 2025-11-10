@@ -5263,16 +5263,7 @@ const salesHistoryGridOptions = {
     pagination: true,
     paginationPageSize: 50, // A reasonable default for a history grid
     paginationPageSizeSelector: [25, 50, 100],
-
-    
-    defaultColDef: {
-        resizable: true,
-        sortable: true,
-        filter: true,
-        wrapText: true,
-        autoHeight: true,
-    },
-
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
         {
             headerName: "Actions",
@@ -5309,7 +5300,7 @@ const salesHistoryGridOptions = {
             filter: 'agDateColumnFilter'
         },
         
-        { field: "customerInfo.name", headerName: "Customer", width: 150, flex: 1, filter: 'agTextColumnFilter' },
+        { field: "customerInfo.name", headerName: "Customer", width: 200, filter: 'agTextColumnFilter' },
         { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
         {
             field: "financials.totalAmount",
@@ -5341,7 +5332,7 @@ const salesHistoryGridOptions = {
                 return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${status}</span>`;
             }
         },
-        { field: "audit.createdBy", headerName: "Created By", flex: 1, filter: 'agTextColumnFilter' }
+        { field: "audit.createdBy", headerName: "Created By", filter: 'agTextColumnFilter' }
     ],
     onGridReady: (params) => {
         console.log("[ui.js] Sales History Grid is now ready. Attaching listener.");
