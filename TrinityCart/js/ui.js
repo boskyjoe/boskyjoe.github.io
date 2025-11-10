@@ -4217,21 +4217,31 @@ const consignmentItemsGridOptions = {
             }
         },
         {
-            headerName: "Balance Amt",
+            headerName: "Value On Hand", 
             width: 140,
-            cellStyle: { 'font-weight': 'bold' },
+            cellStyle: { 'font-weight': 'bold', color: '#1d4ed8' }, // A distinct blue color
+            
             valueGetter: p => {
                 const sellingPrice = p.data.sellingPrice || 0;
+                
+                // First, calculate the on-hand quantity
+                const checkedOut = p.data.quantityCheckedOut || 0;
                 const sold = p.data.quantitySold || 0;
                 const returned = p.data.quantityReturned || 0;
                 const damaged = p.data.quantityDamaged || 0;
                 const gifted = p.data.quantityGifted || 0;
                 
-                return sellingPrice * (sold + returned + damaged + gifted);
+                const onHandQty = checkedOut - (sold + returned + damaged + gifted);
+                
+                // Then, multiply the on-hand quantity by the selling price
+                return onHandQty * sellingPrice;
             },
+            
             valueFormatter: p => formatCurrency(p.value || 0),
             cellClass: 'text-right'
         },
+
+        
     ],
     onGridReady: params => { consignmentItemsGridApi = params.api; },
     onCellEditingStopped: (params) => {
