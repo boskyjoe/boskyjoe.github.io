@@ -5264,16 +5264,23 @@ const salesHistoryGridOptions = {
     paginationPageSize: 50, // A reasonable default for a history grid
     paginationPageSizeSelector: [25, 50, 100],
 
+    autoHeaderHeight: true,
+    wrapHeaderText: true,
+
     defaultColDef: {
         resizable: true,
         sortable: true,
         filter: true,
+        wrapText: true,
+        autoHeight: true,
     },
 
     columnDefs: [
         {
             headerName: "Actions",
             width: 120,
+            wrapText: false,
+            autoHeight: false,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-green-600">
