@@ -4358,7 +4358,7 @@ export function initializeConsignmentGrids() {
     }
 }
 
-export function hideConsignmentDetailPanel()() {
+export function hideConsignmentDetailPanel() {
     document.getElementById('consignment-detail-panel').classList.add('hidden');
     appState.selectedConsignmentId = null;
     // Detach all detail listeners
