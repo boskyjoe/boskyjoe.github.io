@@ -4702,7 +4702,7 @@ async function handleNewSaleSubmit(e) {
 
             // Handle overpayment/donation
             if (amountReceived > grandTotal) {
-                ProgressToast.hide(0); 
+                ProgressToast.hide(500); 
                 donationAmount = amountReceived - grandTotal;
                 
                 const confirmDonation = await showModal('confirm', 'Overpayment - Record as Donation?', 
@@ -4856,7 +4856,7 @@ async function handleNewSaleSubmit(e) {
                 `Please verify all information and try again.`
             );
         }, 2000);
-    }
+    } finally {ProgressToast.hide(800);}
 }
 
 /**
