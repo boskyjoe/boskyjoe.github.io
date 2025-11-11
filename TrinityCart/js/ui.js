@@ -4689,7 +4689,7 @@ const requestProductsGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.productId,
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
+        { field: "productName", headerName: "Product", flex: 1, filter: 'agTextColumnFilter' },
         {
             field: "inventoryCount",
             headerName: "Qty Available",
