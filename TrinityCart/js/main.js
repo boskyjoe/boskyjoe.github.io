@@ -4563,11 +4563,7 @@ async function handleNewSaleSubmit(e) {
             return;
         }
 
-        if (!customerPhone) {
-            ProgressToast.hide(0);
-            await showModal('error', 'Missing Phone', 'Please enter the customer\'s phone number.');
-            return;
-        }
+        
 
         if (!selectedStore) {
             ProgressToast.hide(0);
