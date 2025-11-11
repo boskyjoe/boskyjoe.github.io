@@ -2105,7 +2105,7 @@ export async function rejectConsignmentRequest(orderId, reason, user) {
 
     // This is a simple update, not a transaction, as no other documents are involved.
     return orderRef.update({
-        status: 'REJECTED',
+        status: 'Rejected',
         'audit.updatedBy': user.email,
         'audit.updatedOn': now,
         'audit.rejectionReason': reason // Store the reason for the audit trail
