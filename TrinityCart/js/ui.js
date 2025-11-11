@@ -13054,9 +13054,14 @@ export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
             "Team": node.data.teamName,
             "Requested By": node.data.requestingMemberName,
             "Status": node.data.status,
+            "Total": node.data.totalValueCheckedOut || 0,
+            "Paid": node.data.totalAmountPaid || 0,
             "Balance Due": node.data.balanceDue || 0,
-            "Total Value Checked Out": node.data.totalValueCheckedOut || 0,
-            "Total Value Sold": node.data.totalValueSold || 0,
+            "Sold": node.data.totalValueSold || 0,         
+            "Returned": node.data.totalValueReturned || 0,
+            "Gift": node.data.totalValueGifted || 0,
+            "Damaged": node.data.totalValueDamaged || 0,
+            
         };
         dataToExport.push(rowData);
     });
