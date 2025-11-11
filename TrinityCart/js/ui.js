@@ -4067,7 +4067,7 @@ const consignmentOrdersGridOptions = {
                 const status = p.value;
                 if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
                 if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
-                if (status === 'Settled') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">${status}</span>`;
+                if (status === 'Rejected') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">${status}</span>`;
                 return status;
             }
         },
@@ -4083,6 +4083,15 @@ const consignmentOrdersGridOptions = {
         mode: 'singleRow',
         enableSelectionWithoutKeys: true, // Allow click-to-select
         headerCheckbox: false // No header checkbox for single row mode
+    },
+    isRowSelectable: params => {
+        // If the row data doesn't exist yet (e.g., during loading), don't allow selection.
+        if (!params.data) {
+            return false;
+        }
+        const status = params.data.status;
+        // Only allow selection for 'Pending' and 'Active' orders.
+        return status === 'Pending' || status === 'Active';
     },
     onGridReady: params => { 
         consignmentOrdersGridApi = params.api;
