@@ -4060,7 +4060,7 @@ const consignmentOrdersGridOptions = {
         { field: "consignmentId", headerName: "Order ID", width: 180, filter: 'agTextColumnFilter' },
         { field: "manualVoucherNumber", headerName: "Manual Voucher#", width: 180, filter: 'agTextColumnFilter'},
         { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "teamName", headerName: "Team", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "teamName", headerName: "Team", width:180, filter: 'agTextColumnFilter' },
         { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
         {
             field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
