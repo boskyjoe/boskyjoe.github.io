@@ -13082,9 +13082,9 @@ export function exportGridData(gridApi, gridName, fileName = 'export.xlsx', shee
                     "Customer Name": node.data.customerInfo?.name,
                     "Customer Email": node.data.customerInfo?.email,
                     "Customer Phone": node.data.customerInfo?.phone,
-                    "Total Amount": node.data.financials?.totalAmount || 0,
-                    "Amount Paid": node.data.totalAmountPaid || 0,
-                    "Balance Due": node.data.balanceDue || 0,
+                    "Total Amount": formatCurrency(node.data.financials?.totalAmount || 0),
+                    "Amount Paid": formatCurrency(node.data.totalAmountPaid || 0),
+                    "Balance Due": formatCurrency(node.data.balanceDue || 0),
                     "Payment Status": node.data.paymentStatus,
                     "Created By": node.data.audit?.createdBy,
                     // Add more detailed fields not visible in the grid
