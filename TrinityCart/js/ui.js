@@ -13054,14 +13054,13 @@ export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
             "Team": node.data.teamName,
             "Requested By": node.data.requestingMemberName,
             "Status": node.data.status,
-            "Total": node.data.totalValueCheckedOut || 0,
-            "Paid": node.data.totalAmountPaid || 0,
-            "Balance Due": node.data.balanceDue || 0,
-            "Sold": node.data.totalValueSold || 0,         
-            "Returned": node.data.totalValueReturned || 0,
-            "Gift": node.data.totalValueGifted || 0,
-            "Damaged": node.data.totalValueDamaged || 0,
-            
+            "Total Value Checked Out": formatCurrency(node.data.totalValueCheckedOut || 0),
+            "Total Value Sold": formatCurrency(node.data.totalValueSold || 0),
+            "Total Amount Paid": formatCurrency(node.data.totalAmountPaid || 0),
+            "Balance Due": formatCurrency(node.data.balanceDue || 0),
+            "Value Returned": formatCurrency(node.data.totalValueReturned || 0),
+            "Value Gifted": formatCurrency(node.data.totalValueGifted || 0),
+            "Value Damaged": formatCurrency(node.data.totalValueDamaged || 0),
         };
         dataToExport.push(rowData);
     });
