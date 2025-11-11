@@ -4141,6 +4141,14 @@ const fulfillmentItemsGridOptions = {
     paginationPageSizeSelector: [25, 50, 100],
     columnDefs: [
         { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
+        {
+            field: "sellingPrice",
+            headerName: "Selling Price",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value || 0),
+            filter: 'agNumberColumnFilter',
+            cellClass: 'text-right', suppressMovable: true 
+        },
         { field: "quantityRequested", headerName: "Qty Requested", width: 150 },
         {
             field: "quantityCheckedOut",
