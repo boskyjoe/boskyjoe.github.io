@@ -156,7 +156,7 @@ import {
     showExpensesView, 
     getExpenseRowData, 
     removeExpenseRow,   
-    addNewExpenseRow,exportConsignmentOrders   
+    addNewExpenseRow,exportConsignmentOrders,exportSalesOrderHistory
 } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
@@ -2264,8 +2264,13 @@ function handleStandaloneButtons(target, event) {
         '#export-consignment-orders-excel': () => {
             console.log('[main.js] Export requested. Dispatching event: exportConsignmentGrid');
              exportConsignmentOrders();
+        },
+        '#export-sales-orders-excel-btn': () => {
+            console.log('[main.js] Export requested. Dispatching event: exportConsignmentGrid');
+             exportSalesOrderHistory();
         }
 
+        
 
 
 
