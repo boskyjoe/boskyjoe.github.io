@@ -2091,6 +2091,27 @@ export async function updateCatalogueItem(catalogueId, itemId, updatedData, user
     }
 }
 
+/**
+ * ✅ NEW: Rejects a pending consignment order by updating its status.
+ * @param {string} orderId - The Firestore document ID of the consignment order.
+ * @param {string} reason - The reason for the rejection, provided by the admin.
+ * @param {object} user - The admin or manager performing the action.
+ * @returns {Promise<void>}
+ */
+export async function rejectConsignmentRequest(orderId, reason, user) {
+    const db = firebase.firestore();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    // This is a simple update, not a transaction, as no other documents are involved.
+    return orderRef.update({
+        status: 'Rejected',
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now,
+        'audit.rejectionReason': reason // Store the reason for the audit trail
+    });
+}
+
 
 /**
  * Creates a new "Pending" Consignment Request using a batch write.
