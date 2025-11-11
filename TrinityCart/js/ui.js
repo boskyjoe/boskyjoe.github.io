@@ -4094,7 +4094,7 @@ const consignmentOrdersGridOptions = {
         return status === 'Pending' || status === 'Active';
     },
     rowClassRules: {
-        'ag-row-is-not-selectable': params => {
+        'opacity-50 cursor-not-allowed': params => {
             const status = params.data?.status;
             return status === 'Rejected' || status === 'Settled';
         }
