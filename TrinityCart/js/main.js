@@ -4687,6 +4687,7 @@ async function handleNewSaleSubmit(e) {
 
             // Handle partial payment confirmation
             if (amountReceived < grandTotal) {
+                 ProgressToast.hide(500);
                 const proceedPartial = await showModal('confirm', 'Partial Payment Confirmation', 
                     `Amount received: ${formatCurrency(amountReceived)}\n` +
                     `Total amount: ${formatCurrency(grandTotal)}\n` +
