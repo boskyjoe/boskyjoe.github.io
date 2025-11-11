@@ -114,7 +114,7 @@ import {
     fulfillConsignmentAndUpdateInventory,
     logActivityAndUpdateConsignment, getConsignmentOrderById,
     submitPaymentRecord, updatePaymentRecord,
-    verifyConsignmentPayment, cancelPaymentRecord,
+    verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
     voidSalePayment, getSalesInvoiceById,
 } from './api.js';
@@ -437,6 +437,86 @@ async function handleSavePurchaseInvoice() {
     }
 }
 
+// ✅ NEW: This function follows the same pattern as your fulfillment handler.
+let isRejecting = false; // Prevents double-clicks
+async function handleRejectConsignmentClick() {
+    if (isRejecting) {
+        console.warn("Rejection is already in progress.");
+        return;
+    }
+
+    const user = appState.currentUser;
+    if (!user || !['admin', 'inventory_manager'].includes(user.role)) {
+        return showModal('error', 'Permission Denied', 'Only administrators or inventory managers can reject requests.');
+    }
+
+    const orderId = appState.selectedConsignmentId;
+    if (!orderId) {
+        return showModal('warning', 'No Order Selected', 'An order must be selected to reject it.');
+    }
+
+    // Use a prompt to get the reason for rejection first.
+    const reason = prompt("Please provide a reason for rejecting this consignment request:");
+
+    // If the user clicks "Cancel" on the prompt, `reason` will be null, and we stop.
+    if (reason === null) {
+        console.log("User cancelled rejection prompt.");
+        return;
+    }
+
+    // If the user clicks "OK" but leaves the reason blank, show an error.
+    if (reason.trim() === '') {
+        return showModal('error', 'Reason Required', 'A reason is required to reject a consignment request.');
+    }
+
+    // Now, show the final confirmation modal.
+    const confirmed = await showModal('confirm', 'Confirm Rejection', 
+        `Are you sure you want to reject this order?\n\nReason: "${reason}"\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) {
+        console.log("User cancelled final rejection confirmation.");
+        return;
+    }
+
+    isRejecting = true;
+    const rejectButton = document.getElementById('reject-consignment-btn');
+    if (rejectButton) {
+        rejectButton.disabled = true;
+        rejectButton.textContent = 'Processing...';
+    }
+
+    ProgressToast.show('Rejecting Consignment Order', 'warning');
+
+    try {
+        ProgressToast.updateProgress('Updating order status...', 75, 'Step 1 of 2');
+        
+        // Call the simple API function we created
+        await rejectConsignmentRequest(orderId, reason, user);
+
+        ProgressToast.updateProgress('Rejection complete!', 100, 'Step 2 of 2');
+        ProgressToast.showSuccess('Order has been rejected.');
+
+        // Hide the detail panel since the order is no longer actionable
+        hideConsignmentDetailPanel();
+
+        setTimeout(() => {
+            ProgressToast.hide(500);
+            showModal('success', 'Order Rejected', 'The consignment request has been successfully marked as rejected.');
+        }, 1200);
+
+    } catch (error) {
+        console.error("Error rejecting consignment order:", error);
+        ProgressToast.showError(`Rejection failed: ${error.message}`);
+        setTimeout(() => showModal('error', 'Rejection Failed', `The operation could not be completed. Please check the console for details.\n\nError: ${error.message}`), 2000);
+    } finally {
+        isRejecting = false;
+        if (rejectButton) {
+            rejectButton.disabled = false;
+            rejectButton.textContent = 'Reject Order';
+        }
+    }
+}
 
 /**
  * [NEW] Handles the logic when a user clicks "Request New Consignment".
@@ -534,6 +614,7 @@ async function handleRequestConsignmentClick() {
 
     // We will add logic for the "Next" button and form submission later.
 }
+
 
 /**
  * [NEW] Handles the "Fulfill & Check Out" button click.
@@ -1809,6 +1890,7 @@ function handleStandaloneButtons(target, event) {
         '#request-consignment-btn': () => handleRequestConsignmentClick(),
         '#consignment-next-btn': () => handleConsignmentNext(),
         '#fulfill-checkout-btn': () => handleFulfillConsignmentClick(),
+        '#reject-consignment-btn': () => handleRejectConsignmentClick(),
         '#catalogue-form-cancel-btn': () => resetCatalogueForm(),
         '#report-activity-btn': () => showReportActivityModal(),
         '#cancel-payment-edit-btn': () => resetPaymentForm(),
