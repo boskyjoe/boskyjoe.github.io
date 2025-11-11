@@ -154,9 +154,9 @@ import { storeConfig } from './config.js';
 
 import { 
     showExpensesView, 
-    getExpenseRowData, // ✅ ADD
-    removeExpenseRow,   // ✅ ADD
-    addNewExpenseRow    // ✅ ADD
+    getExpenseRowData, 
+    removeExpenseRow,   
+    addNewExpenseRow,exportConsignmentOrders   
 } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
@@ -2259,6 +2259,11 @@ function handleStandaloneButtons(target, event) {
                     ProgressToast.showError(`Bulk verification failed: ${error.message}`);
                 }
             }
+        },
+         // Dispatch a custom event. to export the consigment order grid to excel
+        '#export-consignment-orders-excel': () => {
+            console.log('[main.js] Export requested. Dispatching event: exportConsignmentGrid');
+             exportConsignmentOrders();
         }
 
 
