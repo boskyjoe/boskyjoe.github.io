@@ -4102,39 +4102,51 @@ async function handleConsignmentRequestSubmit(e) {
         // Step 1: Role-Based Context Validation
         ProgressToast.updateProgress('Validating request permissions...', 12, 'Step 1 of 8');
 
-        // Determine which dropdown to use based on the user's role
-        const teamSelectId = (user.role === 'admin') ? 'admin-select-team' : 'user-select-team';
-        const teamSelect = document.getElementById(teamSelectId);
-
+        const isAdminMode = user.role === 'admin';
+        const teamSelect = document.getElementById(isAdminMode ? 'admin-select-team' : 'user-select-team');
+        
         if (!teamSelect || !teamSelect.value) {
             ProgressToast.hide(0);
-            return showModal('error', 'No Team Selected', 'Please select a team for this request.');
+            await showModal('error', 'No Team Selected', 'Please select a team for this consignment request.');
+            return;
         }
 
-        const teamId = teamSelect.value;
-        const teamName = teamSelect.options[teamSelect.selectedIndex].text;
+        let requestingMemberId, requestingMemberName, requestingMemberEmail;
 
-        // --- Step 2: Find the Authoritative Team Lead for the Selected Team ---
-        ProgressToast.updateProgress('Identifying team lead...', 30, 'Step 2 of 7');
+        if (isAdminMode) {
+            // Admin workflow: Must select team lead
+            ProgressToast.updateProgress('Processing admin team selection...', 20, 'Admin Mode');
+            
+            const memberSelect = document.getElementById('admin-select-member');
+            if (!memberSelect.value) {
+                ProgressToast.hide(0);
+                await showModal('error', 'No Team Lead Selected', 'Please select a Team Lead for this consignment request.');
+                return;
+            }
 
-        // We need to fetch the members of this team to find the lead.
-        // This requires an API call.
-        const members = await getMembersForTeam(teamId);
-        const teamLead = members.find(m => m.role === 'Team Lead');
-
-        if (!teamLead) {
-            ProgressToast.hide(0);
-            return showModal('error', 'No Team Lead Found', `The selected team "${teamName}" does not have a designated Team Lead. Please assign one in the Team Management module.`);
+            try {
+                const selectedLead = JSON.parse(memberSelect.value);
+                requestingMemberId = selectedLead.id;
+                requestingMemberName = selectedLead.name;
+                requestingMemberEmail = selectedLead.email;
+                
+                console.log(`[main.js] Admin creating request for team lead: ${requestingMemberName}`);
+            } catch (parseError) {
+                ProgressToast.hide(0);
+                await showModal('error', 'Invalid Team Lead Data', 'Team lead information is corrupted. Please refresh and try again.');
+                return;
+            }
+        } else {
+            // Team lead workflow: Use current user
+            requestingMemberId = user.uid;
+            requestingMemberName = user.displayName;
+            requestingMemberEmail = user.email;
+            
+            console.log(`[main.js] Team lead ${requestingMemberName} creating request for their team`);
         }
 
-        const requestingMemberId = teamLead.id; // The member's document ID in the sub-collection
-        const requestingMemberName = teamLead.name;
-        const requestingMemberEmail = teamLead.email;
-
-        console.log(`[main.js] Request will be created for Team: "${teamName}", authoritative Lead: "${requestingMemberName}"`);
-
-        // --- Step 3: Validate Other Form Fields ---
-        ProgressToast.updateProgress('Validating request details...', 45, 'Step 3 of 7');
+        // Step 2: Catalogue and Event Validation
+        ProgressToast.updateProgress('Validating catalogue and event selection...', 35, 'Step 2 of 8');
 
         const catalogueSelect = document.getElementById('request-catalogue-select');
         const eventSelect = document.getElementById('request-event-select');
@@ -4154,8 +4166,6 @@ async function handleConsignmentRequestSubmit(e) {
         ProgressToast.updateProgress('Checking requested products...', 50, 'Step 3 of 8');
 
         const requestedItems = getRequestedConsignmentItems();
-
-        
         
         if (requestedItems.length === 0) {
             ProgressToast.hide(0);
