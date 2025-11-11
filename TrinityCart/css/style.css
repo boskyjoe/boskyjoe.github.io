@@ -506,3 +506,16 @@ main {
     }
 }
 
+/* ===================================================================== */
+/* AG-GRID CUSTOMIZATIONS - NON-SELECTABLE ROWS */
+/* ===================================================================== */
+
+/*
+ * This is the crucial rule.
+ * It targets the checkbox input ONLY inside rows that have the 'cursor-not-allowed'
+ * class (which we apply via rowClassRules).
+ * The 'pointer-events: none' property makes the checkbox completely ignore mouse clicks.
+ */
+.ag-row.cursor-not-allowed .ag-selection-checkbox input {
+    pointer-events: none !important;
+}
