@@ -58,7 +58,7 @@ import { deletePaymentAndUpdateInvoice } from './api.js';
 import { getPaymentDataFromGridById,
     getConsignmentPaymentDataFromGridById, refreshConsignmentPaymentsGrid,
     getSupplierPaymentDataFromGridById,    
-    getSalesPaymentDataFromGridById, getSelectedConsignmentOrderBalance,  
+    getSalesPaymentDataFromGridById, getSelectedConsignmentOrderBalance,  hideConsignmentDetailPanel,
     getSelectedConsignmentOrderData  } from './ui.js';
 
 import { showSupplierPaymentModal, closeSupplierPaymentModal, getInvoiceDataFromGridById, initializeModals, closePaymentModal } from './ui.js';
