@@ -4093,6 +4093,12 @@ const consignmentOrdersGridOptions = {
         // Only allow selection for 'Pending' and 'Active' orders.
         return status === 'Pending' || status === 'Active';
     },
+    rowClassRules: {
+        'opacity-50 cursor-not-allowed': params => {
+            const status = params.data?.status;
+            return status === 'Rejected' || status === 'Settled';
+        }
+    },
     onGridReady: params => { 
         consignmentOrdersGridApi = params.api;
         console.log('[consignmentGrid] Grid ready, selection mode:', params.api.getGridOption('rowSelection'));
