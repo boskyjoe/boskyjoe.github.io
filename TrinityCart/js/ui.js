@@ -4366,6 +4366,7 @@ const consignmentItemsGridOptions = {
 
 // 3. Create Initialization and Helper Functions
 
+
 export function initializeConsignmentGrids() {
     if (isConsignmentGridsInitialized) return;
 
@@ -13023,4 +13024,85 @@ export function showPNLReportView() {
     // We use a trick to ensure we don't add multiple listeners if the view is revisited.
     generateBtn.replaceWith(generateBtn.cloneNode(true));
     document.getElementById('generate-pnl-report-btn').addEventListener('click', generateReport);
+}
+
+
+/**
+ * ✅ ENHANCED: Exports data from an AG-Grid instance to an Excel (.xlsx) file.
+ * It now iterates through all rows, respecting filters but ignoring pagination.
+ * @param {object} gridApi - The AG-Grid API object of the grid to export.
+ * @param {string} fileName - The desired name for the downloaded file.
+ */
+export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
+    if (!gridApi) {
+        console.error("Export to Excel failed: Grid API is not available.");
+        showModal('error', 'Export Failed', 'The grid is not ready for export.');
+        return;
+    }
+
+    ProgressToast.show('Preparing Export...', 'info');
+    ProgressToast.updateProgress('Gathering all rows of data...', 30);
+
+    // ✅ THE FIX: Use forEachNodeAfterFilter to get ALL data, ignoring pagination.
+    const dataToExport = [];
+    gridApi.forEachNodeAfterFilter(node => {
+        // We can also format the data here for a cleaner export
+        const rowData = {
+            "Order ID": node.data.consignmentId,
+            "Manual Voucher": node.data.manualVoucherNumber,
+            "Request Date": node.data.requestDate ? node.data.requestDate.toDate().toLocaleDateString() : '',
+            "Team": node.data.teamName,
+            "Requested By": node.data.requestingMemberName,
+            "Status": node.data.status,
+            "Balance Due": node.data.balanceDue || 0,
+            "Total Value Checked Out": node.data.totalValueCheckedOut || 0,
+            "Total Value Sold": node.data.totalValueSold || 0,
+        };
+        dataToExport.push(rowData);
+    });
+
+    if (dataToExport.length === 0) {
+        ProgressToast.hide(0);
+        showModal('info', 'No Data to Export', 'There are no rows matching the current filters to export.');
+        return;
+    }
+
+    ProgressToast.updateProgress(`Found ${dataToExport.length} rows. Creating Excel file...`, 70);
+
+    try {
+        // Convert the array of objects into a "worksheet".
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        // Create a new "workbook" and add the worksheet to it.
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Consignment Orders");
+
+        // Trigger the download.
+        XLSX.writeFile(workbook, fileName);
+
+        ProgressToast.showSuccess('Export complete!');
+        setTimeout(() => ProgressToast.hide(500), 1200);
+
+    } catch (error) {
+        console.error("Error creating Excel file:", error);
+        ProgressToast.showError('Failed to create Excel file.');
+    }
+}
+
+
+/**
+ * ✅ NEW: A dedicated function to handle the export action for this specific grid.
+ * This function can be safely called from main.js without breaking architecture.
+ */
+export function exportConsignmentOrders() {
+    console.log('[ui.js] Export requested for consignment orders.');
+
+    // This function has access to the grid API because it's in the same file.
+    if (consignmentOrdersGridApi) {
+        const timestamp = new Date().toISOString().split('T')[0];
+        exportGridToExcel(consignmentOrdersGridApi, `Consignment_Orders_${timestamp}.xlsx`);
+    } else {
+        // If the grid isn't ready, show an error.
+        showModal('error', 'Grid Not Ready', 'The consignment grid is not available for export yet. Please wait a moment and try again.');
+    }
 }
