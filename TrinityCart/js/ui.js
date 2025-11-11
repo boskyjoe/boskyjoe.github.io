@@ -1458,6 +1458,12 @@ export function showChurchTeamsView() {
     showView('church-teams-view');
     initializeChurchTeamsGrids();
 
+    if (churchTeamsGridApi) {
+        churchTeamsGridApi.deselectAll();
+        console.log("[ui.js] Deselected all rows in church team grid for a clean state.");
+    }
+
+
     // Populate the read-only church name field from the app state
     document.getElementById('team-churchName-input').value = appState.ChurchName;
 
