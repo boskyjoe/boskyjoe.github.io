@@ -4759,6 +4759,11 @@ export function showConsignmentView() {
     initializeConsignmentGrids();
     hideConsignmentDetailPanel(); // Ensure a clean state on view load
 
+    if (consignmentOrdersGridApi) {
+        consignmentOrdersGridApi.deselectAll();
+        console.log("[ui.js] Deselected all rows in consignment grid for a clean state.");
+    }
+
     const db = firebase.firestore();
     const user = appState.currentUser;
 
