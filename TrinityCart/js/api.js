@@ -2132,8 +2132,6 @@ export async function createConsignmentRequest(requestData, items, user) {
         consignmentId: consignmentId,
         status: 'Pending',
         requestDate: now,
-        requestingMemberId: user.uid,
-        requestingMemberName: user.displayName,
         audit: { createdBy: user.email, createdOn: now }
     });
 
