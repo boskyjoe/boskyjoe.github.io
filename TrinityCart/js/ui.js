@@ -4071,6 +4071,21 @@ const consignmentOrdersGridOptions = {
                 return status;
             }
         },
+        ,
+        { 
+            field: "totalValueCheckedOut", 
+            headerName: "Total", 
+            width: 140, 
+            // The valueFormatter is now correctly inside its parent column definition object.
+            valueFormatter: p => formatCurrency(p.value || 0)
+        },
+        { 
+            field: "totalAmountPaid", 
+            headerName: "Paid", 
+            width: 140, 
+            // The valueFormatter is now correctly inside its parent column definition object.
+            valueFormatter: p => formatCurrency(p.value || 0)
+        },
         { 
             field: "balanceDue", 
             headerName: "Balance Due", 
