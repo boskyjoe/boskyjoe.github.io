@@ -4071,7 +4071,6 @@ const consignmentOrdersGridOptions = {
                 return status;
             }
         },
-        ,
         { 
             field: "totalValueCheckedOut", 
             headerName: "Total", 
