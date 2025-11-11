@@ -4740,6 +4740,7 @@ async function handleNewSaleSubmit(e) {
             amountReceived = 0;
         }
 
+         ProgressToast.show('Processing Sale Transaction', 'info');
         // Step 7: Prepare Final Sale Data (ENHANCED WITH CATALOGUE ATTRIBUTION)
         ProgressToast.updateProgress('Preparing transaction data with catalogue attribution...', 75, 'Step 7 of 9');
 
