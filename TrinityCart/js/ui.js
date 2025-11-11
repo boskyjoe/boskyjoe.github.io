@@ -13028,40 +13028,78 @@ export function showPNLReportView() {
 
 
 /**
- * ✅ ENHANCED: Exports data from an AG-Grid instance to an Excel (.xlsx) file.
- * It now iterates through all rows, respecting filters but ignoring pagination.
- * @param {object} gridApi - The AG-Grid API object of the grid to export.
+ * ✅ NEW & CUSTOMIZABLE: Exports detailed data from a specific grid to an Excel file.
+ * This function uses a 'gridName' to determine which custom data mapping to apply,
+ * allowing the export to include more columns than are visible in the grid.
+ * @param {object} gridApi - The AG-Grid API of the grid to export.
+ * @param {string} gridName - A unique name for the grid (e.g., 'consignmentOrders', 'salesHistory').
  * @param {string} fileName - The desired name for the downloaded file.
+ * @param {string} sheetName - The name for the sheet inside the Excel file.
  */
-export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
+
+export function exportGridData(gridApi, gridName, fileName = 'export.xlsx', sheetName = 'Data') {
     if (!gridApi) {
-        console.error("Export to Excel failed: Grid API is not available.");
+        console.error("Export failed: Grid API is not available.");
         showModal('error', 'Export Failed', 'The grid is not ready for export.');
         return;
     }
 
-    ProgressToast.show('Preparing Export...', 'info');
-    ProgressToast.updateProgress('Gathering all rows of data...', 30);
+    ProgressToast.show('Preparing Detailed Export...', 'info');
+    ProgressToast.updateProgress('Gathering and formatting all data...', 30);
 
-    // ✅ THE FIX: Use forEachNodeAfterFilter to get ALL data, ignoring pagination.
+
     const dataToExport = [];
+    // Get all rows, respecting filters but ignoring pagination.
     gridApi.forEachNodeAfterFilter(node => {
         // We can also format the data here for a cleaner export
-        const rowData = {
-            "Order ID": node.data.consignmentId,
-            "Manual Voucher": node.data.manualVoucherNumber,
-            "Request Date": node.data.requestDate ? node.data.requestDate.toDate().toLocaleDateString() : '',
-            "Team": node.data.teamName,
-            "Requested By": node.data.requestingMemberName,
-            "Status": node.data.status,
-            "Total Value Checked Out": formatCurrency(node.data.totalValueCheckedOut || 0),
-            "Total Value Sold": formatCurrency(node.data.totalValueSold || 0),
-            "Total Amount Paid": formatCurrency(node.data.totalAmountPaid || 0),
-            "Balance Due": formatCurrency(node.data.balanceDue || 0),
-            "Value Returned": formatCurrency(node.data.totalValueReturned || 0),
-            "Value Gifted": formatCurrency(node.data.totalValueGifted || 0),
-            "Value Damaged": formatCurrency(node.data.totalValueDamaged || 0),
-        };
+        let rowData;
+
+        switch (gridName) {
+
+            case 'consignmentOrders':
+                rowData = {
+                    "Order ID": node.data.consignmentId,
+                    "Manual Voucher": node.data.manualVoucherNumber,
+                    "Request Date": node.data.requestDate ? node.data.requestDate.toDate().toLocaleDateString() : '',
+                    "Team": node.data.teamName,
+                    "Requested By": node.data.requestingMemberName,
+                    "Status": node.data.status,
+                    "Total Value Checked Out": formatCurrency(node.data.totalValueCheckedOut || 0),
+                    "Total Value Sold": formatCurrency(node.data.totalValueSold || 0),
+                    "Total Amount Paid": formatCurrency(node.data.totalAmountPaid || 0),
+                    "Balance Due": formatCurrency(node.data.balanceDue || 0),
+                    "Value Returned": formatCurrency(node.data.totalValueReturned || 0),
+                    "Value Gifted": formatCurrency(node.data.totalValueGifted || 0),
+                    "Value Damaged": formatCurrency(node.data.totalValueDamaged || 0),
+                };
+                break ;
+            case 'salesHistory':
+                rowData = {
+                    "Invoice ID": node.data.saleId,
+                    "Manual Voucher": node.data.manualVoucherNumber,
+                    "Sale Date": node.data.saleDate ? node.data.saleDate.toDate().toLocaleDateString() : '',
+                    "Store": node.data.store,
+                    "Customer Name": node.data.customerInfo?.name,
+                    "Customer Email": node.data.customerInfo?.email,
+                    "Customer Phone": node.data.customerInfo?.phone,
+                    "Total Amount": node.data.financials?.totalAmount || 0,
+                    "Amount Paid": node.data.totalAmountPaid || 0,
+                    "Balance Due": node.data.balanceDue || 0,
+                    "Payment Status": node.data.paymentStatus,
+                    "Created By": node.data.audit?.createdBy,
+                    // Add more detailed fields not visible in the grid
+                    "Item Count": node.data.lineItems?.length || 0
+                };
+                break;
+            default:
+                // A fallback for any grid that doesn't have a custom mapping yet.
+                // This will just export the raw data.
+                rowData = node.data;
+                break;
+        }
+
+
+
         dataToExport.push(rowData);
     });
 
@@ -13079,7 +13117,7 @@ export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
 
         // Create a new "workbook" and add the worksheet to it.
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Consignment Orders");
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
         // Trigger the download.
         XLSX.writeFile(workbook, fileName);
@@ -13098,15 +13136,33 @@ export function exportGridToExcel(gridApi, fileName = 'export.xlsx') {
  * ✅ NEW: A dedicated function to handle the export action for this specific grid.
  * This function can be safely called from main.js without breaking architecture.
  */
+
 export function exportConsignmentOrders() {
     console.log('[ui.js] Export requested for consignment orders.');
-
-    // This function has access to the grid API because it's in the same file.
     if (consignmentOrdersGridApi) {
         const timestamp = new Date().toISOString().split('T')[0];
-        exportGridToExcel(consignmentOrdersGridApi, `Consignment_Orders_${timestamp}.xlsx`);
+        exportGridData(
+            consignmentOrdersGridApi, 
+            'consignmentOrders', // This name tells the generic function which data mapping to use
+            `Consignment_Orders_${timestamp}.xlsx`, 
+            "_Consignment_Orders"
+        );
     } else {
-        // If the grid isn't ready, show an error.
-        showModal('error', 'Grid Not Ready', 'The consignment grid is not available for export yet. Please wait a moment and try again.');
+        showModal('error', 'Grid Not Ready', 'The consignment grid is not available for export yet.');
+    }
+}
+
+export function exportSalesOrderHistory() {
+    console.log('[ui.js] Export requested for sales history.');
+    if (salesHistoryGridApi) {
+        const timestamp = new Date().toISOString().split('T')[0];
+        exportGridData(
+            salesHistoryGridApi, 
+            'salesHistory', // The specific name for this grid's data mapping
+            `Sales_History_${timestamp}.xlsx`, 
+            "_Sales_History"
+        );
+    } else {
+        showModal('error', 'Grid Not Ready', 'The sales history grid is not available for export yet.');
     }
 }
