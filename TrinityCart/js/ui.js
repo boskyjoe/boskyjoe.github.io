@@ -4056,12 +4056,13 @@ const consignmentOrdersGridOptions = {
     pagination: true,
     paginationPageSize: 100, // You can adjust this default value if you like
     paginationPageSizeSelector: [25, 50, 100],
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
         { field: "consignmentId", headerName: "Order ID", width: 180, filter: 'agTextColumnFilter' },
         { field: "manualVoucherNumber", headerName: "Manual Voucher#", width: 180, filter: 'agTextColumnFilter'},
         { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
         { field: "teamName", headerName: "Team", width:180, filter: 'agTextColumnFilter' },
-        { field: "requestingMemberName", headerName: "Requested By", flex: 1, filter: 'agTextColumnFilter' },
+        { field: "requestingMemberName", headerName: "Requested By", filter: 'agTextColumnFilter' },
         {
             field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
                 const status = p.value;
