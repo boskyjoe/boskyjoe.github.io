@@ -7506,17 +7506,29 @@ async function handleGenerateInvoice(invoiceId) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Application Initializing...");
 
+    ProgressToast.show('Application Initializing.......', 'info');
+
     // Add the RowGroupingModule to the array of modules to be registered.
+    ProgressToast.updateProgress('Activating the required modules ...', 75);
     ModuleRegistry.registerModules([
         AllCommunityModule
     ]);
 
+    ProgressToast.updateProgress('Initializing all the database connection and listeners....', 75);
+
     setupEventListeners();
 
     // 3. Initialize modals AFTER event listeners are set up
+    ProgressToast.updateProgress('Initializing all controllers...', 75);
+
     initializeModals();
 
     // 4. Initialize master data listeners last
     //    These trigger UI updates that depend on event listeners being ready
+    ProgressToast.updateProgress('Initializing all Master date...', 75);
     initializeMasterDataListeners();
+
+    ProgressToast.showSuccess('Application Loaded successfully.. Welcome to MONETA');
+    setTimeout(() => ProgressToast.hide(500), 500);
+
 });
