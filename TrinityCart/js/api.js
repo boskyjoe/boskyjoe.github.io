@@ -4739,3 +4739,50 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
         throw new Error("Failed to replace receipt. The authentication token could not be retrieved or was invalid.");
     }
 }
+
+//Export utility 
+
+/**
+ * ✅ NEW: Fetches all sales catalogues and their complete item sub-collections.
+ * Returns a structured array, perfect for creating a multi-sheet Excel report.
+ * @returns {Promise<Array<object>>} An array of catalogue objects, each containing an 'items' array.
+ */
+export async function getAllCataloguesWithItems() {
+    const db = firebase.firestore();
+    console.log("[API] Fetching all catalogues and enriching items with master data...");
+
+    const cataloguesSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).where('isActive', '==', true).get();
+    
+    const cataloguePromises = cataloguesSnapshot.docs.map(async (catalogueDoc) => {
+        const catalogueData = catalogueDoc.data();
+        const itemsSnapshot = await catalogueDoc.ref.collection('items').get();
+        
+        const enrichedItems = itemsSnapshot.docs.map(itemDoc => {
+            const itemData = itemDoc.data();
+            
+            // 1. Find the corresponding master product from the cache
+            const masterProduct = masterData.products.find(p => p.id === itemData.productId);
+            
+            // 2. Find the corresponding category from the cache
+            const category = masterData.categories.find(c => c.id === masterProduct?.categoryId);
+
+            // 3. Return a new object with the additional fields
+            return {
+                ...itemData, // Keep all original item data (productName, sellingPrice, etc.)
+                categoryName: category ? category.categoryName : 'N/A', // Add the category name
+                inventoryCount: masterProduct ? masterProduct.inventoryCount : 0 // Add the inventory count
+            };
+        });
+        
+        return {
+            id: catalogueDoc.id,
+            ...catalogueData,
+            items: enrichedItems // Use the new array of enriched items
+        };
+    });
+
+    const allCataloguesWithItems = await Promise.all(cataloguePromises);
+
+    console.log(`[API] Fetched and enriched ${allCataloguesWithItems.reduce((sum, cat) => sum + cat.items.length, 0)} items.`);
+    return allCataloguesWithItems;
+}
