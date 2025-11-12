@@ -13427,20 +13427,36 @@ function renderStockStatusChart(stockData) {
     }
 
     // 3. The rest of your chart creation logic is correct.
-    const chartData = stockData.slice(0, 10);
+    const chartData = stockData
+        .filter(item => item.inventoryCount > 0) 
+        .slice(0, 10); 
+
+    // If there are no items with stock, display a helpful message.
+    if (chartData.length === 0) {
+        // You can create a more elegant placeholder, but for now, this logs the issue.
+        console.log("No items with stock > 0 to display in the chart.");
+        // Optionally, you could draw a "No Data" message on the canvas here.
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("No products with stock to display.", canvasElement.width / 2, canvasElement.height / 2);
+        return;
+    }
+
     const labels = chartData.map(item => item.itemName);
     const data = chartData.map(item => item.inventoryCount);
     
     const backgroundColors = chartData.map(item => {
-        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 0.7)';
-        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)';
-        return 'rgba(34, 197, 94, 0.7)';
+        // Since we filtered out zero-stock items, we only need to check for 'Low Stock'
+        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)'; // Amber
+        return 'rgba(34, 197, 94, 0.7)'; // Green
     });
     const borderColors = chartData.map(item => {
-        if (item.status === 'Out of Stock') return 'rgba(185, 28, 28, 1)';
         if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
         return 'rgba(22, 163, 74, 1)';
     });
+
 
     // 4. Create the new chart instance on the canvas context.
     dashboardStockChart = new Chart(ctx, {
