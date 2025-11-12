@@ -11441,6 +11441,9 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // renderBarChart('dashboard-stock-status-chart', summaryData.stockStatus);
         }
 
+        //Call the function to render the bar chart
+        renderStockStatusChart(summaryData.stockStatus);
+
         // --- 4. POPULATE STRIP 3: Top Sold Products ---
         if (dashboardSoldGridApi) {
             dashboardSoldGridApi.setGridOption('rowData', summaryData.topSoldProducts); 
@@ -13400,3 +13403,90 @@ const dashboardSoldGridOptions = {
     ],
     onGridReady: params => { dashboardSoldGridApi = params.api; }
 };
+
+let dashboardStockChart = null;
+
+/**
+ * ✅ NEW: Renders or updates the stock status bar chart on the dashboard.
+ * @param {Array<object>} stockData - The array of stock status objects from the summary.
+ */
+function renderStockStatusChart(stockData) {
+    const chartCanvas = document.getElementById('dashboard-stock-status-chart');
+    if (!chartCanvas) {
+        console.error("Chart canvas 'dashboard-stock-status-chart' not found.");
+        return;
+    }
+
+    // Get the top 10 lowest stock items for the chart
+    const chartData = stockData.slice(0, 10);
+
+    // Prepare the data for Chart.js
+    const labels = chartData.map(item => item.itemName);
+    const data = chartData.map(item => item.inventoryCount);
+    
+    // Define colors based on stock status
+    const backgroundColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(239, 68, 68, 0.6)'; // Red
+        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.6)'; // Amber
+        return 'rgba(34, 197, 94, 0.6)'; // Green
+    });
+    const borderColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 1)';
+        if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
+        return 'rgba(22, 163, 74, 1)';
+    });
+
+    // If a chart instance already exists, destroy it before creating a new one
+    if (dashboardStockChart) {
+        dashboardStockChart.destroy();
+    }
+
+    // Create the new chart
+    dashboardStockChart = new Chart(chartCanvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Stock on Hand',
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y', // This makes it a horizontal bar chart, which is better for long labels
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // Hide the legend as the bar colors are self-explanatory
+                },
+                title: {
+                    display: true,
+                    text: 'Top 10 Lowest Stock Items',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity in Stock'
+                    }
+                },
+                y: {
+                    ticks: {
+                        font: {
+                            size: 10 // Smaller font for product names if they are long
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
