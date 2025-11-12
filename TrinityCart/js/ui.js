@@ -11479,6 +11479,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // ===================================================================
         // ✅ SINGLE CALL: Get outstanding metrics once with proper cache handling
         // ===================================================================
+        /* 
         const outstandingMetrics = await getOutstandingBalancesForDashboard(forceRefresh);
 
         // ===================================================================
@@ -11586,6 +11587,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
             inventoryValue: formatCurrency(inventoryValue.totalValue),
             cacheStatus: outstandingMetrics.metadata?.dataAccuracy || 'Unknown'
         });
+
+        */
         
         // ===================================================================
         // ADMIN ACTIVITY & ALERTS  
