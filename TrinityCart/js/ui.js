@@ -13439,10 +13439,27 @@ function renderStockStatusChart(stockData) {
         dashboardStockChart.destroy();
     }
 
+    const legendContainer = document.getElementById('stock-chart-legend');
+    if (legendContainer) {
+        legendContainer.innerHTML = `
+            <div class="flex items-center">
+                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(34, 197, 94, 0.7);"></span>
+                <span class="text-xs text-gray-600">Good Stock (10+)</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(245, 158, 11, 0.7);"></span>
+                <span class="text-xs text-gray-600">Low Stock (1-9)</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(220, 38, 38, 0.7);"></span>
+                <span class="text-xs text-gray-600">Out of Stock</span>
+            </div>
+        `;
+    }
+
     // 3. The rest of your chart creation logic is correct.
     const chartData = stockData
-        .filter(item => item.inventoryCount > 0) 
-        .slice(0, 10); 
+        .filter(item => item.inventoryCount > 0); 
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
@@ -13454,6 +13471,7 @@ function renderStockStatusChart(stockData) {
         ctx.fillStyle = "#888";
         ctx.textAlign = "center";
         ctx.fillText("No products with stock to display.", canvasElement.width / 2, canvasElement.height / 2);
+        if (legendContainer) legendContainer.innerHTML = '';
         return;
     }
 
@@ -13489,10 +13507,10 @@ function renderStockStatusChart(stockData) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: { display: true },
                 title: {
                     display: true,
-                    text: 'Product Stock',
+                    text: 'Stock Items (with stock > 0)',
                     font: { size: 16, weight: 'bold' }
                 }
             },
