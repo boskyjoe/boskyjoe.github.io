@@ -11448,6 +11448,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // --- 4. POPULATE STRIP 3: Top Sold Products ---
         if (dashboardSoldGridApi) {
             dashboardSoldGridApi.setGridOption('rowData', summaryData.topSoldProducts); 
+            // Call the function to render the top sold products bar chart
+            renderTopSoldChart(summaryData.topSoldProducts);
         }
         // Here you would also call a function to render the top sold bar chart
         // renderBarChart('dashboard-sold-products-chart', summaryData.topSoldProducts);
@@ -13517,6 +13519,94 @@ function renderStockStatusChart(stockData) {
             scales: {
                 x: { beginAtZero: true, title: { display: true, text: 'Quantity in Stock' }},
                 y: { ticks: { font: { size: 10 }}}
+            }
+        }
+    });
+}
+
+let dashboardSoldChart = null;
+
+/**
+ * ✅ NEW: Renders or updates the Top Sold Products bar chart on the dashboard.
+ * @param {Array<object>} topSoldData - The array of top sold product objects from the summary.
+ */
+function renderTopSoldChart(topSoldData) {
+    const canvasElement = document.getElementById('dashboard-sold-products-chart');
+    if (!canvasElement) {
+        console.error("Chart canvas 'dashboard-sold-products-chart' not found.");
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // Destroy any old chart instance before creating a new one
+    if (dashboardSoldChart) {
+        dashboardSoldChart.destroy();
+    }
+
+    // Since this chart doesn't need a dynamic legend, we can clear it.
+    const legendContainer = document.getElementById('sold-products-chart-legend');
+    if (legendContainer) {
+        legendContainer.innerHTML = ''; // No legend needed for a single-color chart
+    }
+
+    // Take the top 10 products for a clean chart
+    const chartData = topSoldData.slice(0, 10);
+
+    if (chartData.length === 0) {
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("No sales data available for this period.", canvasElement.width / 2, canvasElement.height / 2);
+        return;
+    }
+
+    // Prepare the data for Chart.js
+    const labels = chartData.map(item => item.productName);
+    const data = chartData.map(item => item.totalQuantity);
+
+    // Create the new chart
+    dashboardSoldChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Units Sold',
+                data: data,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)', // A nice blue color
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Horizontal bar chart
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // Hide the legend as there's only one dataset
+                },
+                title: {
+                    display: true,
+                    text: 'Top 10 Sold Products (Last 30 Days)',
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Total Units Sold'
+                    }
+                },
+                y: {
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
             }
         }
     });
