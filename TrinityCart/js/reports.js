@@ -5042,7 +5042,7 @@ export async function generatePLStatement(startDate, endDate) {
  * @param {number} daysBack - The number of days to analyze for sales data.
  * @returns {Promise<Object>} An object containing all the necessary dashboard data.
  */
-export async function generateAdminDashboardSummary(daysBack = 30) {
+export async function generateAdminDashboardSummary(daysBack = 365) {
     const db = firebase.firestore();
     const { startDate, endDate } = createDateRange(daysBack);
 
