@@ -482,7 +482,7 @@
                 <div id="dashboard-view" class="view">
 
                     <!-- Welcome Header (Unchanged) -->
-                    <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h2 id="dashboard-welcome-title" class="text-2xl font-bold text-gray-900">Welcome</h2>
@@ -581,8 +581,7 @@
                         </div>
                     </div>
 
-
-                     <div class="space-y-8">
+                    <div class="space-y-8">
 
                         <!-- Enhanced Key Metrics Cards (More Business Intelligence) -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
@@ -590,19 +589,15 @@
                             <!-- Row 1: Core Daily Metrics -->
 
                             <!-- Today's Sales -->
-                            <div
-                                class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border-l-4 border-green-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-green-800">Today's Sales</h3>
-                                        <p id="dashboard-today-sales" class="text-2xl font-bold text-green-900">Loading...
-                                        </p>
+                                        <p id="dashboard-today-sales" class="text-2xl font-bold text-green-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" />
+                                        <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" />
                                         </svg>
                                     </div>
                                 </div>
@@ -612,18 +607,15 @@
                             </div>
 
                             <!-- This Week's Sales -->
-                            <div
-                                class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border-l-4 border-blue-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-blue-800">This Week</h3>
                                         <p id="dashboard-week-sales" class="text-2xl font-bold text-blue-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </div>
                                 </div>
@@ -633,20 +625,15 @@
                             </div>
 
                             <!-- Pending Actions (Role-based) -->
-                            <div
-                                class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <h3 class="text-sm font-medium text-yellow-800" id="dashboard-actions-title">Pending
-                                            Actions</h3>
-                                        <p id="dashboard-pending-actions" class="text-2xl font-bold text-yellow-900">
-                                            Loading...</p>
+                                        <h3 class="text-sm font-medium text-yellow-800" id="dashboard-actions-title">Pending Actions</h3>
+                                        <p id="dashboard-pending-actions" class="text-2xl font-bold text-yellow-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-yellow-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
                                 </div>
@@ -658,18 +645,15 @@
                             <!-- Row 2: Operational Metrics -->
 
                             <!-- Low Stock Alert -->
-                            <div
-                                class="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border-l-4 border-red-500">
+                            <div class="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border-l-4 border-red-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-red-800">Low Stock Alert</h3>
                                         <p id="dashboard-low-stock" class="text-2xl font-bold text-red-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-red-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-red-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 9v2m0 4h.01" />
+                                        <svg class="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01" />
                                         </svg>
                                     </div>
                                 </div>
@@ -679,19 +663,15 @@
                             </div>
 
                             <!-- Active Teams -->
-                            <div
-                                class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                            <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border-l-4 border-purple-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-purple-800">Active Teams</h3>
-                                        <p id="dashboard-active-teams" class="text-2xl font-bold text-purple-900">Loading...
-                                        </p>
+                                        <p id="dashboard-active-teams" class="text-2xl font-bold text-purple-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                     </div>
                                 </div>
@@ -701,20 +681,15 @@
                             </div>
 
                             <!-- System Performance -->
-                            <div
-                                class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
+                            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <h3 class="text-sm font-medium text-indigo-800" id="dashboard-performance-title">
-                                            System Health</h3>
-                                        <p id="dashboard-performance-value" class="text-2xl font-bold text-indigo-900">
-                                            Loading...</p>
+                                        <h3 class="text-sm font-medium text-indigo-800" id="dashboard-performance-title">System Health</h3>
+                                        <p id="dashboard-performance-value" class="text-2xl font-bold text-indigo-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-indigo-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-indigo-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <svg class="w-5 h-5 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
                                 </div>
@@ -726,46 +701,36 @@
                         </div>
 
                         <!-- Row 2: Financial Overview Cards (Admin Only) -->
-                        <div id="dashboard-financial-section"
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
+                        <div id="dashboard-financial-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
 
                             <!-- Outstanding Receivables -->
-                            <div
-                                class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
+                            <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-emerald-800">Customer Receivables</h3>
-                                        <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">
-                                            Loading...</p>
+                                        <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                                        <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                                         </svg>
                                     </div>
                                 </div>
                                 <div class="mt-2 text-sm">
-                                    <span class="text-emerald-700" id="dashboard-receivables-details">Money owed to
-                                        us</span>
+                                    <span class="text-emerald-700" id="dashboard-receivables-details">Money owed to us</span>
                                 </div>
                             </div>
 
                             <!-- Outstanding Payables -->
-                            <div
-                                class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-orange-800">Supplier Payables</h3>
-                                        <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">
-                                            Loading...</p>
+                                        <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M17 16l4-4m0 0l-4-4m4 4H3" />
+                                        <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3" />
                                         </svg>
                                     </div>
                                 </div>
@@ -775,19 +740,15 @@
                             </div>
 
                             <!-- Net Cash Position -->
-                            <div
-                                class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
+                            <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-teal-800">Net Position</h3>
-                                        <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...
-                                        </p>
+                                        <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-teal-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </div>
                                 </div>
@@ -797,19 +758,15 @@
                             </div>
 
                             <!-- Total Products -->
-                            <div
-                                class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg shadow-md border-l-4 border-gray-500">
+                            <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg shadow-md border-l-4 border-gray-500">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <h3 class="text-sm font-medium text-gray-800">Total Products</h3>
-                                        <p id="dashboard-total-products" class="text-2xl font-bold text-gray-900">Loading...
-                                        </p>
+                                        <p id="dashboard-total-products" class="text-2xl font-bold text-gray-900">Loading...</p>
                                     </div>
                                     <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                         </svg>
                                     </div>
                                 </div>
@@ -819,103 +776,6 @@
                             </div>
 
                         </div>
-
-                        <!-- Row 2: Financial Overview Cards (Admin/Finance Only) -->
-                        <div id="dashboard-financial-section"
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style="display: none;">
-
-                            <!-- Outstanding Receivables -->
-                            <div
-                                class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-lg shadow-md border-l-4 border-emerald-500">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h3 class="text-sm font-medium text-emerald-800">Customer Receivables</h3>
-                                        <p id="dashboard-customer-receivables" class="text-2xl font-bold text-emerald-900">
-                                            Loading...</p>
-                                    </div>
-                                    <div class="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div class="mt-2 text-sm">
-                                    <span class="text-emerald-700" id="dashboard-receivables-details">Outstanding
-                                        invoices</span>
-                                </div>
-                            </div>
-
-                            <!-- Outstanding Payables -->
-                            <div
-                                class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow-md border-l-4 border-orange-500">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h3 class="text-sm font-medium text-orange-800">Supplier Payables</h3>
-                                        <p id="dashboard-supplier-payables" class="text-2xl font-bold text-orange-900">
-                                            Loading...</p>
-                                    </div>
-                                    <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-orange-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M17 16l4-4m0 0l-4-4m4 4H3" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div class="mt-2 text-sm">
-                                    <span class="text-orange-700" id="dashboard-payables-details">Outstanding
-                                        invoices</span>
-                                </div>
-                            </div>
-
-                            <!-- Net Cash Position -->
-                            <div
-                                class="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-lg shadow-md border-l-4 border-teal-500">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h3 class="text-sm font-medium text-teal-800">Net Cash Position</h3>
-                                        <p id="dashboard-net-position" class="text-2xl font-bold text-teal-900">Loading...
-                                        </p>
-                                    </div>
-                                    <div class="w-10 h-10 bg-teal-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div class="mt-2 text-sm">
-                                    <span class="text-teal-700" id="dashboard-net-details">Receivables - Payables</span>
-                                </div>
-                            </div>
-
-                            <!-- Total Inventory Value -->
-                            <div
-                                class="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-lg shadow-md border-l-4 border-pink-500">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h3 class="text-sm font-medium text-pink-800">Inventory Value</h3>
-                                        <p id="dashboard-inventory-value" class="text-2xl font-bold text-pink-900">
-                                            Loading...</p>
-                                    </div>
-                                    <div class="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-pink-700" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div class="mt-2 text-sm">
-                                    <span class="text-pink-700" id="dashboard-inventory-details">Current stock value</span>
-                                </div>
-                            </div>
-
-                        </div>
-
 
                         <!-- Recent Activity & Alerts (Role-based) -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -949,10 +809,6 @@
 
                         </div>
                     </div>
-
-
-
-
 
                 </div>
 
