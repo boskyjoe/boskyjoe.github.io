@@ -51,7 +51,8 @@ import {
     calculateSalesTrends,
     calculateCustomerInsights,
     calculateInventoryAnalysis,generateExecutiveDashboardData,calculateTrueBusinessRevenue,calculateFinancialHealthScore,generatePLStatement,
-    REPORT_CONFIGS 
+    REPORT_CONFIGS,
+    generateAdminDashboardSummary
 } from './reports.js';
 
 import {detachPaymentManagementRealtimeSync,buildActionRequiredList} from './payment-management.js'
@@ -11240,6 +11241,7 @@ function updateFinancialHealthModalContent(trueRevenueAnalysis, businessSummary)
  * 
  * @returns {Promise<void>}
  */
+
 export async function loadApplicationDashboard(forceRefresh = false)  {
     console.log('[ui.js] 🏠 Loading application landing dashboard...');
     
@@ -11353,14 +11355,70 @@ export async function loadLimitedAccessDashboard(user) {
     }
 }
 
+
 /**
  * ADMIN LANDING DASHBOARD: Complete system metrics and financial overview
  */
 
 async function loadAdminLandingDashboard(user, forceRefresh = false) {
     console.log('[ui.js] 👑 Loading admin landing dashboard with expanded metrics...');
+
+    // Initialize new grids if they don't exist
+    const stockGridDiv = document.getElementById('dashboard-stock-status-grid');
+    if (stockGridDiv && !dashboardStockGridApi) {
+        dashboardStockGridApi = createGrid(stockGridDiv, dashboardStockGridOptions);
+    }
+    const soldGridDiv = document.getElementById('dashboard-sold-products-grid');
+    if (soldGridDiv && !dashboardSoldGridApi) {
+        dashboardSoldGridApi = createGrid(soldGridDiv, dashboardSoldGridOptions);
+    }
     
     document.getElementById('dashboard-welcome-subtitle').textContent = 'Administrator Dashboard - System Operations Overview';
+
+    try {
+        // --- 1. FETCH ALL DATA WITH ONE CALL ---
+        const summaryData = await generateAdminDashboardSummary(30); // Get data for the last 30 days
+
+        // --- 2. POPULATE STRIP 1: Sales Financial Summary ---
+        const sales = summaryData.salesSummary;
+        document.getElementById('sales-summary-total-invoiced').textContent = formatCurrency(sales.total.invoiced);
+        document.getElementById('sales-summary-total-cash').textContent = formatCurrency(sales.total.cash);
+        document.getElementById('sales-summary-total-diff').textContent = formatCurrency(sales.total.diff);
+        
+        document.getElementById('sales-summary-consignment-invoiced').textContent = formatCurrency(sales.consignment.invoiced);
+        document.getElementById('sales-summary-consignment-cash').textContent = formatCurrency(sales.consignment.cash);
+        document.getElementById('sales-summary-consignment-diff').textContent = formatCurrency(sales.consignment.diff);
+
+        document.getElementById('sales-summary-tasty-invoiced').textContent = formatCurrency(sales.tastyTreats.invoiced);
+        document.getElementById('sales-summary-tasty-cash').textContent = formatCurrency(sales.tastyTreats.cash);
+        document.getElementById('sales-summary-tasty-diff').textContent = formatCurrency(sales.tastyTreats.diff);
+
+        document.getElementById('sales-summary-church-invoiced').textContent = formatCurrency(sales.churchStore.invoiced);
+        document.getElementById('sales-summary-church-cash').textContent = formatCurrency(sales.churchStore.cash);
+        document.getElementById('sales-summary-church-diff').textContent = formatCurrency(sales.churchStore.diff);
+        
+        // --- 3. POPULATE STRIP 2: Stock Status ---
+        if (dashboardStockGridApi) {
+            dashboardStockGridApi.setGridOption('rowData', summaryData.stockStatus.slice(0, 10)); // Show top 10 lowest stock
+        }
+        // Here you would also call a function to render the stock status bar chart
+        // renderBarChart('dashboard-stock-status-chart', summaryData.stockStatus);
+
+        // --- 4. POPULATE STRIP 3: Top Sold Products ---
+        if (dashboardSoldGridApi) {
+            dashboardSoldGridApi.setGridOption('rowData', summaryData.topSoldProducts.slice(0, 10)); // Show top 10 sold
+        }
+        // Here you would also call a function to render the top sold bar chart
+        // renderBarChart('dashboard-sold-products-chart', summaryData.topSoldProducts);
+
+        // --- 5. POPULATE YOUR EXISTING METRIC CARDS (This part is unchanged) ---
+        // ... (your existing code to populate today's sales, pending actions, etc.)
+        
+    } catch (error) {
+        console.error('[ui.js] Error loading enhanced admin dashboard:', error);
+        // You can add error states to the new sections here
+        throw error;
+    }
     
     try {
         // ===================================================================
@@ -13268,3 +13326,31 @@ export async function exportAllCataloguesToMultiSheetExcel() {
         ProgressToast.showError('Failed to generate report.');
     }
 }
+
+
+// ✅ NEW: Grid for the Stock Status dashboard panel
+let dashboardStockGridApi = null;
+const dashboardStockGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "itemName", headerName: "Product", flex: 1 },
+        { field: "inventoryCount", headerName: "Stock", width: 80, cellClass: 'text-center font-bold' },
+        { field: "status", headerName: "Status", width: 100, cellRenderer: p => {
+            if (p.value === 'Low Stock') return `<span class="text-xs font-semibold text-yellow-700">Low</span>`;
+            if (p.value === 'Out of Stock') return `<span class="text-xs font-semibold text-red-700">Out</span>`;
+            return `<span class="text-xs text-green-700">Good</span>`;
+        }}
+    ],
+    onGridReady: params => { dashboardStockGridApi = params.api; }
+};
+
+// ✅ NEW: Grid for the Top Sold Products dashboard panel
+let dashboardSoldGridApi = null;
+const dashboardSoldGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
+    ],
+    onGridReady: params => { dashboardSoldGridApi = params.api; }
+};
