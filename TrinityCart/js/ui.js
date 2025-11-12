@@ -11,7 +11,7 @@ import { getPaymentModes } from './api.js';
 import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
-import { getPaymentsForInvoice,getAllSupplierPayments } from './api.js';
+import { getPaymentsForInvoice,getAllSupplierPayments,getAllCataloguesWithItems } from './api.js';
 import { showModal } from './modal.js';
 
 
@@ -13091,6 +13091,16 @@ export function exportGridData(gridApi, gridName, fileName = 'export.xlsx', shee
                     "Item Count": node.data.lineItems?.length || 0
                 };
                 break;
+            case 'salesCatalogue':
+                rowData = {
+                    "Catalogue ID": node.data.catalogueId,
+                    "Catalogue Name": node.data.catalogueName,
+                    "Season": node.data.seasonName,
+                    "Status": node.data.isActive ? 'Active' : 'Inactive',
+                    "Product Name":node.data.items?.productName,
+                    "Selling Price":node.data.items?.sellingPrice,
+                };
+                break;
             default:
                 // A fallback for any grid that doesn't have a custom mapping yet.
                 // This will just export the raw data.
@@ -13164,5 +13174,97 @@ export function exportSalesOrderHistory() {
         );
     } else {
         showModal('error', 'Grid Not Ready', 'The sales history grid is not available for export yet.');
+    }
+}
+
+
+
+/**
+ * ✅ NEW: Creates a multi-sheet Excel workbook of all sales catalogues.
+ * Each sheet represents a single catalogue and lists its items.
+ */
+export async function exportAllCataloguesToMultiSheetExcel() {
+    ProgressToast.show('Generating Multi-Sheet Report...', 'info');
+    ProgressToast.updateProgress('Fetching all catalogue and item data...', 20);
+
+    try {
+        // 1. Get the structured data from our new API function
+        const cataloguesWithItems = await getAllCataloguesWithItems();
+
+        if (cataloguesWithItems.length === 0) {
+            ProgressToast.hide(0);
+            return showModal('info', 'No Data', 'There are no active sales catalogues to export.');
+        }
+
+
+        ProgressToast.updateProgress('Creating Excel workbook...', 60);
+
+        // 2. Create a new, empty workbook
+        const workbook = XLSX.utils.book_new();
+
+        // 3. Loop through each catalogue to create a sheet for it
+        cataloguesWithItems.forEach(catalogue => {
+            // Sanitize sheet name (Excel has a 31-char limit and dislikes certain characters)
+            const sheetName = catalogue.catalogueName.substring(0, 31).replace(/[\/\\?*\[\]]/g, '');
+            const sheetData = [];
+            
+            // Add header rows with catalogue info
+            sheetData.push(["Catalogue Name:", catalogue.catalogueName]);
+            sheetData.push(["Season:", catalogue.seasonName]);
+            sheetData.push(["Status:", catalogue.isActive ? 'Active' : 'Inactive']);
+            sheetData.push([]); // Add a blank row for spacing
+
+            // Add the item headers
+            sheetData.push([
+                "Product Name", 
+                "Category", // New column
+                "Inventory Count", // New column
+                "Cost Price", 
+                "Margin %", 
+                "Selling Price"
+            ]);
+
+            // Add the item data rows
+            catalogue.items.forEach(item => {
+                sheetData.push([
+                    item.productName,
+                    item.categoryName, // New field
+                    item.inventoryCount, // New field
+                    formatCurrency(item.costPrice || 0),
+                    item.marginPercentage || 0,
+                    formatCurrency(item.sellingPrice || 0)
+                ]);
+            });
+
+            // Convert the array of arrays to a worksheet
+            const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+            // Optional: Set column widths for better readability
+            worksheet['!cols'] = [
+                { wch: 40 }, // Product Name
+                { wch: 20 }, // Category
+                { wch: 15 }, // Inventory Count
+                { wch: 15 }, // Cost Price
+                { wch: 15 }, // Margin %
+                { wch: 15 }  // Selling Price
+            ];
+
+
+            // Add the new worksheet to the workbook with the sanitized name
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        });
+
+        ProgressToast.updateProgress('Downloading file...', 90);
+
+        // 4. Trigger the download of the complete workbook
+        const timestamp = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `Sales_Catalogues_Detailed_${timestamp}.xlsx`);
+
+        ProgressToast.showSuccess('Report downloaded!');
+        setTimeout(() => ProgressToast.hide(500), 1500);
+
+    } catch (error) {
+        console.error("Error creating multi-sheet Excel report:", error);
+        ProgressToast.showError('Failed to generate report.');
     }
 }
