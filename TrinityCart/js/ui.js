@@ -11439,10 +11439,11 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
             dashboardStockGridApi.setGridOption('rowData', summaryData.stockStatus); 
         // Here you would also call a function to render the stock status bar chart
         // renderBarChart('dashboard-stock-status-chart', summaryData.stockStatus);
+        //Call the function to render the bar chart
+            renderStockStatusChart(summaryData.stockStatus);
         }
 
-        //Call the function to render the bar chart
-        renderStockStatusChart(summaryData.stockStatus);
+        
 
         // --- 4. POPULATE STRIP 3: Top Sold Products ---
         if (dashboardSoldGridApi) {
@@ -13479,7 +13480,7 @@ function renderStockStatusChart(stockData) {
                 legend: { display: false },
                 title: {
                     display: true,
-                    text: 'Top 10 Lowest Stock Items',
+                    text: 'Product Stock',
                     font: { size: 16, weight: 'bold' }
                 }
             },
