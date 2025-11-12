@@ -13407,42 +13407,43 @@ const dashboardSoldGridOptions = {
 let dashboardStockChart = null;
 
 /**
- * ✅ NEW: Renders or updates the stock status bar chart on the dashboard.
- * @param {Array<object>} stockData - The array of stock status objects from the summary.
+ * ✅ CORRECTED & ROBUST: Renders or updates the stock status bar chart.
+ * It now correctly gets the canvas context and handles chart destruction.
+ * @param {Array<object>} stockData - The array of stock status objects.
  */
 function renderStockStatusChart(stockData) {
-    const chartCanvas = document.getElementById('dashboard-stock-status-chart');
-    if (!chartCanvas) {
-        console.error("Chart canvas 'dashboard-stock-status-chart' not found.");
+    // 1. Get the canvas element and its 2D rendering context.
+    const canvasElement = document.getElementById('dashboard-stock-status-chart');
+    if (!canvasElement) {
+        console.error("Chart canvas element 'dashboard-stock-status-chart' not found.");
         return;
     }
+    const ctx = canvasElement.getContext('2d');
 
-    // Get the top 10 lowest stock items for the chart
-    const chartData = stockData.slice(0, 10);
-
-    // Prepare the data for Chart.js
-    const labels = chartData.map(item => item.itemName);
-    const data = chartData.map(item => item.inventoryCount);
-    
-    // Define colors based on stock status
-    const backgroundColors = chartData.map(item => {
-        if (item.status === 'Out of Stock') return 'rgba(239, 68, 68, 0.6)'; // Red
-        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.6)'; // Amber
-        return 'rgba(34, 197, 94, 0.6)'; // Green
-    });
-    const borderColors = chartData.map(item => {
-        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 1)';
-        if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
-        return 'rgba(22, 163, 74, 1)';
-    });
-
-    // If a chart instance already exists, destroy it before creating a new one
+    // 2. If a chart instance already exists, destroy it completely.
+    // This is crucial for re-rendering when the user refreshes the dashboard.
     if (dashboardStockChart) {
         dashboardStockChart.destroy();
     }
 
-    // Create the new chart
-    dashboardStockChart = new Chart(chartCanvas, {
+    // 3. The rest of your chart creation logic is correct.
+    const chartData = stockData.slice(0, 10);
+    const labels = chartData.map(item => item.itemName);
+    const data = chartData.map(item => item.inventoryCount);
+    
+    const backgroundColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 0.7)';
+        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)';
+        return 'rgba(34, 197, 94, 0.7)';
+    });
+    const borderColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(185, 28, 28, 1)';
+        if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
+        return 'rgba(22, 163, 74, 1)';
+    });
+
+    // 4. Create the new chart instance on the canvas context.
+    dashboardStockChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -13455,37 +13456,20 @@ function renderStockStatusChart(stockData) {
             }]
         },
         options: {
-            indexAxis: 'y', // This makes it a horizontal bar chart, which is better for long labels
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false // Hide the legend as the bar colors are self-explanatory
-                },
+                legend: { display: false },
                 title: {
                     display: true,
                     text: 'Top 10 Lowest Stock Items',
-                    font: {
-                        size: 16,
-                        weight: 'bold'
-                    }
+                    font: { size: 16, weight: 'bold' }
                 }
             },
             scales: {
-                x: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Quantity in Stock'
-                    }
-                },
-                y: {
-                    ticks: {
-                        font: {
-                            size: 10 // Smaller font for product names if they are long
-                        }
-                    }
-                }
+                x: { beginAtZero: true, title: { display: true, text: 'Quantity in Stock' }},
+                y: { ticks: { font: { size: 10 }}}
             }
         }
     });
