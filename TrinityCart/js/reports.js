@@ -5048,43 +5048,45 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
 
     // --- 1. Fetch Data in Parallel ---
     const [
-        directSales,
-        consignmentActivities,
-        allProducts
+        directSalesSnapshot,
+        consignmentOrdersSnapshot,
+        allProductsSnapshot
     ] = await Promise.all([
         db.collection(SALES_COLLECTION_PATH).get(),
-        db.collectionGroup('activityLog').where('activityType', '==', 'Sale').get(),
+        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', 'in', ['Active', 'Settled']).get(),
         db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).where('isActive', '==', true).get()
     ]);
 
     // --- 2. Process Sales Financials ---
     let totalInvoiced = 0, totalCash = 0;
-    let consignmentInvoiced = 0, consignmentCash = 0;
     let tastyInvoiced = 0, tastyCash = 0;
     let churchInvoiced = 0, churchCash = 0;
 
-    directSales.forEach(doc => {
+    directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
-        totalInvoiced += sale.financials?.totalAmount || 0;
-        totalCash += sale.totalAmountPaid || 0;
+        const invoicedAmount = sale.financials?.totalAmount || 0;
+        const cashAmount = sale.totalAmountPaid || 0; // This is a top-level field
+
+        totalInvoiced += invoicedAmount;
+        totalCash += cashAmount;
+        
         if (sale.store === 'Tasty Treats') {
-            tastyInvoiced += sale.financials?.totalAmount || 0;
-            tastyCash += sale.totalAmountPaid || 0;
-        } else {
-            churchInvoiced += sale.financials?.totalAmount || 0;
-            churchCash += sale.totalAmountPaid || 0;
+            tastyInvoiced += invoicedAmount;
+            tastyCash += cashAmount;
+        } else { // Assume everything else is Church Store
+            churchInvoiced += invoicedAmount;
+            churchCash += cashAmount;
         }
     });
 
-    consignmentActivities.forEach(doc => {
-        const activity = doc.data();
-        consignmentInvoiced += activity.totalSaleValue || 0;
-        // Note: Consignment cash is tracked via payments, this is a simplification for the dashboard
-        // We will assume a portion is collected for this summary.
+    let consignmentInvoiced = 0, consignmentCash = 0;
+    consignmentOrdersSnapshot.forEach(doc => {
+        const order = doc.data();
+        consignmentInvoiced += order.totalValueCheckedOut || 0;
+        consignmentCash += order.totalAmountPaid || 0;
     });
+
     totalInvoiced += consignmentInvoiced;
-    // For this summary, we'll estimate consignment cash. A full cash flow report would be more accurate.
-    consignmentCash = consignmentInvoiced * 0.5; // Assume 50% collected for summary
     totalCash += consignmentCash;
 
     // --- 3. Process Stock Status ---
