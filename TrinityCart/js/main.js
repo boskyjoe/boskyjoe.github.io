@@ -156,7 +156,7 @@ import {
     showExpensesView, 
     getExpenseRowData, 
     removeExpenseRow,   
-    addNewExpenseRow,exportConsignmentOrders,exportSalesOrderHistory
+    addNewExpenseRow,exportConsignmentOrders,exportSalesOrderHistory,exportAllCataloguesToMultiSheetExcel
 } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
@@ -2266,9 +2266,15 @@ function handleStandaloneButtons(target, event) {
              exportConsignmentOrders();
         },
         '#export-sales-orders-excel-btn': () => {
-            console.log('[main.js] Export requested. Dispatching event: exportConsignmentGrid');
+            console.log('[main.js] Export requested. Dispatching event: exportSalesOrderHistory');
              exportSalesOrderHistory();
+        },
+        '#export-sales-catalogues-excel-btn': () => {
+            console.log('[main.js] Export requested. Dispatching event: exportAllCataloguesToMultiSheetExcel();');
+             exportAllCataloguesToMultiSheetExcel();
         }
+
+        
 
         
 
@@ -7491,6 +7497,8 @@ async function handleGenerateInvoice(invoiceId) {
         ProgressToast.showError(`PDF Generation Failed: ${error.message}`);
     }
 }
+
+
 
 
 
