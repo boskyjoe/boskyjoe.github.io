@@ -5107,10 +5107,15 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         let status = 'Good';
         if (stock === 0) status = 'Out of Stock';
         else if (stock < 10) status = 'Low Stock';
+
+        // ✅ Find the category name from the masterData cache
+        const category = masterData.categories.find(c => c.id === product.categoryId);
+
         return { 
             itemName: product.itemName, 
             inventoryCount: stock, 
-            status: status 
+            status: status,
+            categoryName: category ? category.categoryName : 'N/A'
         };
     }).sort((a, b) => a.inventoryCount - b.inventoryCount); // Sort by lowest stock first
 
@@ -5122,8 +5127,12 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         const sale = doc.data();
         if (sale.saleDate.toDate() >= startDate && sale.saleDate.toDate() <= endDate) {
             sale.lineItems.forEach(item => {
-                const currentQty = soldProducts.get(item.productName) || 0;
-                soldProducts.set(item.productName, currentQty + item.quantity);
+                const productId = item.productId; // Use the ID
+                if (productId) {
+                    const currentData = soldProducts.get(productId) || { totalQuantity: 0, productName: item.productName };
+                    currentData.totalQuantity += item.quantity;
+                    soldProducts.set(productId, currentData);
+                }
             });
         }
     });
@@ -5132,13 +5141,29 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     consignmentActivitiesSnapshot.forEach(doc => {
         const activity = doc.data();
         if (activity.activityDate.toDate() >= startDate && activity.activityDate.toDate() <= endDate) {
-            const currentQty = soldProducts.get(activity.productName) || 0;
-            soldProducts.set(activity.productName, currentQty + (activity.quantity || activity.quantityDelta || 0));
+            const productId = activity.productId; // Use the ID
+            if (productId) {
+                const currentData = soldProducts.get(productId) || { totalQuantity: 0, productName: activity.productName };
+                const quantity = activity.quantity || activity.quantityDelta || 0;
+                currentData.totalQuantity += quantity;
+                soldProducts.set(productId, currentData);
+            }
         }
     });
 
-    const topSold = Array.from(soldProducts, ([productName, totalQuantity]) => ({ productName, totalQuantity }))
-        .sort((a, b) => b.totalQuantity - a.totalQuantity);
+    const topSold = Array.from(soldProducts.entries()).map(([productId, data]) => {
+        // Find the product in masterData to get its category
+        const product = masterData.products.find(p => p.id === productId);
+        const category = masterData.categories.find(c => c.id === product?.categoryId);
+        
+        return { 
+            productId: productId,
+            productName: data.productName, 
+            totalQuantity: data.totalQuantity,
+            categoryName: category ? category.categoryName : 'N/A'
+        };
+    }).sort((a, b) => b.totalQuantity - a.totalQuantity);
+
 
     // --- 5. Assemble and Return the Final Object ---
     const summary = {
