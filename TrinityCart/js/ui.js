@@ -13369,8 +13369,12 @@ export async function exportAllCataloguesToMultiSheetExcel() {
 let dashboardStockGridApi = null;
 const dashboardStockGridOptions = {
     theme: 'legacy',
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "itemName", headerName: "Product", flex: 1 },
+        { field: "itemName", headerName: "Product"},
         { field: "inventoryCount", headerName: "Stock", width: 80, cellClass: 'text-center font-bold' },
         { field: "status", headerName: "Status", width: 100, cellRenderer: p => {
             if (p.value === 'Low Stock') return `<span class="text-xs font-semibold text-yellow-700">Low</span>`;
@@ -13385,8 +13389,11 @@ const dashboardStockGridOptions = {
 let dashboardSoldGridApi = null;
 const dashboardSoldGridOptions = {
     theme: 'legacy',
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "productName", headerName: "Product"},
         { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
     onGridReady: params => { dashboardSoldGridApi = params.api; }
