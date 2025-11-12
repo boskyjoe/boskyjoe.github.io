@@ -11479,7 +11479,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // ===================================================================
         // ✅ SINGLE CALL: Get outstanding metrics once with proper cache handling
         // ===================================================================
-        /* 
+        
         const outstandingMetrics = await getOutstandingBalancesForDashboard(forceRefresh);
 
         // ===================================================================
@@ -11488,14 +11488,15 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         
         // Today's sales
         const todayMetrics = await getDailyDashboardOptimized();
-        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
-        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
+        //document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        //document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
         
         // This week's sales
         const weekMetrics = await generateBusinessSummaryOptimized(7, { useCache: true });
         document.getElementById('dashboard-week-sales').textContent = formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue);
         document.getElementById('dashboard-week-details').textContent = 'All channels combined';
         
+
         // Pending actions
         const pendingActions = await getAdminPendingActions();
         document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
@@ -11588,7 +11589,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
             cacheStatus: outstandingMetrics.metadata?.dataAccuracy || 'Unknown'
         });
 
-        */
+    
         
         // ===================================================================
         // ADMIN ACTIVITY & ALERTS  
