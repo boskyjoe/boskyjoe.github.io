@@ -13507,7 +13507,7 @@ function renderStockStatusChart(stockData) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: true },
+                legend: { display: false },
                 title: {
                     display: true,
                     text: 'Stock Items (with stock > 0)',
