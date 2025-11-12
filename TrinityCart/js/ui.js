@@ -6367,24 +6367,17 @@ export function updateUI() {
         showView('login-view');
     }*/
 
-
-    if (!user) {
-        // --- CASE 1: User is completely logged out ---
-        console.log("[UI] No user. Showing login view.");
-        showView('login-view');
-    } else if (user.role === 'guest') {
-        // --- CASE 2: User is a new guest ---
-        // The onAuthStateChanged function has already shown a "Welcome" modal.
-        // We do NOT want to change the view here. We want them to see the modal
-        // on top of the login page.
-        console.log("[UI] User is a guest. UI will remain on login view to show modals.");
-        // By doing nothing here, we allow the modal to be the main focus.
-    } else {
-        // --- CASE 3: User is an authorized, active user ---
-        // Show the main application dashboard (or their last active view).
-        console.log("[UI] Authorized user. Showing application view.");
+    if (user && user.role && user.role !== 'guest') {
+        // --- CASE 1: User is logged in with a valid, non-guest role ---
+        console.log(`[UI] Authorized user with role '${user.role}'. Showing application view.`);
         showView(appState.activeView || 'dashboard-view');
+    } else {
+        // --- CASE 2: User is logged out, has no role, or is a 'guest' ---
+        console.log("[UI] User is logged out or has guest/no role. Showing login view.");
+        showView('login-view');
     }
+
+    
 }
 
 
