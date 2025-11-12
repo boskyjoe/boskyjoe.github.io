@@ -11488,8 +11488,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         
         // Today's sales
         const todayMetrics = await getDailyDashboardOptimized();
-        //document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
-        //document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
+        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
         
         // This week's sales
         const weekMetrics = await generateBusinessSummaryOptimized(7, { useCache: true });
