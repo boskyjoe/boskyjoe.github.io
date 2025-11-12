@@ -13376,7 +13376,7 @@ const dashboardStockGridOptions = {
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
-    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true,floatingFilter: true,  },
     columnDefs: [
         { field: "categoryName", headerName: "Category", width: 250 },
         { field: "itemName", headerName: "Product",width: 200},
@@ -13387,7 +13387,19 @@ const dashboardStockGridOptions = {
             return `<span class="text-xs text-green-700">Good</span>`;
         }}
     ],
-    onGridReady: params => { dashboardStockGridApi = params.api; }
+    onGridReady: params => { dashboardStockGridApi = params.api; },
+    onFilterChanged: (event) => {
+        console.log('[Dashboard] Grid filter changed. Updating chart...');
+        
+        // 1. Get the data that is currently displayed in the grid after filtering.
+        const filteredData = [];
+        event.api.forEachNodeAfterFilter(node => {
+            filteredData.push(node.data);
+        });
+
+        // 2. Re-render the chart using only the filtered data.
+        renderStockStatusChart(filteredData);
+    }
 };
 
 // ✅ NEW: Grid for the Top Sold Products dashboard panel
