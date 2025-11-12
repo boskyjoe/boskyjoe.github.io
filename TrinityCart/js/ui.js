@@ -6359,12 +6359,31 @@ export function updateUI() {
     renderUserProfile(user);
     renderSidebar(user ? user.role : null);
 
-    if (user && user.role !== 'guest') {
+    /*if (user && user.role !== 'guest') {
         // If the user is logged in with a valid role, show their default view
         showView(appState.activeView || 'dashboard-view');
     } else {
         // If logged out or a guest, show the login view
         showView('login-view');
+    }*/
+
+
+    if (!user) {
+        // --- CASE 1: User is completely logged out ---
+        console.log("[UI] No user. Showing login view.");
+        showView('login-view');
+    } else if (user.role === 'guest') {
+        // --- CASE 2: User is a new guest ---
+        // The onAuthStateChanged function has already shown a "Welcome" modal.
+        // We do NOT want to change the view here. We want them to see the modal
+        // on top of the login page.
+        console.log("[UI] User is a guest. UI will remain on login view to show modals.");
+        // By doing nothing here, we allow the modal to be the main focus.
+    } else {
+        // --- CASE 3: User is an authorized, active user ---
+        // Show the main application dashboard (or their last active view).
+        console.log("[UI] Authorized user. Showing application view.");
+        showView(appState.activeView || 'dashboard-view');
     }
 }
 
