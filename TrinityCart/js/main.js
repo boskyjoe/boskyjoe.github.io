@@ -7529,6 +7529,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMasterDataListeners();
 
     ProgressToast.showSuccess('Application Loaded successfully.. Welcome to MONETA');
-    setTimeout(() => ProgressToast.hide(500), 1500);
+    setTimeout(() => ProgressToast.hide(1500), 1500);
 
 });
