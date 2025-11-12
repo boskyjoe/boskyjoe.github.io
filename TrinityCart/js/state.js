@@ -3,7 +3,7 @@
 
 export const appState = {
     currentUser: null,
-    activeView: 'login-view',
+    activeView: 'dashboard-view',   
     selectedPurchaseInvoiceId: null, 
     isLocalUpdateInProgress:null,
     draftCatalogueItems: [],
