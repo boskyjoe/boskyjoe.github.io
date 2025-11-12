@@ -5152,7 +5152,6 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         topSoldProducts: topSold
     };
 
-    setCachedDashboardData(cacheKey, summary);
     console.log("[Reports] Admin Dashboard Summary Generated:", summary);
     return summary;
 }
