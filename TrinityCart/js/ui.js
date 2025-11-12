@@ -13416,7 +13416,7 @@ const dashboardStockGridOptions = {
     }
 };
 
-// ✅ NEW: Grid for the Top Sold Products dashboard panel renderTopSoldChart
+// ✅ NEW: Grid for the Top Sold Products dashboard panel 
 let dashboardSoldGridApi = null;
 const dashboardSoldGridOptions = {
     theme: 'legacy',
@@ -13439,7 +13439,7 @@ const dashboardSoldGridOptions = {
         });
 
         // 2. Re-render the chart using only the filtered data.
-        renderStockStatusChart(filteredData);
+        renderTopSoldChart(filteredData);
     }
 };
 
