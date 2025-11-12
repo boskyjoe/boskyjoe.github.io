@@ -13374,7 +13374,7 @@ const dashboardStockGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "categoryName", headerName: "Category", width: 150 },
+        { field: "categoryName", headerName: "Category", width: 250 },
         { field: "itemName", headerName: "Product",width: 200},
         { field: "inventoryCount", headerName: "Stock", width: 100, cellClass: 'text-center font-bold' },
         { field: "status", headerName: "Status", cellRenderer: p => {
@@ -13394,7 +13394,7 @@ const dashboardSoldGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "categoryName", headerName: "Category", width: 120 },
+        { field: "categoryName", headerName: "Category", width: 250 },
         { field: "productName", headerName: "Product",width: 200},
         { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
