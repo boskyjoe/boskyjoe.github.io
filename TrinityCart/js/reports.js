@@ -36,6 +36,7 @@ import {
     deactivateProductPriceHistory 
 } from './api.js';
 
+
 /**
  * Report configuration optimized for minimal database usage
  */
@@ -5042,7 +5043,11 @@ export async function generatePLStatement(startDate, endDate) {
  * @param {number} daysBack - The number of days to analyze for sales data.
  * @returns {Promise<Object>} An object containing all the necessary dashboard data.
  */
-export async function generateAdminDashboardSummary(daysBack = 30) {
+export async function generateAdminDashboardSummary(daysBack = 365) {
+    console.log(`[Reports] Fetching FRESH Admin Dashboard Summary data...`);
+
+
+
     const db = firebase.firestore();
     const { startDate, endDate } = createDateRange(daysBack);
     console.log(`[Reports] Generating Admin Dashboard Summary from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
@@ -5147,6 +5152,7 @@ export async function generateAdminDashboardSummary(daysBack = 30) {
         topSoldProducts: topSold
     };
 
+    setCachedDashboardData(cacheKey, summary);
     console.log("[Reports] Admin Dashboard Summary Generated:", summary);
     return summary;
 }
