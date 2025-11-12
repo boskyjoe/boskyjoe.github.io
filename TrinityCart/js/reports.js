@@ -5042,19 +5042,23 @@ export async function generatePLStatement(startDate, endDate) {
  * @param {number} daysBack - The number of days to analyze for sales data.
  * @returns {Promise<Object>} An object containing all the necessary dashboard data.
  */
-export async function generateAdminDashboardSummary(daysBack = 365) {
+export async function generateAdminDashboardSummary(daysBack = 30) {
     const db = firebase.firestore();
     const { startDate, endDate } = createDateRange(daysBack);
+    console.log(`[Reports] Generating Admin Dashboard Summary from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
 
-    // --- 1. Fetch Data in Parallel ---
+    // --- 1. Fetch All Necessary Data in Parallel ---
     const [
         directSalesSnapshot,
         consignmentOrdersSnapshot,
-        allProductsSnapshot
+        allProductsSnapshot,
+        consignmentActivitiesSnapshot // Needed for Top Sold Products calculation
     ] = await Promise.all([
         db.collection(SALES_COLLECTION_PATH).get(),
         db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', 'in', ['Active', 'Settled']).get(),
-        db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).where('isActive', '==', true).get()
+        db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).where('isActive', '==', true).get(),
+        // This query is only for calculating top sold items from consignment
+        db.collectionGroup('activityLog').where('activityType', '==', 'Sale').get()
     ]);
 
     // --- 2. Process Sales Financials ---
@@ -5062,10 +5066,11 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     let tastyInvoiced = 0, tastyCash = 0;
     let churchInvoiced = 0, churchCash = 0;
 
+    // Process Direct Sales using the correct field names
     directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
         const invoicedAmount = sale.financials?.totalAmount || 0;
-        const cashAmount = sale.totalAmountPaid || 0; // This is a top-level field
+        const cashAmount = sale.totalAmountPaid || 0;
 
         totalInvoiced += invoicedAmount;
         totalCash += cashAmount;
@@ -5079,6 +5084,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         }
     });
 
+    // Process Consignment Orders using pre-calculated totals
     let consignmentInvoiced = 0, consignmentCash = 0;
     consignmentOrdersSnapshot.forEach(doc => {
         const order = doc.data();
@@ -5096,12 +5102,18 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         let status = 'Good';
         if (stock === 0) status = 'Out of Stock';
         else if (stock < 10) status = 'Low Stock';
-        return { itemName: product.itemName, inventoryCount: stock, status };
+        return { 
+            itemName: product.itemName, 
+            inventoryCount: stock, 
+            status: status 
+        };
     }).sort((a, b) => a.inventoryCount - b.inventoryCount); // Sort by lowest stock first
 
     // --- 4. Process Top Sold Products (within the date range) ---
     const soldProducts = new Map();
-    directSales.forEach(doc => {
+
+    // Tally from Direct Sales
+    directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
         if (sale.saleDate.toDate() >= startDate && sale.saleDate.toDate() <= endDate) {
             sale.lineItems.forEach(item => {
@@ -5110,7 +5122,9 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
             });
         }
     });
-    consignmentActivities.forEach(doc => {
+
+    // Tally from Consignment Sales
+    consignmentActivitiesSnapshot.forEach(doc => {
         const activity = doc.data();
         if (activity.activityDate.toDate() >= startDate && activity.activityDate.toDate() <= endDate) {
             const currentQty = soldProducts.get(activity.productName) || 0;
@@ -5121,8 +5135,8 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     const topSold = Array.from(soldProducts, ([productName, totalQuantity]) => ({ productName, totalQuantity }))
         .sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-    // --- 5. Assemble Final Object ---
-    return {
+    // --- 5. Assemble and Return the Final Object ---
+    const summary = {
         salesSummary: {
             total: { invoiced: totalInvoiced, cash: totalCash, diff: totalInvoiced - totalCash },
             consignment: { invoiced: consignmentInvoiced, cash: consignmentCash, diff: consignmentInvoiced - consignmentCash },
@@ -5132,4 +5146,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         stockStatus: stockStatus,
         topSoldProducts: topSold
     };
+
+    console.log("[Reports] Admin Dashboard Summary Generated:", summary);
+    return summary;
 }
