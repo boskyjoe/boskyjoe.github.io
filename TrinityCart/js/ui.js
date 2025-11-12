@@ -11436,14 +11436,14 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         
         // --- 3. POPULATE STRIP 2: Stock Status ---
         if (dashboardStockGridApi) {
-            dashboardStockGridApi.setGridOption('rowData', summaryData.stockStatus.slice(0, 10)); // Show top 10 lowest stock
-        }
+            dashboardStockGridApi.setGridOption('rowData', summaryData.stockStatus); 
         // Here you would also call a function to render the stock status bar chart
         // renderBarChart('dashboard-stock-status-chart', summaryData.stockStatus);
+        }
 
         // --- 4. POPULATE STRIP 3: Top Sold Products ---
         if (dashboardSoldGridApi) {
-            dashboardSoldGridApi.setGridOption('rowData', summaryData.topSoldProducts.slice(0, 10)); // Show top 10 sold
+            dashboardSoldGridApi.setGridOption('rowData', summaryData.topSoldProducts); 
         }
         // Here you would also call a function to render the top sold bar chart
         // renderBarChart('dashboard-sold-products-chart', summaryData.topSoldProducts);
