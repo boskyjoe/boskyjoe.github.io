@@ -5090,7 +5090,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     totalCash += consignmentCash;
 
     // --- 3. Process Stock Status ---
-    const stockStatus = allProducts.docs.map(doc => {
+    const stockStatus = allProductsSnapshot.docs.map(doc => {
         const product = doc.data();
         const stock = product.inventoryCount || 0;
         let status = 'Good';
