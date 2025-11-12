@@ -91,6 +91,42 @@ const DASHBOARD_CACHE_CONFIG = {
 };
 
 
+
+/**
+ * ✅ NEW: The "smart" controller function that handles caching for the admin dashboard summary.
+ * This is the function that loadAdminLandingDashboard will now call.
+ * @param {boolean} forceRefresh - If true, bypasses the cache.
+ * @returns {Promise<Object>} The dashboard summary data, from cache or fresh.
+ */
+async function getAdminDashboardSummaryWithCache(forceRefresh = false) {
+    const cacheKey = 'admin_dashboard_summary_365'; // Using a fixed key
+    
+    // 1. CACHE CHECK
+    if (!forceRefresh) {
+        const cached = getCachedDashboardData(cacheKey);
+        if (cached) {
+            console.log("[ui.js] ✅ Using cached Admin Dashboard Summary.");
+            updateDashboardCacheIndicators(cached);
+            return cached.data;
+        }
+    }
+
+    // 2. FETCH FRESH DATA (if no cache or forceRefresh is true)
+    // It calls the "dumb" function from reports.js
+    const summaryData = await generateAdminDashboardSummary(365);
+
+    // 3. STORE IN CACHE
+    setCachedDashboardData(cacheKey, summaryData);
+    updateDashboardCacheIndicators({
+        timestamp: Date.now(),
+        ageMinutes: 0,
+        data: summaryData
+    });
+
+    return summaryData;
+}
+
+
 /**
  * ENHANCED: Get cached dashboard data with timestamp tracking
  */
@@ -11361,7 +11397,7 @@ export async function loadLimitedAccessDashboard(user) {
  */
 
 async function loadAdminLandingDashboard(user, forceRefresh = false) {
-    console.log('[ui.js] 👑 Loading admin landing dashboard with expanded metrics...');
+    console.log(`[ui.js] 👑 Loading admin dashboard (forceRefresh: ${forceRefresh})`);
 
     // Initialize new grids if they don't exist
     const stockGridDiv = document.getElementById('dashboard-stock-status-grid');
@@ -11377,7 +11413,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
     try {
         // --- 1. FETCH ALL DATA WITH ONE CALL ---
-        const summaryData = await generateAdminDashboardSummary(30); // Get data for the last 30 days
+        console.log("[ui.js] --- Loading data for new dashboard strips... ---");
+        const summaryData = await getAdminDashboardSummaryWithCache(forceRefresh);
 
         // --- 2. POPULATE STRIP 1: Sales Financial Summary ---
         const sales = summaryData.salesSummary;
