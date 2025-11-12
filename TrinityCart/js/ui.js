@@ -13374,9 +13374,10 @@ const dashboardStockGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "itemName", headerName: "Product"},
-        { field: "inventoryCount", headerName: "Stock", width: 80, cellClass: 'text-center font-bold' },
-        { field: "status", headerName: "Status", width: 100, cellRenderer: p => {
+        { field: "categoryName", headerName: "Category", width: 150 },
+        { field: "itemName", headerName: "Product",width: 200},
+        { field: "inventoryCount", headerName: "Stock", width: 100, cellClass: 'text-center font-bold' },
+        { field: "status", headerName: "Status", cellRenderer: p => {
             if (p.value === 'Low Stock') return `<span class="text-xs font-semibold text-yellow-700">Low</span>`;
             if (p.value === 'Out of Stock') return `<span class="text-xs font-semibold text-red-700">Out</span>`;
             return `<span class="text-xs text-green-700">Good</span>`;
@@ -13393,7 +13394,8 @@ const dashboardSoldGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
-        { field: "productName", headerName: "Product"},
+        { field: "categoryName", headerName: "Category", width: 120 },
+        { field: "productName", headerName: "Product",width: 200},
         { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
     onGridReady: params => { dashboardSoldGridApi = params.api; }
