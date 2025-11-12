@@ -803,10 +803,15 @@ const EventHandlers = {
 // ============================================================================
 
 function setupEventListeners() {
+    ProgressToast.updateProgress('Initializing all the UI Controllors....', 150);
     setupGlobalClickHandler();
+    ProgressToast.updateProgress('Initializing all Controls....', 150);
     setupMobileSidebar();
+    ProgressToast.updateProgress('Initializing all application forms....', 150);
     setupFormSubmissions();
+    ProgressToast.updateProgress('Initializing all navigation controls....', 150);
     setupCustomEventListeners();
+    ProgressToast.updateProgress('Initializing all the database connection and listeners....', 150);
     setupInputListeners();
 }
 
@@ -7514,18 +7519,18 @@ document.addEventListener('DOMContentLoaded', () => {
         AllCommunityModule
     ]);
 
-    ProgressToast.updateProgress('Initializing all the database connection and listeners....', 150);
+    
 
     setupEventListeners();
 
     // 3. Initialize modals AFTER event listeners are set up
-    ProgressToast.updateProgress('Initializing all controllers...', 150);
 
     initializeModals();
 
     // 4. Initialize master data listeners last
     //    These trigger UI updates that depend on event listeners being ready
     ProgressToast.updateProgress('Initializing all Master date...', 150);
+    
     initializeMasterDataListeners();
 
     ProgressToast.showSuccess('Application Loaded successfully.. Welcome to MONETA');
