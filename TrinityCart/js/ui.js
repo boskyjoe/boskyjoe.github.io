@@ -13416,19 +13416,31 @@ const dashboardStockGridOptions = {
     }
 };
 
-// ✅ NEW: Grid for the Top Sold Products dashboard panel
+// ✅ NEW: Grid for the Top Sold Products dashboard panel renderTopSoldChart
 let dashboardSoldGridApi = null;
 const dashboardSoldGridOptions = {
     theme: 'legacy',
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
-    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true,floatingFilter: true,  },
     columnDefs: [
         { field: "categoryName", headerName: "Category", width: 250 },
         { field: "productName", headerName: "Product",width: 200},
         { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
-    onGridReady: params => { dashboardSoldGridApi = params.api; }
+    onGridReady: params => { dashboardSoldGridApi = params.api; },
+    onFilterChanged: (event) => {
+        console.log('[Dashboard] Grid filter changed. Updating chart...');
+        
+        // 1. Get the data that is currently displayed in the grid after filtering.
+        const filteredData = [];
+        event.api.forEachNodeAfterFilter(node => {
+            filteredData.push(node.data);
+        });
+
+        // 2. Re-render the chart using only the filtered data.
+        renderStockStatusChart(filteredData);
+    }
 };
 
 let dashboardStockChart = null;
