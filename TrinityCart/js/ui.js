@@ -5603,10 +5603,10 @@ const salesHistoryGridOptions = {
                 salesHistoryGridApi.setGridOption('loading', false);
 
                 updatePinnedTotalsNested(
-                    event.api,
+                    salesHistoryGridApi,
                     [
                         { path: 'financials.totalAmount' }, // Pass objects with the path
-                        { path: 'totalAmountPaid' },
+                        { path: 'financials.amountTendered' },
                         { path: 'balanceDue' }
                     ],
                     'manualVoucherNumber'
