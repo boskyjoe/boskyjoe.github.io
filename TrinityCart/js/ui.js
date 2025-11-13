@@ -1903,7 +1903,17 @@ let unsubscribePaymentsListener = null;
 
 const purchaseInvoicesGridOptions = {
     theme: 'legacy',
-    getRowId: params => params.data.id,
+    //getRowId: params => params.data.id,
+
+    getRowId: params => {
+        // For the pinned row, its data won't have an 'id'.
+        // We can give it a special, static ID.
+        if (params.node.isRowPinned()) {
+            return 'totals-row';
+        }
+        // For all normal data rows, use the document ID as before.
+        return params.data.id;
+    },
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
@@ -2328,7 +2338,7 @@ const bulkAddProductsGridOptions = {
             flex: 1,
             filter: 'agTextColumnFilter',
             floatingFilter: true, // Enable floating filter
-            suppressMenu: true,
+            suppressHeaderMenuButton: true,
             suppressHeaderFilterButton: true,
             pinned: 'left', // Keep product name visible when scrolling
             filterValueGetter: params => {
@@ -2346,7 +2356,7 @@ const bulkAddProductsGridOptions = {
             flex: 2,
             filter: 'agTextColumnFilter',
             floatingFilter: true, // Enable floating filter
-            suppressMenu: true, // Hide the menu icon
+            suppressHeaderMenuButton: true, // Hide the menu icon
             suppressHeaderFilterButton: true,
             cellStyle: { fontWeight: 'bold' },
         },
@@ -2357,7 +2367,7 @@ const bulkAddProductsGridOptions = {
             cellClass: 'text-center font-bold',
             filter: 'agNumberColumnFilter',
             floatingFilter: true, // Enable floating filter
-            suppressMenu: true, // Hide the menu icon
+            suppressHeaderMenuButton: true, // Hide the menu icon
             suppressHeaderFilterButton: true,
             cellStyle: params => {
                 const stock = params.value || 0;
@@ -2372,7 +2382,7 @@ const bulkAddProductsGridOptions = {
             width: 140,
             filter: 'agNumberColumnFilter',
             floatingFilter: true, // Enable floating filter
-            suppressMenu: true,
+            suppressHeaderMenuButton: true,
             suppressHeaderFilterButton: true,
             valueFormatter: p => p.value ? formatCurrency(p.value) : 'Not set',
             cellStyle: params => {
@@ -5444,7 +5454,7 @@ const addProductModalGridOptions = {
             flex: 1, 
             filter: 'agTextColumnFilter', 
             floatingFilter: true, // Enable floating filter
-            suppressMenu: true,
+            suppressHeaderMenuButton: true,
             suppressHeaderFilterButton: true
         },
         { 
@@ -5453,18 +5463,18 @@ const addProductModalGridOptions = {
             width: 120,
             filter: 'agNumberColumnFilter', // Allow filtering by price
             floatingFilter: true,
-            suppressMenu: true,
+            suppressHeaderMenuButton: true,
             // Use your global formatCurrency function for consistent display
             valueFormatter: p => formatCurrency(p.value) 
         },
         { field: "inventoryCount", headerName: "Stock", width: 100,filter:false,floatingFilter: true, // Enable floating filter
-            suppressMenu: true },
+            suppressHeaderMenuButton: true },
         {
             headerName: "Add",
             width: 80,
             cellClass: 'flex items-center justify-center',
             floatingFilter: true,
-            suppressMenu: true,
+            suppressHeaderMenuButton: true,
             filter:false,
             cellRenderer: params => {
                 const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>`;
@@ -5481,7 +5491,7 @@ const addProductModalGridOptions = {
         sortable: true,
         filter: true,
         floatingFilter: true,
-        suppressMenu: true // Add to defaultColDef too
+        suppressHeaderMenuButton: true // Add to defaultColDef too
     },
     onGridReady: params => { addProductModalGridApi = params.api; }
 };
@@ -5489,7 +5499,15 @@ const addProductModalGridOptions = {
 // Grid for the "Sales History"
 
 const salesHistoryGridOptions = {
-    getRowId: params => params.data.id,
+    getRowId: params => {
+        // For the pinned row, its data won't have an 'id'.
+        // We can give it a special, static ID.
+        if (params.node.isRowPinned()) {
+            return 'totals-row';
+        }
+        // For all normal data rows, use the document ID as before.
+        return params.data.id;
+    },
     theme: 'legacy',
     pagination: true,
     paginationPageSize: 50, // A reasonable default for a history grid
