@@ -993,6 +993,7 @@ export async function addSupplierPayment(paymentData, user) {
  * @returns {Promise<void>}
  * @since 1.0.0 Enhanced with verification workflow support
  */
+
 export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVerification = true) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -4785,4 +4786,71 @@ export async function getAllCataloguesWithItems() {
 
     console.log(`[API] Fetched and enriched ${allCataloguesWithItems.reduce((sum, cat) => sum + cat.items.length, 0)} items.`);
     return allCataloguesWithItems;
+}
+
+/**
+ * ✅ NEW & CORRECT: Processes a bulk payment by creating individual, verifiable
+ * payment records for each invoice being paid. This maintains a clean audit trail.
+ * @param {object} paymentDetails - The details of the single payment being made (total amount, mode, ref, etc.).
+ * @param {Array<object>} invoicesToPay - An array of the invoice objects to apply the payment to.
+ * @param {object} user - The user performing the action.
+ */
+export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, user) {
+    let paymentAmountToAllocate = paymentDetails.amountPaid;
+
+    // Sort invoices by date to pay off the oldest debts first
+    const sortedInvoices = invoicesToPay.sort((a, b) => a.purchaseDate.toDate() - b.purchaseDate.toDate());
+
+    console.log(`[API] Starting bulk payment allocation. Total to allocate: ${formatCurrency(paymentAmountToAllocate)}`);
+
+    // We will process each payment creation sequentially to avoid race conditions
+    for (const invoice of sortedInvoices) {
+        if (paymentAmountToAllocate <= 0) {
+            console.log("[API] Full payment amount has been allocated. Stopping.");
+            break; // Stop if we've used up the entire payment
+        }
+
+        const amountToApply = Math.min(invoice.balanceDue, paymentAmountToAllocate);
+
+        if (amountToApply <= 0) {
+            console.log(`[API] Skipping invoice ${invoice.invoiceId}, as it has no balance due.`);
+            continue; // Skip invoices that are already paid
+        }
+
+        // Create the specific payment data for this single invoice
+        const singlePaymentData = {
+            relatedInvoiceId: invoice.id,
+            supplierId: invoice.supplierId,
+            amountPaid: amountToApply,
+            paymentDate: paymentDetails.paymentDate,
+            paymentMode: paymentDetails.paymentMode,
+            // Add a note indicating this was part of a bulk payment
+            transactionRef: paymentDetails.transactionRef,
+            notes: `Part of bulk payment. ${paymentDetails.notes || ''}`.trim()
+        };
+
+        try {
+            console.log(`[API] Allocating ${formatCurrency(amountToApply)} to invoice ${invoice.invoiceId}...`);
+            // Call your existing, trusted function to create the pending payment record.
+            // This does NOT require a transaction because the function itself is atomic for one payment.
+            await recordPaymentAndUpdateInvoice(singlePaymentData, user, true); // 'true' enforces verification
+            
+            // Decrease the amount of payment left to allocate
+            paymentAmountToAllocate -= amountToApply;
+            console.log(`[API] Remaining amount to allocate: ${formatCurrency(paymentAmountToAllocate)}`);
+
+        } catch (error) {
+            console.error(`[API] Failed to create payment record for invoice ${invoice.id}. Stopping bulk process.`, error);
+            // If one payment fails, we should stop the whole process to prevent partial application.
+            throw new Error(`Failed on invoice ${invoice.invoiceId}: ${error.message}`);
+        }
+    }
+
+    if (paymentAmountToAllocate > 0.01) { // Use a small tolerance
+        // This means there was an overpayment across all invoices.
+        console.warn(`Bulk payment overpaid by ${formatCurrency(paymentAmountToAllocate)}. This amount has not been allocated.`);
+        // In a future version, you could create a "Supplier Credit" record here.
+    }
+    
+    console.log("[API] Bulk payment allocation complete.");
 }
