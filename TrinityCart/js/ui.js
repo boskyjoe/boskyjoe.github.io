@@ -5559,7 +5559,7 @@ const salesHistoryGridOptions = {
 
                 updatePinnedTotals(
                     salesHistoryGridApi,
-                    ['financials.totalAmount', 'totalAmountPaid', 'balanceDue'], // Corrected field name
+                    ['financials.totalAmount', 'financials.amountTendered', 'balanceDue'], // Corrected field name
                     'manualVoucherNumber'
                 );
                 
