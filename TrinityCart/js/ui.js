@@ -3108,6 +3108,47 @@ function updatePinnedTotals(gridApi, columnsToSum, labelColumnField) {
     console.log(`[UI] Pinned totals updated for grid.`, sums);
 }
 
+/**
+ * ✅ NEW & GENERIC (NESTED): Calculates totals for grids with NESTED data (e.g., 'financials.totalAmount').
+ * @param {object} gridApi - The AG-Grid API.
+ * @param {Array<object>} nestedColumnsToSum - An array of objects describing the nested paths, e.g., [{ path: 'financials.totalAmount' }, { path: 'totalAmountPaid' }]
+ * @param {string} labelColumnField - The field name of a column to display the "Totals:" label.
+ */
+function updatePinnedTotalsNested(gridApi, nestedColumnsToSum, labelColumnField) {
+    if (!gridApi) return;
+
+    const sums = {};
+    nestedColumnsToSum.forEach(col => { sums[col.path] = 0; });
+
+    gridApi.forEachNodeAfterFilter(node => {
+        nestedColumnsToSum.forEach(col => {
+            // Helper to get a value from a nested path like 'financials.totalAmount'
+            const getNestedValue = (path, obj) => path.split('.').reduce((p, c) => (p && p[c]) ? p[c] : 0, obj);
+            sums[col.path] += Number(getNestedValue(col.path, node.data)) || 0;
+        });
+    });
+
+    // Helper to set a value in a nested object path
+    const setNestedValue = (path, value, obj) => {
+        const keys = path.split('.');
+        keys.reduce((p, c, i) => {
+            if (i === keys.length - 1) {
+                p[c] = value;
+            } else {
+                p[c] = p[c] || {};
+            }
+            return p[c];
+        }, obj);
+    };
+
+    const totalsRowData = {};
+    setNestedValue(labelColumnField, 'Totals:', totalsRowData);
+    nestedColumnsToSum.forEach(col => {
+        setNestedValue(col.path, sums[col.path], totalsRowData);
+    });
+
+    gridApi.setGridOption('pinnedBottomRowData', [totalsRowData]);
+}
 
 // NEW: Function to reset the form to "Create New" mode
 export function resetPurchaseForm() {
@@ -5519,10 +5560,14 @@ const salesHistoryGridOptions = {
         { field: "audit.createdBy", headerName: "Created By", filter: 'agTextColumnFilter' }
     ],
     onFilterChanged: (event) => {
-        updatePinnedTotals(
+        updatePinnedTotalsNested(
             event.api,
-            ['financials.totalAmount', 'financials.amountTendered','balanceDue'], // The columns you want to sum in this grid
-            'productName' // The column where the "Totals:" label will appear
+            [
+                { path: 'financials.totalAmount' }, // Pass objects with the path
+                { path: 'totalAmountPaid' },
+                { path: 'balanceDue' }
+            ],
+            'manualVoucherNumber'
         );
     },
     onGridReady: (params) => {
@@ -5557,9 +5602,13 @@ const salesHistoryGridOptions = {
                 // Also use setGridOption to hide the overlay for consistency.
                 salesHistoryGridApi.setGridOption('loading', false);
 
-                updatePinnedTotals(
-                    salesHistoryGridApi,
-                    ['financials.totalAmount', 'financials.amountTendered', 'balanceDue'], // Corrected field name
+                updatePinnedTotalsNested(
+                    event.api,
+                    [
+                        { path: 'financials.totalAmount' }, // Pass objects with the path
+                        { path: 'totalAmountPaid' },
+                        { path: 'balanceDue' }
+                    ],
                     'manualVoucherNumber'
                 );
                 
