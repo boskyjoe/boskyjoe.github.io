@@ -519,3 +519,15 @@ main {
 .ag-row.cursor-not-allowed .ag-selection-checkbox input {
     pointer-events: none !important;
 }
+
+
+/* ===================================================================== */
+/* AG-GRID CUSTOMIZATIONS - PINNED TOTALS ROW */
+/* ===================================================================== */
+
+.ag-row-pinned {
+    font-weight: bold !important;
+    background-color: #f3f4f6 !important; /* A light gray background */
+    border-top: 2px solid #d1d5db !important;
+}
+
