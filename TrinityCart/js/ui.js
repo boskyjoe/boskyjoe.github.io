@@ -1918,6 +1918,9 @@ const purchaseInvoicesGridOptions = {
         { field: "balanceDue", headerName: "Balance", width:150, valueFormatter: p => formatCurrency(p.value) },
         {
             field: "paymentStatus", headerName: "Status", width: 100, cellRenderer: p => {
+                if (p.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
                 const status = p.value;
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">Paid</span>`;
                 if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">Partial</span>`;
@@ -5450,6 +5453,9 @@ const salesHistoryGridOptions = {
             autoHeight: false,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
+                if (params.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
                 const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-green-600">
                         <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
                         <path fill-rule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clip-rule="evenodd" />
@@ -5512,6 +5518,13 @@ const salesHistoryGridOptions = {
         },
         { field: "audit.createdBy", headerName: "Created By", filter: 'agTextColumnFilter' }
     ],
+    onFilterChanged: (event) => {
+        updatePinnedTotals(
+            event.api,
+            ['financials.totalAmount', 'financials.amountTendered','balanceDue'], // The columns you want to sum in this grid
+            'productName' // The column where the "Totals:" label will appear
+        );
+    },
     onGridReady: (params) => {
         console.log("[ui.js] Sales History Grid is now ready. Attaching listener.");
         salesHistoryGridApi = params.api;
