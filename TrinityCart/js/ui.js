@@ -1889,6 +1889,55 @@ export function showProductsView() {
 
 
 
+/**
+ * ✅ NEW: A custom status bar component for AG-Grid Community.
+ * It manually calculates and displays the sum of specified columns.
+ */
+class CustomTotalsComponent {
+    init(params) {
+        this.eGui = document.createElement('div');
+        this.eGui.className = 'ag-status-name-value';
+        this.params = params;
+
+        // Listen for grid data changes to update the totals
+        params.api.addEventListener('modelUpdated', this.updateTotals.bind(this));
+    }
+
+    getGui() {
+        return this.eGui;
+    }
+
+    destroy() {
+        // Clean up the event listener
+        this.params.api.removeEventListener('modelUpdated', this.updateTotals);
+    }
+
+    updateTotals() {
+        let totalInvoice = 0;
+        let totalPaid = 0;
+        let totalBalance = 0;
+
+        // Loop through all rows currently displayed in the grid (respects filters)
+        this.params.api.forEachNodeAfterFilter(node => {
+            totalInvoice += node.data.invoiceTotal || 0;
+            totalPaid += node.data.totalAmountPaid || 0;
+            totalBalance += node.data.balanceDue || 0;
+        });
+
+        // Display the calculated totals in the status bar
+        this.eGui.innerHTML = `
+            <span class="ag-status-name-value-label" style="margin-right: 20px;">
+                Totals:
+            </span>
+            <span class="ag-status-name-value-value">
+                Total: <strong>${formatCurrency(totalInvoice)}</strong> | 
+                Paid: <strong>${formatCurrency(totalPaid)}</strong> | 
+                Balance: <strong style="color: #dc2626;">${formatCurrency(totalBalance)}</strong>
+            </span>
+        `;
+    }
+}
+
 // --- PURCHASE MANAGEMENT UI ---
 
 let lineItemCounter = 0;
@@ -1910,6 +1959,19 @@ const purchaseInvoicesGridOptions = {
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
+    statusBar: {
+        statusPanels: [
+            {
+                statusPanel: 'agTotalAndFilteredRowCountComponent',
+                align: 'left',
+            },
+            {
+                // Tell AG-Grid to use our custom component
+                statusPanel: CustomTotalsComponent,
+                align: 'right'
+            }
+        ]
+    },
     columnDefs: [
         //{ field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "invoiceName", headerName: "Invoice Name", width: 150 },
