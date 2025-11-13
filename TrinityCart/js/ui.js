@@ -1929,6 +1929,9 @@ const purchaseInvoicesGridOptions = {
             width: 150,
             cellClass: 'flex items-center justify-center space-x-2', // Added space-x-2 for spacing
             cellRenderer: params => {
+                if (params.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
                 const docId = params.data.id;
 
                 // Define the SVG icons
