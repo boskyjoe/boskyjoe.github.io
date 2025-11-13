@@ -4198,8 +4198,18 @@ let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detai
 // 2. Define AG-Grid Options for each grid
 
 // MASTER GRID: All Consignment Orders
+
 const consignmentOrdersGridOptions = {
-    getRowId: params => params.data.id,
+    //getRowId: params => params.data.id,
+    getRowId: params => {
+        if (params.data && params.data.id) {
+            return params.data.id;
+        }
+        if (params.data) {
+            return 'totals-row-static-id'; // Static ID for the totals row
+        }
+        return null;
+    },
     theme: 'legacy',
     pagination: true,
     paginationPageSize: 100, // You can adjust this default value if you like
@@ -4213,6 +4223,9 @@ const consignmentOrdersGridOptions = {
         { field: "requestingMemberName", headerName: "Requested By", filter: 'agTextColumnFilter' },
         {
             field: "status", headerName: "Status", filter: 'agTextColumnFilter', width: 120, cellRenderer: p => {
+                if (p.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
                 const status = p.value;
                 if (status === 'Active') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
                 if (status === 'Pending') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
@@ -4261,6 +4274,13 @@ const consignmentOrdersGridOptions = {
             const status = params.data?.status;
             return status === 'Rejected' || status === 'Settled';
         }
+    },
+    onFilterChanged: (event) => {
+        updatePinnedTotals(
+            event.api,
+            ['totalValueCheckedOut', 'totalAmountPaid', 'balanceDue'],
+            'teamName' // Display "Totals:" in the Team column
+        );
     },
     onGridReady: params => { 
         consignmentOrdersGridApi = params.api;
@@ -5000,6 +5020,12 @@ export function showConsignmentView() {
             if (consignmentOrdersGridApi) {
                 consignmentOrdersGridApi.setGridOption('rowData', orders);
                 consignmentOrdersGridApi.setGridOption('loading', false);
+
+                updatePinnedTotals(
+                    consignmentOrdersGridApi,
+                    ['totalValueCheckedOut', 'totalAmountPaid', 'balanceDue'],
+                    'teamName' // Display "Totals:" in the Team column
+                );
             }
         }, error => {
             console.error("Error listening to consignment orders:", error);
