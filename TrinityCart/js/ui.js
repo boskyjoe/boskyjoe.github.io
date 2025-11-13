@@ -1903,17 +1903,9 @@ let unsubscribePaymentsListener = null;
 
 const purchaseInvoicesGridOptions = {
     theme: 'legacy',
-    //getRowId: params => params.data.id,
+    getRowId: params => params.data.id,
 
-    getRowId: params => {
-        // For the pinned row, its data won't have an 'id'.
-        // We can give it a special, static ID.
-        if (params.node.isRowPinned()) {
-            return 'totals-row';
-        }
-        // For all normal data rows, use the document ID as before.
-        return params.data.id;
-    },
+    
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
