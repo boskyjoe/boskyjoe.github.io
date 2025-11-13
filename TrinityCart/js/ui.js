@@ -3114,15 +3114,22 @@ function updatePinnedTotals(gridApi, columnsToSum, labelColumnField) {
  * @param {Array<object>} nestedColumnsToSum - An array of objects describing the nested paths, e.g., [{ path: 'financials.totalAmount' }, { path: 'totalAmountPaid' }]
  * @param {string} labelColumnField - The field name of a column to display the "Totals:" label.
  */
+
 function updatePinnedTotalsNested(gridApi, nestedColumnsToSum, labelColumnField) {
     if (!gridApi) return;
 
     const sums = {};
     nestedColumnsToSum.forEach(col => { sums[col.path] = 0; });
 
+    let rowCount = 0; // For debugging
     gridApi.forEachNodeAfterFilter(node => {
+        // ✅ ADD THIS LOG: Let's inspect the very first row's data.
+        if (rowCount === 0) {
+            console.log("Inspecting first row's data for nested totals:", node.data);
+        }
+        rowCount++;
+
         nestedColumnsToSum.forEach(col => {
-            // Helper to get a value from a nested path like 'financials.totalAmount'
             const getNestedValue = (path, obj) => path.split('.').reduce((p, c) => (p && p[c]) ? p[c] : 0, obj);
             sums[col.path] += Number(getNestedValue(col.path, node.data)) || 0;
         });
@@ -3149,6 +3156,8 @@ function updatePinnedTotalsNested(gridApi, nestedColumnsToSum, labelColumnField)
 
     gridApi.setGridOption('pinnedBottomRowData', [totalsRowData]);
 }
+
+
 
 // NEW: Function to reset the form to "Create New" mode
 export function resetPurchaseForm() {
