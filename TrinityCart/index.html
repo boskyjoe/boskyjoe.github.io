@@ -1250,6 +1250,7 @@
                                 <!-- Heading -->
                                 <div>
                                     <h3 id="purchase-form-title" class="text-lg font-semibold text-gray-800">Create New Purchase Invoice</h3>
+                                    <p class="text-sm text-gray-500 mt-1">Manage your all your purchase from your suppliers</p>
                                 </div>
                             </div>
                         </div>
@@ -1537,9 +1538,19 @@
 
                     <!-- Card 1: Actions and Master Grid -->
                     <div class="bg-white rounded-lg shadow-lg">
-                        <div class="p-6">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex justify-between items-center">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-xl font-semibold text-gray-800">Consignment Orders</h3>
+                                <div class="flex items-center space-x-4">
+                                    <!-- Beautiful Consignment Orders Icon -->
+                                    <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center shadow-sm">
+                                        <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                        </svg>
+                                    </div>
+                                    <!-- Heading -->
+                                    <h3 class="text-xl font-semibold text-gray-800">Consignment Orders</h3>
+                                </div>
                                 <div class="flex gap-3">
                                     <button id="export-consignment-orders-excel"
                                         class="bg-green-600 text-white px-5 py-2 rounded-md hover:bg-green-700 font-semibold flex items-center gap-2">
@@ -1755,8 +1766,24 @@
 
                     <!-- Card 1: New Sale / POS Interface -->
                     <div class="bg-white rounded-lg shadow-lg">
+
                         <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">New Sale</h3>
+                            <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                                <div class="flex items-center space-x-4">
+                                    <!-- Beautiful New Sale Icon -->
+                                    <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center shadow-sm">
+                                        <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </div>
+                                    <!-- Heading -->
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800">New Sale</h3>
+                                         <p class="text-sm text-gray-500 mt-1">Create New Direct Sales : Church Store/Tasty Treats</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <form id="new-sale-form">
