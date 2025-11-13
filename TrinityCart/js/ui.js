@@ -58,6 +58,7 @@ import {
 import {detachPaymentManagementRealtimeSync,buildActionRequiredList} from './payment-management.js'
 import { expenseTypes } from './config.js';
 
+Chart.register(ChartDataLabels);
 
 
 // --- DOM ELEMENT REFERENCES ---
@@ -13726,6 +13727,23 @@ function renderStockStatusChart(stockData) {
                     display: true,
                     text: 'Stock Items (with stock > 0)',
                     font: { size: 16, weight: 'bold' }
+                },
+                datalabels: {
+                    // Position the label to the right of the bar
+                    anchor: 'end',
+                    // Align the text to the left of the anchor point
+                    align: 'right',
+                    // Add a little padding
+                    padding: 4,
+                    // Set the color of the label text
+                    color: '#333',
+                    font: {
+                        weight: 'bold'
+                    },
+                    // We can format the number if we want
+                    formatter: function(value, context) {
+                        return value; // Just return the raw number
+                    }
                 }
             },
             scales: {
@@ -13802,6 +13820,15 @@ function renderTopSoldChart(topSoldData) {
                     display: true,
                     text: 'Top 10 Sold Products (Last 30 Days)',
                     font: { size: 16, weight: 'bold' }
+                },
+                datalabels: { // <-- Just add the same block here
+                    anchor: 'end',
+                    align: 'right',
+                    padding: 4,
+                    color: '#333',
+                    font: {
+                        weight: 'bold'
+                    }
                 }
             },
             scales: {
