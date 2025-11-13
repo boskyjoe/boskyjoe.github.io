@@ -5579,7 +5579,7 @@ const salesHistoryGridOptions = {
             width: 160,
             filter: 'agTextColumnFilter',
             cellRenderer: p => {
-                if (params.node.isRowPinned()) {
+                if (p.node.isRowPinned()) {
                     return ''; // If it's a pinned row, return an empty string.
                 }
                 const status = p.value;
