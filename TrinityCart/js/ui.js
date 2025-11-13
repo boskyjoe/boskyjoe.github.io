@@ -5530,7 +5530,11 @@ const salesHistoryGridOptions = {
             field: "saleDate",
             headerName: "Sale Date",
             width: 140,
-            return p.value ? p.value.toDate().toLocaleDateString() : '';
+            valueFormatter: p => {
+                // If p.value exists (is not null or undefined), then format it.
+                // Otherwise, return an empty string.
+                return p.value ? p.value.toDate().toLocaleDateString() : '';
+            },
             filter: 'agDateColumnFilter'
         },
         
