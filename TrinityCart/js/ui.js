@@ -5492,13 +5492,18 @@ const addProductModalGridOptions = {
 
 const salesHistoryGridOptions = {
     getRowId: params => {
-        // For the pinned row, its data won't have an 'id'.
-        // We can give it a special, static ID.
-        if (params.node.isRowPinned()) {
-            return 'totals-row';
+        // If the row data has a valid 'id' property, use it.
+        // This will be true for all your normal data rows from Firestore.
+        if (params.data && params.data.id) {
+            return params.data.id;
         }
-        // For all normal data rows, use the document ID as before.
-        return params.data.id;
+        // If the row data exists but does NOT have an 'id', we can safely assume
+        // it's our special pinned totals row. Give it a static ID.
+        if (params.data) {
+            return 'totals-row-static-id';
+        }
+        // Fallback for any other strange cases (should not happen)
+        return null;
     },
     theme: 'legacy',
     pagination: true,
