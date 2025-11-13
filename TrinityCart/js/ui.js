@@ -1968,6 +1968,13 @@ const purchaseInvoicesGridOptions = {
             loadPaymentsForSelectedInvoice();
         }
     },
+    onFilterChanged: (event) => {
+        updatePinnedTotals(
+            event.api, 
+            ['invoiceTotal', 'totalAmountPaid', 'balanceDue'], // Columns to sum
+            'invoiceName' // Column to display the "Totals:" label
+        );
+    },
     onGridReady: (params) => {
         console.log("[ui.js] Purchase Invoices Grid is now ready.");
         purchaseInvoicesGridApi = params.api;
@@ -3039,7 +3046,11 @@ export function showPurchasesView() {
                     purchaseInvoicesGridApi.setGridOption('loading', false);
 
                     //Call our new function here after the data is loaded.
-                    updatePurchaseInvoiceTotals(purchaseInvoicesGridApi);
+                    updatePinnedTotals(
+                        purchaseInvoicesGridApi, 
+                        ['invoiceTotal', 'totalAmountPaid', 'balanceDue'],
+                        'invoiceName'
+                    );
 
 
                 }, error => {
@@ -3051,41 +3062,45 @@ export function showPurchasesView() {
     }, 50);
 }
 
+
 /**
- * ✅ NEW & CORRECT: Manually calculates and renders totals for the purchase invoices grid.
- * This is the Community-compatible way to create a totals footer.
- * @param {object} gridApi - The AG-Grid API for the purchase invoices grid.
+ * ✅ NEW & GENERIC: Calculates and displays totals in a pinned bottom row for ANY grid.
+ * @param {object} gridApi - The AG-Grid API for the grid.
+ * @param {Array<string>} columnsToSum - An array of field names to be summed up (e.g., ['invoiceTotal', 'balanceDue']).
+ * @param {string} labelColumnField - The field name of a text column where the "Totals:" label will be displayed.
  */
-function updatePurchaseInvoiceTotals(gridApi) {
-    console.log("[ui.js] I am the footer for the purchase grid.");
-    const footerElement = document.getElementById('purchase-invoices-totals-footer');
-    if (!footerElement || !gridApi) return;
+function updatePinnedTotals(gridApi, columnsToSum, labelColumnField) {
+    if (!gridApi) {
+        console.warn("updatePinnedTotals called but gridApi is not ready.");
+        return;
+    }
 
-    let totalInvoice = 0;
-    let totalPaid = 0;
-    let totalBalance = 0;
-
-    // Loop through all rows currently displayed in the grid (respects filters)
-    gridApi.forEachNodeAfterFilter(node => {
-        totalInvoice += node.data.invoiceTotal || 0;
-        totalPaid += node.data.totalAmountPaid || 0;
-        totalBalance += node.data.balanceDue || 0;
+    // 1. Initialize an object to hold the sums.
+    const sums = {};
+    columnsToSum.forEach(field => {
+        sums[field] = 0; // e.g., sums = { invoiceTotal: 0, balanceDue: 0 }
     });
 
-    // Build the HTML string for the totals
-    footerElement.innerHTML = `
-        <span style="margin-right: 20px;">
-            Total: <strong>${formatCurrency(totalInvoice)}</strong>
-        </span>
-        <span style="margin-right: 20px;">
-            Paid: <strong>${formatCurrency(totalPaid)}</strong>
-        </span>
-        <span>
-            Balance Due: <strong style="color: #dc2626;">${formatCurrency(totalBalance)}</strong>
-        </span>
-    `;
-}
+    // 2. Loop through all visible rows and calculate the sums.
+    gridApi.forEachNodeAfterFilter(node => {
+        columnsToSum.forEach(field => {
+            sums[field] += Number(node.data[field]) || 0;
+        });
+    });
 
+    // 3. Create the data object for the pinned row.
+    // It starts with the label and then adds all the calculated sums.
+    const totalsRowData = {
+        [labelColumnField]: 'Totals:'
+    };
+    columnsToSum.forEach(field => {
+        totalsRowData[field] = sums[field];
+    });
+
+    // 4. Set the pinned bottom row data.
+    gridApi.setGridOption('pinnedBottomRowData', [totalsRowData]);
+    console.log(`[UI] Pinned totals updated for grid.`, sums);
+}
 
 
 // NEW: Function to reset the form to "Create New" mode
