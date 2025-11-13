@@ -5507,7 +5507,7 @@ const salesHistoryGridOptions = {
         {
             field: "paymentStatus",
             headerName: "Status",
-            width: 140,
+            width: 160,
             filter: 'agTextColumnFilter',
             cellRenderer: p => {
                 const status = p.value;
@@ -5552,9 +5552,17 @@ const salesHistoryGridOptions = {
                 const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
                 salesHistoryGridApi.setGridOption('rowData', sales);
+                
 
                 // Also use setGridOption to hide the overlay for consistency.
                 salesHistoryGridApi.setGridOption('loading', false);
+
+                updatePinnedTotals(
+                    salesHistoryGridApi,
+                    ['financials.totalAmount', 'totalAmountPaid', 'balanceDue'], // Corrected field name
+                    'manualVoucherNumber'
+                );
+                
                 
             }, error => {
                 console.error("Error with sales history listener:", error);
@@ -5886,6 +5894,7 @@ export function showSalesView() {
 
         if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
         calculateSalesTotals();
+
         //document.getElementById('sale-pay-now-container').classList.add('hidden');
 
         // 3. Populate the dropdowns on the form.
