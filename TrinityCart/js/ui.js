@@ -5579,6 +5579,9 @@ const salesHistoryGridOptions = {
             width: 160,
             filter: 'agTextColumnFilter',
             cellRenderer: p => {
+                if (params.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
                 const status = p.value;
                 if (status === 'Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${status}</span>`;
                 if (status === 'Partially Paid') return `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-600 bg-yellow-200">${status}</span>`;
