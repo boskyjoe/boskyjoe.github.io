@@ -5530,7 +5530,7 @@ const salesHistoryGridOptions = {
             field: "saleDate",
             headerName: "Sale Date",
             width: 140,
-            valueFormatter: p => p.value.toDate().toLocaleDateString(),
+            return p.value ? p.value.toDate().toLocaleDateString() : '';
             filter: 'agDateColumnFilter'
         },
         
