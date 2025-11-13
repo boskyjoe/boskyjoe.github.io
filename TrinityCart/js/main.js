@@ -104,7 +104,8 @@ import {
     refreshSalePaymentModal,loadApplicationDashboard,
     showBulkAddProductsModal,        
     closeBulkAddProductsModal,       
-    getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility
+    getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
+    showBulkPaymentModal, closeBulkPaymentModal,
 } from './ui.js';
 
 import {
@@ -116,7 +117,7 @@ import {
     submitPaymentRecord, updatePaymentRecord,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
-    voidSalePayment, getSalesInvoiceById,
+    voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment
 } from './api.js';
 
 
@@ -1928,6 +1929,7 @@ function handleStandaloneButtons(target, event) {
         '.pmt-mgmt-view-consignment-order': async (target) => await handlePmtMgmtViewConsignmentOrder(target),
         '.pmt-mgmt-view-settlement-history': async (target) => await handlePmtMgmtViewSettlementHistory(target),
         '#add-expense-row-btn': () => addNewExpenseRow(),
+        '#bulk-purchase-payment-btn': () => handleBulkPaymentClick(),
 
         '#refresh-executive-dashboard': async () => {
             console.log('[main.js] Executive dashboard manual refresh');
@@ -2672,7 +2674,8 @@ function setupFormSubmissions() {
         { id: 'add-payment-mode-form', handler: handlePaymentModeSubmit },
         { id: 'add-sale-type-form', handler: handleSaleTypeSubmit },
         { id: 'add-season-form', handler: handleSeasonSubmit },
-        { id: 'add-event-form', handler: handleEventSubmit }
+        { id: 'add-event-form', handler: handleEventSubmit },
+        { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
@@ -7503,7 +7506,102 @@ async function handleGenerateInvoice(invoiceId) {
     }
 }
 
+/**
+ * ✅ NEW: Handles the click on the "Pay Selected Invoices" button.
+ * Validates the selection and opens the bulk payment modal.
+ */
+async function handleBulkPaymentClick() {
+    if (!purchaseInvoicesGridApi) return;
 
+    const selectedRows = purchaseInvoicesGridApi.getSelectedRows();
+
+    // 1. Validation: Ensure rows are selected
+    if (selectedRows.length === 0) {
+        return showModal('info', 'No Invoices Selected', 'Please select one or more invoices to pay.');
+    }
+
+    // 2. Validation: Ensure all selected invoices are for the SAME supplier
+    const firstSupplierId = selectedRows[0].supplierId;
+    const allSameSupplier = selectedRows.every(row => row.supplierId === firstSupplierId);
+
+    if (!allSameSupplier) {
+        return showModal('error', 'Multiple Suppliers Selected', 'You can only process a bulk payment for a single supplier at a time. Please select invoices from the same supplier.');
+    }
+    
+    // 3. Validation: Ensure selected invoices actually have a balance due
+    const payableInvoices = selectedRows.filter(row => (row.balanceDue || 0) > 0);
+    if (payableInvoices.length === 0) {
+        return showModal('info', 'No Balance Due', 'The selected invoices have already been fully paid.');
+    }
+
+    // 4. Calculate the total balance and prepare for the modal
+    const totalBalanceDue = payableInvoices.reduce((sum, row) => sum + (row.balanceDue || 0), 0);
+
+    // Store the actual invoices to be paid in the appState for the submission handler
+    appState.invoicesToPayInBulk = payableInvoices;
+
+    // 5. Call the UI function to show the modal
+    showBulkPaymentModal(payableInvoices, totalBalanceDue);
+}
+
+
+/**
+ * ✅ NEW: Handles the submission of the bulk supplier payment modal.
+ */
+async function handleBulkSupplierPaymentSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    if (!user) return;
+
+    // Get the invoices we stored in the appState when the modal was opened
+    const invoicesToPay = appState.invoicesToPayInBulk;
+    if (!invoicesToPay || invoicesToPay.length === 0) {
+        return showModal('error', 'Data Error', 'No invoices were selected for this bulk payment. Please close and try again.');
+    }
+
+    ProgressToast.show('Processing Bulk Payment...', 'info');
+
+    try {
+        // 1. Collect payment data from the modal form
+        const paymentData = {
+            supplierId: invoicesToPay[0].supplierId, // All invoices have the same supplier
+            amountPaid: parseFloat(document.getElementById('bulk-payment-amount').value) || 0,
+            paymentDate: new Date(document.getElementById('bulk-payment-date').value),
+            paymentMode: document.getElementById('bulk-payment-mode').value,
+            transactionRef: document.getElementById('bulk-payment-ref').value.trim(),
+            notes: document.getElementById('bulk-payment-notes').value.trim()
+        };
+
+        // 2. Validation
+        if (paymentData.amountPaid <= 0 || !paymentData.paymentMode || !paymentData.transactionRef) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Missing Information', 'Please fill out Amount Paid, Payment Mode, and Reference #.');
+        }
+
+        // 3. Call the new transactional API function
+        ProgressToast.updateProgress('Saving payment and updating invoices...', 60);
+        await processBulkSupplierPayment(paymentData, invoicesToPay, user);
+
+        // 4. Success
+        ProgressToast.showSuccess('Bulk payment processed successfully!');
+        closeBulkPaymentModal();
+        
+        // Deselect rows in the grid for a clean state
+        if (purchaseInvoicesGridApi) {
+            purchaseInvoicesGridApi.deselectAll();
+        }
+
+        setTimeout(() => {
+            showModal('success', 'Bulk Payment Complete', 
+                `The payment of ${formatCurrency(paymentData.amountPaid)} has been successfully allocated across ${invoicesToPay.length} invoices.`
+            );
+        }, 500);
+
+    } catch (error) {
+        console.error("Error processing bulk supplier payment:", error);
+        ProgressToast.showError(`Processing Failed: ${error.message}`);
+    }
+}
 
 
 
