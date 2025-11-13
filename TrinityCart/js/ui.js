@@ -3057,6 +3057,7 @@ export function showPurchasesView() {
  * @param {object} gridApi - The AG-Grid API for the purchase invoices grid.
  */
 function updatePurchaseInvoiceTotals(gridApi) {
+    console.log("[ui.js] I am the footer for the purchase grid.");
     const footerElement = document.getElementById('purchase-invoices-totals-footer');
     if (!footerElement || !gridApi) return;
 
