@@ -3353,6 +3353,7 @@ export function getInvoiceDataFromGridById(rowId) {
     return rowNode ? rowNode.data : null;
 }
 
+
 export function initializeModals() {
     document.addEventListener('click', (e) => {
         if (e.target.closest('.modal-close-trigger')) {
@@ -3379,6 +3380,8 @@ export function initializeModals() {
                 closeBulkAddProductsModal();
             } else if (modalToClose.id === 'supplier-payment-modal') {
                 closeSupplierPaymentModal();
+            } else if (modalToClose.id === 'bulk-supplier-payment-modal') {
+                 closeBulkPaymentModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -13850,3 +13853,60 @@ function renderTopSoldChart(topSoldData) {
         }
     });
 }
+
+/**
+ * ✅ NEW: Opens and populates the Bulk Supplier Payment modal.
+ * @param {Array<object>} selectedInvoices - The array of invoice objects selected in the grid.
+ * @param {number} totalBalanceDue - The pre-calculated sum of the balance due for the selected invoices.
+ */
+export function showBulkPaymentModal(selectedInvoices, totalBalanceDue) {
+    const modal = document.getElementById('bulk-supplier-payment-modal');
+    if (!modal) return;
+
+    const supplierName = selectedInvoices[0].supplierName; // All invoices are for the same supplier
+
+    // Populate the modal's summary fields
+    document.getElementById('bulk-payment-modal-title').textContent = `Bulk Payment for ${supplierName}`;
+    document.getElementById('bulk-payment-supplier-name').textContent = supplierName;
+    document.getElementById('bulk-payment-total-balance').textContent = formatCurrency(totalBalanceDue);
+    document.getElementById('bulk-payment-invoice-count').textContent = `${selectedInvoices.length} invoices selected`;
+
+    // Pre-fill the payment amount with the total balance due
+    const amountInput = document.getElementById('bulk-payment-amount');
+    amountInput.value = totalBalanceDue.toFixed(2);
+    amountInput.max = totalBalanceDue.toFixed(2); // Optional: prevent overpayment
+
+    // Populate the payment mode dropdown from masterData
+    const modeSelect = document.getElementById('bulk-payment-mode');
+    modeSelect.innerHTML = '<option value="">Select a mode...</option>';
+    masterData.paymentModes.forEach(mode => {
+        if (mode.isActive) {
+            const option = document.createElement('option');
+            option.value = mode.paymentMode;
+            option.textContent = mode.paymentMode;
+            modeSelect.appendChild(option);
+        }
+    });
+
+    // Set the payment date to today by default
+    document.getElementById('bulk-payment-date').valueAsDate = new Date();
+
+    // Show the modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+/**
+ * ✅ NEW: Closes the Bulk Supplier Payment modal.
+ */
+export function closeBulkPaymentModal() {
+    const modal = document.getElementById('bulk-supplier-payment-modal');
+    if (!modal) return;
+
+    modal.classList.remove('visible');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('bulk-supplier-payment-form').reset(); // Reset the form on close
+    }, 300);
+}
+
