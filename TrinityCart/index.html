@@ -1434,9 +1434,21 @@
                     <div class="bg-white rounded-lg shadow-lg">
                         <!-- Tab Headers -->
                         <div class="border-b border-gray-200">
-                            <nav class="-mb-px flex space-x-6 px-6" aria-label="Tabs">
-                                <a href="#" id="tab-invoices" class="tab tab-active">All Purchase Invoices</a>
-                                <a href="#" id="tab-payments" class="tab tab-disabled">Payments for Invoices</a>
+                            <!-- ✅ CHANGED: Add flex layout to the nav bar -->
+                            <nav class="-mb-px flex justify-between items-center px-6" aria-label="Tabs">
+                                <!-- Left side: The tabs -->
+                                <div class="flex space-x-6">
+                                    <a href="#" id="tab-invoices" class="tab tab-active">All Purchase Invoices</a>
+                                    <a href="#" id="tab-payments" class="tab tab-disabled">Payments for Invoices</a>
+                                </div>
+
+                                <!-- ✅ NEW: Right side: The Bulk Payment button -->
+                                <div id="purchase-grid-bulk-actions">
+                                    <button id="bulk-purchase-payment-btn" class="hidden bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold text-sm flex items-center space-x-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.23a.75.75 0 0 0-1.09 1.02l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.02l-2.955 3.134V2.75Z" /><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" /></svg>
+                                        <span>Pay Selected Invoices</span>
+                                    </button>
+                                </div>
                             </nav>
                         </div>
 
@@ -5804,6 +5816,77 @@
     </div>
 
 
+    <!-- ======================= -->
+    <!--  BULK SUPPLIER PAYMENT MODAL  -->
+    <!-- ======================= -->
+    <div id="bulk-supplier-payment-modal" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black bg-opacity-60 modal-close-trigger"></div>
+
+        <!-- Modal Panel -->
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 id="bulk-payment-modal-title" class="text-lg font-bold text-gray-900">Bulk Payment to Supplier</h3>
+                <button type="button" class="p-1 rounded-full text-gray-600 hover:bg-gray-200 modal-close-trigger">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="bulk-supplier-payment-form">
+                <div class="p-6 space-y-6">
+                    <!-- Summary Section -->
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-600">Supplier:</p>
+                                <p id="bulk-payment-supplier-name" class="text-lg font-semibold text-blue-800">Loading...</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">Total Balance Due:</p>
+                                <p id="bulk-payment-total-balance" class="text-2xl font-bold text-red-600">Loading...</p>
+                                <p class="text-xs text-gray-500"><span id="bulk-payment-invoice-count">0</span> invoices selected</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Details Form -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="bulk-payment-amount" class="form-label">Total Amount Paid<span class="text-red-500">*</span></label>
+                            <input type="number" id="bulk-payment-amount" class="form-input w-full text-lg" required step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label for="bulk-payment-date" class="form-label">Payment Date<span class="text-red-500">*</span></label>
+                            <input type="date" id="bulk-payment-date" class="form-input w-full" required>
+                        </div>
+                        <div>
+                            <label for="bulk-payment-mode" class="form-label">Payment Mode<span class="text-red-500">*</span></label>
+                            <select id="bulk-payment-mode" class="form-input w-full" required>
+                                <option value="" disabled selected>Select a mode...</option>
+                                <!-- Options populated by JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bulk-payment-ref" class="form-label">Reference #<span class="text-red-500">*</span></label>
+                            <input type="text" id="bulk-payment-ref" placeholder="e.g., Check #456, Bank Transfer ID" required class="form-input w-full">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="bulk-payment-notes" class="form-label">Notes (Optional)</label>
+                            <textarea id="bulk-payment-notes" class="form-input w-full" rows="2" placeholder="e.g., Bulk payment for October invoices"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-3">
+                    <button type="button" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">Submit Bulk Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
     <!-- =================================== -->
