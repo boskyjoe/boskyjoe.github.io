@@ -1888,56 +1888,6 @@ export function showProductsView() {
 }
 
 
-
-/**
- * ✅ NEW: A custom status bar component for AG-Grid Community.
- * It manually calculates and displays the sum of specified columns.
- */
-class CustomTotalsComponent {
-    init(params) {
-        this.eGui = document.createElement('div');
-        this.eGui.className = 'ag-status-name-value';
-        this.params = params;
-
-        // Listen for grid data changes to update the totals
-        params.api.addEventListener('modelUpdated', this.updateTotals.bind(this));
-    }
-
-    getGui() {
-        return this.eGui;
-    }
-
-    destroy() {
-        // Clean up the event listener
-        this.params.api.removeEventListener('modelUpdated', this.updateTotals);
-    }
-
-    updateTotals() {
-        let totalInvoice = 0;
-        let totalPaid = 0;
-        let totalBalance = 0;
-
-        // Loop through all rows currently displayed in the grid (respects filters)
-        this.params.api.forEachNodeAfterFilter(node => {
-            totalInvoice += node.data.invoiceTotal || 0;
-            totalPaid += node.data.totalAmountPaid || 0;
-            totalBalance += node.data.balanceDue || 0;
-        });
-
-        // Display the calculated totals in the status bar
-        this.eGui.innerHTML = `
-            <span class="ag-status-name-value-label" style="margin-right: 20px;">
-                Totals:
-            </span>
-            <span class="ag-status-name-value-value">
-                Total: <strong>${formatCurrency(totalInvoice)}</strong> | 
-                Paid: <strong>${formatCurrency(totalPaid)}</strong> | 
-                Balance: <strong style="color: #dc2626;">${formatCurrency(totalBalance)}</strong>
-            </span>
-        `;
-    }
-}
-
 // --- PURCHASE MANAGEMENT UI ---
 
 let lineItemCounter = 0;
@@ -1949,8 +1899,6 @@ let unsubscribeInvoicesListener = null; // The "off switch" for the invoices lis
 let unsubscribePaymentsListener = null;
 
 
-
-
 // Grid for the main list of invoices
 
 const purchaseInvoicesGridOptions = {
@@ -1959,19 +1907,6 @@ const purchaseInvoicesGridOptions = {
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
-    statusBar: {
-        statusPanels: [
-            {
-                statusPanel: 'agTotalAndFilteredRowCountComponent',
-                align: 'left',
-            },
-            {
-                // Tell AG-Grid to use our custom component
-                statusPanel: CustomTotalsComponent,
-                align: 'right'
-            }
-        ]
-    },
     columnDefs: [
         //{ field: "invoiceId", headerName: "Invoice ID", width: 150 },
         { field: "invoiceName", headerName: "Invoice Name", width: 150 },
@@ -3103,6 +3038,10 @@ export function showPurchasesView() {
                     purchaseInvoicesGridApi.setGridOption('rowData', invoices);
                     purchaseInvoicesGridApi.setGridOption('loading', false);
 
+                    //Call our new function here after the data is loaded.
+                    updatePurchaseInvoiceTotals(purchaseInvoicesGridApi);
+
+
                 }, error => {
                     console.error("Error with invoices real-time listener:", error);
                     purchaseInvoicesGridApi.setGridOption('loading', false);
@@ -3111,6 +3050,42 @@ export function showPurchasesView() {
         }
     }, 50);
 }
+
+/**
+ * ✅ NEW & CORRECT: Manually calculates and renders totals for the purchase invoices grid.
+ * This is the Community-compatible way to create a totals footer.
+ * @param {object} gridApi - The AG-Grid API for the purchase invoices grid.
+ */
+function updatePurchaseInvoiceTotals(gridApi) {
+    const footerElement = document.getElementById('purchase-invoices-totals-footer');
+    if (!footerElement || !gridApi) return;
+
+    let totalInvoice = 0;
+    let totalPaid = 0;
+    let totalBalance = 0;
+
+    // Loop through all rows currently displayed in the grid (respects filters)
+    gridApi.forEachNodeAfterFilter(node => {
+        totalInvoice += node.data.invoiceTotal || 0;
+        totalPaid += node.data.totalAmountPaid || 0;
+        totalBalance += node.data.balanceDue || 0;
+    });
+
+    // Build the HTML string for the totals
+    footerElement.innerHTML = `
+        <span style="margin-right: 20px;">
+            Total: <strong>${formatCurrency(totalInvoice)}</strong>
+        </span>
+        <span style="margin-right: 20px;">
+            Paid: <strong>${formatCurrency(totalPaid)}</strong>
+        </span>
+        <span>
+            Balance Due: <strong style="color: #dc2626;">${formatCurrency(totalBalance)}</strong>
+        </span>
+    `;
+}
+
+
 
 // NEW: Function to reset the form to "Create New" mode
 export function resetPurchaseForm() {
