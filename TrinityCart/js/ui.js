@@ -6076,6 +6076,50 @@ export function showSalesView() {
             saleTypeSelect.value = 'Revenue';
         }
 
+        // ✅ Add the event listener for the Sale Type dropdown
+        const orderDiscountInput = document.getElementById('sale-order-discount');
+        const paymentTypeSelect = document.getElementById('sale-payment-type');
+
+        if (saleTypeSelect && orderDiscountInput && paymentTypeSelect) {
+            saleTypeSelect.addEventListener('change', (e) => {
+                const selectedType = e.target.value;
+
+                if (selectedType === 'Sample') {
+                    // --- SAMPLE MODE ---
+                    // 1. Set discount to 100% and disable the input
+                    orderDiscountInput.value = 100;
+                    orderDiscountInput.disabled = true;
+
+                    // 2. Set payment type to "Pay Later" and disable it
+                    paymentTypeSelect.value = 'Pay Later (Invoice)';
+                    paymentTypeSelect.disabled = true;
+
+                    // 3. Manually trigger the 'change' event on the payment type dropdown.
+                    // This ensures your existing logic to hide the "Pay Now" container runs.
+                    paymentTypeSelect.dispatchEvent(new Event('change'));
+
+                    // 4. Recalculate totals to show the user the new zero total immediately.
+                    calculateSalesTotals();
+
+                    console.log("[UI] Sale Type set to 'Sample'. Applied 100% discount and locked payment type.");
+
+                } else {
+                    // --- REVENUE MODE (or any other type) ---
+                    // 1. Reset discount to 0 and re-enable it
+                    orderDiscountInput.value = 0;
+                    orderDiscountInput.disabled = false;
+
+                    // 2. Re-enable the payment type dropdown
+                    paymentTypeSelect.disabled = false;
+
+                    // 3. Recalculate totals to remove the 100% discount
+                    calculateSalesTotals();
+                    
+                    console.log("[UI] Sale Type set back to 'Revenue'. Unlocked fields.");
+                }
+            });
+        }
+
     }, 0); 
     
 
