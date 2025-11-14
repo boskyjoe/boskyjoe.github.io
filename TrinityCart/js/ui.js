@@ -13764,7 +13764,7 @@ function renderStockStatusChart(stockData) {
 
     // 3. The rest of your chart creation logic is correct.
     const chartData = stockData
-        .filter(item => item.inventoryCount > 0); 
+        .filter(item => item.inventoryCount > -1); 
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
