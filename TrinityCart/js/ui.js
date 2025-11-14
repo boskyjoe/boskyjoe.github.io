@@ -11,7 +11,7 @@ import { getPaymentModes } from './api.js';
 import { getProducts, getCategories } from './api.js';
 import { getUsersWithRoles } from './api.js';
 import { getSalesEvents, getSeasons } from './api.js';
-import { getPaymentsForInvoice,getAllSupplierPayments,getAllCataloguesWithItems } from './api.js';
+import { getPaymentsForInvoice,getAllSupplierPayments,getAllCataloguesWithItems,getItemsForCatalogue } from './api.js';
 import { showModal } from './modal.js';
 import { formatCurrency } from './utils.js'; 
 
