@@ -121,6 +121,10 @@ export const expenseTypes = [
     'Other'
 ];
 
+export const saleTypeOptions = [
+    { value: 'Revenue', label: 'Revenue Sale' },
+    { value: 'Sample', label: 'Sample / Non-Revenue' }
+];
 
 export const EXPENSE_RECEIPTS_STORAGE_PATH = 'MONETA/expense_receipts/';
 
