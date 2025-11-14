@@ -14,7 +14,7 @@ import { firebaseConfig, USERS_COLLECTION_PATH,
     getDonationSourceByStore 
  } from './config.js';
 
-import { updateUI, showView, showSuppliersView, showLoader, hideLoader, formatCurrency } from './ui.js';
+import { updateUI, showView, showSuppliersView, showLoader, hideLoader,  } from './ui.js';
 import { showCategoriesView,ProgressToast } from './ui.js';
 import { showModal } from './modal.js';
 
