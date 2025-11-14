@@ -982,104 +982,144 @@
 
                 </div>
 
+
+
+
+                <!-- ======================= -->
+                <!--  Supplier Management  -->
+                <!-- ======================= -->
+
                 <!-- View 3: Manage Suppliers -->
                 <div id="suppliers-view" class="view space-y-8">
-
                     <!-- Card 1: Add New Supplier Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
                         <!-- Card Header -->
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <div class="flex items-center space-x-4">
-                                <!-- Beautiful Add New Supplier Icon -->
-                                <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center shadow-sm">
-                                    <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                    </svg>
-                                </div>
-                                <!-- Heading -->
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-800">Add New Supplier</h3>
-                                    <p class="text-sm text-gray-500 mt-1">Register all your product Suppliers</p>
+                        <div class="bg-gradient-to-r from-teal-50 via-cyan-50 to-teal-50 border-b border-teal-100 px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <!-- Beautiful Add New Supplier Icon -->
+                                    <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md transform hover:scale-105 transition-transform">
+                                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                        </svg>
+                                    </div>
+                                    <!-- Heading -->
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                            Add New Supplier
+                                            <span class="ml-3 px-2.5 py-0.5 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">NEW</span>
+                                        </h3>
+                                        <p class="text-sm text-gray-600 mt-1 flex items-center">
+                                            <svg class="w-4 h-4 mr-1.5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Register all your product Suppliers
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
                         <!-- Card Body -->
-                        <div class="p-6">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
                             <form id="add-supplier-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <!-- Supplier Name -->
                                 <div class="sm:col-span-1">
-                                    <label for="supplierName-input" class="form-label">Supplier Name<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="supplierName-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        Supplier Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="text" id="supplierName-input" placeholder="e.g., Mary's Bakery"
-                                        class="form-input w-full" required>
+                                        class="form-input w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all" required>
                                 </div>
-
                                 <!-- Contact No -->
                                 <div class="sm:col-span-1">
-                                    <label for="contactNo-input" class="form-label">Contact No<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="contactNo-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        Contact No<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="tel" id="contactNo-input" placeholder="e.g., 555-123-4567"
-                                        class="form-input w-full">
+                                        class="form-input w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all">
                                 </div>
-
                                 <!-- Contact Email -->
                                 <div class="sm:col-span-1">
-                                    <label for="contactEmail-input" class="form-label">Contact Email<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="contactEmail-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        Contact Email<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="email" id="contactEmail-input" placeholder="e.g., mary@bakery.com"
-                                        class="form-input w-full">
+                                        class="form-input w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all">
                                 </div>
-
                                 <!-- Address -->
                                 <div class="sm:col-span-2">
-                                    <label for="address-input" class="form-label">Address<span
-                                            class="text-red-500">*</span></label>
-                                    <textarea id="address-input" class="form-input w-full" rows="3"
+                                    <label for="address-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Address<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <textarea id="address-input" class="form-input w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all" rows="3"
                                         placeholder="e.g., 123 Main St, Anytown, USA 12345"></textarea>
                                 </div>
-
                                 <!-- Credit Term -->
                                 <div class="sm:col-span-1">
-                                    <label for="creditTerm-input" class="form-label">Credit Term</label>
-                                    <select id="creditTerm-select" class="form-input w-full">
+                                    <label for="creditTerm-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Credit Term
+                                        <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Optional</span>
+                                    </label>
+                                    <select id="creditTerm-select" class="form-input w-full focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all">
                                         <!-- Options will be populated by JavaScript -->
                                     </select>
-                                    <!--<input type="text" id="creditTerm-input" placeholder="e.g., Net 30"
-                                        class="form-input w-full">-->
                                 </div>
-
                                 <!-- Form Actions / Submit Button -->
                                 <div class="sm:col-span-full flex justify-end">
                                     <button type="submit"
-                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold">
+                                        class="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-8 py-2.5 rounded-lg hover:from-teal-700 hover:to-cyan-700 transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                        </svg>
                                         Save Supplier
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-
+                    
                     <!-- Card 2: Existing Suppliers Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
                         <!-- Card Header -->
-                        <div
-                            class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex items-center space-x-3">
-                            <svg class="w-6 h-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                            </svg>
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Suppliers</h3>
+                        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm mr-3">
+                                    <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Existing Suppliers</h3>
+                                    <p class="text-sm text-gray-600">View and manage all registered suppliers</p>
+                                </div>
+                            </div>
                         </div>
-
                         <!-- Card Body -->
-                        <div class="p-2">
-                            <div id="suppliers-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="suppliers-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
-
                 </div>
 
 
