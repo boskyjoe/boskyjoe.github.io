@@ -23,7 +23,8 @@ import { SALES_CATALOGUES_COLLECTION_PATH,
 } from './config.js';
 
 import { masterData } from './masterData.js';
-
+import { formatCurrency } from './ui.js';
+import { formatCurrency } from './utils.js'; 
 
 
 /**
