@@ -7560,6 +7560,7 @@ async function handleBulkPaymentClick() {
 /**
  * ✅ NEW: Handles the submission of the bulk supplier payment modal.
  */
+
 async function handleBulkSupplierPaymentSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
@@ -7591,7 +7592,6 @@ async function handleBulkSupplierPaymentSubmit(e) {
         }
 
         console.log("[Main.js] Payment Data that we collected : ",paymentData)
-        return ;
         
         // 3. Call the new transactional API function
         ProgressToast.updateProgress('Saving payment and updating invoices...', 60);
