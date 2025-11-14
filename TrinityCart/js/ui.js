@@ -13926,3 +13926,25 @@ export function closeBulkPaymentModal() {
     }, 300);
 }
 
+/**
+ * ✅ NEW & CORRECT: Gets the currently selected rows from the purchase invoices grid.
+ * This function lives in ui.js and can safely access the grid API.
+ * @returns {Array<object>} An array of the selected row data objects.
+ */
+export function getSelectedPurchaseInvoices() {
+    if (!purchaseInvoicesGridApi) {
+        console.error("Cannot get selected rows: purchaseInvoicesGridApi is not ready.");
+        return [];
+    }
+    return purchaseInvoicesGridApi.getSelectedRows();
+}
+
+/**
+ * ✅ NEW & CORRECT: Deselects all rows in the purchase invoices grid.
+ */
+export function deselectAllPurchaseInvoices() {
+    if (purchaseInvoicesGridApi) {
+        purchaseInvoicesGridApi.deselectAll();
+        console.log("[UI] All purchase invoices deselected.");
+    }
+}
