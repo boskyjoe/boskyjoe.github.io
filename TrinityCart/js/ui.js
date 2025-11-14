@@ -1974,7 +1974,7 @@ const purchaseInvoicesGridOptions = {
             bulkPaymentBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
             bulkPaymentBtn.classList.add('bg-red-600', 'cursor-not-allowed', 'opacity-75');
             
-            btnSpan.textContent = 'Multiple Suppliers Selected';
+            btnSpan.textContent = 'Bulk Payment not allowed : Multiple Suppliers Selected';
             btnIcon.style.display = 'none'; // Hide icon to make text more prominent
         }
     },
