@@ -13729,10 +13729,13 @@ let dashboardStockChart = null;
  * It now correctly gets the canvas context and handles chart destruction.
  * @param {Array<object>} stockData - The array of stock status objects.
  */
+
 function renderStockStatusChart(stockData) {
     // 1. Get the canvas element and its 2D rendering context.
+    const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
     const canvasElement = document.getElementById('dashboard-stock-status-chart');
-    if (!canvasElement) {
+
+    if (!canvasElement || !chartContainer) {
         console.error("Chart canvas element 'dashboard-stock-status-chart' not found.");
         return;
     }
@@ -13764,7 +13767,7 @@ function renderStockStatusChart(stockData) {
 
     // 3. The rest of your chart creation logic is correct.
     const chartData = stockData
-        .filter(item => item.inventoryCount > -1); 
+        .filter(item => item.inventoryCount >= 0 ); 
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
@@ -13780,15 +13783,22 @@ function renderStockStatusChart(stockData) {
         return;
     }
 
+    const heightPerBar = 30; 
+    const chartPadding = 80;
+    const calculatedHeight = (chartData.length * heightPerBar) + chartPadding;
+    chartContainer.style.height = `${calculatedHeight}px`;
+
     const labels = chartData.map(item => item.itemName);
     const data = chartData.map(item => item.inventoryCount);
     
     const backgroundColors = chartData.map(item => {
-        // Since we filtered out zero-stock items, we only need to check for 'Low Stock'
+        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 0.7)';   // Red
         if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)'; // Amber
         return 'rgba(34, 197, 94, 0.7)'; // Green
     });
+
     const borderColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(185, 28, 28, 1)';
         if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
         return 'rgba(22, 163, 74, 1)';
     });
@@ -13815,7 +13825,7 @@ function renderStockStatusChart(stockData) {
                 legend: { display: false },
                 title: {
                     display: true,
-                    text: 'Stock Items (with stock > 0)',
+                    text: 'Current Stock Levels',
                     font: { size: 16, weight: 'bold' }
                 },
                 datalabels: {
