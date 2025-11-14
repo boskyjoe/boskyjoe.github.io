@@ -6075,7 +6075,7 @@ export function showSalesView() {
 
         const saleTypeSelect = document.getElementById('sale-type-select');
         if (saleTypeSelect) {
-            saleTypeSelect.innerHTML = ''; // Clear existing options
+            saleTypeSelect.innerHTML = '<option value="">Select Sale Type...</option>'; // Clear existing options
             saleTypeOptions.forEach(option => {
                 const optionElement = document.createElement('option');
                 optionElement.value = option.value;
