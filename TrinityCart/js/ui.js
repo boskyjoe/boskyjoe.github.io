@@ -13735,9 +13735,10 @@ function renderStockStatusChart(stockData) {
     const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
     const canvasElement = document.getElementById('dashboard-stock-status-chart');
     const gridContainer = document.getElementById('dashboard-stock-status-grid');
+    const legendContainer = document.getElementById('stock-chart-legend');
 
     if (!canvasElement || !chartContainer || !gridContainer) {
-        console.error("Chart canvas element 'dashboard-stock-status-chart' not found.");
+        console.error("A required chart or grid container was not found.");
         return;
     }
     const ctx = canvasElement.getContext('2d');
@@ -13748,69 +13749,43 @@ function renderStockStatusChart(stockData) {
         dashboardStockChart.destroy();
     }
 
-    if (chartData.length === 0) {
-        // ... (your "No Data" logic)
-        // Reset heights to default if no data
-        chartContainer.style.height = '300px';
-        gridContainer.style.height = '300px'; // ✅ NEW: Reset grid height
-        return;
-    }
-
-    const legendContainer = document.getElementById('stock-chart-legend');
     if (legendContainer) {
         legendContainer.innerHTML = `
-            <div class="flex items-center">
-                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(34, 197, 94, 0.7);"></span>
-                <span class="text-xs text-gray-600">Good Stock (10+)</span>
-            </div>
-            <div class="flex items-center">
-                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(245, 158, 11, 0.7);"></span>
-                <span class="text-xs text-gray-600">Low Stock (1-9)</span>
-            </div>
-            <div class="flex items-center">
-                <span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(220, 38, 38, 0.7);"></span>
-                <span class="text-xs text-gray-600">Out of Stock</span>
-            </div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(34, 197, 94, 0.7);"></span><span class="text-xs text-gray-600">Good (10+)</span></div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(245, 158, 11, 0.7);"></span><span class="text-xs text-gray-600">Low (1-9)</span></div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-sm mr-2" style="background-color: rgba(220, 38, 38, 0.7);"></span><span class="text-xs text-gray-600">Out of Stock</span></div>
         `;
     }
 
     // 3. The rest of your chart creation logic is correct.
-    const chartData = stockData
-        .filter(item => item.inventoryCount >= 0 ); 
+    const chartData = stockData;
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
-        // You can create a more elegant placeholder, but for now, this logs the issue.
-        console.log("No items with stock > 0 to display in the chart.");
-        // Optionally, you could draw a "No Data" message on the canvas here.
+        chartContainer.style.height = '300px';
+        gridContainer.style.height = '300px';
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#888";
-        ctx.textAlign = "center";
-        ctx.fillText("No products with stock to display.", canvasElement.width / 2, canvasElement.height / 2);
+        ctx.fillText("No stock data to display.", canvasElement.width / 2, canvasElement.height / 2);
         if (legendContainer) legendContainer.innerHTML = '';
         return;
     }
 
-    const heightPerItem = 30; 
+    const heightPerBar = 30;
     const chartPadding = 80;
-    const gridPadding = 40; 
-
-    const calculatedChartHeight = (chartData.length * heightPerItem) + chartPadding;
-    const calculatedGridHeight = (chartData.length * heightPerItem) + gridPadding;
+    const gridPadding = 40; // AG-Grid header is shorter than chart scales
+    const calculatedChartHeight = (chartData.length * heightPerBar) + chartPadding;
+    const calculatedGridHeight = (chartData.length * heightPerBar) + gridPadding;
 
     chartContainer.style.height = `${calculatedChartHeight}px`;
     gridContainer.style.height = `${calculatedGridHeight}px`;
 
     const labels = chartData.map(item => item.itemName);
     const data = chartData.map(item => item.inventoryCount);
-    
     const backgroundColors = chartData.map(item => {
-        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 0.7)';   // Red
-        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)'; // Amber
-        return 'rgba(34, 197, 94, 0.7)'; // Green
+        if (item.status === 'Out of Stock') return 'rgba(220, 38, 38, 0.7)';
+        if (item.status === 'Low Stock') return 'rgba(245, 158, 11, 0.7)';
+        return 'rgba(34, 197, 94, 0.7)';
     });
-
     const borderColors = chartData.map(item => {
         if (item.status === 'Out of Stock') return 'rgba(185, 28, 28, 1)';
         if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 1)';
@@ -13837,36 +13812,24 @@ function renderStockStatusChart(stockData) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                title: {
-                    display: true,
-                    text: 'Current Stock Levels',
-                    font: { size: 16, weight: 'bold' }
-                },
+                title: { display: true, text: 'Current Stock Levels', font: { size: 16, weight: 'bold' } },
                 datalabels: {
-                    // Position the label to the right of the bar
                     anchor: 'end',
-                    // Align the text to the left of the anchor point
                     align: 'right',
-                    // Add a little padding
                     padding: 4,
-                    // Set the color of the label text
                     color: '#333',
-                    font: {
-                        weight: 'bold'
-                    },
-                    // We can format the number if we want
-                    formatter: function(value, context) {
-                        return value; // Just return the raw number
-                    }
+                    font: { weight: 'bold' },
+                    formatter: (value) => value
                 }
             },
             scales: {
-                x: { beginAtZero: true, title: { display: true, text: 'Quantity in Stock' }},
-                y: { ticks: { font: { size: 10 }}}
+                x: { beginAtZero: true, title: { display: true, text: 'Quantity in Stock' } },
+                y: { ticks: { font: { size: 10 } } }
             }
         }
     });
 }
+
 
 let dashboardSoldChart = null;
 
