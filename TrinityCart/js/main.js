@@ -7607,7 +7607,10 @@ async function handleBulkSupplierPaymentSubmit(e) {
             showModal('success', 'Bulk Payment Complete', 
                 `The payment of ${formatCurrency(paymentData.amountPaid)} has been successfully allocated across ${invoicesToPay.length} invoices.`
             );
+            ProgressToast.hide(0);
         }, 500);
+
+        ProgressToast.hide(0);
 
     } catch (error) {
         console.error("Error processing bulk supplier payment:", error);
