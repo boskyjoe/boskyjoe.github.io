@@ -1966,17 +1966,43 @@ const purchaseInvoicesGridOptions = {
     onSelectionChanged: (event) => {
         const selectedRows = event.api.getSelectedRows();
         const bulkPaymentBtn = document.getElementById('bulk-purchase-payment-btn');
+        const btnSpan = bulkPaymentBtn.querySelector('span');
+        const btnIcon = bulkPaymentBtn.querySelector('svg');
 
-        if (!bulkPaymentBtn) return; // Safety check
+        if (!bulkPaymentBtn || !btnSpan || !btnIcon) return; // Safety check
 
-        if (selectedRows.length > 0) {
-            // If one or more rows are selected, show the button
-            bulkPaymentBtn.classList.remove('hidden');
-            // Update the button text to be more informative
-            bulkPaymentBtn.querySelector('span').textContent = `Pay ${selectedRows.length} Selected Invoice(s)`;
-        } else {
-            // If no rows are selected, hide the button
+        // CASE 1: No rows are selected
+        if (selectedRows.length === 0) {
             bulkPaymentBtn.classList.add('hidden');
+            return;
+        }
+
+        // If we reach here, at least one row is selected, so the button should be visible.
+        bulkPaymentBtn.classList.remove('hidden');
+
+        // Check if all selected rows are for the same supplier
+        const firstSupplierId = selectedRows[0].supplierId;
+        const allSameSupplier = selectedRows.every(row => row.supplierId === firstSupplierId);
+
+        if (allSameSupplier) {
+            // CASE 2: VALID SELECTION (all from the same supplier)
+            bulkPaymentBtn.disabled = false;
+            // Remove error styles and add success styles
+            bulkPaymentBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'cursor-not-allowed', 'opacity-75');
+            bulkPaymentBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            
+            btnSpan.textContent = `Pay ${selectedRows.length} Selected Invoice(s)`;
+            btnIcon.style.display = 'inline-block'; // Ensure icon is visible
+
+        } else {
+            // CASE 3: INVALID SELECTION (multiple suppliers)
+            bulkPaymentBtn.disabled = true;
+            // Remove success styles and add error styles
+            bulkPaymentBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            bulkPaymentBtn.classList.add('bg-red-600', 'cursor-not-allowed', 'opacity-75');
+            
+            btnSpan.textContent = 'Multiple Suppliers Selected';
+            btnIcon.style.display = 'none'; // Hide icon to make text more prominent
         }
     },
     rowClassRules: {
