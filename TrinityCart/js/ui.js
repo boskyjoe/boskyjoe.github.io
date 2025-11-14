@@ -5993,6 +5993,10 @@ export function populateSalesCatalogueDropdown() {
     });
 
     catalogueSelect.disabled = false;
+    if (activeCatalogues.length === 1) {
+        catalogueSelect.value = activeCatalogues[0].id;
+        console.log(`[UI] Defaulted to single active sales catalogue: ${activeCatalogues[0].catalogueName}`);
+    }
     console.log(`[ui.js] ✅ Populated ${activeCatalogues.length} ACTIVE sales catalogues for sales form`);
 }
 
@@ -6039,6 +6043,10 @@ export function showSalesView() {
                 option.textContent = store;
                 storeSelect.appendChild(option);
             });
+            // Set default value to "Church Store"
+            storeSelect.value = 'Church Store';
+            // Manually trigger the change event in case other logic depends on it
+            storeSelect.dispatchEvent(new Event('change'));
         }
 
         const paymentModeSelect = document.getElementById('sale-payment-mode');
