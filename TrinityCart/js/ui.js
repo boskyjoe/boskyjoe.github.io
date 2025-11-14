@@ -4267,6 +4267,13 @@ const consignmentOrdersGridOptions = {
             valueFormatter: p => formatCurrency(p.value || 0)
         },
         { 
+            field: "totalValueSold", 
+            headerName: "Total Sold", 
+            width: 140, 
+            // The valueFormatter is now correctly inside its parent column definition object.
+            valueFormatter: p => formatCurrency(p.value || 0)
+        },
+        { 
             field: "balanceDue", 
             headerName: "Balance Due", 
             width: 140, 
