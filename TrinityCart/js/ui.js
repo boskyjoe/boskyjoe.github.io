@@ -4651,9 +4651,9 @@ export function renderConsignmentDetail(orderData) {
 
 
     // --- [NEW] Populate the Financial Summary panel every time ---
-    document.getElementById('summary-total-sold').textContent = `$${(orderData.totalValueSold || 0).toFixed(2)}`;
-    document.getElementById('summary-total-paid').textContent = `$${(orderData.totalAmountPaid || 0).toFixed(2)}`;
-    document.getElementById('summary-balance-due').textContent = `$${(orderData.balanceDue || 0).toFixed(2)}`;
+    document.getElementById('summary-total-sold').textContent = formatCurrency(orderData.totalValueSold || 0);
+    document.getElementById('summary-total-paid').textContent = formatCurrency(orderData.totalAmountPaid || 0);
+    document.getElementById('summary-balance-due').textContent = formatCurrency(orderData.balanceDue || 0); 
 
     // Populate header with the new order's data
     document.getElementById('selected-consignment-id').textContent = orderData.consignmentId;
