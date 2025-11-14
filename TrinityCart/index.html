@@ -1153,44 +1153,59 @@
                 <div id="sales-catalogue-view" class="view space-y-8">
 
                     <!-- Card 1: Catalogue Header Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
                         <!-- Card Header -->
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-
+                        <div class="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-b border-purple-100 px-6 py-5">
                             <div class="flex items-center space-x-4">
                                 <!-- Beautiful Sales Catalogue Icon -->
-                                <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center shadow-sm">
-                                    <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-md transform hover:scale-105 transition-transform">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                                 <!-- Heading and Description -->
                                 <div>
-                                    <h3 id="catalogue-form-title" class="text-lg font-semibold text-gray-800">Create New Sales Catalogue</h3>
-                                    <p class="text-sm text-gray-500 mt-1">Create promotional catalogues for your sales campaigns</p>
+                                    <h3 id="catalogue-form-title" class="text-lg font-bold text-gray-800 flex items-center">
+                                        Create New Sales Catalogue
+                                        <span class="ml-3 px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">NEW</span>
+                                    </h3>
+                                    <p class="text-sm text-gray-600 mt-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Create promotional catalogues for your sales campaigns
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Card Body -->
-                        <div class="p-6">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
                             <form id="sales-catalogue-form" class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                                 <input type="hidden" id="sales-catalogue-doc-id"> <!-- For editing -->
 
                                 <!-- Catalogue Name -->
                                 <div class="md:col-span-2">
-                                    <label for="catalogue-name-input" class="form-label">Catalogue Name<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="catalogue-name-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        Catalogue Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="text" id="catalogue-name-input"
-                                        placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full" required>
+                                        placeholder="e.g., Christmas Bake Sale 2025" class="form-input w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" required>
                                 </div>
 
                                 <!-- Sales Season Dropdown -->
                                 <div>
-                                    <label for="catalogue-season-select" class="form-label">Sales Season<span
-                                            class="text-red-500">*</span></label>
-                                    <select id="catalogue-season-select" class="form-input w-full" required>
+                                    <label for="catalogue-season-select" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Sales Season<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <select id="catalogue-season-select" class="form-input w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" required>
                                         <option value="" disabled selected>Select a season...</option>
                                         <!-- Options will be populated by JS -->
                                     </select>
@@ -1199,12 +1214,18 @@
                                 <!-- Form Actions / Submit Button -->
                                 <div class="flex justify-start space-x-3">
                                     <button type="submit" id="catalogue-form-submit-btn"
-                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                        </svg>
                                         Save Catalogue
                                     </button>
                                     <button type="button" id="catalogue-form-cancel-btn"
-                                        class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 font-semibold"
+                                        class="bg-gray-500 text-white px-6 py-2.5 rounded-lg hover:bg-gray-600 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center"
                                         style="display: none;">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
                                         Cancel Edit
                                     </button>
                                 </div>
@@ -1213,24 +1234,57 @@
                     </div>
 
                     <!-- Card 2: Dual Grid System for Product Selection -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="p-6">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <!-- Section Header -->
+                        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-indigo-100">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-lg font-bold text-gray-800">Product Selection</h3>
+                                    <p class="text-sm text-gray-600">Drag products between catalogues or use grid actions</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                                 <!-- Left Side: Available Products -->
-                                <div>
-                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Available Products in Master
-                                        Catalogue</h4>
-                                    <div id="available-products-grid" class="ag-theme-alpine"
-                                        style="height: 600px; width: 100%;"></div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
+                                        <h4 class="text-base font-semibold text-gray-800 flex items-center">
+                                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                            </svg>
+                                            Available Products
+                                        </h4>
+                                        <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">MASTER</span>
+                                    </div>
+                                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                        <div id="available-products-grid" class="ag-theme-alpine"
+                                            style="height: 600px; width: 100%;"></div>
+                                    </div>
                                 </div>
 
                                 <!-- Right Side: Items in this Catalogue -->
-                                <div>
-                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Items in this Sales Catalogue
-                                    </h4>
-                                    <div id="catalogue-items-grid" class="ag-theme-alpine"
-                                        style="height: 600px; width: 100%;"></div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between bg-purple-50 px-4 py-3 rounded-lg border border-purple-200">
+                                        <h4 class="text-base font-semibold text-gray-800 flex items-center">
+                                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                            </svg>
+                                            Selected Items
+                                        </h4>
+                                        <span class="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">CATALOGUE</span>
+                                    </div>
+                                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                        <div id="catalogue-items-grid" class="ag-theme-alpine"
+                                            style="height: 600px; width: 100%;"></div>
+                                    </div>
                                 </div>
 
                             </div>
@@ -1238,12 +1292,22 @@
                     </div>
 
                     <!-- Card 3: Existing Sales Catalogues Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 px-6 py-4">
                             <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-semibold text-gray-800">Existing Sales Catalogues</h3>
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-lg font-bold text-gray-800">Existing Sales Catalogues</h3>
+                                        <p class="text-sm text-gray-600">View and manage all your catalogues</p>
+                                    </div>
+                                </div>
                                 <button id="export-sales-catalogues-excel-btn"
-                                    class="bg-green-600 text-white px-5 py-2 rounded-md hover:bg-green-700 font-semibold flex items-center gap-2">
+                                    class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-2.5 rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
                                         <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
                                     </svg>
@@ -1251,9 +1315,11 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="p-2">
-                            <div id="existing-catalogues-grid" class="ag-theme-alpine"
-                                style="height: 400px; width: 100%;"></div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="existing-catalogues-grid" class="ag-theme-alpine"
+                                    style="height: 400px; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -5718,7 +5784,7 @@
 
 
 
-    
+
 
     <!-- =================================== -->
     <!--   REPORT ACTIVITY MODAL             -->
