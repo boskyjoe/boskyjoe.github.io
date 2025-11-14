@@ -4698,9 +4698,15 @@ export function renderConsignmentDetail(orderData) {
             console.log("[Firestore] Received update for main consignment order document.");
             const updatedOrderData = doc.data();
             if (updatedOrderData) {
-                document.getElementById('summary-total-sold').textContent = `$${(updatedOrderData.totalValueSold || 0).toFixed(2)}`;
-                document.getElementById('summary-total-paid').textContent = `$${(updatedOrderData.totalAmountPaid || 0).toFixed(2)}`;
-                document.getElementById('summary-balance-due').textContent = `$${(updatedOrderData.balanceDue || 0).toFixed(2)}`;
+
+                document.getElementById('summary-total-sold').textContent = formatCurrency(updatedOrderData.totalValueSold || 0);
+                document.getElementById('summary-total-paid').textContent = formatCurrency(updatedOrderData.totalAmountPaid || 0);
+                document.getElementById('summary-balance-due').textContent = formatCurrency(updatedOrderData.balanceDue  || 0); 
+
+                
+                //document.getElementById('summary-total-sold').textContent = `$${(updatedOrderData.totalValueSold || 0).toFixed(2)}`;
+                //document.getElementById('summary-total-paid').textContent = `$${(updatedOrderData.totalAmountPaid || 0).toFixed(2)}`;
+                //document.getElementById('summary-balance-due').textContent = `$${(updatedOrderData.balanceDue || 0).toFixed(2)}`;
             }
         });
 
