@@ -4653,6 +4653,8 @@ async function handleNewSaleSubmit(e) {
         const customerPhone = document.getElementById('sale-customer-phone').value.trim();
         const voucherNumber = document.getElementById('sale-voucher-number').value.trim();
         const selectedStore = document.getElementById('sale-store-select').value;
+        const selectedSaleType = document.getElementById('sale-type-select').value;
+
 
         // Validate required customer fields
         if (!customerName) {
@@ -4666,6 +4668,12 @@ async function handleNewSaleSubmit(e) {
         if (!selectedStore) {
             ProgressToast.hide(0);
             await showModal('error', 'Missing Store', 'Please select which store location for this sale.');
+            return;
+        }
+
+        if (!selectedSaleType) {
+            ProgressToast.hide(0);
+            await showModal('error', 'Missing Sales Type', 'Please enter the Sales type.');
             return;
         }
 
@@ -4843,12 +4851,14 @@ async function handleNewSaleSubmit(e) {
             saleDate: new Date(document.getElementById('sale-date').value),
             store: selectedStore,
             manualVoucherNumber: voucherNumber,
+            saleType:selectedSaleType,
             
             // ✅ ENHANCED: Sales catalogue attribution
             salesCatalogueId: selectedCatalogueId,
             salesCatalogueName: selectedCatalogue.catalogueName,
             salesSeasonId: selectedCatalogue.seasonId,
             salesSeasonName: selectedCatalogue.seasonName,
+
             
             customerInfo: {
                 name: customerName,
