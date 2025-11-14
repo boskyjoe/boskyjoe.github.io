@@ -7590,6 +7590,9 @@ async function handleBulkSupplierPaymentSubmit(e) {
             return showModal('error', 'Missing Information', 'Please fill out Amount Paid, Payment Mode, and Reference #.');
         }
 
+        console.log("[Main.js] Payment Data that we collected : ",paymentData)
+        return ;
+        
         // 3. Call the new transactional API function
         ProgressToast.updateProgress('Saving payment and updating invoices...', 60);
         await processBulkSupplierPayment(paymentData, invoicesToPay, user);
