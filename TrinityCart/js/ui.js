@@ -13734,8 +13734,9 @@ function renderStockStatusChart(stockData) {
     // 1. Get the canvas element and its 2D rendering context.
     const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
     const canvasElement = document.getElementById('dashboard-stock-status-chart');
+    const gridContainer = document.getElementById('dashboard-stock-status-grid');
 
-    if (!canvasElement || !chartContainer) {
+    if (!canvasElement || !chartContainer || !gridContainer) {
         console.error("Chart canvas element 'dashboard-stock-status-chart' not found.");
         return;
     }
@@ -13745,6 +13746,14 @@ function renderStockStatusChart(stockData) {
     // This is crucial for re-rendering when the user refreshes the dashboard.
     if (dashboardStockChart) {
         dashboardStockChart.destroy();
+    }
+
+    if (chartData.length === 0) {
+        // ... (your "No Data" logic)
+        // Reset heights to default if no data
+        chartContainer.style.height = '300px';
+        gridContainer.style.height = '300px'; // ✅ NEW: Reset grid height
+        return;
     }
 
     const legendContainer = document.getElementById('stock-chart-legend');
@@ -13783,10 +13792,15 @@ function renderStockStatusChart(stockData) {
         return;
     }
 
-    const heightPerBar = 30; 
+    const heightPerItem = 30; 
     const chartPadding = 80;
-    const calculatedHeight = (chartData.length * heightPerBar) + chartPadding;
-    chartContainer.style.height = `${calculatedHeight}px`;
+    const gridPadding = 40; 
+
+    const calculatedChartHeight = (chartData.length * heightPerItem) + chartPadding;
+    const calculatedGridHeight = (chartData.length * heightPerItem) + gridPadding;
+
+    chartContainer.style.height = `${calculatedChartHeight}px`;
+    gridContainer.style.height = `${calculatedGridHeight}px`;
 
     const labels = chartData.map(item => item.itemName);
     const data = chartData.map(item => item.inventoryCount);
