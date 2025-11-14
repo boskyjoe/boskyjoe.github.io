@@ -3397,6 +3397,8 @@ export function initializeModals() {
                 closeSupplierPaymentModal();
             } else if (modalToClose.id === 'bulk-supplier-payment-modal') {
                  closeBulkPaymentModal();
+            } else if (modalToClose.id === 'view-catalogue-items-modal') {
+                closeViewCatalogueItemsModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -3746,6 +3748,7 @@ export function resetCatalogueForm() {
 
 
 // Define its options
+
 const existingCataloguesGridOptions = {
     theme: 'legacy',
     getRowId: params => params.data.id,
@@ -3762,7 +3765,7 @@ const existingCataloguesGridOptions = {
         },
         {
             headerName: "Actions", 
-            width: 150, // ✅ INCREASED width to accommodate two buttons
+            width: 180, // ✅ INCREASED width to accommodate two buttons
             cellClass: 'flex items-center justify-center space-x-2', // ✅ ADD space between buttons
             cellRenderer: params => {
                 const docId = params.data.id;
@@ -3782,6 +3785,11 @@ const existingCataloguesGridOptions = {
                     <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" />
                 </svg>`;
 
+                const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600">
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                    <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" />
+                </svg>`;
+
                 // ✅ ENHANCED: Determine status button attributes
                 let statusIcon, statusButtonClass, statusTooltip;
 
@@ -3797,6 +3805,11 @@ const existingCataloguesGridOptions = {
 
                 // ✅ RETURN: Both edit and status buttons
                 return `
+                    <button class="action-btn-icon action-btn-view-items" 
+                            data-id="${docId}" 
+                            title="View Items">
+                        ${viewIcon}
+                    </button>
                     <button class="action-btn-icon action-btn-edit-catalogue" 
                             data-id="${docId}" 
                             title="Edit Catalogue">
@@ -3822,6 +3835,59 @@ const existingCataloguesGridOptions = {
         console.log('[ui.js] Existing catalogues grid ready with activate/deactivate functionality');
     }
 };
+
+
+// ✅ Add a variable for the new grid's API
+let catalogueItemsViewGridApi = null;
+
+// ✅ Define the options for the read-only grid inside the modal
+const catalogueItemsViewGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "productName", headerName: "Product Name", flex: 1 },
+        { field: "costPrice", headerName: "Cost Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "marginPercentage", headerName: "Margin %", width: 120, valueFormatter: p => `${p.value || 0}%` },
+        { field: "sellingPrice", headerName: "Selling Price", width: 130, valueFormatter: p => formatCurrency(p.value) }
+    ],
+    onGridReady: params => { catalogueItemsViewGridApi = params.api; }
+};
+
+// ✅ NEW: Function to show the modal
+export async function showViewCatalogueItemsModal(catalogueId, catalogueName) {
+    const modal = document.getElementById('view-catalogue-items-modal');
+    if (!modal) return;
+
+    document.getElementById('view-items-modal-title').textContent = `Items in "${catalogueName}"`;
+
+    // Initialize the grid if it's the first time
+    const gridDiv = document.getElementById('catalogue-items-view-grid');
+    if (gridDiv && !catalogueItemsViewGridApi) {
+        catalogueItemsViewGridApi = createGrid(gridDiv, catalogueItemsViewGridOptions);
+    }
+    
+    // Show modal and loading state
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+    if (catalogueItemsViewGridApi) catalogueItemsViewGridApi.setGridOption('loading', true);
+
+    // Fetch the items for this specific catalogue
+    const items = await getItemsForCatalogue(catalogueId);
+    
+    if (catalogueItemsViewGridApi) {
+        catalogueItemsViewGridApi.setGridOption('rowData', items);
+        catalogueItemsViewGridApi.setGridOption('loading', false);
+    }
+}
+
+// ✅ NEW: Function to close the modal
+export function closeViewCatalogueItemsModal() {
+    const modal = document.getElementById('view-catalogue-items-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
 
 
 // 4. Create the initialization function
