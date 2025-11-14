@@ -27,7 +27,6 @@ import { appState } from './state.js';
 import { showModal } from './modal.js';
 import { createGrid } from 'https://cdn.jsdelivr.net/npm/ag-grid-community@latest/+esm';
 import {
-    formatCurrency,
     showView,
     ProgressToast,
 
@@ -45,6 +44,9 @@ import {
     // Existing helper functions
     resetPaymentForm
 } from './ui.js';
+
+import { formatCurrency } from './utils.js'; 
+
 
 // API functions (existing - call without modification)
 import {
