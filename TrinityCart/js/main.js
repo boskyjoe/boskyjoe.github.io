@@ -107,7 +107,7 @@ import {
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
-    deselectAllPurchaseInvoices,
+    deselectAllPurchaseInvoices,showViewCatalogueItemsModal
 } from './ui.js';
 
 import {
@@ -1102,7 +1102,13 @@ async function handleExistingCataloguesGrid(button, docId, user) {
 
     console.log(`[main.js] Catalogue action by user: ${user.email}, catalogue: ${docId}`);
 
-    if (button.classList.contains('action-btn-edit-catalogue')) {
+    if (button.classList.contains('action-btn-view-items')) {
+        // Handle the view button click
+        const catalogueData = getCatalogueDataFromGridById(docId);
+        if (catalogueData) {
+            showViewCatalogueItemsModal(docId, catalogueData.catalogueName);
+        }
+    } else if (button.classList.contains('action-btn-edit-catalogue')) {
         // Existing edit functionality
         console.log('[main.js] Edit catalogue action');
         const catalogueData = getCatalogueDataFromGridById(docId);
