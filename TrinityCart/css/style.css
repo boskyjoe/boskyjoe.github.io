@@ -80,12 +80,27 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease-in-out;
+    display: none;
 }
 
 .consignment-tab-panel.active {
     position: relative;
+    display: block;
     opacity: 1;
     pointer-events: auto;
+}
+
+#consignment-detail-panel {
+    min-height: fit-content;
+}
+
+#consignment-detail-panel > .flex.flex-col {
+    min-height: 0;
+}
+
+#fulfillment-view,
+#active-order-view {
+    min-height: 0;
 }
 
 #active-order-view .p-6 {
