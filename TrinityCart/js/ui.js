@@ -13928,11 +13928,42 @@ function renderTopSoldChart(topSoldData) {
     });
 }
 
+let bulkPaymentInvoicesGridApi = null;
+
+// ✅ NEW: Define the options for the mini-grid inside the modal
+const bulkPaymentInvoicesGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "supplierInvoiceNo", headerName: "Supplier Invoice #", flex: 1 },
+        { 
+            field: "purchaseDate", 
+            headerName: "Invoice Date", 
+            width: 130,
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : ''
+        },
+        { 
+            field: "balanceDue", 
+            headerName: "Balance", 
+            width: 130,
+            valueFormatter: p => formatCurrency(p.value || 0)
+        }
+    ],
+    defaultColDef: {
+        sortable: false, // Sorting is not necessary for this simple view
+        filter: false
+    },
+    onGridReady: params => {
+        bulkPaymentInvoicesGridApi = params.api;
+    }
+};
+
+
 /**
  * ✅ NEW: Opens and populates the Bulk Supplier Payment modal.
  * @param {Array<object>} selectedInvoices - The array of invoice objects selected in the grid.
  * @param {number} totalBalanceDue - The pre-calculated sum of the balance due for the selected invoices.
  */
+
 export function showBulkPaymentModal(selectedInvoices, totalBalanceDue) {
     const modal = document.getElementById('bulk-supplier-payment-modal');
     if (!modal) return;
@@ -13964,6 +13995,20 @@ export function showBulkPaymentModal(selectedInvoices, totalBalanceDue) {
 
     // Set the payment date to today by default
     document.getElementById('bulk-payment-date').valueAsDate = new Date();
+
+    const gridDiv = document.getElementById('bulk-payment-invoices-grid');
+    if (gridDiv && !bulkPaymentInvoicesGridApi) {
+        // Create the grid for the first time
+        bulkPaymentInvoicesGridApi = createGrid(gridDiv, bulkPaymentInvoicesGridOptions);
+    }
+    
+    // Use a setTimeout to ensure the grid is ready before setting data
+    setTimeout(() => {
+        if (bulkPaymentInvoicesGridApi) {
+            // Set the row data with the invoices that were selected
+            bulkPaymentInvoicesGridApi.setGridOption('rowData', selectedInvoices);
+        }
+    }, 50);
 
     // Show the modal
     modal.style.display = 'flex';
