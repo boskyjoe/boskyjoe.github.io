@@ -56,7 +56,7 @@ import {
 } from './reports.js';
 
 import {detachPaymentManagementRealtimeSync,buildActionRequiredList} from './payment-management.js'
-import { expenseTypes } from './config.js';
+import { expenseTypes,saleTypeOptions } from './config.js';
 
 Chart.register(ChartDataLabels);
 
@@ -6062,6 +6062,18 @@ export function showSalesView() {
                 console.log(`[ui.js] Sales catalogue changed to: ${e.target.value}`);
                 // Could refresh available products or show catalogue info
             });
+        }
+
+        const saleTypeSelect = document.getElementById('sale-type-select');
+        if (saleTypeSelect) {
+            saleTypeSelect.innerHTML = ''; // Clear existing options
+            saleTypeOptions.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.label;
+                saleTypeSelect.appendChild(optionElement);
+            });
+            saleTypeSelect.value = 'Revenue';
         }
 
     }, 0); 
