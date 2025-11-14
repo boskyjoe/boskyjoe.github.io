@@ -1963,6 +1963,22 @@ const purchaseInvoicesGridOptions = {
         mode: 'multiRow',
         enableSelectionWithoutKeys: true
     },
+    onSelectionChanged: (event) => {
+        const selectedRows = event.api.getSelectedRows();
+        const bulkPaymentBtn = document.getElementById('bulk-purchase-payment-btn');
+
+        if (!bulkPaymentBtn) return; // Safety check
+
+        if (selectedRows.length > 0) {
+            // If one or more rows are selected, show the button
+            bulkPaymentBtn.classList.remove('hidden');
+            // Update the button text to be more informative
+            bulkPaymentBtn.querySelector('span').textContent = `Pay ${selectedRows.length} Selected Invoice(s)`;
+        } else {
+            // If no rows are selected, hide the button
+            bulkPaymentBtn.classList.add('hidden');
+        }
+    },
     rowClassRules: {
         'ag-row-selected-custom': params => params.data && params.data.id === appState.selectedPurchaseInvoiceId,
     },
