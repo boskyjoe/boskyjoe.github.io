@@ -36,6 +36,7 @@ import {
     deactivateProductPriceHistory 
 } from './api.js';
 
+import { formatCurrency } from './utils.js'; 
 
 /**
  * Report configuration optimized for minimal database usage
