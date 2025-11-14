@@ -34,6 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
+import { formatCurrency } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
