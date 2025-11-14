@@ -105,7 +105,8 @@ import {
     showBulkAddProductsModal,        
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
-    showBulkPaymentModal, closeBulkPaymentModal,
+    showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
+    deselectAllPurchaseInvoices,
 } from './ui.js';
 
 import {
@@ -7510,10 +7511,10 @@ async function handleGenerateInvoice(invoiceId) {
  * ✅ NEW: Handles the click on the "Pay Selected Invoices" button.
  * Validates the selection and opens the bulk payment modal.
  */
-async function handleBulkPaymentClick() {
-    if (!purchaseInvoicesGridApi) return;
 
-    const selectedRows = purchaseInvoicesGridApi.getSelectedRows();
+async function handleBulkPaymentClick() {
+    const selectedRows = getSelectedPurchaseInvoices();
+
 
     // 1. Validation: Ensure rows are selected
     if (selectedRows.length === 0) {
@@ -7582,14 +7583,14 @@ async function handleBulkSupplierPaymentSubmit(e) {
         ProgressToast.updateProgress('Saving payment and updating invoices...', 60);
         await processBulkSupplierPayment(paymentData, invoicesToPay, user);
 
+       
         // 4. Success
         ProgressToast.showSuccess('Bulk payment processed successfully!');
         closeBulkPaymentModal();
         
         // Deselect rows in the grid for a clean state
-        if (purchaseInvoicesGridApi) {
-            purchaseInvoicesGridApi.deselectAll();
-        }
+        deselectAllPurchaseInvoices();
+        
 
         setTimeout(() => {
             showModal('success', 'Bulk Payment Complete', 
