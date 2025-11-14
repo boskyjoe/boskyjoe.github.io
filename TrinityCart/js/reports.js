@@ -26,7 +26,7 @@ import {
     CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
     EXPENSES_COLLECTION_PATH,PRODUCTS_CATALOGUE_COLLECTION_PATH
 } from './config.js';
-import { formatCurrency } from './ui.js';
+
 import { masterData } from './masterData.js';
 
 import { 
