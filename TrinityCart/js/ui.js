@@ -5714,7 +5714,10 @@ const salesHistoryGridOptions = {
                 const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" /></svg>`;
 
                 return `
-                <button class="action-btn-icon hover:text-blue-700 hover:bg-blue-50 action-btn-view-sale" data-id="${docId}" title="View Sale Details">${viewIcon}</button>
+                <button class="action-btn-icon hover:text-blue-700 hover:bg-blue-50 action-btn-view-sale" 
+                    data-id="${params.data.id}" 
+                    title="View Sale Details">
+                ${viewIcon}
                 <button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>
                 <button class="action-btn-icon hover:text-red-700 hover:bg-red-50 action-btn-generate-invoice" data-id="${params.data.id}" title="Download PDF Invoice">${pdfIcon}</button>
                 `;
