@@ -14158,8 +14158,17 @@ export function showSalesDetailModal(saleData) {
     const modal = document.getElementById('view-sale-details-modal');
     if (!modal) return;
 
+    const systemId = saleData.saleId || 'N/A';
+    const manualVoucher = saleData.manualVoucherNumber;
+    let displayText = systemId; // Start with the system ID by default.
+
+    // If a manual voucher number exists, concatenate it.
+    if (manualVoucher) {
+        displayText += ` (Manual Voucher #: ${manualVoucher})`;
+    }
+    
     // Populate the static detail fields
-    document.getElementById('sale-detail-invoice-id').textContent = saleData.manualVoucherNumber || saleData.saleId;
+    document.getElementById('sale-detail-invoice-id').textContent = displayText ;
     document.getElementById('sale-detail-customer').textContent = saleData.customerInfo?.name || 'N/A';
     document.getElementById('sale-detail-date').textContent = saleData.saleDate?.toDate().toLocaleDateString() || 'N/A';
     document.getElementById('sale-detail-store').textContent = saleData.store || 'N/A';
