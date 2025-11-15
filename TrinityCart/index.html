@@ -1128,26 +1128,32 @@
                 <!-- View: Manage Products -->
                 <div id="products-view" class="view space-y-8">
                     <!-- Card: Products Grid with Add Button -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg flex justify-between items-center">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-100 px-6 py-5 rounded-t-lg flex justify-between items-center">
                             <div class="flex items-center space-x-4">
                                 <!-- Beautiful Product Catalogue Icon -->
-                                <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center shadow-sm">
-                                    <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md transform hover:scale-105 transition-transform">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
                                 </div>
-                                
                                 <!-- Heading and Description -->
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800">Product Catalogue</h3>
-                                    <p class="text-sm text-gray-500 mt-1">Manage your product inventory and pricing</p>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Product Catalogue
+                                        <span class="ml-3 px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">MASTER</span>
+                                    </h3>
+                                    <p class="text-sm text-gray-600 mt-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Manage your product inventory and pricing
+                                    </p>
                                 </div>
                             </div>
-                            
                             <button id="add-new-product-to-catalogue-btn"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold flex items-center space-x-2">
+                                class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -1155,10 +1161,22 @@
                                 <span>Add New Product</span>
                             </button>
                         </div>
-                        <div class="p-2">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <!-- Info banner -->
+                            <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start">
+                                <svg class="w-5 h-5 mr-3 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">Master Product Catalogue</p>
+                                    <p class="text-xs text-gray-600 mt-1">Add, edit, or remove products. Changes here will affect all sales catalogues using these products.</p>
+                                </div>
+                            </div>
                             <!-- Full-width grid -->
-                            <div id="products-catalogue-grid" class="ag-theme-alpine"
-                                style="height: 90vh; width: 100%;"></div>
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="products-catalogue-grid" class="ag-theme-alpine"
+                                    style="height: 90vh; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
