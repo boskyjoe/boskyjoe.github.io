@@ -1995,7 +1995,7 @@ const purchaseInvoicesGridOptions = {
     onFilterChanged: (event) => {
         updatePinnedTotals(
             event.api, 
-            ['invoiceTotal', 'totalAmountPaid', 'balanceDue'], // Columns to sum
+            ['invoiceTotal', 'totalAmountPaid', 'totalValueSold','balanceDue'], // Columns to sum
             'invoiceName' // Column to display the "Totals:" label
         );
     },
@@ -5121,7 +5121,7 @@ export function showConsignmentView() {
 
                 updatePinnedTotals(
                     consignmentOrdersGridApi,
-                    ['totalValueCheckedOut', 'totalAmountPaid', 'balanceDue'],
+                    ['totalValueCheckedOut', 'totalAmountPaid','totalValueSold', 'balanceDue'],
                     'teamName' // Display "Totals:" in the Team column
                 );
             }
