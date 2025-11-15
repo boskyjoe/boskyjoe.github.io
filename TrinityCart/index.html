@@ -3218,16 +3218,46 @@
 
 
 
+
+                <!-- View: Admin Modules (Navigation Hub) -->
                 <!-- View: Admin Modules (Navigation Hub) -->
                 <div id="admin-modules-view" class="view">
-                    <h2 class="text-2xl font-semibold mb-6">Admin Modules - Master Data</h2>
-                    <p class="text-gray-600 mb-8 -mt-4">Manage core application settings and dropdown lists.</p>
+                    <!-- Header Section -->
+                    <div class="bg-gradient-to-r from-slate-50 to-gray-100 rounded-lg p-6 mb-8 border border-gray-200 shadow-sm">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-14 h-14 bg-gradient-to-br from-slate-600 to-gray-700 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                                    Admin Modules - Master Data
+                                    <span class="ml-3 px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full uppercase tracking-wide">Admin Only</span>
+                                </h2>
+                                <p class="text-gray-600 mt-2">Manage core application settings and dropdown lists.</p>
+                                <div class="mt-4 bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                                    <div class="flex items-start space-x-3">
+                                        <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-800">Administrative Control Panel</p>
+                                            <p class="text-xs text-gray-600 mt-1">These modules allow you to configure master data that powers the entire application. Changes made here will affect dropdown menus, selection options, and data validation throughout the system. Only administrators should have access to these settings.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- Cards Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
                         <!-- Card: Product Categories -->
-                        <a href="#" class="master-data-card" data-view-id="categories-view">
-                            <div class="icon-container bg-blue-100 text-blue-600">
+                        <a href="#" class="master-data-card group" data-view-id="categories-view">
+                            <div class="icon-container bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3235,14 +3265,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Product Categories</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors">Product Categories</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage product groupings</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Payment Modes -->
-                        <a href="#" class="master-data-card" data-view-id="payment-modes-view">
-                            <div class="icon-container bg-green-100 text-green-600">
+                        <a href="#" class="master-data-card group" data-view-id="payment-modes-view">
+                            <div class="icon-container bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3250,14 +3283,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Payment Modes</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-green-600 transition-colors">Payment Modes</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage payment methods</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Banks -->
-                        <a href="#" class="master-data-card" data-view-id="banks-view">
-                            <div class="icon-container bg-yellow-100 text-yellow-600">
+                        <a href="#" class="master-data-card group" data-view-id="banks-view">
+                            <div class="icon-container bg-yellow-100 text-yellow-600 group-hover:bg-yellow-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3265,14 +3301,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Banks</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-yellow-600 transition-colors">Banks</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage bank names for transactions</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Sale Types -->
-                        <a href="#" class="master-data-card" data-view-id="sale-types-view">
-                            <div class="icon-container bg-purple-100 text-purple-600">
+                        <a href="#" class="master-data-card group" data-view-id="sale-types-view">
+                            <div class="icon-container bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3281,14 +3320,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Sale Types</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-purple-600 transition-colors">Sale Types</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage different types of sales</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Sales Season -->
-                        <a href="#" class="master-data-card" data-view-id="seasons-view">
-                            <div class="icon-container bg-indigo-100 text-indigo-600">
+                        <a href="#" class="master-data-card group" data-view-id="seasons-view">
+                            <div class="icon-container bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3296,14 +3338,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Sales Seasons</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-indigo-600 transition-colors">Sales Seasons</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage festival periods & sales cycles</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Sales Events -->
-                        <a href="#" class="master-data-card" data-view-id="sales-events-view">
-                            <div class="icon-container bg-orange-100 text-orange-600">
+                        <a href="#" class="master-data-card group" data-view-id="sales-events-view">
+                            <div class="icon-container bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3311,14 +3356,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Sales Events</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-orange-600 transition-colors">Sales Events</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage events within a sales season</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: Church Teams -->
-                        <a href="#" class="master-data-card" data-view-id="church-teams-view">
-                            <div class="icon-container bg-red-100 text-red-600">
+                        <a href="#" class="master-data-card group" data-view-id="church-teams-view">
+                            <div class="icon-container bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3326,14 +3374,17 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">Church Teams</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-red-600 transition-colors">Church Teams</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage different church teams</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                         <!-- Card: User Management -->
-                        <a href="#" class="master-data-card" data-view-id="users-view">
-                            <div class="icon-container bg-pink-100 text-pink-600">
+                        <a href="#" class="master-data-card group" data-view-id="users-view">
+                            <div class="icon-container bg-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-all duration-300 group-hover:scale-110">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -3341,9 +3392,12 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-lg text-gray-800">User Management</h3>
+                                <h3 class="font-bold text-lg text-gray-800 group-hover:text-pink-600 transition-colors">User Management</h3>
                                 <p class="text-sm text-gray-500 mt-1">Manage user roles and access</p>
                             </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-pink-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </a>
 
                     </div>
