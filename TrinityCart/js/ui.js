@@ -3399,6 +3399,8 @@ export function initializeModals() {
                  closeBulkPaymentModal();
             } else if (modalToClose.id === 'view-catalogue-items-modal') {
                 closeViewCatalogueItemsModal();
+            } else if (modalToClose.id === 'view-sale-details-modal') {
+                closeSalesDetailModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -3418,6 +3420,9 @@ export function initializeModals() {
             closeReportActivityModal();
             closeRecordSalePaymentModal();
             closeBulkAddProductsModal();
+            closeViewCatalogueItemsModal();
+            closeSalesDetailModal();
+            closeBulkPaymentModal();
 
             // 2. Also close the Custom Modal (for success/error/confirm)
             const customModal = document.getElementById('custom-modal');
@@ -5706,8 +5711,11 @@ const salesHistoryGridOptions = {
                         </svg>`;
                 const pdfIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v4.59L7.3 8.24a.75.75 0 00-1.1 1.02l3.25 3.5a.75.75 0 001.1 0l3.25-3.5a.75.75 0 10-1.1-1.02l-1.95 2.1V5z" clip-rule="evenodd" /></svg>`;
 
+                const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" /></svg>`;
 
-                return `<button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>
+                return `
+                <button class="action-btn-icon hover:text-blue-700 hover:bg-blue-50 action-btn-view-sale" data-id="${docId}" title="View Sale Details">${viewIcon}</button>
+                <button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>
                 <button class="action-btn-icon hover:text-red-700 hover:bg-red-50 action-btn-generate-invoice" data-id="${params.data.id}" title="Download PDF Invoice">${pdfIcon}</button>
                 `;
             }
@@ -14122,4 +14130,59 @@ export function deselectAllPurchaseInvoices() {
         purchaseInvoicesGridApi.deselectAll();
         console.log("[UI] All purchase invoices deselected.");
     }
+}
+
+
+// ✅ NEW: Add a variable for the new grid's API at the top of the file
+let saleDetailItemsGridApi = null;
+
+// ✅ NEW: Define the options for the read-only grid inside the modal
+const saleDetailItemsGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "productName", headerName: "Product Name", flex: 1 },
+        { field: "quantity", headerName: "Qty", width: 80 },
+        { field: "unitPrice", headerName: "Unit Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "discountAmount", headerName: "Discount", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "taxAmount", headerName: "Tax", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "lineTotal", headerName: "Line Total", width: 130, valueFormatter: p => formatCurrency(p.value), cellStyle: { 'font-weight': 'bold' } }
+    ],
+    onGridReady: params => { saleDetailItemsGridApi = params.api; }
+};
+
+// ✅ NEW: Function to show the modal and populate it with data
+export function showSalesDetailModal(saleData) {
+    const modal = document.getElementById('view-sale-details-modal');
+    if (!modal) return;
+
+    // Populate the static detail fields
+    document.getElementById('sale-detail-invoice-id').textContent = saleData.manualVoucherNumber || saleData.saleId;
+    document.getElementById('sale-detail-customer').textContent = saleData.customerInfo?.name || 'N/A';
+    document.getElementById('sale-detail-date').textContent = saleData.saleDate?.toDate().toLocaleDateString() || 'N/A';
+    document.getElementById('sale-detail-store').textContent = saleData.store || 'N/A';
+    document.getElementById('sale-detail-type').textContent = saleData.saleType || 'N/A';
+    document.getElementById('sale-detail-createdby').textContent = saleData.audit?.createdBy || 'N/A';
+
+    // Initialize the grid if it's the first time
+    const gridDiv = document.getElementById('sale-detail-items-grid');
+    if (gridDiv && !saleDetailItemsGridApi) {
+        saleDetailItemsGridApi = createGrid(gridDiv, saleDetailItemsGridOptions);
+    }
+    
+    // Set the row data for the items grid
+    if (saleDetailItemsGridApi) {
+        saleDetailItemsGridApi.setGridOption('rowData', saleData.lineItems || []);
+    }
+
+    // Show the modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+// ✅ NEW: Function to close the modal
+export function closeSalesDetailModal() {
+    const modal = document.getElementById('view-sale-details-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
