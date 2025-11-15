@@ -107,7 +107,7 @@ import {
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
-    deselectAllPurchaseInvoices,showViewCatalogueItemsModal
+    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal
 } from './ui.js';
 
 import {
@@ -853,6 +853,7 @@ function setupGlobalClickHandler() {
             }
             return; // Action handled
         }
+
 
         // Authentication
         //if (target.closest('#login-button')) return EventHandlers.auth.login();
@@ -1701,16 +1702,34 @@ async function handleExpensesGrid(button, docId, user) {
 
 
 async function handleSalesHistoryGrid(button, docId) {
-    if (!button.classList.contains('action-btn-manage-payments')) return;
 
-    console.log("Opening manage payments modal for:", docId);
-    const invoiceData = getSalesHistoryDataById(docId);
+    // --- Action 1: View Sale Details ---
+    if (button.classList.contains('action-btn-view-sale')) {
+        console.log("Opening view sale details modal for:", docId);
+        const saleData = getSalesHistoryDataById(docId); // Assuming you have this helper
 
-    if (invoiceData) {
-        showRecordSalePaymentModal(invoiceData);
-    } else {
-        alert("Error: Could not find data for the selected invoice.");
+        if (saleData) {
+            showSalesDetailModal(saleData);
+        } else {
+            showModal('error', 'Data Not Found', 'Could not find data for the selected sale.');
+        }
+        return; // Action handled, exit the function
     }
+
+    // --- Action 2: Manage Payments ---
+    if (button.classList.contains('action-btn-manage-payments')) {
+        console.log("Opening manage payments modal for:", docId);
+        const invoiceData = getSalesHistoryDataById(docId);
+
+        if (invoiceData) {
+            showRecordSalePaymentModal(invoiceData);
+        } else {
+            showModal('error', 'Data Not Found', 'Could not find data for the selected invoice.');
+        }
+        return; // Action handled, exit the function
+    }
+
+
 }
 
 async function handleSalePaymentHistoryGrid(button, docId, user) {
