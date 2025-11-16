@@ -11792,6 +11792,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         document.getElementById('sales-summary-total-cash').textContent = formatCurrency(sales.total.cash);
         document.getElementById('sales-summary-total-diff').textContent = formatCurrency(sales.total.diff);
         
+        document.getElementById('sales-summary-consignment-checkedout').textContent = formatCurrency(sales.consignment.checkout);
         document.getElementById('sales-summary-consignment-invoiced').textContent = formatCurrency(sales.consignment.invoiced);
         document.getElementById('sales-summary-consignment-cash').textContent = formatCurrency(sales.consignment.cash);
         document.getElementById('sales-summary-consignment-diff').textContent = formatCurrency(sales.consignment.diff);
