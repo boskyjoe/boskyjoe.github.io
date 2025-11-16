@@ -4331,15 +4331,15 @@ const consignmentOrdersGridOptions = {
             valueFormatter: p => formatCurrency(p.value || 0)
         },
         { 
-            field: "totalAmountPaid", 
-            headerName: "Paid", 
+            field: "totalValueSold", 
+            headerName: "Total Sold", 
             width: 140, 
             // The valueFormatter is now correctly inside its parent column definition object.
             valueFormatter: p => formatCurrency(p.value || 0)
         },
         { 
-            field: "totalValueSold", 
-            headerName: "Total Sold", 
+            field: "totalAmountPaid", 
+            headerName: "Paid", 
             width: 140, 
             // The valueFormatter is now correctly inside its parent column definition object.
             valueFormatter: p => formatCurrency(p.value || 0)
@@ -14194,7 +14194,7 @@ export function showSalesDetailModal(saleData) {
     document.getElementById('sale-detail-paid').textContent = formatCurrency(saleData.totalAmountPaid || 0);
     document.getElementById('sale-detail-balance').textContent = formatCurrency(saleData.balanceDue || 0);
 
-    
+
     // Show the modal
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
