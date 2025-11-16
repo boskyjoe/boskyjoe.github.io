@@ -14250,6 +14250,10 @@ const consignmentExpensesGridOptions = {
 
 // ✅ NEW: Function to show the modal
 export function showLogExpenseModal(orderData) {
+
+    console.log('[us.js] showLogExpenseModal', orderData);
+
+
     const modal = document.getElementById('log-consignment-expense-modal');
     if (!modal) return;
 
