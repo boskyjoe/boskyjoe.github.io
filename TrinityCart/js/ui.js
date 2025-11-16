@@ -14175,6 +14175,12 @@ export function showSalesDetailModal(saleData) {
     document.getElementById('sale-detail-store').textContent = saleData.store || 'N/A';
     document.getElementById('sale-detail-type').textContent = saleData.saleType || 'N/A';
     document.getElementById('sale-detail-createdby').textContent = saleData.audit?.createdBy || 'N/A';
+    document.getElementById('sale-detail-customer-address').textContent = saleData.customerInfo?.address || 'N/A';
+
+    document.getElementById('sale-detail-customer-phone').textContent = saleData.customerInfo?.phone || 'N/A';
+    document.getElementById('sale-detail-customer-email').textContent = saleData.customerInfo?.email || 'N/A';
+
+    
 
     // Initialize the grid if it's the first time
     const gridDiv = document.getElementById('sale-detail-items-grid');
