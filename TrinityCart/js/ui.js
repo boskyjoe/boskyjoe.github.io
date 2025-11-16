@@ -14253,8 +14253,16 @@ export function showLogExpenseModal(orderData) {
     const modal = document.getElementById('log-consignment-expense-modal');
     if (!modal) return;
 
+    const systemId = orderData.consignmentId || 'N/A';
+    const manualVoucher = orderData.manualVoucherNumber;
+    let displayText = systemId;
+
+    if (manualVoucher) {
+        displayText += ` (Manual Voucher #: ${manualVoucher})`;
+    }
+
     // Populate summary fields
-    document.getElementById('expense-modal-order-id').textContent = orderData.consignmentId;
+    document.getElementById('expense-modal-order-id').textContent = displayText;
     document.getElementById('expense-modal-total-sold').textContent = formatCurrency(orderData.totalValueSold || 0);
     document.getElementById('expense-modal-current-expenses').textContent = formatCurrency(orderData.totalExpenses || 0);
     document.getElementById('expense-modal-balance-due').textContent = formatCurrency(orderData.balanceDue || 0);
