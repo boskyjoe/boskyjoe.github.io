@@ -162,6 +162,9 @@ import {
     addNewExpenseRow,exportConsignmentOrders,exportSalesOrderHistory,exportAllCataloguesToMultiSheetExcel
 } from './ui.js';
 
+import { addConsignmentExpense } from './api.js';
+import { showLogExpenseModal, closeLogExpenseModal } from './ui.js';
+
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
 
 
@@ -856,6 +859,17 @@ function setupGlobalClickHandler() {
             }
             return; // Action handled
         }
+
+        const logExpenseBtn = e.target.closest('.action-btn-log-expense');
+        if (logExpenseBtn) {
+            const orderId = logExpenseBtn.dataset.id;
+            const orderData = getConsignmentOrderDataById(orderId); // Assuming you have this helper
+            if (orderData) {
+                showLogExpenseModal(orderData);
+            }
+            return;
+        }
+
 
 
         // Authentication
@@ -1572,6 +1586,34 @@ async function handleConsignmentPaymentsGrid(button, docId, user) {
         await showModal('error', 'Unknown Action', 'The requested action is not recognized. Please refresh the page.');
     }
 }
+
+// Add new form submission handler
+async function handleLogExpenseSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    const orderId = appState.selectedConsignmentId; // Assuming this is set when an order is selected
+
+    if (!user || !orderId) return;
+
+    const expenseData = {
+        justification: document.getElementById('expense-justification').value,
+        amount: document.getElementById('expense-amount').value
+    };
+
+    if (!expenseData.justification || !expenseData.amount) {
+        return showModal('error', 'Missing Fields', 'Please provide both a justification and an amount.');
+    }
+
+    try {
+        await addConsignmentExpense(orderId, expenseData, user);
+        showModal('success', 'Expense Logged', 'The expense has been logged and the order balance updated.');
+        document.getElementById('log-expense-form').reset();
+        // The modal will update automatically via its own real-time listener
+    } catch (error) {
+        showModal('error', 'Failed to Log Expense', error.message);
+    }
+}
+
 
 
 /**
@@ -2705,7 +2747,8 @@ function setupFormSubmissions() {
         { id: 'add-sale-type-form', handler: handleSaleTypeSubmit },
         { id: 'add-season-form', handler: handleSeasonSubmit },
         { id: 'add-event-form', handler: handleEventSubmit },
-        { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit }
+        { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit },
+        { id: 'log-expense-form', handler: handleLogExpenseSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
