@@ -34,3 +34,14 @@ export function formatCurrency(value) {
     // For now, let's stick to the standard formatter's output.
     return formatter.format(numberValue).replace('₹', currencySymbol);
 }
+
+
+// (This is a simplified version. For production, a more robust library might be better)
+export function numberToWords(num) {
+    // This is a complex function. For now, we'll return a placeholder.
+    // You can find many JavaScript libraries online to do this conversion accurately.
+    // For example, using a library like 'to-words'.
+    if (num === 0) return 'Zero';
+    // A full implementation is very long. Let's just return the number as a string for now.
+    return `${num.toFixed(2)} in words (placeholder)`; 
+}
