@@ -6,62 +6,52 @@ export function getTastyTreatsInvoiceHTML() {
         <div class="invoice-container">
             <!-- Header Section -->
             <div class="invoice-header">
+                <div class="header-logo">
+                    <img src="{{logoUrl}}" alt="Logo" style="max-height: 60px;">
+                </div>
+                <div class="header-company-details">
+                    <h2>{{companyName}}</h2>
+                    <p>{{address1}}, {{address2}}</p>
+                    <p>{{city}}, {{state}} - {{pincode}}</p>
+                    <p><strong>Email:</strong> {{email}}</p>
+                    <p><strong>GSTIN:</strong> {{gstin}}</p>
+                </div>
                 <div class="header-title">
                     <h1>Tax Invoice</h1>
                     <p class="copy-type">{{copyType}}</p>
                 </div>
             </div>
 
-            <!-- Company Info Section -->
-            <div class="company-section">
-                <div class="company-info">
-                    <h2>{{companyName}}</h2>
-                    <p><strong>Registered Address.</strong></p>
-                    <p>{{address1}}</p>
-                    <p>{{address2}}</p>
-                    <p>{{city}}, {{state}} - {{pincode}}</p>
-                    <p><strong>Email:</strong> {{email}}</p>
-                    <p><strong>GSTIN:</strong> {{gstin}}, <strong>State:</strong> {{stateCode}}</p>
-                </div>
-            </div>
-
-            <!-- Bill To / Ship To Section -->
-            <table class="parties-table">
+            <!-- ✅ NEW: Combined Details Section in a Single Row -->
+            <table class="details-master-table">
                 <tr>
-                    <td class="bill-to-cell">
+                    <!-- Bill To -->
+                    <td class="details-cell">
                         <h3>Bill To</h3>
                         <p><strong>{{customerName}}</strong></p>
                         <p>{{customerAddress1}}</p>
-                        <p>{{customerAddress2}}</p>
-                        <p>{{customerCity}}, {{customerState}} {{customerPincode}}</p>
-                        <p><strong>GSTIN Number:</strong> {{customerGSTIN}}</p>
-                        <p><strong>State:</strong> {{customerStateCode}}</p>
+                        <p><strong>GSTIN:</strong> {{customerGSTIN}}</p>
+                        <p><strong>State:</strong> {{customerState}} ({{customerStateCode}})</p>
                     </td>
-                    <td class="ship-to-cell">
+                    <!-- Ship To -->
+                    <td class="details-cell">
                         <h3>Ship To</h3>
                         <p>{{shipToAddress1}}</p>
-                        <p>{{shipToAddress2}}</p>
-                        <p>{{shipToCity}}, {{shipToState}} {{shipToPincode}}</p>
+                        <p>{{shipToCity}}, {{shipToState}} - {{shipToPincode}}</p>
                     </td>
-                </tr>
-            </table>
-
-            <!-- Transportation & Invoice Details -->
-            <table class="details-table">
-                <tr>
-                    <td class="transport-cell">
-                        <h3>Transportation Details</h3>
-                        <p><strong>Transport Name:</strong> {{transportName}}</p>
-                        <p><strong>Vehicle Number:</strong> {{vehicleNumber}}</p>
-                        <p><strong>Delivery Date:</strong> {{deliveryDate}}</p>
-                        <p><strong>Delivery location:</strong> {{deliveryLocation}}</p>
+                    <!-- Transport Details -->
+                    <td class="details-cell">
+                        <h3>Transportation</h3>
+                        <p><strong>Mode:</strong> {{transportName}}</p>
+                        <p><strong>Vehicle:</strong> {{vehicleNumber}}</p>
+                        <p><strong>Date:</strong> {{deliveryDate}}</p>
                     </td>
-                    <td class="invoice-cell">
+                    <!-- Invoice Details -->
+                    <td class="details-cell">
                         <h3>Invoice Details</h3>
-                        <p><strong>Invoice No.:</strong> {{invoiceNumber}}</p>
+                        <p><strong>No.:</strong> {{invoiceNumber}}</p>
                         <p><strong>Date:</strong> {{invoiceDate}}</p>
                         <p><strong>Time:</strong> {{invoiceTime}}</p>
-                        <p><strong>Place of Supply:</strong> {{placeOfSupply}}</p>
                     </td>
                 </tr>
             </table>
@@ -186,7 +176,7 @@ export function getTastyTreatsInvoiceHTML() {
 export function getTastyTreatsInvoiceCSS() {
     return `
         @page {
-            margin: 10mm;
+            margin: 8mm;
             size: A4;
         }
 
@@ -197,143 +187,105 @@ export function getTastyTreatsInvoiceCSS() {
         }
 
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 9pt;
-            line-height: 1.3;
-            color: #000;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 8pt; /* Reduced base font size */
+            line-height: 1.4;
+            color: #333;
         }
 
         .invoice-container {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 8mm;
+            width: 194mm;
+            min-height: 277mm;
             margin: 0 auto;
             background: white;
         }
 
-        /* Header */
+        /* ✅ NEW: Header with Logo, Company Details, and Title on one line */
         .invoice-header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 10px;
+            padding-bottom: 5px;
             border-bottom: 2px solid #000;
-            padding-bottom: 8px;
         }
-
-        .invoice-header h1 {
-            font-size: 18pt;
-            font-weight: bold;
-            margin-bottom: 3px;
+        .header-logo {
+            width: 25%;
+            flex-shrink: 0;
         }
-
-        .copy-type {
-            font-size: 9pt;
-            font-weight: bold;
+        .header-company-details {
+            width: 50%;
+            text-align: center;
         }
-
-        /* Company Section */
-        .company-section {
-            margin-bottom: 12px;
-            padding: 8px;
-            border: 1px solid #000;
-            background-color: #f5f5f5;
-        }
-
-        .company-info h2 {
+        .header-company-details h2 {
             font-size: 14pt;
             font-weight: bold;
+            color: #000;
+        }
+        .header-title {
+            width: 25%;
+            text-align: right;
+        }
+        .header-title h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #000;
+        }
+        .copy-type {
+            font-size: 8pt;
+            font-weight: bold;
+        }
+
+        /* ✅ NEW: Master Details Table for Bill To, Ship To, etc. */
+        .details-master-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            border: 1px solid #000;
+        }
+        .details-master-table td.details-cell {
+            width: 25%; /* Four equal columns */
+            vertical-align: top;
+            padding: 6px;
+            border-right: 1px solid #000;
+        }
+        .details-master-table td.details-cell:last-child {
+            border-right: none;
+        }
+        .details-master-table h3 {
+            font-size: 9pt;
+            font-weight: bold;
             margin-bottom: 4px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 2px;
         }
-
-        .company-info p {
-            font-size: 8.5pt;
-            line-height: 1.4;
+        .details-master-table p {
             margin-bottom: 2px;
         }
 
-        /* Parties Table */
-        .parties-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
-        }
-
-        .parties-table td {
-            width: 50%;
-            vertical-align: top;
-            padding: 8px;
-            border: 1px solid #000;
-        }
-
-        .parties-table h3 {
-            font-size: 10pt;
-            font-weight: bold;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-        }
-
-        .parties-table p {
-            font-size: 8.5pt;
-            line-height: 1.4;
-            margin-bottom: 2px;
-        }
-
-        /* Details Table */
-        .details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
-        }
-
-        .details-table td {
-            width: 50%;
-            vertical-align: top;
-            padding: 8px;
-            border: 1px solid #000;
-        }
-
-        .details-table h3 {
-            font-size: 10pt;
-            font-weight: bold;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-        }
-
-        .details-table p {
-            font-size: 8.5pt;
-            line-height: 1.5;
-            margin-bottom: 2px;
-        }
-
-        /* Items Table */
+        /* Items Table (Slightly more compact) */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
-            font-size: 8.5pt;
+            margin-bottom: 5px;
+            font-size: 8pt; /* Smaller font for the table */
         }
-
         .items-table th {
             background-color: #e0e0e0;
             border: 1px solid #000;
-            padding: 6px 4px;
-            text-align: left;
+            padding: 4px; /* Reduced padding */
+            text-align: center;
             font-weight: bold;
-            font-size: 8pt;
         }
-
         .items-table td {
             border: 1px solid #000;
-            padding: 5px 4px;
+            padding: 4px;
             vertical-align: top;
         }
-
         .items-table tbody tr {
             page-break-inside: avoid;
         }
-
-        .items-table .total-row {
+        .items-table tfoot .total-row {
             background-color: #f0f0f0;
             font-weight: bold;
         }
@@ -342,191 +294,106 @@ export function getTastyTreatsInvoiceCSS() {
         .tax-summary-table {
             width: 60%;
             margin-left: auto;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+            font-size: 8pt;
+        }
+        .tax-summary-table th, .tax-summary-table td {
+            border: 1px solid #000;
+            padding: 4px;
+        }
+        .tax-summary-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+
+        /* Amounts & Words Section (Flexbox for side-by-side layout) */
+        .summary-flex-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+        .amount-words-container {
+            width: 58%;
+        }
+        .amounts-section {
+            width: 40%;
+        }
+
+        /* Amounts Table */
+        .amounts-table {
+            width: 100%;
             border-collapse: collapse;
             font-size: 8.5pt;
         }
-
-        .tax-summary-table th {
-            background-color: #e0e0e0;
-            border: 1px solid #000;
-            padding: 5px;
-            text-align: left;
-            font-weight: bold;
-        }
-
-        .tax-summary-table td {
-            border: 1px solid #000;
-            padding: 5px;
-        }
-
-        /* Amounts Section */
-        .amounts-section {
-            margin-bottom: 12px;
-        }
-
-        .amounts-table {
-            width: 50%;
-            margin-left: auto;
-            border-collapse: collapse;
-            font-size: 9pt;
-        }
-
-        .amounts-table tr {
-            border-bottom: 1px solid #ccc;
-        }
-
         .amounts-table td {
-            padding: 5px 10px;
+            padding: 4px 8px;
+            border-bottom: 1px solid #eee;
         }
-
-        .amount-label {
-            text-align: right;
-            width: 60%;
-        }
-
-        .amount-value {
-            text-align: right;
-            width: 40%;
-            font-weight: bold;
-        }
-
-        .received-row {
-            background-color: #e8f5e9;
-        }
-
-        .balance-row {
-            background-color: #ffebee;
-        }
-
+        .amount-label { text-align: right; }
+        .amount-value { text-align: right; font-weight: bold; }
         .current-balance-row {
-            background-color: #fff3e0;
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
-        }
-
-        .current-balance-row td {
-            padding: 8px 10px;
             font-size: 10pt;
         }
 
         /* Amount in Words */
         .amount-words {
-            margin-bottom: 12px;
             padding: 8px;
             border: 1px solid #000;
-            background-color: #f9f9f9;
         }
-
         .amount-words h4 {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .amount-words p {
-            font-size: 10pt;
-            font-weight: bold;
-        }
-
-        /* Payment Info Table */
-        .payment-info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
-        }
-
-        .payment-info-table td {
-            vertical-align: top;
-            padding: 8px;
-            border: 1px solid #000;
-        }
-
-        .payment-info-table h4 {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 4px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-        }
-
-        .payment-info-table p {
             font-size: 8.5pt;
-            line-height: 1.4;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .amount-words p {
+            font-size: 9pt;
+            font-weight: bold;
+            text-transform: capitalize;
         }
 
-        /* Bank Details */
+        /* Bank Details & Terms (Flexbox for side-by-side layout) */
+        .footer-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch; /* Make columns equal height */
+            page-break-inside: avoid;
+            margin-top: 15px;
+        }
         .bank-details {
-            margin-bottom: 12px;
+            width: 58%;
             padding: 8px;
             border: 1px solid #000;
-            background-color: #f5f5f5;
         }
-
+        .signature-section-wrapper {
+            width: 40%;
+            border: 1px solid #000;
+            border-left: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
         .bank-details h4 {
             font-size: 9pt;
             font-weight: bold;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-        }
-
-        .bank-details p {
-            font-size: 8.5pt;
-            line-height: 1.5;
-            margin-bottom: 2px;
-        }
-
-        /* Footer Section */
-        .footer-section {
-            display: table;
-            width: 100%;
-            page-break-inside: avoid;
-        }
-
-        .terms-section {
-            display: table-cell;
-            width: 60%;
-            vertical-align: top;
-            padding: 8px;
-            border: 1px solid #000;
-        }
-
-        .terms-section h4 {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .terms-section p {
-            font-size: 8pt;
-            line-height: 1.4;
-        }
-
-        .signature-section {
-            display: table-cell;
-            width: 40%;
-            vertical-align: top;
-            padding: 8px;
-            border: 1px solid #000;
-            border-left: none;
-            text-align: center;
-        }
-
-        .signature-section p {
-            font-size: 8.5pt;
             margin-bottom: 4px;
         }
-
+        .signature-section {
+            text-align: center;
+            padding: 8px;
+        }
         .signature-line {
-            margin: 40px 20px 10px 20px;
+            margin: 40px 20px 5px 20px;
             border-bottom: 1px solid #000;
         }
 
         @media print {
-            .invoice-container {
-                padding: 5mm;
-            }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .invoice-container { padding: 0; }
         }
     `;
 }
