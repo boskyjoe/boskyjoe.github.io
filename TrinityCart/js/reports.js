@@ -5044,6 +5044,7 @@ export async function generatePLStatement(startDate, endDate) {
  * @param {number} daysBack - The number of days to analyze for sales data.
  * @returns {Promise<Object>} An object containing all the necessary dashboard data.
  */
+
 export async function generateAdminDashboardSummary(daysBack = 365) {
     console.log(`[Reports] Fetching FRESH Admin Dashboard Summary data...`);
 
@@ -5090,15 +5091,25 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         }
     });
 
+    let consignmentSold = 0;
+    let consignmentCash = 0;
+    let consignmentCheckedOut = 0; // New field for total value out with teams
+
+
     // Process Consignment Orders using pre-calculated totals
-    let consignmentInvoiced = 0, consignmentCash = 0;
     consignmentOrdersSnapshot.forEach(doc => {
         const order = doc.data();
-        consignmentInvoiced += order.totalValueCheckedOut || 0;
+        // The actual revenue generated from consignment
+        consignmentSold += order.totalValueSold || 0; 
+        // The cash collected from teams
         consignmentCash += order.totalAmountPaid || 0;
+        // The total value of inventory currently active with teams
+        if (order.status === 'Active') {
+            consignmentCheckedOut += order.totalValueCheckedOut || 0;
+        }
     });
 
-    totalInvoiced += consignmentInvoiced;
+    totalInvoiced += consignmentSold;
     totalCash += consignmentCash;
 
     // --- 3. Process Stock Status ---
@@ -5169,14 +5180,32 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     // --- 5. Assemble and Return the Final Object ---
     const summary = {
         salesSummary: {
-            total: { invoiced: totalInvoiced, cash: totalCash, diff: totalInvoiced - totalCash },
-            consignment: { invoiced: consignmentInvoiced, cash: consignmentCash, diff: consignmentInvoiced - consignmentCash },
-            tastyTreats: { invoiced: tastyInvoiced, cash: tastyCash, diff: tastyInvoiced - tastyCash },
-            churchStore: { invoiced: churchInvoiced, cash: churchCash, diff: churchInvoiced - churchCash }
+            total: { 
+                invoiced: totalInvoiced, 
+                cash: totalCash, 
+                diff: totalInvoiced - totalCash 
+            },
+            consignment: { 
+                invoiced: consignmentSold, // Represents actual sales revenue
+                cash: consignmentCash, 
+                diff: consignmentSold - consignmentCash,
+                checkout: consignmentCheckedOut // Value of goods currently with teams
+            },
+            tastyTreats: { 
+                invoiced: tastyInvoiced, 
+                cash: tastyCash, 
+                diff: tastyInvoiced - tastyCash 
+            },
+            churchStore: { 
+                invoiced: churchInvoiced, 
+                cash: churchCash, 
+                diff: churchInvoiced - churchCash 
+            }
         },
         stockStatus: stockStatus,
         topSoldProducts: topSold
     };
+
 
     console.log("[Reports] Admin Dashboard Summary Generated:", summary);
     return summary;
