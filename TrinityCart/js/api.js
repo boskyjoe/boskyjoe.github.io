@@ -4856,3 +4856,44 @@ export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, 
         }
     });
 }
+
+/**
+ * ✅ NEW: Atomically adds an expense to a consignment order.
+ * Creates an expense record and updates the parent order's totals.
+ * @param {string} orderId - The document ID of the consignment order.
+ * @param {object} expenseData - An object with { amount, justification }.
+ * @param {object} user - The user adding the expense.
+ */
+export async function addConsignmentExpense(orderId, expenseData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+    const expenseRef = orderRef.collection('expenses').doc(); // New sub-collection
+
+    const expenseAmount = Number(expenseData.amount);
+    if (isNaN(expenseAmount) || expenseAmount <= 0) {
+        throw new Error("Expense amount must be a positive number.");
+    }
+
+    return db.runTransaction(async (transaction) => {
+        // We don't need to read the parent doc first, we can just use increments.
+        
+        // 1. Create the new expense document in the sub-collection
+        transaction.set(expenseRef, {
+            expenseId: `EXP-${Date.now()}`,
+            expenseDate: now,
+            justification: expenseData.justification,
+            amount: expenseAmount,
+            addedBy: user.email
+        });
+
+        // 2. Update the parent consignment order document
+        transaction.update(orderRef, {
+            // Increment the total expenses
+            totalExpenses: FieldValue.increment(expenseAmount),
+            // DECREMENT the balance due by the same amount
+            balanceDue: FieldValue.increment(-expenseAmount)
+        });
+    });
+}
