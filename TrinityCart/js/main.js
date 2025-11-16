@@ -1593,25 +1593,35 @@ async function handleConsignmentPaymentsGrid(button, docId, user) {
 async function handleLogExpenseSubmit(e) {
     e.preventDefault();
     const user = appState.currentUser;
-    const orderId = appState.selectedConsignmentId; // Assuming this is set when an order is selected
+    const orderId = appState.selectedConsignmentId;
 
-    if (!user || !orderId) return;
+    if (!user || !orderId) {
+        return showModal('error', 'Error', 'No user or order selected. Please close the modal and try again.');
+    }
 
     const expenseData = {
-        justification: document.getElementById('expense-justification').value,
+        justification: document.getElementById('expense-justification').value.trim(),
         amount: document.getElementById('expense-amount').value
     };
 
-    if (!expenseData.justification || !expenseData.amount) {
-        return showModal('error', 'Missing Fields', 'Please provide both a justification and an amount.');
+    if (!expenseData.justification || !expenseData.amount || Number(expenseData.amount) <= 0) {
+        return showModal('error', 'Invalid Input', 'Please provide a valid justification and a positive amount.');
     }
 
     try {
+        ProgressToast.show('Logging Expense...', 'info');
         await addConsignmentExpense(orderId, expenseData, user);
-        showModal('success', 'Expense Logged', 'The expense has been logged and the order balance updated.');
+        ProgressToast.showSuccess('Expense logged successfully!');
+        
+        // Reset the form for the next entry
         document.getElementById('log-expense-form').reset();
-        // The modal will update automatically via its own real-time listener
+
+        // The modal will update automatically via its own real-time listener,
+        // but we can also manually refresh the main grid's data if needed.
+        // For now, we'll let the modal's listener handle the updates.
+
     } catch (error) {
+        ProgressToast.showError('Failed to log expense.');
         showModal('error', 'Failed to Log Expense', error.message);
     }
 }
