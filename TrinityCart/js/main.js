@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency } from './utils.js'; 
+import { formatCurrency,numberToWords } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
@@ -163,6 +163,9 @@ import {
 } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
+
+
+import { generateTastyTreatsInvoice } from './pdf-templates.js';
 
 
 
@@ -7433,106 +7436,104 @@ window.refreshApplicationDashboard = async function(forceRefresh = false) {
  * Generates a PDF invoice for a given sale ID and initiates download.
  * @param {string} invoiceId The document ID of the sales invoice.
  */
+
 async function handleGenerateInvoice(invoiceId) {
     ProgressToast.show('Generating PDF Invoice...', 'info');
     
     try {
+        // 1. FETCH DATA
         ProgressToast.updateProgress('Fetching invoice data...', 25);
         const invoiceData = await getSalesInvoiceById(invoiceId);
         if (!invoiceData) {
             throw new Error("Invoice data could not be found.");
         }
 
-        ProgressToast.updateProgress('Preparing invoice template...', 50);
+        // 2. PREPARE THE DATA OBJECT
+        ProgressToast.updateProgress('Preparing invoice data...', 50);
 
         const storeDetails = storeConfig[invoiceData.store] || storeConfig['default'];
-        
-        const templateHtml = getInvoiceSample3HTML();
-        const templateCss = getInvoiceSample3CSS();
 
-        let populatedHtml = templateHtml;
-        
-        // Handle the "PAID" stamp
-        let paidStampHtml = '';
-        if (invoiceData.paymentStatus === 'Paid') {
-            paidStampHtml = '<div class="paid-stamp">PAID</div>';
-        }
-        populatedHtml = populatedHtml.replace('{{paidStamp}}', paidStampHtml);
-
-        // Determine the correct CSS class for the payment status
-        let paymentStatusClass = 'unpaid';
-        if (invoiceData.paymentStatus === 'Paid') {
-            paymentStatusClass = 'paid';
-        } else if (invoiceData.paymentStatus === 'Partially Paid') {
-            paymentStatusClass = 'partially-paid';
-        }
-        
-        // Define all placeholders and their values
-        const placeholders = {
-            '{{logoUrl}}': masterData.systemSetups?.logoUrl || 'https://placehold.co/100x40?text=MONETA',
-            '{{companyName}}': appState.ChurchName,
-            '{{companyAddress}}': storeDetails.address,
-            '{{companyTaxId}}': storeDetails.taxId,
-            '{{signatoryName}}': storeDetails.signatoryName,
-            '{{signatoryTitle}}': storeDetails.signatoryTitle,
+        // This object's structure MUST match the placeholders in your template
+        const invoicePrintData = {
+            copyType: 'ORIGINAL FOR RECIPIENT',
             
-            '{{companyEmail}}': storeDetails.email,
+            // Company Details
+            companyName: appState.ChurchName,
+            address1: storeDetails.address,
+            city: storeDetails.city,
+            state: storeDetails.state,
+            pincode: storeDetails.pincode,
+            email: storeDetails.email,
+            gstin: storeDetails.taxId,
+            stateCode: storeDetails.stateCode,
 
-            '{{invoiceId}}': invoiceData.saleId,
-            '{{voucherNumber}}': invoiceData.manualVoucherNumber,
-            '{{invoiceDate}}': invoiceData.saleDate.toDate().toLocaleDateString(),
-            '{{customerName}}': invoiceData.customerInfo.name,
-            '{{customerEmail}}': invoiceData.customerInfo.email,
-            '{{subtotal}}': formatCurrency(invoiceData.financials?.itemsSubtotal || 0),
-            '{{invoiceDiscount}}': formatCurrency(invoiceData.financials?.orderDiscountAmount || 0),
-            '{{totalTax}}': formatCurrency(invoiceData.financials?.totalTax || 0),
-            '{{grandTotal}}': formatCurrency(invoiceData.financials?.totalAmount || 0),
-            '{{amountPaid}}': formatCurrency(invoiceData.totalAmountPaid || 0),
-            '{{balanceDue}}': formatCurrency(invoiceData.balanceDue || 0),
-            '{{paymentStatus}}': invoiceData.paymentStatus,
-            '{{paymentStatusClass}}': paymentStatusClass
+            // Customer Details
+            customerName: invoiceData.customerInfo.name,
+            customerAddress1: invoiceData.customerInfo.address || '', // Assuming address is stored
+            customerCity: invoiceData.customerInfo.city || '',
+            customerState: invoiceData.customerInfo.state || '',
+            customerPincode: invoiceData.customerInfo.pincode || '',
+            customerGSTIN: invoiceData.customerInfo.gstin || 'N/A',
+            customerStateCode: invoiceData.customerInfo.stateCode || '',
+
+            // Shipping Details (can be same as billing or different)
+            shipToAddress1: invoiceData.customerInfo.address || '',
+            shipToCity: invoiceData.customerInfo.city || '',
+            shipToState: invoiceData.customerInfo.state || '',
+            shipToPincode: invoiceData.customerInfo.pincode || '',
+
+            // Invoice Details
+            invoiceNumber: invoiceData.saleId,
+            invoiceDate: invoiceData.saleDate.toDate().toLocaleDateString(),
+            invoiceTime: invoiceData.saleDate.toDate().toLocaleTimeString(),
+            placeOfSupply: storeDetails.state,
+
+            // Line Items (transformed to match the template helper)
+            items: invoiceData.lineItems.map(item => ({
+                itemName: item.productName,
+                hsnSac: item.hsnCode || 'N/A', // Assuming HSN code is on the item
+                qty: item.quantity,
+                unit: 'pcs', // Assuming a default unit
+                unitPrice: formatCurrency(item.unitPrice),
+                taxableAmount: formatCurrency(item.lineTotal - (item.taxAmount || 0)),
+                cgst: formatCurrency((item.taxAmount || 0) / 2),
+                sgst: formatCurrency((item.taxAmount || 0) / 2),
+                amount: formatCurrency(item.lineTotal)
+            })),
+
+            // Line Item Totals
+            totalQty: invoiceData.lineItems.reduce((sum, item) => sum + item.quantity, 0),
+            totalTaxableAmount: formatCurrency(invoiceData.financials.itemsSubtotal || 0),
+            totalCGST: formatCurrency((invoiceData.financials.totalTax || 0) / 2),
+            totalSGST: formatCurrency((invoiceData.financials.totalTax || 0) / 2),
+            totalAmount: formatCurrency(invoiceData.financials.totalAmount || 0),
+
+            // Tax Summary (requires more detailed data from line items if you have multiple tax rates)
+            taxSummary: [], // Placeholder - needs more logic if you have complex taxes
+
+            // Final Amounts
+            subTotal: formatCurrency(invoiceData.financials.itemsSubtotal || 0),
+            grandTotal: formatCurrency(invoiceData.financials.totalAmount || 0),
+            receivedAmount: formatCurrency(invoiceData.totalAmountPaid || 0),
+            balanceAmount: formatCurrency(invoiceData.balanceDue || 0),
+            currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
+
+            // Amount in Words
+            amountInWords: numberToWords(invoiceData.financials.totalAmount || 0),
+
+            // Payment & Bank Details
+            paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
+            description: invoiceData.payments?.[0]?.notes || '',
+            bankName: storeDetails.bankName,
+            accountNumber: storeDetails.accountNumber,
+            ifscCode: storeDetails.ifscCode,
+            accountHolderName: storeDetails.accountHolderName,
+            termsAndConditions: storeDetails.terms
         };
 
-        // Replace all placeholders
-        for (const [key, value] of Object.entries(placeholders)) {
-            populatedHtml = populatedHtml.replace(new RegExp(key, 'g'), String(value));
-        }
-
-        // ===================================================================
-        // ✅ THIS IS THE MISSING PIECE
-        // This code loops through each item in the invoice and generates an HTML table row.
-        // ===================================================================
-        const itemRows = invoiceData.lineItems.map((item) => `
-            <tr>
-                <td>${item.productName}</td>
-                <td>${formatCurrency(item.unitPrice)}</td>
-                <td>${item.quantity}</td>
-                <td>${formatCurrency(item.discountAmount || 0)}</td>
-                <td>${formatCurrency(item.taxAmount || 0)}</td>
-                <td>${formatCurrency(item.lineTotal)}</td>
-            </tr>
-        `).join(''); // .join('') combines all the rows into a single string
-
-        // Now, we replace the placeholder with the generated HTML string
-        populatedHtml = populatedHtml.replace('{{lineItems}}', itemRows);
-        // ===================================================================
-
-        // The rest of the function for PDF generation
+        // 3. CALL THE PDF GENERATOR
         ProgressToast.updateProgress('Rendering PDF...', 75);
-        const invoiceContainer = document.getElementById('invoice-template-container');
-        invoiceContainer.innerHTML = `<style>${templateCss}</style>${populatedHtml}`;
-        
-        const elementToPrint = invoiceContainer.querySelector('.invoice-wrapper');
-
-        const opt = {
-            margin:       0.5,
-            filename:     `Invoice-${invoiceData.saleId}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        await html2pdf().from(elementToPrint).set(opt).save();
+        await generateTastyTreatsInvoice(invoicePrintData);
 
         ProgressToast.showSuccess('Invoice downloaded successfully!');
         setTimeout(() => ProgressToast.hide(500), 1200);
