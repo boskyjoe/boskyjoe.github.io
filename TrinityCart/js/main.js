@@ -162,7 +162,7 @@ import {
     addNewExpenseRow,exportConsignmentOrders,exportSalesOrderHistory,exportAllCataloguesToMultiSheetExcel
 } from './ui.js';
 
-import { addConsignmentExpense } from './api.js';
+import { addConsignmentExpense} from './api.js';
 import { showLogExpenseModal, closeLogExpenseModal } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense } from './api.js';
@@ -863,9 +863,11 @@ function setupGlobalClickHandler() {
         const logExpenseBtn = e.target.closest('.action-btn-log-expense');
         if (logExpenseBtn) {
             const orderId = logExpenseBtn.dataset.id;
-            const orderData = getConsignmentOrderDataById(orderId); // Assuming you have this helper
+            const orderData = getConsignmentOrderById(orderId); // Assuming you have this helper
             if (orderData) {
                 showLogExpenseModal(orderData);
+            } else {
+                showModal('error', 'Order Not Found', 'The selected consignment order could not be found.');
             }
             return;
         }
