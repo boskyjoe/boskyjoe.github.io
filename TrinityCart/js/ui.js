@@ -3401,6 +3401,8 @@ export function initializeModals() {
                 closeViewCatalogueItemsModal();
             } else if (modalToClose.id === 'view-sale-details-modal') {
                 closeSalesDetailModal();
+            } else if (modalToClose.id === 'log-consignment-expense-modal') {
+                closeLogExpenseModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -3423,6 +3425,7 @@ export function initializeModals() {
             closeViewCatalogueItemsModal();
             closeSalesDetailModal();
             closeBulkPaymentModal();
+            closeLogExpenseModal () ;
 
             // 2. Also close the Custom Modal (for success/error/confirm)
             const customModal = document.getElementById('custom-modal');
@@ -4350,6 +4353,22 @@ const consignmentOrdersGridOptions = {
             width: 140, 
             // The valueFormatter is now correctly inside its parent column definition object.
             valueFormatter: p => formatCurrency(p.value || 0)
+        },
+        {
+            headerName: "Actions",
+            width: 100, 
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                const user = appState.currentUser;
+                if (!user || !params.data) return '';
+
+                // Only show for Admin and Finance on Active orders
+                if ((user.role === 'admin' || user.role === 'finance') && params.data.status === 'Active') {
+                    const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>`;
+                    return `<button class="action-btn-icon action-btn-log-expense" data-id="${params.data.id}" title="Log Expense">${expenseIcon}</button>`;
+                }
+                return ''; // Return empty for other roles or statuses
+            }
         }
     ],
     rowSelection: { 
@@ -14213,4 +14232,59 @@ export function closeSalesDetailModal() {
     if (!modal) return;
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+// ✅ NEW: Add a variable for the new grid's API
+let consignmentExpensesGridApi = null;
+
+// ✅ NEW: Define the options for the grid inside the modal
+const consignmentExpensesGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "expenseDate", headerName: "Date", width: 120, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "justification", headerName: "Justification", flex: 1 },
+        { field: "amount", headerName: "Amount", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "addedBy", headerName: "Added By", width: 180 }
+    ]
+};
+
+// ✅ NEW: Function to show the modal
+export function showLogExpenseModal(orderData) {
+    const modal = document.getElementById('log-consignment-expense-modal');
+    if (!modal) return;
+
+    // Populate summary fields
+    document.getElementById('expense-modal-order-id').textContent = orderData.consignmentId;
+    document.getElementById('expense-modal-total-sold').textContent = formatCurrency(orderData.totalValueSold || 0);
+    document.getElementById('expense-modal-current-expenses').textContent = formatCurrency(orderData.totalExpenses || 0);
+    document.getElementById('expense-modal-balance-due').textContent = formatCurrency(orderData.balanceDue || 0);
+
+    // Initialize grid
+    const gridDiv = document.getElementById('consignment-expenses-grid');
+    if (gridDiv && !consignmentExpensesGridApi) {
+        consignmentExpensesGridApi = createGrid(gridDiv, consignmentExpensesGridOptions);
+    }
+    
+    // Show modal and fetch existing expenses
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+    
+    // Listen for expense updates for this order in real-time
+    const db = firebase.firestore();
+    db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderData.id).collection('expenses')
+      .orderBy('expenseDate', 'desc')
+      .onSnapshot(snapshot => {
+          const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          if (consignmentExpensesGridApi) {
+              consignmentExpensesGridApi.setGridOption('rowData', expenses);
+          }
+      });
+}
+
+// ✅ NEW: Function to close the modal
+export function closeLogExpenseModal() {
+    const modal = document.getElementById('log-consignment-expense-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => modal.style.display = 'none', 300);
 }
