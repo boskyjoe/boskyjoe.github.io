@@ -1647,15 +1647,17 @@ async function handleLogExpenseSubmit(e) {
  * It receives plain data and orchestrates the update process.
  * @param {object} updateDetails - An object containing { expenseId, fieldToUpdate, newValue, oldValue }.
  */
+
 async function handleExpenseUpdate(updateDetails) { // <-- The parameter is named 'updateDetails'
     const user = appState.currentUser;
     const orderId = appState.selectedConsignmentId;
     
     // ✅ THE FIX: Use the correct parameter name 'updateDetails' for destructuring.
-    const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId } = updateDetails;
+    const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId, gridName } = updateDetails;
 
     if (!user || !orderId) {
-        throw new Error("Cannot update expense: user or orderId is missing.");
+        showModal('error', 'Session Error', 'Cannot update expense: user session or order context is missing.');
+        return;
     }
 
     ProgressToast.show('Updating Expense...', 'info');
@@ -1678,15 +1680,18 @@ async function handleExpenseUpdate(updateDetails) { // <-- The parameter is name
         console.error("Error updating expense in controller:", error);
         ProgressToast.showError(`Update Failed: ${error.message}`);
         
-        document.dispatchEvent(new CustomEvent('revertGridCell', {
+       document.dispatchEvent(new CustomEvent('revertGridCell', {
             detail: {
-                gridName: 'consignmentExpenses', // Identify which grid to act on
+                gridName: gridName, // Use the gridName received from the event
                 nodeId: gridNodeId,
                 field: fieldToUpdate,
                 value: oldValue
             }
         }));
-    } finally {ProgressToast.hide(10);}
+
+    } finally {ProgressToast.hide(300);
+        closeLogExpenseModal();
+    }
 }
 
 
