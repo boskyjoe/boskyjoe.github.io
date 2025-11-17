@@ -4869,7 +4869,7 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
-    const expenseRef = orderRef.collection('expenses').doc(); // New sub-collection
+    const expenseRef = orderRef.collection('expenses').doc();
 
     const expenseAmount = Number(expenseData.amount);
     if (isNaN(expenseAmount) || expenseAmount <= 0) {
@@ -4877,22 +4877,20 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
     }
 
     return db.runTransaction(async (transaction) => {
-        // We don't need to read the parent doc first, we can just use increments.
-        
         // 1. Create the new expense document in the sub-collection
         transaction.set(expenseRef, {
             expenseId: `EXP-${Date.now()}`,
-            expenseDate: now,
+            // ✅ CHANGED: Use the date from the form, converted to a proper Date object
+            expenseDate: new Date(expenseData.expenseDate), 
             justification: expenseData.justification,
             amount: expenseAmount,
-            addedBy: user.email
+            addedBy: user.email,
+            addedOn: now // Keep track of when it was added
         });
 
         // 2. Update the parent consignment order document
         transaction.update(orderRef, {
-            // Increment the total expenses
             totalExpenses: FieldValue.increment(expenseAmount),
-            // DECREMENT the balance due by the same amount
             balanceDue: FieldValue.increment(-expenseAmount)
         });
     });
