@@ -4364,7 +4364,10 @@ const consignmentOrdersGridOptions = {
 
                 // Only show for Admin and Finance on Active orders
                 if ((user.role === 'admin' || user.role === 'finance') && params.data.status === 'Active') {
-                    const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>`;
+                    const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600">
+                            <path d="M3.5 3A1.5 1.5 0 0 0 2 4.5v11A1.5 1.5 0 0 0 3.5 17h13a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 16.5 3h-13zM10 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM10 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+                            <path d="m14.06 7.94-3-3a.75.75 0 0 0-1.06 1.06L11.94 8 9 10.94a.75.75 0 0 0 1.06 1.06l3-3a.75.75 0 0 0 0-1.06z" />
+                        </svg>`;
                     return `<button class="action-btn-icon action-btn-log-expense" data-id="${params.data.id}" title="Log Expense">${expenseIcon}</button>`;
                 }
                 return ''; // Return empty for other roles or statuses
@@ -14256,6 +14259,14 @@ export function showLogExpenseModal(orderData) {
 
     const modal = document.getElementById('log-consignment-expense-modal');
     if (!modal) return;
+
+    const expenseDateInput = document.getElementById('expense-date');
+    if (expenseDateInput) {
+        // Use the order's checkoutDate if it exists, otherwise default to today
+        const defaultDate = orderData.checkoutDate ? orderData.checkoutDate.toDate() : new Date();
+        // Format the date as YYYY-MM-DD for the input field
+        expenseDateInput.value = defaultDate.toISOString().split('T')[0];
+    }
 
     const systemId = orderData.consignmentId || 'N/A';
     const manualVoucher = orderData.manualVoucherNumber;
