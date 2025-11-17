@@ -14243,41 +14243,34 @@ let consignmentExpensesGridApi = null;
 // ✅ NEW: Define the options for the grid inside the modal
 const consignmentExpensesGridOptions = {
     theme: 'legacy',
-     onCellValueChanged: (params) => {
+    onCellValueChanged: (params) => {
         const { oldValue, newValue, colDef, data: expenseData } = params;
         const field = colDef.field;
 
-        // If the value didn't actually change, do nothing.
-        if (oldValue === newValue) {
-            return;
-        }
+        if (oldValue === newValue) return;
 
-        // --- Client-side Validation (happens in the UI layer) ---
+        // --- Client-side Validation ---
         if (field === 'amount') {
             const newAmount = Number(newValue);
             if (isNaN(newAmount) || newAmount <= 0) {
                 params.node.setDataValue(field, oldValue); // Revert UI
                 showModal('error', 'Invalid Amount', 'Expense amount must be greater than zero. To remove an expense, use the delete button.');
-                return; // Stop
+                return;
             }
         }
         
-        // --- Call the Controller ---
-        // Gather all necessary, non-grid-specific data to pass to the controller.
-        const updateDetails = {
-            expenseId: expenseData.id,
-            fieldToUpdate: field,
-            newValue: newValue,
-            oldValue: oldValue
-        };
-
-        // Call the controller function in main.js
-        handleExpenseUpdate(updateDetails)
-            .catch(error => {
-                // If the controller/API fails, revert the change in the grid.
-                console.error("Reverting grid change due to update failure:", error);
-                params.node.setDataValue(field, oldValue);
-            });
+        // ✅ THE FIX: Dispatch a custom event with all the necessary details.
+        console.log('[UI] Dispatching "expenseUpdated" event.');
+        document.dispatchEvent(new CustomEvent('expenseUpdated', {
+            detail: {
+                expenseId: expenseData.id,
+                fieldToUpdate: field,
+                newValue: newValue,
+                oldValue: oldValue,
+                // Pass the grid node's ID so we can revert it on failure
+                gridNodeId: params.node.id 
+            }
+        }));
     },
     columnDefs: [
         { 
