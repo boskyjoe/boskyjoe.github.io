@@ -5713,7 +5713,7 @@ const salesHistoryGridOptions = {
             valueFormatter: p => formatCurrency(p.value)
         },
         {
-            field: "totalExpenses",
+            field: "financials.totalExpenses",
             headerName: "Expenses",
             width: 120,
             valueFormatter: p => formatCurrency(p.value)
@@ -5787,7 +5787,8 @@ const salesHistoryGridOptions = {
             [
                 { path: 'financials.totalAmount' }, // Pass objects with the path
                 { path: 'financials.amountTendered' },
-                { path: 'balanceDue' }
+                { path: 'balanceDue'},
+                { path: 'financials.totalExpenses' }
             ],
             'manualVoucherNumber'
         );
@@ -5829,7 +5830,8 @@ const salesHistoryGridOptions = {
                     [
                         { path: 'financials.totalAmount' }, // Pass objects with the path
                         { path: 'financials.amountTendered' },
-                        { path: 'balanceDue' }
+                        { path: 'balanceDue' },
+                        { path: 'financials.totalExpenses' }
                     ],
                     'manualVoucherNumber'
                 );
