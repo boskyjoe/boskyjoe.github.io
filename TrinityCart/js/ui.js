@@ -11777,7 +11777,8 @@ export async function loadApplicationDashboard(forceRefresh = false)  {
         } else if (currentUser.role === 'sales_staff') {
             await loadSalesStaffLandingDashboard(currentUser);
         } else if (currentUser.role === 'inventory_manager') {
-            await loadInventoryManagerLandingDashboard(currentUser);
+            //await loadInventoryManagerLandingDashboard(currentUser);
+            await loadAdminLandingDashboard(currentUser);
         } else {
             await loadLimitedAccessDashboard(currentUser);
         }
