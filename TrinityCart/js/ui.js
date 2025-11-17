@@ -11957,8 +11957,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
         // Pending actions
         const pendingActions = await getAdminPendingActions();
-        document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
-        document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
+        //document.getElementById('dashboard-pending-actions').textContent = pendingActions.total.toString();
+        //document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
         
         // Low stock alert
         //const inventoryAlerts = getEnhancedInventoryAlerts();
@@ -11986,6 +11986,11 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // ===================================================================
         // ROW 2: FINANCIAL METRICS (Using the single outstandingMetrics call)
         // ===================================================================
+
+        const metricsSection = document.getElementById('dashboard-Metrics');
+        if (metricsSection) {
+            metricsSection.classList.remove('hidden');
+        }
         
         // Show financial section for admin
         /*const financialSection = document.getElementById('dashboard-financial-section');
