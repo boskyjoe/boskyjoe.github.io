@@ -165,7 +165,7 @@ import {
 import { addConsignmentExpense} from './api.js';
 import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense, getSalesInvoiceById} from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense} from './api.js';
 
 
 import { generateTastyTreatsInvoice } from './pdf-templates.js';
