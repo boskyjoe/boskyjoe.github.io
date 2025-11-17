@@ -1,5 +1,6 @@
 // js/pdf-templates.js
 
+import { formatCurrency,numberToWords } from './utils.js'; 
 
 export function getTastyTreatsInvoiceHTML() {
     return `
