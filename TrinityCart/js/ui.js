@@ -14268,7 +14268,8 @@ const consignmentExpensesGridOptions = {
                 newValue: newValue,
                 oldValue: oldValue,
                 // Pass the grid node's ID so we can revert it on failure
-                gridNodeId: params.node.id 
+                gridNodeId: params.node.id,
+                gridName: 'consignmentExpensesGrid'
             }
         }));
     },
