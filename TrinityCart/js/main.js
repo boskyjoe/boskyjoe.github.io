@@ -6121,12 +6121,15 @@ function setupCustomEventListeners() {
         'updateSaleType': handleUpdateSaleType,
         'updateSeason': handleUpdateSeason,
         'updateSalesEvent': handleUpdateSalesEvent,
-        'updateUserRole': handleUpdateUserRole,
-        'expenseUpdated': handleExpenseUpdate 
+        'updateUserRole': handleUpdateUserRole
     };
 
     Object.entries(customEvents).forEach(([event, handler]) => {
         document.addEventListener(event, handler);
+    });
+
+    document.addEventListener('expenseUpdated', e => {
+        handleExpenseUpdate(e.detail);
     });
 }
 
