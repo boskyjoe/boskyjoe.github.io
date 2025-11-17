@@ -1758,6 +1758,9 @@ async function handleLogDirectSaleExpenseSubmit(e) {
     } catch (error) {
         ProgressToast.showError('Failed to log expense.');
         showModal('error', 'Failed to Log Expense', error.message);
+    } finally {
+        ProgressToast.hide(50);
+        closeLogDirectSaleExpenseModal () ;
     }
 }
 
