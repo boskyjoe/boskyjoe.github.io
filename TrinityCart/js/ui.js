@@ -13894,7 +13894,7 @@ const dashboardSoldGridOptions = {
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true,floatingFilter: true,  },
     columnDefs: [
         { field: "categoryName", headerName: "Category", width: 250 },
-        { field: "productName", headerName: "Product",width: 200},
+        { field: "productName", headerName: "Product",width: 300},
         { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
     onGridReady: params => { dashboardSoldGridApi = params.api; },
