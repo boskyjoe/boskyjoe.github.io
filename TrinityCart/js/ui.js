@@ -4414,7 +4414,8 @@ const consignmentOrdersGridOptions = {
         'opacity-50 cursor-not-allowed': params => {
             const status = params.data?.status;
             return status === 'Rejected' || status === 'Settled';
-        }
+        },
+        'bg-yellow-100': params => params.data && params.data.hasPendingPayments === true
     },
     onFilterChanged: (event) => {
         updatePinnedTotals(
