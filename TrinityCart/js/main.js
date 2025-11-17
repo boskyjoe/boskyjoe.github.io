@@ -863,13 +863,27 @@ function setupGlobalClickHandler() {
         const logExpenseBtn = e.target.closest('.action-btn-log-expense');
         if (logExpenseBtn) {
             const orderId = logExpenseBtn.dataset.id;
-            const orderData = getConsignmentOrderById(orderId); // Assuming you have this helper
-            if (orderData) {
-                showLogExpenseModal(orderData);
-            } else {
-                showModal('error', 'Order Not Found', 'The selected consignment order could not be found.');
+            
+            try {
+                ProgressToast.show('Loading Order Details...', 'info');
+                
+                // ✅ THE FIX: Add the 'await' keyword here.
+                const orderData = await getConsignmentOrderById(orderId); 
+                
+                ProgressToast.hide(0);
+
+                if (orderData) {
+                    appState.selectedConsignmentId = orderId;
+                    // Now you are passing the actual data object, not the Promise.
+                    showLogExpenseModal(orderData);
+                } else {
+                    showModal('error', 'Order Not Found', 'The selected consignment order could not be found.');
+                }
+            } catch (error) {
+                ProgressToast.hide(0);
+                showModal('error', 'Error Fetching Order', 'Could not retrieve order details.');
             }
-            return;
+            return; // Action handled
         }
 
 
