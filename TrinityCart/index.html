@@ -4086,35 +4086,72 @@
 
                 <!-- View: Manage Payment Modes -->
                 <div id="payment-modes-view" class="view space-y-8">
-                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-
+                    <a href="#" class="back-link inline-flex items-center text-green-600 hover:text-green-800 font-semibold transition-colors" data-view-id="admin-modules-view">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin Modules
+                    </a>
+                    
                     <!-- Card 1: Add New Payment Mode Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Payment Mode</h3>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-b border-green-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Add New Payment Mode
+                                        <span class="ml-3 px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">NEW</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">Create a new payment method option</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="p-6">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
                             <form id="add-payment-mode-form" class="flex items-end space-x-4">
                                 <div class="flex-grow">
-                                    <label for="paymentModeName-input" class="form-label">Payment Mode Name<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="paymentModeName-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        Payment Mode Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="text" id="paymentModeName-input" placeholder="e.g., Bank Transfer"
-                                        class="form-input w-full" required>
+                                        class="form-input w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all" required>
                                 </div>
                                 <button type="submit"
-                                    class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add
-                                    Mode</button>
+                                    class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 h-10 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    Add Mode
+                                </button>
                             </form>
                         </div>
                     </div>
-
+                    
                     <!-- Card 2: Existing Payment Modes Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Payment Modes</h3>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Existing Payment Modes</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">View and manage all payment methods</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="p-2">
-                            <div id="payment-modes-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="payment-modes-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
                             </div>
                         </div>
                     </div>
