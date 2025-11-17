@@ -1642,51 +1642,30 @@ async function handleLogExpenseSubmit(e) {
     }
 }
 
-
 /**
- * ✅ NEW: Handles the onCellValueChanged event from the consignment expenses grid.
- * Validates the change and calls the API to update the data.
- * @param {object} params - The event object from AG-Grid.
+ * ✅ CORRECTED: This is now a pure controller function.
+ * It receives plain data and orchestrates the update process.
+ * @param {object} updateDetails - An object containing { expenseId, fieldToUpdate, newValue, oldValue }.
  */
-async function handleExpenseUpdate(params) {
+async function handleExpenseUpdate(updateDetails) {
     const user = appState.currentUser;
     const orderId = appState.selectedConsignmentId;
     
     if (!user || !orderId) {
-        console.error("Cannot update expense: user or orderId is missing.");
-        return;
+        throw new Error("Cannot update expense: user or orderId is missing.");
     }
 
-    const { oldValue, newValue, colDef, data: expenseData } = params;
-    const field = colDef.field; // The field that was edited (e.g., 'amount', 'justification')
-    const expenseId = expenseData.id;
-
-    // If the value didn't actually change, do nothing.
-    if (oldValue === newValue) {
-        return;
-    }
-
-    // --- Validation for the 'amount' field ---
-    if (field === 'amount') {
-        const newAmount = Number(newValue);
-        if (isNaN(newAmount) || newAmount <= 0) {
-            // Revert the invalid change in the grid
-            params.node.setDataValue(field, oldValue);
-            // Show an error message to the user
-            showModal('error', 'Invalid Amount', 'Expense amount must be a positive number. To remove an expense, use the delete button.');
-            return; // Stop processing
-        }
-    }
+    const { expenseId, fieldToUpdate, newValue, oldValue } = updateDetails;
 
     ProgressToast.show('Updating Expense...', 'info');
 
     try {
-        // Calculate the change in amount (will be 0 if only justification was changed)
-        const amountDelta = (field === 'amount') ? (newValue - oldValue) : 0;
+        // Calculate the change in amount
+        const amountDelta = (fieldToUpdate === 'amount') ? (newValue - oldValue) : 0;
 
-        // Prepare the data to be updated
+        // Prepare the data for the API
         const updatedData = {
-            [field]: (field === 'expenseDate') ? new Date(newValue) : newValue
+            [fieldToUpdate]: (fieldToUpdate === 'expenseDate') ? new Date(newValue) : newValue
         };
 
         // Call the transactional API function
@@ -1695,13 +1674,12 @@ async function handleExpenseUpdate(params) {
         ProgressToast.showSuccess('Expense updated successfully!');
 
     } catch (error) {
-        console.error("Error updating expense:", error);
+        console.error("Error updating expense in controller:", error);
         ProgressToast.showError(`Update Failed: ${error.message}`);
-        // Revert the change in the grid on failure
-        params.node.setDataValue(field, oldValue);
+        // Re-throw the error so the UI layer can catch it and revert the cell value.
+        throw error; 
     }
 }
-
 
 /**
  * Handles all CRUD actions triggered from within the expenses grid.
