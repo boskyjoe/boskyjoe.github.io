@@ -11989,7 +11989,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
         const metricsSection = document.getElementById('dashboard-Metrics');
         if (metricsSection) {
-            metricsSection.classList.remove('hidden');
+            metricsSection.classList.add('hidden');
         }
         
         // Show financial section for admin
