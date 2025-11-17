@@ -115,7 +115,7 @@ import {
     getMembersForTeam,
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
-    logActivityAndUpdateConsignment, getConsignmentOrderById,
+    logActivityAndUpdateConsignment, getConsignmentOrderById,getItemsForConsignmentOrder,
     submitPaymentRecord, updatePaymentRecord,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
@@ -163,7 +163,7 @@ import {
 } from './ui.js';
 
 import { addConsignmentExpense} from './api.js';
-import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal } from './ui.js';
+import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal,showViewConsignmentDetailsModal } from './ui.js';
 
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense} from './api.js';
 
@@ -910,6 +910,16 @@ function setupGlobalClickHandler() {
             return; // Action handled
         }
 
+        // ✅ Handler for the "View Consignment" button
+        const viewConsignmentBtn = e.target.closest('.action-btn-view-consignment');
+        if (viewConsignmentBtn) {
+            const orderId = viewConsignmentBtn.dataset.id;
+            const orderData = await getConsignmentOrderById(orderId);
+            if (orderData) {
+                showViewConsignmentDetailsModal(orderData);
+            }
+            return;
+        }
 
         // Authentication
         //if (target.closest('#login-button')) return EventHandlers.auth.login();
