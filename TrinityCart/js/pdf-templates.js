@@ -547,33 +547,37 @@ export function getConsignmentDetailHTML() {
                 </section>
                 
                 <h3>Items Summary</h3>
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Qty Out</th>
-                            <!-- ✅ NEW COLUMNS ADDED -->
-                            <th>Qty Sold</th>
-                            <th>Qty Gift</th>
-                            <th>Qty Return</th>
-                            <th>Qty Damaged</th>
-                            <th>Price</th>
-                            <th>Total Sale</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{lineItems}} <!-- This placeholder remains the same -->
-                    </tbody>
-                </table>
+                <div class="table-and-summary-container">
+                    <div class="table-wrapper">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Qty Out</th>
+                                    <!-- ✅ NEW COLUMNS ADDED -->
+                                    <th>Qty Sold</th>
+                                    <th>Qty Gift</th>
+                                    <th>Qty Return</th>
+                                    <th>Qty Damaged</th>
+                                    <th>Price</th>
+                                    <th>Total Sale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{lineItems}} <!-- This placeholder remains the same -->
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="summary-section">
-                    <h3>Financial Summary</h3>
-                    <div class="summary-grid">
-                        <span>Total Value Checked Out:</span> <span class="value">{{totalValueCheckedOut}}</span>
-                        <span>Total Value Sold:</span> <span class="value text-green">{{totalValueSold}}</span>
-                        <span>Total Expenses:</span> <span class="value text-red">- {{totalExpenses}}</span>
-                        <span>Total Amount Paid:</span> <span class="value text-green">{{totalAmountPaid}}</span>
-                        <span class="total-label">Balance Due:</span> <span class="total-value text-red">{{balanceDue}}</span>
+                    <div class="summary-section">
+                        <h3>Financial Summary</h3>
+                        <div class="summary-grid">
+                            <span>Total Value Checked Out:</span> <span class="value">{{totalValueCheckedOut}}</span>
+                            <span>Total Value Sold:</span> <span class="value text-green">{{totalValueSold}}</span>
+                            <span>Total Expenses:</span> <span class="value text-red">- {{totalExpenses}}</span>
+                            <span>Total Amount Paid:</span> <span class="value text-green">{{totalAmountPaid}}</span>
+                            <span class="total-label">Balance Due:</span> <span class="total-value text-red">{{balanceDue}}</span>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -626,7 +630,20 @@ export function getConsignmentDetailCSS() {
         .items-table thead {
             background-color: #f2f2f2;
         }
-        .summary-section { margin-top: 20px; float: right; width: 40%; }
+        .table-and-summary-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Aligns items to the top */
+            margin-top: 20px;
+        }
+        .table-wrapper {
+            width: 100%; /* The table will take up all available space */
+        }
+        .summary-section {
+            width: 40%; /* Set a width for the summary */
+            margin-left: 20px; /* Add some space between the table and summary */
+            flex-shrink: 0; /* Prevent the summary from shrinking */
+        }
         .summary-grid { display: grid; grid-template-columns: auto auto; gap: 5px; }
         .summary-grid .value { text-align: right; font-weight: bold; }
         .summary-grid .total-label, .summary-grid .total-value { font-size: 10pt; border-top: 1px solid #333; padding-top: 5px; }
