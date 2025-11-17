@@ -1650,12 +1650,12 @@ async function handleLogExpenseSubmit(e) {
 async function handleExpenseUpdate(updateDetails) {
     const user = appState.currentUser;
     const orderId = appState.selectedConsignmentId;
-    
+    const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId } = detail;
+
     if (!user || !orderId) {
         throw new Error("Cannot update expense: user or orderId is missing.");
     }
 
-    const { expenseId, fieldToUpdate, newValue, oldValue } = updateDetails;
 
     ProgressToast.show('Updating Expense...', 'info');
 
@@ -6119,7 +6119,8 @@ function setupCustomEventListeners() {
         'updateSaleType': handleUpdateSaleType,
         'updateSeason': handleUpdateSeason,
         'updateSalesEvent': handleUpdateSalesEvent,
-        'updateUserRole': handleUpdateUserRole
+        'updateUserRole': handleUpdateUserRole,
+        'expenseUpdated': handleExpenseUpdate 
     };
 
     Object.entries(customEvents).forEach(([event, handler]) => {
