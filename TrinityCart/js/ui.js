@@ -4404,7 +4404,7 @@ const consignmentOrdersGridOptions = {
     onFilterChanged: (event) => {
         updatePinnedTotals(
             event.api,
-            ['totalValueCheckedOut', 'totalAmountPaid', 'balanceDue'],
+            ['totalValueCheckedOut', 'totalAmountPaid', 'balanceDue','totalExpenses'],
             'teamName' // Display "Totals:" in the Team column
         );
     },
@@ -5155,7 +5155,7 @@ export function showConsignmentView() {
 
                 updatePinnedTotals(
                     consignmentOrdersGridApi,
-                    ['totalValueCheckedOut', 'totalAmountPaid','totalValueSold', 'balanceDue'],
+                    ['totalValueCheckedOut', 'totalAmountPaid','totalValueSold', 'balanceDue','totalExpenses'],
                     'teamName' // Display "Totals:" in the Team column
                 );
             }
