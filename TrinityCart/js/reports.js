@@ -5069,7 +5069,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     ]);
 
     // --- 2. Process Sales Financials ---
-    let totalInvoiced = 0, totalCash = 0;
+    let totalInvoiced = 0, totalCash = 0; totalExpenses = 0 ;
     let tastyInvoiced = 0, tastyCash = 0;
     let churchInvoiced = 0, churchCash = 0;
 
@@ -5094,7 +5094,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     let consignmentSold = 0;
     let consignmentCash = 0;
     let consignmentCheckedOut = 0; // New field for total value out with teams
-    let totalExpenses = 0 ;
+    let consignmentExpenses = 0 ;
 
 
     // Process Consignment Orders using pre-calculated totals
@@ -5109,11 +5109,12 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
             consignmentCheckedOut += order.totalValueCheckedOut || 0;
         }
 
-        totalExpenses += totalExpenses || 0 ;
+        consignmentExpenses += order.totalExpenses || 0 ;
     });
 
     totalInvoiced += consignmentSold;
     totalCash += consignmentCash;
+    totalExpenses += consignmentExpenses ;
 
     // --- 3. Process Stock Status ---
     const stockStatus = allProductsSnapshot.docs.map(doc => {
@@ -5186,14 +5187,15 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
             total: { 
                 invoiced: totalInvoiced, 
                 cash: totalCash, 
-                diff: totalInvoiced - totalCash 
+                diff: totalInvoiced - totalCash,
+                expenses:totalExpenses
             },
             consignment: { 
                 invoiced: consignmentSold, // Represents actual sales revenue
                 cash: consignmentCash, 
                 diff: consignmentSold - consignmentCash,
                 checkout: consignmentCheckedOut, // Value of goods currently with teams
-                totalExpenses:totalExpenses
+                totalExpenses:consignmentExpenses
             },
             tastyTreats: { 
                 invoiced: tastyInvoiced, 
