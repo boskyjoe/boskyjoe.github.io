@@ -168,7 +168,7 @@ import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal
 import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense} from './api.js';
 
 
-import { generateTastyTreatsInvoice } from './pdf-templates.js';
+import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-templates.js';
 
 
 
@@ -7868,43 +7868,45 @@ async function handleBulkSupplierPaymentSubmit(e) {
 
 
 /**
- * ✅ NEW: Handles the click on the "Download PDF" button inside the consignment detail modal.
- * It captures the modal's content and converts it to a PDF.
+ * ✅ NEW & CORRECTED: Prepares data and calls the template engine to generate a high-quality PDF.
  */
 async function handleDownloadConsignmentDetail() {
-    // 1. Get the main content element of the modal.
-    // We want the part with the white background and padding, not the overlay.
-    const modalContentElement = document.querySelector('#view-consignment-details-modal .relative.bg-white');
-    
-    if (!modalContentElement) {
-        showModal('error', 'Error', 'Could not find the modal content to print.');
-        return;
-    }
-
-    // 2. Get the order ID from appState to use in the filename.
+    // 1. Get the main order data from the appState (this is correct)
     const orderData = appState.activeConsignmentModalData;
     if (!orderData) {
-        showModal('error', 'Data Error', 'Could not find data for the active modal.');
-        return;
+        return showModal('error', 'Data Error', 'Could not find data for the active modal.');
     }
 
-    const fileName = `Consignment-Details-${orderData?.consignmentId || orderId}.pdf`;
-
-    ProgressToast.show('Generating PDF...', 'info');
-
-    // 3. Configure html2pdf.js
-    const opt = {
-        margin:       0.5,
-        filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+    ProgressToast.show('Generating High-Quality PDF...', 'info');
 
     try {
-        // 4. Run the conversion and save the file.
-        await html2pdf().from(modalContentElement).set(opt).save();
+        // 2. Fetch the line items for this specific order
+        ProgressToast.updateProgress('Fetching item details...', 30);
+        const items = await getItemsForConsignmentOrder(orderData.id);
+
+        // 3. Prepare a single, clean data object for the template engine
+        ProgressToast.updateProgress('Preparing report data...', 60);
+        const reportData = {
+            consignmentId: orderData.consignmentId,
+            manualVoucherNumber: orderData.manualVoucherNumber,
+            teamName: orderData.teamName,
+            requestingMemberName: orderData.requestingMemberName,
+            requestDate: orderData.requestDate.toDate().toLocaleDateString(),
+            status: orderData.status,
+            totalValueCheckedOut: formatCurrency(orderData.totalValueCheckedOut || 0),
+            totalValueSold: formatCurrency(orderData.totalValueSold || 0),
+            totalExpenses: formatCurrency(orderData.totalExpenses || 0),
+            totalAmountPaid: formatCurrency(orderData.totalAmountPaid || 0),
+            balanceDue: formatCurrency(orderData.balanceDue || 0),
+            items: items // Pass the array of item objects
+        };
+
+        // 4. Call the PDF generation engine
+        ProgressToast.updateProgress('Rendering PDF...', 80);
+        await generateConsignmentDetailPDF(reportData);
+
         ProgressToast.showSuccess('PDF Downloaded!');
+
     } catch (error) {
         console.error("PDF generation failed:", error);
         ProgressToast.showError('Failed to generate PDF.');
@@ -7912,7 +7914,6 @@ async function handleDownloadConsignmentDetail() {
         ProgressToast.hide(200) ;
     }
 }
-
 
 
 
