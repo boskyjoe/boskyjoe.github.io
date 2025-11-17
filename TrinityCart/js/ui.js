@@ -3403,6 +3403,8 @@ export function initializeModals() {
                 closeSalesDetailModal();
             } else if (modalToClose.id === 'log-consignment-expense-modal') {
                 closeLogExpenseModal();
+            } else if (modalToClose.id === 'log-direct-sale-expense-modal') {
+                closeLogDirectSaleExpenseModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -3426,6 +3428,8 @@ export function initializeModals() {
             closeSalesDetailModal();
             closeBulkPaymentModal();
             closeLogExpenseModal () ;
+            closeLogDirectSaleExpenseModal();
+
 
             // 2. Also close the Custom Modal (for success/error/confirm)
             const customModal = document.getElementById('custom-modal');
@@ -5733,6 +5737,10 @@ const salesHistoryGridOptions = {
                 if (params.node.isRowPinned()) {
                     return ''; // If it's a pinned row, return an empty string.
                 }
+
+                const docId = params.data.id;
+                const user = appState.currentUser;
+
                 const paymentIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-green-600">
                         <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
                         <path fill-rule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clip-rule="evenodd" />
@@ -5742,14 +5750,27 @@ const salesHistoryGridOptions = {
 
                 const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" /></svg>`;
 
-                return `
-                <button class="action-btn-icon hover:text-blue-700 hover:bg-blue-50 action-btn-view-sale" 
+                // ✅ NEW: The expense icon
+                const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600">
+                            <path d="M3.5 3A1.5 1.5 0 0 0 2 4.5v11A1.5 1.5 0 0 0 3.5 17h13a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 16.5 3h-13zM10 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM10 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+                            <path d="m14.06 7.94-3-3a.75.75 0 0 0-1.06 1.06L11.94 8 9 10.94a.75.75 0 0 0 1.06 1.06l3-3a.75.75 0 0 0 0-1.06z" />
+                        </svg>`
+
+                let buttonsHTML = `
+                    <button class="action-btn-icon hover:text-blue-700 hover:bg-blue-50 action-btn-view-sale" 
                     data-id="${params.data.id}" 
                     title="View Sale Details">
-                ${viewIcon}
-                <button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>
-                <button class="action-btn-icon hover:text-red-700 hover:bg-red-50 action-btn-generate-invoice" data-id="${params.data.id}" title="Download PDF Invoice">${pdfIcon}</button>
+                    ${viewIcon}
+                    <button class="action-btn-icon hover:text-green-700 hover:bg-green-50 action-btn-manage-payments" data-id="${params.data.id}" title="View Details & Manage Payments">${paymentIcon}</button>
+                    <button class="action-btn-icon hover:text-red-700 hover:bg-red-50 action-btn-generate-invoice" data-id="${params.data.id}" title="Download PDF Invoice">${pdfIcon}</button>
                 `;
+                
+                if (user && (user.role === 'admin' || user.role === 'finance')) {
+                    buttonsHTML += `
+                        <button class="action-btn-icon hover:bg-orange-50 action-btn-log-direct-expense" data-id="${docId}" title="Log Expense for this Sale">${expenseIcon}</button>
+                    `;
+                }
+                return buttonsHTML;
             }
         },
         { field: "audit.createdBy", headerName: "Created By", filter: 'agTextColumnFilter' }
@@ -14371,3 +14392,97 @@ export function closeLogExpenseModal() {
     modal.classList.remove('visible');
     setTimeout(() => modal.style.display = 'none', 300);
 }
+
+// ✅ 1. Add a variable for the new grid's API at the top of the file
+let directSaleExpensesGridApi = null;
+
+// ✅ 2. Define the options for the read-only grid inside the modal
+const directSaleExpensesGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "expenseDate", headerName: "Date", width: 120, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "justification", headerName: "Justification", flex: 1 },
+        { field: "amount", headerName: "Amount", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "addedBy", headerName: "Added By", width: 180 }
+    ],
+    // This grid is for viewing, so we can disable editing here.
+    // The edit/delete logic will be added later if needed.
+    defaultColDef: {
+        editable: false 
+    }
+};
+
+/**
+ * ✅ 3. NEW: Function to show the Direct Sale Expense modal and populate it with data.
+ * @param {object} saleData - The full data object for the selected sales invoice.
+ */
+export function showLogDirectSaleExpenseModal(saleData) {
+    const modal = document.getElementById('log-direct-sale-expense-modal');
+    if (!modal) return;
+
+    // Populate the modal's header and summary fields
+    const systemId = saleData.saleId || 'N/A';
+    const manualVoucher = saleData.manualVoucherNumber;
+    let displayText = systemId;
+    if (manualVoucher) {
+        displayText += ` (Manual Voucher #: ${manualVoucher})`;
+    }
+    document.getElementById('direct-expense-modal-invoice-id').textContent = displayText;
+    
+    document.getElementById('direct-expense-modal-invoice-total').textContent = formatCurrency(saleData.financials?.totalAmount || 0);
+    document.getElementById('direct-expense-modal-current-expenses').textContent = formatCurrency(saleData.financials?.totalExpenses || 0);
+    document.getElementById('direct-expense-modal-balance-due').textContent = formatCurrency(saleData.balanceDue || 0);
+
+    // Set the default expense date to the sale date
+    const expenseDateInput = document.getElementById('direct-expense-date');
+    if (expenseDateInput) {
+        const defaultDate = saleData.saleDate ? saleData.saleDate.toDate() : new Date();
+        expenseDateInput.value = defaultDate.toISOString().split('T')[0];
+    }
+    
+    // Initialize the grid if it's the first time
+    const gridDiv = document.getElementById('direct-sale-expenses-grid');
+    if (gridDiv && !directSaleExpensesGridApi) {
+        directSaleExpensesGridApi = createGrid(gridDiv, directSaleExpensesGridOptions);
+    }
+    
+    // Show the modal
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+    
+    // Set up a real-time listener for the expenses sub-collection for this specific sale
+    const db = firebase.firestore();
+    // Clean up any previous listener before creating a new one
+    if (appState.unsubscribeDirectSaleExpenses) {
+        appState.unsubscribeDirectSaleExpenses();
+    }
+    appState.unsubscribeDirectSaleExpenses = db.collection(SALES_COLLECTION_PATH).doc(saleData.id).collection('expenses')
+      .orderBy('expenseDate', 'desc')
+      .onSnapshot(snapshot => {
+          const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          if (directSaleExpensesGridApi) {
+              directSaleExpensesGridApi.setGridOption('rowData', expenses);
+          }
+      });
+}
+
+/**
+ * ✅ 4. NEW: Function to close the Direct Sale Expense modal.
+ */
+export function closeLogDirectSaleExpenseModal() {
+    const modal = document.getElementById('log-direct-sale-expense-modal');
+    if (!modal) return;
+
+    // Unsubscribe from the real-time listener to prevent background data fetches
+    if (appState.unsubscribeDirectSaleExpenses) {
+        appState.unsubscribeDirectSaleExpenses();
+        appState.unsubscribeDirectSaleExpenses = null;
+    }
+
+    modal.classList.remove('visible');
+    setTimeout(() => { 
+        modal.style.display = 'none';
+        document.getElementById('log-direct-expense-form').reset();
+    }, 300);
+}
+
