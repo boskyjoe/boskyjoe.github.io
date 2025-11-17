@@ -2133,6 +2133,8 @@ export async function createConsignmentRequest(requestData, items, user) {
         consignmentId: consignmentId,
         status: 'Pending',
         requestDate: now,
+        hasPendingPayments: false,
+        totalExpenses: 0,
         audit: { createdBy: user.email, createdOn: now }
     });
 
@@ -2470,6 +2472,16 @@ export async function submitPaymentRecord(paymentData, user) {
                 }
             });
         }
+
+        // --- 3. ✅ NEW: Update the parent consignment order to set the flag ---
+        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
+        
+        console.log(`[API] Setting hasPendingPayments flag to true for order ${paymentData.orderId}`);
+        
+        transaction.update(orderRef, {
+            hasPendingPayments: true
+        });
+
     });
 }
 
@@ -2523,6 +2535,26 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
                 recordedBy: adminUser.email
             });
         }
+
+        // ✅ 5. NEW: CHECK AND UPDATE THE hasPendingPayments FLAG
+        // Query for any OTHER pending payments for this same order.
+        const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+                                     .where('orderId', '==', paymentData.orderId)
+                                     .where('paymentStatus', '==', 'Pending Verification');
+        
+        const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
+
+        // Inside a transaction, the current payment still counts as "Pending".
+        // So, if the size is exactly 1, it means we are verifying the LAST one.
+        if (pendingSnapshot.size === 1) {
+            console.log(`[API] Last pending payment for order ${paymentData.orderId} verified. Clearing flag.`);
+            // Update the parent order to clear the flag.
+            transaction.update(orderRef, { hasPendingPayments: false });
+        } else {
+            console.log(`[API] Order ${paymentData.orderId} still has ${pendingSnapshot.size - 1} other pending payments. Flag remains true.`);
+        }
+
+
     
     });
 }
@@ -4898,6 +4930,7 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
             expenseDate: new Date(expenseData.expenseDate), 
             justification: expenseData.justification,
             amount: expenseAmount,
+            hasPendingPayments: false,
             addedBy: user.email,
             addedOn: now // Keep track of when it was added
         });
