@@ -4367,7 +4367,7 @@ const consignmentOrdersGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 100, 
+            width: 130, 
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const user = appState.currentUser;
