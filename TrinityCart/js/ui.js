@@ -14562,6 +14562,8 @@ export async function showViewConsignmentDetailsModal(orderData) {
     const modal = document.getElementById('view-consignment-details-modal');
     if (!modal) return;
 
+    appState.activeConsignmentModalData = orderData;
+
     // Populate header and summary
     document.getElementById('consignment-detail-modal-order-id').textContent = `${orderData.consignmentId} (Voucher: ${orderData.manualVoucherNumber})`;
     document.getElementById('consignment-detail-modal-team').textContent = orderData.teamName;
@@ -14600,6 +14602,8 @@ export async function showViewConsignmentDetailsModal(orderData) {
 export function closeViewConsignmentDetailsModal() {
     const modal = document.getElementById('view-consignment-details-modal');
     if (!modal) return;
+    appState.activeConsignmentModalData = null;
+
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
