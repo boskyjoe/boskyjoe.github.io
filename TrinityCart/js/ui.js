@@ -13973,11 +13973,13 @@ function renderStockStatusChart(stockData) {
                 legend: { display: false },
                 title: { display: true, text: 'Current Stock Levels', font: { size: 16, weight: 'bold' } },
                 datalabels: {
-                    anchor: 'end',
-                    align: 'right',
+                    anchor: 'center',
+                    align: 'center',
                     padding: 4,
                     color: '#333',
                     font: { weight: 'bold' },
+                    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+                    textShadowBlur: 2,
                     formatter: (value) => value
                 }
             },
@@ -14058,13 +14060,15 @@ function renderTopSoldChart(topSoldData) {
                     font: { size: 16, weight: 'bold' }
                 },
                 datalabels: { // <-- Just add the same block here
-                    anchor: 'end',
-                    align: 'right',
+                    anchor: 'center',
+                    align: 'center',
                     padding: 4,
                     color: '#333',
                     font: {
                         weight: 'bold'
-                    }
+                    },
+                    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+                    textShadowBlur: 2,
                 }
             },
             scales: {
