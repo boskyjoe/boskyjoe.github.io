@@ -1647,12 +1647,11 @@ async function handleLogExpenseSubmit(e) {
  * It receives plain data and orchestrates the update process.
  * @param {object} updateDetails - An object containing { expenseId, fieldToUpdate, newValue, oldValue }.
  */
-
 async function handleExpenseUpdate(updateDetails) { // <-- The parameter is named 'updateDetails'
     const user = appState.currentUser;
     const orderId = appState.selectedConsignmentId;
     
-    // ✅ THE FIX: Use the correct parameter name 'updateDetails' here.
+    // ✅ THE FIX: Use the correct parameter name 'updateDetails' for destructuring.
     const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId } = updateDetails;
 
     if (!user || !orderId) {
@@ -1682,7 +1681,6 @@ async function handleExpenseUpdate(updateDetails) { // <-- The parameter is name
         throw error; 
     }
 }
-
 
 
 /**
