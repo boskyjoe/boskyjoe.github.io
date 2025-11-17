@@ -1630,6 +1630,7 @@ async function handleLogExpenseSubmit(e) {
         
         // Reset the form for the next entry
         document.getElementById('log-expense-form').reset();
+        ProgressToast.hide(10);
 
         // The modal will update automatically via its own real-time listener,
         // but we can also manually refresh the main grid's data if needed.
