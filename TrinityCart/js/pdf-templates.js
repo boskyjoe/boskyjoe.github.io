@@ -526,3 +526,111 @@ export function generateTastyTreatsInvoice(data) {
     
     return html2pdf().set(opt).from(fullHTML).save();
 }
+
+
+
+// ✅ NEW: HTML template for the Consignment Detail Report
+export function getConsignmentDetailHTML() {
+    return `
+        <div class="report-container">
+            <header>
+                <h1>Consignment Order Details</h1>
+                <p>Order: <strong>{{consignmentId}}</strong> (Voucher: {{manualVoucherNumber}})</p>
+            </header>
+            <main>
+                <section class="info-section">
+                    <div><strong>Team:</strong> {{teamName}}</div>
+                    <div><strong>Requested By:</strong> {{requestingMemberName}}</div>
+                    <div><strong>Request Date:</strong> {{requestDate}}</div>
+                    <div><strong>Status:</strong> {{status}}</div>
+                </section>
+                
+                <h3>Items Summary</h3>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Qty Checked Out</th>
+                            <th>Qty Sold</th>
+                            <th>Unit Price</th>
+                            <th>Total Value Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{lineItems}} <!-- Placeholder for item rows -->
+                    </tbody>
+                </table>
+
+                <div class="summary-section">
+                    <h3>Financial Summary</h3>
+                    <div class="summary-grid">
+                        <span>Total Value Checked Out:</span> <span class="value">{{totalValueCheckedOut}}</span>
+                        <span>Total Value Sold:</span> <span class="value text-green">{{totalValueSold}}</span>
+                        <span>Total Expenses:</span> <span class="value text-red">- {{totalExpenses}}</span>
+                        <span>Total Amount Paid:</span> <span class="value text-green">{{totalAmountPaid}}</span>
+                        <span class="total-label">Balance Due:</span> <span class="total-value text-red">{{balanceDue}}</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+    `;
+}
+
+// ✅ NEW: CSS for the Consignment Detail Report
+export function getConsignmentDetailCSS() {
+    return `
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+        .report-container { padding: 40px; }
+        header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .info-section { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; }
+        h3 { font-size: 14pt; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .items-table thead { background-color: #f2f2f2; }
+        .summary-section { margin-top: 20px; float: right; width: 40%; }
+        .summary-grid { display: grid; grid-template-columns: auto auto; gap: 5px; }
+        .summary-grid .value { text-align: right; font-weight: bold; }
+        .summary-grid .total-label, .summary-grid .total-value { font-size: 12pt; border-top: 1px solid #333; padding-top: 5px; }
+        .text-green { color: #166534; }
+        .text-red { color: #991b1b; }
+    `;
+}
+
+
+export async function generateConsignmentDetailPDF(data) {
+    let html = getConsignmentDetailHTML();
+    const css = getConsignmentDetailCSS();
+
+    // Replace placeholders
+    for (const [key, value] of Object.entries(data)) {
+        if (typeof value !== 'object') {
+            html = html.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+        }
+    }
+
+    // Generate and replace line items
+    const itemRows = data.items.map(item => `
+        <tr>
+            <td>${item.productName}</td>
+            <td>${item.quantityCheckedOut || 0}</td>
+            <td>${item.quantitySold || 0}</td>
+            <td>${formatCurrency(item.sellingPrice || 0)}</td>
+            <td>${formatCurrency((item.quantitySold || 0) * (item.sellingPrice || 0))}</td>
+        </tr>
+    `).join('');
+    html = html.replace('{{lineItems}}', itemRows);
+
+    // Combine for final output
+    const fullHTML = `<!DOCTYPE html><html><head><style>${css}</style></head><body>${html}</body></html>`;
+
+    // Configure and run html2pdf.js
+    const opt = {
+        margin: 0.5,
+        filename: `Consignment-Detail-${data.consignmentId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    return html2pdf().from(fullHTML).set(opt).save();
+}
