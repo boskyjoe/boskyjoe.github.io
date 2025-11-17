@@ -551,14 +551,18 @@ export function getConsignmentDetailHTML() {
                     <thead>
                         <tr>
                             <th>Product Name</th>
-                            <th>Qty Checked Out</th>
+                            <th>Qty Out</th>
+                            <!-- ✅ NEW COLUMNS ADDED -->
                             <th>Qty Sold</th>
-                            <th>Unit Price</th>
-                            <th>Total Value Sold</th>
+                            <th>Qty Gift</th>
+                            <th>Qty Return</th>
+                            <th>Qty Damaged</th>
+                            <th>Price</th>
+                            <th>Total Sale</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {{lineItems}} <!-- Placeholder for item rows -->
+                        {{lineItems}} <!-- This placeholder remains the same -->
                     </tbody>
                 </table>
 
@@ -580,20 +584,36 @@ export function getConsignmentDetailHTML() {
 // ✅ NEW: CSS for the Consignment Detail Report
 export function getConsignmentDetailCSS() {
     return `
-        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
-        .report-container { padding: 40px; }
+        @page {
+            margin: 8mm; /* You might want to reduce this to 5mm for more space */
+            size: A4;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            /* ✅ THE FIX: Change the base font size */
+            font-size: 7pt; /* Let's try 7pt first, 6pt can be very small */
+            line-height: 1.3;
+            color: #333;
+        }
+        .report-container { padding: 5mm; }
+        header h1 { font-size: 14pt; } /* Reduce header sizes proportionally */
         header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
         .info-section { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; }
-        h3 { font-size: 14pt; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        h3 { font-size: 11pt; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
         /* Items Table */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt; /* Slightly smaller font to fit more columns */
+            font-size: 7pt; /* Ensure table font size matches the body */
         }
         .items-table th, .items-table td {
             border: 1px solid #ddd;
-            padding: 6px; /* Adjust padding if needed */
+            padding: 4px; /* Slightly smaller padding for a tighter look */
             text-align: left;
         }
         .items-table td:not(:first-child) {
@@ -609,7 +629,7 @@ export function getConsignmentDetailCSS() {
         .summary-section { margin-top: 20px; float: right; width: 40%; }
         .summary-grid { display: grid; grid-template-columns: auto auto; gap: 5px; }
         .summary-grid .value { text-align: right; font-weight: bold; }
-        .summary-grid .total-label, .summary-grid .total-value { font-size: 12pt; border-top: 1px solid #333; padding-top: 5px; }
+        .summary-grid .total-label, .summary-grid .total-value { font-size: 10pt; border-top: 1px solid #333; padding-top: 5px; }
         .text-green { color: #166534; }
         .text-red { color: #991b1b; }
     `;
