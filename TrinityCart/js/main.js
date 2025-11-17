@@ -163,9 +163,9 @@ import {
 } from './ui.js';
 
 import { addConsignmentExpense} from './api.js';
-import { showLogExpenseModal, closeLogExpenseModal } from './ui.js';
+import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense} from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense, getSalesInvoiceById} from './api.js';
 
 
 import { generateTastyTreatsInvoice } from './pdf-templates.js';
@@ -886,6 +886,29 @@ function setupGlobalClickHandler() {
             return; // Action handled
         }
 
+        const logDirectExpenseBtn = e.target.closest('.action-btn-log-direct-expense');
+        if (logDirectExpenseBtn) {
+            const saleId = logDirectExpenseBtn.dataset.id;
+            
+            try {
+                ProgressToast.show('Loading Sale Details...', 'info');
+                // Use your existing function to get the sale data
+                const saleData = await getSalesInvoiceById(saleId); 
+                ProgressToast.hide(0);
+
+                if (saleData) {
+                    // Store the ID in appState so the form submission handler knows which sale to update
+                    appState.selectedSaleId = saleId; 
+                    showLogDirectSaleExpenseModal(saleData);
+                } else {
+                    showModal('error', 'Sale Not Found', 'The selected sale could not be found.');
+                }
+            } catch (error) {
+                ProgressToast.hide(0);
+                showModal('error', 'Error Fetching Sale', 'Could not retrieve sale details.');
+            }
+            return; // Action handled
+        }
 
 
         // Authentication
@@ -1693,6 +1716,55 @@ async function handleExpenseUpdate(updateDetails) { // <-- The parameter is name
         closeLogExpenseModal();
     }
 }
+
+
+//Add the new form submission handler
+async function handleLogDirectSaleExpenseSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    // Get the active sale ID from the appState
+    const saleId = appState.selectedSaleId; 
+
+    if (!user || !saleId) {
+        return showModal('error', 'Error', 'No user or sale selected. Please close the modal and try again.');
+    }
+
+    const expenseData = {
+        justification: document.getElementById('direct-expense-justification').value.trim(),
+        amount: document.getElementById('direct-expense-amount').value,
+        expenseDate: document.getElementById('direct-expense-date').value
+    };
+
+    if (!expenseData.justification || !expenseData.amount || !expenseData.expenseDate || Number(expenseData.amount) <= 0) {
+        return showModal('error', 'Invalid Input', 'Please provide a valid date, justification, and a positive amount.');
+    }
+
+    try {
+        ProgressToast.show('Logging Expense...', 'info');
+        // Call the new API function we created
+        await addDirectSaleExpense(saleId, expenseData, user);
+        ProgressToast.showSuccess('Expense logged successfully!');
+        
+        // Reset the form for the next entry, but keep the modal open
+        document.getElementById('log-direct-expense-form').reset();
+        // Set the date back to the default
+        const expenseDateInput = document.getElementById('direct-expense-date');
+        if (expenseDateInput) {
+            const saleData = getSalesHistoryDataById(saleId); // Get fresh data to reset date
+            const defaultDate = saleData.saleDate ? saleData.saleDate.toDate() : new Date();
+            expenseDateInput.value = defaultDate.toISOString().split('T')[0];
+        }
+
+    } catch (error) {
+        ProgressToast.showError('Failed to log expense.');
+        showModal('error', 'Failed to Log Expense', error.message);
+    }
+}
+
+
+
+
+
 
 
 /**
@@ -2827,7 +2899,8 @@ function setupFormSubmissions() {
         { id: 'add-season-form', handler: handleSeasonSubmit },
         { id: 'add-event-form', handler: handleEventSubmit },
         { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit },
-        { id: 'log-expense-form', handler: handleLogExpenseSubmit }
+        { id: 'log-expense-form', handler: handleLogExpenseSubmit },
+        { id: 'log-direct-expense-form', handler: handleLogDirectSaleExpenseSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
@@ -7772,6 +7845,8 @@ async function handleBulkSupplierPaymentSubmit(e) {
         ProgressToast.showError(`Processing Failed: ${error.message}`);
     }
 }
+
+
 
 
 
