@@ -1615,11 +1615,12 @@ async function handleLogExpenseSubmit(e) {
 
     const expenseData = {
         justification: document.getElementById('expense-justification').value.trim(),
-        amount: document.getElementById('expense-amount').value
+        amount: document.getElementById('expense-amount').value,
+        expenseDate: document.getElementById('expense-date').value // The value is a 'YYYY-MM-DD' string
     };
 
-    if (!expenseData.justification || !expenseData.amount || Number(expenseData.amount) <= 0) {
-        return showModal('error', 'Invalid Input', 'Please provide a valid justification and a positive amount.');
+    if (!expenseData.justification || !expenseData.amount || !expenseData.expenseDate || Number(expenseData.amount) <= 0) {
+        return showModal('error', 'Missing Fields', 'Please provide a valid date, justification, and a positive amount.');
     }
 
     try {
