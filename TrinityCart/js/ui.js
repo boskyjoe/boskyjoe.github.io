@@ -14243,10 +14243,37 @@ let consignmentExpensesGridApi = null;
 // ✅ NEW: Define the options for the grid inside the modal
 const consignmentExpensesGridOptions = {
     theme: 'legacy',
+    onCellValueChanged: (params) => {
+        // This is the event that fires after a cell is edited.
+        // We will call our main controller function from here.
+        handleExpenseUpdate(params);
+    },
     columnDefs: [
-        { field: "expenseDate", headerName: "Date", width: 120, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "justification", headerName: "Justification", flex: 1 },
-        { field: "amount", headerName: "Amount", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { 
+            field: "expenseDate", 
+            headerName: "Date", 
+            width: 120, 
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '',
+            // ✅ Make the date editable
+            editable: true 
+        },
+        { 
+            field: "justification", 
+            headerName: "Justification", 
+            flex: 1,
+            // ✅ Make the justification editable
+            editable: true 
+        },
+        { 
+            field: "amount", 
+            headerName: "Amount", 
+            width: 120, 
+            valueFormatter: p => formatCurrency(p.value),
+            // ✅ Make the amount editable
+            editable: true,
+            // Use a value parser to ensure the new value is a number
+            valueParser: p => Number(p.newValue)
+        },
         { field: "addedBy", headerName: "Added By", width: 180 }
     ]
 };
