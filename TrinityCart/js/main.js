@@ -1686,7 +1686,7 @@ async function handleExpenseUpdate(updateDetails) { // <-- The parameter is name
                 value: oldValue
             }
         }));
-    }
+    } finally {ProgressToast.hide(10);}
 }
 
 
