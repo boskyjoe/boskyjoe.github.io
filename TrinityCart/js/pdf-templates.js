@@ -585,9 +585,27 @@ export function getConsignmentDetailCSS() {
         header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
         .info-section { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; }
         h3 { font-size: 14pt; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-        .items-table { width: 100%; border-collapse: collapse; }
-        .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .items-table thead { background-color: #f2f2f2; }
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt; /* Slightly smaller font to fit more columns */
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 6px; /* Adjust padding if needed */
+            text-align: left;
+        }
+        .items-table td:not(:first-child) {
+            text-align: center; /* Center-align all numeric columns */
+        }
+        .items-table td:last-child {
+            text-align: right; /* Right-align the final currency column */
+            font-weight: bold;
+        }
+        .items-table thead {
+            background-color: #f2f2f2;
+        }
         .summary-section { margin-top: 20px; float: right; width: 40%; }
         .summary-grid { display: grid; grid-template-columns: auto auto; gap: 5px; }
         .summary-grid .value { text-align: right; font-weight: bold; }
@@ -610,15 +628,24 @@ export async function generateConsignmentDetailPDF(data) {
     }
 
     // Generate and replace line items
-    const itemRows = data.items.map(item => `
-        <tr>
-            <td>${item.productName}</td>
-            <td>${item.quantityCheckedOut || 0}</td>
-            <td>${item.quantitySold || 0}</td>
-            <td>${formatCurrency(item.sellingPrice || 0)}</td>
-            <td>${formatCurrency((item.quantitySold || 0) * (item.sellingPrice || 0))}</td>
-        </tr>
-    `).join('');
+    const itemRows = data.items.map(item => {
+        const quantitySold = item.quantitySold || 0;
+        const sellingPrice = item.sellingPrice || 0;
+        const totalSaleValue = quantitySold * sellingPrice;
+
+        return `
+            <tr>
+                <td>${item.productName}</td>
+                <td>${item.quantityCheckedOut || 0}</td>
+                <td>${quantitySold}</td>
+                <td>${item.quantityGifted || 0}</td>
+                <td>${item.quantityReturned || 0}</td>
+                <td>${item.quantityDamaged || 0}</td>
+                <td>${formatCurrency(sellingPrice)}</td>
+                <td>${formatCurrency(totalSaleValue)}</td>
+            </tr>
+        `;
+    }).join('');
     html = html.replace('{{lineItems}}', itemRows);
 
     // Combine for final output
