@@ -921,6 +921,13 @@ function setupGlobalClickHandler() {
             return;
         }
 
+        //Add the handler for our new button
+        const downloadBtn = e.target.closest('#download-consignment-detail-pdf');
+        if (downloadBtn) {
+            await handleDownloadConsignmentDetail();
+            return;
+        }
+
         // Authentication
         //if (target.closest('#login-button')) return EventHandlers.auth.login();
         if (target.closest('#login-button, #login-button-bottom')) return EventHandlers.auth.login();
@@ -7858,6 +7865,48 @@ async function handleBulkSupplierPaymentSubmit(e) {
         ProgressToast.showError(`Processing Failed: ${error.message}`);
     }
 }
+
+
+/**
+ * ✅ NEW: Handles the click on the "Download PDF" button inside the consignment detail modal.
+ * It captures the modal's content and converts it to a PDF.
+ */
+async function handleDownloadConsignmentDetail() {
+    // 1. Get the main content element of the modal.
+    // We want the part with the white background and padding, not the overlay.
+    const modalContentElement = document.querySelector('#view-consignment-details-modal .relative.bg-white');
+    
+    if (!modalContentElement) {
+        showModal('error', 'Error', 'Could not find the modal content to print.');
+        return;
+    }
+
+    // 2. Get the order ID from appState to use in the filename.
+    const orderId = appState.selectedConsignmentId; 
+    const orderData = getConsignmentOrderDataById(orderId); // Helper to get data from the grid
+    const fileName = `Consignment-Details-${orderData?.consignmentId || orderId}.pdf`;
+
+    ProgressToast.show('Generating PDF...', 'info');
+
+    // 3. Configure html2pdf.js
+    const opt = {
+        margin:       0.5,
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        // 4. Run the conversion and save the file.
+        await html2pdf().from(modalContentElement).set(opt).save();
+        ProgressToast.showSuccess('PDF Downloaded!');
+    } catch (error) {
+        console.error("PDF generation failed:", error);
+        ProgressToast.showError('Failed to generate PDF.');
+    }
+}
+
 
 
 
