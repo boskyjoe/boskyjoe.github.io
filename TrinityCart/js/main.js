@@ -7908,6 +7908,8 @@ async function handleDownloadConsignmentDetail() {
     } catch (error) {
         console.error("PDF generation failed:", error);
         ProgressToast.showError('Failed to generate PDF.');
+    } finally {
+        ProgressToast.hide(200) ;
     }
 }
 
