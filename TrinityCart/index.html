@@ -6964,7 +6964,7 @@
                         <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Add New Expense</h4>
                     </div>
                     <form id="log-expense-form" class="space-y-4 bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 shadow-sm">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div class="md:col-span-2">
                                 <label for="expense-justification" class="form-label flex items-center">
                                     <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6973,6 +6973,15 @@
                                     Justification / Reason <span class="text-red-500 ml-1">*</span>
                                 </label>
                                 <input type="text" id="expense-justification" class="form-input w-full focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" placeholder="e.g., Stall rental, transport cost" required>
+                            </div>
+                            <div>
+                                <label for="expense-date" class="form-label flex items-center">
+                                    <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    Expense Date <span class="text-red-500 ml-1">*</span>
+                                </label>
+                                <input type="date" id="expense-date" class="form-input w-full focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" required>
                             </div>
                             <div>
                                 <label for="expense-amount" class="form-label flex items-center">
@@ -7020,7 +7029,6 @@
             </div>
         </div>
     </div>
-
 
 
     <!-- =================================== -->
