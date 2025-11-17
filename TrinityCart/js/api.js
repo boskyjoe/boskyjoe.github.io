@@ -4931,3 +4931,45 @@ export async function updateConsignmentExpense(orderId, expenseId, amountDelta, 
         }
     });
 }
+
+/**
+ * ✅ NEW & CORRECT: Atomically adds an expense to a direct sale invoice.
+ * Creates an expense record and updates the parent invoice's totals, including balanceDue.
+ * @param {string} invoiceId - The document ID of the sales invoice.
+ * @param {object} expenseData - An object with { amount, justification, expenseDate }.
+ * @param {object} user - The user adding the expense.
+ */
+export async function addDirectSaleExpense(invoiceId, expenseData, user) {
+    const db = firebase.firestore();
+    const FieldValue = firebase.firestore.FieldValue;
+    const now = FieldValue.serverTimestamp();
+
+    const invoiceRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
+    const expenseRef = invoiceRef.collection('expenses').doc();
+
+    const expenseAmount = Number(expenseData.amount);
+    if (isNaN(expenseAmount) || expenseAmount <= 0) {
+        throw new Error("Expense amount must be a positive number.");
+    }
+
+    return db.runTransaction(async (transaction) => {
+        // 1. Create the new expense document in the sub-collection
+        transaction.set(expenseRef, {
+            expenseId: `DSEXP-${Date.now()}`,
+            expenseDate: new Date(expenseData.expenseDate),
+            justification: expenseData.justification,
+            amount: expenseAmount,
+            addedBy: user.email,
+            addedOn: now
+        });
+
+        // 2. Update the parent sales invoice document
+        transaction.update(invoiceRef, {
+            // Increment the total expenses within the financials map
+            'financials.totalExpenses': FieldValue.increment(expenseAmount),
+            // DECREMENT the top-level balanceDue by the same amount
+            balanceDue: FieldValue.increment(-expenseAmount)
+        });
+    });
+}
+
