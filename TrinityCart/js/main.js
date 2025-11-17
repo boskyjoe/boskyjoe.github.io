@@ -1677,8 +1677,15 @@ async function handleExpenseUpdate(updateDetails) { // <-- The parameter is name
     } catch (error) {
         console.error("Error updating expense in controller:", error);
         ProgressToast.showError(`Update Failed: ${error.message}`);
-        // Re-throw the error so the UI layer can catch it and revert the cell value.
-        throw error; 
+        
+        document.dispatchEvent(new CustomEvent('revertGridCell', {
+            detail: {
+                gridName: 'consignmentExpenses', // Identify which grid to act on
+                nodeId: gridNodeId,
+                field: fieldToUpdate,
+                value: oldValue
+            }
+        }));
     }
 }
 
