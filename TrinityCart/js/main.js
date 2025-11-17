@@ -1647,15 +1647,17 @@ async function handleLogExpenseSubmit(e) {
  * It receives plain data and orchestrates the update process.
  * @param {object} updateDetails - An object containing { expenseId, fieldToUpdate, newValue, oldValue }.
  */
-async function handleExpenseUpdate(updateDetails) {
+
+async function handleExpenseUpdate(updateDetails) { // <-- The parameter is named 'updateDetails'
     const user = appState.currentUser;
     const orderId = appState.selectedConsignmentId;
-    const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId } = detail;
+    
+    // ✅ THE FIX: Use the correct parameter name 'updateDetails' here.
+    const { expenseId, fieldToUpdate, newValue, oldValue, gridNodeId } = updateDetails;
 
     if (!user || !orderId) {
         throw new Error("Cannot update expense: user or orderId is missing.");
     }
-
 
     ProgressToast.show('Updating Expense...', 'info');
 
@@ -1680,6 +1682,8 @@ async function handleExpenseUpdate(updateDetails) {
         throw error; 
     }
 }
+
+
 
 /**
  * Handles all CRUD actions triggered from within the expenses grid.
