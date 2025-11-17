@@ -14547,7 +14547,12 @@ const consignmentDetailModalGridOptions = {
         { field: "productName", headerName: "Product", flex: 1 },
         { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
         { field: "quantitySold", headerName: "Qty Sold", width: 100 },
+        { field: "quantityGifted", headerName: "Qty Gift", width: 100 },
+        { field: "quantityReturned", headerName: "Qty Return", width: 100 },
+        { field: "quantityDamaged", headerName: "Qty Damaged", width: 100 },
         { field: "sellingPrice", headerName: "Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "totalSaleValue", headerName: "Total Sale", width: 130, valueGetter: p => (p.data.quantitySold || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
+        { field: "totalGiftValue", headerName: "Total Gift", width: 130, valueGetter: p => (p.data.quantityGifted || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
         { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) }
     ]
 };
