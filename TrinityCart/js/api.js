@@ -2174,6 +2174,18 @@ export async function getConsignmentOrderById(orderId) {
 
 
 /**
+ * ✅ NEW: Fetches all items from the sub-collection of a specific consignment order.
+ * @param {string} orderId - The Firestore document ID of the parent order.
+ * @returns {Promise<Array<object>>} An array of item objects.
+ */
+export async function getItemsForConsignmentOrder(orderId) {
+    const db = firebase.firestore();
+    const itemsRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId).collection('items');
+    const snapshot = await itemsRef.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
  * Fulfills a consignment order and atomically decrements inventory.
  * This is a critical transaction to prevent race conditions.
  * @param {string} orderId - The ID of the consignment order to fulfill.
