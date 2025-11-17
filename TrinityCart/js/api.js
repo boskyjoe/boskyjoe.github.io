@@ -4869,7 +4869,7 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
     
     const FieldValue = firebase.firestore.FieldValue;
     const now = FieldValue.serverTimestamp();
-    
+
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const expenseRef = orderRef.collection('expenses').doc();
 
@@ -4895,5 +4895,39 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
             totalExpenses: FieldValue.increment(expenseAmount),
             balanceDue: FieldValue.increment(-expenseAmount)
         });
+    });
+}
+
+/**
+ * ✅ NEW: Atomically updates an existing consignment expense and the parent order's totals.
+ * @param {string} orderId - The ID of the parent consignment order.
+ * @param {string} expenseId - The ID of the expense document to update.
+ * @param {number} amountDelta - The change in the expense amount (newValue - oldValue).
+ * @param {object} updatedData - The new data for the expense document (e.g., { amount: 150, justification: 'New text' }).
+ * @param {object} user - The user performing the update.
+ */
+export async function updateConsignmentExpense(orderId, expenseId, amountDelta, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const FieldValue = firebase.firestore.FieldValue;
+
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+    const expenseRef = orderRef.collection('expenses').doc(expenseId);
+
+    return db.runTransaction(async (transaction) => {
+        // 1. Update the specific expense document in the sub-collection
+        transaction.update(expenseRef, {
+            ...updatedData,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now
+        });
+
+        // 2. If the amount changed, update the parent order's totals
+        if (amountDelta !== 0) {
+            transaction.update(orderRef, {
+                totalExpenses: FieldValue.increment(amountDelta),
+                balanceDue: FieldValue.increment(-amountDelta) // Note the negative sign
+            });
+        }
     });
 }
