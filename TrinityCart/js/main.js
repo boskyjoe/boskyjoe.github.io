@@ -7882,8 +7882,12 @@ async function handleDownloadConsignmentDetail() {
     }
 
     // 2. Get the order ID from appState to use in the filename.
-    const orderId = appState.selectedConsignmentId; 
-    const orderData = getConsignmentOrderDataById(orderId); // Helper to get data from the grid
+    const orderData = appState.activeConsignmentModalData;
+    if (!orderData) {
+        showModal('error', 'Data Error', 'Could not find data for the active modal.');
+        return;
+    }
+
     const fileName = `Consignment-Details-${orderData?.consignmentId || orderId}.pdf`;
 
     ProgressToast.show('Generating PDF...', 'info');
