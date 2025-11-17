@@ -547,7 +547,6 @@ export function getConsignmentDetailHTML() {
                 </section>
                 
                 <h3>Items Summary</h3>
-                <div class="table-and-summary-container">
                     <div class="table-wrapper">
                         <table class="items-table">
                             <thead>
@@ -579,7 +578,6 @@ export function getConsignmentDetailHTML() {
                             <span class="total-label">Balance Due:</span> <span class="total-value text-red">{{balanceDue}}</span>
                         </div>
                     </div>
-                </div>
             </main>
         </div>
     `;
@@ -640,13 +638,26 @@ export function getConsignmentDetailCSS() {
             width: 100%; /* The table will take up all available space */
         }
         .summary-section {
-            width: 40%; /* Set a width for the summary */
-            margin-left: 20px; /* Add some space between the table and summary */
-            flex-shrink: 0; /* Prevent the summary from shrinking */
+            margin-top: 20px;   /* Add some space above it */
+            margin-left: auto;  /* This is the magic trick */
+            width: 50%;         /* Or whatever width you prefer, e.g., 300px */
         }
-        .summary-grid { display: grid; grid-template-columns: auto auto; gap: 5px; }
+        .summary-grid { 
+            display: grid; 
+            grid-template-columns: auto auto; 
+            gap: 5px; 
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
         .summary-grid .value { text-align: right; font-weight: bold; }
-        .summary-grid .total-label, .summary-grid .total-value { font-size: 10pt; border-top: 1px solid #333; padding-top: 5px; }
+        .summary-grid .total-label, .summary-grid .total-value { 
+            font-size: 10pt; 
+            border-top: 1px solid #ccc; 
+            padding-top: 5px; 
+            margin-top: 5px;
+        }
         .text-green { color: #166534; }
         .text-red { color: #991b1b; }
     `;
