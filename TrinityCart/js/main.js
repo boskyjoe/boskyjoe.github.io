@@ -3703,7 +3703,7 @@ async function handleTeamSubmit(e) {
             return;
         }
 
-        if (teamName.length > 50) {
+        if (teamName.length > 500) {
             ProgressToast.hide(0);
             await showModal('error', 'Name Too Long', 'Team name must be 50 characters or less for display purposes.');
             return;
