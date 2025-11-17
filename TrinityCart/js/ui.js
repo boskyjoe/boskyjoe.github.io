@@ -14243,10 +14243,41 @@ let consignmentExpensesGridApi = null;
 // ✅ NEW: Define the options for the grid inside the modal
 const consignmentExpensesGridOptions = {
     theme: 'legacy',
-    onCellValueChanged: (params) => {
-        // This is the event that fires after a cell is edited.
-        // We will call our main controller function from here.
-        handleExpenseUpdate(params);
+     onCellValueChanged: (params) => {
+        const { oldValue, newValue, colDef, data: expenseData } = params;
+        const field = colDef.field;
+
+        // If the value didn't actually change, do nothing.
+        if (oldValue === newValue) {
+            return;
+        }
+
+        // --- Client-side Validation (happens in the UI layer) ---
+        if (field === 'amount') {
+            const newAmount = Number(newValue);
+            if (isNaN(newAmount) || newAmount <= 0) {
+                params.node.setDataValue(field, oldValue); // Revert UI
+                showModal('error', 'Invalid Amount', 'Expense amount must be greater than zero. To remove an expense, use the delete button.');
+                return; // Stop
+            }
+        }
+        
+        // --- Call the Controller ---
+        // Gather all necessary, non-grid-specific data to pass to the controller.
+        const updateDetails = {
+            expenseId: expenseData.id,
+            fieldToUpdate: field,
+            newValue: newValue,
+            oldValue: oldValue
+        };
+
+        // Call the controller function in main.js
+        handleExpenseUpdate(updateDetails)
+            .catch(error => {
+                // If the controller/API fails, revert the change in the grid.
+                console.error("Reverting grid change due to update failure:", error);
+                params.node.setDataValue(field, oldValue);
+            });
     },
     columnDefs: [
         { 
@@ -14275,7 +14306,8 @@ const consignmentExpensesGridOptions = {
             valueParser: p => Number(p.newValue)
         },
         { field: "addedBy", headerName: "Added By", width: 180 }
-    ]
+    ],
+    onGridReady: params => { consignmentExpensesGridApi = params.api; }
 };
 
 // ✅ NEW: Function to show the modal
