@@ -5104,12 +5104,11 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         consignmentSold += order.totalValueSold || 0; 
         // The cash collected from teams
         consignmentCash += order.totalAmountPaid || 0;
+        consignmentExpenses += order.totalExpenses || 0 ;
         // The total value of inventory currently active with teams
         if (order.status === 'Active') {
             consignmentCheckedOut += order.totalValueCheckedOut || 0;
         }
-
-        consignmentExpenses += order.totalExpenses || 0 ;
     });
 
     totalInvoiced += consignmentSold;
@@ -5195,7 +5194,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 cash: consignmentCash, 
                 diff: consignmentSold - consignmentCash,
                 checkout: consignmentCheckedOut, // Value of goods currently with teams
-                totalExpenses:consignmentExpenses
+                consignmentExpenses:consignmentExpenses
             },
             tastyTreats: { 
                 invoiced: tastyInvoiced, 
