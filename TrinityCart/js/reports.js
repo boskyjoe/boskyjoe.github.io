@@ -5094,6 +5094,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     let consignmentSold = 0;
     let consignmentCash = 0;
     let consignmentCheckedOut = 0; // New field for total value out with teams
+    let totalExpenses = 0 ;
 
 
     // Process Consignment Orders using pre-calculated totals
@@ -5107,6 +5108,8 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         if (order.status === 'Active') {
             consignmentCheckedOut += order.totalValueCheckedOut || 0;
         }
+
+        totalExpenses += totalExpenses || 0 ;
     });
 
     totalInvoiced += consignmentSold;
@@ -5189,7 +5192,8 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 invoiced: consignmentSold, // Represents actual sales revenue
                 cash: consignmentCash, 
                 diff: consignmentSold - consignmentCash,
-                checkout: consignmentCheckedOut // Value of goods currently with teams
+                checkout: consignmentCheckedOut, // Value of goods currently with teams
+                totalExpenses:totalExpenses
             },
             tastyTreats: { 
                 invoiced: tastyInvoiced, 
