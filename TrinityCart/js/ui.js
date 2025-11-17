@@ -3405,6 +3405,8 @@ export function initializeModals() {
                 closeLogExpenseModal();
             } else if (modalToClose.id === 'log-direct-sale-expense-modal') {
                 closeLogDirectSaleExpenseModal();
+            } else if (modalToClose.id === 'view-consignment-details-modal') {
+                closeViewConsignmentDetailsModal();
             }
             // Add similar logic for other modals if needed
         }
@@ -3429,6 +3431,7 @@ export function initializeModals() {
             closeBulkPaymentModal();
             closeLogExpenseModal () ;
             closeLogDirectSaleExpenseModal();
+            closeViewConsignmentDetailsModal();
 
 
             // 2. Also close the Custom Modal (for success/error/confirm)
@@ -4296,6 +4299,7 @@ let unsubscribeConsignmentDetailsListeners = []; // Array to hold multiple detai
 
 // MASTER GRID: All Consignment Orders
 
+
 const consignmentOrdersGridOptions = {
     //getRowId: params => params.data.id,
     getRowId: params => {
@@ -4373,13 +4377,20 @@ const consignmentOrdersGridOptions = {
                 const user = appState.currentUser;
                 if (!user || !params.data) return '';
 
+                let buttonsHTML = '';
+
+                const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" /></svg>`;
+
+                buttonsHTML += `<button class="action-btn-icon action-btn-view-consignment" data-id="${params.data.id}" title="View Order Details">${viewIcon}</button>`;
+
                 // Only show for Admin and Finance on Active orders
                 if ((user.role === 'admin' || user.role === 'finance') && params.data.status === 'Active') {
                     const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600">
                             <path d="M3.5 3A1.5 1.5 0 0 0 2 4.5v11A1.5 1.5 0 0 0 3.5 17h13a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 16.5 3h-13zM10 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM10 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
                             <path d="m14.06 7.94-3-3a.75.75 0 0 0-1.06 1.06L11.94 8 9 10.94a.75.75 0 0 0 1.06 1.06l3-3a.75.75 0 0 0 0-1.06z" />
                         </svg>`;
-                    return `<button class="action-btn-icon action-btn-log-expense" data-id="${params.data.id}" title="Log Expense">${expenseIcon}</button>`;
+                    buttonsHTML += `<button class="action-btn-icon action-btn-log-expense" data-id="${params.data.id}" title="Log Expense">${expenseIcon}</button>`;
+                    return buttonsHTML;
                 }
                 return ''; // Return empty for other roles or statuses
             }
@@ -4459,6 +4470,8 @@ const consignmentOrdersGridOptions = {
         }
     }
 };
+
+
 
 // DETAIL GRID 1: Fulfillment (for Pending orders)
 const fulfillmentItemsGridOptions = {
@@ -14523,3 +14536,65 @@ export function closeLogDirectSaleExpenseModal() {
     }, 300);
 }
 
+
+// ✅ NEW: Add a variable for the new grid's API
+let consignmentDetailModalGridApi = null;
+
+// ✅ NEW: Define the options for the read-only grid inside the modal
+const consignmentDetailModalGridOptions = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
+        { field: "quantitySold", headerName: "Qty Sold", width: 100 },
+        { field: "sellingPrice", headerName: "Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
+        { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) }
+    ]
+};
+
+// ✅ NEW: Function to show the modal and populate it
+export async function showViewConsignmentDetailsModal(orderData) {
+    const modal = document.getElementById('view-consignment-details-modal');
+    if (!modal) return;
+
+    // Populate header and summary
+    document.getElementById('consignment-detail-modal-order-id').textContent = `${orderData.consignmentId} (Voucher: ${orderData.manualVoucherNumber})`;
+    document.getElementById('consignment-detail-modal-team').textContent = orderData.teamName;
+    document.getElementById('consignment-detail-modal-member').textContent = orderData.requestingMemberName;
+    document.getElementById('consignment-detail-modal-date').textContent = orderData.requestDate.toDate().toLocaleDateString();
+    document.getElementById('consignment-detail-modal-status').textContent = orderData.status;
+    document.getElementById('consignment-detail-modal-catalogue').textContent = orderData.salesCatalogueName;
+
+    // Populate financials
+    document.getElementById('consignment-detail-modal-total').textContent = formatCurrency(orderData.totalValueCheckedOut || 0);
+    document.getElementById('consignment-detail-modal-sold').textContent = formatCurrency(orderData.totalValueSold || 0);
+    document.getElementById('consignment-detail-modal-expenses').textContent = `- ${formatCurrency(orderData.totalExpenses || 0)}`;
+    document.getElementById('consignment-detail-modal-paid').textContent = formatCurrency(orderData.totalAmountPaid || 0);
+    document.getElementById('consignment-detail-modal-balance').textContent = formatCurrency(orderData.balanceDue || 0);
+
+    // Initialize grid
+    const gridDiv = document.getElementById('consignment-detail-modal-items-grid');
+    if (gridDiv && !consignmentDetailModalGridApi) {
+        consignmentDetailModalGridApi = createGrid(gridDiv, consignmentDetailModalGridOptions);
+    }
+    
+    // Show modal and fetch items
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+    if (consignmentDetailModalGridApi) consignmentDetailModalGridApi.setGridOption('loading', true);
+
+    const items = await getItemsForConsignmentOrder(orderData.id); // We'll need to create this API function
+    
+    if (consignmentDetailModalGridApi) {
+        consignmentDetailModalGridApi.setGridOption('rowData', items);
+        consignmentDetailModalGridApi.setGridOption('loading', false);
+    }
+}
+
+// ✅ NEW: Function to close the modal
+export function closeViewConsignmentDetailsModal() {
+    const modal = document.getElementById('view-consignment-details-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
