@@ -11938,21 +11938,21 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // ✅ SINGLE CALL: Get outstanding metrics once with proper cache handling
         // ===================================================================
         
-        const outstandingMetrics = await getOutstandingBalancesForDashboard(forceRefresh);
+        //const outstandingMetrics = await getOutstandingBalancesForDashboard(forceRefresh);
 
         // ===================================================================
         // ROW 1: CORE DAILY METRICS
         // ===================================================================
         
         // Today's sales
-        const todayMetrics = await getDailyDashboardOptimized();
-        document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
-        document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
+        //const todayMetrics = await getDailyDashboardOptimized();
+        //document.getElementById('dashboard-today-sales').textContent = todayMetrics.todayRevenue;
+        //document.getElementById('dashboard-today-transactions').textContent = `${todayMetrics.todayTransactions} transactions`;
         
         // This week's sales
-        const weekMetrics = await generateBusinessSummaryOptimized(7, { useCache: true });
-        document.getElementById('dashboard-week-sales').textContent = formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue);
-        document.getElementById('dashboard-week-details').textContent = 'All channels combined';
+        //const weekMetrics = await generateBusinessSummaryOptimized(7, { useCache: true });
+        //document.getElementById('dashboard-week-sales').textContent = formatCurrency(weekMetrics.executiveSummary.totalBusinessRevenue);
+        //document.getElementById('dashboard-week-details').textContent = 'All channels combined';
         
 
         // Pending actions
@@ -11961,43 +11961,43 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         document.getElementById('dashboard-actions-details').textContent = pendingActions.description;
         
         // Low stock alert
-        const inventoryAlerts = getEnhancedInventoryAlerts();
-        document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
-        document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.description;
+        //const inventoryAlerts = getEnhancedInventoryAlerts();
+        //document.getElementById('dashboard-low-stock').textContent = inventoryAlerts.lowStockCount.toString();
+        //document.getElementById('dashboard-low-stock-details').textContent = inventoryAlerts.description;
         
         // Active teams
-        const teamsActive = masterData.teams.filter(team => team.isActive).length;
-        document.getElementById('dashboard-active-teams').textContent = teamsActive.toString();
-        document.getElementById('dashboard-teams-details').textContent = `${teamsActive} teams participating`;
+        //const teamsActive = masterData.teams.filter(team => team.isActive).length;
+        //document.getElementById('dashboard-active-teams').textContent = teamsActive.toString();
+        //document.getElementById('dashboard-teams-details').textContent = `${teamsActive} teams participating`;
         
         // Total products
-        const activeProducts = masterData.products.filter(p => p.isActive);
-        const totalProducts = activeProducts.length;
-        const productsInStock = activeProducts.filter(p => (p.inventoryCount || 0) > 0).length;
+        //const activeProducts = masterData.products.filter(p => p.isActive);
+        //const totalProducts = activeProducts.length;
+        //const productsInStock = activeProducts.filter(p => (p.inventoryCount || 0) > 0).length;
         
-        document.getElementById('dashboard-total-products').textContent = totalProducts.toString();
-        document.getElementById('dashboard-products-details').textContent = `${productsInStock} in stock, ${totalProducts - productsInStock} out of stock`;
+        //document.getElementById('dashboard-total-products').textContent = totalProducts.toString();
+        //document.getElementById('dashboard-products-details').textContent = `${productsInStock} in stock, ${totalProducts - productsInStock} out of stock`;
         
         // System health
-        const systemHealth = calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts);
-        document.getElementById('dashboard-performance-value').textContent = systemHealth.rating;
-        document.getElementById('dashboard-performance-details').textContent = systemHealth.description;
+        //const systemHealth = calculateSystemHealth(todayMetrics, pendingActions, inventoryAlerts);
+        //document.getElementById('dashboard-performance-value').textContent = systemHealth.rating;
+       // document.getElementById('dashboard-performance-details').textContent = systemHealth.description;
 
         // ===================================================================
         // ROW 2: FINANCIAL METRICS (Using the single outstandingMetrics call)
         // ===================================================================
         
         // Show financial section for admin
-        const financialSection = document.getElementById('dashboard-financial-section');
+        /*const financialSection = document.getElementById('dashboard-financial-section');
         if (financialSection) {
             financialSection.style.display = 'grid';
-        }
+        }*/
         
         // ✅ CUSTOMER RECEIVABLES: Complete three-channel breakdown
-        document.getElementById('dashboard-customer-receivables').textContent = outstandingMetrics.formattedTotalReceivables;
+        //document.getElementById('dashboard-customer-receivables').textContent = outstandingMetrics.formattedTotalReceivables;
         
         // ✅ ENHANCED DETAILS: Show breakdown by channel
-        const receivablesDetails = document.getElementById('dashboard-receivables-details');
+        /*const receivablesDetails = document.getElementById('dashboard-receivables-details');
         if (receivablesDetails) {
             const breakdown = outstandingMetrics.receivablesBreakdown;
             receivablesDetails.innerHTML = `
@@ -12007,8 +12007,9 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
                     <div>👥 Teams: ${breakdown.consignment.formatted}</div>
                 </div>
             `;
-        }
+        }*/
         
+            /*
         // Supplier payables  
         document.getElementById('dashboard-supplier-payables').textContent = outstandingMetrics.formattedTotalPayables;
         document.getElementById('dashboard-payables-details').textContent = `${outstandingMetrics.payablesCount} supplier invoices`;
@@ -12046,7 +12047,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
             inventoryValue: formatCurrency(inventoryValue.totalValue),
             cacheStatus: outstandingMetrics.metadata?.dataAccuracy || 'Unknown'
         });
-
+        */
     
         
         // ===================================================================
@@ -12054,7 +12055,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // ===================================================================
         
         await updateRecentActivity('admin', user);
-        await updateSystemAlerts('admin', user, { pendingActions, inventoryAlerts, systemHealth, outstandingMetrics });
+        //await updateSystemAlerts('admin', user, { pendingActions, inventoryAlerts, systemHealth, outstandingMetrics });
+        await updateSystemAlerts('admin', user, { pendingActions});
         
     } catch (error) {
         console.error('[ui.js] Error loading admin landing dashboard:', error);
