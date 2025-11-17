@@ -6268,21 +6268,46 @@ export function showSalesView() {
 }
 
 /**
- * [NEW] Adds a single product item to the sales cart grid.
- * @param {object} itemData - The product item to add.
+ * ✅ ENHANCED & CORRECTED: Adds an item to the sales cart grid.
+ * It now intelligently checks if the item already exists and updates its quantity
+ * instead of adding a duplicate row, which prevents the "Duplicate node id" error.
+ * @param {object} itemData - The item object from handleAddToCart.
  */
 export function addItemToCart(itemData) {
     if (!salesCartGridApi) {
         console.error("Cannot add item to cart: salesCartGridApi is not ready.");
         return;
     }
-    // Use applyTransaction to add the new row.
-    salesCartGridApi.applyTransaction({ add: [itemData] });
 
-    // After adding, immediately recalculate the totals.
+    const productId = itemData.productId;
+
+    // 1. Check if a row with this product ID already exists in the grid.
+    const existingNode = salesCartGridApi.getRowNode(productId);
+
+    if (existingNode) {
+        // --- ITEM ALREADY EXISTS: UPDATE THE QUANTITY ---
+        console.log(`[UI] Product ${productId} already in cart. Updating quantity.`);
+        
+        const currentQty = existingNode.data.quantity;
+        const newQty = currentQty + 1; // Increment the quantity
+        
+        // Use applyTransaction to update the specific row. This is more robust
+        // than setDataValue as it works better with the grid's change detection.
+        salesCartGridApi.applyTransaction({ 
+            update: [{ ...existingNode.data, quantity: newQty }] 
+        });
+        
+    } else {
+        // --- NEW ITEM: ADD A NEW ROW ---
+        console.log(`[UI] Product ${productId} is new. Adding to cart.`);
+        
+        // Use applyTransaction to add the new row.
+        salesCartGridApi.applyTransaction({ add: [itemData] });
+    }
+
+    // Finally, recalculate all totals. This will run after either an add or an update.
     calculateSalesTotals();
 }
-
 
 /**
  * [NEW] Retrieves all items currently in the sales cart grid.
