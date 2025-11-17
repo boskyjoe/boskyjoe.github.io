@@ -4866,7 +4866,9 @@ export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, 
  */
 export async function addConsignmentExpense(orderId, expenseData, user) {
     const db = firebase.firestore();
-    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    const FieldValue = firebase.firestore.FieldValue;
+    const now = FieldValue.serverTimestamp();
     
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
     const expenseRef = orderRef.collection('expenses').doc();
