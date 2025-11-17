@@ -5713,6 +5713,12 @@ const salesHistoryGridOptions = {
             valueFormatter: p => formatCurrency(p.value)
         },
         {
+            field: "totalExpenses",
+            headerName: "Expenses",
+            width: 120,
+            valueFormatter: p => formatCurrency(p.value)
+        },
+        {
             field: "paymentStatus",
             headerName: "Status",
             width: 160,
