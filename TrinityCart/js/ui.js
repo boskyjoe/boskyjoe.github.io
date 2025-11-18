@@ -4329,15 +4329,19 @@ const consignmentOrdersGridOptions = {
                     return '';
                 }
                 
-                if (params.value === true) {
-                    // Use the same amber/yellow color for consistency
+                if (params.data && params.data.hasPendingPayments === true) {
                     return `<span class="font-semibold text-amber-700">Yes</span>`;
                 }
                 // For false or undefined, return a subtle "No"
                 return `<span class="text-gray-400">No</span>`;
             },
             // This ensures the filter works on the "Yes"/"No" text, not the true/false value
-            valueGetter: params => params.data?.hasPendingPayments ? 'Yes' : 'No'
+            valueGetter: params => {
+                if (params.data && params.data.hasPendingPayments === true) {
+                    return 'Yes';
+                }
+                return 'No';
+            }
         },
         { field: "manualVoucherNumber", headerName: "Manual Voucher#", width: 180, filter: 'agTextColumnFilter'},
         { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
