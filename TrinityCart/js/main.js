@@ -619,7 +619,7 @@ async function handleRequestConsignmentClick() {
         } else {
             catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
         }
-        
+
     } catch (error) {
         console.error("Error preparing consignment request modal:", error);
         closeConsignmentRequestModal();
@@ -4954,44 +4954,64 @@ async function handleNewSaleSubmit(e) {
         ProgressToast.updateProgress('Calculating line item totals...', 35, 'Step 4 of 9');
 
         const finalLineItems = [];
-        let itemsSubtotal = 0;
-        let totalItemLevelTax = 0;
+        let itemsSubtotal = 0;      // This is the sum of (qty * price) before any discounts
+        let totalLineDiscount = 0;  // Sum of all line-item discounts
+        let totalItemLevelTax = 0;  // Sum of all CGST + SGST from all lines    
 
         rawCartItems.forEach(item => {
             const qty = item.quantity || 0;
             const price = item.unitPrice || 0;
             const lineDiscPercent = item.discountPercentage || 0;
-            const lineTaxPercent = item.taxPercentage || 0;
 
-            const lineSubtotal = qty * price;
-            const discountAmount = lineSubtotal * (lineDiscPercent / 100);
-            const taxableAmount = lineSubtotal - discountAmount;
-            const taxAmount = taxableAmount * (lineTaxPercent / 100);
-            const lineTotal = taxableAmount + taxAmount;
+            // ✅ CORRECT: Get both CGST and SGST percentages from the item data
+            const cgstPercent = item.cgstPercentage || 0;
+            const sgstPercent = item.sgstPercentage || 0;
+
+            const lineTotalBeforeDiscount = qty * price;
+            const lineDiscountAmount = lineTotalBeforeDiscount * (lineDiscPercent / 100);
+            
+            const taxableAmount = lineTotalBeforeDiscount - lineDiscountAmount;
+
+            // Calculate each tax component separately
+            const cgstAmount = taxableAmount * (cgstPercent / 100);
+            const sgstAmount = taxableAmount * (sgstPercent / 100);
+            const itemTotalTax = cgstAmount + sgstAmount;
+
+            const lineTotal = taxableAmount + itemTotalTax;
 
             finalLineItems.push({
                 ...item,
-                lineSubtotal,
-                discountAmount,
-                taxableAmount,
-                taxAmount,
-                lineTotal
+                discountPercentage: lineDiscPercent,
+                discountAmount: lineDiscountAmount,
+                lineSubtotal:lineTotalBeforeDiscount,
+                taxableAmount: taxableAmount,
+                cgstPercentage: cgstPercent,
+                sgstPercentage: sgstPercent,
+                cgstAmount: cgstAmount,
+                sgstAmount: sgstAmount,
+                taxAmount: itemTotalTax,
+                lineTotal: lineTotal
             });
 
-            itemsSubtotal += taxableAmount;
-            totalItemLevelTax += taxAmount;
+            // Add to the grand totals for the order
+            itemsSubtotal += lineTotalBeforeDiscount;
+            totalLineDiscount += lineDiscountAmount;
+            totalItemLevelTax += itemTotalTax;
         });
 
         // Step 5: Calculate Order Totals
         ProgressToast.updateProgress('Calculating order totals and taxes...', 50, 'Step 5 of 9');
 
+        const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
+
         const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
         const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
-        const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
-        const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
+        const orderDiscountAmount = subtotalAfterLineDiscounts * (orderDiscPercent / 100);
+        const finalTaxableAmount = subtotalAfterLineDiscounts - orderDiscountAmount;
         const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
+
         const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
-        const grandTotal = finalTaxableAmount + finalTotalTax;
+        const grandTotal = finalTaxableAmount + finalTotalTax;  
 
         console.log(`[main.js] Sale total calculated: ${formatCurrency(grandTotal)} for voucher ${voucherNumber}`);
 
