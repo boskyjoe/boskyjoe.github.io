@@ -6409,7 +6409,7 @@ export function addItemToCart(itemData) {
             discountPercentage: 0,
             
             // ✅ NEW: Pre-fill both tax rates from config
-            taxPercentage: taxConfig ? taxConfig.cgstRate : 0, // CGST
+            cgstPercentage: taxConfig ? taxConfig.cgstRate : 0, // CGST
             sgstPercentage: taxConfig ? taxConfig.sgstRate : 0  // SGST
         };
         
