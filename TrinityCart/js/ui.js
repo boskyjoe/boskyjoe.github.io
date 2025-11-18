@@ -5986,6 +5986,9 @@ export function calculateSalesTotals() {
 
     // Use a transaction to update the grid with all the new calculated values
     // Use a single transaction to update the grid with all the new calculated values
+
+    console.log(`[ui.js] Line level calculation :itemsSubtotal,totalLineDiscount,totalItemLevelTax`,itemsSubtotal,totalLineDiscount,totalItemLevelTax);
+
     salesCartGridApi.applyTransaction({ update: updatedRowData });
 
     // 2. Get order-level adjustments from the form
