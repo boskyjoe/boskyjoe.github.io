@@ -84,27 +84,27 @@ export const DONATION_SOURCES = {
 export const storeConfig = {
     // Default or fallback information
     'default': {
-        address: '123 Moneta Lane, Anytown, USA 12345',
-        taxId: 'GSTIN-DEFAULT-12345',
-        signatoryName: 'Moneta Finance Department',
-        signatoryTitle: 'Authorized Signatory',
-        email:'church@gmail.com'
+        address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
+        taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
+        signatoryName: 'Ms. Mary Joseph',
+        signatoryTitle: 'Proprietor, Tasty Treats',
+        email:'sscindiranagar@gmail.com'
     },
     // Specific details for Church Store
     'Church Store': {
-        address: 'St. Thomas Church, 123 Church St, Indiranagar, Bangalore 560038',
-        taxId: 'GSTIN-CHURCH-54321',
-        signatoryName: 'Mr. John Matthews',
-        signatoryTitle: 'Church Treasurer',
-        email:'church@gmail.com'
+        address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
+        taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
+        signatoryName: 'Ms. Mary Joseph',
+        signatoryTitle: 'Proprietor, Tasty Treats',
+        email:'sscindiranagar@gmail.com'
     },
     // Specific details for Tasty Treats
     'Tasty Treats': {
-        address: 'Tasty Treats Bake Shop, 456 Bakery Rd, Koramangala, Bangalore 560034',
-        taxId: 'GSTIN-TASTY-67890',
+        address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
+        taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
         signatoryTitle: 'Proprietor, Tasty Treats',
-        email:'tt@gmail.com'
+        email:'sscindiranagar@gmail.com'
     }
 };
 
@@ -160,6 +160,9 @@ export const creditTermOptions = [
     { value: 'CBS', label: 'Cash Before Shipment (CBS)' },
     { value: 'Due on Receipt', label: 'Due on Receipt' }
 ];
+
+
+
 
 
 
