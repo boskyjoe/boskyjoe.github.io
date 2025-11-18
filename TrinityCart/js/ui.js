@@ -5580,7 +5580,7 @@ const salesCartGridOptions = {
         },
         // --- [NEW] Line Item Tax Column ---
         {
-            field: "taxPercentage",
+            field: "cgstPercentage",
             headerName: "CGST %",
             width: 90,
             editable: true,
