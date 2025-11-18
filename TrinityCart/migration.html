@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrinityCart - Sales Invoice Data Migration</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }
+        h1 { color: #1e3a8a; }
+        #app { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
+        button { font-size: 1rem; padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; transition: background-color 0.2s; }
+        #login-btn { background-color: #4285F4; color: white; }
+        #run-migration-btn { background-color: #dc2626; color: white; }
+        #run-migration-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        #log-output { margin-top: 20px; padding: 15px; background-color: #1f2937; color: #d1d5db; border-radius: 6px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; max-height: 400px; overflow-y: auto; }
+        .warning { background-color: #fefce8; border: 1px solid #facc15; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        #backup-btn { background-color: #059669; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <h1>Sales Invoice Tax Field Migration</h1>
+        <p>This script will update all documents in the <strong>salesInvoices</strong> collection.</p>
+        <div class="warning">
+            <strong>Warning:</strong> This is a one-time operation that directly modifies your database.
+            <ol style="margin-left: 20px; list-style-type: decimal;">
+                <li><strong>Backup your data</strong> before running this script.</li>
+                <li>Run this during off-peak hours.</li>
+                <li>You must be logged in as an <strong>admin</strong> to run the migration.</li>
+            </ol>
+        </div>
+
+        <div id="auth-status">
+            <p><strong>Status:</strong> <span id="status-text">Not Logged In</span></p>
+            <button id="login-btn">Login with Google</button>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <div id="steps-container" style="display: none;">
+            <h3>Step 1: Create a Backup</h3>
+            <p>This will copy all documents from <strong>salesInvoices</strong> to <strong>salesInvoices_bkp</strong>.</p>
+            <button id="backup-btn">Create Backup</button>
+            <hr style="margin: 20px 0;">
+            <h3>Step 2: Run the Migration</h3>
+            <p>This will update the tax fields in the original <strong>salesInvoices</strong> collection.</p>
+            <button id="run-migration-btn" disabled>Run Migration</button>
+        </div>
+
+        <pre id="log-output">Awaiting login...</pre>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script type="module">
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAt_2gMhSPPSBi0zApb7z05ODZjMceDOk",
+            authDomain: "trinitycart-9e055.firebaseapp.com",
+            projectId: "trinitycart-9e055",
+            storageBucket: "trinitycart-9e055.appspot.com",
+            messagingSenderId: "450216949740",
+            appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
+            measurementId: "G-57JRDMJB14"
+        };
+
+        // --- INITIALIZE FIREBASE & GET DOM ELEMENTS ---
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        const loginBtn = document.getElementById('login-btn');
+        const backupBtn = document.getElementById('backup-btn');
+        const runBtn = document.getElementById('run-migration-btn');
+        const logOutput = document.getElementById('log-output');
+        const statusText = document.getElementById('status-text');
+        const stepsContainer = document.getElementById('steps-container');
+
+        // --- PATHS ---
+        const BASE_DOC_PATH = 'artifacts/TrinityCart-default-app-id';
+        const SOURCE_COLLECTION = `${BASE_DOC_PATH}/salesInvoices`;
+        const BACKUP_COLLECTION = `${BASE_DOC_PATH}/salesInvoices_bkp`;
+
+
+        function log(message) {
+            console.log(message);
+            logOutput.textContent += `\n[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // --- AUTHENTICATION ---
+        loginBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => log(`Login failed: ${err.message}`));
+        });
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Check if user is an admin
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().role === 'admin') {
+                    statusText.textContent = `Logged in as ADMIN: ${user.email}`;
+                    loginBtn.style.display = 'none';
+                    runBtn.disabled = false;
+                    log('Admin user authenticated. Ready to run migration.');
+                } else {
+                    statusText.textContent = `Logged in as: ${user.email} (Not an Admin)`;
+                    runBtn.disabled = true;
+                    log('Error: You must be an admin to run this script.');
+                }
+            } else {
+                statusText.textContent = 'Not Logged In';
+                loginBtn.style.display = 'block';
+                runBtn.disabled = true;
+            }
+        });
+
+        // ✅ NEW: BACKUP LOGIC
+        backupBtn.addEventListener('click', async () => {
+            if (!confirm("This will create a backup of the entire salesInvoices collection. This may incur costs if the collection is large. Continue?")) {
+                log("Backup cancelled by user.");
+                return;
+            }
+
+            backupBtn.disabled = true;
+            backupBtn.textContent = 'Backup in progress...';
+            log('Starting backup...');
+
+            try {
+                const sourceRef = db.collection(SOURCE_COLLECTION);
+                const snapshot = await sourceRef.get();
+                log(`Found ${snapshot.size} documents to back up.`);
+
+                let batch = db.batch();
+                let docsBackedUp = 0;
+
+                for (const doc of snapshot.docs) {
+                    const docData = doc.data();
+                    // Get a reference to the new document in the backup collection WITH THE SAME ID.
+                    const backupDocRef = db.collection(BACKUP_COLLECTION).doc(doc.id);
+                    batch.set(backupDocRef, docData);
+                    docsBackedUp++;
+
+                    if (docsBackedUp % 490 === 0) {
+                        log(`--- Committing backup batch of 490 documents... ---`);
+                        await batch.commit();
+                        batch = db.batch();
+                    }
+                }
+
+                if (docsBackedUp % 490 !== 0) {
+                    log(`--- Committing final backup batch of ${docsBackedUp % 490} documents... ---`);
+                    await batch.commit();
+                }
+
+                log('\n========================================');
+                log(`✅ BACKUP COMPLETE! ${docsBackedUp} documents copied to salesInvoices_bkp.`);
+                log('========================================');
+                backupBtn.textContent = 'Backup Complete';
+                runBtn.disabled = false; // Enable the migration button
+
+            } catch (error) {
+                log(`\n❌ BACKUP FAILED: ${error.message}`);
+                backupBtn.textContent = 'Backup Failed (See Log)';
+            }
+        });
+        
+        // --- MIGRATION LOGIC ---
+        runBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to start the data migration? This cannot be undone.")) {
+                log("Migration cancelled by user.");
+                return;
+            }
+
+            runBtn.disabled = true;
+            runBtn.textContent = 'Migration in progress...';
+            log('Starting migration...');
+
+            try {
+
+                const BASE_DOC_PATH = 'artifacts/TrinityCart-default-app-id';
+                const SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesInvoices`;
+                const salesRef = db.collection(SALES_COLLECTION_PATH);
+                
+                const snapshot = await salesRef.get();
+                log(`Found ${snapshot.size} total sales invoices to check.`);
+
+                let batch = db.batch();
+                let docsChecked = 0;
+                let docsUpdated = 0;
+                let operationsInBatch = 0;
+
+                for (const doc of snapshot.docs) {
+                    docsChecked++;
+                    const data = doc.data();
+                    let needsUpdate = false;
+
+                    if (data.lineItems && Array.isArray(data.lineItems)) {
+                        data.lineItems.forEach(item => {
+                            // IDEMPOTENCY CHECK: Only migrate if the old fields exist and the new ones don't
+                            if (item.taxPercentage !== undefined && item.cgstPercentage === undefined) {
+                                needsUpdate = true;
+                                item.cgstPercentage = item.taxPercentage;
+                                item.cgstAmount = item.taxAmount;
+                                item.sgstPercentage = 0; // Set new fields to 0
+                                item.sgstAmount = 0;
+                                delete item.taxPercentage; // Clean up old fields
+                                delete item.taxAmount;
+                            }
+                        });
+                    }
+
+                    if (needsUpdate) {
+                        batch.update(doc.ref, { lineItems: data.lineItems });
+                        docsUpdated++;
+                        operationsInBatch++;
+                        log(`  - Queued update for invoice ID: ${doc.id}`);
+                    }
+
+                    // Commit the batch every 490 operations to stay under the 500 limit
+                    if (operationsInBatch >= 490) {
+                        log(`\n--- Committing batch of ${operationsInBatch} updates... ---`);
+                        await batch.commit();
+                        log('--- Batch committed successfully. ---');
+                        batch = db.batch(); // Start a new batch
+                        operationsInBatch = 0;
+                    }
+                }
+
+                // Commit any remaining operations in the final batch
+                if (operationsInBatch > 0) {
+                    log(`\n--- Committing final batch of ${operationsInBatch} updates... ---`);
+                    await batch.commit();
+                    log('--- Final batch committed successfully. ---');
+                }
+
+                log('\n========================================');
+                log('✅ MIGRATION COMPLETE!');
+                log(`   Documents Checked: ${docsChecked}`);
+                log(`   Documents Updated: ${docsUpdated}`);
+                log('========================================');
+                runBtn.textContent = 'Migration Finished';
+
+            } catch (error) {
+                log(`\n❌ MIGRATION FAILED: ${error.message}`);
+                console.error(error);
+                runBtn.textContent = 'Migration Failed (See Log)';
+            }
+        });
+    </script>
+
+</body>
+</html>
