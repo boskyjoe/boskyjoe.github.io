@@ -2628,6 +2628,7 @@ function getDonorClassification(donationAmount) {
  * @param {string} userEmail - The email of the user creating the sale.
  * @param {string|null} donationSource - Standardized donation source from DONATION_SOURCES
  */
+
 export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail, donationSource = null) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
