@@ -14,7 +14,7 @@ import { getSalesEvents, getSeasons } from './api.js';
 import { getPaymentsForInvoice,getAllSupplierPayments,getAllCataloguesWithItems,getItemsForCatalogue,getItemsForConsignmentOrder } from './api.js';
 import { showModal } from './modal.js';
 import { formatCurrency } from './utils.js'; 
-
+import { storeConfig } from './config.js'; 
 
 
 
