@@ -5581,11 +5581,19 @@ const salesCartGridOptions = {
         // --- [NEW] Line Item Tax Column ---
         {
             field: "taxPercentage",
-            headerName: "Tax %",
+            headerName: "CGST %",
             width: 90,
             editable: true,
             valueParser: p => parseFloat(p.newValue) || 0,
             // [SIMPLIFIED] Formatter to always show a percentage
+            valueFormatter: p => `${p.value || 0}%`
+        },
+        {
+            field: "sgstPercentage", // This field will be added to the row data
+            headerName: "SGST %",
+            width: 90,
+            editable: true,
+            valueParser: p => parseFloat(p.newValue) || 0,
             valueFormatter: p => `${p.value || 0}%`
         },
         // --- [NEW] Calculated Line Total Column ---
@@ -5598,10 +5606,20 @@ const salesCartGridOptions = {
             valueGetter: params => {
                 const qty = params.data.quantity || 0;
                 const price = params.data.unitPrice || 0;
-                const disc = params.data.discountPercentage || 0;
-                const tax = params.data.taxPercentage || 0;
-                const lineSubtotal = (qty * price) * (1 - disc / 100);
-                const lineTotal = lineSubtotal * (1 + tax / 100);
+                const discPercent = params.data.discountPercentage || 0;
+                const cgstPercent = params.data.taxPercentage || 0;
+                const sgstPercent = params.data.sgstPercentage || 0;
+
+                // 1. Calculate the base amount after the item discount. This is the taxable amount.
+                const taxableAmount = (qty * price) * (1 - discPercent / 100);
+
+                // 2. Calculate each tax component separately from the taxable amount.
+                const cgstAmount = taxableAmount * (cgstPercent / 100);
+                const sgstAmount = taxableAmount * (sgstPercent / 100);
+
+                // 3. The final line total is the taxable amount plus all taxes.
+                const lineTotal = taxableAmount + cgstAmount + sgstAmount;
+                
                 return lineTotal;
             },
             // --- THIS IS THE FIX ---
@@ -5912,74 +5930,100 @@ export function initializeSalesGrids() {
 }
 
 // The crucial function for real-time calculations
+
 export function calculateSalesTotals() {
 
     if (!salesCartGridApi) return;
 
-    let itemsSubtotal = 0;
-    let totalItemLevelTax = 0;
+    let itemsSubtotal = 0;      // Sum of (qty * price) BEFORE any discounts or taxes
+    let totalLineDiscount = 0;  // Sum of all line-item discounts
+    let totalItemLevelTax = 0;  // Sum of all line-item taxes (CGST + SGST)
+
+    const updatedRowData = []; // We'll store updated data here
 
     // 1. Calculate totals from the grid rows
     salesCartGridApi.forEachNode(node => {
-        const item = node.data;
+        const item = { ...node.data }; // Create a mutable copy
+        
         const qty = item.quantity || 0;
         const price = item.unitPrice || 0;
         const lineDiscPercent = item.discountPercentage || 0;
-        const lineTaxPercent = item.taxPercentage || 0;
-
-        // --- SIMPLIFIED LOGIC ---
-        // We only need to calculate the values for display in the summary.
-        // We no longer save them back to the grid here.
-        const discountedLinePrice = (qty * price) * (1 - lineDiscPercent / 100);
-        const lineTax = discountedLinePrice * (lineTaxPercent / 100);
         
-        itemsSubtotal += discountedLinePrice;
-        totalItemLevelTax += lineTax;
+        // ✅ CORRECTED: Use the new, explicit field names
+        const cgstPercent = item.cgstPercentage || 0;
+        const sgstPercent = item.sgstPercentage || 0;
+
+        const lineTotalBeforeDiscount = qty * price;
+        const lineDiscountAmount = lineTotalBeforeDiscount * (lineDiscPercent / 100);
+        
+        // The taxable amount is after the line-item discount
+        const taxableAmount = lineTotalBeforeDiscount - lineDiscountAmount;
+
+        // Calculate each tax component separately
+        const cgstAmount = taxableAmount * (cgstPercent / 100);
+        const sgstAmount = taxableAmount * (sgstPercent / 100);
+        const itemTotalTax = cgstAmount + sgstAmount;
+
+        // The final total for this line
+        const lineTotal = taxableAmount + itemTotalTax;
+
+        // Store all calculated values back onto the item object.
+        // This is crucial for saving the full details to Firestore later.
+        item.discountAmount = lineDiscountAmount;
+        item.taxableAmount = taxableAmount;
+        item.cgstAmount = cgstAmount;
+        item.sgstAmount = sgstAmount;
+        item.taxAmount = itemTotalTax;
+        item.lineTotal = lineTotal;
+        
+        updatedRowData.push(item);
+
+        // Add to the grand totals for the entire order
+        itemsSubtotal += lineTotalBeforeDiscount;
+        totalLineDiscount += lineDiscountAmount;
+        totalItemLevelTax += itemTotalTax;
     });
 
-    // 2. Get order-level adjustments (This part is correct)
+    // Use a transaction to update the grid with all the new calculated values
+    // Use a single transaction to update the grid with all the new calculated values
+    salesCartGridApi.applyTransaction({ update: updatedRowData });
+
+    // 2. Get order-level adjustments from the form
     const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
     const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
 
-    // 3. Calculate final totals (This part is correct)
-    const orderDiscountAmount = itemsSubtotal * (orderDiscPercent / 100);
-    const finalTaxableAmount = itemsSubtotal - orderDiscountAmount;
+    // 3. Calculate final order totals
+    const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
+    const orderDiscountAmount = subtotalAfterLineDiscounts * (orderDiscPercent / 100);
+    const finalTaxableAmount = subtotalAfterLineDiscounts - orderDiscountAmount;
     const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
     
     const finalTotalTax = totalItemLevelTax + orderLevelTaxAmount;
     const grandTotal = finalTaxableAmount + finalTotalTax;
 
-    // 4. Update the UI (This part is correct)
+    // 4. Update the main UI summary fields
     document.getElementById('sale-subtotal').textContent = formatCurrency(itemsSubtotal);
-    //document.getElementById('sale-tax').textContent = `$${finalTotalTax.toFixed(2)}`;
     document.getElementById('sale-tax').textContent = formatCurrency(finalTotalTax);
     document.getElementById('sale-grand-total').textContent = formatCurrency(grandTotal);
 
-    // 5. Update change/balance due display (This part is correct)
+    // 5. Update the dynamic payment status display (your existing logic is correct)
     const amountReceived = parseFloat(document.getElementById('sale-amount-received').value) || 0;
     const paymentStatusDisplay = document.getElementById('payment-status-display');
+    const paymentType = document.getElementById('sale-payment-type').value;
 
-    // --- [NEW] DYNAMIC STATUS LOGIC ---
-    if (document.getElementById('sale-payment-type').value === 'Pay Later (Invoice)') {
-        // If it's an invoice, the balance due is the full amount.
+    if (paymentType === 'Pay Later (Invoice)') {
         paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">${formatCurrency(grandTotal)}</span>`;
     } else if (amountReceived === 0) {
-        // If paying now, but no amount entered yet, show nothing.
         paymentStatusDisplay.innerHTML = '';
     } else if (amountReceived > grandTotal) {
-        // Overpayment / Donation scenario
         const overpayment = amountReceived - grandTotal;
         paymentStatusDisplay.innerHTML = `Change/Donation: <span class="text-green-600">${formatCurrency(overpayment)}</span>`;
     } else if (amountReceived < grandTotal) {
-        // Partial payment / Underpayment scenario
         const balanceRemaining = grandTotal - amountReceived;
         paymentStatusDisplay.innerHTML = `Balance Due: <span class="text-red-600">${formatCurrency(balanceRemaining)}</span>`;
     } else {
-        // Exact payment
         paymentStatusDisplay.innerHTML = `Change Due: <span class="text-green-600">${formatCurrency(0)}</span>`;
     }
-
-
 }
 
 /**
@@ -6348,9 +6392,25 @@ export function addItemToCart(itemData) {
     } else {
         // --- NEW ITEM: ADD A NEW ROW ---
         console.log(`[UI] Product ${productId} is new. Adding to cart.`);
+
+        const selectedStore = document.getElementById('sale-store-select').value;
+        const taxConfig = (selectedStore === 'Tasty Treats') ? storeConfig['Tasty Treats'].taxInfo : null;
+
+        const newItem = {
+            productId: itemData.productId,
+            productName: itemData.productName,
+            quantity: 1,
+            unitPrice: itemData.unitPrice,
+            costPrice: itemData.costPrice,
+            discountPercentage: 0,
+            
+            // ✅ NEW: Pre-fill both tax rates from config
+            taxPercentage: taxConfig ? taxConfig.cgstRate : 0, // CGST
+            sgstPercentage: taxConfig ? taxConfig.sgstRate : 0  // SGST
+        };
         
         // Use applyTransaction to add the new row.
-        salesCartGridApi.applyTransaction({ add: [itemData] });
+        salesCartGridApi.applyTransaction({ add: [newItem] });
     }
 
     // Finally, recalculate all totals. This will run after either an add or an update.
