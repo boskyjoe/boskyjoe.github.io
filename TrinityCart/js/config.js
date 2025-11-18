@@ -104,7 +104,11 @@ export const storeConfig = {
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
         signatoryTitle: 'Proprietor, Tasty Treats',
-        email:'sscindiranagar@gmail.com'
+        email:'sscindiranagar@gmail.com',
+        taxInfo: {
+            cgstRate: 9, // Central GST as a percentage (e.g., 9 for 9%)
+            sgstRate: 9  // State GST as a percentage (e.g., 9 for 9%)
+        }
     }
 };
 
