@@ -5982,6 +5982,7 @@ export function calculateSalesTotals() {
         itemsSubtotal += lineTotalBeforeDiscount;
         totalLineDiscount += lineDiscountAmount;
         totalItemLevelTax += itemTotalTax;
+        console.log(`[ui.js] totalItemLevelTax in the loop `,totalItemLevelTax);
     });
 
     // Use a transaction to update the grid with all the new calculated values
