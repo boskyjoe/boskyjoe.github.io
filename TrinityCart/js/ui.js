@@ -6265,13 +6265,6 @@ export function showSalesView() {
 
         // 3. Populate the dropdowns on the form.
 
-        const paymentTypeSelect = document.getElementById('sale-payment-type');
-        if (paymentTypeSelect) {
-            paymentTypeSelect.value = 'Pay Later (Invoice)';
-            // Manually trigger the change event to ensure the "Pay Now" container is hidden
-            paymentTypeSelect.dispatchEvent(new Event('change'));
-        }
-
         
         const storeSelect = document.getElementById('sale-store-select');
         storeSelect.innerHTML = '<option value="">Select a store...</option>';
@@ -6326,6 +6319,18 @@ export function showSalesView() {
         // ✅ Add the event listener for the Sale Type dropdown
         const orderDiscountInput = document.getElementById('sale-order-discount');
         const paymentTypeSelect = document.getElementById('sale-payment-type');
+
+        if (paymentTypeSelect) {
+            paymentTypeSelect.value = 'Pay Later (Invoice)';
+            // Manually trigger the change event to ensure the "Pay Now" container is hidden
+            paymentTypeSelect.dispatchEvent(new Event('change'));
+        }
+
+        if (paymentTypeSelect) {
+            paymentTypeSelect.value = 'Pay Later (Invoice)';
+            // Manually trigger the change event to ensure the "Pay Now" container is hidden
+            paymentTypeSelect.dispatchEvent(new Event('change'));
+        }
 
         if (saleTypeSelect && orderDiscountInput && paymentTypeSelect) {
             saleTypeSelect.addEventListener('change', (e) => {
