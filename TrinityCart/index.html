@@ -2197,6 +2197,465 @@
                     </div>
                 </div>
 
+
+                <!-- ADMIN FORMS-->
+
+                <!-- View: Manage Payment Modes -->
+                <div id="payment-modes-view" class="view space-y-8">
+                    <a href="#"
+                        class="back-link inline-flex items-center text-green-600 hover:text-green-800 font-semibold transition-colors"
+                        data-view-id="admin-modules-view">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin Modules
+                    </a>
+
+                    <!-- Card 1: Add New Payment Mode Form -->
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div
+                            class="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-b border-green-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div
+                                    class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Add New Payment Mode
+                                        <span
+                                            class="ml-3 px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">NEW</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">Create a new payment method option</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <form id="add-payment-mode-form" class="flex items-end space-x-4">
+                                <div class="flex-grow">
+                                    <label for="paymentModeName-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        Payment Mode Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <input type="text" id="paymentModeName-input" placeholder="e.g., Bank Transfer"
+                                        class="form-input w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                                        required>
+                                </div>
+                                <button type="submit"
+                                    class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 h-10 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    Add Mode
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Payment Modes Grid -->
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div
+                            class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div
+                                    class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Existing Payment Modes</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">View and manage all payment methods</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="payment-modes-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Manage Sale Types -->
+                <div id="sale-types-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Add New Sale Type Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sale Type</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-sale-type-form" class="flex items-end space-x-4">
+                                <div class="flex-grow">
+                                    <label for="saleTypeName-input" class="form-label">Sale Type Name<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="saleTypeName-input" placeholder="e.g., General Sale"
+                                        class="form-input w-full" required>
+                                </div>
+                                <button type="submit"
+                                    class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add Sale
+                                    Type</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Sale Types Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sale Types</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="sale-types-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Manage Sales Seasons -->
+                <div id="seasons-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Add New Season Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Season</h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-season-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Season Name -->
+                                <div class="md:col-span-1">
+                                    <label for="seasonName-input" class="form-label">Season Name<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="seasonName-input" placeholder="e.g., Christmas 2024"
+                                        class="form-input w-full" required>
+                                </div>
+                                <!-- Start Date -->
+                                <div>
+                                    <label for="startDate-input" class="form-label">Start Date<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="date" id="startDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- End Date -->
+                                <div>
+                                    <label for="endDate-input" class="form-label">End Date<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="date" id="endDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Add Season
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Seasons Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Seasons</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="seasons-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+                <!-- View: Manage Sales Events -->
+                <div id="sales-events-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Add New Sales Event Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Event<span
+                                    class="text-red-500">*</span></h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-event-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Parent Season Dropdown -->
+                                <div class="md:col-span-1">
+                                    <label for="parentSeason-select" class="form-label">Parent Season<span
+                                            class="text-red-500">*</span></label>
+                                    <select id="parentSeason-select" class="form-input w-full" required>
+                                        <option value="">Select a season...</option>
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                                <!-- Event Name -->
+                                <div class="md:col-span-2">
+                                    <label for="eventName-input" class="form-label">Event Name<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale"
+                                        class="form-input w-full" required>
+                                </div>
+                                <!-- Start Date -->
+                                <div>
+                                    <label for="eventStartDate-input" class="form-label">Event Start Date<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="date" id="eventStartDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- End Date -->
+                                <div>
+                                    <label for="eventEndDate-input" class="form-label">Event End Date<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="date" id="eventEndDate-input" class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Add Event
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Sales Events Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Events</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="sales-events-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =================================== -->
+                <!--      VIEW: TEAM MANAGEMENT          -->
+                <!-- =================================== -->
+                <div id="church-teams-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Create New Team Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Create New Church Team<span
+                                    class="text-red-500">*</span></h3>
+                        </div>
+                        <div class="p-6">
+                            <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                <!-- Church Name (Read-only) -->
+                                <div>
+                                    <label for="team-churchName-input" class="form-label">Church Name<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200"
+                                        readonly>
+                                </div>
+                                <!-- Team Name -->
+                                <div>
+                                    <label for="team-name-input" class="form-label">Team Name<span
+                                            class="text-red-500">*</span></label>
+                                    <input type="text" id="team-name-input" placeholder="e.g., Ushering Team"
+                                        class="form-input w-full" required>
+                                </div>
+                                <!-- Form Actions -->
+                                <div>
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Save Team
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Master-Detail Grids -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <!-- Master Grid: All Teams -->
+                        <div class="p-6 border-b">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">All Church Teams</h3>
+                            <div id="church-teams-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;">
+                            </div>
+                        </div>
+
+                        <!-- Detail Grid: Team Members -->
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold text-gray-800">Team Members for <span id="selected-team-name"
+                                        class="text-blue-600">...</span></h3>
+                                <button id="add-member-btn"
+                                    class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
+                                    disabled>
+                                    + Add Member
+                                </button>
+                            </div>
+                            <div id="team-members-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- View: Manage Users -->
+                <div id="users-view" class="view space-y-8">
+                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+
+                    <!-- Card 1: Provision New User Form -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Provision New User Role</h3>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-600 mb-4">
+                                Users must first log in once with their Google account. After that, you can assign them
+                                a role here using their email address.
+                            </p>
+                            <form id="provision-user-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- User Email -->
+                                <div class="md:col-span-1">
+                                    <label for="userEmail-input" class="form-label">User's Google Email</label>
+                                    <input type="email" id="userEmail-input" placeholder="user@example.com"
+                                        class="form-input w-full" required>
+                                </div>
+                                <!-- Role Dropdown -->
+                                <div>
+                                    <label for="userRole-select" class="form-label">Assign Role</label>
+                                    <select id="userRole-select" class="form-input w-full" required>
+                                        <option value="">Select a role...</option>
+                                        <option value="sales_staff">Sales Staff</option>
+                                        <option value="inventory_manager">Inventory Manager</option>
+                                        <option value="finance">Finance</option>
+                                        <option value="team_lead">Church Team Lead</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="flex items-end">
+                                    <button type="submit"
+                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        Save Role
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Users Grid -->
+                    <div class="bg-white rounded-lg shadow-lg">
+                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                            <h3 class="text-lg font-semibold text-gray-800">Existing Users</h3>
+                        </div>
+                        <div class="p-2">
+                            <div id="users-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- PRODUCT CATEGORY -->
+                <div id="categories-view" class="view space-y-8">
+                    <a href="#"
+                        class="back-link inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                        data-view-id="admin-modules-view">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin Modules
+                    </a>
+
+                    <!-- Card 1: Add New Category Form -->
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div
+                            class="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div
+                                    class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Add New Category
+                                        <span
+                                            class="ml-3 px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">NEW</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">Create a new product category</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <form id="add-category-form" class="flex items-end space-x-4">
+                                <div class="flex-grow">
+                                    <label for="categoryName-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        Category Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <input type="text" id="categoryName-input" placeholder="e.g., Cakes"
+                                        class="form-input w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                        required>
+                                </div>
+                                <button type="submit"
+                                    class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 h-10 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    Add Category
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Existing Categories Grid -->
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div
+                            class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div
+                                    class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Existing Categories</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">View and manage all product categories</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="categories-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+
+
                 <!-- View: Reports Hub (Navigation Hub) -->
                 <div id="reports-hub-view" class="view">
                     <h2 class="text-2xl font-semibold mb-6">Reports & Analytics</h2>
@@ -4395,398 +4854,22 @@
 
 
 
-        <!-- View: Manage Sale Types -->
-        <div id="sale-types-view" class="view space-y-8">
-            <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+        
 
-            <!-- Card 1: Add New Sale Type Form -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Add New Sale Type</h3>
-                </div>
-                <div class="p-6">
-                    <form id="add-sale-type-form" class="flex items-end space-x-4">
-                        <div class="flex-grow">
-                            <label for="saleTypeName-input" class="form-label">Sale Type Name<span
-                                    class="text-red-500">*</span></label>
-                            <input type="text" id="saleTypeName-input" placeholder="e.g., General Sale"
-                                class="form-input w-full" required>
-                        </div>
-                        <button type="submit"
-                            class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 h-10">Add Sale
-                            Type</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Sale Types Grid -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Existing Sale Types</h3>
-                </div>
-                <div class="p-2">
-                    <div id="sale-types-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="categories-view" class="view space-y-8">
-            <a href="#"
-                class="back-link inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-                data-view-id="admin-modules-view">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Admin Modules
-            </a>
-
-            <!-- Card 1: Add New Category Form -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-                <div
-                    class="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-100 px-6 py-4 rounded-t-lg">
-                    <div class="flex items-center space-x-3">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                                Add New Category
-                                <span
-                                    class="ml-3 px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">NEW</span>
-                            </h3>
-                            <p class="text-xs text-gray-600 mt-0.5">Create a new product category</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-6 bg-gradient-to-b from-white to-gray-50">
-                    <form id="add-category-form" class="flex items-end space-x-4">
-                        <div class="flex-grow">
-                            <label for="categoryName-input" class="form-label flex items-center">
-                                <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                </svg>
-                                Category Name<span class="text-red-500 ml-1">*</span>
-                            </label>
-                            <input type="text" id="categoryName-input" placeholder="e.g., Cakes"
-                                class="form-input w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                required>
-                        </div>
-                        <button type="submit"
-                            class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 h-10 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add Category
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Categories Grid -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-                <div
-                    class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 px-6 py-4 rounded-t-lg">
-                    <div class="flex items-center space-x-3">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800">Existing Categories</h3>
-                            <p class="text-xs text-gray-600 mt-0.5">View and manage all product categories</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-6 bg-gradient-to-b from-white to-gray-50">
-                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                        <div id="categories-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
 
 
-        <!-- View: Manage Payment Modes -->
-        <div id="payment-modes-view" class="view space-y-8">
-            <a href="#"
-                class="back-link inline-flex items-center text-green-600 hover:text-green-800 font-semibold transition-colors"
-                data-view-id="admin-modules-view">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Admin Modules
-            </a>
-
-            <!-- Card 1: Add New Payment Mode Form -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-                <div
-                    class="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-b border-green-100 px-6 py-4 rounded-t-lg">
-                    <div class="flex items-center space-x-3">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                                Add New Payment Mode
-                                <span
-                                    class="ml-3 px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">NEW</span>
-                            </h3>
-                            <p class="text-xs text-gray-600 mt-0.5">Create a new payment method option</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-6 bg-gradient-to-b from-white to-gray-50">
-                    <form id="add-payment-mode-form" class="flex items-end space-x-4">
-                        <div class="flex-grow">
-                            <label for="paymentModeName-input" class="form-label flex items-center">
-                                <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                Payment Mode Name<span class="text-red-500 ml-1">*</span>
-                            </label>
-                            <input type="text" id="paymentModeName-input" placeholder="e.g., Bank Transfer"
-                                class="form-input w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                                required>
-                        </div>
-                        <button type="submit"
-                            class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 h-10 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add Mode
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Payment Modes Grid -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-                <div
-                    class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 px-6 py-4 rounded-t-lg">
-                    <div class="flex items-center space-x-3">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800">Existing Payment Modes</h3>
-                            <p class="text-xs text-gray-600 mt-0.5">View and manage all payment methods</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-6 bg-gradient-to-b from-white to-gray-50">
-                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                        <div id="payment-modes-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
 
-        <!-- View: Manage Sales Seasons -->
-        <div id="seasons-view" class="view space-y-8">
-            <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
+        
 
-            <!-- Card 1: Add New Season Form -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Add New Sales Season</h3>
-                </div>
-                <div class="p-6">
-                    <form id="add-season-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Season Name -->
-                        <div class="md:col-span-1">
-                            <label for="seasonName-input" class="form-label">Season Name<span
-                                    class="text-red-500">*</span></label>
-                            <input type="text" id="seasonName-input" placeholder="e.g., Christmas 2024"
-                                class="form-input w-full" required>
-                        </div>
-                        <!-- Start Date -->
-                        <div>
-                            <label for="startDate-input" class="form-label">Start Date<span
-                                    class="text-red-500">*</span></label>
-                            <input type="date" id="startDate-input" class="form-input w-full" required>
-                        </div>
-                        <!-- End Date -->
-                        <div>
-                            <label for="endDate-input" class="form-label">End Date<span
-                                    class="text-red-500">*</span></label>
-                            <input type="date" id="endDate-input" class="form-input w-full" required>
-                        </div>
-                        <!-- Form Actions -->
-                        <div class="md:col-span-3 flex justify-end">
-                            <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
-                                Add Season
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Seasons Grid -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Existing Sales Seasons</h3>
-                </div>
-                <div class="p-2">
-                    <div id="seasons-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- View: Manage Sales Events -->
-        <div id="sales-events-view" class="view space-y-8">
-            <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-
-            <!-- Card 1: Add New Sales Event Form -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Add New Sales Event<span
-                            class="text-red-500">*</span></h3>
-                </div>
-                <div class="p-6">
-                    <form id="add-event-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Parent Season Dropdown -->
-                        <div class="md:col-span-1">
-                            <label for="parentSeason-select" class="form-label">Parent Season<span
-                                    class="text-red-500">*</span></label>
-                            <select id="parentSeason-select" class="form-input w-full" required>
-                                <option value="">Select a season...</option>
-                                <!-- Options will be populated by JS -->
-                            </select>
-                        </div>
-                        <!-- Event Name -->
-                        <div class="md:col-span-2">
-                            <label for="eventName-input" class="form-label">Event Name<span
-                                    class="text-red-500">*</span></label>
-                            <input type="text" id="eventName-input" placeholder="e.g., Weekend Bake Sale"
-                                class="form-input w-full" required>
-                        </div>
-                        <!-- Start Date -->
-                        <div>
-                            <label for="eventStartDate-input" class="form-label">Event Start Date<span
-                                    class="text-red-500">*</span></label>
-                            <input type="date" id="eventStartDate-input" class="form-input w-full" required>
-                        </div>
-                        <!-- End Date -->
-                        <div>
-                            <label for="eventEndDate-input" class="form-label">Event End Date<span
-                                    class="text-red-500">*</span></label>
-                            <input type="date" id="eventEndDate-input" class="form-input w-full" required>
-                        </div>
-                        <!-- Form Actions -->
-                        <div class="md:col-span-3 flex justify-end">
-                            <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
-                                Add Event
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Sales Events Grid -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Existing Sales Events</h3>
-                </div>
-                <div class="p-2">
-                    <div id="sales-events-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
 
 
-        <!-- =================================== -->
-        <!--      VIEW: TEAM MANAGEMENT          -->
-        <!-- =================================== -->
-        <div id="church-teams-view" class="view space-y-8">
-            <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-
-            <!-- Card 1: Create New Team Form -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Create New Church Team<span
-                            class="text-red-500">*</span></h3>
-                </div>
-                <div class="p-6">
-                    <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                        <!-- Church Name (Read-only) -->
-                        <div>
-                            <label for="team-churchName-input" class="form-label">Church Name<span
-                                    class="text-red-500">*</span></label>
-                            <input type="text" id="team-churchName-input" class="form-input w-full bg-gray-200"
-                                readonly>
-                        </div>
-                        <!-- Team Name -->
-                        <div>
-                            <label for="team-name-input" class="form-label">Team Name<span
-                                    class="text-red-500">*</span></label>
-                            <input type="text" id="team-name-input" placeholder="e.g., Ushering Team"
-                                class="form-input w-full" required>
-                        </div>
-                        <!-- Form Actions -->
-                        <div>
-                            <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
-                                Save Team
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Master-Detail Grids -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <!-- Master Grid: All Teams -->
-                <div class="p-6 border-b">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">All Church Teams</h3>
-                    <div id="church-teams-grid" class="ag-theme-alpine" style="height: 300px; width: 100%;">
-                    </div>
-                </div>
-
-                <!-- Detail Grid: Team Members -->
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">Team Members for <span id="selected-team-name"
-                                class="text-blue-600">...</span></h3>
-                        <button id="add-member-btn"
-                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold"
-                            disabled>
-                            + Add Member
-                        </button>
-                    </div>
-                    <div id="team-members-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;">
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
 
 
@@ -4796,60 +4879,7 @@
 
 
 
-        <!-- View: Manage Users -->
-        <div id="users-view" class="view space-y-8">
-            <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
-
-            <!-- Card 1: Provision New User Form -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Provision New User Role</h3>
-                </div>
-                <div class="p-6">
-                    <p class="text-sm text-gray-600 mb-4">
-                        Users must first log in once with their Google account. After that, you can assign them
-                        a role here using their email address.
-                    </p>
-                    <form id="provision-user-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- User Email -->
-                        <div class="md:col-span-1">
-                            <label for="userEmail-input" class="form-label">User's Google Email</label>
-                            <input type="email" id="userEmail-input" placeholder="user@example.com"
-                                class="form-input w-full" required>
-                        </div>
-                        <!-- Role Dropdown -->
-                        <div>
-                            <label for="userRole-select" class="form-label">Assign Role</label>
-                            <select id="userRole-select" class="form-input w-full" required>
-                                <option value="">Select a role...</option>
-                                <option value="sales_staff">Sales Staff</option>
-                                <option value="inventory_manager">Inventory Manager</option>
-                                <option value="finance">Finance</option>
-                                <option value="team_lead">Church Team Lead</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <!-- Form Actions -->
-                        <div class="flex items-end">
-                            <button type="submit"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
-                                Save Role
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Card 2: Existing Users Grid -->
-            <div class="bg-white rounded-lg shadow-lg">
-                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Existing Users</h3>
-                </div>
-                <div class="p-2">
-                    <div id="users-grid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- ======================= -->
         <!--   SALES REPORTS VIEW    -->
