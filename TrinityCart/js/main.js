@@ -535,7 +535,7 @@ async function handleRequestConsignmentClick() {
     const user = appState.currentUser;
     if (!user) return alert("Please log in.");
 
-    // Show the modal first, with a loading state
+    //1. Show the modal first, with a loading state
     showConsignmentRequestModal();
     // We will add logic here to show a spinner inside the modal
 
@@ -545,82 +545,86 @@ async function handleRequestConsignmentClick() {
     const userTeamSelect = document.getElementById('user-select-team');
     const adminTeamDiv = document.getElementById('admin-team-selection');
     const userTeamDiv = document.getElementById('user-team-selection');
-
-    // Reset all selection divs
-    adminTeamDiv.classList.add('hidden');
-    userTeamDiv.classList.add('hidden');
-
-    if (user.role === 'admin') {
-        // Admin can select from any team
-        adminTeamDiv.classList.remove('hidden');
-        adminTeamSelect.innerHTML = '<option value="">Select a team...</option>';
-        // We need a way to get all teams here, let's assume it's in masterData
-        masterData.teams.forEach(team => {
-            const option = document.createElement('option');
-            option.value = team.id;
-            option.textContent = team.teamName;
-            adminTeamSelect.appendChild(option);
-        });
-    } else {
-        // For non-admins, check their memberships
-        const membershipInfo = await getUserMembershipInfo(user.email);
-
-        if (!membershipInfo || !membershipInfo.teams) {
-            closeConsignmentRequestModal();
-            return alert("You are not a member of any team. Please contact an admin.");
-        }
-
-        // Filter for teams where the user is a Team Lead
-        const leadTeams = Object.entries(membershipInfo.teams)
-            .filter(([id, data]) => data.role === 'Team Lead')
-            .map(([id, data]) => ({ teamId: id, teamName: data.teamName }));
-
-        if (leadTeams.length === 0) {
-            closeConsignmentRequestModal();
-            return alert("You do not have Team Lead permissions for any team. This action is restricted to Team Leads.");
-        }
-
-
-        if (leadTeams.length === 1) {
-            // Auto-select if they lead only one team
-            userTeamSelect.innerHTML = `<option value="${leadTeams[0].teamId}">${leadTeams[0].teamName}</option>`;
-            userTeamSelect.disabled = true;
-        } else {
-            // Let them choose if they lead multiple teams
-            userTeamSelect.innerHTML = '<option value="">Select your team...</option>';
-            leadTeams.forEach(team => {
-                const option = document.createElement('option');
-                option.value = team.teamId;
-                option.textContent = team.teamName;
-                userTeamSelect.appendChild(option);
-            });
-            userTeamSelect.disabled = false;
-        }
-
-    }
-
     const catalogueSelect = document.getElementById('request-catalogue-select');
     const eventSelect = document.getElementById('request-event-select');
 
-    // 1. Clear any old options from previous times the modal was opened.
-    catalogueSelect.innerHTML = '<option value="">Select a catalogue...</option>';
+    // Reset all UI elements to a clean state
+    adminTeamDiv.classList.add('hidden');
+    userTeamDiv.classList.add('hidden');
+    adminTeamSelect.innerHTML = '';
+    userTeamSelect.innerHTML = '';
+    catalogueSelect.innerHTML = '<option value="">Loading...</option>';
     eventSelect.innerHTML = '<option value="">Select an event (optional)...</option>';
-    eventSelect.disabled = true; // Events are disabled until a catalogue is chosen.
+    catalogueSelect.disabled = true;
+    eventSelect.disabled = true;
 
-    // 2. Populate the Sales Catalogue dropdown from the masterData cache.
-    if (masterData.salesCatalogues && masterData.salesCatalogues.length > 0) {
-        masterData.salesCatalogues.forEach(catalogue => {
-            const option = document.createElement('option');
-            option.value = catalogue.id;
-            option.textContent = catalogue.catalogueName;
-            catalogueSelect.appendChild(option);
-        });
-    } else {
-        // Provide helpful feedback if no catalogues are available.
-        catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
-        catalogueSelect.disabled = true;
+    try {
+        // --- 2. Handle Role-Based Team Selection ---
+        if (user.role === 'admin') {
+            // Admin can select from any team
+            adminTeamDiv.classList.remove('hidden');
+            adminTeamSelect.innerHTML = '<option value="">Select a team...</option>';
+            // We need a way to get all teams here, let's assume it's in masterData
+            masterData.teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.id;
+                option.textContent = team.teamName;
+                adminTeamSelect.appendChild(option);
+            });
+        } else {
+            // For non-admins, check their memberships
+            const membershipInfo = await getUserMembershipInfo(user.email);
+            const leadTeams = Object.entries(membershipInfo.teams || {})
+                .filter(([id, data]) => data.role === 'Team Lead')
+                .map(([id, data]) => ({ teamId: id, teamName: data.teamName }));
+
+            if (leadTeams.length === 0) {
+                closeConsignmentRequestModal();
+                return showModal('error', 'Permission Denied', 'You do not have Team Lead permissions for any team.');
+            }
+
+            userTeamDiv.classList.remove('hidden'); // Make the correct div visible
+
+            if (leadTeams.length === 1) {
+                // Auto-select if they lead only one team
+                userTeamSelect.innerHTML = `<option value="${leadTeams[0].teamId}">${leadTeams[0].teamName}</option>`;
+                userTeamSelect.disabled = true;
+                // Manually trigger change to load members for the auto-selected team
+                userTeamSelect.dispatchEvent(new Event('change'));
+            } else {
+                // Let them choose if they lead multiple teams
+                userTeamSelect.innerHTML = '<option value="">Select your team...</option>';
+                leadTeams.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team.teamId;
+                    option.textContent = team.teamName;
+                    userTeamSelect.appendChild(option);
+                });
+                userTeamSelect.disabled = false;
+            }
+        }
+
+        // --- 3. Populate Catalogues (This logic is now separate and clean) ---
+        catalogueSelect.innerHTML = '<option value="">Select a catalogue...</option>';
+        const activeCatalogues = masterData.salesCatalogues.filter(cat => cat.isActive);
+
+        if (activeCatalogues.length > 0) {
+            activeCatalogues.forEach(catalogue => {
+                const option = document.createElement('option');
+                option.value = catalogue.id;
+                option.textContent = catalogue.catalogueName;
+                catalogueSelect.appendChild(option);
+            });
+            catalogueSelect.disabled = false;
+        } else {
+            catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
+        }
+        
+    } catch (error) {
+        console.error("Error preparing consignment request modal:", error);
+        closeConsignmentRequestModal();
+        showModal('error', 'Error', 'Could not prepare the request form. Please try again.');
     }
-
     // We will add logic for the "Next" button and form submission later.
 }
 
