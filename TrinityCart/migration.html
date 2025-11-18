@@ -82,6 +82,7 @@
 
         // --- PATHS ---
         const BASE_DOC_PATH = 'artifacts/TrinityCart-default-app-id';
+        const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
         const SOURCE_COLLECTION = `${BASE_DOC_PATH}/salesInvoices`;
         const BACKUP_COLLECTION = `${BASE_DOC_PATH}/salesInvoices_bkp`;
 
@@ -100,21 +101,38 @@
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // Check if user is an admin
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists && userDoc.data().role === 'admin') {
-                    statusText.textContent = `Logged in as ADMIN: ${user.email}`;
-                    loginBtn.style.display = 'none';
-                    runBtn.disabled = false;
-                    log('Admin user authenticated. Ready to run migration.');
-                } else {
-                    statusText.textContent = `Logged in as: ${user.email} (Not an Admin)`;
-                    runBtn.disabled = true;
-                    log('Error: You must be an admin to run this script.');
+                log(`User logged in: ${user.email}. Checking role...`);
+                statusText.textContent = `Verifying permissions for ${user.email}...`;
+                
+                try {
+                    // 1. Get the user's document using the CORRECT collection path.
+                    const userDocRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
+                    const userDoc = await userDocRef.get();
+
+                    // 2. Check if the document exists and if the role is 'admin'.
+                    if (userDoc.exists && userDoc.data().role === 'admin') {
+                        // --- ADMIN IS VERIFIED ---
+                        statusText.textContent = `Logged in as ADMIN: ${user.email}`;
+                        loginBtn.style.display = 'none';
+                        stepsContainer.style.display = 'block';
+                        log('✅ Admin user authenticated. Ready for Step 1: Backup.');
+                    } else {
+                        // --- USER IS NOT AN ADMIN ---
+                        statusText.textContent = `Logged in as: ${user.email} (Access Denied)`;
+                        loginBtn.style.display = 'none';
+                        stepsContainer.style.display = 'none';
+                        log('❌ Error: This user is not an admin. Migration tools are disabled.');
+                    }
+                } catch (error) {
+                    log(`❌ Error checking user role: ${error.message}`);
+                    statusText.textContent = 'Error verifying permissions.';
                 }
+
             } else {
+                // --- USER IS LOGGED OUT ---
                 statusText.textContent = 'Not Logged In';
                 loginBtn.style.display = 'block';
+                stepsContainer.style.display = 'none';
                 runBtn.disabled = true;
             }
         });
@@ -168,7 +186,7 @@
                 backupBtn.textContent = 'Backup Failed (See Log)';
             }
         });
-        
+
         // --- MIGRATION LOGIC ---
         runBtn.addEventListener('click', async () => {
             if (!confirm("Are you sure you want to start the data migration? This cannot be undone.")) {
