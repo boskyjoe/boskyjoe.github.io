@@ -5,89 +5,91 @@ import { formatCurrency,numberToWords } from './utils.js';
 export function getTastyTreatsInvoiceHTML() {
     return `
         <div class="invoice-container">
-            <!-- Header Section -->
-            <div class="invoice-header">
-                <div class="header-logo">
-                    <img src="{{logoUrl}}" alt="Logo" style="max-height: 60px;">
-                </div>
-                <div class="header-company-details">
-                    <h2>{{companyName}}</h2>
-                    <p>{{address1}}, {{address2}}</p>
-                    <p>{{city}}, {{state}} - {{pincode}}</p>
-                    <p><strong>Email:</strong> {{email}}</p>
-                    <p><strong>GSTIN:</strong> {{gstin}}</p>
-                </div>
-                <div class="header-title">
-                    <h1>Tax Invoice</h1>
-                    <p class="copy-type">{{copyType}}</p>
-                </div>
+        <!-- Header Section -->
+        <div class="invoice-header">
+            <div class="header-logo">
+                <img src="{{logoUrl}}" alt="Logo" style="max-height: 60px;">
             </div>
+            <div class="header-company-details">
+                <h2>{{companyName}}</h2>
+                <p>{{address1}}, {{address2}}</p>
+                <p>{{city}}, {{state}} - {{pincode}}</p>
+                <p><strong>Email:</strong> {{email}}</p>
+                <p><strong>GSTIN:</strong> {{gstin}}</p>
+            </div>
+            <div class="header-title">
+                <h1>Tax Invoice</h1>
+                <p class="copy-type">{{copyType}}</p>
+            </div>
+        </div>
 
-            <!-- ✅ NEW: Combined Details Section in a Single Row -->
-            <table class="details-master-table">
+        <!-- Combined Details Section in a Single Row -->
+        <table class="details-master-table">
+            <tr>
+                <!-- Bill To -->
+                <td class="details-cell">
+                    <h3>Bill To</h3>
+                    <p><strong>{{customerName}}</strong></p>
+                    <p>{{customerAddress1}}</p>
+                    <p><strong>GSTIN:</strong> {{customerGSTIN}}</p>
+                    <p><strong>State:</strong> {{customerState}} ({{customerStateCode}})</p>
+                </td>
+                <!-- Ship To -->
+                <td class="details-cell">
+                    <h3>Ship To</h3>
+                    <p>{{shipToAddress1}}</p>
+                    <p>{{shipToCity}}, {{shipToState}} - {{shipToPincode}}</p>
+                </td>
+                <!-- Transport Details -->
+                <td class="details-cell">
+                    <h3>Transportation</h3>
+                    <p><strong>Mode:</strong> {{transportName}}</p>
+                    <p><strong>Vehicle:</strong> {{vehicleNumber}}</p>
+                    <p><strong>Date:</strong> {{deliveryDate}}</p>
+                </td>
+                <!-- Invoice Details -->
+                <td class="details-cell">
+                    <h3>Invoice Details</h3>
+                    <p><strong>No.:</strong> {{invoiceNumber}}</p>
+                    <p><strong>Date:</strong> {{invoiceDate}}</p>
+                    <p><strong>Time:</strong> {{invoiceTime}}</p>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Line Items Table -->
+        <table class="items-table">
+            <thead>
                 <tr>
-                    <!-- Bill To -->
-                    <td class="details-cell">
-                        <h3>Bill To</h3>
-                        <p><strong>{{customerName}}</strong></p>
-                        <p>{{customerAddress1}}</p>
-                        <p><strong>GSTIN:</strong> {{customerGSTIN}}</p>
-                        <p><strong>State:</strong> {{customerState}} ({{customerStateCode}})</p>
-                    </td>
-                    <!-- Ship To -->
-                    <td class="details-cell">
-                        <h3>Ship To</h3>
-                        <p>{{shipToAddress1}}</p>
-                        <p>{{shipToCity}}, {{shipToState}} - {{shipToPincode}}</p>
-                    </td>
-                    <!-- Transport Details -->
-                    <td class="details-cell">
-                        <h3>Transportation</h3>
-                        <p><strong>Mode:</strong> {{transportName}}</p>
-                        <p><strong>Vehicle:</strong> {{vehicleNumber}}</p>
-                        <p><strong>Date:</strong> {{deliveryDate}}</p>
-                    </td>
-                    <!-- Invoice Details -->
-                    <td class="details-cell">
-                        <h3>Invoice Details</h3>
-                        <p><strong>No.:</strong> {{invoiceNumber}}</p>
-                        <p><strong>Date:</strong> {{invoiceDate}}</p>
-                        <p><strong>Time:</strong> {{invoiceTime}}</p>
-                    </td>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 35%;">Item Name</th>
+                    <th style="width: 8%;">HSN/ SAC</th>
+                    <th style="width: 8%;">Qty</th>
+                    <th style="width: 10%;">Unit Price/ Unit</th>
+                    <th style="width: 12%;">Taxable Amount</th>
+                    <th style="width: 8%;">CGST</th>
+                    <th style="width: 8%;">SGST</th>
+                    <th style="width: 12%;">Amount</th>
                 </tr>
-            </table>
+            </thead>
+            <tbody>
+                {{lineItems}}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;"><strong>Total</strong></td>
+                    <td style="text-align: center;"><strong>{{totalQty}}</strong></td>
+                    <td></td>
+                    <td style="text-align: right;"><strong>{{totalTaxableAmount}}</strong></td>
+                    <td style="text-align: right;"><strong>{{totalCGST}}</strong></td>
+                    <td style="text-align: right;"><strong>{{totalSGST}}</strong></td>
+                    <td style="text-align: right;"><strong>{{totalAmount}}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
 
-            <!-- Line Items Table -->
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 5%;">#</th>
-                        <th style="width: 35%;">Item Name</th>
-                        <th style="width: 8%;">HSN/ SAC</th>
-                        <th style="width: 8%;">Qty</th>
-                        <th style="width: 10%;">Unit Price/ Unit</th>
-                        <th style="width: 12%;">Taxable Amount</th>
-                        <th style="width: 8%;">CGST</th>
-                        <th style="width: 8%;">SGST</th>
-                        <th style="width: 12%;">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{lineItems}}
-                </tbody>
-                <tfoot>
-                    <tr class="total-row">
-                        <td colspan="3" style="text-align: right;"><strong>Total</strong></td>
-                        <td style="text-align: center;"><strong>{{totalQty}}</strong></td>
-                        <td></td>
-                        <td style="text-align: right;"><strong>{{totalTaxableAmount}}</strong></td>
-                        <td style="text-align: right;"><strong>{{totalCGST}}</strong></td>
-                        <td style="text-align: right;"><strong>{{totalSGST}}</strong></td>
-                        <td style="text-align: right;"><strong>{{totalAmount}}</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
-
+        <!-- ✅ NEW: Tax Summary and Amounts Side by Side -->
+        <div class="tax-amounts-wrapper">
             <!-- Tax Summary Table -->
             <table class="tax-summary-table">
                 <thead>
@@ -128,7 +130,10 @@ export function getTastyTreatsInvoiceHTML() {
                     </tr>
                 </table>
             </div>
+        </div>
 
+        <!-- ✅ NEW: Amount in Words and Payment Info Side by Side -->
+        <div class="words-payment-wrapper">
             <!-- Amount in Words -->
             <div class="amount-words">
                 <h4>Invoice Amount In Words</h4>
@@ -136,19 +141,20 @@ export function getTastyTreatsInvoiceHTML() {
             </div>
 
             <!-- Payment Mode and Description -->
-            <table class="payment-info-table">
-                <tr>
-                    <td style="width: 50%;">
-                        <h4>Payment Mode</h4>
-                        <p>{{paymentMode}}</p>
-                    </td>
-                    <td style="width: 50%;">
-                        <h4>Description</h4>
-                        <p>{{description}}</p>
-                    </td>
-                </tr>
-            </table>
+            <div class="payment-info-section">
+                <div class="payment-mode-box">
+                    <h4>Payment Mode</h4>
+                    <p>{{paymentMode}}</p>
+                </div>
+                <div class="description-box">
+                    <h4>Description</h4>
+                    <p>{{description}}</p>
+                </div>
+            </div>
+        </div>
 
+        <!-- ✅ NEW: Bank Details, Terms and Signature Side by Side -->
+        <div class="footer-wrapper">
             <!-- Bank Details -->
             <div class="bank-details">
                 <h4>Bank Details</h4>
@@ -158,19 +164,20 @@ export function getTastyTreatsInvoiceHTML() {
                 <p><strong>Account Holder's Name:</strong> {{accountHolderName}}</p>
             </div>
 
-            <!-- Terms and Signature -->
-            <div class="footer-section">
-                <div class="terms-section">
-                    <h4>Terms and conditions</h4>
-                    <p>{{termsAndConditions}}</p>
-                </div>
-                <div class="signature-section">
-                    <p><strong>For: {{companyName}}</strong></p>
-                    <div class="signature-line"></div>
-                    <p>Authorized Signatory</p>
-                </div>
+            <!-- Terms and Conditions -->
+            <div class="terms-section">
+                <h4>Terms and conditions</h4>
+                <p>{{termsAndConditions}}</p>
+            </div>
+
+            <!-- Signature -->
+            <div class="signature-section">
+                <p><strong>For: {{companyName}}</strong></p>
+                <div class="signature-line"></div>
+                <p>Authorized Signatory</p>
             </div>
         </div>
+    </div>
     `;
 }
 
@@ -180,221 +187,283 @@ export function getTastyTreatsInvoiceCSS() {
             margin: 8mm;
             size: A4;
         }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 8pt; /* Reduced base font size */
+            font-family: Arial, sans-serif;
+            font-size: 12px;
             line-height: 1.4;
             color: #333;
         }
-
+        
         .invoice-container {
-            width: 194mm;
-            min-height: 277mm;
+            max-width: 210mm;
             margin: 0 auto;
-            background: white;
+            padding: 15px;
         }
-
-        /* ✅ NEW: Header with Logo, Company Details, and Title on one line */
+        
         .invoice-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #000;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
         }
+        
         .header-logo {
-            width: 25%;
-            flex-shrink: 0;
+            flex: 0 0 auto;
         }
+        
         .header-company-details {
-            width: 50%;
-            text-align: center;
+            flex: 1;
+            padding: 0 20px;
         }
+        
         .header-company-details h2 {
-            font-size: 14pt;
-            font-weight: bold;
-            color: #000;
+            font-size: 18px;
+            margin-bottom: 5px;
         }
+        
+        .header-company-details p {
+            margin: 2px 0;
+        }
+        
         .header-title {
-            width: 25%;
+            flex: 0 0 auto;
             text-align: right;
         }
+        
         .header-title h1 {
-            font-size: 16pt;
-            font-weight: bold;
-            color: #000;
+            font-size: 24px;
+            margin-bottom: 5px;
         }
+        
         .copy-type {
-            font-size: 8pt;
             font-weight: bold;
+            color: #666;
         }
-
-        /* ✅ NEW: Master Details Table for Bill To, Ship To, etc. */
+        
         .details-master-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            border: 1px solid #000;
+            margin-bottom: 20px;
         }
-        .details-master-table td.details-cell {
-            width: 25%; /* Four equal columns */
+        
+        .details-cell {
+            width: 25%;
             vertical-align: top;
-            padding: 6px;
-            border-right: 1px solid #000;
+            padding: 10px;
+            border: 1px solid #ddd;
         }
-        .details-master-table td.details-cell:last-child {
-            border-right: none;
+        
+        .details-cell h3 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
         }
-        .details-master-table h3 {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 4px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 2px;
+        
+        .details-cell p {
+            margin: 3px 0;
+            font-size: 11px;
         }
-        .details-master-table p {
-            margin-bottom: 2px;
-        }
-
-        /* Items Table (Slightly more compact) */
+        
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 5px;
-            font-size: 8pt; /* Smaller font for the table */
+            margin-bottom: 20px;
         }
-        .items-table th {
-            background-color: #e0e0e0;
-            border: 1px solid #000;
-            padding: 4px; /* Reduced padding */
-            text-align: center;
-            font-weight: bold;
-        }
+        
+        .items-table th,
         .items-table td {
-            border: 1px solid #000;
-            padding: 4px;
-            vertical-align: top;
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
         }
-        .items-table tbody tr {
-            page-break-inside: avoid;
+        
+        .items-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            text-align: center;
         }
-        .items-table tfoot .total-row {
-            background-color: #f0f0f0;
+        
+        .items-table tbody td {
+            text-align: center;
+        }
+        
+        .items-table tbody td:nth-child(2) {
+            text-align: left;
+        }
+        
+        .total-row {
+            background-color: #f9f9f9;
             font-weight: bold;
         }
-
-        /* Tax Summary Table */
-        .tax-summary-table {
-            width: 60%;
-            margin-left: auto;
-            margin-bottom: 10px;
-            border-collapse: collapse;
-            font-size: 8pt;
-        }
-        .tax-summary-table th, .tax-summary-table td {
-            border: 1px solid #000;
-            padding: 4px;
-        }
-        .tax-summary-table th {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-
-        /* Amounts & Words Section (Flexbox for side-by-side layout) */
-        .summary-flex-container {
+        
+        /* ✅ NEW: Side by Side Layout for Tax Summary and Amounts */
+        .tax-amounts-wrapper {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
-            page-break-inside: avoid;
+            gap: 15px;
+            margin-bottom: 20px;
         }
-        .amount-words-container {
-            width: 58%;
+        
+        .tax-summary-table {
+            flex: 1;
+            border-collapse: collapse;
         }
+        
+        .tax-summary-table th,
+        .tax-summary-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .tax-summary-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        
         .amounts-section {
-            width: 40%;
+            flex: 0 0 300px;
         }
-
-        /* Amounts Table */
+        
         .amounts-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8.5pt;
         }
+        
         .amounts-table td {
-            padding: 4px 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .amount-label { text-align: right; }
-        .amount-value { text-align: right; font-weight: bold; }
-        .current-balance-row {
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
-            font-size: 10pt;
-        }
-
-        /* Amount in Words */
-        .amount-words {
+            border: 1px solid #ddd;
             padding: 8px;
-            border: 1px solid #000;
         }
-        .amount-words h4 {
-            font-size: 8.5pt;
-            font-weight: bold;
-            margin-bottom: 4px;
+        
+        .amount-label {
+            text-align: left;
+            width: 60%;
         }
-        .amount-words p {
-            font-size: 9pt;
-            font-weight: bold;
-            text-transform: capitalize;
-        }
-
-        /* Bank Details & Terms (Flexbox for side-by-side layout) */
-        .footer-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: stretch; /* Make columns equal height */
-            page-break-inside: avoid;
-            margin-top: 15px;
-        }
-        .bank-details {
-            width: 58%;
-            padding: 8px;
-            border: 1px solid #000;
-        }
-        .signature-section-wrapper {
+        
+        .amount-value {
+            text-align: right;
             width: 40%;
-            border: 1px solid #000;
-            border-left: none;
+            font-weight: bold;
+        }
+        
+        .received-row {
+            background-color: #f0f8ff;
+        }
+        
+        .balance-row {
+            background-color: #fff3cd;
+        }
+        
+        .current-balance-row {
+            background-color: #d4edda;
+        }
+        
+        /* ✅ NEW: Side by Side Layout for Amount Words and Payment Info */
+        .words-payment-wrapper {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .amount-words {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        
+        .amount-words h4 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        .payment-info-section {
+            flex: 0 0 40%;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 0;
         }
+        
+        .payment-mode-box,
+        .description-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        
+        .payment-mode-box {
+            border-bottom: none;
+        }
+        
+        .payment-mode-box h4,
+        .description-box h4 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        /* ✅ NEW: Side by Side Layout for Bank, Terms, and Signature */
+        .footer-wrapper {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .bank-details {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        
         .bank-details h4 {
-            font-size: 9pt;
-            font-weight: bold;
-            margin-bottom: 4px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
         }
+        
+        .bank-details p {
+            margin: 3px 0;
+        }
+        
+        .terms-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        
+        .terms-section h4 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        
         .signature-section {
+            flex: 0 0 250px;
+            border: 1px solid #ddd;
+            padding: 10px;
             text-align: center;
-            padding: 8px;
         }
+        
+        .signature-section p {
+            margin: 5px 0;
+        }
+        
         .signature-line {
-            margin: 40px 20px 5px 20px;
-            border-bottom: 1px solid #000;
-        }
-
-        @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .invoice-container { padding: 0; }
+            height: 60px;
+            border-bottom: 1px solid #333;
+            margin: 20px 0 10px 0;
         }
     `;
 }
