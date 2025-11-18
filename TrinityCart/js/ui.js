@@ -5607,7 +5607,7 @@ const salesCartGridOptions = {
                 const qty = params.data.quantity || 0;
                 const price = params.data.unitPrice || 0;
                 const discPercent = params.data.discountPercentage || 0;
-                const cgstPercent = params.data.taxPercentage || 0;
+                const cgstPercent = params.data.cgstPercentage || 0;
                 const sgstPercent = params.data.sgstPercentage || 0;
 
                 // 1. Calculate the base amount after the item discount. This is the taxable amount.
