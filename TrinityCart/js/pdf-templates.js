@@ -8,7 +8,7 @@ export function getTastyTreatsInvoiceHTML() {
         <!-- Header Section -->
         <div class="invoice-header">
             <div class="header-logo">
-                <img src="{{logoUrl}}" alt="Logo" style="max-height: 60px;">
+                <img src="{{logoUrl}}" alt="Logo" style="max-height: 40px;">
             </div>
             <div class="header-company-details">
                 <h2>{{companyName}}</h2>
@@ -158,10 +158,18 @@ export function getTastyTreatsInvoiceHTML() {
             <!-- Bank Details -->
             <div class="bank-details">
                 <h4>Bank Details</h4>
-                <p><strong>Name:</strong> {{bankName}}</p>
-                <p><strong>Account No.:</strong> {{accountNumber}}</p>
-                <p><strong>IFSC code:</strong> {{ifscCode}}</p>
-                <p><strong>Account Holder's Name:</strong> {{accountHolderName}}</p>
+                <div class="bank-details-content">
+                    <div class="bank-qr-code">
+                        <img src="{{qrCodeUrl}}" alt="UPI QR Code">
+                    </div>
+                    <div class="bank-info">
+                        <p><strong>Name:</strong> {{bankName}}</p>
+                        <p>{{bankBranch}}</p>
+                        <p><strong>Account No.:</strong> {{accountNumber}}</p>
+                        <p><strong>IFSC code:</strong> {{ifscCode}}</p>
+                        <p><strong>Account Holder's Name:</strong> {{accountHolderName}}</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Terms and Conditions -->
@@ -195,24 +203,24 @@ export function getTastyTreatsInvoiceCSS() {
         
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 6px;
+            line-height: 1.2;
             color: #333;
         }
         
         .invoice-container {
             max-width: 210mm;
             margin: 0 auto;
-            padding: 15px;
+            padding: 8px;
         }
         
         .invoice-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
         }
         
         .header-logo {
@@ -221,16 +229,16 @@ export function getTastyTreatsInvoiceCSS() {
         
         .header-company-details {
             flex: 1;
-            padding: 0 20px;
+            padding: 0 10px;
         }
         
         .header-company-details h2 {
-            font-size: 18px;
-            margin-bottom: 5px;
+            font-size: 9px;
+            margin-bottom: 2px;
         }
         
         .header-company-details p {
-            margin: 2px 0;
+            margin: 1px 0;
         }
         
         .header-title {
@@ -239,8 +247,8 @@ export function getTastyTreatsInvoiceCSS() {
         }
         
         .header-title h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
+            font-size: 12px;
+            margin-bottom: 2px;
         }
         
         .copy-type {
@@ -251,46 +259,49 @@ export function getTastyTreatsInvoiceCSS() {
         .details-master-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
         }
         
         .details-cell {
             width: 25%;
             vertical-align: top;
-            padding: 10px;
+            padding: 4px;
             border: 1px solid #ddd;
         }
         
         .details-cell h3 {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 7px;
+            margin-bottom: 3px;
             color: #555;
             border-bottom: 1px solid #eee;
-            padding-bottom: 4px;
+            padding-bottom: 2px;
         }
         
         .details-cell p {
-            margin: 3px 0;
-            font-size: 11px;
+            margin: 1px 0;
+            font-size: 6px;
         }
         
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
         }
         
         .items-table th,
         .items-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 3px 4px;
             text-align: left;
+            font-size: 6px;
         }
         
         .items-table th {
             background-color: #f5f5f5;
             font-weight: bold;
             text-align: center;
+            font-size: 7px;
+            line-height: 1.1;
         }
         
         .items-table tbody td {
@@ -309,8 +320,8 @@ export function getTastyTreatsInvoiceCSS() {
         /* ✅ NEW: Side by Side Layout for Tax Summary and Amounts */
         .tax-amounts-wrapper {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
         
         .tax-summary-table {
@@ -321,17 +332,20 @@ export function getTastyTreatsInvoiceCSS() {
         .tax-summary-table th,
         .tax-summary-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 3px 4px;
             text-align: center;
+            font-size: 6px;
         }
         
         .tax-summary-table th {
             background-color: #f5f5f5;
             font-weight: bold;
+            font-size: 7px;
+            line-height: 1.1;
         }
         
         .amounts-section {
-            flex: 0 0 300px;
+            flex: 0 0 200px;
         }
         
         .amounts-table {
@@ -341,7 +355,8 @@ export function getTastyTreatsInvoiceCSS() {
         
         .amounts-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 3px 4px;
+            font-size: 6px;
         }
         
         .amount-label {
@@ -370,20 +385,24 @@ export function getTastyTreatsInvoiceCSS() {
         /* ✅ NEW: Side by Side Layout for Amount Words and Payment Info */
         .words-payment-wrapper {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
         
         .amount-words {
             flex: 1;
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
         }
         
         .amount-words h4 {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 7px;
+            margin-bottom: 3px;
             color: #555;
+        }
+        
+        .amount-words p {
+            font-size: 6px;
         }
         
         .payment-info-section {
@@ -396,7 +415,7 @@ export function getTastyTreatsInvoiceCSS() {
         .payment-mode-box,
         .description-box {
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
         }
         
         .payment-mode-box {
@@ -405,65 +424,97 @@ export function getTastyTreatsInvoiceCSS() {
         
         .payment-mode-box h4,
         .description-box h4 {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 7px;
+            margin-bottom: 3px;
             color: #555;
+        }
+        
+        .payment-mode-box p,
+        .description-box p {
+            font-size: 6px;
         }
         
         /* ✅ NEW: Side by Side Layout for Bank, Terms, and Signature */
         .footer-wrapper {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 8px;
+            margin-top: 8px;
         }
         
         .bank-details {
             flex: 1;
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
         }
         
         .bank-details h4 {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 7px;
+            margin-bottom: 3px;
             color: #555;
             border-bottom: 1px solid #eee;
-            padding-bottom: 4px;
+            padding-bottom: 2px;
         }
         
-        .bank-details p {
-            margin: 3px 0;
+        .bank-details-content {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .bank-qr-code {
+            flex: 0 0 auto;
+            text-align: center;
+        }
+        
+        .bank-qr-code img {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ddd;
+        }
+        
+        .bank-info {
+            flex: 1;
+        }
+        
+        .bank-info p {
+            margin: 1px 0;
+            font-size: 6px;
         }
         
         .terms-section {
             flex: 1;
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
         }
         
         .terms-section h4 {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 7px;
+            margin-bottom: 3px;
             color: #555;
             border-bottom: 1px solid #eee;
-            padding-bottom: 4px;
+            padding-bottom: 2px;
+        }
+        
+        .terms-section p {
+            font-size: 6px;
         }
         
         .signature-section {
-            flex: 0 0 250px;
+            flex: 0 0 150px;
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 4px;
             text-align: center;
         }
         
         .signature-section p {
-            margin: 5px 0;
+            margin: 2px 0;
+            font-size: 6px;
         }
         
         .signature-line {
-            height: 60px;
+            height: 40px;
             border-bottom: 1px solid #333;
-            margin: 20px 0 10px 0;
+            margin: 10px 0 5px 0;
         }
     `;
 }
