@@ -5137,6 +5137,7 @@ export function refreshConsignmentDetailPanel(orderId) {
 /**
  * [NEW] The main function to display the Consignment Management view.
  */
+
 export function showConsignmentView() {
     // 1. Standard view setup
     showView('consignment-view');
