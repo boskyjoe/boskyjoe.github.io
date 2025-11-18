@@ -4318,6 +4318,27 @@ const consignmentOrdersGridOptions = {
     defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     columnDefs: [
         //{ field: "consignmentId", headerName: "Order ID", width: 180, filter: 'agTextColumnFilter' },
+        {
+            field: "hasPendingPayments",
+            headerName: "Payment Varification",
+            width: 140,
+            filter: 'agTextColumnFilter', // Allows filtering by "Yes" or "No"
+            cellRenderer: params => {
+                // Don't show anything in this cell for the pinned totals row
+                if (params.node.isRowPinned()) {
+                    return '';
+                }
+                
+                if (params.value === true) {
+                    // Use the same amber/yellow color for consistency
+                    return `<span class="font-semibold text-amber-700">Yes</span>`;
+                }
+                // For false or undefined, return a subtle "No"
+                return `<span class="text-gray-400">No</span>`;
+            },
+            // This ensures the filter works on the "Yes"/"No" text, not the true/false value
+            valueGetter: params => params.data?.hasPendingPayments ? 'Yes' : 'No'
+        },
         { field: "manualVoucherNumber", headerName: "Manual Voucher#", width: 180, filter: 'agTextColumnFilter'},
         { field: "requestDate", headerName: "Request Date", filter: 'agDateColumnFilter', width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
         { field: "teamName", headerName: "Team", width:250, filter: 'agTextColumnFilter' },
@@ -4415,7 +4436,7 @@ const consignmentOrdersGridOptions = {
             const status = params.data?.status;
             return status === 'Rejected' || status === 'Settled';
         },
-        'bg-yellow-100': params => params.data && params.data.hasPendingPayments === true
+        'bg-amber-100': params => params.data && params.data.hasPendingPayments === true
     },
     onFilterChanged: (event) => {
         updatePinnedTotals(
