@@ -6264,6 +6264,15 @@ export function showSalesView() {
         //document.getElementById('sale-pay-now-container').classList.add('hidden');
 
         // 3. Populate the dropdowns on the form.
+
+        const paymentTypeSelect = document.getElementById('sale-payment-type');
+        if (paymentTypeSelect) {
+            paymentTypeSelect.value = 'Pay Later (Invoice)';
+            // Manually trigger the change event to ensure the "Pay Now" container is hidden
+            paymentTypeSelect.dispatchEvent(new Event('change'));
+        }
+
+        
         const storeSelect = document.getElementById('sale-store-select');
         storeSelect.innerHTML = '<option value="">Select a store...</option>';
         if (masterData.systemSetups && masterData.systemSetups.Stores) {
