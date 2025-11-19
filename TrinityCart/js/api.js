@@ -3056,7 +3056,9 @@ export async function recordSalePayment(paymentData, user) {
  */
 export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
+
     const FieldValue = firebase.firestore.FieldValue;
+    
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
     console.log(`[API] Initiating client-side transactional deletion for sale: ${saleId}`);
