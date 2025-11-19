@@ -2287,7 +2287,7 @@
                     </div>
                 </div>
 
-                 <!-- =================================== -->
+                <!-- =================================== -->
                 <!--      View: Manage Sale Types        -->
                 <!-- =================================== -->
 
@@ -2364,54 +2364,109 @@
                     </div>
                 </div>
 
-                <!-- View: Manage Sales Seasons -->
-                <div id="seasons-view" class="view space-y-8">
-                    <a href="#" class="back-link" data-view-id="admin-modules-view">&larr; Back to Admin Modules</a>
 
+                <!-- =================================== -->
+                <!--      View: Manage Sales Seasons       -->
+                <!-- =================================== -->
+
+                
+                <div id="seasons-view" class="view space-y-8">
+                    <a href="#" class="back-link inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold transition-colors" data-view-id="admin-modules-view">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin Modules
+                    </a>
+                    
                     <!-- Card 1: Add New Season Form -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Add New Sales Season</h3>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Add New Sales Season
+                                        <span class="ml-3 px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">NEW</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">Create a new seasonal sales period</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="p-6">
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
                             <form id="add-season-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <!-- Season Name -->
                                 <div class="md:col-span-1">
-                                    <label for="seasonName-input" class="form-label">Season Name<span
-                                            class="text-red-500">*</span></label>
+                                    <label for="seasonName-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        Season Name<span class="text-red-500 ml-1">*</span>
+                                    </label>
                                     <input type="text" id="seasonName-input" placeholder="e.g., Christmas 2024"
-                                        class="form-input w-full" required>
+                                        class="form-input w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" required>
                                 </div>
+                                
                                 <!-- Start Date -->
                                 <div>
-                                    <label for="startDate-input" class="form-label">Start Date<span
-                                            class="text-red-500">*</span></label>
-                                    <input type="date" id="startDate-input" class="form-input w-full" required>
+                                    <label for="startDate-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Start Date<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <input type="date" id="startDate-input" 
+                                        class="form-input w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" required>
                                 </div>
+                                
                                 <!-- End Date -->
                                 <div>
-                                    <label for="endDate-input" class="form-label">End Date<span
-                                            class="text-red-500">*</span></label>
-                                    <input type="date" id="endDate-input" class="form-input w-full" required>
+                                    <label for="endDate-input" class="form-label flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        End Date<span class="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <input type="date" id="endDate-input" 
+                                        class="form-input w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" required>
                                 </div>
+                                
                                 <!-- Form Actions -->
                                 <div class="md:col-span-3 flex justify-end">
                                     <button type="submit"
-                                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-semibold">
+                                        class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
                                         Add Season
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-
+                    
                     <!-- Card 2: Existing Seasons Grid -->
-                    <div class="bg-white rounded-lg shadow-lg">
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Existing Sales Seasons</h3>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-indigo-50 to-cyan-50 border-b border-indigo-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Existing Sales Seasons</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">View and manage all seasonal sales periods</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="p-2">
-                            <div id="seasons-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <div id="seasons-grid" class="ag-theme-alpine" style="height: 400px; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
