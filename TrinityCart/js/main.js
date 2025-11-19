@@ -940,11 +940,11 @@ function setupGlobalClickHandler() {
 
             const confirmed = await showModal('confirm', 
                 'Confirm Deletion', 
-                `Are you sure you want to permanently delete invoice <strong>${saleData.manualVoucherNumber || saleId}</strong>?<br><br>
-                 This will:<br>
-                 - Restock <strong>${saleData.lineItems.length} item(s)</strong> to inventory.<br>
-                 - Delete all associated payments and donations.<br><br>
-                 <strong>This action cannot be undone.</strong>`
+                `Are you sure you want to permanently delete invoice ${saleData.manualVoucherNumber || saleId} \n\n
+                 This will:\n
+                 - Restock ${saleData.lineItems.length} item(s) to inventory.\n
+                 - Delete all associated payments and donations.\n\n
+                 This action cannot be undone.`
             );
 
             if (confirmed) {
