@@ -932,6 +932,37 @@ function setupGlobalClickHandler() {
             return;
         }
 
+
+        const deleteSaleBtn = e.target.closest('.action-btn-delete-sale');
+        if (deleteSaleBtn) {
+            const saleId = deleteSaleBtn.dataset.id;
+            const saleData = getSalesHistoryDataById(saleId); // Get data for the modal message
+
+            const confirmed = await showModal('confirm', 
+                'Confirm Deletion', 
+                `Are you sure you want to permanently delete invoice <strong>${saleData.manualVoucherNumber || saleId}</strong>?<br><br>
+                 This will:<br>
+                 - Restock <strong>${saleData.lineItems.length} item(s)</strong> to inventory.<br>
+                 - Delete all associated payments and donations.<br><br>
+                 <strong>This action cannot be undone.</strong>`
+            );
+
+            if (confirmed) {
+                ProgressToast.show('Deleting Sale...', 'info');
+                try {
+                    await deleteSaleAndReverseClientSide(saleId);
+                    ProgressToast.showSuccess('Sale deleted successfully!');
+                } catch (error) {
+                    console.error("Sale deletion failed:", error);
+                    ProgressToast.showError(`Deletion Failed: ${error.message}`);
+                }
+            }
+            ProgressToast.hide(200) ;
+            return;
+        }
+
+
+
         // Authentication
         //if (target.closest('#login-button')) return EventHandlers.auth.login();
         if (target.closest('#login-button, #login-button-bottom')) return EventHandlers.auth.login();
