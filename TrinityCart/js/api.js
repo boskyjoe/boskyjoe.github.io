@@ -3057,14 +3057,14 @@ export async function recordSalePayment(paymentData, user) {
 export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
 
-    const FieldValue = firebase.firestore.FieldValue;
-
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
     console.log(`[API] Initiating client-side transactional deletion for sale: ${saleId}`);
 
     return db.runTransaction(async (transaction) => {
         // --- READ PHASE ---
+        const FieldValue = firebase.firestore.FieldValue;
+        
         const saleDoc = await transaction.get(saleRef);
         if (!saleDoc.exists) {
             throw new Error("Sale document not found. It may have already been deleted.");
