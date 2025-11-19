@@ -5835,6 +5835,32 @@ const salesHistoryGridOptions = {
                 return buttonsHTML;
             }
         },
+        {
+            headerName: "Delete",
+            width: 120,
+            wrapText: false,
+            autoHeight: false,
+            cellClass: 'flex items-center justify-center',
+            cellRenderer: params => {
+                if (params.node.isRowPinned()) {
+                    return ''; // If it's a pinned row, return an empty string.
+                }
+
+                const docId = params.data.id;
+                const user = appState.currentUser;
+
+                const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-gray-400 hover:text-red-600"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+
+                let buttonsHTML = ``;
+                
+                if (user && (user.role === 'admin' || user.role === 'finance')) {
+                    buttonsHTML += `
+                        <button class="action-btn-icon action-btn-delete-sale" data-id="${docId}" title="Delete Sale">${deleteIcon}</button>
+                    `;
+                }
+                return buttonsHTML;
+            }
+        },
         { field: "audit.createdBy", headerName: "Created By", filter: 'agTextColumnFilter' }
     ],
     onFilterChanged: (event) => {
