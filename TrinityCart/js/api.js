@@ -3049,6 +3049,57 @@ export async function recordSalePayment(paymentData, user) {
 
 
 /**
+ * ✅ NEW (CLIENT-SIDE): Deletes a sale and reverses all associated transactions.
+ * Runs as a single atomic transaction from the client.
+ * Requires that the logged-in user has admin permissions set in Firestore Security Rules.
+ * @param {string} saleId - The ID of the sales invoice to delete.
+ */
+export async function deleteSaleAndReverseClientSide(saleId) {
+    const db = firebase.firestore();
+    const FieldValue = firebase.firestore.FieldValue;
+    const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
+
+    console.log(`[API] Initiating client-side transactional deletion for sale: ${saleId}`);
+
+    return db.runTransaction(async (transaction) => {
+        // --- READ PHASE ---
+        const saleDoc = await transaction.get(saleRef);
+        if (!saleDoc.exists) {
+            throw new Error("Sale document not found. It may have already been deleted.");
+        }
+        const saleData = saleDoc.data();
+
+        const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
+        const paymentsSnapshot = await transaction.get(paymentsQuery);
+
+        const donationsQuery = db.collection(DONATIONS_COLLECTION_PATH).where('relatedSaleId', '==', saleId);
+        const donationsSnapshot = await transaction.get(donationsQuery);
+
+        // --- WRITE PHASE ---
+
+        // A. Restock Inventory
+        for (const item of saleData.lineItems) {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            transaction.update(productRef, {
+                inventoryCount: FieldValue.increment(item.quantity)
+            });
+        }
+
+        // B. Delete Payments
+        paymentsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
+
+        // C. Delete Donations
+        donationsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
+        
+        // D. Delete the Sale itself
+        transaction.delete(saleRef);
+    });
+}
+
+
+
+
+/**
  * [ENHANCED] Voids a verified payment with proper payment status recalculation,
  * creating a reversing transaction and updating all related financial totals.
  * @param {string} paymentId - The document ID of the payment to void.
