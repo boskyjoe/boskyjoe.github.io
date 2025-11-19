@@ -420,9 +420,7 @@ const suppliersGridOptions = {
             editable: false, sortable: false, filter: false,
         }
     ],
-    defaultColDef: {
-        sortable: true, filter: true, resizable: true,
-    },
+    defaultColDef: { resizable: true, sortable: true, filter: true, wrapText: true, autoHeight: true, },
     rowData: [],
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
