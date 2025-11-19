@@ -3054,21 +3054,22 @@ export async function recordSalePayment(paymentData, user) {
  * Requires that the logged-in user has admin permissions set in Firestore Security Rules.
  * @param {string} saleId - The ID of the sales invoice to delete.
  */
+
+
 export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
-    const FieldValue = firebase.firestore.FieldValue;
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
-    console.log(`[API-Debug] Initiating deletion for sale: ${saleId}`);
+    console.log(`[API] Initiating MANUAL transactional deletion for sale: ${saleId}`);
 
     return db.runTransaction(async (transaction) => {
         // --- READ PHASE ---
-
         const saleDoc = await transaction.get(saleRef);
         if (!saleDoc.exists) {
-            throw new Error("Sale document not found. It may have already been deleted.");
+            throw new Error("Sale document not found.");
         }
         const saleData = saleDoc.data();
+
         console.log("[API-Debug] Successfully read sale document:", saleData);
 
         const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
@@ -3079,42 +3080,45 @@ export async function deleteSaleAndReverseClientSide(saleId) {
 
         // --- WRITE PHASE ---
 
-        // A. Restock Inventory
+        // A. Restock Inventory (MANUAL READ-CALCULATE-WRITE METHOD)
         console.log("[API-Debug] Starting inventory restock loop...");
         for (const item of saleData.lineItems) {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            
+            // 1. READ the product's current stock *inside the transaction*
+            const productDoc = await transaction.get(productRef);
+            if (!productDoc.exists) {
+                console.warn(`Product ${item.productName} not found. Cannot restock.`);
+                continue; // Skip this item
+            }
             console.log(`[API-Debug] --- Processing Item: ${item.productName} ---`);
             console.log(`[API-Debug] Raw item.quantity value:`, item.quantity);
             console.log(`[API-Debug] Type of item.quantity:`, typeof item.quantity);
 
+            const currentStock = productDoc.data().inventoryCount || 0;
             const quantityToRestock = Number(item.quantity);
-            console.log(`[API-Debug] Value after Number() conversion:`, quantityToRestock);
-            console.log(`[API-Debug] Type after Number() conversion:`, typeof quantityToRestock);
-
 
             if (isNaN(quantityToRestock)) {
-                console.error("[API-Debug] ❌ FAILED: Quantity is NaN. Throwing error.");
-                throw new Error(`Invalid data: Product "${item.productName}" has a non-numeric quantity ('${item.quantity}').`);
+                throw new Error(`Invalid data for product "${item.productName}". Deletion aborted.`);
             }
-            
-            console.log(`[API-Debug] ✅ PASSED: Quantity is a valid number. Proceeding with increment.`);
-           
 
-            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
-            transaction.update(productRef, {
-                inventoryCount: FieldValue.increment(quantityToRestock)
-            });
+            // 2. CALCULATE the new stock level
+            const newStock = currentStock + quantityToRestock;
+
+            // 3. WRITE the new, final number back. No FieldValue.increment() needed.
+            transaction.update(productRef, { inventoryCount: newStock });
         }
 
-        // B. Delete Payments
+        // B. Delete associated records
         paymentsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
-
-        // C. Delete Donations
         donationsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
         
-        // D. Delete the Sale itself
+        // C. Delete the sale itself
         transaction.delete(saleRef);
     });
 }
+
+
 
 
 
