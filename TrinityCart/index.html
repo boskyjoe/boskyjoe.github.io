@@ -1960,20 +1960,32 @@
                 <!--      VIEW: EXPENSE MANAGEMENT -->
                 <!-- ============================= -->
                 <div id="expenses-view" class="view space-y-8">
-
                     <!-- Main Card for the Expense Ledger -->
-                    <div class="bg-white rounded-lg shadow-lg">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
                         <!-- Card Header with Title -->
-                        <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 rounded-t-lg">
-                            <h3 class="text-lg font-semibold text-gray-800">Business Expense Ledger</h3>
-                            <p class="text-sm text-gray-500 mt-1">Log, edit, and manage all operational expenses
-                                directly in the grid below.</p>
+                        <div class="bg-gradient-to-r from-red-50 via-rose-50 to-red-50 border-b border-red-100 px-6 py-4 rounded-t-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-500 rounded-lg flex items-center justify-center shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                        Business Expense Ledger
+                                        <span class="ml-3 px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">LEDGER</span>
+                                    </h3>
+                                    <p class="text-sm text-gray-500 mt-1">Log, edit, and manage all operational expenses directly in the grid below.</p>
+                                </div>
+                            </div>
                         </div>
-
+                        
                         <!-- Card Body containing the AG-Grid -->
-                        <div class="p-2">
-                            <!-- This is where the grid and its toolbar will be rendered -->
-                            <div id="expenses-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                        <div class="p-6 bg-gradient-to-b from-white to-gray-50">
+                            <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <!-- This is where the grid and its toolbar will be rendered -->
+                                <div id="expenses-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
