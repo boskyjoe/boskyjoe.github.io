@@ -3059,7 +3059,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
     const FieldValue = firebase.firestore.FieldValue;
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
-    console.log(`[API] Initiating client-side transactional deletion for sale: ${saleId}`);
+    console.log(`[API-Debug] Initiating deletion for sale: ${saleId}`);
 
     return db.runTransaction(async (transaction) => {
         // --- READ PHASE ---
@@ -3069,6 +3069,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
             throw new Error("Sale document not found. It may have already been deleted.");
         }
         const saleData = saleDoc.data();
+        console.log("[API-Debug] Successfully read sale document:", saleData);
 
         const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
         const paymentsSnapshot = await transaction.get(paymentsQuery);
@@ -3079,15 +3080,26 @@ export async function deleteSaleAndReverseClientSide(saleId) {
         // --- WRITE PHASE ---
 
         // A. Restock Inventory
+        console.log("[API-Debug] Starting inventory restock loop...");
         for (const item of saleData.lineItems) {
-            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            console.log(`[API-Debug] --- Processing Item: ${item.productName} ---`);
+            console.log(`[API-Debug] Raw item.quantity value:`, item.quantity);
+            console.log(`[API-Debug] Type of item.quantity:`, typeof item.quantity);
 
             const quantityToRestock = Number(item.quantity);
+            console.log(`[API-Debug] Value after Number() conversion:`, quantityToRestock);
+            console.log(`[API-Debug] Type after Number() conversion:`, typeof quantityToRestock);
+
 
             if (isNaN(quantityToRestock)) {
-                throw new Error(`Invalid data in invoice: Product "${item.productName}" has a non-numeric quantity ('${item.quantity}'). Deletion aborted.`);
+                console.error("[API-Debug] ❌ FAILED: Quantity is NaN. Throwing error.");
+                throw new Error(`Invalid data: Product "${item.productName}" has a non-numeric quantity ('${item.quantity}').`);
             }
+            
+            console.log(`[API-Debug] ✅ PASSED: Quantity is a valid number. Proceeding with increment.`);
+           
 
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
             transaction.update(productRef, {
                 inventoryCount: FieldValue.increment(quantityToRestock)
             });
