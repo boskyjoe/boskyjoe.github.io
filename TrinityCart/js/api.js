@@ -3058,7 +3058,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
 
     const FieldValue = firebase.firestore.FieldValue;
-    
+
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
     console.log(`[API] Initiating client-side transactional deletion for sale: ${saleId}`);
@@ -3082,8 +3082,15 @@ export async function deleteSaleAndReverseClientSide(saleId) {
         // A. Restock Inventory
         for (const item of saleData.lineItems) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            const quantityToRestock = Number(item.quantity);
+
+            if (isNaN(quantityToRestock)) {
+                // This error will abort the entire transaction.
+                throw new Error(`Invalid data in invoice: Product "${item.productName}" has a non-numeric quantity ('${item.quantity}'). Deletion aborted to ensure data integrity.`);
+            }
+
             transaction.update(productRef, {
-                inventoryCount: FieldValue.increment(item.quantity)
+                inventoryCount: FieldValue.increment(quantityToRestock)
             });
         }
 
