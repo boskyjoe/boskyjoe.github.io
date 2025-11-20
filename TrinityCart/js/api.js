@@ -3088,6 +3088,17 @@ export async function deleteSaleAndReverseClientSide(saleId) {
 
     console.log(`[API] Found ${paymentsSnapshot.size} payments and ${donationsSnapshot.size} donations to delete.`);
 
+    const collectionsToDelete = ['expenses']; // Add 'payments', 'donations' if they are sub-collections
+    for (const subCollection of collectionsToDelete) {
+        const snapshot = await saleRef.collection(subCollection).get();
+        if (!snapshot.empty) {
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            console.log(`[API] Deleted ${snapshot.size} documents from sub-collection: ${subCollection}`);
+        }
+    }
+
     // --- STEP 2: PERFORM ALL WRITES IN A SINGLE ATOMIC TRANSACTION ---
     console.log('[API] Phase 2: Starting atomic write transaction...');
     return db.runTransaction(async (transaction) => {
