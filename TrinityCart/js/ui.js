@@ -14704,7 +14704,8 @@ const consignmentDetailModalGridOptions = {
         { field: "sellingPrice", headerName: "Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
         { field: "totalSaleValue", headerName: "Total Sale", width: 130, valueGetter: p => (p.data.quantitySold || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
         { field: "totalGiftValue", headerName: "Total Gift", width: 130, valueGetter: p => (p.data.quantityGifted || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
-        { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) }
+        { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
+        { field: "totalExpenses", headerName: "Total Expenses", width: 130, valueGetter: p => (p.data.totalExpenses || 0), valueFormatter: p => formatCurrency(p.value) }
     ]
 };
 
