@@ -6707,6 +6707,7 @@ const salePaymentHistoryGridOptions = {
     theme: 'legacy',
     columnDefs: [
         { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "transactionRef", headerName: "Reference #", width: 140 },
         { 
             field: "amountPaid", 
             headerName: "Amount Paid", 
@@ -6721,7 +6722,7 @@ const salePaymentHistoryGridOptions = {
             valueFormatter: p => (p.value && p.value !== 0) ? formatCurrency(p.value) : '',
             cellStyle: params => params.value < 0 ? { color: 'red' } : { 'font-weight': 'bold', color: 'purple' }
         },
-        { field: "paymentMode", headerName: "Mode", flex: 1 },
+        { field: "paymentMode", headerName: "Mode", width: 150},
         { 
             field: "status", 
             headerName: "Status", 
