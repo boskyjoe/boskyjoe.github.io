@@ -14695,7 +14695,7 @@ let consignmentDetailModalGridApi = null;
 const consignmentDetailModalGridOptions = {
     theme: 'legacy',
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1 },
+        { field: "productName", headerName: "Product",width: 250},
         { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
         { field: "quantitySold", headerName: "Qty Sold", width: 100 },
         { field: "quantityGifted", headerName: "Qty Gift", width: 100 },
@@ -14704,8 +14704,7 @@ const consignmentDetailModalGridOptions = {
         { field: "sellingPrice", headerName: "Price", width: 120, valueFormatter: p => formatCurrency(p.value) },
         { field: "totalSaleValue", headerName: "Total Sale", width: 130, valueGetter: p => (p.data.quantitySold || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
         { field: "totalGiftValue", headerName: "Total Gift", width: 130, valueGetter: p => (p.data.quantityGifted || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
-        { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) },
-        { field: "totalExpenses", headerName: "Total Expenses", width: 130, valueGetter: p => (p.data.totalExpenses || 0), valueFormatter: p => formatCurrency(p.value) }
+        { field: "totalValue", headerName: "Total Value", width: 130, valueGetter: p => (p.data.quantityCheckedOut || 0) * (p.data.sellingPrice || 0), valueFormatter: p => formatCurrency(p.value) }
     ]
 };
 
