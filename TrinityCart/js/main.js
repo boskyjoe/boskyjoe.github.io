@@ -531,6 +531,8 @@ async function handleRejectConsignmentClick() {
  * [NEW] Handles the logic when a user clicks "Request New Consignment".
  * It determines the user's role and teams, then configures and shows the request modal.
  */
+
+let adminTeamSelectChoice = null;
 async function handleRequestConsignmentClick() {
     const user = appState.currentUser;
     if (!user) return alert("Please log in.");
@@ -563,14 +565,36 @@ async function handleRequestConsignmentClick() {
         if (user.role === 'admin') {
             // Admin can select from any team
             adminTeamDiv.classList.remove('hidden');
-            adminTeamSelect.innerHTML = '<option value="">Select a team...</option>';
-            // We need a way to get all teams here, let's assume it's in masterData
-            masterData.teams.forEach(team => {
-                const option = document.createElement('option');
-                option.value = team.id;
-                option.textContent = team.teamName;
-                adminTeamSelect.appendChild(option);
+
+            // ✅ Initialize Choices.js for the admin team select dropdown
+            if (adminTeamSelectChoice) {
+                adminTeamSelectChoice.destroy();
+            }
+            
+            adminTeamSelectChoice = new Choices(adminTeamSelect, {
+                searchEnabled: true,
+                shouldSort: false,
+                itemSelectText: 'Press to select',
+                placeholder: true,
+                placeholderValue: 'Loading teams...'
             });
+
+            // Prepare choices in the format Choices.js expects
+            const teamChoices = masterData.teams.map(team => ({
+                value: team.id,
+                label: team.teamName
+            }));
+
+            // Use setChoices to load the data with a proper placeholder
+            adminTeamSelectChoice.setChoices(
+                [
+                    { value: '', label: 'Search or select a team', selected: true, disabled: true },
+                    ...teamChoices
+                ],
+                'value',
+                'label',
+                true // Replace all existing choices
+            );
         } else {
             // For non-admins, check their memberships
             const membershipInfo = await getUserMembershipInfo(user.email);
