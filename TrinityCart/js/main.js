@@ -7953,6 +7953,7 @@ async function handleDownloadConsignmentDetail() {
             totalExpenses: formatCurrency(orderData.totalExpenses || 0),
             totalAmountPaid: formatCurrency(orderData.totalAmountPaid || 0),
             balanceDue: formatCurrency(orderData.balanceDue || 0),
+            totalExpenses:formatCurrency(orderData.totalExpenses || 0),
             items: items // Pass the array of item objects
         };
 
