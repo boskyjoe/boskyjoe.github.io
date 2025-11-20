@@ -3055,70 +3055,65 @@ export async function recordSalePayment(paymentData, user) {
  * @param {string} saleId - The ID of the sales invoice to delete.
  */
 
-
+/**
+ * ✅ FINAL & CORRECTED (Client-Side without Rule Changes): Deletes a sale and reverses transactions.
+ * This version reads the necessary documents BEFORE the transaction starts to avoid
+ * client-side transaction query limitations.
+ * @param {string} saleId - The ID of the sales invoice to delete.
+ */
 export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
+    const FieldValue = firebase.firestore.FieldValue;
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
-    console.log(`[API] Initiating MANUAL transactional deletion for sale: ${saleId}`);
+    console.log(`[API] Initiating client-side deletion for sale: ${saleId}`);
 
+    // --- STEP 1: READ ALL NECESSARY DATA (OUTSIDE THE TRANSACTION) ---
+    console.log('[API] Phase 1: Reading all related documents...');
+    
+    // Get the main sale document
+    const saleDoc = await saleRef.get();
+    if (!saleDoc.exists) {
+        throw new Error("Sale document not found. It may have already been deleted.");
+    }
+    const saleData = saleDoc.data();
+
+    // Get all associated payments
+    const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
+    const paymentsSnapshot = await paymentsQuery.get();
+    
+    // Get all associated donations
+    const donationsQuery = db.collection(DONATIONS_COLLECTION_PATH).where('relatedSaleId', '==', saleId);
+    const donationsSnapshot = await donationsQuery.get();
+
+    console.log(`[API] Found ${paymentsSnapshot.size} payments and ${donationsSnapshot.size} donations to delete.`);
+
+    // --- STEP 2: PERFORM ALL WRITES IN A SINGLE ATOMIC TRANSACTION ---
+    console.log('[API] Phase 2: Starting atomic write transaction...');
     return db.runTransaction(async (transaction) => {
-        // --- READ PHASE ---
-        const saleDoc = await transaction.get(saleRef);
-        if (!saleDoc.exists) {
-            throw new Error("Sale document not found.");
-        }
-        const saleData = saleDoc.data();
-
-        console.log("[API-Debug] Successfully read sale document:", saleData);
-
-        const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
-        const paymentsSnapshot = await transaction.get(paymentsQuery);
-
-        const donationsQuery = db.collection(DONATIONS_COLLECTION_PATH).where('relatedSaleId', '==', saleId);
-        const donationsSnapshot = await transaction.get(donationsQuery);
-
-        // --- WRITE PHASE ---
-
-        // A. Restock Inventory (MANUAL READ-CALCULATE-WRITE METHOD)
-        console.log("[API-Debug] Starting inventory restock loop...");
+        
+        // A. Restock Inventory
         for (const item of saleData.lineItems) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
-            
-            // 1. READ the product's current stock *inside the transaction*
-            const productDoc = await transaction.get(productRef);
-            if (!productDoc.exists) {
-                console.warn(`Product ${item.productName} not found. Cannot restock.`);
-                continue; // Skip this item
-            }
-            console.log(`[API-Debug] --- Processing Item: ${item.productName} ---`);
-            console.log(`[API-Debug] Raw item.quantity value:`, item.quantity);
-            console.log(`[API-Debug] Type of item.quantity:`, typeof item.quantity);
-
-            const currentStock = productDoc.data().inventoryCount || 0;
             const quantityToRestock = Number(item.quantity);
 
             if (isNaN(quantityToRestock)) {
-                throw new Error(`Invalid data for product "${item.productName}". Deletion aborted.`);
+                throw new Error(`Invalid data in invoice: Product "${item.productName}" has a non-numeric quantity.`);
             }
-
-            // 2. CALCULATE the new stock level
-            const newStock = currentStock + quantityToRestock;
-
-            // 3. WRITE the new, final number back. No FieldValue.increment() needed.
-            transaction.update(productRef, { inventoryCount: newStock });
+            // NOTE: This is now a "blind" increment. It's safe inside a transaction.
+            transaction.update(productRef, { inventoryCount: FieldValue.increment(quantityToRestock) });
         }
 
-        // B. Delete associated records
+        // B. Delete Payments
         paymentsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
+
+        // C. Delete Donations
         donationsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
         
-        // C. Delete the sale itself
+        // D. Delete the Sale itself
         transaction.delete(saleRef);
     });
 }
-
-
 
 
 
