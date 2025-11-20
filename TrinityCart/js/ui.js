@@ -6892,6 +6892,16 @@ export function showView(viewId) {
         }
     }
 
+    // ✅ NEW: Add this block to hide the consignment detail panel when navigating away.
+    const detailPanel = document.getElementById('consignment-detail-panel');
+    if (detailPanel && viewId !== 'consignment-view' && !detailPanel.classList.contains('hidden')) {
+        console.log('[ui.js] Navigating away from consignment view. Hiding detail panel.');
+        hideConsignmentDetailPanel(); // Use your existing helper function
+    }
+
+
+
+
     appState.activeView = viewId;
     views.forEach(view => {
         view.classList.toggle('active', view.id === viewId);
