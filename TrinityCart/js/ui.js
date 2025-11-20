@@ -14036,7 +14036,7 @@ const dashboardSoldGridOptions = {
     columnDefs: [
         { field: "categoryName", headerName: "Category", width: 250 },
         { field: "productName", headerName: "Product",width: 300},
-        { field: "totalQuantity", headerName: "Units Sold", width: 120, cellClass: 'text-center font-bold', sort: 'desc' }
+        { field: "totalQuantity", headerName: "Units Sold", width: 130, cellClass: 'text-center font-bold', sort: 'desc' }
     ],
     onGridReady: params => { dashboardSoldGridApi = params.api; },
     onFilterChanged: (event) => {
