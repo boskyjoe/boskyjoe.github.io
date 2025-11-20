@@ -811,7 +811,6 @@ export async function generateConsignmentDetailPDF(data) {
                 <td>${item.quantityDamaged || 0}</td>
                 <td>${formatCurrency(sellingPrice)}</td>
                 <td>${formatCurrency(totalSaleValue)}</td>
-                <td>${formatCurrency(totalExpenses)}</td>
             </tr>
         `;
     }).join('');
