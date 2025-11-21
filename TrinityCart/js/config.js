@@ -91,7 +91,7 @@ export const storeConfig = {
         email:'sscindiranagar@gmail.com',
         paymentDetails: {
             bankName: 'Default Bank Name',
-            branch:'' ,
+            branch:'Bangalore Indira Nagar' ,
             accountNumber: '0000 0000 0000 0000',
             ifscCode: 'BANK0000000',
             accountHolderName: 'Default Account Holder',
@@ -107,7 +107,7 @@ export const storeConfig = {
         email:'sscindiranagar@gmail.com',
         paymentDetails: {
             bankName: 'South Indian Bank',
-            branch:'' ,
+            branch:'Bangalore Indira Nagar' ,
             accountNumber: '0123 4567 8901 2345',
             ifscCode: 'SIBL0000123',
             accountHolderName: 'St. Sebastian\'s Church',
