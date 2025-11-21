@@ -7751,6 +7751,8 @@ async function handleGenerateInvoice(invoiceId) {
 
         const storeDetails = storeConfig[invoiceData.store] || storeConfig['default'];
 
+        console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
+
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
             copyType: 'ORIGINAL FOR RECIPIENT',
