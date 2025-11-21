@@ -7758,7 +7758,7 @@ async function handleGenerateInvoice(invoiceId) {
             copyType: 'ORIGINAL FOR RECIPIENT',
             
             // Company Details
-            companyName: appState.ChurchName,
+            companyName: storeDetails.companyName,
             address1: storeDetails.address,
             city: storeDetails.city,
             state: storeDetails.state,
