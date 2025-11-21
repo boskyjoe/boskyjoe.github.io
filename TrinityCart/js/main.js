@@ -7822,11 +7822,15 @@ async function handleGenerateInvoice(invoiceId) {
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
             description: invoiceData.payments?.[0]?.notes || '',
-            bankName: storeDetails.bankName,
-            accountNumber: storeDetails.accountNumber,
-            ifscCode: storeDetails.ifscCode,
-            accountHolderName: storeDetails.accountHolderName,
-            termsAndConditions: storeDetails.terms
+
+            termsAndConditions: storeDetails.terms,
+
+            bankName: storeDetails.paymentDetails.bankName,
+            accountNumber: storeDetails.paymentDetails.accountNumber,
+            ifscCode: storeDetails.paymentDetails.ifscCode,
+            accountHolderName: storeDetails.paymentDetails.accountHolderName,
+            upiQRCodeUrl: storeDetails.paymentDetails.upiQRCodeUrl,
+
         };
 
         // 3. CALL THE PDF GENERATOR
