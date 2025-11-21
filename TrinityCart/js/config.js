@@ -88,7 +88,14 @@ export const storeConfig = {
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
         signatoryTitle: 'Proprietor, Tasty Treats',
-        email:'sscindiranagar@gmail.com'
+        email:'sscindiranagar@gmail.com',
+        paymentDetails: {
+            bankName: 'Default Bank Name',
+            accountNumber: '0000 0000 0000 0000',
+            ifscCode: 'BANK0000000',
+            accountHolderName: 'Default Account Holder',
+            upiQRCodeUrl: 'https://placehold.co/100x100?text=UPI+QR' // A placeholder QR code
+        }
     },
     // Specific details for Church Store
     'Church Store': {
@@ -96,7 +103,14 @@ export const storeConfig = {
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
         signatoryTitle: 'Proprietor, Tasty Treats',
-        email:'sscindiranagar@gmail.com'
+        email:'sscindiranagar@gmail.com',
+        paymentDetails: {
+            bankName: 'South Indian Bank',
+            accountNumber: '0123 4567 8901 2345',
+            ifscCode: 'SIBL0000123',
+            accountHolderName: 'St. Sebastian\'s Church',
+            upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
+        }
     },
     // Specific details for Tasty Treats
     'Tasty Treats': {
@@ -108,6 +122,13 @@ export const storeConfig = {
         taxInfo: {
             cgstRate: 9, // Central GST as a percentage (e.g., 9 for 9%)
             sgstRate: 9  // State GST as a percentage (e.g., 9 for 9%)
+        },
+        paymentDetails: {
+            bankName: 'South Indian Bank',
+            accountNumber: '0399073000000912',
+            ifscCode: 'SIBL0000399',
+            accountHolderName: 'Tasty Treats',
+            upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
         }
     }
 };
