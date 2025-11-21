@@ -91,6 +91,7 @@ export const storeConfig = {
         email:'sscindiranagar@gmail.com',
         paymentDetails: {
             bankName: 'Default Bank Name',
+            branch:'' ,
             accountNumber: '0000 0000 0000 0000',
             ifscCode: 'BANK0000000',
             accountHolderName: 'Default Account Holder',
@@ -106,6 +107,7 @@ export const storeConfig = {
         email:'sscindiranagar@gmail.com',
         paymentDetails: {
             bankName: 'South Indian Bank',
+            branch:'' ,
             accountNumber: '0123 4567 8901 2345',
             ifscCode: 'SIBL0000123',
             accountHolderName: 'St. Sebastian\'s Church',
@@ -124,7 +126,8 @@ export const storeConfig = {
             sgstRate: 9  // State GST as a percentage (e.g., 9 for 9%)
         },
         paymentDetails: {
-            bankName: 'South Indian Bank',
+            bankName: 'South Indian Bank, Bangalore Indira Nagar',
+            branch:'' ,
             accountNumber: '0399073000000912',
             ifscCode: 'SIBL0000399',
             accountHolderName: 'Tasty Treats',
