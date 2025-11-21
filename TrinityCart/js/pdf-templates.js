@@ -37,6 +37,7 @@ export function getTastyTreatsInvoiceHTML() {
                 <!-- Ship To -->
                 <td class="details-cell">
                     <h3>Ship To</h3>
+                    <p><strong>{{shipToCustomerName}}</strong></p>
                     <p>{{shipToAddress1}}</p>
                     <p>{{shipToCity}}, {{shipToState}} - {{shipToPincode}}</p>
                 </td>
