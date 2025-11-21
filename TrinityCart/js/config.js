@@ -127,7 +127,7 @@ export const storeConfig = {
         },
         paymentDetails: {
             bankName: 'South Indian Bank, Bangalore Indira Nagar',
-            branch:'' ,
+            branch:'Indiranagar Branch, Bangalore' ,
             accountNumber: '0399073000000912',
             ifscCode: 'SIBL0000399',
             accountHolderName: 'Tasty Treats',
