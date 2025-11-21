@@ -7825,7 +7825,9 @@ async function handleGenerateInvoice(invoiceId) {
 
             termsAndConditions: storeDetails.terms,
 
+            
             bankName: storeDetails.paymentDetails.bankName,
+            bankBranch:storeDetails.paymentDetails.branch,
             accountNumber: storeDetails.paymentDetails.accountNumber,
             ifscCode: storeDetails.paymentDetails.ifscCode,
             accountHolderName: storeDetails.paymentDetails.accountHolderName,
