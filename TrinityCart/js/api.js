@@ -2503,12 +2503,17 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
     return db.runTransaction(async (transaction) => {
         // --- PHASE 1: READ ALL NECESSARY DOCUMENTS ---
 
+        console.log(`[API-Verify] Starting transaction for payment: ${paymentId}`);
+
+
         // 1. READ the payment document.
         const paymentDoc = await transaction.get(paymentRef);
         if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
             throw new Error("Payment not found or is not pending verification.");
         }
         const paymentData = paymentDoc.data();
+
+        console.log("[API-Verify] Read payment document successfully.");
 
         // 2. Read the parent consignment order document to get its current financial state.
         const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
@@ -2518,6 +2523,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         }
         const orderData = orderDoc.data();
 
+        console.log("[API-Verify] Read parent order document successfully.");
 
         // 3. Query for any other pending payments for this order to manage the 'hasPendingPayments' flag.
         const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
@@ -2525,9 +2531,11 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
                                      .where('paymentStatus', '==', 'Pending Verification');
         const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
 
+        console.log(`[API-Verify] Found ${pendingSnapshot.size} pending payments for this order.`);
 
         // --- PHASE 2: CALCULATE NEW FINANCIAL STATE ---
 
+        console.log("[API-Verify] Calculating new financial state...");
         const currentPaid = orderData.totalAmountPaid || 0;
         const currentBalance = orderData.balanceDue || 0;
         const paymentAmount = paymentData.amountPaid || 0;
@@ -2535,10 +2543,13 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         const newTotalAmountPaid = currentPaid + paymentAmount;
         const newBalanceDue = currentBalance - paymentAmount;
 
+        console.log(`[API-Verify] New Totals Calculated: Paid=${newTotalAmountPaid}, Balance=${newBalanceDue}`);
+
 
         // --- PHASE 3: WRITE ALL CHANGES ---
 
 
+        console.log("[API-Verify] Preparing paymentStatus write operations...");
          // A. Update the payment document itself to "Verified".
         transaction.update(paymentRef, {
             paymentStatus: 'Verified',
@@ -2546,22 +2557,26 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
             verifiedOn: now
         });
 
+        console.log("[API-Verify]  paymentStatus write operations success");
+
+        console.log("[API-Verify] Preparing update order balance ...");
         // B. Update the parent consignment order with the new, manually calculated totals.
         // We are NOT using FieldValue.increment() here.
         transaction.update(orderRef, {
             totalAmountPaid: newTotalAmountPaid,
             balanceDue: newBalanceDue
         });
+        console.log("[API-Verify] order status updae successful");
 
         // C. Update the hasPendingPayments flag based on the query result.
         // Inside the transaction, the current payment still counts as "Pending".
         // So, if the size is exactly 1, it means we are verifying the LAST one.
         if (pendingSnapshot.size === 1) {
-            console.log(`[API] Last pending payment for order ${paymentData.orderId} verified. Clearing flag.`);
+            console.log(`[API-Verify]  Last pending payment for order ${paymentData.orderId} verified. Clearing flag.`);
             // We can merge this update with the one above for efficiency.
             transaction.update(orderRef, { hasPendingPayments: false });
         } else {
-            console.log(`[API] Order ${paymentData.orderId} still has ${pendingSnapshot.size - 1} other pending payments. Flag remains true.`);
+            console.log(`[API-Verify]  Order ${paymentData.orderId} still has ${pendingSnapshot.size - 1} other pending payments. Flag remains true.`);
         }
 
 
@@ -2584,6 +2599,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
                 recordedBy: adminUser.email
             });
         }
+        console.log("[API-Verify] All transaction writes queued successfully.");
     });
 }
 
