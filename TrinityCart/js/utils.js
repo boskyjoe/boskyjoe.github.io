@@ -35,44 +35,19 @@ export function formatCurrency(value) {
     return formatter.format(numberValue).replace('₹', currencySymbol);
 }
 
-let ToWordsLibrary = null;
 /**
- * ✅ NEW & ROBUST: Dynamically imports the 'to-words' library on demand.
- * This is the most reliable way to load an external script in a module.
- * @returns {Promise<object>} A promise that resolves with the ToWords class.
- */
-async function getToWords() {
-    // If we have already loaded the library, return it immediately.
-    if (ToWordsLibrary) {
-        return ToWordsLibrary;
-    }
-
-    try {
-        console.log("[Utils] Dynamically importing 'to-words' library for the first time...");
-        // The import() function returns a promise that resolves with the module's exports.
-        // For this library, the main export is on the 'default' property.
-        const module = await import('https://cdn.jsdelivr.net/npm/to-words@3.2.0/dist/to-words.mjs');
-        ToWordsLibrary = module.default; // Cache the loaded class
-        console.log("[Utils] 'to-words' library successfully imported.");
-        return ToWordsLibrary;
-    } catch (error) {
-        console.error("Fatal: Could not load the 'to-words' library from CDN.", error);
-        throw new Error("Number to words conversion service is unavailable.");
-    }
-}
-
-
-/**
- * ✅ CORRECTED: Converts a number into Indian currency words.
- * It now uses the dynamic loader function to ensure the library is available.
+ * ✅ SIMPLIFIED & CORRECT: Converts a number into Indian currency words.
+ * Assumes the 'to-words' library has been loaded via a <script> tag in index.html.
  * @param {number} num - The number to convert.
- * @returns {Promise<string>} A promise that resolves with the amount in words.
+ * @returns {string} The amount in words.
  */
-export async function numberToWords(num) {
-    // 1. Get the library, which will either be loaded from cache or fetched from the network.
-    const ToWords = await getToWords();
+export function numberToWords(num) {
+    // Safety check in case the library fails to load for any reason
+    if (typeof ToWords === 'undefined') {
+        console.error("The 'ToWords' library is not available. Please check the script tag in index.html.");
+        return "Conversion Error";
+    }
 
-    // 2. The rest of your logic is now guaranteed to work.
     const toWordsConverter = new ToWords({
         localeCode: 'en-IN',
         converterOptions: {
@@ -87,6 +62,7 @@ export async function numberToWords(num) {
     });
 
     try {
+        // This is now a synchronous function, it does not need to be async.
         return toWordsConverter.convert(num) + ' Only';
     } catch (error) {
         console.error("Failed to convert number to words:", error);
