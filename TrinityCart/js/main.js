@@ -7753,6 +7753,17 @@ async function handleGenerateInvoice(invoiceId) {
 
         console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
 
+        const ToWords = window.ToWords;
+
+        if (typeof ToWords !== 'undefined') {            
+            // 2. Call the function, passing the ToWords class
+            const amountInWords = numberToWords(invoiceData.financials.totalAmount || 0, ToWords); 
+            
+            console.log(`The amount in words is: ${amountInWords}`);
+        } else {
+            console.error("External library (ToWords) not found. Check HTML script tag.");
+        }
+
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
             copyType: 'ORIGINAL FOR RECIPIENT',
@@ -7820,7 +7831,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: numberToWords(invoiceData.financials.totalAmount || 0),
+            amountInWords: amountInWords,
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
