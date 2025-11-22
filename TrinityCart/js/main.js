@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency,numberToWords,nativeNumberToWords } from './utils.js'; 
+import { formatCurrency } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
@@ -7822,7 +7822,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: numberToWords(invoiceData.financials.totalAmount || 0, ToWords),
+            amountInWords: 'Not AV',
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
