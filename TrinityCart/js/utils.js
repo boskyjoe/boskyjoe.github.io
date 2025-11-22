@@ -35,34 +35,53 @@ export function formatCurrency(value) {
     return formatter.format(numberValue).replace('₹', currencySymbol);
 }
 
-
+let ToWordsLibrary = null;
 /**
- * ✅ NEW: Converts a number into Indian currency words (Rupees and Paise).
- * Uses the 'to-words' library.
- * @param {number} num - The number to convert.
- * @returns {string} The amount in words (e.g., "Rupees One Thousand Two Hundred and Fifty Only").
+ * ✅ NEW & ROBUST: Dynamically imports the 'to-words' library on demand.
+ * This is the most reliable way to load an external script in a module.
+ * @returns {Promise<object>} A promise that resolves with the ToWords class.
  */
-export function numberToWords(num) {
-    if (typeof toWords === 'undefined') {
-        console.error("The 'to-words' library is not loaded.");
-        return "Number to words conversion unavailable.";
+async function getToWords() {
+    // If we have already loaded the library, return it immediately.
+    if (ToWordsLibrary) {
+        return ToWordsLibrary;
     }
 
+    try {
+        console.log("[Utils] Dynamically importing 'to-words' library for the first time...");
+        // The import() function returns a promise that resolves with the module's exports.
+        // For this library, the main export is on the 'default' property.
+        const module = await import('https://cdn.jsdelivr.net/npm/to-words@3.2.0/dist/to-words.mjs');
+        ToWordsLibrary = module.default; // Cache the loaded class
+        console.log("[Utils] 'to-words' library successfully imported.");
+        return ToWordsLibrary;
+    } catch (error) {
+        console.error("Fatal: Could not load the 'to-words' library from CDN.", error);
+        throw new Error("Number to words conversion service is unavailable.");
+    }
+}
+
+
+/**
+ * ✅ CORRECTED: Converts a number into Indian currency words.
+ * It now uses the dynamic loader function to ensure the library is available.
+ * @param {number} num - The number to convert.
+ * @returns {Promise<string>} A promise that resolves with the amount in words.
+ */
+export async function numberToWords(num) {
+    // 1. Get the library, which will either be loaded from cache or fetched from the network.
+    const ToWords = await getToWords();
+
+    // 2. The rest of your logic is now guaranteed to work.
     const toWordsConverter = new ToWords({
-        localeCode: 'en-IN', // Use Indian English numbering (Lakhs, Crores)
+        localeCode: 'en-IN',
         converterOptions: {
-            currency: true,          // Enable currency mode
-            ignoreDecimal: false,    // Include the decimal part
-            ignoreZeroCurrency: false,
-            currencyOptions: {       // Define the currency names
+            currency: true,
+            currencyOptions: {
                 name: 'Rupee',
                 plural: 'Rupees',
                 symbol: '₹',
-                fractionalUnit: {
-                    name: 'Paisa',
-                    plural: 'Paise',
-                    symbol: '',
-                },
+                fractionalUnit: { name: 'Paisa', plural: 'Paise', symbol: '' },
             }
         }
     });
