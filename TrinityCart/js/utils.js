@@ -45,3 +45,42 @@ export function numberToWords(num) {
     // A full implementation is very long. Let's just return the number as a string for now.
     return `${num.toFixed(2)} in words (placeholder)`; 
 }
+
+/**
+ * ✅ NEW: Converts a number into Indian currency words (Rupees and Paise).
+ * Uses the 'to-words' library.
+ * @param {number} num - The number to convert.
+ * @returns {string} The amount in words (e.g., "Rupees One Thousand Two Hundred and Fifty Only").
+ */
+export function numberToWords(num) {
+    if (typeof toWords === 'undefined') {
+        console.error("The 'to-words' library is not loaded.");
+        return "Number to words conversion unavailable.";
+    }
+
+    const toWordsConverter = new ToWords({
+        localeCode: 'en-IN', // Use Indian English numbering (Lakhs, Crores)
+        converterOptions: {
+            currency: true,          // Enable currency mode
+            ignoreDecimal: false,    // Include the decimal part
+            ignoreZeroCurrency: false,
+            currencyOptions: {       // Define the currency names
+                name: 'Rupee',
+                plural: 'Rupees',
+                symbol: '₹',
+                fractionalUnit: {
+                    name: 'Paisa',
+                    plural: 'Paise',
+                    symbol: '',
+                },
+            }
+        }
+    });
+
+    try {
+        return toWordsConverter.convert(num) + ' Only';
+    } catch (error) {
+        console.error("Failed to convert number to words:", error);
+        return "Error in conversion";
+    }
+}
