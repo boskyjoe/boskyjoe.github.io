@@ -13,17 +13,18 @@ import { EVENTS_COLLECTION_PATH } from './config.js';
 
 import { PURCHASE_INVOICES_COLLECTION_PATH, SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH } from './config.js';
 
-import { SALES_CATALOGUES_COLLECTION_PATH,
-        CHURCH_TEAMS_COLLECTION_PATH,USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
-        CONSIGNMENT_ORDERS_COLLECTION_PATH,
-        CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH,SALES_COLLECTION_PATH,
-    SALES_PAYMENTS_LEDGER_COLLECTION_PATH,DONATIONS_COLLECTION_PATH,
-    DONATION_SOURCES,          
-    getDonationSourceByStore,EXPENSES_COLLECTION_PATH,EXPENSE_RECEIPTS_STORAGE_PATH,imageKitConfig
+import {
+    SALES_CATALOGUES_COLLECTION_PATH,
+    CHURCH_TEAMS_COLLECTION_PATH, USER_TEAM_MEMBERSHIPS_COLLECTION_PATH,
+    CONSIGNMENT_ORDERS_COLLECTION_PATH,
+    CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,
+    SALES_PAYMENTS_LEDGER_COLLECTION_PATH, DONATIONS_COLLECTION_PATH,
+    DONATION_SOURCES,
+    getDonationSourceByStore, EXPENSES_COLLECTION_PATH, EXPENSE_RECEIPTS_STORAGE_PATH, imageKitConfig
 } from './config.js';
 
 import { masterData } from './masterData.js';
-import { formatCurrency } from './utils.js'; 
+import { formatCurrency } from './utils.js';
 
 
 /**
@@ -35,12 +36,12 @@ import { formatCurrency } from './utils.js';
 export async function createUserRecord(user, role) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     // Use the user's UID as the document ID, as per your data model.
     const userRef = db.collection(USERS_COLLECTION_PATH).doc(user.uid);
 
     console.log(`Creating new user record for ${user.email} with role: ${role}`);
-    
+
     // Use set() to create the document with a specific ID and all required fields.
     return userRef.set({
         // --- Your specified fields ---
@@ -98,12 +99,12 @@ export async function getItemsForCatalogue(catalogueId) {
 export async function getVendors() {
     try {
         const response = await fetch(`${API_URL}?action=getVendors`);
-        
+
         // Add response status check
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         // Check if response is JSON
         const contentType = response.headers.get('content-type');
         if (!contentType?.includes('application/json')) {
@@ -111,7 +112,7 @@ export async function getVendors() {
             console.error('Non-JSON response:', text);
             throw new Error('Server returned HTML instead of JSON - check your deployment');
         }
-        
+
         return await response.json();
     } catch (error) {
         console.error("Failed to fetch vendors:", error);
@@ -126,12 +127,12 @@ async function postData(action, data, userEmail) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, data, userEmail }),
         });
-        
+
         // Add response status check
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         // Check if response is JSON
         const contentType = response.headers.get('content-type');
         if (!contentType?.includes('application/json')) {
@@ -139,16 +140,16 @@ async function postData(action, data, userEmail) {
             console.error('Non-JSON response:', text);
             throw new Error('Server returned HTML instead of JSON - check your deployment');
         }
-        
+
         const result = await response.json();
-        
+
         // Log successful operations for debugging
         if (result.success) {
             console.log(`✅ ${action} completed successfully`);
         } else {
             console.warn(`⚠️ ${action} failed:`, result.error || result.message);
         }
-        
+
         return result;
     } catch (error) {
         console.error(`Action ${action} failed:`, error);
@@ -162,7 +163,7 @@ export async function addVendor(vendorData, userEmail) {
         console.error('Missing required fields for addVendor');
         return { success: false, error: 'vendorName and userEmail are required' };
     }
-    
+
     return postData('addVendor', vendorData, userEmail);
 }
 
@@ -172,7 +173,7 @@ export async function updateVendor(vendorData, userEmail) {
         console.error('Missing required fields for updateVendor');
         return { success: false, error: 'vendorId and userEmail are required' };
     }
-    
+
     return postData('updateVendor', vendorData, userEmail);
 }
 
@@ -182,7 +183,7 @@ export async function setVendorStatus(vendorId, isActive, userEmail) {
         console.error('Missing or invalid fields for setVendorStatus');
         return { success: false, error: 'vendorId, isActive (boolean), and userEmail are required' };
     }
-    
+
     return postData('setVendorStatus', { vendorId, isActive }, userEmail);
 }
 
@@ -190,9 +191,9 @@ export async function setVendorStatus(vendorId, isActive, userEmail) {
 export async function testAPI() {
     console.log('🔍 Testing API connection...');
     console.log('API URL:', API_URL);
-    
+
     const vendors = await getVendors();
-    
+
     if (Array.isArray(vendors)) {
         console.log(`✅ API working! Found ${vendors.length} vendors`);
         return true;
@@ -215,7 +216,7 @@ export async function getSuppliers() {
         const snapshot = await db.collection(SUPPLIERS_COLLECTION_PATH).orderBy('supplierName').get();
         const suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log(`[api.js] Firestore returned ${suppliers.length} suppliers.`, suppliers);
-        return suppliers ;
+        return suppliers;
     } catch (error) {
         console.error("[api.js] Error fetching suppliers from Firestore:", error);
         throw error;
@@ -356,7 +357,7 @@ export async function setSaleTypeStatus(docId, newStatus, user) {
 
 export async function getPaymentModes() {
     const db = firebase.firestore();
-    console.log("api.js:getPaymentModes") ;
+    console.log("api.js:getPaymentModes");
     try {
         const snapshot = await db.collection(PAYMENT_MODES_COLLECTION_PATH).orderBy('paymentMode').get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -400,7 +401,7 @@ export async function setPaymentModeStatus(docId, newStatus, user) {
 
 export async function getSeasons() {
     const db = firebase.firestore();
-    console.log("api.js:getSeasons") ;
+    console.log("api.js:getSeasons");
     try {
         const snapshot = await db.collection(SEASONS_COLLECTION_PATH).orderBy('startDate', 'desc').get();
 
@@ -409,8 +410,8 @@ export async function getSeasons() {
         console.error("Error fetching Seasons:", error);
         throw error;
     }
-    
-    
+
+
 }
 
 export async function addSeason(seasonData, user) {
@@ -450,16 +451,16 @@ export async function setSeasonStatus(docId, newStatus, user) {
 
 export async function getSalesEvents() {
     const db = firebase.firestore();
-    console.log("api.js:getSalesEvents") ;
+    console.log("api.js:getSalesEvents");
 
     try {
         const snapshot = await db.collection(EVENTS_COLLECTION_PATH).orderBy('eventStartDate', 'desc').get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-         console.error("Error fetching Sales Event:", error);
+        console.error("Error fetching Sales Event:", error);
         throw error;
     }
-    
+
 }
 
 export async function addSalesEvent(eventData, user) {
@@ -520,7 +521,7 @@ export async function getTeamsForUser(userEmail) {
     const db = firebase.firestore();
     const membershipDocId = userEmail.toLowerCase();
     const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
-    
+
     const doc = await membershipRef.get();
 
     if (doc.exists) {
@@ -688,7 +689,7 @@ export async function removeTeamMember(teamId, memberId, memberEmail) {
 
 export async function getUsersWithRoles() {
     const db = firebase.firestore();
-    console.log("api.js:getUsersWithRoles") ;
+    console.log("api.js:getUsersWithRoles");
     try {
         const snapshot = await db.collection(USERS_COLLECTION_PATH).get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -780,7 +781,7 @@ export async function addProduct(productData, user) {
         ...productData,
         itemId: itemId,
         isActive: true,
-        isReadyForSale: true, 
+        isReadyForSale: true,
         inventoryCount: productData.inventoryCount || 0,
         createdBy: user.email,
         createdOn: now,
@@ -841,7 +842,7 @@ export async function createPurchaseInvoiceAndUpdateInventory(invoiceData, user)
         invoiceData.lineItems.forEach(item => {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.masterProductId);
             const quantityPurchased = Number(item.quantity);
-            
+
             // Atomically increment the inventory count for this product.
             transaction.update(productRef, {
                 inventoryCount: firebase.firestore.FieldValue.increment(quantityPurchased)
@@ -1004,38 +1005,38 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
     if (requireVerification) {
         // ✅ NEW: VERIFICATION WORKFLOW - Just create payment record
         console.log(`[API] Creating supplier payment for verification workflow`);
-        
+
         const paymentId = `SPAY-SUP-${Date.now()}`;
-        
+
         return newPaymentRef.set({
             paymentId: paymentId,
             relatedInvoiceId: paymentData.relatedInvoiceId,
             supplierId: paymentData.supplierId,
-            
+
             // Financial details
             amountPaid: paymentData.amountPaid,
             paymentDate: paymentData.paymentDate,
             paymentMode: paymentData.paymentMode,
             transactionRef: paymentData.transactionRef,
             notes: paymentData.notes || '',
-            
+
             // ✅ VERIFICATION STATUS
             paymentStatus: 'Pending Verification',
             submittedBy: user.email,
             submittedOn: now,
             requiresVerification: true,
-            
+
             audit: {
                 createdBy: user.email,
                 createdOn: now,
                 context: 'Supplier payment submitted for admin verification'
             }
         });
-        
+
     } else {
         // ✅ LEGACY: IMMEDIATE PROCESSING (transactional)
         console.log(`[API] Processing supplier payment with immediate invoice update`);
-        
+
         return db.runTransaction(async (transaction) => {
             // READ: Get the current state of the invoice
             const invoiceDoc = await transaction.get(invoiceRef);
@@ -1044,7 +1045,7 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
             }
 
             const invoiceData = invoiceDoc.data();
-            
+
             // ✅ ENHANCED: Same debugging as verification function
             console.log(`[API] 🔍 LEGACY payment processing debug:`);
             console.log(`  📋 Invoice Total: ${invoiceData.invoiceTotal}`);
@@ -1055,14 +1056,14 @@ export async function recordPaymentAndUpdateInvoice(paymentData, user, requireVe
             const invoiceTotal = Number(invoiceData.invoiceTotal || 0);
             const currentAmountPaid = Number(invoiceData.amountPaid || 0);
             const paymentAmount = Number(paymentData.amountPaid || 0);
-            
+
             const newTotalAmountPaid = currentAmountPaid + paymentAmount;
             const calculatedBalance = invoiceTotal - newTotalAmountPaid;
             const newBalanceDue = Math.max(0, Math.round(calculatedBalance * 100) / 100);
-            
+
             // ✅ IDENTICAL: Same status logic as verification function
             let newPaymentStatus;
-            
+
             if (newBalanceDue === 0) {
                 newPaymentStatus = "Paid";
             } else if (newBalanceDue < 0) {
@@ -1132,7 +1133,7 @@ export async function verifySupplierPayment(paymentId, adminUser) {
         if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
             throw new Error("Payment not found or is not pending verification.");
         }
-        
+
         const paymentData = paymentDoc.data();
         const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(paymentData.relatedInvoiceId);
 
@@ -1141,9 +1142,9 @@ export async function verifySupplierPayment(paymentId, adminUser) {
         if (!invoiceDoc.exists) {
             throw new Error(`Related invoice does not exist.`);
         }
-        
+
         const currentInvoiceData = invoiceDoc.data();
-        
+
         // ✅ ENHANCED: Comprehensive debugging
         console.log(`[API] 🔍 DETAILED payment verification debugging:`);
         console.log(`  📋 Invoice ID: ${currentInvoiceData.invoiceId}`);
@@ -1159,7 +1160,7 @@ export async function verifySupplierPayment(paymentId, adminUser) {
         const invoiceTotal = Number(currentInvoiceData.invoiceTotal || 0);
         const currentAmountPaid = Number(currentInvoiceData.amountPaid || 0);
         const paymentAmount = Number(paymentData.amountPaid || 0);
-        
+
         // Validate numbers
         if (isNaN(invoiceTotal) || isNaN(currentAmountPaid) || isNaN(paymentAmount)) {
             console.error(`[API] ❌ Invalid numbers detected:`, {
@@ -1169,15 +1170,15 @@ export async function verifySupplierPayment(paymentId, adminUser) {
             });
             throw new Error("Invalid number values in invoice or payment data");
         }
-        
+
         // ✅ CORRECTED: Precise calculation with proper rounding
         const newTotalAmountPaid = currentAmountPaid + paymentAmount;
         const calculatedBalance = invoiceTotal - newTotalAmountPaid;
         const newBalanceDue = Math.max(0, Math.round(calculatedBalance * 100) / 100); // Round to 2 decimal places
-        
+
         // ✅ ENHANCED: Detailed status calculation with explicit logic
         let newPaymentStatus;
-        
+
         console.log(`[API] 🧮 STATUS CALCULATION LOGIC:`);
         console.log(`  💰 Invoice Total: ${invoiceTotal}`);
         console.log(`  💰 New Total Paid: ${newTotalAmountPaid}`);
@@ -1186,7 +1187,7 @@ export async function verifySupplierPayment(paymentId, adminUser) {
         console.log(`  🤔 Is Balance Zero? ${newBalanceDue === 0}`);
         console.log(`  🤔 Is Balance <= 0? ${newBalanceDue <= 0}`);
         console.log(`  🤔 Total Paid > 0? ${newTotalAmountPaid > 0}`);
-        
+
         if (newBalanceDue === 0) {
             newPaymentStatus = 'Paid';
             console.log(`  ✅ STATUS: PAID (balance is exactly zero)`);
@@ -1233,7 +1234,7 @@ export async function verifySupplierPayment(paymentId, adminUser) {
             amountPaid: newTotalAmountPaid,
             balanceDue: newBalanceDue,
             paymentStatus: newPaymentStatus, // ✅ CRITICAL: Should now correctly show "Paid"
-            
+
             // ✅ AUDIT: Enhanced tracking
             lastPaymentVerification: {
                 verifiedPaymentId: paymentId,
@@ -1244,7 +1245,7 @@ export async function verifySupplierPayment(paymentId, adminUser) {
                 newStatus: newPaymentStatus,
                 balanceTransition: `₹${(currentInvoiceData.balanceDue || 0).toFixed(2)} → ₹${newBalanceDue.toFixed(2)}`
             },
-            
+
             'audit.updatedBy': adminUser.email,
             'audit.updatedOn': now
         });
@@ -1264,17 +1265,17 @@ export async function verifySupplierPayment(paymentId, adminUser) {
 export async function cancelSupplierPaymentRecord(paymentId) {
     const db = firebase.firestore();
     const paymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
-    
+
     // Verify payment is pending before cancelling
     const paymentDoc = await paymentRef.get();
     if (!paymentDoc.exists) {
         throw new Error("Payment record not found.");
     }
-    
+
     if (paymentDoc.data().paymentStatus !== 'Pending Verification') {
         throw new Error("Only pending payments can be cancelled. Verified payments must be voided.");
     }
-    
+
     // Safe to delete since it was never processed
     return paymentRef.delete();
 }
@@ -1366,24 +1367,24 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
     return db.runTransaction(async (transaction) => {
         // === PHASE 1: READ & VALIDATION ===
         console.log(`[API] Voiding supplier payment: ${paymentId}`);
-        
+
         const paymentDoc = await transaction.get(paymentRef);
         if (!paymentDoc.exists) {
             throw new Error("Payment record not found. It may have already been voided or deleted.");
         }
-        
+
         const originalPaymentData = paymentDoc.data();
-        
+
         // ✅ CORRECTED: Handle missing or undefined paymentStatus
         const currentStatus = originalPaymentData.paymentStatus || originalPaymentData.status || 'Verified';
-        
+
         console.log(`[API] Original payment status: "${currentStatus}"`);
-        
+
         // Validate payment can be voided
         if (currentStatus === 'Voided') {
             throw new Error("This payment has already been voided.");
         }
-        
+
         // ✅ FLEXIBLE: Allow voiding of verified payments OR legacy payments without status
         if (currentStatus !== 'Verified' && currentStatus !== 'Recorded' && originalPaymentData.amountPaid > 0) {
             console.warn(`[API] Payment has status "${currentStatus}" but proceeding with void since it has valid amount`);
@@ -1393,13 +1394,13 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
 
         const invoiceRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).doc(originalPaymentData.relatedInvoiceId);
         const invoiceDoc = await transaction.get(invoiceRef);
-        
+
         if (!invoiceDoc.exists) {
             throw new Error(`Related invoice ${originalPaymentData.relatedInvoiceId} does not exist.`);
         }
-        
+
         const currentInvoiceData = invoiceDoc.data();
-        
+
         // Get supplier information for logging
         const supplier = masterData.suppliers.find(s => s.id === originalPaymentData.supplierId);
         const supplierName = supplier ? supplier.supplierName : 'Unknown Supplier';
@@ -1416,7 +1417,7 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
         const currentInvoicePaidAmount = currentInvoiceData.amountPaid || 0;
         const newTotalAmountPaid = Math.max(0, currentInvoicePaidAmount - voidedAmount);
         const newBalanceDue = currentInvoiceData.invoiceTotal - newTotalAmountPaid;
-        
+
         // ✅ ENHANCED: Recalculate payment status based on new balance
         let newPaymentStatus;
         if (newBalanceDue <= 0) {
@@ -1439,12 +1440,12 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
             // ✅ CORRECTED: Set status field consistently
             paymentStatus: 'Voided',
             status: 'Voided', // Also set legacy status field for compatibility
-            
+
             voidedBy: adminUser.email,
             voidedOn: now,
             originalStatus: currentStatus, // ✅ CORRECTED: Use the status we determined
             voidReason: 'Administrative void - payment reversal',
-            
+
             // ✅ ENHANCED: Preserve original data for audit
             originalPaymentData: {
                 originalAmount: originalPaymentData.amountPaid,
@@ -1458,32 +1459,32 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
         // === PHASE 4: CREATE REVERSING PAYMENT ENTRY ===
         const reversalPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
         const reversalPaymentId = `VOID-${originalPaymentData.paymentId || paymentId}`;
-        
+
         transaction.set(reversalPaymentRef, {
             // ✅ ENHANCED: Professional reversing entry
             paymentId: reversalPaymentId,
             relatedInvoiceId: originalPaymentData.relatedInvoiceId,
             supplierId: originalPaymentData.supplierId,
-            
+
             // ✅ NEGATIVE AMOUNTS: Reversing entry
             amountPaid: -voidedAmount,
-            
+
             paymentDate: now,
             paymentMode: 'VOID_REVERSAL',
             transactionRef: `Reversal of ${originalPaymentData.transactionRef || 'payment'}`,
-            
+
             // ✅ ENHANCED: Clear reversal context
             notes: `Reversed payment for Invoice ${currentInvoiceData.invoiceId}. Original payment: ₹${voidedAmount.toFixed(2)} on ${originalPaymentData.paymentDate.toDate?.().toLocaleDateString() || 'unknown date'}`,
-            
+
             // ✅ CONSISTENT: Set both status fields
             paymentStatus: 'Void_Reversal',
             status: 'Void_Reversal',
-            
+
             originalPaymentId: paymentId,
             recordedBy: adminUser.email,
             voidedBy: adminUser.email,
             isReversalEntry: true,
-            
+
             // ✅ AUDIT TRAIL
             audit: {
                 createdBy: adminUser.email,
@@ -1499,7 +1500,7 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
             amountPaid: newTotalAmountPaid,
             balanceDue: newBalanceDue,
             paymentStatus: newPaymentStatus,
-            
+
             // ✅ ENHANCED: Track void activity
             lastPaymentVoided: {
                 voidedAmount: voidedAmount,
@@ -1509,7 +1510,7 @@ export async function voidSupplierPaymentAndUpdateInvoice(paymentId, adminUser) 
                 previousStatus: currentInvoiceData.paymentStatus,
                 reversalPaymentId: reversalPaymentRef.id
             },
-            
+
             // Update audit trail
             'audit.updatedBy': adminUser.email,
             'audit.updatedOn': now
@@ -1540,9 +1541,9 @@ export async function getLatestPurchasePrice(productId) {
     // This is the highly efficient query.
     // It finds only invoices containing the product, sorts by newest first, and gets only the top one.
     const invoicesQuery = db.collection(PURCHASE_INVOICES_COLLECTION_PATH)
-                            .where('productIds', 'array-contains', productId) // Query the new simple array
-                            .orderBy('purchaseDate', 'desc')
-                            .limit(1);
+        .where('productIds', 'array-contains', productId) // Query the new simple array
+        .orderBy('purchaseDate', 'desc')
+        .limit(1);
     try {
         const snapshot = await invoicesQuery.get();
 
@@ -1554,7 +1555,7 @@ export async function getLatestPurchasePrice(productId) {
 
         // We only have one document in the snapshot.
         const latestInvoice = snapshot.docs[0].data();
-        
+
         // Find the specific line item within that one invoice.
         const foundItem = latestInvoice.lineItems.find(item => item.masterProductId === productId);
 
@@ -1592,10 +1593,10 @@ export async function getLatestPurchasePrice(productId) {
 export async function createCatalogueWithItems(catalogueData, itemsData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Creating catalogue with ${itemsData.length} items AND price history records`);
-        
+
         // 1. Create a new WriteBatch for catalogue and items
         const catalogueBatch = db.batch();
 
@@ -1623,7 +1624,7 @@ export async function createCatalogueWithItems(catalogueData, itemsData, user) {
 
         // 6. ENHANCED: Create price history records for each product
         console.log(`[API] Creating price history records for ${itemsData.length} products...`);
-        
+
         const priceHistoryPromises = itemsData.map(async (item) => {
             try {
                 await createProductPriceHistory(item.productId, {
@@ -1632,9 +1633,9 @@ export async function createCatalogueWithItems(catalogueData, itemsData, user) {
                     unitSellingPrice: item.sellingPrice,
                     isActive: true // New catalogue is active, so price history is active
                 }, user);
-                
+
                 console.log(`[API] ✅ Price history created: ${item.productName} -> ₹${item.sellingPrice}`);
-                
+
             } catch (priceHistoryError) {
                 console.error(`[API] Error creating price history for ${item.productName}:`, priceHistoryError);
                 // Don't fail the entire operation if one price history fails
@@ -1643,12 +1644,12 @@ export async function createCatalogueWithItems(catalogueData, itemsData, user) {
 
         // Wait for all price history records to be created
         await Promise.all(priceHistoryPromises);
-        
+
         console.log(`[API] ✅ ENHANCED catalogue creation completed with price history integration`);
         console.log(`[API] Created: 1 catalogue + ${itemsData.length} items + ${itemsData.length} price history records`);
-        
+
         return catalogueRef;
-        
+
     } catch (error) {
         console.error(`[API] Error in enhanced catalogue creation:`, error);
         throw new Error(`Enhanced catalogue creation failed: ${error.message}`);
@@ -1698,37 +1699,37 @@ export async function getSalesCatalogues() {
 export async function updateSalesCatalogue(docId, updatedData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Updating catalogue ${docId} with price history status management`);
-        
+
         // 1. Get current catalogue state for comparison
         const catalogueRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(docId);
         const currentCatalogueDoc = await catalogueRef.get();
-        
+
         if (!currentCatalogueDoc.exists) {
             throw new Error(`Catalogue ${docId} not found`);
         }
-        
+
         const currentCatalogueData = currentCatalogueDoc.data();
         const currentActiveStatus = currentCatalogueData.isActive;
         const newActiveStatus = updatedData.isActive !== undefined ? updatedData.isActive : currentActiveStatus;
-        
+
         console.log(`[API] Catalogue status change: ${currentActiveStatus} -> ${newActiveStatus}`);
-        
+
         // 2. Update the main catalogue document (existing functionality)
         await catalogueRef.update({
             ...updatedData,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now,
         });
-        
+
         console.log(`[API] ✅ Catalogue main document updated`);
-        
+
         // 3. ENHANCED: Manage price history status if isActive changed
         if (updatedData.isActive !== undefined && updatedData.isActive !== currentActiveStatus) {
             console.log(`[API] Catalogue active status changed, updating price history records...`);
-            
+
             try {
                 await updateProductPriceHistoryStatus(docId, newActiveStatus, user);
                 console.log(`[API] ✅ Price history status updated to ${newActiveStatus ? 'active' : 'inactive'}`);
@@ -1740,9 +1741,9 @@ export async function updateSalesCatalogue(docId, updatedData, user) {
         } else {
             console.log(`[API] No active status change, price history status unchanged`);
         }
-        
+
         console.log(`[API] ✅ ENHANCED catalogue update completed with price history management`);
-        
+
     } catch (error) {
         console.error(`[API] Error in enhanced catalogue update:`, error);
         throw new Error(`Enhanced catalogue update failed: ${error.message}`);
@@ -1763,32 +1764,32 @@ export async function updateSalesCatalogue(docId, updatedData, user) {
  */
 export async function addItemToCatalogue(catalogueId, itemData) {
     const db = firebase.firestore();
-    
+
     try {
         console.log(`[API] Adding item to catalogue ${catalogueId} with intelligent price history management`);
-        
+
         // 1. Add item to catalogue items sub-collection (existing functionality)
         const itemRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
             .doc();
-        
+
         await itemRef.set(itemData);
         console.log(`[API] ✅ Item added to catalogue: ${itemData.productName}`);
-        
+
         // 2. Get catalogue information for price history
         const catalogueDoc = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).get();
-        
+
         if (!catalogueDoc.exists) {
             throw new Error(`Catalogue ${catalogueId} not found`);
         }
-        
+
         const catalogueData = catalogueDoc.data();
-        
+
         // 3. ENHANCED: Always try to create price history (handles all scenarios)
         if (catalogueData.isActive) {
             console.log(`[API] Creating price history for ${itemData.productName} (catalogue is active)`);
-            
+
             try {
                 // Check if price history already exists (avoid duplicates)
                 const existingPriceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
@@ -1797,9 +1798,9 @@ export async function addItemToCatalogue(catalogueId, itemData) {
                     .where('salesCatalogueId', '==', catalogueId)
                     .where('isActive', '==', true)
                     .limit(1);
-                
+
                 const existingSnapshot = await existingPriceHistoryQuery.get();
-                
+
                 if (existingSnapshot.empty) {
                     // No existing price history - create new one
                     await createProductPriceHistory(itemData.productId, {
@@ -1808,7 +1809,7 @@ export async function addItemToCatalogue(catalogueId, itemData) {
                         unitSellingPrice: itemData.sellingPrice,
                         isActive: true
                     }, { email: catalogueData.audit?.updatedBy || catalogueData.audit?.createdBy || 'system' });
-                    
+
                     console.log(`[API] ✅ New price history created: ${itemData.productName} -> ₹${itemData.sellingPrice}`);
                 } else {
                     // Price history exists - update the price
@@ -1818,10 +1819,10 @@ export async function addItemToCatalogue(catalogueId, itemData) {
                         updatedBy: catalogueData.audit?.updatedBy || 'system',
                         updatedDate: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    
+
                     console.log(`[API] ✅ Existing price history updated: ${itemData.productName} -> ₹${itemData.sellingPrice}`);
                 }
-                
+
             } catch (priceHistoryError) {
                 console.error(`[API] Error managing price history for ${itemData.productName}:`, priceHistoryError);
                 console.warn(`[API] Item added to catalogue but price history operation failed`);
@@ -1830,10 +1831,10 @@ export async function addItemToCatalogue(catalogueId, itemData) {
         } else {
             console.log(`[API] ℹ️ Catalogue is inactive, price history will be created when catalogue is activated`);
         }
-        
+
         console.log(`[API] ✅ ENHANCED item addition completed`);
         return itemRef;
-        
+
     } catch (error) {
         console.error(`[API] Error in enhanced addItemToCatalogue:`, error);
         throw new Error(`Enhanced add item to catalogue failed: ${error.message}`);
@@ -1855,52 +1856,52 @@ export async function addItemToCatalogue(catalogueId, itemData) {
  */
 export async function removeItemFromCatalogue(catalogueId, itemId) {
     const db = firebase.firestore();
-    
+
     try {
         console.log(`[API] Removing item from catalogue ${catalogueId} with price history deactivation`);
-        
+
         // 1. Get item data before deletion to identify the product
         const itemRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
             .doc(itemId);
-        
+
         const itemDoc = await itemRef.get();
         if (!itemDoc.exists) {
             throw new Error(`Catalogue item ${itemId} not found`);
         }
-        
+
         const itemData = itemDoc.data();
         const productId = itemData.productId;
         const productName = itemData.productName;
-        
+
         console.log(`[API] Removing ${productName} from catalogue`);
-        
+
         // 2. ENHANCED: Deactivate price history first (preserve audit trail)
         try {
             const priceHistoryDeactivated = await deactivateProductPriceHistory(
-                productId, 
-                catalogueId, 
+                productId,
+                catalogueId,
                 { email: 'system' } // Use system user for removal operations
             );
-            
+
             if (priceHistoryDeactivated) {
                 console.log(`[API] ✅ Price history deactivated for ${productName}`);
             } else {
                 console.log(`[API] ℹ️ No active price history found to deactivate for ${productName}`);
             }
-            
+
         } catch (priceHistoryError) {
             console.error(`[API] Error deactivating price history:`, priceHistoryError);
             console.warn(`[API] Continuing with item removal despite price history error`);
         }
-        
+
         // 3. Remove the item from catalogue (existing functionality)
         await itemRef.delete();
         console.log(`[API] ✅ Item removed from catalogue: ${productName}`);
-        
+
         console.log(`[API] ✅ ENHANCED item removal completed with price history deactivation`);
-        
+
     } catch (error) {
         console.error(`[API] Error in enhanced catalogue item removal:`, error);
         throw new Error(`Enhanced catalogue item removal failed: ${error.message}`);
@@ -1922,7 +1923,7 @@ export async function getUserMembershipInfo(userEmail) { // <-- RENAMED
     const db = firebase.firestore();
     const membershipDocId = userEmail.toLowerCase();
     const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
-    
+
     const doc = await membershipRef.get();
 
     if (doc.exists) {
@@ -1955,35 +1956,35 @@ export async function getUserMembershipInfo(userEmail) { // <-- RENAMED
  */
 export async function activateSalesCatalogueWithPriceHistory(catalogueId, user) {
     const db = firebase.firestore();
-    
+
     try {
         console.log(`[API] Activating catalogue ${catalogueId} with comprehensive price history management`);
-        
+
         // 1. Get catalogue data
         const catalogueDoc = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(catalogueId).get();
         if (!catalogueDoc.exists) {
             throw new Error(`Catalogue ${catalogueId} not found`);
         }
-        
+
         const catalogueData = catalogueDoc.data();
         console.log(`[API] Activating catalogue: ${catalogueData.catalogueName}`);
-        
+
         // 2. Activate the main catalogue
         await updateSalesCatalogue(catalogueId, { isActive: true }, user);
         console.log(`[API] ✅ Main catalogue activated`);
-        
+
         // 3. Get all items in the catalogue
         const itemsSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
             .get();
-        
+
         const catalogueItems = itemsSnapshot.docs.map(doc => doc.data());
         console.log(`[API] Found ${catalogueItems.length} items to activate price history for`);
-        
+
         // 4. Create/activate price history records for all items
         let priceRecordsProcessed = 0;
-        
+
         if (catalogueItems.length > 0) {
             priceRecordsProcessed = await batchCreatePriceHistory(
                 catalogueId,
@@ -1996,14 +1997,14 @@ export async function activateSalesCatalogueWithPriceHistory(catalogueId, user) 
                 user
             );
         }
-        
+
         console.log(`[API] ✅ Catalogue activation completed:`);
         console.log(`[API]   - Catalogue: ${catalogueData.catalogueName} -> ACTIVE`);
         console.log(`[API]   - Items: ${catalogueItems.length}`);
         console.log(`[API]   - Price history records: ${priceRecordsProcessed}`);
-        
+
         return priceRecordsProcessed;
-        
+
     } catch (error) {
         console.error(`[API] Error activating catalogue with price history:`, error);
         throw new Error(`Catalogue activation failed: ${error.message}`);
@@ -2027,39 +2028,39 @@ export async function activateSalesCatalogueWithPriceHistory(catalogueId, user) 
 export async function updateCatalogueItem(catalogueId, itemId, updatedData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Updating catalogue item ${itemId} with price history synchronization`);
-        
+
         // 1. Get current item data to identify the product
         const itemRef = db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
             .doc(itemId);
-        
+
         const currentItemDoc = await itemRef.get();
         if (!currentItemDoc.exists) {
             throw new Error(`Catalogue item ${itemId} not found`);
         }
-        
+
         const currentItemData = currentItemDoc.data();
         const productId = currentItemData.productId;
-        
+
         console.log(`[API] Updating item for product ${productId}: ${currentItemData.productName}`);
-        
+
         // 2. Update the catalogue item (existing functionality)
         await itemRef.update({
             ...updatedData,
             'audit.updatedBy': user.email,
             'audit.updatedOn': now
         });
-        
+
         console.log(`[API] ✅ Catalogue item updated`);
-        
+
         // 3. ENHANCED: Update price history if selling price changed
         if (updatedData.sellingPrice && updatedData.sellingPrice !== currentItemData.sellingPrice) {
             console.log(`[API] Price changed from ₹${currentItemData.sellingPrice} to ₹${updatedData.sellingPrice}, updating price history...`);
-            
+
             try {
                 const priceHistoryUpdated = await updateProductPriceHistoryPrice(
                     productId,
@@ -2067,14 +2068,14 @@ export async function updateCatalogueItem(catalogueId, itemId, updatedData, user
                     updatedData.sellingPrice,
                     user
                 );
-                
+
                 if (priceHistoryUpdated) {
                     console.log(`[API] ✅ Price history synchronized: ${currentItemData.productName} -> ₹${updatedData.sellingPrice}`);
                 } else {
                     console.warn(`[API] No price history found to update for product ${productId} in catalogue ${catalogueId}`);
                     console.log(`[API] This might be expected if the item was added before price history system was implemented`);
                 }
-                
+
             } catch (priceHistoryError) {
                 console.error(`[API] Error updating price history for price change:`, priceHistoryError);
                 // Don't fail the entire operation if price history update fails
@@ -2083,9 +2084,9 @@ export async function updateCatalogueItem(catalogueId, itemId, updatedData, user
         } else {
             console.log(`[API] No price change detected, price history unchanged`);
         }
-        
+
         console.log(`[API] ✅ ENHANCED catalogue item update completed`);
-        
+
     } catch (error) {
         console.error(`[API] Error in enhanced catalogue item update:`, error);
         throw new Error(`Enhanced catalogue item update failed: ${error.message}`);
@@ -2219,7 +2220,7 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
             const item = finalItems[i];
             const productRef = productRefs[i];
             const quantityToDecrement = Number(item.quantityCheckedOut);
-            
+
             // Decrement main store inventory
             transaction.update(productRef, {
                 inventoryCount: firebase.firestore.FieldValue.increment(-quantityToDecrement)
@@ -2233,8 +2234,8 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
         }
 
         // Finally, update the main order to "Active".
-        transaction.update(orderRef, { 
-            status: 'Active', 
+        transaction.update(orderRef, {
+            status: 'Active',
             checkoutDate: now,
             totalValueCheckedOut: totalValueCheckedOut,
             balanceDue: totalValueCheckedOut, // Initially, balance due is the full value
@@ -2259,7 +2260,7 @@ export async function fulfillConsignmentAndUpdateInventory(orderId, finalItems, 
 export async function logActivityAndUpdateConsignment(activityData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     // Destructure all needed variables from the single activityData object.
     const { orderId, itemId, productId, productName, activityType, quantityDelta, sellingPrice, correctionDetails } = activityData;
 
@@ -2299,7 +2300,7 @@ export async function logActivityAndUpdateConsignment(activityData, user) {
             // If the new total exceeds what was checked out, abort the entire transaction.
             throw new Error(`Invalid quantity. The total accounted for (${totalAccountedFor}) cannot exceed the checked out quantity of ${currentItemData.quantityCheckedOut}.`);
         }
-        
+
 
         // --- 3. WRITE PHASE (only runs if validation passes) ---
 
@@ -2402,29 +2403,29 @@ export async function submitPaymentRecord(paymentData, user) {
     return db.runTransaction(async (transaction) => {
         // Create main payment record
         const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
-        
+
         transaction.set(paymentRef, {
             paymentId: paymentId,
             orderId: paymentData.orderId,
             teamLeadId: paymentData.teamLeadId,
             teamLeadName: paymentData.teamLeadName,
             teamName: paymentData.teamName,
-            
+
             // ✅ ENHANCED: Include donation information
             amountPaid: paymentData.amountPaid, // Amount applied to balance
             donationAmount: paymentData.donationAmount || 0, // Extra amount as donation
             totalCollected: (paymentData.amountPaid || 0) + (paymentData.donationAmount || 0),
-            
+
             paymentDate: paymentData.paymentDate,
             paymentMode: paymentData.paymentMode,
             transactionRef: paymentData.transactionRef,
             notes: paymentData.notes || '',
             paymentReason: paymentData.paymentReason,
-            
+
             paymentStatus: 'Pending Verification',
             submittedBy: user.email,
             submittedOn: now,
-            
+
             // ✅ DONATION CONTEXT
             donationSource: paymentData.donationSource
         });
@@ -2433,13 +2434,13 @@ export async function submitPaymentRecord(paymentData, user) {
         if (paymentData.donationAmount && paymentData.donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             const donationId = `DON-TEAM-${paymentId}-${Date.now().toString().slice(-4)}`;
-            
+
             transaction.set(donationRef, {
                 donationId: donationId,
                 amount: paymentData.donationAmount,
                 donationDate: now,
                 source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
-                
+
                 sourceDetails: {
                     transactionType: 'consignment_payment_overpayment',
                     teamName: paymentData.teamName,
@@ -2450,20 +2451,20 @@ export async function submitPaymentRecord(paymentData, user) {
                     paymentMode: paymentData.paymentMode,
                     transactionReference: paymentData.transactionRef
                 },
-                
+
                 relatedPaymentId: paymentRef.id,
                 relatedConsignmentOrderId: paymentData.orderId,
-                
+
                 teamName: paymentData.teamName,
                 teamLeadName: paymentData.teamLeadName,
                 teamLeadEmail: user.email,
-                
+
                 donorClassification: getDonorClassification(paymentData.donationAmount),
                 isAnonymous: false,
-                
+
                 recordedBy: user.email,
                 status: 'Pending Verification',
-                
+
                 audit: {
                     createdBy: user.email,
                     createdOn: now,
@@ -2475,9 +2476,9 @@ export async function submitPaymentRecord(paymentData, user) {
 
         // --- 3. ✅ NEW: Update the parent consignment order to set the flag ---
         const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
-        
+
         console.log(`[API] Setting hasPendingPayments flag to true for order ${paymentData.orderId}`);
-        
+
         transaction.update(orderRef, {
             hasPendingPayments: true
         });
@@ -2500,42 +2501,46 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
 
     const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
 
+    // --- PHASE 1: READ ALL NECESSARY DATA (OUTSIDE THE TRANSACTION) ---
+    console.log(`[API-Verify] Phase 1: Reading all related documents for payment ${paymentId}`);
+
+    // 1. READ the payment document.
+    const paymentDoc = await transaction.get(paymentRef);
+    if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
+        throw new Error("Payment not found or is not pending verification.");
+    }
+    const paymentData = paymentDoc.data();
+
+    console.log("[API-Verify] Read payment document successfully.");
+
+    // 2. Read the parent consignment order document to get its current financial state.
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
+    const orderDoc = await transaction.get(orderRef);
+    if (!orderDoc.exists) {
+        throw new Error("The associated consignment order could not be found.");
+    }
+    const orderData = orderDoc.data();
+
+    console.log("[API-Verify] Read parent order document successfully.");
+
+    // 3. Query for any other pending payments for this order to manage the 'hasPendingPayments' flag.
+    const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+        .where('orderId', '==', paymentData.orderId)
+        .where('paymentStatus', '==', 'Pending Verification');
+    const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
+
+    console.log(`[API-Verify] Found ${pendingSnapshot.size} pending payments for this order.`);
+
+
+    // --- PHASE 2: RUN THE ATOMIC WRITE-ONLY TRANSACTION ---
+    console.log("[API-Verify] Phase 2: Starting atomic write transaction...");
+
     return db.runTransaction(async (transaction) => {
-        // --- PHASE 1: READ ALL NECESSARY DOCUMENTS ---
 
-        console.log(`[API-Verify] Starting transaction for payment: ${paymentId}`);
-
-
-        // 1. READ the payment document.
-        const paymentDoc = await transaction.get(paymentRef);
-        if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
-            throw new Error("Payment not found or is not pending verification.");
-        }
-        const paymentData = paymentDoc.data();
-
-        console.log("[API-Verify] Read payment document successfully.");
-
-        // 2. Read the parent consignment order document to get its current financial state.
-        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
-        const orderDoc = await transaction.get(orderRef);
-        if (!orderDoc.exists) {
-            throw new Error("The associated consignment order could not be found.");
-        }
-        const orderData = orderDoc.data();
-
-        console.log("[API-Verify] Read parent order document successfully.");
-
-        // 3. Query for any other pending payments for this order to manage the 'hasPendingPayments' flag.
-        const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-                                     .where('orderId', '==', paymentData.orderId)
-                                     .where('paymentStatus', '==', 'Pending Verification');
-        const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
-
-        console.log(`[API-Verify] Found ${pendingSnapshot.size} pending payments for this order.`);
-
-        // --- PHASE 2: CALCULATE NEW FINANCIAL STATE ---
+        // --- CALCULATION PHASE (INSIDE TRANSACTION FOR SAFETY) ---
 
         console.log("[API-Verify] Calculating new financial state...");
+        
         const currentPaid = orderData.totalAmountPaid || 0;
         const currentBalance = orderData.balanceDue || 0;
         const paymentAmount = paymentData.amountPaid || 0;
@@ -2550,7 +2555,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
 
 
         console.log("[API-Verify] Preparing paymentStatus write operations...");
-         // A. Update the payment document itself to "Verified".
+        // A. Update the payment document itself to "Verified".
         transaction.update(paymentRef, {
             paymentStatus: 'Verified',
             verifiedBy: adminUser.email,
@@ -2582,7 +2587,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
 
         // ✅ FUTURE ENHANCEMENT: Add consignment donation handling if needed
         // If consignment payments can have overpayments, add donation logic here:
-        
+
         // D. Handle donation creation if there was an overpayment.
         if (paymentData.donationAmount && paymentData.donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
@@ -2623,8 +2628,8 @@ export async function cancelPaymentRecord(paymentId) {
         // Now, check if any OTHER pending payments exist for this order
         const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
         const pendingQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-                             .where('orderId', '==', paymentData.orderId)
-                             .where('paymentStatus', '==', 'Pending Verification');
+            .where('orderId', '==', paymentData.orderId)
+            .where('paymentStatus', '==', 'Pending Verification');
         const pendingSnapshot = await transaction.get(pendingQuery);
 
         // If the size is 1, it means we are cancelling the LAST pending payment
@@ -2645,7 +2650,7 @@ function calculateInvoiceAge(saleDate) {
     try {
         const currentDate = new Date();
         let saleDateObj;
-        
+
         if (saleDate?.toDate && typeof saleDate.toDate === 'function') {
             saleDateObj = saleDate.toDate(); // Firestore Timestamp
         } else if (saleDate instanceof Date) {
@@ -2655,15 +2660,15 @@ function calculateInvoiceAge(saleDate) {
         } else {
             return 0; // Cannot calculate
         }
-        
+
         // Validate the date is reasonable
         if (isNaN(saleDateObj.getTime())) {
             return 0;
         }
-        
+
         const ageDays = Math.ceil((currentDate - saleDateObj) / (1000 * 60 * 60 * 24));
         return Math.max(0, ageDays); // Ensure non-negative
-        
+
     } catch (error) {
         console.warn('[API] Could not calculate invoice age:', error);
         return 0;
@@ -2675,7 +2680,7 @@ function calculateInvoiceAge(saleDate) {
  */
 function getDonorClassification(donationAmount) {
     if (donationAmount >= 2000) return 'Major Donor';
-    if (donationAmount >= 1000) return 'Significant Donor';  
+    if (donationAmount >= 1000) return 'Significant Donor';
     if (donationAmount >= 500) return 'Generous Donor';
     if (donationAmount >= 200) return 'Regular Donor';
     if (donationAmount >= 100) return 'Supporter';
@@ -2719,12 +2724,12 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 
         // A. Create the main Sales Invoice document
         const saleRef = db.collection(SALES_COLLECTION_PATH).doc();
-        
+
         let prefix = 'SALE-';
         if (saleData.store === 'Church Store') prefix = 'CS-';
         else if (saleData.store === 'Tasty Treats') prefix = 'TT-';
         const saleId = `${prefix}${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-        
+
         let totalAmountPaid = 0;
         if (initialPaymentData) {
             totalAmountPaid = initialPaymentData.amountPaid;
@@ -2759,7 +2764,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
         // C. ✅ ENHANCED: Create donation record with standardized source tracking
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
-            
+
             const donationId = `DON-${saleId}-${Date.now().toString().slice(-4)}`;
 
             transaction.set(donationRef, {
@@ -2779,7 +2784,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 
                     paymentMode: initialPaymentData?.paymentMode || 'Cash',
                     transactionReference: initialPaymentData?.transactionRef || 'Direct sale',
-                    
+
 
                     customerEmail: saleData.customerInfo.email,
                     customerPhone: saleData.customerInfo.phone,
@@ -2805,7 +2810,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
                     method: 'automatic_overpayment_processing'
                 }
             });
-            
+
             console.log(`[API] ✅ Enhanced donation record created:`);
             console.log(`  - Donation ID: ${donationId}`);
             console.log(`  - Amount: ₹${donationAmount.toFixed(2)}`);
@@ -2861,17 +2866,17 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 export async function recordSalePayment(paymentData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     // Destructure payment data with enhanced fields
-    const { 
-        invoiceId, 
-        amountPaid, 
-        donationAmount, 
-        donationSource, 
-        customerName, 
-        paymentMode, 
-        transactionRef, 
-        notes 
+    const {
+        invoiceId,
+        amountPaid,
+        donationAmount,
+        donationSource,
+        customerName,
+        paymentMode,
+        transactionRef,
+        notes
     } = paymentData;
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
@@ -2881,14 +2886,14 @@ export async function recordSalePayment(paymentData, user) {
         try {
             // === PHASE 1: READ & VALIDATION ===
             console.log(`[API] Processing payment: ₹${amountPaid.toFixed(2)} for invoice ${invoiceId}`);
-            
+
             const saleDoc = await transaction.get(saleRef);
             if (!saleDoc.exists) {
                 throw new Error("The invoice you are trying to pay does not exist.");
             }
-            
+
             const currentSaleData = saleDoc.data();
-            
+
             // Validate invoice can accept payments
             if (currentSaleData.paymentStatus === 'Paid' && currentSaleData.balanceDue <= 0) {
                 throw new Error("This invoice has already been paid in full.");
@@ -2897,35 +2902,35 @@ export async function recordSalePayment(paymentData, user) {
             // === PHASE 2: PAYMENT RECORD CREATION ===
             const paymentId = `SPAY-${Date.now()}`;
             const physicalAmountGiven = amountPaid + (donationAmount || 0);
-            
+
             transaction.set(paymentRef, {
                 // Core payment identification
                 invoiceId: invoiceId,
                 paymentId: paymentId,
                 paymentDate: now,
-                
+
                 // Financial details
                 amountPaid: amountPaid,
                 donationAmount: donationAmount || 0,
                 totalCollected: physicalAmountGiven,
-                
+
                 // Payment method and reference
                 paymentMode: paymentMode,
                 transactionRef: transactionRef,
                 notes: notes || '',
-                
+
                 // Administrative
                 status: 'Verified',
                 recordedBy: user.email,
-                
+
                 // ✅ ENHANCED: Donation source tracking
                 donationSource: donationSource || null,
-                
+
                 // ✅ BUSINESS CONTEXT
                 relatedInvoiceNumber: currentSaleData.saleId,
                 customerName: customerName,
                 store: currentSaleData.store,
-                
+
                 // Audit trail
                 audit: {
                     createdBy: user.email,
@@ -2939,7 +2944,7 @@ export async function recordSalePayment(paymentData, user) {
             // === PHASE 3: INVOICE FINANCIAL UPDATES ===
             const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
             const newBalanceDue = Math.max(0, (currentSaleData.financials?.totalAmount || 0) - newTotalAmountPaid);
-            
+
             // ✅ ENHANCED: Proper payment status calculation
             let newPaymentStatus;
             if (newBalanceDue <= 0) {
@@ -2961,7 +2966,7 @@ export async function recordSalePayment(paymentData, user) {
                 totalAmountPaid: newTotalAmountPaid,
                 balanceDue: newBalanceDue,
                 paymentStatus: newPaymentStatus,
-                
+
                 // ✅ ENHANCED: Comprehensive financial tracking
                 'financials.amountTendered': newAmountTendered,
                 'financials.totalPhysicalCashReceived': newAmountTendered,
@@ -2969,7 +2974,7 @@ export async function recordSalePayment(paymentData, user) {
                 'financials.paymentCount': currentPaymentCount + 1,
                 'financials.lastPaymentAmount': physicalAmountGiven,
                 'financials.lastPaymentMode': paymentMode,
-                
+
                 // ✅ AUDIT: Payment history summary
                 lastPaymentDetails: {
                     paymentId: paymentId,
@@ -2992,11 +2997,11 @@ export async function recordSalePayment(paymentData, user) {
             if (donationAmount > 0) {
                 const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
                 const donationId = `DON-${paymentId}-${Date.now().toString().slice(-4)}`;
-                
+
                 // ✅ CORRECTED: Safe invoice age calculation
                 const currentDate = new Date();
                 let invoiceAge = 0;
-                
+
                 try {
                     let saleDate;
                     if (currentSaleData.saleDate?.toDate) {
@@ -3006,7 +3011,7 @@ export async function recordSalePayment(paymentData, user) {
                     } else {
                         saleDate = new Date(); // Fallback
                     }
-                    
+
                     invoiceAge = Math.ceil((currentDate - saleDate) / (1000 * 60 * 60 * 24));
                     invoiceAge = Math.max(0, invoiceAge); // Ensure non-negative
                 } catch (dateError) {
@@ -3020,33 +3025,33 @@ export async function recordSalePayment(paymentData, user) {
                     donationId: donationId,
                     amount: donationAmount,
                     donationDate: now,
-                    
+
                     // ✅ STANDARDIZED: Source tracking using constants
                     source: donationSource || DONATION_SOURCES.INVOICE_OVERPAYMENT,
-                    
+
                     // ✅ COMPREHENSIVE: Rich source context
                     sourceDetails: {
                         // Transaction classification
                         transactionType: 'invoice_payment_overpayment',
                         donationContext: 'customer_payment_overpayment',
-                        
+
                         // Business identifiers
                         store: currentSaleData.store,
                         systemInvoiceId: currentSaleData.saleId,
                         manualVoucherNumber: currentSaleData.manualVoucherNumber,
-                        
+
                         // Financial context
                         originalInvoiceAmount: currentSaleData.financials?.totalAmount || 0,
                         paymentAmount: amountPaid,
                         totalPhysicalPayment: physicalAmountGiven,
                         invoiceBalanceBeforePayment: currentSaleData.balanceDue || 0,
                         invoiceBalanceAfterPayment: newBalanceDue,
-                        
+
                         // Payment details
                         paymentMode: paymentMode,
                         transactionReference: transactionRef,
                         paymentId: paymentId,
-                        
+
                         // ✅ BUSINESS INTELLIGENCE
                         customerEmail: currentSaleData.customerInfo?.email || 'unknown',
                         customerPhone: currentSaleData.customerInfo?.phone || 'unknown',
@@ -3054,32 +3059,32 @@ export async function recordSalePayment(paymentData, user) {
                         wasPartiallyPaid: (currentSaleData.totalAmountPaid || 0) > 0,
                         paymentSequence: (currentSaleData.totalAmountPaid || 0) > 0 ? 'subsequent_payment' : 'first_payment',
                         paymentNumber: currentPaymentCount + 1,
-                        
+
                         // ✅ CUSTOMER INSIGHTS
                         isRepeatCustomer: currentPaymentCount > 0,
                         customerTotalContributed: newAmountTendered,
                         donationPercentageOfInvoice: ((donationAmount / (currentSaleData.financials?.totalAmount || 1)) * 100).toFixed(2)
                     },
-                    
+
                     // Relationships for data linking
                     relatedPaymentId: paymentRef.id,
                     relatedInvoiceId: invoiceId,
                     relatedSaleId: invoiceId, // Same as invoice for sales
-                    
+
                     // Customer information
                     customerName: customerName,
                     customerEmail: currentSaleData.customerInfo?.email,
-                    
+
                     // ✅ DONOR RECOGNITION
                     donorClassification: getDonorClassification(donationAmount),
                     isAnonymous: false, // Sales donations have customer info
                     donationCategory: 'customer_generosity',
-                    
+
                     // Administrative
                     recordedBy: user.email,
                     status: 'Verified',
                     processedAutomatically: true,
-                    
+
                     // ✅ COMPREHENSIVE: Audit trail
                     audit: {
                         createdBy: user.email,
@@ -3088,14 +3093,14 @@ export async function recordSalePayment(paymentData, user) {
                         donationSource: donationSource,
                         method: 'payment_overpayment_processing',
                         userRole: user.role || 'unknown',
-                        
+
                         // Processing context
                         processingLocation: 'sales_payment_modal',
                         systemVersion: '1.0.0',
                         dataVersion: 'enhanced_donation_tracking'
                     }
                 });
-                
+
                 console.log(`[API] ✅ Enhanced donation record created:`);
                 console.log(`  - Donation ID: ${donationId}`);
                 console.log(`  - Amount: ₹${donationAmount.toFixed(2)}`);
@@ -3135,7 +3140,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
 
     // --- STEP 1: READ ALL NECESSARY DATA (OUTSIDE THE TRANSACTION) ---
     console.log('[API] Phase 1: Reading all related documents...');
-    
+
     // Get the main sale document
     const saleDoc = await saleRef.get();
     if (!saleDoc.exists) {
@@ -3146,7 +3151,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
     // Get all associated payments
     const paymentsQuery = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).where('invoiceId', '==', saleId);
     const paymentsSnapshot = await paymentsQuery.get();
-    
+
     // Get all associated donations
     const donationsQuery = db.collection(DONATIONS_COLLECTION_PATH).where('relatedSaleId', '==', saleId);
     const donationsSnapshot = await donationsQuery.get();
@@ -3167,7 +3172,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
     // --- STEP 2: PERFORM ALL WRITES IN A SINGLE ATOMIC TRANSACTION ---
     console.log('[API] Phase 2: Starting atomic write transaction...');
     return db.runTransaction(async (transaction) => {
-        
+
         // A. Restock Inventory
         for (const item of saleData.lineItems) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
@@ -3185,7 +3190,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
 
         // C. Delete Donations
         donationsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
-        
+
         // D. Delete the Sale itself
         transaction.delete(saleRef);
     });
@@ -3222,7 +3227,7 @@ export async function voidSalePayment(paymentId, adminUser) {
         const currentInvoiceData = invoiceDoc.data();
 
         // 2. WRITE: Update the original payment's status to "Voided".
-        transaction.update(paymentRef, { 
+        transaction.update(paymentRef, {
             status: 'Voided',
             voidedBy: adminUser.email,
             voidedOn: now,
@@ -3249,7 +3254,7 @@ export async function voidSalePayment(paymentId, adminUser) {
         // 4. ✅ ENHANCED: Calculate new payment status based on remaining balance
         const newTotalAmountPaid = (currentInvoiceData.totalAmountPaid || 0) - originalPaymentData.amountPaid;
         const newBalanceDue = currentInvoiceData.financials.totalAmount - newTotalAmountPaid;
-        
+
         // ✅ CRITICAL: Recalculate payment status based on new balance
         let newPaymentStatus;
         if (newBalanceDue <= 0) {
@@ -3293,11 +3298,11 @@ export async function voidSalePayment(paymentId, adminUser) {
                 sourceDetails: {
                     transactionType: 'payment_void_reversal',
                     store: currentInvoiceData.store,
-                    
+
                     // ✅ CORRECTED: Use both identifiers for complete audit
                     systemInvoiceId: currentInvoiceData.saleId,           // Digital invoice ID
                     manualVoucherNumber: currentInvoiceData.manualVoucherNumber, // Manual voucher
-                    
+
                     originalPaymentId: paymentId,
                     voidReason: 'Administrative payment void',
                     originalPaymentMode: originalPaymentData.paymentMode,
@@ -3315,7 +3320,7 @@ export async function voidSalePayment(paymentId, adminUser) {
                     originalDonationAmount: originalPaymentData.donationAmount
                 }
             });
-            
+
             console.log(`[API] ✅ Donation reversal recorded: ₹${(-originalPaymentData.donationAmount).toFixed(2)}`); // ✅ MANUAL FORMAT
         }
     });
@@ -3370,20 +3375,20 @@ export async function getSalesInvoiceById(invoiceId) {
 
 export async function calculateDirectSalesMetrics(startDate, endDate) {
     const db = firebase.firestore();
-    
+
     const directSalesQuery = db.collection(SALES_COLLECTION_PATH)
         .where('saleDate', '>=', startDate)
         .where('saleDate', '<=', endDate);
-    
+
     const snapshot = await directSalesQuery.get();
     const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
+
     // Calculate store-specific metrics
     const storeMetrics = {
         'Church Store': { revenue: 0, transactions: 0, customers: new Set() },
         'Tasty Treats': { revenue: 0, transactions: 0, customers: new Set() }
     };
-    
+
     sales.forEach(sale => {
         const store = sale.store;
         if (storeMetrics[store]) {
@@ -3392,7 +3397,7 @@ export async function calculateDirectSalesMetrics(startDate, endDate) {
             storeMetrics[store].customers.add(sale.customerInfo.email);
         }
     });
-    
+
     return {
         totalDirectRevenue: sales.reduce((sum, s) => sum + s.financials.totalAmount, 0),
         totalTransactions: sales.length,
@@ -3401,8 +3406,8 @@ export async function calculateDirectSalesMetrics(startDate, endDate) {
             revenue: storeMetrics[store].revenue,
             transactions: storeMetrics[store].transactions,
             uniqueCustomers: storeMetrics[store].customers.size,
-            avgTransactionValue: storeMetrics[store].transactions > 0 
-                ? storeMetrics[store].revenue / storeMetrics[store].transactions 
+            avgTransactionValue: storeMetrics[store].transactions > 0
+                ? storeMetrics[store].revenue / storeMetrics[store].transactions
                 : 0
         }))
     };
@@ -3411,20 +3416,20 @@ export async function calculateDirectSalesMetrics(startDate, endDate) {
 
 export async function calculateConsignmentSalesMetrics(startDate, endDate) {
     const db = firebase.firestore();
-    
+
     // Get all consignment orders with activity in the date range
     const ordersQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
         .where('status', '==', 'Active');
-    
+
     const snapshot = await ordersQuery.get();
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
+
     let totalConsignmentRevenue = 0;
     let totalItemsSold = 0;
     let totalItemsReturned = 0;
-    
+
     const teamPerformance = {};
-    
+
     // Analyze each order's activity within the date range
     for (const order of orders) {
         const activitySnapshot = await db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH)
@@ -3434,14 +3439,14 @@ export async function calculateConsignmentSalesMetrics(startDate, endDate) {
             .where('activityDate', '<=', endDate)
             .where('activityType', '==', 'Sale')
             .get();
-        
+
         const activities = activitySnapshot.docs.map(doc => doc.data());
         const orderRevenue = activities.reduce((sum, a) => sum + (a.totalSaleValue || 0), 0);
         const orderQuantity = activities.reduce((sum, a) => sum + (a.quantity || 0), 0);
-        
+
         totalConsignmentRevenue += orderRevenue;
         totalItemsSold += orderQuantity;
-        
+
         // Track team performance
         if (!teamPerformance[order.teamName]) {
             teamPerformance[order.teamName] = {
@@ -3450,12 +3455,12 @@ export async function calculateConsignmentSalesMetrics(startDate, endDate) {
                 activeOrders: 0
             };
         }
-        
+
         teamPerformance[order.teamName].revenue += orderRevenue;
         teamPerformance[order.teamName].itemsSold += orderQuantity;
         teamPerformance[order.teamName].activeOrders += 1;
     }
-    
+
     return {
         totalConsignmentRevenue,
         totalItemsSold,
@@ -3502,7 +3507,7 @@ export function generateSalesPerformanceReport(rawMetrics, comparisonMetrics = n
         storeComparison: [],
         trendIndicators: {}
     };
-    
+
     // Format store breakdown data
     Object.entries(rawMetrics.storeBreakdown).forEach(([store, data]) => {
         report.storeComparison.push({
@@ -3513,12 +3518,12 @@ export function generateSalesPerformanceReport(rawMetrics, comparisonMetrics = n
             revenuePercentage: ((data.revenue / rawMetrics.totalDirectRevenue) * 100).toFixed(1)
         });
     });
-    
+
     // Calculate trend indicators if comparison data provided
     if (comparisonMetrics) {
-        const revenueChange = ((rawMetrics.totalDirectRevenue - comparisonMetrics.totalDirectRevenue) 
+        const revenueChange = ((rawMetrics.totalDirectRevenue - comparisonMetrics.totalDirectRevenue)
             / comparisonMetrics.totalDirectRevenue) * 100;
-        
+
         report.trendIndicators = {
             revenueChange: {
                 percentage: revenueChange.toFixed(1),
@@ -3527,7 +3532,7 @@ export function generateSalesPerformanceReport(rawMetrics, comparisonMetrics = n
             }
         };
     }
-    
+
     return report;
 }
 
@@ -3557,23 +3562,23 @@ export async function complexBusinessFunction(data) {
     if (!data || typeof data !== 'object') {
         throw new Error('Invalid data parameter');
     }
-    
+
     // STEP 2: Initialize calculation variables
     let totalRevenue = 0;
     const storeMetrics = new Map(); // Using Map for better performance with large datasets
-    
+
     // STEP 3: Process each transaction with detailed business logic
     data.transactions.forEach(transaction => {
         // Business rule: Only count completed transactions for revenue
         if (transaction.status === 'Completed') {
             totalRevenue += transaction.amount;
-            
+
             // Store-level aggregation for breakdown analysis
             const currentStoreTotal = storeMetrics.get(transaction.store) || 0;
             storeMetrics.set(transaction.store, currentStoreTotal + transaction.amount);
         }
     });
-    
+
     // STEP 4: Return structured results with clear property names
     return {
         totalRevenue,
@@ -3626,11 +3631,11 @@ export async function createProductPriceHistory(productId, priceHistoryData, use
     if (!productId || typeof productId !== 'string') {
         throw new Error('createProductPriceHistory requires a valid product ID string');
     }
-    
+
     if (!priceHistoryData || typeof priceHistoryData !== 'object') {
         throw new Error('createProductPriceHistory requires valid price history data object');
     }
-    
+
     if (!user || !user.email) {
         throw new Error('createProductPriceHistory requires a valid user object with email');
     }
@@ -3645,41 +3650,41 @@ export async function createProductPriceHistory(productId, priceHistoryData, use
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Creating price history for product ${productId} in catalogue ${priceHistoryData.salesCatalogueName}`);
-        
+
         // Create reference to the price history sub-collection
         const priceHistoryRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
             .doc(productId)
             .collection('priceHistory')
             .doc(); // Auto-generate document ID
-        
+
         // Prepare complete price history document
         const priceHistoryDocument = {
             // Essential catalogue reference
             salesCatalogueId: priceHistoryData.salesCatalogueId,
             salesCatalogueName: priceHistoryData.salesCatalogueName,
-            
+
             // Core pricing data
             unitSellingPrice: Number(priceHistoryData.unitSellingPrice), // Ensure number type
             isActive: priceHistoryData.isActive !== false, // Default to true if not specified
-            
+
             // Standard audit fields
             createdBy: user.email,
             createdDate: now,
             updatedBy: user.email,
             updatedDate: now
         };
-        
+
         // Create the price history record
         await priceHistoryRef.set(priceHistoryDocument);
-        
+
         console.log(`[API] ✅ Price history created successfully for ${productId}`);
         console.log(`[API] Price: ₹${priceHistoryData.unitSellingPrice}, Active: ${priceHistoryDocument.isActive}`);
-        
+
         return priceHistoryRef;
-        
+
     } catch (error) {
         console.error(`[API] Error creating price history for product ${productId}:`, error);
         throw new Error(`Failed to create price history: ${error.message}`);
@@ -3715,39 +3720,39 @@ export async function updateProductPriceHistoryStatus(salesCatalogueId, isActive
     if (!salesCatalogueId || typeof salesCatalogueId !== 'string') {
         throw new Error('updateProductPriceHistoryStatus requires a valid catalogue ID string');
     }
-    
+
     if (typeof isActive !== 'boolean') {
         throw new Error('updateProductPriceHistoryStatus requires isActive to be a boolean');
     }
-    
+
     if (!user || !user.email) {
         throw new Error('updateProductPriceHistoryStatus requires a valid user object');
     }
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Updating price history status for catalogue ${salesCatalogueId} to ${isActive ? 'active' : 'inactive'}`);
-        
+
         // Create a batch operation for atomic updates
         const batch = db.batch();
         let updateCount = 0;
-        
+
         // Get all products to check their price history
         const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
         console.log(`[API] Checking price history across ${productsSnapshot.size} products`);
-        
+
         // Process each product's price history in parallel for efficiency
         const updatePromises = productsSnapshot.docs.map(async (productDoc) => {
             const productId = productDoc.id;
-            
+
             // Query price history records for this catalogue
             const priceHistoryQuery = productDoc.ref.collection('priceHistory')
                 .where('salesCatalogueId', '==', salesCatalogueId);
-            
+
             const priceHistorySnapshot = await priceHistoryQuery.get();
-            
+
             // Update each matching price history record
             priceHistorySnapshot.docs.forEach(priceDoc => {
                 batch.update(priceDoc.ref, {
@@ -3758,10 +3763,10 @@ export async function updateProductPriceHistoryStatus(salesCatalogueId, isActive
                 updateCount++;
             });
         });
-        
+
         // Wait for all price history queries to complete
         await Promise.all(updatePromises);
-        
+
         // Commit all updates atomically
         if (updateCount > 0) {
             await batch.commit();
@@ -3769,7 +3774,7 @@ export async function updateProductPriceHistoryStatus(salesCatalogueId, isActive
         } else {
             console.log(`[API] ℹ️ No price history records found for catalogue ${salesCatalogueId}`);
         }
-        
+
     } catch (error) {
         console.error(`[API] Error updating price history status for catalogue ${salesCatalogueId}:`, error);
         throw new Error(`Failed to update price history status: ${error.message}`);
@@ -3816,10 +3821,10 @@ export async function updateProductPriceHistoryStatus(salesCatalogueId, isActive
 export async function getCurrentSellingPricesFromHistory(productIds = null, useHighestPrice = true) {
     const db = firebase.firestore();
     let totalReads = 0;
-    
+
     try {
         console.log(`[API] Getting current selling prices from price history (highest price: ${useHighestPrice})`);
-        
+
         // Determine which products to query
         let productsToQuery;
         if (productIds && Array.isArray(productIds)) {
@@ -3832,9 +3837,9 @@ export async function getCurrentSellingPricesFromHistory(productIds = null, useH
                 .map(product => product.id);
             console.log(`[API] Querying prices for ${productsToQuery.length} active products from cache`);
         }
-        
+
         const currentPrices = new Map();
-        
+
         // Query price history for each product in parallel (optimized for speed)
         const priceQueryPromises = productsToQuery.map(async (productId) => {
             try {
@@ -3844,26 +3849,26 @@ export async function getCurrentSellingPricesFromHistory(productIds = null, useH
                     .collection('priceHistory')
                     .where('isActive', '==', true)
                     .orderBy('updatedDate', 'desc'); // Most recently updated first
-                
+
                 const priceSnapshot = await priceHistoryQuery.get();
                 const readCount = priceSnapshot.size;
-                
+
                 if (readCount > 0) {
                     const activePriceRecords = priceSnapshot.docs.map(doc => ({
                         id: doc.id,
                         ...doc.data()
                     }));
-                    
+
                     // Determine which price to use
                     let selectedPrice;
                     let selectedCatalogue;
-                    
+
                     if (useHighestPrice && activePriceRecords.length > 1) {
                         // Find highest price for maximum revenue potential
                         const highestPriceRecord = activePriceRecords.reduce((highest, current) => {
                             return (current.unitSellingPrice > highest.unitSellingPrice) ? current : highest;
                         });
-                        
+
                         selectedPrice = highestPriceRecord.unitSellingPrice;
                         selectedCatalogue = highestPriceRecord.salesCatalogueName;
                     } else {
@@ -3871,7 +3876,7 @@ export async function getCurrentSellingPricesFromHistory(productIds = null, useH
                         selectedPrice = activePriceRecords[0].unitSellingPrice;
                         selectedCatalogue = activePriceRecords[0].salesCatalogueName;
                     }
-                    
+
                     // Store comprehensive pricing information
                     currentPrices.set(productId, {
                         sellingPrice: selectedPrice,
@@ -3887,33 +3892,33 @@ export async function getCurrentSellingPricesFromHistory(productIds = null, useH
                         priceRange: activePriceRecords.length > 1 ? {
                             lowest: Math.min(...activePriceRecords.map(r => r.unitSellingPrice)),
                             highest: Math.max(...activePriceRecords.map(r => r.unitSellingPrice)),
-                            variation: Math.max(...activePriceRecords.map(r => r.unitSellingPrice)) - 
-                                      Math.min(...activePriceRecords.map(r => r.unitSellingPrice))
+                            variation: Math.max(...activePriceRecords.map(r => r.unitSellingPrice)) -
+                                Math.min(...activePriceRecords.map(r => r.unitSellingPrice))
                         } : null
                     });
-                    
+
                     console.log(`[API] ✅ ${productId}: ₹${selectedPrice} from ${selectedCatalogue} (${activePriceRecords.length} catalogues)`);
                 }
-                
+
                 return readCount;
-                
+
             } catch (productError) {
                 console.warn(`[API] Error getting price history for product ${productId}:`, productError);
                 return 0; // Return 0 reads for failed queries
             }
         });
-        
+
         // Execute all price queries in parallel and sum up reads
         const readCounts = await Promise.all(priceQueryPromises);
         totalReads = readCounts.reduce((sum, count) => sum + count, 0);
-        
+
         console.log(`[API] ✅ Current selling prices retrieved using ${totalReads} Firestore reads`);
         console.log(`[API] Found pricing for ${currentPrices.size} products out of ${productsToQuery.length} queried`);
-        
+
         // Log pricing insights
         let multiCatalogueProducts = 0;
         let totalPriceVariation = 0;
-        
+
         currentPrices.forEach((priceInfo, productId) => {
             if (priceInfo.catalogueCount > 1) {
                 multiCatalogueProducts++;
@@ -3922,14 +3927,14 @@ export async function getCurrentSellingPricesFromHistory(productIds = null, useH
                 }
             }
         });
-        
+
         if (multiCatalogueProducts > 0) {
             const avgVariation = totalPriceVariation / multiCatalogueProducts;
             console.log(`[API] 📊 ${multiCatalogueProducts} products in multiple catalogues, avg price variation: ₹${avgVariation.toFixed(2)}`);
         }
-        
+
         return currentPrices;
-        
+
     } catch (error) {
         console.error(`[API] Error getting current selling prices from history (${totalReads} reads used):`, error);
         throw new Error(`Failed to get current selling prices: ${error.message}`);
@@ -3977,25 +3982,25 @@ export async function batchCreatePriceHistory(salesCatalogueId, salesCatalogueNa
     if (!salesCatalogueId || !salesCatalogueName) {
         throw new Error('batchCreatePriceHistory requires valid catalogue ID and name');
     }
-    
+
     if (!catalogueItems || !Array.isArray(catalogueItems) || catalogueItems.length === 0) {
         throw new Error('batchCreatePriceHistory requires a non-empty array of catalogue items');
     }
-    
+
     if (typeof isActive !== 'boolean') {
         throw new Error('batchCreatePriceHistory requires isActive to be a boolean');
     }
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Batch creating price history for ${catalogueItems.length} items in catalogue ${salesCatalogueName}`);
-        
+
         // Create batch operation for atomic execution
         const batch = db.batch();
         let batchCount = 0;
-        
+
         // Process each catalogue item
         catalogueItems.forEach(item => {
             // Validate item structure
@@ -4003,13 +4008,13 @@ export async function batchCreatePriceHistory(salesCatalogueId, salesCatalogueNa
                 console.warn(`[API] Skipping invalid catalogue item:`, item);
                 return;
             }
-            
+
             // Create price history document reference
             const priceHistoryRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
                 .doc(item.productId)
                 .collection('priceHistory')
                 .doc(); // Auto-generate ID
-            
+
             // Prepare price history document
             const priceHistoryDocument = {
                 salesCatalogueId: salesCatalogueId,
@@ -4021,14 +4026,14 @@ export async function batchCreatePriceHistory(salesCatalogueId, salesCatalogueNa
                 updatedBy: user.email,
                 updatedDate: now
             };
-            
+
             // Add to batch
             batch.set(priceHistoryRef, priceHistoryDocument);
             batchCount++;
-            
+
             console.log(`[API] Batched price history: ${item.productId} -> ₹${item.sellingPrice}`);
         });
-        
+
         // Commit the entire batch atomically
         if (batchCount > 0) {
             await batch.commit();
@@ -4036,9 +4041,9 @@ export async function batchCreatePriceHistory(salesCatalogueId, salesCatalogueNa
         } else {
             console.log(`[API] ⚠️ No valid items found for batch price history creation`);
         }
-        
+
         return batchCount;
-        
+
     } catch (error) {
         console.error(`[API] Error in batch price history creation for catalogue ${salesCatalogueId}:`, error);
         throw new Error(`Batch price history creation failed: ${error.message}`);
@@ -4086,21 +4091,21 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
     if (!productId || !salesCatalogueId) {
         throw new Error('updateProductPriceHistoryPrice requires valid product and catalogue IDs');
     }
-    
+
     if (typeof newSellingPrice !== 'number' || newSellingPrice < 0) {
         throw new Error('updateProductPriceHistoryPrice requires a valid positive selling price');
     }
-    
+
     if (!user || !user.email) {
         throw new Error('updateProductPriceHistoryPrice requires a valid user object');
     }
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Updating/creating price history for product ${productId} in catalogue ${salesCatalogueId} to ₹${newSellingPrice}`);
-        
+
         // 1. Try to find existing active price history record
         const priceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
             .doc(productId)
@@ -4108,24 +4113,24 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
             .where('salesCatalogueId', '==', salesCatalogueId)
             .where('isActive', '==', true)
             .limit(1);
-        
+
         const priceHistorySnapshot = await priceHistoryQuery.get();
-        
+
         if (!priceHistorySnapshot.empty) {
             // CASE 1: Price history exists - UPDATE existing record
             const existingPriceDoc = priceHistorySnapshot.docs[0];
             const existingData = existingPriceDoc.data();
-            
+
             console.log(`[API] Found existing price history record, updating from ₹${existingData.unitSellingPrice} to ₹${newSellingPrice}`);
-            
+
             await existingPriceDoc.ref.update({
                 unitSellingPrice: newSellingPrice,
                 updatedBy: user.email,
                 updatedDate: now
             });
-            
+
             console.log(`[API] ✅ Existing price history updated successfully`);
-            
+
             return {
                 updated: true,
                 created: false,
@@ -4134,20 +4139,20 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
                 newPrice: newSellingPrice,
                 operation: 'updated'
             };
-            
+
         } else {
             // CASE 2: No price history exists - CREATE new record (BACKWARD COMPATIBILITY)
             console.log(`[API] No price history found, creating new record for backward compatibility`);
-            
+
             // Get catalogue information for the new price history record
             const catalogueDoc = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(salesCatalogueId).get();
-            
+
             if (!catalogueDoc.exists) {
                 throw new Error(`Catalogue ${salesCatalogueId} not found for price history creation`);
             }
-            
+
             const catalogueData = catalogueDoc.data();
-            
+
             // Create new price history record
             const priceHistoryRef = await createProductPriceHistory(productId, {
                 salesCatalogueId: salesCatalogueId,
@@ -4155,9 +4160,9 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
                 unitSellingPrice: newSellingPrice,
                 isActive: catalogueData.isActive !== false // Inherit catalogue's active status
             }, user);
-            
+
             console.log(`[API] ✅ New price history record created for backward compatibility`);
-            
+
             return {
                 updated: false,
                 created: true,
@@ -4168,7 +4173,7 @@ export async function updateProductPriceHistoryPrice(productId, salesCatalogueId
                 backwardCompatibility: true
             };
         }
-        
+
     } catch (error) {
         console.error(`[API] Error in updateProductPriceHistoryPrice for ${productId}:`, error);
         throw new Error(`Price history update/create failed: ${error.message}`);
@@ -4210,24 +4215,24 @@ export async function deactivateProductPriceHistory(productId, salesCatalogueId,
 
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    
+
     try {
         console.log(`[API] Deactivating price history for product ${productId} in catalogue ${salesCatalogueId}`);
-        
+
         // Find and deactivate the specific price history record
         const priceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
             .doc(productId)
             .collection('priceHistory')
             .where('salesCatalogueId', '==', salesCatalogueId)
             .where('isActive', '==', true);
-        
+
         const priceHistorySnapshot = await priceHistoryQuery.get();
-        
+
         if (priceHistorySnapshot.empty) {
             console.log(`[API] No active price history found to deactivate for product ${productId}`);
             return false;
         }
-        
+
         // Deactivate all matching records (should typically be just one)
         const batch = db.batch();
         priceHistorySnapshot.docs.forEach(doc => {
@@ -4237,12 +4242,12 @@ export async function deactivateProductPriceHistory(productId, salesCatalogueId,
                 updatedDate: now
             });
         });
-        
+
         await batch.commit();
-        
+
         console.log(`[API] ✅ Deactivated ${priceHistorySnapshot.size} price history records for product ${productId}`);
         return true;
-        
+
     } catch (error) {
         console.error(`[API] Error deactivating price history for product ${productId}:`, error);
         throw new Error(`Failed to deactivate price history: ${error.message}`);
@@ -4283,32 +4288,32 @@ export async function getProductPricingAnalysis(productId) {
     }
 
     const db = firebase.firestore();
-    
+
     try {
         console.log(`[API] Getting comprehensive pricing analysis for product ${productId}`);
-        
+
         // Get ALL price history for this product (active and inactive)
         const allPriceHistoryQuery = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH)
             .doc(productId)
             .collection('priceHistory')
             .orderBy('createdDate', 'desc');
-        
+
         const allPriceHistorySnapshot = await allPriceHistoryQuery.get();
-        
+
         if (allPriceHistorySnapshot.empty) {
             console.log(`[API] No price history found for product ${productId}`);
             return null;
         }
-        
+
         const allPriceRecords = allPriceHistorySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
-        
+
         // Separate active and inactive records
         const activePrices = allPriceRecords.filter(record => record.isActive);
         const historicalPrices = allPriceRecords.filter(record => !record.isActive);
-        
+
         // Analyze current pricing (active records only)
         let currentPricing = null;
         if (activePrices.length > 0) {
@@ -4318,7 +4323,7 @@ export async function getProductPricingAnalysis(productId) {
                 catalogueName: r.salesCatalogueName,
                 price: r.unitSellingPrice
             }));
-            
+
             currentPricing = {
                 activeCatalogueCount: activePrices.length,
                 currentHighestPrice: Math.max(...prices),
@@ -4328,14 +4333,14 @@ export async function getProductPricingAnalysis(productId) {
                     lowest: Math.min(...prices),
                     highest: Math.max(...prices),
                     variation: Math.max(...prices) - Math.min(...prices),
-                    variationPercentage: Math.min(...prices) > 0 
-                        ? ((Math.max(...prices) - Math.min(...prices)) / Math.min(...prices)) * 100 
+                    variationPercentage: Math.min(...prices) > 0
+                        ? ((Math.max(...prices) - Math.min(...prices)) / Math.min(...prices)) * 100
                         : 0
                 },
                 catalogueDistribution: catalogues
             };
         }
-        
+
         // Analyze pricing history trends
         const pricingHistory = {
             totalHistoricalRecords: historicalPrices.length,
@@ -4345,24 +4350,24 @@ export async function getProductPricingAnalysis(productId) {
                 catalogueName: record.salesCatalogueName,
                 isActive: record.isActive
             })),
-            highestHistoricalPrice: allPriceRecords.length > 0 
-                ? Math.max(...allPriceRecords.map(r => r.unitSellingPrice)) 
+            highestHistoricalPrice: allPriceRecords.length > 0
+                ? Math.max(...allPriceRecords.map(r => r.unitSellingPrice))
                 : 0,
-            lowestHistoricalPrice: allPriceRecords.length > 0 
-                ? Math.min(...allPriceRecords.map(r => r.unitSellingPrice)) 
+            lowestHistoricalPrice: allPriceRecords.length > 0
+                ? Math.min(...allPriceRecords.map(r => r.unitSellingPrice))
                 : 0
         };
-        
+
         // Generate pricing insights and recommendations
         const pricingInsights = {
             isInMultipleCatalogues: activePrices.length > 1,
             hasPriceVariation: currentPricing && currentPricing.priceRange.variation > 0,
             priceConsistencyRating: currentPricing && currentPricing.priceRange.variationPercentage < 5 ? 'Excellent' :
-                                   currentPricing && currentPricing.priceRange.variationPercentage < 15 ? 'Good' :
-                                   currentPricing && currentPricing.priceRange.variationPercentage < 25 ? 'Fair' : 'Poor',
+                currentPricing && currentPricing.priceRange.variationPercentage < 15 ? 'Good' :
+                    currentPricing && currentPricing.priceRange.variationPercentage < 25 ? 'Fair' : 'Poor',
             recommendations: []
         };
-        
+
         // Generate specific recommendations
         if (pricingInsights.isInMultipleCatalogues && pricingInsights.hasPriceVariation) {
             pricingInsights.recommendations.push({
@@ -4372,7 +4377,7 @@ export async function getProductPricingAnalysis(productId) {
                 action: 'Review pricing strategy across catalogues'
             });
         }
-        
+
         const analysisResult = {
             productId,
             currentPricing,
@@ -4384,7 +4389,7 @@ export async function getProductPricingAnalysis(productId) {
                 isActive: record.isActive
             })),
             pricingInsights,
-            
+
             metadata: {
                 analyzedAt: new Date().toISOString(),
                 totalPriceRecords: allPriceRecords.length,
@@ -4393,10 +4398,10 @@ export async function getProductPricingAnalysis(productId) {
                 firestoreReadsUsed: allPriceHistorySnapshot.size
             }
         };
-        
+
         console.log(`[API] ✅ Product pricing analysis completed for ${productId} using ${allPriceHistorySnapshot.size} reads`);
         return analysisResult;
-        
+
     } catch (error) {
         console.error(`[API] Error analyzing product pricing for ${productId}:`, error);
         throw new Error(`Product pricing analysis failed: ${error.message}`);
@@ -4430,14 +4435,14 @@ export async function getProductPricingAnalysis(productId) {
 export async function getPricingStatistics() {
     const db = firebase.firestore();
     let totalReads = 0;
-    
+
     try {
         console.log(`[API] Calculating comprehensive pricing statistics across all products`);
-        
+
         // Get pricing data for all active products
         const activePrices = await getCurrentSellingPricesFromHistory(null, true);
         totalReads += activePrices.size; // Approximate read count
-        
+
         // Initialize statistics collection
         const statistics = {
             totalProductsWithPricing: activePrices.size,
@@ -4452,24 +4457,24 @@ export async function getPricingStatistics() {
                 over100: 0
             }
         };
-        
+
         // Analyze each product's pricing
         activePrices.forEach((priceInfo, productId) => {
             // Count products in multiple catalogues
             if (priceInfo.catalogueCount > 1) {
                 statistics.productsInMultipleCatalogues++;
-                
+
                 if (priceInfo.priceRange && priceInfo.priceRange.variation > 0) {
                     statistics.totalPriceVariation += priceInfo.priceRange.variation;
                 }
             }
-            
+
             // Count catalogue distribution
             priceInfo.catalogueSources.forEach(source => {
                 const currentCount = statistics.catalogueDistribution.get(source.catalogueName) || 0;
                 statistics.catalogueDistribution.set(source.catalogueName, currentCount + 1);
             });
-            
+
             // Categorize by price ranges
             const price = priceInfo.sellingPrice;
             if (price < 10) {
@@ -4482,30 +4487,30 @@ export async function getPricingStatistics() {
                 statistics.priceRanges.over100++;
             }
         });
-        
+
         // Calculate derived metrics
-        const averagePriceVariation = statistics.productsInMultipleCatalogues > 0 
-            ? statistics.totalPriceVariation / statistics.productsInMultipleCatalogues 
+        const averagePriceVariation = statistics.productsInMultipleCatalogues > 0
+            ? statistics.totalPriceVariation / statistics.productsInMultipleCatalogues
             : 0;
-        
+
         // Convert catalogue distribution to array
         const catalogueAnalysis = [];
         statistics.catalogueDistribution.forEach((productCount, catalogueName) => {
             catalogueAnalysis.push({
                 catalogueName,
                 productCount,
-                percentage: statistics.totalProductsWithPricing > 0 
-                    ? (productCount / statistics.totalProductsWithPricing) * 100 
+                percentage: statistics.totalProductsWithPricing > 0
+                    ? (productCount / statistics.totalProductsWithPricing) * 100
                     : 0
             });
         });
-        
+
         // Sort by product count (highest first)
         catalogueAnalysis.sort((a, b) => b.productCount - a.productCount);
-        
+
         // Generate business insights
         const businessInsights = [];
-        
+
         if (statistics.productsInMultipleCatalogues > 5) {
             businessInsights.push({
                 type: 'pricing-consistency',
@@ -4515,7 +4520,7 @@ export async function getPricingStatistics() {
                 impact: 'Revenue optimization opportunity'
             });
         }
-        
+
         if (averagePriceVariation > 10) {
             businessInsights.push({
                 type: 'price-variation',
@@ -4525,7 +4530,7 @@ export async function getPricingStatistics() {
                 impact: 'Customer confusion and lost sales potential'
             });
         }
-        
+
         if (statistics.totalProductsWithoutPricing > 0) {
             businessInsights.push({
                 type: 'missing-pricing',
@@ -4535,24 +4540,24 @@ export async function getPricingStatistics() {
                 impact: 'Products cannot be sold without catalogue pricing'
             });
         }
-        
+
         const finalResults = {
             overallStatistics: {
                 totalProductsAnalyzed: masterData.products?.length || 0,
                 productsWithActivePricing: statistics.totalProductsWithPricing,
                 productsWithoutPricing: statistics.totalProductsWithoutPricing,
-                pricingCoverage: masterData.products?.length > 0 
-                    ? (statistics.totalProductsWithPricing / masterData.products.length) * 100 
+                pricingCoverage: masterData.products?.length > 0
+                    ? (statistics.totalProductsWithPricing / masterData.products.length) * 100
                     : 0,
                 productsInMultipleCatalogues: statistics.productsInMultipleCatalogues,
                 averagePriceVariation: averagePriceVariation,
                 totalActiveCatalogues: catalogueAnalysis.length
             },
-            
+
             catalogueAnalysis: catalogueAnalysis,
-            
+
             priceRangeDistribution: statistics.priceRanges,
-            
+
             pricingOpportunities: Array.from(activePrices.entries())
                 .filter(([productId, priceInfo]) => priceInfo.catalogueCount > 1 && priceInfo.priceRange?.variation > 5)
                 .map(([productId, priceInfo]) => ({
@@ -4561,15 +4566,15 @@ export async function getPricingStatistics() {
                     catalogueCount: priceInfo.catalogueCount,
                     priceVariation: priceInfo.priceRange.variation,
                     currentPriceRange: `₹${priceInfo.priceRange.lowest} - ₹${priceInfo.priceRange.highest}`,
-                    recommendedAction: priceInfo.priceRange.variation > 20 
+                    recommendedAction: priceInfo.priceRange.variation > 20
                         ? 'High priority price review needed'
                         : 'Consider price standardization'
                 }))
                 .sort((a, b) => b.priceVariation - a.priceVariation) // Highest variation first
                 .slice(0, 10), // Top 10 opportunities
-            
+
             businessInsights,
-            
+
             metadata: {
                 generatedAt: new Date().toISOString(),
                 approximateFirestoreReads: totalReads,
@@ -4577,12 +4582,12 @@ export async function getPricingStatistics() {
                 analysisScope: 'All active products with pricing data'
             }
         };
-        
+
         console.log(`[API] ✅ Pricing statistics completed using ~${totalReads} Firestore reads`);
         console.log(`[API] Key insights: ${statistics.totalProductsWithPricing} products priced, ${statistics.productsInMultipleCatalogues} in multiple catalogues`);
-        
+
         return finalResults;
-        
+
     } catch (error) {
         console.error(`[API] Error calculating pricing statistics:`, error);
         throw new Error(`Pricing statistics calculation failed: ${error.message}`);
@@ -4627,7 +4632,7 @@ export async function addExpense(expenseData, user) {
             console.log("Step 1: Manually fetching security token...");
             //const authUrl = `https://moneta007.netlify.app/.netlify/functions/imagekit-auth?t=${Date.now()}`;
 
-            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
 
             const authResponse = await fetch(authUrl);
 
@@ -4656,7 +4661,7 @@ export async function addExpense(expenseData, user) {
                 expire: authenticationParameters.expire,
                 signature: authenticationParameters.signature,
             });
-            
+
             receiptUrl = result.url;
             receiptFileId = result.fileId;
             console.log('Step 4: Receipt uploaded successfully to ImageKit. URL:', receiptUrl);
@@ -4685,7 +4690,7 @@ export async function addExpense(expenseData, user) {
         receiptUrl,
         receiptFileId
     };
-    
+
     return db.collection(EXPENSES_COLLECTION_PATH).add(dataToSave);
 }
 
@@ -4769,13 +4774,13 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
     const authenticator = async () => {
         try {
             console.log("Authenticator called for existing expense. Fetching token...");
-            const authUrl= `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
+            const authUrl = `https://boskyjoe-github-io.vercel.app/api/imagekit-auth`;
             const response = await fetch(authUrl);
-            
+
             if (!response.ok) {
                 throw new Error(`Authentication server failed with status ${response.status}`);
             }
-            
+
             return await response.json();
         } catch (error) {
             console.error("Error in ImageKit authenticator:", error);
@@ -4785,7 +4790,7 @@ export async function uploadReceiptForExistingExpense(docId, file, user) {
 
     // --- Step 2: Upload the file using the authenticator ---
     console.log(`Uploading new receipt for existing expense: ${file.name}`);
-    
+
     const result = await imagekit.upload({
         file: file,
         fileName: file.name,
@@ -4907,7 +4912,7 @@ export async function replaceExpenseReceipt(docId, expenseData, newFile, user) {
             expire: authenticationParameters.expire,
             signature: authenticationParameters.signature,
         });
-        
+
         console.log('Step D: New receipt uploaded successfully. URL:', result.url);
 
         // --- Step 3: Update the Firestore document ---
@@ -4944,17 +4949,17 @@ export async function getAllCataloguesWithItems() {
     console.log("[API] Fetching all catalogues and enriching items with master data...");
 
     const cataloguesSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH).where('isActive', '==', true).get();
-    
+
     const cataloguePromises = cataloguesSnapshot.docs.map(async (catalogueDoc) => {
         const catalogueData = catalogueDoc.data();
         const itemsSnapshot = await catalogueDoc.ref.collection('items').get();
-        
+
         const enrichedItems = itemsSnapshot.docs.map(itemDoc => {
             const itemData = itemDoc.data();
-            
+
             // 1. Find the corresponding master product from the cache
             const masterProduct = masterData.products.find(p => p.id === itemData.productId);
-            
+
             // 2. Find the corresponding category from the cache
             const category = masterData.categories.find(c => c.id === masterProduct?.categoryId);
 
@@ -4965,7 +4970,7 @@ export async function getAllCataloguesWithItems() {
                 inventoryCount: masterProduct ? masterProduct.inventoryCount : 0 // Add the inventory count
             };
         });
-        
+
         return {
             id: catalogueDoc.id,
             ...catalogueData,
@@ -5007,7 +5012,7 @@ export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, 
 
             // This is the logic from your recordPaymentAndUpdateInvoice function,
             // but adapted for use inside a transaction.
-            
+
             // 1. Get a reference for the new payment document
             const newPaymentRef = db.collection(SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH).doc();
             const paymentId = `SPAY-SUP-${Date.now()}-${invoice.id.slice(0, 4)}`;
@@ -5035,7 +5040,7 @@ export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, 
 
             // 3. Add the creation of this payment document to the transaction
             transaction.set(newPaymentRef, singlePaymentData);
-            
+
             console.log(`[API-TX] Queued payment of ${formatCurrency(amountToApply)} for invoice ${invoice.invoiceId}`);
 
             // 4. Decrease the amount of payment left to allocate
@@ -5057,7 +5062,7 @@ export async function processBulkSupplierPayment(paymentDetails, invoicesToPay, 
  */
 export async function addConsignmentExpense(orderId, expenseData, user) {
     const db = firebase.firestore();
-    
+
     const FieldValue = firebase.firestore.FieldValue;
     const now = FieldValue.serverTimestamp();
 
@@ -5074,7 +5079,7 @@ export async function addConsignmentExpense(orderId, expenseData, user) {
         transaction.set(expenseRef, {
             expenseId: `EXP-${Date.now()}`,
             // ✅ CHANGED: Use the date from the form, converted to a proper Date object
-            expenseDate: new Date(expenseData.expenseDate), 
+            expenseDate: new Date(expenseData.expenseDate),
             justification: expenseData.justification,
             amount: expenseAmount,
             hasPendingPayments: false,
