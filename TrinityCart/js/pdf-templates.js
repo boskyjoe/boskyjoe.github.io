@@ -607,7 +607,8 @@ export function generateTastyTreatsInvoice(data) {
         '{{accountNumber}}': data.accountNumber || '',
         '{{ifscCode}}': data.ifscCode || '',
         '{{accountHolderName}}': data.accountHolderName || '',
-        '{{termsAndConditions}}': data.termsAndConditions || ''
+        '{{termsAndConditions}}': data.termsAndConditions || '',
+        '{{qrCodeUrl}}':data.upiQRCodeUrl || ''
     };
     
     for (const [key, value] of Object.entries(replacements)) {
