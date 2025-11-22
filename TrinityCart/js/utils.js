@@ -111,3 +111,45 @@ export function nativeNumberToWords(num, locale = 'en-IN', currencyCode = 'INR')
         return "Conversion Error";
     }
 }
+
+
+export function numberToWords(num, ToWordsClass) {
+    // Check if the library class was successfully passed from main.js
+    if (typeof ToWordsClass === 'undefined') {
+        console.error("The ToWords library class must be passed as the second argument.");
+        return "Conversion Error: Library Class Missing";
+    }
+
+    if (isNaN(num)) {
+        return "Invalid Number";
+    }
+
+    try {
+        // Instantiate ToWords with the Indian locale (en-IN)
+        const toWordsConverter = new ToWordsClass({
+            localeCode: 'en-IN',
+            currencyOptions: {
+                // Custom names for Rupee/Paisa
+                name: 'Rupee',
+                plural: 'Rupees',
+                symbol: '₹',
+                fractionalUnit: {
+                    name: 'Paisa',
+                    plural: 'Paise',
+                    symbol: '',
+                },
+            }
+        });
+
+        // Perform the conversion with currency options
+        return toWordsConverter.convert(num, {
+            currency: true,
+            ignoreDecimal: false,
+        });
+        
+    } catch (error) {
+        // This will log the detailed error from the ToWords library
+        console.error("Failed to convert number to words:", error);
+        return "Conversion Error: Check Console";
+    }
+}
