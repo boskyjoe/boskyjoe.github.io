@@ -170,6 +170,7 @@ import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processE
 
 import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-templates.js';
 
+import { numberToWords } from './utils.js';
 
 
 // --- FIREBASE INITIALIZATION ---
