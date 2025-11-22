@@ -6,6 +6,9 @@
 // We need to get the currency symbol from masterData here.
 import { masterData } from './masterData.js';
 
+
+import { ToWords } from 'to-words';
+
 /**
  * Formats a number as a currency string using the system-defined currency symbol.
  * @param {number} value - The number to format.
@@ -43,17 +46,13 @@ export function formatCurrency(value) {
  */
 
 
-export function numberToWords(num) {
-    // 1. Check for the correct global object and simplify access
-    if (typeof ToWords === 'undefined' && typeof window.ToWords === 'undefined') {
-        console.error("The 'ToWords' library is not available. Ensure the script is loaded.");
+export function numberToWords(num, ToWordsClass) {
+    if (typeof ToWordsClass === 'undefined') {
+        console.error("The ToWords library class must be passed as the second argument.");
         return "Conversion Error";
     }
 
-    // Assuming global exposure from CDN
-    const ToWordsClass = window.ToWords || ToWords;
-
-    // 2. Pass 'currencyOptions' directly to the constructor
+    // Use the passed class directly
     const toWordsConverter = new ToWordsClass({
         localeCode: 'en-IN',
         currencyOptions: {
@@ -69,7 +68,6 @@ export function numberToWords(num) {
     });
 
     try {
-        // 3. Pass conversion behavior options to the .convert() method
         return toWordsConverter.convert(num, {
             currency: true,
             ignoreDecimal: false,
@@ -77,5 +75,40 @@ export function numberToWords(num) {
     } catch (error) {
         console.error("Failed to convert number to words:", num, error);
         return "Error in word conversion";
+    }
+}
+
+/**
+ * Converts a number to words in a specific currency format using the native Intl API.
+ * @param {number} num - The number to convert.
+ * @param {string} locale - The target locale (e.g., 'en-IN').
+ * @param {string} currencyCode - The ISO currency code (e.g., 'INR').
+ * @returns {string} The number in words.
+ */
+export function nativeNumberToWords(num, locale = 'en-IN', currencyCode = 'INR') {
+    if (isNaN(num)) {
+        return "Invalid Number";
+    }
+
+    try {
+        const formatter = new Intl.NumberFormat(locale, {
+            // Key 1: Set style to currency
+            style: 'currency',
+            currency: currencyCode,
+            
+            // Key 2: The magic option that converts the number to words
+            notation: 'long',
+            
+            // Optional: Controls minimum/maximum fractional digits
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2
+        });
+
+        // The result will include the currency name in the specified language/locale.
+        return formatter.format(num);
+
+    } catch (e) {
+        console.error("Intl.NumberFormat error:", e);
+        return "Conversion Error";
     }
 }
