@@ -7753,7 +7753,7 @@ async function handleGenerateInvoice(invoiceId) {
 
         console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
 
-        
+        const ToWords = window.ToWords;
 
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
@@ -7822,7 +7822,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: nativeNumberToWords(invoiceData.financials.totalAmount || 0,'en-IN', 'INR'),
+            amountInWords: numberToWords(invoiceData.financials.totalAmount || 0, ToWords),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
