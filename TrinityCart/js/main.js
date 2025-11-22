@@ -7822,7 +7822,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: nativeNumberToWords(grandTotal || 0,'en-IN', 'INR'),
+            amountInWords: nativeNumberToWords(invoiceData.financials.totalAmount || 0,'en-IN', 'INR'),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
