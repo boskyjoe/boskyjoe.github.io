@@ -2501,30 +2501,74 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
     const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
 
     return db.runTransaction(async (transaction) => {
+        // --- PHASE 1: READ ALL NECESSARY DOCUMENTS ---
+
         // 1. READ the payment document.
         const paymentDoc = await transaction.get(paymentRef);
         if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
             throw new Error("Payment not found or is not pending verification.");
         }
         const paymentData = paymentDoc.data();
-        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
 
-        // 2. WRITE: Update the payment document itself to "Verified".
+        // 2. Read the parent consignment order document to get its current financial state.
+        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) {
+            throw new Error("The associated consignment order could not be found.");
+        }
+        const orderData = orderDoc.data();
+
+
+        // 3. Query for any other pending payments for this order to manage the 'hasPendingPayments' flag.
+        const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+                                     .where('orderId', '==', paymentData.orderId)
+                                     .where('paymentStatus', '==', 'Pending Verification');
+        const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
+
+
+        // --- PHASE 2: CALCULATE NEW FINANCIAL STATE ---
+
+        const currentPaid = orderData.totalAmountPaid || 0;
+        const currentBalance = orderData.balanceDue || 0;
+        const paymentAmount = paymentData.amountPaid || 0;
+
+        const newTotalAmountPaid = currentPaid + paymentAmount;
+        const newBalanceDue = currentBalance - paymentAmount;
+
+
+        // --- PHASE 3: WRITE ALL CHANGES ---
+
+
+         // A. Update the payment document itself to "Verified".
         transaction.update(paymentRef, {
             paymentStatus: 'Verified',
             verifiedBy: adminUser.email,
             verifiedOn: now
         });
 
-        // 3. WRITE: Atomically update the main consignment order's financial totals.
+        // B. Update the parent consignment order with the new, manually calculated totals.
+        // We are NOT using FieldValue.increment() here.
         transaction.update(orderRef, {
-            totalAmountPaid: firebase.firestore.FieldValue.increment(paymentData.amountPaid),
-            balanceDue: firebase.firestore.FieldValue.increment(-paymentData.amountPaid)
+            totalAmountPaid: newTotalAmountPaid,
+            balanceDue: newBalanceDue
         });
+
+        // C. Update the hasPendingPayments flag based on the query result.
+        // Inside the transaction, the current payment still counts as "Pending".
+        // So, if the size is exactly 1, it means we are verifying the LAST one.
+        if (pendingSnapshot.size === 1) {
+            console.log(`[API] Last pending payment for order ${paymentData.orderId} verified. Clearing flag.`);
+            // We can merge this update with the one above for efficiency.
+            transaction.update(orderRef, { hasPendingPayments: false });
+        } else {
+            console.log(`[API] Order ${paymentData.orderId} still has ${pendingSnapshot.size - 1} other pending payments. Flag remains true.`);
+        }
+
 
         // ✅ FUTURE ENHANCEMENT: Add consignment donation handling if needed
         // If consignment payments can have overpayments, add donation logic here:
         
+        // D. Handle donation creation if there was an overpayment.
         if (paymentData.donationAmount && paymentData.donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             transaction.set(donationRef, {
@@ -2540,27 +2584,6 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
                 recordedBy: adminUser.email
             });
         }
-
-        // ✅ 5. NEW: CHECK AND UPDATE THE hasPendingPayments FLAG
-        // Query for any OTHER pending payments for this same order.
-        const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
-                                     .where('orderId', '==', paymentData.orderId)
-                                     .where('paymentStatus', '==', 'Pending Verification');
-        
-        const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
-
-        // Inside a transaction, the current payment still counts as "Pending".
-        // So, if the size is exactly 1, it means we are verifying the LAST one.
-        if (pendingSnapshot.size === 1) {
-            console.log(`[API] Last pending payment for order ${paymentData.orderId} verified. Clearing flag.`);
-            // Update the parent order to clear the flag.
-            transaction.update(orderRef, { hasPendingPayments: false });
-        } else {
-            console.log(`[API] Order ${paymentData.orderId} still has ${pendingSnapshot.size - 1} other pending payments. Flag remains true.`);
-        }
-
-
-    
     });
 }
 
@@ -2571,7 +2594,28 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
  */
 export async function cancelPaymentRecord(paymentId) {
     const db = firebase.firestore();
-    return db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId).delete();
+    const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+
+    return db.runTransaction(async (transaction) => {
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists) throw new Error("Payment not found.");
+        const paymentData = paymentDoc.data();
+
+        // Delete the payment record
+        transaction.delete(paymentRef);
+
+        // Now, check if any OTHER pending payments exist for this order
+        const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
+        const pendingQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
+                             .where('orderId', '==', paymentData.orderId)
+                             .where('paymentStatus', '==', 'Pending Verification');
+        const pendingSnapshot = await transaction.get(pendingQuery);
+
+        // If the size is 1, it means we are cancelling the LAST pending payment
+        if (pendingSnapshot.size === 1) {
+            transaction.update(orderRef, { hasPendingPayments: false });
+        }
+    });
 }
 
 // =======================================================
