@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency,numberToWords } from './utils.js'; 
+import { formatCurrency,numberToWords,nativeNumberToWords } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
@@ -7753,16 +7753,7 @@ async function handleGenerateInvoice(invoiceId) {
 
         console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
 
-        const ToWords = window.ToWords;
-
-        if (typeof ToWords !== 'undefined') {            
-            // 2. Call the function, passing the ToWords class
-            const amountInWords = numberToWords(invoiceData.financials.totalAmount || 0, ToWords); 
-            
-            console.log(`The amount in words is: ${amountInWords}`);
-        } else {
-            console.error("External library (ToWords) not found. Check HTML script tag.");
-        }
+        
 
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
@@ -7831,7 +7822,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: amountInWords,
+            amountInWords: nativeNumberToWords(amountInWords || 0,'en-IN', 'INR'),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
