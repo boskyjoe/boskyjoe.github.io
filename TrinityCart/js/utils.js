@@ -36,36 +36,42 @@ export function formatCurrency(value) {
 }
 
 /**
- * ✅ SIMPLIFIED & CORRECT: Converts a number into Indian currency words.
- * Assumes the 'to-words' library has been loaded via a <script> tag in index.html.
+ * ✅ FINAL & CORRECT: Converts a number into Indian currency words.
+ * Assumes the 'ToWords' library has been loaded via the <script defer> tag.
  * @param {number} num - The number to convert.
- * @returns {string} The amount in words.
+ * @returns {string} The amount in words (e.g., "Rupees One Thousand Two Hundred and Fifty Only").
  */
 export function numberToWords(num) {
-    // Safety check in case the library fails to load for any reason
+    // Safety check in case the library fails to load.
     if (typeof ToWords === 'undefined') {
-        console.error("The 'ToWords' library is not available. Please check the script tag in index.html.");
+        console.error("The 'ToWords' library is not available.");
         return "Conversion Error";
     }
 
+    // ✅ 1. Create a new instance WITH the configuration object.
     const toWordsConverter = new ToWords({
-        localeCode: 'en-IN',
+        localeCode: 'en-IN', // This enables Lakhs and Crores
         converterOptions: {
-            currency: true,
-            currencyOptions: {
+            currency: true,          // This enables currency mode
+            ignoreDecimal: false,    // Process numbers after the decimal
+            currencyOptions: {       // Define the currency names
                 name: 'Rupee',
                 plural: 'Rupees',
                 symbol: '₹',
-                fractionalUnit: { name: 'Paisa', plural: 'Paise', symbol: '' },
+                fractionalUnit: {
+                    name: 'Paisa',
+                    plural: 'Paise',
+                    symbol: '',
+                },
             }
         }
     });
 
     try {
-        // This is now a synchronous function, it does not need to be async.
+        // ✅ 2. Call the .convert() method on the configured instance.
         return toWordsConverter.convert(num) + ' Only';
     } catch (error) {
-        console.error("Failed to convert number to words:", error);
-        return "Error in conversion";
+        console.error("Failed to convert number to words:", num, error);
+        return "Error in word conversion";
     }
 }
