@@ -2490,9 +2490,14 @@ export async function submitPaymentRecord(paymentData, user) {
  * @param {string} paymentId - The ID of the payment document in the ledger.
  * @param {object} adminUser - The admin verifying the payment.
  */
+
 export async function verifyConsignmentPayment(paymentId, adminUser) {
     const db = firebase.firestore();
-    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    const FieldValue = firebase.firestore.FieldValue;
+    const now = FieldValue.serverTimestamp();
+
+
     const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
 
     return db.runTransaction(async (transaction) => {
