@@ -41,20 +41,23 @@ export function formatCurrency(value) {
  * @param {number} num - The number to convert.
  * @returns {string} The amount in words (e.g., "Rupees One Thousand Two Hundred and Fifty Only").
  */
-export function numberToWords(num) {
-    // Safety check in case the library fails to load.
-    if (typeof ToWords === 'undefined') {
+
+function numberToWords(num) {
+    // Check for the correct global object
+    if (typeof ToWords === 'undefined' && typeof window.ToWords === 'undefined') {
         console.error("The 'ToWords' library is not available.");
         return "Conversion Error";
     }
 
-    // ✅ 1. Create a new instance WITH the configuration object.
-    const toWordsConverter = new ToWords({
-        localeCode: 'en-IN', // This enables Lakhs and Crores
+    // Handle different ways the library might be exposed
+    const ToWordsClass = window.ToWords?.ToWords || window.ToWords || ToWords;
+
+    const toWordsConverter = new ToWordsClass({
+        localeCode: 'en-IN',
         converterOptions: {
-            currency: true,          // This enables currency mode
-            ignoreDecimal: false,    // Process numbers after the decimal
-            currencyOptions: {       // Define the currency names
+            currency: true,
+            ignoreDecimal: false,
+            currencyOptions: {
                 name: 'Rupee',
                 plural: 'Rupees',
                 symbol: '₹',
@@ -68,8 +71,7 @@ export function numberToWords(num) {
     });
 
     try {
-        // ✅ 2. Call the .convert() method on the configured instance.
-        return toWordsConverter.convert(num) + ' Only';
+        return toWordsConverter.convert(num);
     } catch (error) {
         console.error("Failed to convert number to words:", num, error);
         return "Error in word conversion";
