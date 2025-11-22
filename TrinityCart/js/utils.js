@@ -7,7 +7,6 @@
 import { masterData } from './masterData.js';
 
 
-import { ToWords } from 'to-words';
 
 /**
  * Formats a number as a currency string using the system-defined currency symbol.
