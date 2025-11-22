@@ -43,35 +43,36 @@ export function formatCurrency(value) {
  */
 
 function numberToWords(num) {
-    // Check for the correct global object
+    // 1. Check for the correct global object and simplify access
     if (typeof ToWords === 'undefined' && typeof window.ToWords === 'undefined') {
-        console.error("The 'ToWords' library is not available.");
+        console.error("The 'ToWords' library is not available. Ensure the script is loaded.");
         return "Conversion Error";
     }
 
-    // Handle different ways the library might be exposed
-    const ToWordsClass = window.ToWords?.ToWords || window.ToWords || ToWords;
+    // Assuming global exposure from CDN
+    const ToWordsClass = window.ToWords || ToWords;
 
+    // 2. Pass 'currencyOptions' directly to the constructor
     const toWordsConverter = new ToWordsClass({
         localeCode: 'en-IN',
-        converterOptions: {
-            currency: true,
-            ignoreDecimal: false,
-            currencyOptions: {
-                name: 'Rupee',
-                plural: 'Rupees',
-                symbol: '₹',
-                fractionalUnit: {
-                    name: 'Paisa',
-                    plural: 'Paise',
-                    symbol: '',
-                },
-            }
+        currencyOptions: {
+            name: 'Rupee',
+            plural: 'Rupees',
+            symbol: '₹',
+            fractionalUnit: {
+                name: 'Paisa',
+                plural: 'Paise',
+                symbol: '',
+            },
         }
     });
 
     try {
-        return toWordsConverter.convert(num);
+        // 3. Pass conversion behavior options to the .convert() method
+        return toWordsConverter.convert(num, {
+            currency: true,
+            ignoreDecimal: false,
+        });
     } catch (error) {
         console.error("Failed to convert number to words:", num, error);
         return "Error in word conversion";
