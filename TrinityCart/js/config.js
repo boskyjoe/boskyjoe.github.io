@@ -84,6 +84,7 @@ export const DONATION_SOURCES = {
 export const storeConfig = {
     // Default or fallback information
     'default': {
+        companyName:'Tasty Treats',
         address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
@@ -96,10 +97,12 @@ export const storeConfig = {
             ifscCode: 'BANK0000000',
             accountHolderName: 'Default Account Holder',
             upiQRCodeUrl: 'https://placehold.co/100x100?text=UPI+QR' // A placeholder QR code
-        }
+        },
+        terms:'Standard Terms:All Sales are Final'        
     },
     // Specific details for Church Store
     'Church Store': {
+        companyName:'Church Store',
         address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
@@ -112,10 +115,12 @@ export const storeConfig = {
             ifscCode: 'SIBL0000123',
             accountHolderName: 'St. Sebastian\'s Church',
             upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
-        }
+        },
+        terms:'Standard Terms:All Sales are Final'
     },
     // Specific details for Tasty Treats
     'Tasty Treats': {
+        companyName:'Tasty Treats',
         address: '1st Floor,3rd Cross, New Byapanahally Extension, Indiranagar, Bangalore - 560038',
         taxId: 'GSTIN: 29AFTPV5130N1ZH, State: 29-Karnataka',
         signatoryName: 'Ms. Mary Joseph',
@@ -132,7 +137,8 @@ export const storeConfig = {
             ifscCode: 'SIBL0000399',
             accountHolderName: 'Tasty Treats',
             upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
-        }
+        },
+        terms:'Thank you for your generous support toward our dream of building a church. We are deeply grateful for your partnership in this mission. May you be richly blessed!'
     }
 };
 
