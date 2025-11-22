@@ -7777,6 +7777,7 @@ async function handleGenerateInvoice(invoiceId) {
             customerStateCode: invoiceData.customerInfo.stateCode || '',
 
             // Shipping Details (can be same as billing or different)
+            shipToCustomerName: invoiceData.customerInfo.name,
             shipToAddress1: invoiceData.customerInfo.address || '',
             shipToCity: invoiceData.customerInfo.city || '',
             shipToState: invoiceData.customerInfo.state || '',
