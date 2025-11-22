@@ -96,7 +96,7 @@ export const storeConfig = {
             accountNumber: '0000 0000 0000 0000',
             ifscCode: 'BANK0000000',
             accountHolderName: 'Default Account Holder',
-            upiQRCodeUrl: 'https://placehold.co/100x100?text=UPI+QR' // A placeholder QR code
+            upiQRCodeUrl: './images/TTUIQRC.png' // A placeholder QR code
         },
         terms:'Standard Terms:All Sales are Final'        
     },
@@ -114,7 +114,7 @@ export const storeConfig = {
             accountNumber: '0123 4567 8901 2345',
             ifscCode: 'SIBL0000123',
             accountHolderName: 'St. Sebastian\'s Church',
-            upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
+            upiQRCodeUrl: './images/TTUIQRC.png' // URL to the QR code image
         },
         terms:'Standard Terms:All Sales are Final'
     },
@@ -136,7 +136,7 @@ export const storeConfig = {
             accountNumber: '0399073000000912',
             ifscCode: 'SIBL0000399',
             accountHolderName: 'Tasty Treats',
-            upiQRCodeUrl: 'path/to/your/church_store_qr_code.png' // URL to the QR code image
+            upiQRCodeUrl: './images/TTUIQRC.png' // URL to the QR code image
         },
         terms:'Thank you for your generous support toward our dream of building a church. We are deeply grateful for your partnership in this mission. May you be richly blessed!'
     }
