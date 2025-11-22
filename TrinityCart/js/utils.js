@@ -42,7 +42,8 @@ export function formatCurrency(value) {
  * @returns {string} The amount in words (e.g., "Rupees One Thousand Two Hundred and Fifty Only").
  */
 
-function numberToWords(num) {
+
+export function numberToWords(num) {
     // 1. Check for the correct global object and simplify access
     if (typeof ToWords === 'undefined' && typeof window.ToWords === 'undefined') {
         console.error("The 'ToWords' library is not available. Ensure the script is loaded.");
