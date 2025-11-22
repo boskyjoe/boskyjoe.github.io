@@ -2505,7 +2505,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
     console.log(`[API-Verify] Phase 1: Reading all related documents for payment ${paymentId}`);
 
     // 1. READ the payment document.
-    const paymentDoc = await transaction.get(paymentRef);
+    const paymentDoc = await paymentRef.get();
     if (!paymentDoc.exists || paymentDoc.data().paymentStatus !== 'Pending Verification') {
         throw new Error("Payment not found or is not pending verification.");
     }
@@ -2515,7 +2515,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
 
     // 2. Read the parent consignment order document to get its current financial state.
     const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(paymentData.orderId);
-    const orderDoc = await transaction.get(orderRef);
+    const orderDoc = await orderRef.get(orderRef);
     if (!orderDoc.exists) {
         throw new Error("The associated consignment order could not be found.");
     }
@@ -2527,7 +2527,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
     const pendingPaymentsQuery = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH)
         .where('orderId', '==', paymentData.orderId)
         .where('paymentStatus', '==', 'Pending Verification');
-    const pendingSnapshot = await transaction.get(pendingPaymentsQuery);
+    const pendingSnapshot = await pendingPaymentsQuery.get(pendingPaymentsQuery);
 
     console.log(`[API-Verify] Found ${pendingSnapshot.size} pending payments for this order.`);
 
@@ -2540,7 +2540,7 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         // --- CALCULATION PHASE (INSIDE TRANSACTION FOR SAFETY) ---
 
         console.log("[API-Verify] Calculating new financial state...");
-        
+
         const currentPaid = orderData.totalAmountPaid || 0;
         const currentBalance = orderData.balanceDue || 0;
         const paymentAmount = paymentData.amountPaid || 0;
