@@ -6556,11 +6556,23 @@ function setupInputListeners() {
     // Function to clear the dropdown fields
     const clearDropdownFields = () => {
         if (adminTeamSelectChoice) {
-            adminTeamSelectChoice.clearSelection();
-            adminTeamSelectChoice.setChoiceByValue(''); // Reset to placeholder
+            // 1. Remove all items and choices from the dropdown
+            adminTeamSelectChoice.clearStore();
+            
+            // 2. Re-add the placeholder so the user knows what to do
+            adminTeamSelectChoice.setChoices(
+                [{ value: '', label: 'Search or select a team', selected: true, disabled: true }],
+                'value',
+                'label',
+                true
+            );
         }
-        memberSelect.innerHTML = '<option value="">Select a team first</option>';
-        memberSelect.disabled = true;
+        // This part for the member select is still correct
+        const memberSelect = document.getElementById('admin-select-member');
+        if (memberSelect) {
+            memberSelect.innerHTML = '<option value="">Select a team first</option>';
+            memberSelect.disabled = true;
+        }
     };
 
 
