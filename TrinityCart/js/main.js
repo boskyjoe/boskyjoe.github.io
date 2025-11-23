@@ -2830,11 +2830,32 @@ function handleReportClick(reportId) {
     alert(`Opening ${reportId} report - Coming Soon!`);
 }
 
+
+/**
+ * ✅ ENHANCED: Handles the "Next" button click on the consignment request form.
+ * Now validates both the catalogue and the voucher number before proceeding.
+ */
+
+
 function handleConsignmentNext() {
+    // 1. Get values from the form
     const catalogueId = document.getElementById('request-catalogue-select').value;
-    if (!catalogueId) {
-        return alert("Please select a Sales Catalogue before proceeding.");
+    const voucherNumber = document.getElementById('consignment-voucher-number').value.trim();
+
+    // ✅ 2. NEW: Validate the Voucher Number first
+    if (!voucherNumber) {
+        // Use your standard modal for consistent error feedback
+        return showModal('error', 'Voucher Number Required', 'Please enter a manual voucher number before proceeding.');
     }
+    
+    // 3. Validate the Sales Catalogue
+    if (!catalogueId) {
+        // Use your standard modal here as well
+        return showModal('error', 'Sales Catalogue Required', 'Please select a Sales Catalogue before proceeding.');
+    }
+
+    // 4. If all validations pass, proceed to the next step
+    console.log(`[main.js] Step 1 validated. Proceeding to Step 2 with catalogue: ${catalogueId}`);
     showConsignmentRequestStep2(catalogueId);
 }
 
