@@ -1498,6 +1498,7 @@ async function handleTeamMembersGrid(button, docId, user) {
  * @see loadPaymentRecordForEditing() - UI function for payment editing workflow
  * @see refreshConsignmentPaymentsGrid() - UI function for manual grid refresh
  */
+
 async function handleConsignmentPaymentsGrid(button, docId, user) {
     // ✅ INPUT VALIDATION: Ensure required parameters
     if (!user) {
@@ -1551,6 +1552,18 @@ async function handleConsignmentPaymentsGrid(button, docId, user) {
                 'Only pending payments can be cancelled. Verified payments must be voided.'
             );
             return;
+        }
+
+        let submittedDate = 'Unknown';
+        if (paymentData.paymentDate) {
+            // Check if it's a Firestore Timestamp
+            if (typeof paymentData.paymentDate.toDate === 'function') {
+                submittedDate = paymentData.paymentDate.toDate().toLocaleDateString();
+            } 
+            // Check if it's a JS Date object (or a string that can be parsed)
+            else {
+                submittedDate = new Date(paymentData.paymentDate).toLocaleDateString();
+            }
         }
 
         const confirmed = await showModal('confirm', 'Cancel Team Payment', 
@@ -6496,6 +6509,17 @@ function setupInputListeners() {
     // Admin team selection
     setupAdminTeamListener();
 
+
+    // ✅ NEW: Add listeners for the new free-form text fields
+    const altNameInput = document.getElementById('admin-select-member-alt');
+    const altEmailInput = document.getElementById('admin-select-member-alt-email');
+    const altVenueInput = document.getElementById('admin-select-member-venue');
+
+    if (altNameInput) altNameInput.addEventListener('input', validateConsignmentStep1);
+    if (altEmailInput) altEmailInput.addEventListener('input', validateConsignmentStep1);
+    if (altVenueInput) altVenueInput.addEventListener('input', validateConsignmentStep1);
+
+
     // Request catalogue selection
     setupRequestCatalogueListener();
 
@@ -6580,9 +6604,105 @@ function setupProductCatalogueCalculationListeners() {
     if (unitMarginInput) unitMarginInput.addEventListener('input', calculateCatalogueSellingPrice);
 }
 
+/**
+ * ✅ NEW: Checks the state of the consignment request form and enables/disables the 'Next' button.
+ */
+function validateConsignmentStep1() {
+    const nextButton = document.getElementById('consignment-next-btn');
+    if (!nextButton) return;
+
+    // Get values from the dropdown selection path
+    const teamId = document.getElementById('admin-select-team').value;
+    const memberData = document.getElementById('admin-select-member').value;
+
+    // Get values from the free-form text path
+    const altName = document.getElementById('admin-select-member-alt').value.trim();
+    const altEmail = document.getElementById('admin-select-member-alt-email').value.trim();
+    const altVenue = document.getElementById('admin-select-member-venue').value.trim();
+
+    // Check if either condition is met
+    const isDropdownPathValid = teamId && memberData;
+    const isFreeFormPathValid = altName && altEmail && altVenue;
+
+    if (isDropdownPathValid || isFreeFormPathValid) {
+        nextButton.disabled = false;
+        console.log('[Validation] Step 1 is valid. Next button enabled.');
+    } else {
+        nextButton.disabled = true;
+        console.log('[Validation] Step 1 is invalid. Next button disabled.');
+    }
+}
 
 
 function setupAdminTeamListener() {
+    const adminTeamSelect = document.getElementById('admin-select-team');
+    const memberSelect = document.getElementById('admin-select-member');
+
+    // Safety check to ensure both elements exist before adding listeners
+    if (!adminTeamSelect || !memberSelect) {
+        console.warn("Admin team selection dropdowns not found. Listeners not attached.");
+        return;
+    }
+
+    // --- Listener for the TEAM dropdown ---
+    adminTeamSelect.addEventListener('change', async (e) => {
+        const teamId = e.target.value;
+
+        // Reset the member dropdown and call the validator
+        memberSelect.innerHTML = '<option value="">Loading members...</option>';
+        memberSelect.disabled = true;
+        validateConsignmentStep1(); // Validate immediately after team change
+
+        if (!teamId) {
+            memberSelect.innerHTML = '<option value="">Select a team first</option>';
+            return;
+        }
+
+        try {
+            const members = await getMembersForTeam(teamId);
+            const teamLeads = members.filter(m => m.role === 'Team Lead');
+
+            if (teamLeads.length === 0) {
+                memberSelect.innerHTML = '<option value="">No leads in this team</option>';
+                memberSelect.disabled = true;
+                // The validator will keep the 'Next' button disabled, which is correct.
+            } else if (teamLeads.length === 1) {
+                // Auto-select if there is only one lead
+                const lead = teamLeads[0];
+                const leadData = JSON.stringify({ id: lead.id, name: lead.name, email: lead.email });
+                memberSelect.innerHTML = `<option value='${leadData}'>${lead.name}</option>`;
+                memberSelect.disabled = true;
+            } else {
+                // Let the admin choose if there are multiple leads
+                memberSelect.innerHTML = '<option value="">Select a team lead...</option>';
+                teamLeads.forEach(lead => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify({ id: lead.id, name: lead.name, email: lead.email });
+                    option.textContent = lead.name;
+                    memberSelect.appendChild(option);
+                });
+                memberSelect.disabled = false;
+            }
+        } catch (error) {
+            console.error("Error fetching team leads:", error);
+            memberSelect.innerHTML = '<option value="">Error loading leads</option>';
+        } finally {
+            // ✅ ALWAYS call the validator at the end to update the 'Next' button state
+            validateConsignmentStep1();
+        }
+    });
+
+    // --- Listener for the MEMBER dropdown ---
+    // This ensures that when the user selects a member, the form re-validates.
+    memberSelect.addEventListener('change', () => {
+        validateConsignmentStep1();
+    });
+}
+
+
+
+
+function setupAdminTeamListenerBKP() {
     const adminTeamSelect = document.getElementById('admin-select-team');
     if (!adminTeamSelect) return;
 
