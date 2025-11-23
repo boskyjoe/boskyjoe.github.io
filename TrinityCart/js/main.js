@@ -550,6 +550,7 @@ async function handleRequestConsignmentClick() {
     const catalogueSelect = document.getElementById('request-catalogue-select');
     const eventSelect = document.getElementById('request-event-select');
 
+    
     // Reset all UI elements to a clean state
     adminTeamDiv.classList.add('hidden');
     userTeamDiv.classList.add('hidden');
@@ -559,6 +560,13 @@ async function handleRequestConsignmentClick() {
     eventSelect.innerHTML = '<option value="">Select an event (optional)...</option>';
     catalogueSelect.disabled = true;
     eventSelect.disabled = true;
+
+    document.getElementById('admin-select-member-alt').value = '';
+    document.getElementById('admin-select-member-alt-email').value = '';
+    document.getElementById('admin-select-member-alt-ph').value = '';
+    document.getElementById('admin-select-member-venue').value = '';
+
+    
 
     try {
         // --- 2. Handle Role-Based Team Selection ---
@@ -6527,18 +6535,65 @@ function setupInputListeners() {
         
     }
 
-    // Admin team selection
-    setupAdminTeamListener();
 
 
-    // ✅ NEW: Add listeners for the new free-form text fields
+    // Get all relevant elements
+    const adminTeamSelect = document.getElementById('admin-select-team');
+    const memberSelect = document.getElementById('admin-select-member');
     const altNameInput = document.getElementById('admin-select-member-alt');
     const altEmailInput = document.getElementById('admin-select-member-alt-email');
     const altVenueInput = document.getElementById('admin-select-member-venue');
+    const altPhoneNumberInput = document.getElementById('admin-select-member-alt-ph');
 
-    if (altNameInput) altNameInput.addEventListener('input', validateConsignmentStep1);
-    if (altEmailInput) altEmailInput.addEventListener('input', validateConsignmentStep1);
-    if (altVenueInput) altVenueInput.addEventListener('input', validateConsignmentStep1);
+    // Function to clear the free-form fields
+    const clearAltFields = () => {
+        altNameInput.value = '';
+        altEmailInput.value = '';
+        altVenueInput.value = '';
+        altPhoneNumberInput.value = '';
+    };
+
+    // Function to clear the dropdown fields
+    const clearDropdownFields = () => {
+        if (adminTeamSelectChoice) {
+            adminTeamSelectChoice.clearSelection();
+            adminTeamSelectChoice.setChoiceByValue(''); // Reset to placeholder
+        }
+        memberSelect.innerHTML = '<option value="">Select a team first</option>';
+        memberSelect.disabled = true;
+    };
+
+
+     // --- Add the new logic to the listeners ---
+
+    // When a dropdown is used, clear the alternate fields
+    if (adminTeamSelect) {
+        adminTeamSelect.addEventListener('change', () => {
+            clearAltFields();
+            // The existing setupAdminTeamListener will handle the rest
+        });
+    }
+    if (memberSelect) {
+        memberSelect.addEventListener('change', () => {
+            clearAltFields();
+            // The existing setupAdminTeamListener will call validateConsignmentStep1
+        });
+    }
+
+    // When a free-form field is used, clear the dropdowns
+    const altInputs = [altNameInput, altEmailInput, altVenueInput, altPhoneNumberInput];
+    altInputs.forEach(input => {
+        if (input) {
+            input.addEventListener('input', () => {
+                clearDropdownFields();
+                validateConsignmentStep1();
+            });
+        }
+    });
+
+
+    // Admin team selection
+    setupAdminTeamListener();
 
 
     // Request catalogue selection
@@ -6640,10 +6695,11 @@ function validateConsignmentStep1() {
     const altName = document.getElementById('admin-select-member-alt').value.trim();
     const altEmail = document.getElementById('admin-select-member-alt-email').value.trim();
     const altVenue = document.getElementById('admin-select-member-venue').value.trim();
+    const altPh = document.getElementById('admin-select-member-alt-ph').value.trim();
 
     // Check if either condition is met
     const isDropdownPathValid = teamId && memberData;
-    const isFreeFormPathValid = altName && altEmail && altVenue;
+    const isFreeFormPathValid = altName && altEmail && altVenue && altPh;
 
     if (isDropdownPathValid || isFreeFormPathValid) {
         nextButton.disabled = false;
