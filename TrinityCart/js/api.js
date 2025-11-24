@@ -606,14 +606,26 @@ export async function getTeamMembers(teamId) {
  * @param {object} memberData - Data for the new member { name, email, phone, role }.
  * @param {object} user - The admin performing the action.
  */
+
+/**
+ * ✅ ENHANCED: Adds a team member and now returns a reference to the new member document.
+ * @param {string} teamId - The ID of the team to add the member to.
+ * @param {string} teamName - The name of the team.
+ * @param {object} memberData - The data for the new member.
+ * @param {object} user - The user performing the action.
+ * @returns {Promise<DocumentReference>} A promise that resolves with the reference to the newly created member document.
+ */
 export async function addTeamMember(teamId, teamName, memberData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const membershipDocId = memberData.email.toLowerCase();
     const membershipRef = db.collection(USER_TEAM_MEMBERSHIPS_COLLECTION_PATH).doc(membershipDocId);
 
-    return db.runTransaction(async (transaction) => {
-        const newMemberRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc();
+    // ✅ 1. Get a reference to the new member document BEFORE the transaction.
+    const newMemberRef = db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).collection('members').doc();
+
+    // 2. Run the transaction and wait for it to complete.
+    await db.runTransaction(async (transaction) => {
         transaction.set(newMemberRef, {
             ...memberData,
             audit: { addedBy: user.email, addedOn: now }
@@ -629,6 +641,9 @@ export async function addTeamMember(teamId, teamName, memberData, user) {
             }
         }, { merge: true });
     });
+
+    // ✅ 3. Return the reference after the transaction is successful.
+    return newMemberRef;
 }
 
 /**
@@ -2121,6 +2136,7 @@ export async function rejectConsignmentRequest(orderId, reason, user) {
  * @param {Array<object>} items - The list of items being requested.
  * @param {object} user - The currently authenticated user.
  */
+
 export async function createConsignmentRequest(requestData, items, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
