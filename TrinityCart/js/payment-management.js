@@ -2563,7 +2563,7 @@ export async function refreshPaymentManagementDashboard() {
 
 
         // Update dashboard cards
-        updatePaymentMgmtDashboardCards(metrics);
+        //updatePaymentMgmtDashboardCards(metrics);
 
         // ✅ NEW: Update outstanding balance cards
         updateOutstandingBalanceCards(outstandingMetrics);
@@ -3005,13 +3005,14 @@ function updatePaymentMgmtDashboardCards(metrics) {
     const elements = {
         urgent: document.getElementById('pmt-mgmt-urgent-count'),
         pending: document.getElementById('pmt-mgmt-pending-count'),
-        pendingAmount: document.getElementById('pmt-mgmt-pending-amount'),
-        receivables: document.getElementById('pmt-mgmt-receivables-amount'),
         receivablesCount: document.getElementById('pmt-mgmt-receivables-count'),
-        payables: document.getElementById('pmt-mgmt-payables-amount'),
         payablesCount: document.getElementById('pmt-mgmt-payables-count'),
         today: document.getElementById('pmt-mgmt-today-count'),
-        todayAmount: document.getElementById('pmt-mgmt-today-amount')
+        todayAmount: document.getElementById('pmt-mgmt-today-amount'),
+        pendingAmount: document.getElementById('pmt-mgmt-pending-amount'),
+        receivables: document.getElementById('pmt-mgmt-receivables-amount'),
+        payables: document.getElementById('pmt-mgmt-payables-amount')
+        
     };
 
     // Update card values safely
