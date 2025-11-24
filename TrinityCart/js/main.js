@@ -1458,7 +1458,7 @@ async function handleTeamMembersGrid(button, docId, user) {
 
     if (button.classList.contains('action-btn-edit-member')) {
         const memberData = getMemberDataFromGridById(docId);
-        if (memberData) showMemberModal(memberData);
+        if (memberData) showMemberModal(memberData,teamId);
         return ; 
     } else if (button.classList.contains('action-btn-remove-member')) {
         const memberData = getMemberDataFromGridById(docId);
