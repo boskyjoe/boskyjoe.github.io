@@ -4456,7 +4456,174 @@ async function handleCatalogueSubmit(e) {
  * @see getRequestedConsignmentItems() - UI function to get selected products and quantities
  * @see closeConsignmentRequestModal() - UI function to close request modal after success
  */
+
+
+
 async function handleConsignmentRequestSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    if (!user) {
+        return showModal('error', 'Not Logged In', 'You must be logged in to create a request.');
+    }
+
+    ProgressToast.show('Submitting Consignment Request...', 'info');
+
+    try {
+        // --- Step 1: Gather All Inputs & Determine Path ---
+        ProgressToast.updateProgress('Validating inputs...', 10, 'Step 1/7');
+
+        // Free-form ad-hoc fields (for Admin Path B)
+        const altName = document.getElementById('admin-select-member-alt').value.trim();
+        const altEmail = document.getElementById('admin-select-member-alt-email').value.trim();
+        const altPhone = document.getElementById('admin-select-member-alt-ph').value.trim();
+        const altVenue = document.getElementById('admin-select-member-venue').value.trim();
+        const isAdHocPath = user.role === 'admin' && (altName || altEmail || altPhone || altVenue);
+
+        // Shared fields
+        const catalogueSelect = document.getElementById('request-catalogue-select');
+        const eventSelect = document.getElementById('request-event-select');
+        const manualVoucherNumber = document.getElementById('consignment-voucher-number').value.trim();
+        const requestedItems = getRequestedConsignmentItems();
+
+        // --- Step 2: Shared Validation ---
+        if (!manualVoucherNumber) {
+            throw new Error('Voucher Number is required for this request.');
+        }
+        if (!catalogueSelect.value) {
+            throw new Error('A Sales Catalogue must be selected.');
+        }
+        if (requestedItems.length === 0) {
+            throw new Error('Please add at least one product to the request.');
+        }
+
+        // --- Step 3: Gather Team & Member Data based on Path ---
+        ProgressToast.updateProgress('Validating team details...', 25, 'Step 2/7');
+        
+        let teamId, teamName, requestingMemberId, requestingMemberName, requestingMemberEmail;
+        let newTeamCreatedId = null; // For potential rollback
+
+        if (isAdHocPath) {
+            // --- ADMIN PATH B: Create Ad-Hoc Team ---
+            console.log("[Main.js] Admin Ad-Hoc Team Path Detected.");
+            if (!altName || !altEmail || !altPhone || !altVenue) {
+                throw new Error('To create an ad-hoc request, please fill all four alternate fields: Name, Email, Phone, and Venue.');
+            }
+
+            ProgressToast.updateProgress('Creating new team...', 35, 'Step 3/7');
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            const newTeamName = `${altVenue} - ${altName} (${randomSuffix})`;
+            const teamDocRef = await addChurchTeam({ teamName: newTeamName, teamLeadName: altName }, user);
+            newTeamCreatedId = teamDocRef.id; // Store for potential rollback
+            
+            teamId = newTeamCreatedId;
+            teamName = newTeamName;
+
+            ProgressToast.updateProgress('Adding team lead...', 45, 'Step 4/7');
+            const memberData = { name: altName, email: altEmail, phone: altPhone, role: 'Team Lead' };
+            const memberDocRef = await addTeamMember(teamId, teamName, memberData, user);
+            
+            requestingMemberId = memberDocRef.id;
+            requestingMemberName = altName;
+            requestingMemberEmail = altEmail.toLowerCase();
+
+        } else if (user.role === 'admin') {
+            // --- ADMIN PATH A: Use Existing Team Dropdowns ---
+            console.log("[Main.js] Admin Existing Team Path Detected.");
+            teamId = adminTeamSelectChoice.getValue(true);
+            if (!teamId) throw new Error('Please select a team from the dropdown.');
+            teamName = adminTeamSelectChoice.getValue().label;
+            
+            const memberDataString = document.getElementById('admin-select-member').value;
+            if (!memberDataString) throw new Error('Please select a Team Lead from the dropdown.');
+            
+            const memberInfo = JSON.parse(memberDataString);
+            requestingMemberId = memberInfo.id;
+            requestingMemberName = memberInfo.name;
+            requestingMemberEmail = memberInfo.email;
+        } else {
+            // --- TEAM LEAD PATH ---
+            console.log("[Main.js] Team Lead Path Detected.");
+            const teamSelect = document.getElementById('user-select-team');
+            if (!teamSelect.value) throw new Error('Please select your team.');
+            
+            teamId = teamSelect.value;
+            teamName = teamSelect.options[teamSelect.selectedIndex].text;
+            
+            const members = await getMembersForTeam(teamId);
+            const selfAsMember = members.find(m => m.email.toLowerCase() === user.email.toLowerCase());
+            if (!selfAsMember) throw new Error("Could not find your member record in the selected team. Please contact an admin.");
+
+            requestingMemberId = selfAsMember.id;
+            requestingMemberName = selfAsMember.name;
+            requestingMemberEmail = selfAsMember.email;
+        }
+
+        // --- Step 4: Stock Availability Check (Your existing logic) ---
+        ProgressToast.updateProgress('Verifying product availability...', 60, 'Step 5/7');
+        let stockWarnings = [];
+        requestedItems.forEach(item => {
+            const product = masterData.products.find(p => p.id === item.productId);
+            if (product && product.inventoryCount < item.quantityRequested) {
+                stockWarnings.push(`- ${item.productName}: Requested ${item.quantityRequested}, Available ${product.inventoryCount}`);
+            }
+        });
+
+        if (stockWarnings.length > 0) {
+            const proceed = await showModal('confirm', 'Low Stock Warning', 
+                'Some requested quantities exceed available stock:\n\n' +
+                stockWarnings.join('\n') +
+                '\n\nAdmin will adjust quantities during fulfillment. Continue with request?'
+            );
+            if (!proceed) throw new Error('Request cancelled by user due to low stock.');
+        }
+
+        // --- Step 5: Prepare and Create the Final Request ---
+        ProgressToast.updateProgress('Preparing final request data...', 75, 'Step 6/7');
+        const requestData = {
+            teamId, teamName, requestingMemberId, requestingMemberName, requestingMemberEmail,
+            salesCatalogueId: catalogueSelect.value,
+            salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text,
+            salesEventId: eventSelect.value || null,
+            salesEventName: eventSelect.value ? eventSelect.options[eventSelect.selectedIndex].text : null,
+            manualVoucherNumber
+        };
+
+        ProgressToast.updateProgress('Submitting to database...', 90, 'Step 7/7');
+        await createConsignmentRequest(requestData, requestedItems, user);
+
+        // --- Step 6: Success Handling ---
+        ProgressToast.showSuccess('Consignment request submitted successfully!');
+        closeConsignmentRequestModal();
+        
+        const totalQuantity = requestedItems.reduce((sum, item) => sum + item.quantityRequested, 0);
+        const estimatedValue = requestedItems.reduce((sum, item) => sum + (item.quantityRequested * item.sellingPrice), 0);
+
+        setTimeout(() => {
+            showModal('success', 'Request Submitted', 
+                `Your request for ${teamName} has been created and is now pending fulfillment.\n\n` +
+                `• Requesting Member: ${requestingMemberName}\n` +
+                `• Total Items: ${totalQuantity} units\n` +
+                `• Estimated Value: ${formatCurrency(estimatedValue)}`
+            );
+        }, 500);
+
+    } catch (error) {
+        console.error("Error creating consignment request:", error);
+        ProgressToast.showError(`Request Failed: ${error.message}`);
+        
+        // Basic rollback for ad-hoc path: if a team was created but the request failed, notify the admin.
+        if (newTeamCreatedId) {
+            showModal('error', 'Request Failed', 
+                `The consignment request failed, but a new team "${teamName}" was created (ID: ${newTeamCreatedId}). ` +
+                `Please delete this team manually from the Team Management module if it is not needed.\n\nError: ${error.message}`
+            );
+        }
+    }
+}
+
+
+
+async function handleConsignmentRequestSubmitBK(e) {
     e.preventDefault();
     const user = appState.currentUser;
     
@@ -4635,6 +4802,9 @@ async function handleConsignmentRequestSubmit(e) {
         }, 2000);
     }
 }
+
+
+
 
 
 async function handleActivityReportSubmit(e) {
