@@ -584,6 +584,19 @@ export async function updateChurchTeam(teamId, updatedData, user) {
     });
 }
 
+
+/**
+ * ✅ NEW: Deletes a team document. Used for cleanup after a failed ad-hoc request.
+ * NOTE: This does not delete sub-collections. It's intended for empty, orphaned teams.
+ * @param {string} teamId The ID of the team to delete.
+ */
+export async function deleteTeam(teamId) {
+    if (!teamId) return;
+    const db = firebase.firestore();
+    console.log(`[API] Attempting to delete orphaned team: ${teamId}`);
+    return db.collection(CHURCH_TEAMS_COLLECTION_PATH).doc(teamId).delete();
+}
+
 // --- Team Member Sub-collection Functions ---
 
 /**
