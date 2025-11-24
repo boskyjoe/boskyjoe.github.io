@@ -1448,25 +1448,48 @@ async function handleChurchTeamsGrid(button, docId, user) {
     }
 }
 
+
 async function handleTeamMembersGrid(button, docId, user) {
-    const teamId = document.getElementById('member-team-id').value;
+    const teamId = document.getElementById('selected-team-id-for-members').value;
+
+    if (!teamId) {
+        return showModal('error', 'Error', 'Could not determine the current team. Please re-select the team from the list.');
+    }
 
     if (button.classList.contains('action-btn-edit-member')) {
         const memberData = getMemberDataFromGridById(docId);
         if (memberData) showMemberModal(memberData);
+        return ; 
     } else if (button.classList.contains('action-btn-remove-member')) {
-        if (confirm('Are you sure you want to remove this member from the team?')) {
-            try {
-                const memberData = getMemberDataFromGridById(docId);
-                if (!memberData) throw new Error("Could not find member data to delete.");
-
-                await removeTeamMember(teamId, docId, memberData.email);
-                alert('Member removed successfully.');
-            } catch (error) {
-                console.error("Error removing member:", error);
-                alert('Failed to remove member.');
-            }
+        const memberData = getMemberDataFromGridById(docId);
+        if (!memberData) {
+            return showModal('error', 'Data Error', 'Could not find the data for the member you are trying to remove.');
         }
+
+        const confirmed = await showModal(
+            'confirm', 
+            'Confirm Member Removal', 
+            `Are you sure you want to remove <strong>${memberData.name}</strong> from this team?<br><br>This action cannot be undone.`
+        );
+
+        if (!confirmed) {
+            console.log('[main.js] Member removal cancelled by user.');
+            return;
+        }
+        ProgressToast.show('Removing member...', 'info');
+
+        try {
+            // This API call is correct.
+            await removeTeamMember(teamId, docId, memberData.email);
+            
+            ProgressToast.showSuccess('Member removed successfully!');
+            // The grid will update automatically thanks to your real-time listener,
+            // so we don't need to call alert() or manually refresh.
+
+        } catch (error) {
+            console.error("Error removing member:", error);
+            ProgressToast.showError(`Failed to remove member: ${error.message}`);
+        } finally {ProgressToast.hide(200);}
     }
 }
 
