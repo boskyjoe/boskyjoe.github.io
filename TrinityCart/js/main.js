@@ -4618,7 +4618,7 @@ async function handleConsignmentRequestSubmit(e) {
                 `Please delete this team manually from the Team Management module if it is not needed.\n\nError: ${error.message}`
             );
         }
-    }
+    } finally {ProgressToast.hide(200);}
 }
 
 
