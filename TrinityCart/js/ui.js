@@ -1264,6 +1264,8 @@ function resetTeamDetailView() {
         teamMembersGridApi.setGridOption('rowData', []);
     }
 
+    document.getElementById('selected-team-id-for-members').value = '';
+
     // 4. Detach the listener for the members sub-collection to prevent memory leaks.
     if (unsubscribeTeamMembersListener) {
         console.log("[ui.js] Detaching team members listener in resetTeamDetailView");
@@ -1359,6 +1361,7 @@ const churchTeamsGridOptions = {
             selectedTeamId = teamData.id;
             document.getElementById('selected-team-name').textContent = teamData.teamName;
             document.getElementById('add-member-btn').disabled = false;
+            document.getElementById('selected-team-id-for-members').value = teamData.id;
             
             // Clean up previous member listener before loading new team
             if (unsubscribeTeamMembersListener) {
@@ -1500,14 +1503,19 @@ export function showChurchTeamsView() {
 
 
 // 8. Create functions to manage the Add/Edit Member modal
-export function showMemberModal(memberData = null) {
+export function showMemberModal(memberData = null, teamId) {
     const modal = document.getElementById('member-modal');
     const form = document.getElementById('member-form');
     const title = document.getElementById('member-modal-title');
     const submitBtn = document.getElementById('member-form-submit-btn');
 
+    if (!teamId) {
+        console.error("showMemberModal was called without a teamId.");
+        return showModal('error', 'Internal Error', 'Could not identify the team. Please try again.');
+    }
+
     form.reset();
-    document.getElementById('member-team-id').value = selectedTeamId;
+    document.getElementById('member-team-id').value = teamId;
 
     if (memberData) { // Editing existing member
         title.textContent = 'Edit Team Member';
