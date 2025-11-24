@@ -4636,10 +4636,23 @@ async function handleConsignmentRequestSubmit(e) {
         
         // Basic rollback for ad-hoc path: if a team was created but the request failed, notify the admin.
         if (newTeamCreatedId) {
-            showModal('error', 'Request Failed', 
-                `The consignment request failed, but a new team "${teamName}" was created (ID: ${newTeamCreatedId}). ` +
-                `Please delete this team manually from the Team Management module if it is not needed.\n\nError: ${error.message}`
-            );
+            console.warn(`[ROLLBACK] Request failed. Attempting to delete orphaned team: ${newTeamCreatedId}`);
+            try {
+                await deleteTeam(newTeamCreatedId);
+                console.log(`[ROLLBACK] ✅ Successfully deleted orphaned team.`);
+                showModal('error', 'Request Failed', 
+                    `The consignment request failed and the partially created team has been cleaned up. Please try again.\n\nError: ${error.message}`
+                );
+            } catch (cleanupError) {
+                console.error(`[ROLLBACK] ❌ CRITICAL: FAILED TO DELETE ORPHANED TEAM ${newTeamCreatedId}.`, cleanupError);
+                showModal('error', 'Request Failed - Cleanup Required', 
+                    `The consignment request failed. A new team "${teamName}" was created but could not be automatically removed. ` +
+                    `Please delete this team manually from the Team Management module.\n\nError: ${error.message}`
+                );
+            }
+        } else {
+            // Standard error message if no team was created
+            showModal('error', 'Request Failed', `The consignment request could not be submitted.\n\nError: ${error.message}`);
         }
     } finally {ProgressToast.hide(200);}
 }
