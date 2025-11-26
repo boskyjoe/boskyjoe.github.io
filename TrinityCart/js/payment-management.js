@@ -7375,9 +7375,9 @@ export async function loadOutstandingBalanceMetrics(options = {}) {
             directSalesReceivablesResult, 
             consignmentReceivablesResult
         ] = await Promise.all([
-            getAggregateFromServer(payablesQuery, { totalOutstanding: AggregateField.sum('balanceDue') }),
-            getAggregateFromServer(directSalesQuery, { totalOutstanding: AggregateField.sum('balanceDue') }),
-            getAggregateFromServer(consignmentQuery, { totalOutstanding: AggregateField.sum('balanceDue') })
+            getAggregateFromServer(payablesQuery, { totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }),
+            getAggregateFromServer(directSalesQuery, { totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }),
+            getAggregateFromServer(consignmentQuery, { totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') })
         ]);
 
         // Extract the data from the aggregation snapshots
