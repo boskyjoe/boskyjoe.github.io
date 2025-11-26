@@ -7340,7 +7340,88 @@ function generateRecommendedAction(supplierIntel, teamIntel) {
  * 
  * @returns {Promise<Object>} Complete outstanding balance analysis
  */
+
 export async function loadOutstandingBalanceMetrics(options = {}) {
+    const { useCache = true } = options;
+    const cacheKey = 'full_financial_summary_aggregated';
+    
+    if (useCache) {
+        const cached = getCachedPaymentMetrics(cacheKey, 5); // Cache for 5 minutes
+        if (cached) {
+            console.log('[PmtMgmt] ✅ Using cached aggregated financial summary.');
+            return cached;
+        }
+    }
+
+    ProgressToast.show('Calculating Financial Summary...', 'info');
+    const db = firebase.firestore();
+    const startTime = Date.now();
+
+    try {
+        // --- Define the base queries for each channel ---
+        const payablesQuery = db.collection(PURCHASE_INVOICES_COLLECTION_PATH).where('paymentStatus', 'in', ['Unpaid', 'Partially Paid']);
+        const directSalesQuery = db.collection(SALES_COLLECTION_PATH).where('paymentStatus', 'in', ['Unpaid', 'Partially Paid']);
+        const consignmentQuery = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('balanceDue', '>', 0);
+        
+        ProgressToast.updateProgress('Running server-side aggregations...', 50);
+
+        // --- Run all aggregation queries in parallel ---
+        const [
+            supplierPayablesResult, 
+            directSalesReceivablesResult, 
+            consignmentReceivablesResult
+        ] = await Promise.all([
+            payablesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
+            directSalesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
+            consignmentQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get()
+        ]);
+
+        // Extract the data from the aggregation snapshots
+        const totalPayables = supplierPayablesResult.data().totalOutstanding || 0;
+        const totalDirectSalesReceivables = directSalesReceivablesResult.data().totalOutstanding || 0;
+        const totalConsignmentReceivables = consignmentReceivablesResult.data().totalOutstanding || 0;
+
+        // --- Assemble the Final Metrics ---
+        const totalReceivables = totalDirectSalesReceivables + totalConsignmentReceivables;
+        const netPosition = totalReceivables - totalPayables;
+
+        const metrics = {
+            supplierPayables: { totalOutstanding: totalPayables },
+            directSalesReceivables: { totalOutstanding: totalDirectSalesReceivables },
+            consignmentReceivables: { totalOutstanding: totalConsignmentReceivables },
+            
+            netPosition: {
+                totalReceivables,
+                totalPayables,
+                netPosition,
+                formattedReceivables: formatCurrency(totalReceivables),
+                formattedPayables: formatCurrency(totalPayables),
+                formattedNetPosition: formatCurrency(netPosition),
+                // ... your health status logic
+            },
+            executiveSummary: { /* ... your summary logic ... */ },
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                // The number of reads is now incredibly low!
+                // It's billed as 1 read per 1000 documents inspected by the query.
+                firestoreReadsUsed: 'Aggregated (low cost)',
+                executionTimeMs: Date.now() - startTime,
+                dataSource: 'Client-Side Aggregation Query'
+            }
+        };
+
+        cachePaymentMetrics(cacheKey, metrics);
+        ProgressToast.showSuccess('Summary updated!');
+        return metrics;
+
+    } catch (error) {
+        console.error('[PmtMgmt] ❌ Aggregation query failed:', error);
+        ProgressToast.showError(`Calculation Failed: ${error.message}`);
+        throw error;
+    }
+}
+
+export async function loadOutstandingBalanceMetricsbkp(options = {}) {
     const { useCache = true, queryLimit = 100 } = options;
     
     console.log('[PmtMgmt] 💰 Loading STANDALONE outstanding balance metrics...');
