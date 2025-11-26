@@ -47,8 +47,6 @@ import {
 
 import { formatCurrency } from './utils.js'; 
 
-import { getAggregateFromServer, sum } from "firebase/firestore";
-
 
 // API functions (existing - call without modification)
 import {
@@ -7373,9 +7371,9 @@ export async function loadOutstandingBalanceMetrics(options = {}) {
             directSalesReceivablesResult, 
             consignmentReceivablesResult
         ] = await Promise.all([
-            getAggregateFromServer(payablesQuery, { totalOutstanding: sum('balanceDue') }),
-            getAggregateFromServer(directSalesQuery, { totalOutstanding: sum('balanceDue') }),
-            getAggregateFromServer(consignmentQuery, { totalOutstanding: sum('balanceDue') })
+            payablesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
+            directSalesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
+            consignmentQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get()
         ]);
 
         // Extract the data from the aggregation snapshots
