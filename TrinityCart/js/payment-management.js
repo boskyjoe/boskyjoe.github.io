@@ -118,7 +118,7 @@ const BALANCED_CACHE_CONFIG = {
 };
 
 
-import { getAggregateFromServer, sum } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore-compat.js";
+import { getAggregateFromServer, AggregateField } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore-compat.js";
 
 
 
@@ -7375,9 +7375,9 @@ export async function loadOutstandingBalanceMetrics(options = {}) {
             directSalesReceivablesResult, 
             consignmentReceivablesResult
         ] = await Promise.all([
-            getAggregateFromServer(payablesQuery, { totalOutstanding: sum('balanceDue') }),
-            getAggregateFromServer(directSalesQuery, { totalOutstanding: sum('balanceDue') }),
-            getAggregateFromServer(consignmentQuery, { totalOutstanding: sum('balanceDue') })
+            getAggregateFromServer(payablesQuery, { totalOutstanding: AggregateField.sum('balanceDue') }),
+            getAggregateFromServer(directSalesQuery, { totalOutstanding: AggregateField.sum('balanceDue') }),
+            getAggregateFromServer(consignmentQuery, { totalOutstanding: AggregateField.sum('balanceDue') })
         ]);
 
         // Extract the data from the aggregation snapshots
