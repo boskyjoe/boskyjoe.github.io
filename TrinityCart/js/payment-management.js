@@ -118,6 +118,10 @@ const BALANCED_CACHE_CONFIG = {
 };
 
 
+import { getAggregateFromServer, sum } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore-compat.js";
+
+
+
 /**
  * ENHANCED: Setup real-time listeners for Payment Management module
  * 
@@ -7371,9 +7375,9 @@ export async function loadOutstandingBalanceMetrics(options = {}) {
             directSalesReceivablesResult, 
             consignmentReceivablesResult
         ] = await Promise.all([
-            payablesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
-            directSalesQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get(),
-            consignmentQuery.aggregate({ totalOutstanding: firebase.firestore.AggregateField.sum('balanceDue') }).get()
+            getAggregateFromServer(payablesQuery, { totalOutstanding: sum('balanceDue') }),
+            getAggregateFromServer(directSalesQuery, { totalOutstanding: sum('balanceDue') }),
+            getAggregateFromServer(consignmentQuery, { totalOutstanding: sum('balanceDue') })
         ]);
 
         // Extract the data from the aggregation snapshots
