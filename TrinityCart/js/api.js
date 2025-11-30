@@ -3152,11 +3152,24 @@ export async function recordSalePayment(paymentData, user) {
 
 
 /**
- * ✅ NEW (CLIENT-SIDE): Deletes a sale and reverses all associated transactions.
- * Runs as a single atomic transaction from the client.
- * Requires that the logged-in user has admin permissions set in Firestore Security Rules.
- * @param {string} saleId - The ID of the sales invoice to delete.
+ * ✅ NEW: Updates a specific field on a sales payment ledger document.
+ * @param {string} paymentId - The ID of the payment document to update.
+ * @param {object} updatedData - An object with the field to update (e.g., { notes: 'New note' }).
+ * @param {object} user - The user performing the action.
  */
+export async function updateSalePayment(paymentId, updatedData, user) {
+    const db = firebase.firestore();
+    const paymentRef = db.collection(SALES_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+    
+    // Add audit information to the update
+    const dataToUpdate = {
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    return paymentRef.update(dataToUpdate);
+}
 
 /**
  * ✅ FINAL & CORRECTED (Client-Side without Rule Changes): Deletes a sale and reverses transactions.
