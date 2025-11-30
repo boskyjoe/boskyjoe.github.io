@@ -6894,11 +6894,12 @@ function setupInputListeners() {
 
     // Order discount and tax
     const orderDiscountPercentInput = document.getElementById('sale-order-discount');
-    if (orderDiscountPercentInput) {
-        orderDiscountInput.addEventListener('input', calculateSalesTotals);
-    }
-
     const orderDiscountAmtInput = document.getElementById('sales-order-discount-amt');
+
+    if (orderDiscountPercentInput) {
+        orderDiscountPercentInput.addEventListener('input', calculateSalesTotals);
+    }
+    
     if (orderDiscountAmtInput) {
         orderDiscountAmtInput.addEventListener('input', e => calculateSalesTotals(e));
     }
