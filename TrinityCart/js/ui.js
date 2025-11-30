@@ -6744,6 +6744,13 @@ const salePaymentHistoryGridOptions = {
             valueFormatter: p => p.value || '' // If p.value is null or undefined, show an empty string.
         },
         { 
+            field: "notes", 
+            headerName: "Notes", 
+            width: 150,
+            // This formatter handles old records gracefully.
+            valueFormatter: p => p.value || '' // If p.value is null or undefined, show an empty string.
+        },
+        { 
             field: "status", 
             headerName: "Status", 
             width: 120, 
