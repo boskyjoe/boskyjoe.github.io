@@ -116,7 +116,7 @@ import {
     createConsignmentRequest,
     fulfillConsignmentAndUpdateInventory,
     logActivityAndUpdateConsignment, getConsignmentOrderById,getItemsForConsignmentOrder,
-    submitPaymentRecord, updatePaymentRecord,
+    submitPaymentRecord, updatePaymentRecord,updateConsignmentPayment,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
     voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment,deleteSaleAndReverseClientSide,updateSalePayment
@@ -5151,6 +5151,40 @@ async function handleMakePaymentSubmit(e) {
     }
 }
 
+// ✅ NEW: The handler function for the update event
+async function handleConsignmentPaymentUpdate(detail) {
+    const user = appState.currentUser;
+    if (!user) return;
+
+    const { paymentId, fieldToUpdate, newValue, oldValue, gridNodeId } = detail;
+
+    ProgressToast.show('Updating Payment...', 'info');
+
+    try {
+        const updatedData = {
+            [fieldToUpdate]: (fieldToUpdate === 'paymentDate') ? new Date(newValue) : newValue
+        };
+
+        await updateConsignmentPayment(paymentId, updatedData, user);
+        ProgressToast.showSuccess('Payment details updated!');
+
+    } catch (error) {
+        console.error("Error updating consignment payment:", error);
+        ProgressToast.showError(`Update Failed: ${error.message}`);
+        
+        // Dispatch an event to tell the UI to revert the change
+        document.dispatchEvent(new CustomEvent('revertGridCell', {
+            detail: {
+                gridName: 'consignmentPaymentsGrid', // A unique name for this grid
+                nodeId: gridNodeId,
+                field: fieldToUpdate,
+                value: oldValue
+            }
+        }));
+    }
+}
+
+
 
 /**
  * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
@@ -6629,6 +6663,10 @@ function setupCustomEventListeners() {
     });
 
     document.addEventListener('salePaymentUpdated', e => handleSalePaymentUpdate(e.detail));
+
+    document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
+    
+
 }
 
 async function handleUpdateSupplier(e) {
