@@ -6563,7 +6563,7 @@ export function showRecordSalePaymentModal(invoiceData) {
     if (paymentDateInput) {
         paymentDateInput.valueAsDate = new Date();
     }
-    
+
     // Populate financial summary
     document.getElementById('payment-modal-total').textContent = formatCurrency(invoiceData.financials.totalAmount);
     document.getElementById('payment-modal-paid').textContent = formatCurrency(invoiceData.totalAmountPaid || 0);
@@ -6737,6 +6737,13 @@ const salePaymentHistoryGridOptions = {
         },
         { field: "paymentMode", headerName: "Mode", width: 150},
         { 
+            field: "paymentMadeTo", 
+            headerName: "Paid To", 
+            width: 150,
+            // This formatter handles old records gracefully.
+            valueFormatter: p => p.value || '' // If p.value is null or undefined, show an empty string.
+        },
+        { 
             field: "status", 
             headerName: "Status", 
             width: 120, 
@@ -6747,7 +6754,7 @@ const salePaymentHistoryGridOptions = {
         },
         {
             headerName: "Actions",
-            width: 80,
+            width: 100,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 // Only show the Void button for verified, non-voided payments
