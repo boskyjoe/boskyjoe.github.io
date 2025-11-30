@@ -6718,9 +6718,24 @@ let salePaymentHistoryGridApi = null;
 const salePaymentHistoryGridOptions = {
     getRowId: params => params.data.id,
     theme: 'legacy',
+    onCellValueChanged: (params) => {
+        const { oldValue, newValue, colDef, data: paymentData } = params;
+        if (oldValue === newValue) return;
+
+        // Dispatch a custom event with all the necessary details
+        document.dispatchEvent(new CustomEvent('salePaymentUpdated', {
+            detail: {
+                paymentId: paymentData.id,
+                fieldToUpdate: colDef.field,
+                newValue: newValue,
+                oldValue: oldValue,
+                gridNodeId: params.node.id
+            }
+        }));
+    },
     columnDefs: [
-        { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "transactionRef", headerName: "Reference #", width: 140 },
+        { field: "paymentDate", headerName: "Payment Date", width: 140, editable: true, valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "transactionRef", headerName: "Reference #", width: 140,editable: true },
         { 
             field: "amountPaid", 
             headerName: "Amount Paid", 
@@ -6741,14 +6756,16 @@ const salePaymentHistoryGridOptions = {
             headerName: "Paid To", 
             width: 150,
             // This formatter handles old records gracefully.
-            valueFormatter: p => p.value || '' // If p.value is null or undefined, show an empty string.
+            valueFormatter: p => p.value || '', // If p.value is null or undefined, show an empty string.
+            editable: true
         },
         { 
             field: "notes", 
             headerName: "Notes", 
             width: 150,
             // This formatter handles old records gracefully.
-            valueFormatter: p => p.value || '' // If p.value is null or undefined, show an empty string.
+            valueFormatter: p => p.value || '', // If p.value is null or undefined, show an empty string.
+            editable: true
         },
         { 
             field: "status", 
