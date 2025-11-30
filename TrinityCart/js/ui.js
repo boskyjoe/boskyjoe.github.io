@@ -6024,13 +6024,44 @@ export function calculateSalesTotals() {
 
     salesCartGridApi.applyTransaction({ update: updatedRowData });
 
+    const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
+
+
     // 2. Get order-level adjustments from the form
-    const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
-    const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
+
+    const orderDiscPercentInput = document.getElementById('sale-order-discount');
+    const orderDiscAmtInput = document.getElementById('sales-order-discount-amt');
+
+    let orderDiscountAmount = 0;
+
+    // Check which input triggered the event
+    if (event && event.target.id === 'sale-order-discount') {
+        // User edited the PERCENTAGE field
+        const percent = parseFloat(orderDiscPercentInput.value) || 0;
+        orderDiscountAmount = subtotalAfterLineDiscounts * (percent / 100);
+        // Update the amount field
+        orderDiscAmtInput.value = roundToTwo(orderDiscountAmount).toFixed(2);
+    } else if (event && event.target.id === 'sales-order-discount-amt') {
+        // User edited the AMOUNT field
+        const amount = parseFloat(orderDiscAmtInput.value) || 0;
+        orderDiscountAmount = amount;
+        // Update the percentage field (avoid division by zero)
+        const percent = subtotalAfterLineDiscounts > 0 ? (amount / subtotalAfterLineDiscounts) * 100 : 0;
+        orderDiscPercentInput.value = roundToTwo(percent).toFixed(2);
+    } else {
+        // No event, just a regular calculation (e.g., on page load)
+        // Default to using the percentage field
+        const percent = parseFloat(orderDiscPercentInput.value) || 0;
+        orderDiscountAmount = subtotalAfterLineDiscounts * (percent / 100);
+        orderDiscAmtInput.value = roundToTwo(orderDiscountAmount).toFixed(2);
+    }
+
+
 
     // 3. Calculate final order totals
-    const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
-    const orderDiscountAmount = subtotalAfterLineDiscounts * (orderDiscPercent / 100);
+
+    const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
+
     const finalTaxableAmount = subtotalAfterLineDiscounts - orderDiscountAmount;
     const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
     
