@@ -5688,7 +5688,9 @@ async function handleRecordSalePaymentSubmit(e) {
             customerName: invoiceData.customerInfo.name,
             paymentMode: paymentMode,
             transactionRef: transactionRef,
-            notes: document.getElementById('record-sale-notes')?.value || ''
+            notes: document.getElementById('record-sale-notes')?.value || '',
+            paymentDate: new Date(document.getElementById('record-sale-payment-date').value),
+            paymentMadeTo: document.getElementById('record-sale-payment-made-to').value.trim()
         };
 
         console.log(`[main.js] Recording payment: ${formatCurrency(amountToApplyToInvoice)} for invoice ${invoiceData.saleId}`, {
