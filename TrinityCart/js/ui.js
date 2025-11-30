@@ -5404,8 +5404,34 @@ const consignmentPaymentsGridOptions = {
         wrapHeaderText: true, // Wrap header text
         autoHeaderHeight: true // Adjust header height automatically
     },
+    onCellValueChanged: (params) => {
+        const { oldValue, newValue, colDef, data: paymentData } = params;
+        
+        // Don't do anything if the value hasn't actually changed
+        if (oldValue === newValue) return;
+
+        // Only allow editing for 'Pending' payments
+        if (paymentData.paymentStatus !== 'Pending Verification') {
+            showModal('error', 'Cannot Edit', 'Only payments with a "Pending Verification" status can be edited.');
+            // Revert the change in the UI
+            params.node.setDataValue(colDef.field, oldValue);
+            return;
+        }
+
+        // Dispatch a custom event with all the necessary details
+        console.log('[UI] Dispatching "consignmentPaymentUpdated" event.');
+        document.dispatchEvent(new CustomEvent('consignmentPaymentUpdated', {
+            detail: {
+                paymentId: paymentData.id,
+                fieldToUpdate: colDef.field,
+                newValue: newValue,
+                oldValue: oldValue,
+                gridNodeId: params.node.id
+            }
+        }));
+    },
     columnDefs: [
-        { field: "paymentDate", headerName: "Payment Date", width: 140, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "paymentDate", headerName: "Payment Date", width: 140, editable: true, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { 
             field: "amountPaid", 
             headerName: "Amount Paid", 
@@ -5418,8 +5444,14 @@ const consignmentPaymentsGridOptions = {
             width: 120, 
             valueFormatter: p => formatCurrency(p.value)
         },
-        { field: "paymentMode", headerName: "Mode", flex: 1 },
-        { field: "transactionRef", headerName: "Reference #", flex: 1 },
+        { field: "paymentMode", headerName: "Mode" },
+        { field: "transactionRef", headerName: "Reference #", editable: true },
+        {
+            field: "notes",
+            headerName: "Notes",
+            width: 240,
+            editable: true
+        },
         {
             field: "paymentStatus", headerName: "Status", width: 180, cellRenderer: p => {
                 const status = p.value;
