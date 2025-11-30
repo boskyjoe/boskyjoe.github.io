@@ -2905,7 +2905,9 @@ export async function recordSalePayment(paymentData, user) {
         customerName,
         paymentMode,
         transactionRef,
-        notes
+        notes,
+        paymentDate, 
+        paymentMadeTo 
     } = paymentData;
 
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(invoiceId);
@@ -2936,7 +2938,7 @@ export async function recordSalePayment(paymentData, user) {
                 // Core payment identification
                 invoiceId: invoiceId,
                 paymentId: paymentId,
-                paymentDate: now,
+                paymentDate: paymentDate,
 
                 // Financial details
                 amountPaid: amountPaid,
@@ -2947,6 +2949,8 @@ export async function recordSalePayment(paymentData, user) {
                 paymentMode: paymentMode,
                 transactionRef: transactionRef,
                 notes: notes || '',
+
+                paymentMadeTo: paymentMadeTo || null,
 
                 // Administrative
                 status: 'Verified',
