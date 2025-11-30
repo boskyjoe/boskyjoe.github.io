@@ -2420,6 +2420,31 @@ export async function updatePaymentRecord(paymentId, updatedData, user) {
 }
 
 /**
+ * ✅ NEW: Updates a specific field on a consignment payment ledger document.
+ * @param {string} paymentId - The ID of the payment document to update.
+ * @param {object} updatedData - An object with the field to update (e.g., { notes: 'New note' }).
+ * @param {object} user - The user performing the action.
+ */
+export async function updateConsignmentPayment(paymentId, updatedData, user) {
+    const db = firebase.firestore();
+    const paymentRef = db.collection(CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH).doc(paymentId);
+    
+    const dataToUpdate = {
+        ...updatedData,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    // We run a quick check to ensure we are not editing a verified payment
+    const doc = await paymentRef.get();
+    if (doc.exists && doc.data().paymentStatus !== 'Pending Verification') {
+        throw new Error("Cannot edit a payment that is not pending verification.");
+    }
+
+    return paymentRef.update(dataToUpdate);
+}
+
+/**
  * ENHANCED: Creates consignment payment record with automatic donation handling.
  * @param {object} paymentData - The payment data with donation information.
  * @param {object} user - The team lead submitting the record.
