@@ -2119,7 +2119,7 @@ async function handleSalePaymentUpdate(detail) {
                 value: oldValue
             }
         }));
-    }finally {ProgressToast.hide(300);}
+    }
 }
 
 
