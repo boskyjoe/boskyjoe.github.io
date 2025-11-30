@@ -2055,13 +2055,24 @@ async function handleSalePaymentHistoryGrid(button, docId, user) {
     if (!button.classList.contains('action-btn-void-sale-payment')) return;
 
     const paymentData = getSalesPaymentDataFromGridById(docId);
-    if (!paymentData) return;
+    if (!paymentData) {
+        return showModal('error', 'Data Error', 'Could not find data for the selected payment.');
+    }
 
-    if (confirm(`Are you sure you want to VOID this payment of ${formatCurrency(paymentData.amountPaid)}? This will reverse the transaction and cannot be undone.`)) {
+    const confirmed = await showModal(
+        'confirm',
+        'Confirm Void Payment',
+        `Are you sure you want to VOID this payment of <strong>${formatCurrency(paymentData.amountPaid)}</strong>?<br><br>
+         This will reverse the payment and add the amount back to the invoice's balance due. This action cannot be undone.`
+    );
+
+    if (confirmed) {
         //showLoader();
+
+        ProgressToast.show('Voiding payment...', 'warning');
         try {
             await voidSalePayment(docId, user);
-            alert("Payment successfully voided.");
+            ProgressToast.showSuccess("Payment successfully voided.");
 
             const updatedInvoiceData = await getSalesInvoiceById(paymentData.invoiceId);
             if (updatedInvoiceData) {
@@ -2069,11 +2080,12 @@ async function handleSalePaymentHistoryGrid(button, docId, user) {
             }
         } catch (error) {
             console.error("Error voiding payment:", error);
-            alert(`Failed to void payment: ${error.message}`);
+            ProgressToast.showError(`Failed to void payment: ${error.message}`);
         } finally {
             //hideLoader();
+            ProgressToast.hide(300) ;
         }
-    }
+    } else {console.log('[main.js] Payment void cancelled by user.');}
 }
 
 async function handleSuppliersGrid(button, docId, user) {
