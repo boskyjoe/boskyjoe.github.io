@@ -6040,20 +6040,20 @@ export function calculateSalesTotals() {
         const percent = parseFloat(orderDiscPercentInput.value) || 0;
         orderDiscountAmount = subtotalAfterLineDiscounts * (percent / 100);
         // Update the amount field
-        orderDiscAmtInput.value = roundToTwo(orderDiscountAmount).toFixed(2);
+        orderDiscAmtInput.value = orderDiscountAmount.toFixed(2);
     } else if (event && event.target.id === 'sales-order-discount-amt') {
         // User edited the AMOUNT field
         const amount = parseFloat(orderDiscAmtInput.value) || 0;
         orderDiscountAmount = amount;
         // Update the percentage field (avoid division by zero)
         const percent = subtotalAfterLineDiscounts > 0 ? (amount / subtotalAfterLineDiscounts) * 100 : 0;
-        orderDiscPercentInput.value = roundToTwo(percent).toFixed(2);
+        orderDiscPercentInput.value = percent.toFixed(2);
     } else {
         // No event, just a regular calculation (e.g., on page load)
         // Default to using the percentage field
         const percent = parseFloat(orderDiscPercentInput.value) || 0;
         orderDiscountAmount = subtotalAfterLineDiscounts * (percent / 100);
-        orderDiscAmtInput.value = roundToTwo(orderDiscountAmount).toFixed(2);
+        orderDiscAmtInput.value = orderDiscountAmount.toFixed(2);
     }
 
 
