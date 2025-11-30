@@ -6559,6 +6559,11 @@ export function showRecordSalePaymentModal(invoiceData) {
     document.getElementById('payment-modal-date').textContent = invoiceData.saleDate.toDate().toLocaleDateString();
     document.getElementById('payment-modal-store').textContent = invoiceData.store;
 
+    const paymentDateInput = document.getElementById('record-sale-payment-date');
+    if (paymentDateInput) {
+        paymentDateInput.valueAsDate = new Date();
+    }
+    
     // Populate financial summary
     document.getElementById('payment-modal-total').textContent = formatCurrency(invoiceData.financials.totalAmount);
     document.getElementById('payment-modal-paid').textContent = formatCurrency(invoiceData.totalAmountPaid || 0);
