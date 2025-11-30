@@ -5357,8 +5357,21 @@ async function handleNewSaleSubmit(e) {
         const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
 
         const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+        const orderDiscAmt = parseFloat(document.getElementById('sales-order-discount-amt').value) || 0;
         const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
-        const orderDiscountAmount = subtotalAfterLineDiscounts * (orderDiscPercent / 100);
+
+        let orderDiscountAmount;
+
+        // ✅ THE BACKEND LOGIC: Prioritize the amount field if it has a value.
+        if (orderDiscAmt > 0) {
+            orderDiscountAmount = orderDiscAmt;
+            // For data consistency, recalculate the percentage based on the final amount.
+            orderDiscPercent = subtotalAfterLineDiscounts > 0 ? (orderDiscAmt / subtotalAfterLineDiscounts) * 100 : 0;
+        } else {
+            // If amount is 0, fall back to calculating from the percentage.
+            orderDiscountAmount = subtotalAfterLineDiscounts * (orderDiscPercent / 100);
+        }
+
         const finalTaxableAmount = subtotalAfterLineDiscounts - orderDiscountAmount;
         const orderLevelTaxAmount = finalTaxableAmount * (orderTaxPercent / 100);
 
@@ -6880,9 +6893,14 @@ function setupInputListeners() {
     }
 
     // Order discount and tax
-    const orderDiscountInput = document.getElementById('sale-order-discount');
-    if (orderDiscountInput) {
+    const orderDiscountPercentInput = document.getElementById('sale-order-discount');
+    if (orderDiscountPercentInput) {
         orderDiscountInput.addEventListener('input', calculateSalesTotals);
+    }
+
+    const orderDiscountAmtInput = document.getElementById('sales-order-discount-amt');
+    if (orderDiscountAmtInput) {
+        orderDiscountAmtInput.addEventListener('input', e => calculateSalesTotals(e));
     }
 
     const orderTaxInput = document.getElementById('sale-order-tax');
