@@ -119,7 +119,7 @@ import {
     submitPaymentRecord, updatePaymentRecord,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
-    voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment,deleteSaleAndReverseClientSide
+    voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment,deleteSaleAndReverseClientSide,updateSalePayment
 } from './api.js';
 
 
@@ -2087,6 +2087,43 @@ async function handleSalePaymentHistoryGrid(button, docId, user) {
         }
     } else {console.log('[main.js] Payment void cancelled by user.');}
 }
+
+// ✅ NEW: The handler function for the update event
+async function handleSalePaymentUpdate(detail) {
+    const user = appState.currentUser;
+    if (!user) return;
+
+    const { paymentId, fieldToUpdate, newValue, oldValue, gridNodeId } = detail;
+
+    ProgressToast.show('Updating Payment...', 'info');
+
+    try {
+        // Prepare the data for the API
+        const updatedData = {
+            [fieldToUpdate]: (fieldToUpdate === 'paymentDate') ? new Date(newValue) : newValue
+        };
+
+        await updateSalePayment(paymentId, updatedData, user);
+        ProgressToast.showSuccess('Payment details updated!');
+
+    } catch (error) {
+        console.error("Error updating sale payment:", error);
+        ProgressToast.showError(`Update Failed: ${error.message}`);
+        
+        // Dispatch an event to tell the UI to revert the change
+        document.dispatchEvent(new CustomEvent('revertGridCell', {
+            detail: {
+                gridName: 'salePaymentHistoryGrid', // A unique name for this grid
+                nodeId: gridNodeId,
+                field: fieldToUpdate,
+                value: oldValue
+            }
+        }));
+    }
+}
+
+
+
 
 async function handleSuppliersGrid(button, docId, user) {
     const isActivate = button.classList.contains('btn-activate');
@@ -6577,6 +6614,8 @@ function setupCustomEventListeners() {
     document.addEventListener('expenseUpdated', e => {
         handleExpenseUpdate(e.detail);
     });
+
+    document.addEventListener('salePaymentUpdated', e => handleSalePaymentUpdate(e.detail));
 }
 
 async function handleUpdateSupplier(e) {
