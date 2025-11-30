@@ -5356,7 +5356,7 @@ async function handleNewSaleSubmit(e) {
 
         const subtotalAfterLineDiscounts = itemsSubtotal - totalLineDiscount;
 
-        const orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
+        let orderDiscPercent = parseFloat(document.getElementById('sale-order-discount').value) || 0;
         const orderDiscAmt = parseFloat(document.getElementById('sales-order-discount-amt').value) || 0;
         const orderTaxPercent = parseFloat(document.getElementById('sale-order-tax').value) || 0;
 
