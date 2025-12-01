@@ -5449,7 +5449,7 @@ const consignmentPaymentsGridOptions = {
         {
             field: "notes",
             headerName: "Notes",
-            width: 240,
+            width: 350,
             editable: true
         },
         {
