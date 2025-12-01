@@ -5070,8 +5070,8 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
 
     // --- 2. Process Sales Financials ---
     let totalInvoiced = 0, totalCash = 0, totalExpenses = 0 ;
-    let tastyInvoiced = 0, tastyCash = 0; tastyExpenses = 0;
-    let churchInvoiced = 0, churchCash = 0; churchExpenses = 0;
+    let tastyInvoiced = 0, tastyCash = 0, tastyExpenses = 0;
+    let churchInvoiced = 0, churchCash = 0, churchExpenses = 0;
 
     // Process Direct Sales using the correct field names
     directSalesSnapshot.forEach(doc => {
