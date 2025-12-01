@@ -5064,6 +5064,25 @@ export function resetConsignmentRequestModal() {
 
 }
 
+/**
+ * ✅ NEW: Updates the counter for selected products in the consignment request grid.
+ */
+function updateRequestedProductsCounter() {
+    if (!requestProductsGridApi) return;
+
+    let selectedCount = 0;
+    requestProductsGridApi.forEachNode(node => {
+        if (node.data.quantityRequested > 0) {
+            selectedCount++;
+        }
+    });
+
+    const counterElement = document.getElementById('requested-products-counter');
+    if (counterElement) {
+        counterElement.textContent = `${selectedCount} product(s) selected`;
+    }
+}
+
 // [NEW] Grid for the Product Selection step in the Request Modal
 const requestProductsGridOptions = {
     theme: 'legacy',
@@ -5098,7 +5117,16 @@ const requestProductsGridOptions = {
             }
         }
     ],
-    onGridReady: params => { requestProductsGridApi = params.api; }
+    onCellValueChanged: (params) => {
+        // We only need to update the counter if the quantity column was changed.
+        if (params.colDef.field === 'quantityRequested') {
+            updateRequestedProductsCounter();
+        }
+    },
+    onGridReady: params => { 
+        requestProductsGridApi = params.api; 
+        updateRequestedProductsCounter();
+    }
 };
 
 /**
