@@ -4984,9 +4984,6 @@ export function getRequestedConsignmentItems() {
         return [];
     }
 
-    //This single line forces any active cell editor to save its value.
-    requestProductsGridApi.stopEditing();
-
     const requestedItems = [];
     // Use the grid's own API to iterate through the rows.
     requestProductsGridApi.forEachNode(node => {
@@ -12172,10 +12169,15 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         document.getElementById('sales-summary-tasty-invoiced').textContent = formatCurrency(sales.tastyTreats.invoiced);
         document.getElementById('sales-summary-tasty-cash').textContent = formatCurrency(sales.tastyTreats.cash);
         document.getElementById('sales-summary-tasty-diff').textContent = formatCurrency(sales.tastyTreats.diff);
+        document.getElementById('sales-summary-tasty-expenses').textContent = formatCurrency(sales.tastyTreats.tastyExpenses);
+
+
+        
 
         document.getElementById('sales-summary-church-invoiced').textContent = formatCurrency(sales.churchStore.invoiced);
         document.getElementById('sales-summary-church-cash').textContent = formatCurrency(sales.churchStore.cash);
         document.getElementById('sales-summary-church-diff').textContent = formatCurrency(sales.churchStore.diff);
+        document.getElementById('sales-summary-church-expenses').textContent = formatCurrency(sales.churchStore.churchExpenses);
         
         // --- 3. POPULATE STRIP 2: Stock Status ---
         if (dashboardStockGridApi) {
