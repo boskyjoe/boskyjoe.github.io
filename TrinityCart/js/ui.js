@@ -4984,6 +4984,9 @@ export function getRequestedConsignmentItems() {
         return [];
     }
 
+    //This single line forces any active cell editor to save its value.
+    requestProductsGridApi.stopEditing();
+
     const requestedItems = [];
     // Use the grid's own API to iterate through the rows.
     requestProductsGridApi.forEachNode(node => {
