@@ -5410,13 +5410,7 @@ const consignmentPaymentsGridOptions = {
         // Don't do anything if the value hasn't actually changed
         if (oldValue === newValue) return;
 
-        // Only allow editing for 'Pending' payments
-        if (paymentData.paymentStatus !== 'Pending Verification') {
-            showModal('error', 'Cannot Edit', 'Only payments with a "Pending Verification" status can be edited.');
-            // Revert the change in the UI
-            params.node.setDataValue(colDef.field, oldValue);
-            return;
-        }
+        
 
         // Dispatch a custom event with all the necessary details
         console.log('[UI] Dispatching "consignmentPaymentUpdated" event.');
