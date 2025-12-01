@@ -5070,24 +5070,28 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
 
     // --- 2. Process Sales Financials ---
     let totalInvoiced = 0, totalCash = 0, totalExpenses = 0 ;
-    let tastyInvoiced = 0, tastyCash = 0;
-    let churchInvoiced = 0, churchCash = 0;
+    let tastyInvoiced = 0, tastyCash = 0; tastyExpenses = 0;
+    let churchInvoiced = 0, churchCash = 0; churchExpenses = 0;
 
     // Process Direct Sales using the correct field names
     directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
         const invoicedAmount = sale.financials?.totalAmount || 0;
         const cashAmount = sale.totalAmountPaid || 0;
+        const expenseAmount = sale.financials?.totalExpenses || 0;
 
         totalInvoiced += invoicedAmount;
         totalCash += cashAmount;
+        totalExpenses += expenseAmount; 
         
         if (sale.store === 'Tasty Treats') {
             tastyInvoiced += invoicedAmount;
             tastyCash += cashAmount;
+            tastyExpenses += expenseAmount;
         } else { // Assume everything else is Church Store
             churchInvoiced += invoicedAmount;
             churchCash += cashAmount;
+            churchExpenses += expenseAmount;
         }
     });
 
@@ -5199,12 +5203,14 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
             tastyTreats: { 
                 invoiced: tastyInvoiced, 
                 cash: tastyCash, 
-                diff: tastyInvoiced - tastyCash 
+                diff: tastyInvoiced - tastyCash,
+                expenses: tastyExpenses
             },
             churchStore: { 
                 invoiced: churchInvoiced, 
                 cash: churchCash, 
-                diff: churchInvoiced - churchCash 
+                diff: churchInvoiced - churchCash,
+                expenses: churchExpenses
             }
         },
         stockStatus: stockStatus,
