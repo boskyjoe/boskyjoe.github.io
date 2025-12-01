@@ -5181,7 +5181,7 @@ async function handleConsignmentPaymentUpdate(detail) {
                 value: oldValue
             }
         }));
-    }
+    } finally {ProgressToast.hide(600);}
 }
 
 
