@@ -5210,7 +5210,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 invoiced: churchInvoiced, 
                 cash: churchCash, 
                 diff: churchInvoiced - churchCash,
-                tastyExpenses: tastyExpenses
+                churchExpenses: churchExpenses
             }
         },
         stockStatus: stockStatus,
