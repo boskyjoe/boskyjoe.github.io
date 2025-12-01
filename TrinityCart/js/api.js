@@ -2435,12 +2435,6 @@ export async function updateConsignmentPayment(paymentId, updatedData, user) {
         'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    // We run a quick check to ensure we are not editing a verified payment
-    const doc = await paymentRef.get();
-    if (doc.exists && doc.data().paymentStatus !== 'Pending Verification') {
-        throw new Error("Cannot edit a payment that is not pending verification.");
-    }
-
     return paymentRef.update(dataToUpdate);
 }
 
