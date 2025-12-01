@@ -4681,7 +4681,7 @@ async function handleConsignmentRequestSubmit(e) {
 
     } catch (error) {
         console.error("Error creating consignment request:", error);
-        ProgressToast.showError(`Request Failed: ${error.message}`);
+        ProgressToast.hide(0); 
         
         // Basic rollback for ad-hoc path: if a team was created but the request failed, notify the admin.
         if (newTeamCreatedId) {
@@ -4703,7 +4703,7 @@ async function handleConsignmentRequestSubmit(e) {
             // Standard error message if no team was created
             showModal('error', 'Request Failed', `The consignment request could not be submitted.\n\nError: ${error.message}`);
         }
-    } finally {ProgressToast.hide(200);}
+    } finally {setTimeout(() => ProgressToast.hide(300), 1500);}
 }
 
 
