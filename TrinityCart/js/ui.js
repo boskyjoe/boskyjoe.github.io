@@ -5431,21 +5431,21 @@ const consignmentPaymentsGridOptions = {
         }));
     },
     columnDefs: [
-        { field: "paymentDate", headerName: "Payment Date", width: 140, editable: true, valueFormatter: p => p.value.toDate().toLocaleDateString() },
+        { field: "paymentDate", headerName: "Payment Date", width: 150, editable: true, valueFormatter: p => p.value.toDate().toLocaleDateString() },
         { 
             field: "amountPaid", 
             headerName: "Amount Paid", 
-            width: 120, 
+            width: 150, 
             valueFormatter: p => formatCurrency(p.value)
         },
         { 
             field: "donationAmount", 
             headerName: "Donation", 
-            width: 120, 
+            width: 150, 
             valueFormatter: p => formatCurrency(p.value)
         },
-        { field: "paymentMode", headerName: "Mode" },
-        { field: "transactionRef", headerName: "Reference #", editable: true },
+        { field: "paymentMode", headerName: "Mode", width: 150,},
+        { field: "transactionRef", headerName: "Reference #", editable: true, width: 200,},
         {
             field: "notes",
             headerName: "Notes",
