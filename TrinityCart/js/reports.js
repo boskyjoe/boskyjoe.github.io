@@ -5204,13 +5204,13 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 invoiced: tastyInvoiced, 
                 cash: tastyCash, 
                 diff: tastyInvoiced - tastyCash,
-                expenses: tastyExpenses
+                tastyExpenses: tastyExpenses
             },
             churchStore: { 
                 invoiced: churchInvoiced, 
                 cash: churchCash, 
                 diff: churchInvoiced - churchCash,
-                expenses: churchExpenses
+                tastyExpenses: tastyExpenses
             }
         },
         stockStatus: stockStatus,
