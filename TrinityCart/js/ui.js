@@ -5787,25 +5787,25 @@ const salesHistoryGridOptions = {
         {
             field: "financials.totalAmount",
             headerName: "Total",
-            width: 120,
+            width: 200,
             valueFormatter: p => formatCurrency(p.value)
         },
         {
             field: "financials.amountTendered",
             headerName: "Paid",
-            width: 120,
+            width: 200,
             valueFormatter: p => formatCurrency(p.value)
         },
         {
             field: "balanceDue",
             headerName: "Balance Due",
-            width: 120,
+            width: 200,
             valueFormatter: p => formatCurrency(p.value)
         },
         {
             field: "financials.totalExpenses",
             headerName: "Expenses",
-            width: 120,
+            width: 200,
             valueFormatter: p => formatCurrency(p.value)
         },
         {
