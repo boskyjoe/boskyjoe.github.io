@@ -5055,6 +5055,8 @@ async function handleMakePaymentSubmit(e) {
         let donationAmount = 0;
         if (paymentAmount > balanceDue) {
             donationAmount = paymentAmount - balanceDue;
+
+            ProgressToast.hide(0);
             
             const confirmDonation = await showModal('confirm', 'Team Overpayment - Record as Donation?', 
                 `Payment amount: ${formatCurrency(paymentAmount)}\n` +
