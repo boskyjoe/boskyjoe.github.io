@@ -5194,7 +5194,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 expenses:totalExpenses
             },
             consignment: { 
-                invoiced: consignmentSold - consignmentExpenses, // Represents actual sales revenue
+                invoiced: consignmentSold, // Represents actual sales revenue
                 cash: consignmentCash, 
                 diff: consignmentSold - consignmentCash,
                 checkout: consignmentCheckedOut, // Value of goods currently with teams
