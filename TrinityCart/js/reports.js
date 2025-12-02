@@ -5188,7 +5188,7 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     const summary = {
         salesSummary: {
             total: { 
-                invoiced: totalInvoiced, 
+                invoiced: totalInvoiced - totalExpenses, 
                 cash: totalCash, 
                 diff: totalInvoiced - totalCash,
                 expenses:totalExpenses
@@ -5201,13 +5201,13 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 consignmentExpenses:consignmentExpenses
             },
             tastyTreats: { 
-                invoiced: tastyInvoiced, 
+                invoiced: tastyInvoiced - tastyExpenses, 
                 cash: tastyCash, 
                 diff: tastyInvoiced - tastyCash,
                 tastyExpenses: tastyExpenses
             },
             churchStore: { 
-                invoiced: churchInvoiced, 
+                invoiced: churchInvoiced - churchExpenses, 
                 cash: churchCash, 
                 diff: churchInvoiced - churchCash,
                 churchExpenses: churchExpenses
