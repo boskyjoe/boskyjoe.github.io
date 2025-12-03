@@ -155,6 +155,11 @@ export const expenseTypes = [
     'Other'
 ];
 
+export const productType = [
+    'Standard',
+    'Custom'
+] ;
+
 export const saleTypeOptions = [
     { value: 'Revenue', label: 'Revenue Sale' },
     { value: 'Sample', label: 'Sample / Non-Revenue' }
