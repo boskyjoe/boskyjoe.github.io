@@ -1381,13 +1381,36 @@ async function handleAvailableProductsGrid(button, docId) {
     const isEditMode = !!catalogueDocId;
 
     try {
-        const costPrice = await getLatestPurchasePrice(productId);
-        
-        if (costPrice === null) {
-            return alert('This product cannot be added because it has no purchase history. Please create a purchase invoice for it first.');
+
+        // --- 1. Get the full product data from masterData cache ---
+        const productMaster = masterData.products.find(p => p.id === productId);
+        if (!productMaster) {
+            return showModal('error', 'Product Not Found', 'Could not find the master data for this product.');
         }
 
-        const productMaster = masterData.products.find(p => p.id === productId);
+        let costPrice = 0;
+
+        // --- 2. ✅ THE FIX: Conditional Purchase History Check ---
+        // Only perform the check if the itemType is NOT 'Custom'.
+        if (productMaster.itemType !== 'Custom') {
+            console.log(`[Main.js] Product "${productMaster.itemName}" is Standard. Checking purchase history...`);
+            
+            const latestPrice = await getLatestPurchasePrice(productId);
+            
+            if (latestPrice === null) {
+                return showModal('error', 'No Purchase History', 
+                    `This product cannot be added because it has no purchase history.\n\nPlease create a purchase invoice for it first, or mark it as a "Custom" item in the Products module.`
+                );
+            }
+            costPrice = latestPrice; // Use the price from the purchase history
+        } else {
+            console.log(`[Main.js] Product "${productMaster.itemName}" is Custom. Bypassing purchase history check.`);
+            // For Custom items, we can use the unitPrice from the product master record as the cost basis.
+            costPrice = productMaster.unitPrice || 0;
+        }
+
+
+        // --- 3. Calculate Selling Price and Prepare Data (This logic is unchanged) ---
         const margin = productMaster.unitMarginPercentage || 0;
         const sellingPrice = costPrice * (1 + margin / 100);
 
@@ -1408,9 +1431,12 @@ async function handleAvailableProductsGrid(button, docId) {
             appState.draftCatalogueItems.push(itemData);
             updateDraftItemsGrid();
         }
+
+        ProgressToast.show(`Added "${productMaster.itemName}"`, 'success', 1500);
+
     } catch (error) {
         console.error("Error adding item to catalogue:", error);
-        alert('An error occurred while adding the product.');
+        showModal('error', 'Error', `An error occurred while adding the product: ${error.message}`);
     }
 }
 
