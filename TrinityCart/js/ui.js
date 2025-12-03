@@ -1634,7 +1634,7 @@ const productsGridOptions = {
     theme: 'legacy',
     columnDefs: [
         { field: "itemId", headerName: "ID", width: 150 },
-        { field: "itemName", headerName: "Item Name", flex: 2, editable: true },
+        { field: "itemName", headerName: "Item Name", width:250, editable: true },
         {
             field: "categoryId",
             headerName: "Category",
@@ -1665,6 +1665,19 @@ const productsGridOptions = {
             }
         },
         {
+            field: "itemType",
+            headerName: "Item Type",
+            width: 150,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                // The 'values' property is automatically populated from your config file
+                values: productType 
+            },
+            // Add a filter for convenience
+            filter: 'agTextColumnFilter'
+        },
+        {
             field: "inventoryCount",
             headerName: "Stock On Hand",
             width: 150,
@@ -1680,7 +1693,7 @@ const productsGridOptions = {
         {
             field: "unitPrice",
             headerName: "Unit Price",
-            flex: 1,
+            width:150,
             editable: true,
             valueFormatter: p => (typeof p.value === 'number') ? formatCurrency(p.value) : '',
             valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
@@ -1688,14 +1701,14 @@ const productsGridOptions = {
         {
             field: "unitMarginPercentage",
             headerName: "Margin %",
-            flex: 1,
+            width:150,
             editable: true,
             valueParser: p => parseFloat(p.newValue)
         },
         {
             field: "sellingPrice",
             headerName: "Selling Price",
-            flex: 1,
+            width:200,
             editable: false,
             valueFormatter: p => (typeof p.value === 'number') ? formatCurrency(p.value) : '',
             valueParser: p => parseFloat(p.newValue) // Ensure the edited value is a number
