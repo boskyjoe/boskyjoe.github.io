@@ -5196,20 +5196,20 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
             consignment: { 
                 invoiced: consignmentSold, // Represents actual sales revenue
                 cash: consignmentCash, 
-                diff: consignmentSold - consignmentCash,
+                diff: consignmentSold - (consignmentCash + consignmentExpenses),
                 checkout: consignmentCheckedOut, // Value of goods currently with teams
                 consignmentExpenses:consignmentExpenses
             },
             tastyTreats: { 
                 invoiced: tastyInvoiced - tastyExpenses, 
                 cash: tastyCash, 
-                diff: tastyInvoiced - tastyCash,
+                diff: tastyInvoiced - (tastyCash + tastyExpenses),
                 tastyExpenses: tastyExpenses
             },
             churchStore: { 
                 invoiced: churchInvoiced - churchExpenses, 
                 cash: churchCash, 
-                diff: churchInvoiced - churchCash,
+                diff: churchInvoiced - (churchCash + churchExpenses),
                 churchExpenses: churchExpenses
             }
         },
