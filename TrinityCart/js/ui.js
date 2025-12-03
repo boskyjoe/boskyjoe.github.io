@@ -1738,6 +1738,7 @@ const productsGridOptions = {
     rowData: [],
     rowClassRules: {
         'opacity-50': params => !params.data.isActive,
+        'bg-blue-50': params => params.data && params.data.itemType === 'Custom'
     },
     onGridReady: (params) => {
         console.log("[ui.js] Products Grid is now ready.");
