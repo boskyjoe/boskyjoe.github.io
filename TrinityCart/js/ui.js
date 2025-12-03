@@ -36,7 +36,8 @@ import { PURCHASE_INVOICES_COLLECTION_PATH, INVENTORY_LEDGER_COLLECTION_PATH, SU
 import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from './config.js';
 
 import {
-    CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,EXPENSES_COLLECTION_PATH
+    CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,EXPENSES_COLLECTION_PATH,
+    productType
 } from './config.js';
 
 import { 
@@ -1803,6 +1804,23 @@ export function showAddProductToCatalogueModal() {
             option.textContent = cat.categoryName;
             categorySelect.appendChild(option);
         });
+    }
+
+    const itemTypeSelect = document.getElementById('catalogue-itemType-input');
+    if (itemTypeSelect) {
+        // Clear any previous options
+        itemTypeSelect.innerHTML = '';
+
+        // Add each type from the config array as an option
+        productType.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            itemTypeSelect.appendChild(option);
+        });
+
+        // Set the default value to 'Standard'
+        itemTypeSelect.value = 'Standard';
     }
 
     // Show modal with animation
