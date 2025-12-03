@@ -2580,6 +2580,26 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
     console.log(`[API-Verify] Found ${pendingSnapshot.size} pending payments for this order.`);
 
 
+
+    //If there's a donation, find the associated PENDING donation record.
+    let pendingDonationDoc = null;
+    if (paymentData.donationAmount && paymentData.donationAmount > 0) {
+        console.log("[API-Verify] Payment includes a donation. Finding pending donation record...");
+        const donationQuery = db.collection(DONATIONS_COLLECTION_PATH)
+                                .where('relatedPaymentId', '==', paymentId)
+                                .where('status', '==', 'Pending Verification')
+                                .limit(1);
+        const donationSnapshot = await donationQuery.get();
+        if (!donationSnapshot.empty) {
+            pendingDonationDoc = donationSnapshot.docs[0];
+            console.log(`[API-Verify] Found pending donation doc: ${pendingDonationDoc.id}`);
+        } else {
+            // This is a data integrity issue. A payment with a donationAmount should always have a pending donation record.
+            console.warn(`[API-Verify] WARNING: Payment ${paymentId} has a donation amount but no corresponding pending donation record was found.`);
+        }
+    }
+
+
     // --- PHASE 2: RUN THE ATOMIC WRITE-ONLY TRANSACTION ---
     console.log("[API-Verify] Phase 2: Starting atomic write transaction...");
 
@@ -2636,20 +2656,13 @@ export async function verifyConsignmentPayment(paymentId, adminUser) {
         // ✅ FUTURE ENHANCEMENT: Add consignment donation handling if needed
         // If consignment payments can have overpayments, add donation logic here:
 
-        // D. Handle donation creation if there was an overpayment.
-        if (paymentData.donationAmount && paymentData.donationAmount > 0) {
-            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
-            transaction.set(donationRef, {
-                amount: paymentData.donationAmount,
-                donationDate: now,
-                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
-                sourceDetails: {
-                    transactionType: 'consignment_payment_overpayment',
-                    teamName: paymentData.teamName,
-                    orderId: paymentData.orderId
-                },
-                relatedPaymentId: paymentId,
-                recordedBy: adminUser.email
+        // ✅ D. THE FIX: UPDATE the existing donation record, don't create a new one.
+        if (pendingDonationDoc) {
+            console.log(`[API-Verify] Queuing update for donation doc ${pendingDonationDoc.id} to status 'Verified'.`);
+            transaction.update(pendingDonationDoc.ref, {
+                status: 'Verified',
+                'audit.verifiedBy': adminUser.email,
+                'audit.verifiedOn': now
             });
         }
         console.log("[API-Verify] All transaction writes queued successfully.");
