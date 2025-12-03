@@ -1638,7 +1638,7 @@ const productsGridOptions = {
         {
             field: "categoryId",
             headerName: "Category",
-            flex: 1,
+            width:200,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: (params) => {
                 const categoryIds = masterData.categories.map(c => c.id);
