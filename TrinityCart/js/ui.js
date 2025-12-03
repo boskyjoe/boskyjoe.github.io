@@ -1633,8 +1633,8 @@ const productsGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     theme: 'legacy',
     columnDefs: [
-        { field: "itemId", headerName: "ID", width: 150 },
-        { field: "itemName", headerName: "Item Name", width:250, editable: true },
+        { field: "itemId", headerName: "ID", width: 250 },
+        { field: "itemName", headerName: "Item Name", width:300, editable: true },
         {
             field: "categoryId",
             headerName: "Category",
