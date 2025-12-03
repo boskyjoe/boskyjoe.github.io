@@ -3510,6 +3510,8 @@ async function handleProductCatalogueSubmit(e) {
         const categoryId = document.getElementById('catalogue-itemCategory-select').value;
         const initialStock = parseInt(document.getElementById('catalogue-initialStock-input').value, 10) || 0;
 
+        const itemType = document.getElementById('catalogue-itemType-input').value;
+
         if (!itemName) {
             ProgressToast.hide(0);
             return showModal('error', 'Invalid Input', 'Please enter a product name.');
@@ -3531,6 +3533,7 @@ async function handleProductCatalogueSubmit(e) {
         const productData = {
             itemName: itemName,
             categoryId: categoryId,
+            itemType: itemType,
             unitPrice,
             unitMarginPercentage,
             sellingPrice,
