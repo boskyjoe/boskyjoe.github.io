@@ -1437,6 +1437,10 @@ async function handleAvailableProductsGrid(button, docId) {
     } catch (error) {
         console.error("Error adding item to catalogue:", error);
         showModal('error', 'Error', `An error occurred while adding the product: ${error.message}`);
+    } finally {
+        // ✅ FINALLY: Ensure any toast is cleared after a short delay.
+        // This will hide the "Success" toast after its animation.
+        setTimeout(() => ProgressToast.hide(300), 200);
     }
 }
 
