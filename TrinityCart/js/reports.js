@@ -5059,16 +5059,19 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         directSalesSnapshot,
         consignmentOrdersSnapshot,
         allProductsSnapshot,
-        consignmentActivitiesSnapshot // Needed for Top Sold Products calculation
+        consignmentActivitiesSnapshot, // Needed for Top Sold Products calculation
+        donationsSnapshot
     ] = await Promise.all([
         db.collection(SALES_COLLECTION_PATH).get(),
         db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', 'in', ['Active', 'Settled']).get(),
         db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).where('isActive', '==', true).get(),
         // This query is only for calculating top sold items from consignment
-        db.collectionGroup('activityLog').where('activityType', '==', 'Sale').get()
+        db.collectionGroup('activityLog').where('activityType', '==', 'Sale').get(),
+        db.collection(DONATIONS_COLLECTION_PATH).where('status', '==', 'Verified').get()
     ]);
 
     // --- 2. Process Sales Financials ---
+    let totalDonations = 0, consignmentDonations = 0, churchStoreDonations = 0, tastyTreatsDonations = 0;
     let totalInvoiced = 0, totalCash = 0, totalExpenses = 0 ;
     let tastyInvoiced = 0, tastyCash = 0, tastyExpenses = 0;
     let churchInvoiced = 0, churchCash = 0, churchExpenses = 0;
@@ -5184,6 +5187,23 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
     }).sort((a, b) => b.totalQuantity - a.totalQuantity);
 
 
+    donationsSnapshot.forEach(doc => {
+        const donation = doc.data();
+        const amount = donation.amount || 0;
+        totalDonations += amount;
+
+        // Use the 'source' field you created to categorize the donation
+        if (donation.source === DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT) {
+            consignmentDonations += amount;
+        } else if (donation.source === DONATION_SOURCES.DIRECT_SALE_CHURCH_STORE) {
+            churchStoreDonations += amount;
+        } else if (donation.source === DONATION_SOURCES.DIRECT_SALE_TASTY_TREATS) {
+            tastyTreatsDonations += amount;
+        }
+    });
+
+
+
     // --- 5. Assemble and Return the Final Object ---
     const summary = {
         salesSummary: {
@@ -5211,6 +5231,14 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
                 cash: churchCash, 
                 diff: churchInvoiced - (churchCash + churchExpenses),
                 churchExpenses: churchExpenses
+            }
+        },
+        donationsSummary: {
+            totalDonations,
+            bySource: {
+                consignment: consignmentDonations,
+                churchStore: churchStoreDonations,
+                tastyTreats: tastyTreatsDonations
             }
         },
         stockStatus: stockStatus,
