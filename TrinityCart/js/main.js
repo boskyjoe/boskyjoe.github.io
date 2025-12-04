@@ -107,7 +107,7 @@ import {
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
-    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal
+    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue
 } from './ui.js';
 
 import {
@@ -2751,7 +2751,12 @@ function handleStandaloneButtons(target, event) {
         '#export-sales-catalogues-excel-btn': () => {
             console.log('[main.js] Export requested. Dispatching event: exportAllCataloguesToMultiSheetExcel();');
              exportAllCataloguesToMultiSheetExcel();
+        },
+        '#product-mast-excel-export': () => {
+            console.log('[main.js] Product catalogue export requested. Calling handler.');
+            handleExportProductCatalogue();
         }
+        
 
         
 
@@ -4665,7 +4670,7 @@ async function handleConsignmentRequestSubmit(e) {
                 altEmail = generateDynamicEmail(altName);
                 console.log(`[Main.js] Email was blank. Generated a dynamic email: ${altEmail}`);
             }
-            
+
             ProgressToast.updateProgress('Creating new team...', 35, 'Step 3/7');
             const randomSuffix = Math.floor(1000 + Math.random() * 9000);
             const newTeamName = `${altVenue} - ${altName} (${randomSuffix})`;
