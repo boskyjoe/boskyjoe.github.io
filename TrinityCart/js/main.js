@@ -4657,10 +4657,15 @@ async function handleConsignmentRequestSubmit(e) {
         if (isAdHocPath) {
             // --- ADMIN PATH B: Create Ad-Hoc Team ---
             console.log("[Main.js] Admin Ad-Hoc Team Path Detected.");
-            if (!altName || !altEmail || !altPhone || !altVenue) {
+            if (!altName || !altPhone || !altVenue) {
                 throw new Error('To create an ad-hoc request, please fill all four alternate fields: Name, Email, Phone, and Venue.');
             }
 
+            if (!altEmail) {
+                altEmail = generateDynamicEmail(altName);
+                console.log(`[Main.js] Email was blank. Generated a dynamic email: ${altEmail}`);
+            }
+            
             ProgressToast.updateProgress('Creating new team...', 35, 'Step 3/7');
             const randomSuffix = Math.floor(1000 + Math.random() * 9000);
             const newTeamName = `${altVenue} - ${altName} (${randomSuffix})`;
