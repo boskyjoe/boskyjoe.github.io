@@ -8362,6 +8362,33 @@ async function handleGenerateInvoice(invoiceId) {
 
         //const ToWords = window.ToWords;
 
+        const taxableAmountForSummary = invoiceData.financials.itemsSubtotal || 0 ;
+        // Define your fixed tax rates here
+        const cgstRate = 2.5;
+        const sgstRate = 2.5;
+
+        // Calculate the tax amounts based on the taxable amount
+        const totalCGST = taxableAmountForSummary * (cgstRate / 100);
+        const totalSGST = taxableAmountForSummary * (sgstRate / 100);
+
+        // Add the CGST row data to the summary array
+        taxSummary.push({
+            type: 'CGST',
+            taxableAmount: formatCurrency(taxableAmountForSummary),
+            rate: `${cgstRate}%`,
+            taxAmount: formatCurrency(totalCGST)
+        });
+
+        // Add the SGST row data to the summary array
+        taxSummary.push({
+            type: 'SGST',
+            taxableAmount: formatCurrency(taxableAmountForSummary),
+            rate: `${sgstRate}%`,
+            taxAmount: formatCurrency(totalSGST)
+        });
+
+
+
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
             copyType: 'ORIGINAL FOR RECIPIENT',
@@ -8419,7 +8446,7 @@ async function handleGenerateInvoice(invoiceId) {
             totalAmount: formatCurrency(invoiceData.financials.totalAmount || 0),
 
             // Tax Summary (requires more detailed data from line items if you have multiple tax rates)
-            taxSummary: [], // Placeholder - needs more logic if you have complex taxes
+            taxSummary: taxSummary, // Placeholder - needs more logic if you have complex taxes
 
             // Final Amounts
             subTotal: formatCurrency(invoiceData.financials.itemsSubtotal || 0),
