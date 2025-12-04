@@ -12215,19 +12215,21 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
         const donations = summaryData.donationsSummary;
 
+        const grandTotalCaseh = 0;
+
         document.getElementById('cash-grand-total-payment').textContent = formatCurrency(sales.total.cash);
         document.getElementById('cash-grand-total-donation').textContent = formatCurrency(donations.totalDonations);
 
         document.getElementById('cash-consignment-payment').textContent= formatCurrency(sales.consignment.cash);
         document.getElementById('cash-consignment-donation').textContent = formatCurrency(donations.bySource.consignment);
 
-        document.getElementById('cash-church-payment').textContent = formatCurrency(sales.tastyTreats.cash);
+        document.getElementById('cash-church-payment').textContent = formatCurrency(sales.churchStore.cash);
         document.getElementById('cash-church-donation').textContent = formatCurrency(donations.bySource.churchStore);
 
         document.getElementById('cash-tasty-payment').textContent = formatCurrency(sales.tastyTreats.cash);
         document.getElementById('cash-tasty-donation').textContent = formatCurrency(donations.bySource.tastyTreats);
 
-        document.getElementById('cash-grand-total').textContent = formatCurrency(sales.total.cash) + formatCurrency(donations.totalDonations) ;
+        document.getElementById('cash-grand-total').textContent = formatCurrency(sales.total.cash + donations.totalDonations) ;
 
 
         
