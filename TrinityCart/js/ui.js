@@ -2444,7 +2444,7 @@ const bulkAddProductsGridOptions = {
             floatingFilter: false,
             // ✅ CORRECTED: Initialize with default value
             cellDataType: 'number',
-            valueGetter: params => params.data.defaultQty || 1, // Get from data
+            valueGetter: params => params.data.defaultQty || 0, // Get from data
             valueSetter: params => {
                 // ✅ CORRECTED: Set value back to data
                 params.data.defaultQty = params.newValue;
@@ -2453,8 +2453,7 @@ const bulkAddProductsGridOptions = {
             
             cellEditor: 'agNumberCellEditor',
             cellEditorParams: {
-                min: 1,
-                max: 1000,
+                min: 0,
                 precision: 0
             },
             cellStyle: { 
