@@ -1496,6 +1496,12 @@ async function handleCatalogueItemsGrid(button, docId) {
     } catch (error) {
         console.error("Error removing item:", error);
         showModal('error', 'Failed to Remove', `Could not remove the item: ${error.message}`);
+    } finally {
+        // ✅ THE FIX: This block will always run, ensuring the toast is hidden.
+        // We add a delay to allow the "Success" message to be visible for a moment.
+        if (isEditMode) {
+            setTimeout(() => ProgressToast.hide(300), 1500);
+        }
     }
 }
 
