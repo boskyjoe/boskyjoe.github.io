@@ -12210,6 +12210,26 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         document.getElementById('sales-summary-church-cash').textContent = formatCurrency(sales.churchStore.cash);
         document.getElementById('sales-summary-church-diff').textContent = formatCurrency(sales.churchStore.diff);
         document.getElementById('sales-summary-church-expenses').textContent = formatCurrency(sales.churchStore.churchExpenses);
+
+        //nEW: Access the donation data
+
+        const donations = summaryData.donationsSummary;
+
+        document.getElementById('cash-grand-total-payment').textContent = formatCurrency(sales.total.cash);
+        document.getElementById('cash-grand-total-donation').textContent = formatCurrency(donations.totalDonations);
+
+        document.getElementById('cash-consignment-payment').textContent= formatCurrency(sales.consignment.cash);
+        document.getElementById('cash-consignment-donation').textContent = formatCurrency(donations.bySource.consignment);
+
+        document.getElementById('cash-church-payment').textContent = formatCurrency(sales.tastyTreats.cash);
+        document.getElementById('cash-church-donation').textContent = formatCurrency(donations.bySource.churchStore);
+
+        document.getElementById('cash-tasty-payment').textContent = formatCurrency(sales.tastyTreats.cash);
+        document.getElementById('cash-tasty-donation').textContent = formatCurrency(donations.bySource.tastyTreats);
+
+        document.getElementById('cash-grand-total').textContent = formatCurrency(sales.total.cash) + formatCurrency(donations.totalDonations) ;
+
+
         
         // --- 3. POPULATE STRIP 2: Stock Status ---
         if (dashboardStockGridApi) {
