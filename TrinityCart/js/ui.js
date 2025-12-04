@@ -14217,6 +14217,13 @@ export async function handleExportProductCatalogue() {
     } catch (error) {
         console.error("Error exporting product catalogue:", error);
         ProgressToast.showError(`Export Failed: ${error.message}`);
+    } finally {
+        // 4. ✅ THE FIX: This block always runs.
+        // It waits 1.5 seconds to give the "Success" toast time to be read,
+        // then it ensures any toast is hidden.
+        setTimeout(() => {
+            ProgressToast.hide(300);
+        }, 1500);
     }
 }
 
