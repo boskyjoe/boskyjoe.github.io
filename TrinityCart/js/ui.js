@@ -3799,6 +3799,37 @@ export function resetCatalogueForm() {
     }
 }
 
+/**
+ * ✅ NEW: Refreshes the available products grid.
+ * It updates the context with the current list of item IDs in the catalogue
+ * and then tells the grid to redraw its rows.
+ */
+export function refreshAvailableProductsGrid() {
+    if (!availableProductsGridApi) return;
+
+    // Get the current list of item IDs (from draft or from the live grid)
+    const catalogueDocId = document.getElementById('sales-catalogue-doc-id').value;
+    const isEditMode = !!catalogueDocId;
+    let currentItemIds = [];
+
+    if (isEditMode) {
+        const items = [];
+        catalogueItemsGridApi.forEachNode(node => items.push(node.data.productId));
+        currentItemIds = items;
+    } else {
+        currentItemIds = appState.draftCatalogueItems.map(item => item.productId);
+    }
+    
+    // Update the grid's context
+    availableProductsGridApi.setGridOption('context', {
+        currentCatalogueItemIds: new Set(currentItemIds)
+    });
+
+    // Force the rows to be redrawn to update the button states
+    availableProductsGridApi.redrawRows();
+    console.log('[UI] Refreshed available products grid and button states.');
+}
+
 
 // Define its options
 
