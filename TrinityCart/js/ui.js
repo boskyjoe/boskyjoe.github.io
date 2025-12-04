@@ -3814,6 +3814,12 @@ export function loadCatalogueForEditing(catalogueData) {
 
 // [NEW] Function to reset the form back to "Create New" mode
 export function resetCatalogueForm() {
+
+    // 1. Reset the form fields and UI elements (Your existing code is correct)
+    const form = document.getElementById('sales-catalogue-form');
+    if (form) form.reset();
+
+
     document.getElementById('sales-catalogue-form').reset();
     document.getElementById('sales-catalogue-doc-id').value = '';
     document.getElementById('catalogue-form-title').textContent = 'Create New Sales Catalogue';
@@ -3833,6 +3839,7 @@ export function resetCatalogueForm() {
         unsubscribeCatalogueItemsListener();
         unsubscribeCatalogueItemsListener = null;
     }
+    refreshAvailableProductsGrid();
 }
 
 /**
