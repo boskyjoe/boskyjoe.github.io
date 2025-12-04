@@ -8360,7 +8360,7 @@ async function handleGenerateInvoice(invoiceId) {
 
         console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
 
-        const ToWords = window.ToWords;
+        //const ToWords = window.ToWords;
 
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
