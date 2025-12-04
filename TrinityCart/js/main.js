@@ -65,7 +65,7 @@ import { getPaymentDataFromGridById,
 import { showSupplierPaymentModal, closeSupplierPaymentModal, getInvoiceDataFromGridById, initializeModals, closePaymentModal } from './ui.js';
 
 
-import { showSalesCatalogueView, getCatalogueDataFromGridById, loadCatalogueForEditing, resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
+import {refreshAvailableProductsGrid, showSalesCatalogueView, getCatalogueDataFromGridById, loadCatalogueForEditing, resetCatalogueForm, updateDraftItemsGrid, getTeamDataFromGridById } from './ui.js';
 import {
     getLatestPurchasePrice,
     addSalesCatalogue,
@@ -1448,13 +1448,54 @@ async function handleCatalogueItemsGrid(button, docId) {
     if (!button.classList.contains('action-btn-remove-item')) return;
 
     const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
-    if (confirm('Are you sure you want to remove this item from the catalogue?')) {
-        try {
+    const isEditMode = !!catalogueId;
+
+    const confirmed = await showModal(
+        'confirm', 
+        'Remove Item', 
+        'Are you sure you want to remove this item from the catalogue?'
+    );
+
+    if (!confirmed) {
+        return; // User cancelled
+    }
+
+    try {
+
+        if (isEditMode) {
+            // --- EDIT MODE LOGIC ---
+            // This is the existing logic that calls the API.
+            console.log(`[Main.js] Edit Mode: Removing item ${docId} from catalogue ${catalogueId}`);
+            ProgressToast.show('Removing item from catalogue...', 'info');
             await removeItemFromCatalogue(catalogueId, docId);
-        } catch (error) {
-            console.error("Error removing item:", error);
-            alert('Failed to remove the item.');
+            ProgressToast.showSuccess('Item removed successfully.');
+            // The real-time listener on the catalogue items will handle the grid refresh.
+            
+        } else {
+            // --- CREATE MODE LOGIC (DRAFT ITEMS) ---
+            console.log(`[Main.js] Create Mode: Removing draft item with tempId/id: ${docId}`);
+            
+            // Find the index of the item to remove from the draft array.
+            // It might have a 'tempId' or a real 'productId' if it was just added.
+            const itemIndex = appState.draftCatalogueItems.findIndex(
+                item => (item.tempId || item.productId) === docId
+            );
+
+            if (itemIndex > -1) {
+                // Remove the item from the array.
+                appState.draftCatalogueItems.splice(itemIndex, 1);
+                console.log('[Main.js] ✅ Item removed from draft array.');
+                
+                // Refresh the grid that shows the draft items.
+                updateDraftItemsGrid();
+            } else {
+                console.error(`[Main.js] Could not find draft item with ID ${docId} to remove.`);
+            }
         }
+        refreshAvailableProductsGrid();
+    } catch (error) {
+        console.error("Error removing item:", error);
+        showModal('error', 'Failed to Remove', `Could not remove the item: ${error.message}`);
     }
 }
 
