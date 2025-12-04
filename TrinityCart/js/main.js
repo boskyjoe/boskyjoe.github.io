@@ -6786,13 +6786,13 @@ async function handleUpdateChurchTeam(e) {
 }
 
 async function handleUpdateCatalogueItemPrice(e) {
-    const { catalogueId, itemId, newPrice } = e.detail;
+    const { catalogueId, itemId, newPrice,isOverridden } = e.detail;
     const user = appState.currentUser;
     if (!user) return;
 
     const updatedData = {
         sellingPrice: parseFloat(newPrice),
-        isOverridden: true
+        isOverridden: isOverridden
     };
 
     try {
