@@ -8361,7 +8361,7 @@ async function handleGenerateInvoice(invoiceId) {
         console.log("[Main.js] handleGenerateInvoice : ",storeDetails) ;
 
         //const ToWords = window.ToWords;
-
+        const taxSummary = [];
         const taxableAmountForSummary = invoiceData.financials.itemsSubtotal || 0 ;
         // Define your fixed tax rates here
         const cgstRate = 2.5;
