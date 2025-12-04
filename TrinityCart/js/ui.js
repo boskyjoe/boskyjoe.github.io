@@ -3663,7 +3663,7 @@ const catalogueItemsGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     getRowId: params => params.data.id || params.data.tempId, // Crucial for finding and updating rows
     columnDefs: [
-        { field: "productName", headerName: "Product Name", flex: 1 },
+        { field: "productName", headerName: "Product Name", flex: 1,filter: 'agTextColumnFilter' },
         { 
             field: "costPrice", 
             headerName: "Cost Price", 
@@ -3693,7 +3693,7 @@ const catalogueItemsGridOptions = {
         },
         {
             headerName: "Remove",
-            width: 80,
+            width: 90,
             cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const itemId = params.data.id;
