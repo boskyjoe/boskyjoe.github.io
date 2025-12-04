@@ -14161,7 +14161,64 @@ export function exportSalesOrderHistory() {
     }
 }
 
+/**
+ * ✅ NEW & CORRECT LOCATION: Handles the "Export to Excel" for the product catalogue.
+ * This function lives in the UI layer as it directly interacts with the grid API.
+ */
+export async function handleExportProductCatalogue() {
+    if (!productsGridApi) {
+        return showModal('error', 'Grid Not Ready', 'The products grid is not available to export.');
+    }
 
+    ProgressToast.show('Exporting Product Catalogue...', 'info');
+
+    try {
+        const productsToExport = [];
+        productsGridApi.forEachNodeAfterFilterAndSort(node => {
+            productsToExport.push(node.data);
+        });
+
+        if (productsToExport.length === 0) {
+            return ProgressToast.showWarning('No products to export.');
+        }
+
+        ProgressToast.updateProgress('Formatting data for Excel...', 50);
+
+        const exportData = productsToExport.map(product => {
+            const category = masterData.categories.find(c => c.id === product.categoryId);
+            return {
+                'Product ID': product.itemId,
+                'Product Name': product.itemName,
+                'Category': category ? category.categoryName : 'N/A',
+                'Item Type': product.itemType || 'Standard',
+                'Stock on Hand': product.inventoryCount || 0,
+                'Unit Price (Cost)': product.unitPrice || 0,
+                'Margin %': product.unitMarginPercentage || 0,
+                'Selling Price': product.sellingPrice || 0,
+                'Status': product.isActive ? 'Active' : 'Inactive'
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Product Catalogue");
+
+        worksheet['!cols'] = [
+            { wch: 20 }, { wch: 40 }, { wch: 25 }, { wch: 15 }, { wch: 15 },
+            { wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 10 }
+        ];
+
+        ProgressToast.updateProgress('Generating Excel file...', 80);
+        const today = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `Product_Catalogue_${today}.xlsx`);
+
+        ProgressToast.showSuccess('Export complete!');
+
+    } catch (error) {
+        console.error("Error exporting product catalogue:", error);
+        ProgressToast.showError(`Export Failed: ${error.message}`);
+    }
+}
 
 /**
  * ✅ NEW: Creates a multi-sheet Excel workbook of all sales catalogues.
