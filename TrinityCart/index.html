@@ -684,7 +684,43 @@
                                 <span class="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-full shadow-lg">CASH FLOW</span>
                             </div>
 
+
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                                <!-- Grand Total -->
+                                <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-5 shadow-lg border-2 border-green-400">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-8 h-8 bg-white bg-opacity-30 rounded-lg flex items-center justify-center mr-2">
+                                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <h5 class="font-bold text-white text-sm">GRAND TOTAL</h5>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-2 border border-white border-opacity-40">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-green-100 text-xs font-medium">Total Payment:</span>
+                                                <span id="cash-grand-total-payment" class="font-bold text-white text-lg">...</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-2 border border-white border-opacity-40">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-green-100 text-xs font-medium">Total Donation:</span>
+                                                <span id="cash-grand-total-donation" class="font-bold text-white text-lg">...</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-yellow-400 rounded-lg p-2 mt-3 border-2 border-yellow-300">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-yellow-900 text-xs font-bold">CASH IN HAND:</span>
+                                                <span id="cash-grand-total" class="font-bold text-yellow-900 text-xl">...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                
                                 <!-- Consignment Orders -->
                                 <div class="bg-white rounded-xl p-5 shadow-md border border-purple-200 hover:shadow-lg transition-all">
                                     <div class="flex items-center mb-3">
@@ -753,37 +789,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Grand Total -->
-                                <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-5 shadow-lg border-2 border-green-400">
-                                    <div class="flex items-center mb-3">
-                                        <div class="w-8 h-8 bg-white bg-opacity-30 rounded-lg flex items-center justify-center mr-2">
-                                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
-                                            </svg>
-                                        </div>
-                                        <h5 class="font-bold text-white text-sm">GRAND TOTAL</h5>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-2 border border-white border-opacity-40">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-green-100 text-xs font-medium">Total Payment:</span>
-                                                <span id="cash-grand-total-payment" class="font-bold text-white text-lg">...</span>
-                                            </div>
-                                        </div>
-                                        <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-2 border border-white border-opacity-40">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-green-100 text-xs font-medium">Total Donation:</span>
-                                                <span id="cash-grand-total-donation" class="font-bold text-white text-lg">...</span>
-                                            </div>
-                                        </div>
-                                        <div class="bg-yellow-400 rounded-lg p-2 mt-3 border-2 border-yellow-300">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-yellow-900 text-xs font-bold">CASH IN HAND:</span>
-                                                <span id="cash-grand-total" class="font-bold text-yellow-900 text-xl">...</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
