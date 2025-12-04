@@ -111,3 +111,40 @@ export function nativeNumberToWords(num, locale = 'en-IN', currencyCode = 'INR')
         return "Conversion Error";
     }
 }
+
+
+// In js/utils.js
+
+/**
+ * Generates a dynamic, plausible Gmail address from a base string.
+ * It cleans the string, converts it to lowercase, removes invalid characters,
+ * truncates it, and appends a random 4-digit number to ensure uniqueness.
+ *
+ * @param {string} baseString - The string to use as the base for the email (e.g., a name, company, or venue).
+ * @returns {string} A dynamically generated Gmail address.
+ */
+export function generateDynamicEmail(baseString) {
+    // 1. Handle invalid or empty input gracefully
+    if (!baseString || typeof baseString !== 'string' || baseString.trim() === '') {
+        // If the input is bad, return a unique temporary email
+        const timestamp = Date.now().toString().slice(-6);
+        return `temp.user.${timestamp}@gmail.com`;
+    }
+
+    // 2. Sanitize the string:
+    //    a. Convert to lowercase.
+    //    b. Remove all characters that are not letters or numbers.
+    const sanitizedBase = baseString
+        .toLowerCase()
+        .replace(/\s+/g, '.') // Replace spaces with periods for readability
+        .replace(/[^a-z0-9.]/g, ''); // Remove any remaining special characters
+
+    // 3. Truncate to a reasonable length to avoid overly long emails
+    const truncatedBase = sanitizedBase.substring(0, 30);
+
+    // 4. Generate a random 4-digit number to ensure uniqueness
+    const randomNumber = Math.floor(1000 + Math.random() * 9000);
+
+    // 5. Combine the parts to form the final email address
+    return `${truncatedBase}${randomNumber}@gmail.com`;
+}
