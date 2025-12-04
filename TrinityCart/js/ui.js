@@ -3704,15 +3704,51 @@ const catalogueItemsGridOptions = {
     ],
     defaultColDef: { resizable: true, sortable: true },
     onCellValueChanged: (params) => {
-        // This event fires when the user edits the selling price.
-        // We dispatch a custom event for main.js to handle.
-        document.dispatchEvent(new CustomEvent('updateCatalogueItemPrice', {
-            detail: {
-                catalogueId: params.data.catalogueId, // The parent catalogue's ID
-                itemId: params.data.id,              // The item's own ID
-                newPrice: params.newValue
+        const { oldValue, newValue, colDef, data } = params;
+
+        // Only proceed if the 'sellingPrice' column was edited and the value actually changed.
+        if (colDef.field !== 'sellingPrice' || oldValue === newValue) {
+            return;
+        }
+
+        // --- ✅ THE FIX: Determine the current mode ---
+        const catalogueId = document.getElementById('sales-catalogue-doc-id').value;
+        const isEditMode = !!catalogueId;
+
+        if (isEditMode) {
+        // --- EDIT MODE: Dispatch event to update Firestore (Your existing logic) ---
+            console.log(`[UI] Edit Mode: Dispatching update for item ${data.id} to new price ${newValue}`);
+            
+            document.dispatchEvent(new CustomEvent('updateCatalogueItemPrice', {
+                detail: {
+                    catalogueId: catalogueId,
+                    itemId: data.id,
+                    newPrice: newValue,
+                    // Add the override flag for better data tracking
+                    isOverridden: true 
+                }
+            }));
+
+        } else {
+            // --- CREATE MODE: Update the item in the local draft array ---
+            const draftItemId = data.tempId || data.productId;
+            console.log(`[UI] Create Mode: Updating draft item ${draftItemId} to new price ${newValue}`);
+
+            // Find the item in the draft array
+            const itemToUpdate = appState.draftCatalogueItems.find(
+                item => (item.tempId || item.productId) === draftItemId
+            );
+
+            if (itemToUpdate) {
+                // Update the selling price and set the override flag directly on the draft object
+                itemToUpdate.sellingPrice = newValue;
+                itemToUpdate.isOverridden = true;
+                
+                console.log('[UI] Draft item updated in appState:', itemToUpdate);
+            } else {
+                console.error(`[UI] Could not find draft item with ID ${draftItemId} to update its price.`);
             }
-        }));
+        }
     },
     onGridReady: (params) => {
         catalogueItemsGridApi = params.api;
