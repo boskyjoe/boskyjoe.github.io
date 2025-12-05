@@ -3650,6 +3650,8 @@ async function handleProductCatalogueSubmit(e) {
 
         const itemType = document.getElementById('catalogue-itemType-input').value;
 
+        const netWeight = parseFloat(document.getElementById('catalogue-netweight-input').value) || 0;
+
         if (!itemName) {
             ProgressToast.hide(0);
             return showModal('error', 'Invalid Input', 'Please enter a product name.');
@@ -3675,7 +3677,8 @@ async function handleProductCatalogueSubmit(e) {
             unitPrice,
             unitMarginPercentage,
             sellingPrice,
-            inventoryCount: initialStock
+            inventoryCount: initialStock,
+            netWeightKg: netWeight 
         };
 
         console.log('[main.js] Product data prepared:', {
