@@ -3505,11 +3505,14 @@ async function handleEditSaleInfoSubmit(e) {
             throw new Error('A delivery address is mandatory for Tasty Treats.');
         }
 
+        // ✅ Pass all four values to the API function
         await updateSaleInfo(saleId, newStore, newAddress, newCustomerName, user);
-        ProgressToast.showSuccess('Store updated successfully!');
+        
+        ProgressToast.showSuccess('Sale info updated successfully!');
         closeEditSaleInfoModal();
 
     } catch (error) {
+        console.log('[main.js] Update failed:', error);
         ProgressToast.showError(`Update failed: ${error.message}`);
     } finally {
         // 4. ✅ THE FIX: This block always runs.
