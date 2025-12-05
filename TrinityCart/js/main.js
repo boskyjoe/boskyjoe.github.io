@@ -327,6 +327,8 @@ async function handleSavePurchaseInvoice() {
             const masterProductId = row.querySelector('[data-field="masterProductId"]').value;
             if (!masterProductId) continue;
 
+            const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
+            
             const masterProduct = masterData.products.find(p => p.id === masterProductId);
             const netWeightKg = masterProduct?.netWeightKg || 0;
 
