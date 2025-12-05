@@ -1882,6 +1882,7 @@ export async function addItemToCatalogue(catalogueId, itemData) {
  * 
  * @since 1.0.0 (Enhanced with price history deactivation)
  */
+
 export async function removeItemFromCatalogue(catalogueId, itemId) {
     const db = firebase.firestore();
 
@@ -2888,6 +2889,51 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             });
         }
     });
+}
+
+
+
+/**
+ * ✅ ENHANCED: Updates the store and address for a sales invoice.
+ * Now includes a detailed audit trail for the change.
+ * @param {string} saleId - The ID of the sales invoice to update.
+ * @param {string} newStore - The new store name.
+ * @param {string} newAddress - The new address (can be empty).
+ * @param {object} user - The user performing the update.
+ */
+export async function updateSaleStore(saleId, newStore, newAddress, user) {
+    const db = firebase.firestore();
+    const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
+    const FieldValue = firebase.firestore.FieldValue;
+
+    // We will read the document first to get the old store name for the audit log.
+    const doc = await saleRef.get();
+    if (!doc.exists) {
+        throw new Error("Sale document not found.");
+    }
+    const oldStore = doc.data().store;
+
+    // Prepare the data to be updated.
+    const updateData = {
+        store: newStore,
+        'customerInfo.address': newAddress,
+        
+        // ✅ NEW: Add the audit trail information.
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': FieldValue.serverTimestamp(),
+        // Use arrayUnion to add a new entry to a 'changeLog' array without overwriting old ones.
+        'audit.changeLog': FieldValue.arrayUnion({
+            timestamp: new Date(), // Use client time for immediate record, serverTimestamp for final
+            user: user.email,
+            action: 'Store Changed',
+            from: oldStore,
+            to: newStore,
+            notes: 'Store and/or address updated via sales history grid.'
+        })
+    };
+
+    // Perform the update.
+    return saleRef.update(updateData);
 }
 
 
