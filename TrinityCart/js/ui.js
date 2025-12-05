@@ -3444,7 +3444,7 @@ export function initializeModals() {
                 closeLogDirectSaleExpenseModal();
             } else if (modalToClose.id === 'view-consignment-details-modal') {
                 closeViewConsignmentDetailsModal();
-            } else if (modalToClose.id === 'change-store-modal') { closeChangeStoreModal(); }
+            } else if (modalToClose.id === 'edit-sale-info-modal') { closeEditSaleInfoModal(); }
             // Add similar logic for other modals if needed
         }
     });
@@ -15103,19 +15103,20 @@ export function closeViewConsignmentDetailsModal() {
 }
 
 
-export function showChangeStoreModal(saleData) {
-    const modal = document.getElementById('change-store-modal');
+export function showEditSaleInfoModal(saleData) {
+    const modal = document.getElementById('edit-sale-info-modal');
     if (!modal) return;
 
     // Populate hidden fields and headers
-    document.getElementById('change-store-sale-id').value = saleData.id;
-    document.getElementById('change-store-invoice-id').textContent = saleData.manualVoucherNumber || saleData.saleId;
+    document.getElementById('edit-sale-id').value = saleData.id;
+    document.getElementById('edit-sale-invoice-id').textContent = saleData.manualVoucherNumber || saleData.saleId;
+    
 
-    document.getElementById('change-store-customer-name').textContent = saleData.customerInfo.name;
+    document.getElementById('edit-sale-customer-name').value = saleData.customerInfo.name;
 
-    const storeSelect = document.getElementById('change-store-select');
-    const addressContainer = document.getElementById('change-store-address-container');
-    const addressInput = document.getElementById('change-store-address');
+    const storeSelect = document.getElementById('edit-sale-store-select');
+    const addressContainer = document.getElementById('edit-sale-address-container');
+    const addressInput = document.getElementById('edit-sale-address');
 
     // Populate the store dropdown
     storeSelect.innerHTML = '';
@@ -15138,18 +15139,18 @@ export function showChangeStoreModal(saleData) {
             addressContainer.classList.add('hidden');
         }
     };
-
-    // Add a listener to the dropdown
+    storeSelect.removeEventListener('change', toggleAddressField);
     storeSelect.addEventListener('change', toggleAddressField);
-    
-    // Run it once on load
     toggleAddressField();
 
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
 }
 
-export function closeChangeStoreModal() {
-    const modal = document.getElementById('change-store-modal');
+/**
+ * ✅ RENAMED: Closes the edit sale info modal.
+ */
+export function closeEditSaleInfoModal() {
+    const modal = document.getElementById('edit-sale-info-modal');
     if (modal) modal.style.display = 'none';
 }
