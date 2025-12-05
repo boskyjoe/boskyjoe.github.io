@@ -14424,7 +14424,251 @@ let dashboardStockChart = null;
  * @param {Array<object>} stockData - The array of stock status objects.
  */
 
+
 function renderStockStatusChart(stockData) {
+    // 1. Get the canvas element and its 2D rendering context.
+    const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
+    const canvasElement = document.getElementById('dashboard-stock-status-chart');
+    const gridContainer = document.getElementById('dashboard-stock-status-grid');
+    const legendContainer = document.getElementById('stock-chart-legend');
+
+    if (!canvasElement || !chartContainer || !gridContainer) {
+        console.error("A required chart or grid container was not found.");
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // 2. If a chart instance already exists, destroy it completely.
+    // This is crucial for re-rendering when the user refreshes the dashboard.
+    if (dashboardStockChart) {
+        dashboardStockChart.destroy();
+    }
+
+    if (legendContainer) {
+        legendContainer.innerHTML = `
+            <div class="flex items-center gap-1">
+                <span class="w-4 h-4 rounded-md shadow-sm" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.8));"></span>
+                <span class="text-sm font-medium text-gray-700">Good Stock (10+)</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="w-4 h-4 rounded-md shadow-sm" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.8));"></span>
+                <span class="text-sm font-medium text-gray-700">Low Stock (1-9)</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="w-4 h-4 rounded-md shadow-sm" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.8));"></span>
+                <span class="text-sm font-medium text-gray-700">Out of Stock (0)</span>
+            </div>
+        `;
+    }
+
+    // 3. The rest of your chart creation logic is correct.
+    const chartData = stockData;
+
+    // If there are no items with stock, display a helpful message.
+    if (chartData.length === 0) {
+        chartContainer.style.height = '300px';
+        gridContainer.style.height = '300px';
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        ctx.font = '16px Inter, sans-serif';
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'center';
+        ctx.fillText("No stock data to display.", canvasElement.width / 2, canvasElement.height / 2);
+        if (legendContainer) legendContainer.innerHTML = '';
+        return;
+    }
+
+    const heightPerBar = 35;
+    const chartPadding = 90;
+    const gridPadding = 40; // AG-Grid header is shorter than chart scales
+    const calculatedChartHeight = (chartData.length * heightPerBar) + chartPadding;
+    const calculatedGridHeight = (chartData.length * heightPerBar) + gridPadding;
+
+    chartContainer.style.height = `${calculatedChartHeight}px`;
+    gridContainer.style.height = `${calculatedGridHeight}px`;
+
+    const labels = chartData.map(item => item.itemName);
+    const data = chartData.map(item => item.inventoryCount);
+    
+    // Enhanced gradient colors for better visual appeal
+    const backgroundColors = chartData.map(item => {
+        const ctx = document.createElement('canvas').getContext('2d');
+        let gradient;
+        
+        if (item.status === 'Out of Stock') {
+            gradient = ctx.createLinearGradient(0, 0, 500, 0);
+            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.85)');
+            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.75)');
+        } else if (item.status === 'Low Stock') {
+            gradient = ctx.createLinearGradient(0, 0, 500, 0);
+            gradient.addColorStop(0, 'rgba(245, 158, 11, 0.85)');
+            gradient.addColorStop(1, 'rgba(217, 119, 6, 0.75)');
+        } else {
+            gradient = ctx.createLinearGradient(0, 0, 500, 0);
+            gradient.addColorStop(0, 'rgba(34, 197, 94, 0.85)');
+            gradient.addColorStop(1, 'rgba(22, 163, 74, 0.75)');
+        }
+        return gradient;
+    });
+    
+    const borderColors = chartData.map(item => {
+        if (item.status === 'Out of Stock') return 'rgba(185, 28, 28, 0.4)';
+        if (item.status === 'Low Stock') return 'rgba(217, 119, 6, 0.4)';
+        return 'rgba(22, 163, 74, 0.4)';
+    });
+
+    // 4. Create the new chart instance on the canvas context.
+    dashboardStockChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Stock on Hand',
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+                barPercentage: 0.7,
+                categoryPercentage: 0.85,
+                // Add shadow effect
+                shadowOffsetX: 0,
+                shadowOffsetY: 2,
+                shadowBlur: 8,
+                shadowColor: 'rgba(0, 0, 0, 0.1)'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { left: 15, right: 25, top: 5, bottom: 15 }
+            },
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Current Stock Levels',
+                    align: 'start',
+                    padding: { top: 15, bottom: 25 },
+                    font: {
+                        size: 20,
+                        family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+                        weight: '700'
+                    },
+                    color: '#1f2937'
+                },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleFont: { size: 14, weight: '600', family: 'Inter, sans-serif' },
+                    bodyFont: { size: 13, family: 'Inter, sans-serif' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    boxPadding: 6,
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: (tooltipItems) => tooltipItems[0].label,
+                        label: (context) => {
+                            const item = chartData[context.dataIndex];
+                            return [
+                                `Stock: ${context.parsed.x} units`,
+                                `Status: ${item.status}`
+                            ];
+                        }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    offset: 8,
+                    color: function(context) {
+                        const item = chartData[context.dataIndex];
+                        if (item.status === 'Out of Stock') return '#991b1b';
+                        if (item.status === 'Low Stock') return '#92400e';
+                        return '#166534';
+                    },
+                    font: { 
+                        weight: '700',
+                        size: 12,
+                        family: 'Inter, sans-serif'
+                    },
+                    formatter: (value) => value,
+                    backgroundColor: function(context) {
+                        const item = chartData[context.dataIndex];
+                        if (item.status === 'Out of Stock') return 'rgba(254, 226, 226, 0.9)';
+                        if (item.status === 'Low Stock') return 'rgba(254, 243, 199, 0.9)';
+                        return 'rgba(220, 252, 231, 0.9)';
+                    },
+                    borderRadius: 4,
+                    padding: { top: 4, bottom: 4, left: 8, right: 8 }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(229, 231, 235, 0.7)',
+                        lineWidth: 1,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        font: { 
+                            size: 11,
+                            family: 'Inter, sans-serif',
+                            weight: '500'
+                        },
+                        padding: 8
+                    },
+                    title: {
+                        display: true,
+                        text: 'Quantity in Stock',
+                        color: '#374151',
+                        font: { 
+                            size: 13, 
+                            weight: '600',
+                            family: 'Inter, sans-serif'
+                        },
+                        padding: { top: 10 }
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#374151',
+                        font: { 
+                            size: 12,
+                            family: 'Inter, sans-serif',
+                            weight: '500'
+                        },
+                        padding: 12
+                    }
+                }
+            },
+            animation: {
+                duration: 800,
+                easing: 'easeInOutQuart'
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'y',
+                intersect: false
+            }
+        }
+    });
+}
+
+function renderStockStatusChart1(stockData) {
     // 1. Get the canvas element and its 2D rendering context.
     const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
     const canvasElement = document.getElementById('dashboard-stock-status-chart');
