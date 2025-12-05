@@ -2901,7 +2901,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
  * @param {string} newAddress - The new address (can be empty).
  * @param {object} user - The user performing the update.
  */
-export async function updateSaleStore(saleId, newStore, newAddress, user) {
+export async function updateSaleInfo(saleId, newStore, newAddress, user) {
     const db = firebase.firestore();
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
     const FieldValue = firebase.firestore.FieldValue;
@@ -2917,6 +2917,7 @@ export async function updateSaleStore(saleId, newStore, newAddress, user) {
     const updateData = {
         store: newStore,
         'customerInfo.address': newAddress,
+        'customerInfo.name': newCustomerName,
         
         // ✅ NEW: Add the audit trail information.
         'audit.updatedBy': user.email,
