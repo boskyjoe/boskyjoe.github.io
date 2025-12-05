@@ -74,7 +74,7 @@ import {
     updateCatalogueItem,
     removeItemFromCatalogue, createCatalogueWithItems,
     createPurchaseInvoiceAndUpdateInventory,
-    updatePurchaseInvoiceAndInventory,updateSaleStore
+    updatePurchaseInvoiceAndInventory
 } from './api.js';
 
 import { showChurchTeamsView, showMemberModal, closeMemberModal, getMemberDataFromGridById } from './ui.js';
@@ -3504,7 +3504,7 @@ async function handleEditSaleInfoSubmit(e) {
             throw new Error('A delivery address is mandatory for Tasty Treats.');
         }
 
-        await updateSaleStore(saleId, newStore, newAddress, newCustomerName, user);
+        await updateSaleInfo(saleId, newStore, newAddress, newCustomerName, user);
         ProgressToast.showSuccess('Store updated successfully!');
         closeEditSaleInfoModal();
 
