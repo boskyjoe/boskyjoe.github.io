@@ -3444,7 +3444,7 @@ export function initializeModals() {
                 closeLogDirectSaleExpenseModal();
             } else if (modalToClose.id === 'view-consignment-details-modal') {
                 closeViewConsignmentDetailsModal();
-            }
+            } else if (modalToClose.id === 'change-store-modal') { closeChangeStoreModal(); }
             // Add similar logic for other modals if needed
         }
     });
@@ -5916,7 +5916,25 @@ const salesHistoryGridOptions = {
         },
         
         { field: "customerInfo.name", headerName: "Customer", width: 200, filter: 'agTextColumnFilter' },
-        { field: "store", headerName: "Store", width: 150, filter: 'agTextColumnFilter' },
+        { 
+            field: "store", 
+            headerName: "Store", 
+            width: 180, // Increase width for button
+            filter: 'agTextColumnFilter',
+            // ✅ NEW: Use a cellRenderer to add an edit button
+            cellRenderer: params => {
+                if (!params.value) return '';
+                const storeName = params.value;
+                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 ml-2 text-gray-400 hover:text-blue-600"><path d="M12.687 2.687a1.25 1.25 0 0 1 1.768 0l.687.688a1.25 1.25 0 0 1 0 1.767L5.46 14.828a1.25 1.25 0 0 1-.662.363l-3.155.788a.5.5 0 0 1-.62-.62l.788-3.155a1.25 1.25 0 0 1 .363-.662L12.687 2.687Zm-1.437 1.437L4.04 11.33a.25.25 0 0 0-.073.132l-.485 1.943 1.943-.485a.25.25 0 0 0 .132-.073L12.71 5.88l-1.46-1.46Z" /></svg>`;
+                
+                return `
+                    <div class="flex items-center justify-between w-full group">
+                        <span>${storeName}</span>
+                        <button class="action-btn-icon opacity-0 group-hover:opacity-100 action-btn-change-store" data-id="${params.data.id}" title="Change Store">${editIcon}</button>
+                    </div>
+                `;
+            }
+        },
         {
             field: "financials.totalAmount",
             headerName: "Total",
@@ -15082,4 +15100,56 @@ export function closeViewConsignmentDetailsModal() {
 
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
+export function showChangeStoreModal(saleData) {
+    const modal = document.getElementById('change-store-modal');
+    if (!modal) return;
+
+    // Populate hidden fields and headers
+    document.getElementById('change-store-sale-id').value = saleData.id;
+    document.getElementById('change-store-invoice-id').textContent = saleData.manualVoucherNumber || saleData.saleId;
+
+    document.getElementById('change-store-customer-name').textContent = saleData.customerInfo.name;
+
+    const storeSelect = document.getElementById('change-store-select');
+    const addressContainer = document.getElementById('change-store-address-container');
+    const addressInput = document.getElementById('change-store-address');
+
+    // Populate the store dropdown
+    storeSelect.innerHTML = '';
+    masterData.systemSetups.Stores.forEach(store => {
+        const option = document.createElement('option');
+        option.value = store;
+        option.textContent = store;
+        storeSelect.appendChild(option);
+    });
+
+    // Set the current values
+    storeSelect.value = saleData.store;
+    addressInput.value = saleData.customerInfo.address || '';
+
+    // Function to toggle the address field's visibility
+    const toggleAddressField = () => {
+        if (storeSelect.value === 'Tasty Treats') {
+            addressContainer.classList.remove('hidden');
+        } else {
+            addressContainer.classList.add('hidden');
+        }
+    };
+
+    // Add a listener to the dropdown
+    storeSelect.addEventListener('change', toggleAddressField);
+    
+    // Run it once on load
+    toggleAddressField();
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeChangeStoreModal() {
+    const modal = document.getElementById('change-store-modal');
+    if (modal) modal.style.display = 'none';
 }
