@@ -3187,7 +3187,7 @@ function setupFormSubmissions() {
         { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit },
         { id: 'log-expense-form', handler: handleLogExpenseSubmit },
         { id: 'log-direct-expense-form', handler: handleLogDirectSaleExpenseSubmit },
-        { id: 'change-store-form', handler: handleEditSaleInfoSubmit }
+        { id: 'edit-sale-info-form', handler: handleEditSaleInfoSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
