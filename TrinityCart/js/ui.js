@@ -14497,16 +14497,42 @@ function renderStockStatusChart(stockData) {
                 data: data,
                 backgroundColor: backgroundColors,
                 borderColor: borderColors,
-                borderWidth: 1
+                borderWidth: 1,
+                borderRadius: 4, // Adds slightly rounded corners to the bars
+                barPercentage: 0.6, // Makes bars a bit thinner for more whitespace
+                categoryPercentage: 0.8
             }]
         },
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: { left: 10, right: 20, top: 0, bottom: 10 } // Add some internal padding
+            },
             plugins: {
                 legend: { display: false },
-                title: { display: true, text: 'Current Stock Levels', font: { size: 16, weight: 'bold' } },
+                title: {
+                    display: true,
+                    text: 'Current Stock Levels',
+                    align: 'start', // Align title to the left
+                    padding: { top: 10, bottom: 20 },
+                    font: {
+                        size: 18,
+                        family: 'Inter, sans-serif', // Use a modern UI font
+                        weight: '600'
+                    },
+                    color: '#374151' // A softer black
+                },
+                tooltip: {
+                    // Customize tooltips for a cleaner look
+                    backgroundColor: '#111827', // Dark background
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 10,
+                    cornerRadius: 4,
+                    displayColors: false // Hide the little color box in the tooltip
+                },
                 datalabels: {
                     anchor: 'center',
                     align: 'center',
@@ -14519,8 +14545,34 @@ function renderStockStatusChart(stockData) {
                 }
             },
             scales: {
-                x: { beginAtZero: true, title: { display: true, text: 'Quantity in Stock' } },
-                y: { ticks: { font: { size: 10 } } }
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true, // Keep the vertical grid lines
+                        color: '#e5e7eb', // Lighter grid line color
+                        drawBorder: false // Hide the main axis line
+                    },
+                    ticks: {
+                        color: '#6b7280', // Lighter tick color
+                        font: { size: 10 }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Quantity in Stock',
+                        color: '#4b5563',
+                        font: { size: 12, weight: '500' }
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false, // Hide horizontal grid lines for a cleaner look
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#4b5563', // Lighter tick color for product names
+                        font: { size: 11 }
+                    }
+                }
             }
         }
     });
