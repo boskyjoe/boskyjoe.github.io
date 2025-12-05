@@ -107,7 +107,7 @@ import {
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
-    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue,showChangeStoreModal, closeChangeStoreModal
+    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue,
 } from './ui.js';
 
 import { updateSaleInfo } from './api.js';
