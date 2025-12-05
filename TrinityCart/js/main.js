@@ -110,6 +110,9 @@ import {
     deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue,showChangeStoreModal, closeChangeStoreModal
 } from './ui.js';
 
+import { updateSaleInfo } from './api.js';
+import { showEditSaleInfoModal, closeEditSaleInfoModal } from './ui.js';
+
 import {
     getUserMembershipInfo,
     getMembersForTeam,
@@ -961,7 +964,7 @@ function setupGlobalClickHandler() {
         if (changeStoreBtn) {
             const saleId = changeStoreBtn.dataset.id;
             const saleData = getSalesHistoryDataById(saleId);
-            if (saleData) showChangeStoreModal(saleData);
+            if (saleData) showEditSaleInfoModal(saleData);
             return;
         }
 
@@ -3184,7 +3187,7 @@ function setupFormSubmissions() {
         { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit },
         { id: 'log-expense-form', handler: handleLogExpenseSubmit },
         { id: 'log-direct-expense-form', handler: handleLogDirectSaleExpenseSubmit },
-        { id: 'change-store-form', handler: handleChangeStoreSubmit }
+        { id: 'change-store-form', handler: handleEditSaleInfoSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
@@ -3479,7 +3482,7 @@ async function refreshPaymentManagementAfterSupplierPayment() {
 
 
 
-async function handleChangeStoreSubmit(e) {
+async function handleEditSaleInfoSubmit(e) {
     e.preventDefault();
 
     const user = appState.currentUser; // ✅ Get the user
@@ -3489,17 +3492,21 @@ async function handleChangeStoreSubmit(e) {
 
     try {
         const saleId = document.getElementById('change-store-sale-id').value;
+        const newCustomerName = document.getElementById('edit-sale-customer-name').value.trim();
         const newStore = document.getElementById('change-store-select').value;
         const newAddress = document.getElementById('change-store-address').value.trim();
 
         // Validation
+        if (!newCustomerName) {
+            throw new Error('Customer Name cannot be empty.');
+        }
         if (newStore === 'Tasty Treats' && !newAddress) {
             throw new Error('A delivery address is mandatory for Tasty Treats.');
         }
 
-        await updateSaleStore(saleId, newStore, newAddress, user);
+        await updateSaleStore(saleId, newStore, newAddress, newCustomerName, user);
         ProgressToast.showSuccess('Store updated successfully!');
-        closeChangeStoreModal();
+        closeEditSaleInfoModal();
 
     } catch (error) {
         ProgressToast.showError(`Update failed: ${error.message}`);
