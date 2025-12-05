@@ -127,8 +127,8 @@ export const storeConfig = {
         signatoryTitle: 'Proprietor, Tasty Treats',
         email:'sscindiranagar@gmail.com',
         taxInfo: {
-            cgstRate: 9, // Central GST as a percentage (e.g., 9 for 9%)
-            sgstRate: 9  // State GST as a percentage (e.g., 9 for 9%)
+            cgstRate: 0, // Central GST as a percentage (e.g., 9 for 9%)
+            sgstRate: 0  // State GST as a percentage (e.g., 9 for 9%)
         },
         paymentDetails: {
             bankName: 'South Indian Bank, Bangalore Indira Nagar',
