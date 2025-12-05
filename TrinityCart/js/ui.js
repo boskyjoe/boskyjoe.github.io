@@ -3276,6 +3276,11 @@ export async function loadInvoiceDataIntoForm(invoiceData) {
     document.getElementById('purchase-supplier').value = invoiceData.supplierId;
     document.getElementById('supplier-invoice-no').value = invoiceData.supplierInvoiceNo;
 
+    document.getElementById('purchase-invoice-name').value = invoiceData.invoiceName || '';
+
+
+    
+
     // Populate Line Items
     const lineItemsContainer = document.getElementById('purchase-line-items-container');
     lineItemsContainer.innerHTML = ''; // Clear existing rows
