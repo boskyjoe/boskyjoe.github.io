@@ -3491,10 +3491,11 @@ async function handleEditSaleInfoSubmit(e) {
     ProgressToast.show('Updating store...', 'info');
 
     try {
-        const saleId = document.getElementById('change-store-sale-id').value;
+        // ✅ Read all three values from the form
+        const saleId = document.getElementById('edit-sale-id').value;
         const newCustomerName = document.getElementById('edit-sale-customer-name').value.trim();
-        const newStore = document.getElementById('change-store-select').value;
-        const newAddress = document.getElementById('change-store-address').value.trim();
+        const newStore = document.getElementById('edit-sale-store-select').value;
+        const newAddress = document.getElementById('edit-sale-address').value.trim();
 
         // Validation
         if (!newCustomerName) {
