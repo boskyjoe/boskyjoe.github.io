@@ -20,7 +20,7 @@
 <body>
 
     <div id="app">
-        <h1>Sales Invoice Tax Field Migration</h1>
+        <h1>Data Migration Utility</h1>
         <p>This script will update all documents in the <strong>salesInvoices</strong> collection.</p>
         <div class="warning">
             <strong>Warning:</strong> This is a one-time operation that directly modifies your database.
@@ -39,6 +39,12 @@
         <hr style="margin: 20px 0;">
 
         <div id="steps-container" style="display: none;">
+            <!-- === Sales Invoice Tax Migration (Existing) === -->
+            <div class="migration-task">
+                <h3>Sales Invoice Tax Field Migration</h3>
+                <p>Updates tax fields in the <strong>salesInvoices</strong> collection.</p>
+                <button id="run-sales-migration-btn">Run Sales Tax Migration</button>
+            </div>
             <h3>Step 1: Create a Backup</h3>
             <p>This will copy all documents from <strong>salesInvoices</strong> to <strong>salesInvoices_bkp</strong>.</p>
             <button id="backup-btn">Create Backup</button>
@@ -46,6 +52,16 @@
             <h3>Step 2: Run the Migration</h3>
             <p>This will update the tax fields in the original <strong>salesInvoices</strong> collection.</p>
             <button id="run-migration-btn" disabled>Run Migration</button>
+
+            <hr style="margin: 20px 0;">
+
+            <div class="migration-task">
+                <h3>Purchase Invoice Weight Migration</h3>
+                <p>Adds `netWeightKg` and `totalWeightKg` to line items in the <strong>purchaseInvoices</strong> collection. This requires reading all products first.</p>
+                <button id="run-purchase-migration-btn">Run Purchase Weight Migration</button>
+            </div>
+            
+
         </div>
 
         <pre id="log-output">Awaiting login...</pre>
@@ -85,6 +101,14 @@
         const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
         const SOURCE_COLLECTION = `${BASE_DOC_PATH}/salesInvoices`;
         const BACKUP_COLLECTION = `${BASE_DOC_PATH}/salesInvoices_bkp`;
+
+
+        const runPurchaseBtn = document.getElementById('run-purchase-migration-btn'); // ✅ NEW
+
+        // --- PATHS ---
+        // ... (your existing paths)
+        const PURCHASE_INVOICES_COLLECTION_PATH = `${BASE_DOC_PATH}/purchaseInvoices`; // ✅ NEW
+        const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/products`; // ✅ NEW
 
 
         function log(message) {
@@ -269,6 +293,87 @@
                 runBtn.textContent = 'Migration Failed (See Log)';
             }
         });
+
+        runPurchaseBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to run the Purchase Invoice Weight migration? This will read ALL products and ALL purchase invoices.")) {
+                log("Purchase migration cancelled by user.");
+                return;
+            }
+
+            runPurchaseBtn.disabled = true;
+            runPurchaseBtn.textContent = 'Migration in progress...';
+            log('Starting Purchase Invoice Weight Migration...');
+
+            try {
+                // --- Step 1: Fetch all products to create a weight lookup map ---
+                log('Fetching all products to build weight map...');
+                const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
+                const productWeightMap = new Map();
+                productsSnapshot.forEach(doc => {
+                    productWeightMap.set(doc.id, doc.data().netWeightKg || 0);
+                });
+                log(`✅ Built weight map for ${productWeightMap.size} products.`);
+
+                // --- Step 2: Fetch all purchase invoices ---
+                const purchaseInvoicesRef = db.collection(PURCHASE_INVOICES_COLLECTION_PATH);
+                const invoicesSnapshot = await purchaseInvoicesRef.get();
+                log(`Found ${invoicesSnapshot.size} total purchase invoices to check.`);
+
+                let batch = db.batch();
+                let docsUpdated = 0;
+                let operationsInBatch = 0;
+
+                for (const doc of invoicesSnapshot.docs) {
+                    const data = doc.data();
+                    let needsUpdate = false;
+
+                    if (data.lineItems && Array.isArray(data.lineItems)) {
+                        data.lineItems.forEach(item => {
+                            // IDEMPOTENCY CHECK: Only migrate if the weight field doesn't exist
+                            if (item.netWeightKg === undefined) {
+                                needsUpdate = true;
+                                const weight = productWeightMap.get(item.masterProductId) || 0;
+                                item.netWeightKg = weight;
+                                item.totalWeightKg = weight * (item.quantity || 0);
+                            }
+                        });
+                    }
+
+                    if (needsUpdate) {
+                        batch.update(doc.ref, { lineItems: data.lineItems });
+                        docsUpdated++;
+                        operationsInBatch++;
+                        log(`  - Queued weight update for invoice ID: ${doc.id}`);
+                    }
+
+                    // Commit batch to stay under Firestore limits
+                    if (operationsInBatch >= 490) {
+                        log(`\n--- Committing batch of ${operationsInBatch} updates... ---`);
+                        await batch.commit();
+                        batch = db.batch();
+                        operationsInBatch = 0;
+                    }
+                }
+
+                // Commit any remaining operations
+                if (operationsInBatch > 0) {
+                    log(`\n--- Committing final batch of ${operationsInBatch} updates... ---`);
+                    await batch.commit();
+                }
+
+                log('\n========================================');
+                log('✅ PURCHASE INVOICE MIGRATION COMPLETE!');
+                log(`   Documents Updated: ${docsUpdated}`);
+                log('========================================');
+                runPurchaseBtn.textContent = 'Migration Finished';
+
+            } catch (error) {
+                log(`\n❌ PURCHASE MIGRATION FAILED: ${error.message}`);
+                console.error(error);
+                runPurchaseBtn.textContent = 'Migration Failed (See Log)';
+            }
+        });
+
     </script>
 
 </body>
