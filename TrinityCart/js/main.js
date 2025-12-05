@@ -74,7 +74,7 @@ import {
     updateCatalogueItem,
     removeItemFromCatalogue, createCatalogueWithItems,
     createPurchaseInvoiceAndUpdateInventory,
-    updatePurchaseInvoiceAndInventory
+    updatePurchaseInvoiceAndInventory,updateSaleStore
 } from './api.js';
 
 import { showChurchTeamsView, showMemberModal, closeMemberModal, getMemberDataFromGridById } from './ui.js';
@@ -107,7 +107,7 @@ import {
     closeBulkAddProductsModal,       
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
-    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue
+    deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue,showChangeStoreModal, closeChangeStoreModal
 } from './ui.js';
 
 import {
@@ -954,6 +954,14 @@ function setupGlobalClickHandler() {
             if (orderData) {
                 showViewConsignmentDetailsModal(orderData);
             }
+            return;
+        }
+
+        const changeStoreBtn = target.closest('.action-btn-change-store');
+        if (changeStoreBtn) {
+            const saleId = changeStoreBtn.dataset.id;
+            const saleData = getSalesHistoryDataById(saleId);
+            if (saleData) showChangeStoreModal(saleData);
             return;
         }
 
@@ -3175,7 +3183,8 @@ function setupFormSubmissions() {
         { id: 'add-event-form', handler: handleEventSubmit },
         { id: 'bulk-supplier-payment-form', handler: handleBulkSupplierPaymentSubmit },
         { id: 'log-expense-form', handler: handleLogExpenseSubmit },
-        { id: 'log-direct-expense-form', handler: handleLogDirectSaleExpenseSubmit }
+        { id: 'log-direct-expense-form', handler: handleLogDirectSaleExpenseSubmit },
+        { id: 'change-store-form', handler: handleChangeStoreSubmit }
     ];
 
     formConfigs.forEach(({ id, handler }) => {
@@ -3467,6 +3476,42 @@ async function refreshPaymentManagementAfterSupplierPayment() {
 }
 
 
+
+
+
+async function handleChangeStoreSubmit(e) {
+    e.preventDefault();
+
+    const user = appState.currentUser; // ✅ Get the user
+    if (!user) return showModal('error', 'Authentication Error', 'You must be logged in.');
+
+    ProgressToast.show('Updating store...', 'info');
+
+    try {
+        const saleId = document.getElementById('change-store-sale-id').value;
+        const newStore = document.getElementById('change-store-select').value;
+        const newAddress = document.getElementById('change-store-address').value.trim();
+
+        // Validation
+        if (newStore === 'Tasty Treats' && !newAddress) {
+            throw new Error('A delivery address is mandatory for Tasty Treats.');
+        }
+
+        await updateSaleStore(saleId, newStore, newAddress, user);
+        ProgressToast.showSuccess('Store updated successfully!');
+        closeChangeStoreModal();
+
+    } catch (error) {
+        ProgressToast.showError(`Update failed: ${error.message}`);
+    } finally {
+        // 4. ✅ THE FIX: This block always runs.
+        // It waits 1.5 seconds to give the "Success" toast time to be read,
+        // then it ensures any toast is hidden.
+        setTimeout(() => {
+            ProgressToast.hide(300);
+        }, 1500);
+    }
+}
 
 
 /**
