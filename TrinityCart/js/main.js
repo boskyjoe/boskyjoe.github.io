@@ -327,6 +327,9 @@ async function handleSavePurchaseInvoice() {
             const masterProductId = row.querySelector('[data-field="masterProductId"]').value;
             if (!masterProductId) continue;
 
+            const masterProduct = masterData.products.find(p => p.id === masterProductId);
+            const netWeightKg = masterProduct?.netWeightKg || 0;
+
             const productSelect = row.querySelector('.line-item-product');
             const productName = productSelect.options[productSelect.selectedIndex].text;
 
@@ -338,6 +341,10 @@ async function handleSavePurchaseInvoice() {
                 discountType: row.querySelector('[data-field="discountType"]').value,
                 discountValue: parseFloat(row.querySelector('[data-field="discountValue"]').value) || 0,
                 taxPercentage: parseFloat(row.querySelector('[data-field="taxPercentage"]').value) || 0,
+                
+                // ✅ NEW: Add the denormalized weight data at the time of purchase.
+                netWeightKg: netWeightKg,
+                totalWeightKg: netWeightKg * quantity
             });
         }
 
