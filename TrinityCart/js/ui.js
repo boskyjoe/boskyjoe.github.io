@@ -1720,6 +1720,21 @@ const productsGridOptions = {
                 '<span class="text-red-600 font-semibold">Inactive</span>'
         },
         {
+            field: "netWeightKg", // This will be the field name in Firestore
+            headerName: "Net Weight (Kg)",
+            width: 150,
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: {
+                min: 0,
+                precision: 3 // Allow up to 3 decimal places (e.g., 0.500 for 500g)
+            },
+            // Parse the input as a number, default to 0 if invalid
+            valueParser: p => parseFloat(p.newValue) || 0,
+            // If the value is 0 or null, display an empty string for a cleaner look
+            valueFormatter: p => (p.value && p.value > 0) ? p.value : ''
+        },
+        {
             headerName: "Actions", width: 120, cellClass: 'flex items-center justify-center',
             cellRenderer: params => {
                 const icon = params.data.isActive
