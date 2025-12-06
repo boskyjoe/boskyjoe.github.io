@@ -14951,6 +14951,8 @@ function renderStockStatusTreemap(stockData) {
 
     const chartData = stockData;
 
+    console.log('data in tree chart',chartData) ;
+
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
         canvasElement.width = chartContainer.offsetWidth;
