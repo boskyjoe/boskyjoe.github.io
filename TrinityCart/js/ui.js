@@ -14941,121 +14941,114 @@ function renderStockStatusChart(stockData) {
  * @param {Array<Object>} stockData - The array of inventory objects.
  */
 function renderStockStatusTreemap(stockData) {
-    // 1. Get the chart container and initialize ECharts
     const chartDom = document.getElementById('dashboard-stock-treemap-chart');
-    if (!chartDom) {
-        console.error("ECharts container 'dashboard-stock-treemap-chart' was not found.");
-        return;
-    }
+    if (!chartDom) return;
 
-    // Initialize the ECharts instance
+    // Destroy any old instance to prevent memory leaks
+    echarts.dispose(chartDom);
     const myChart = echarts.init(chartDom);
-    let option;
 
     // --- Data Preprocessing ---
-    // ECharts Treemap expects data in a specific hierarchical format.
-    // We will group all items under a single 'root' for a flat treemap,
-    // but use the 'status' to define the color and visual style.
-
-    const treemapData = stockData
-        .filter(item => item.inventoryCount >= 0) // Ensure valid data
-        .map(item => ({
-            name: item.itemName,
-            value: item.inventoryCount,
-            // Custom data for better tooltips/labels
-            itemStatus: item.status,
-            category: item.categoryName // ECharts will not use this, but good to keep
-        }))
-        // Sorting helps ECharts lay out the largest items first, improving readability.
-        .sort((a, b) => b.value - a.value);
-
-
-    // --- Color Mapping & Visual Configuration ---
-    // Define the colors based on your original intent for consistency.
-    const colorMap = {
-        'Good': '#22C55E',       // Green
-        'Low Stock': '#F59E0B',  // Amber
-        'Out of Stock': '#EF4444' // Red
+    // We need to group the data by status for the visualMap to work correctly.
+    const dataByStatus = {
+        'Good': [],
+        'Low Stock': [],
+        'Out of Stock': []
     };
 
+    stockData.forEach(item => {
+        if (item.status in dataByStatus) {
+            dataByStatus[item.status].push({
+                name: item.itemName,
+                value: item.inventoryCount,
+                // Pass the status along for the tooltip
+                itemStatus: item.status
+            });
+        }
+    });
+
+    // Create the final data structure for the treemap
+    const treemapData = [
+        { name: 'Good', children: dataByStatus['Good'] },
+        { name: 'Low Stock', children: dataByStatus['Low Stock'] },
+        { name: 'Out of Stock', children: dataByStatus['Out of Stock'] }
+    ];
+
     // --- ECharts Configuration ---
-    option = {
+    const option = {
         title: {
-            text: 'Stock Inventory Treemap',
-            subtext: 'Area proportional to inventory count',
+            text: 'Stock Inventory Status',
+            subtext: 'Area is proportional to stock quantity',
             left: 'center',
-            textStyle: {
-                fontWeight: '700'
-            }
+            textStyle: { fontWeight: 'bold', fontSize: 18 }
         },
         tooltip: {
-            // Customize the tooltip to show item details clearly
             formatter: function (info) {
-                const statusColor = colorMap[info.data.itemStatus] || '#9CA3AF';
-                return [
-                    `<div style="font-weight: bold;">${info.name}</div>`,
-                    `Status: <span style="color: ${statusColor}; font-weight: bold;">${info.data.itemStatus}</span>`,
-                    `Count: <span style="font-weight: bold;">${info.value} units</span>`,
-                ].join('<br>');
+                // The data is now nested, so we access it via info.data
+                return `
+                    <strong>${info.data.name}</strong><br>
+                    Status: ${info.data.itemStatus}<br>
+                    Stock: <strong>${info.data.value}</strong>
+                `;
             }
         },
-        series: [
-            {
-                type: 'treemap',
-                data: treemapData,
-                // Use a single root for a flat treemap
-                leafDepth: 1, 
-                breadcrumb: {
-                    show: false // Hide the breadcrumb bar
-                },
-                nodeClick: false, // Disable drilling down
+        
+        // ✅ THE FIX: Use a 'visualMap' component for color coding.
+        visualMap: {
+            type: 'piecewise', // Use 'piecewise' for discrete categories
+            show: true,        // Set to 'false' to hide the default legend
+            orient: 'horizontal',
+            left: 'center',
+            bottom: 10,
+            itemWidth: 20,
+            itemHeight: 12,
+            // Define the categories and their corresponding colors
+            pieces: [
+                { value: 'Good', label: 'Good Stock (10+)', color: '#22C55E' },
+                { value: 'Low Stock', label: 'Low Stock (1-9)', color: '#F59E0B' },
+                { value: 'Out of Stock', label: 'Out of Stock', color: '#EF4444' }
+            ],
+            // This tells the visualMap which dimension of the data to look at
+            dimension: 'itemStatus' // We will add this to our data items
+        },
 
-                // Color mapping logic: use the itemStatus to determine the color
-                visualDimension: 1, // Use the value (inventoryCount) for visual mapping
-                levels: [
-                    {
-                        // Level 1 (All items)
-                        itemStyle: {
-                            gapWidth: 1, // Small gap between items
-                            borderColor: '#fff'
-                        },
-                        label: {
-                            show: true,
-                            formatter: function (params) {
-                                // Only show label if rectangle is large enough
-                                return params.name + '\n' + params.value;
-                            },
-                            color: '#fff',
-                            fontSize: 12
-                        },
-                        // Define color logic based on a visual property (the status)
-                        visualMin: 0,
-                        visualMax: Math.max(...treemapData.map(d => d.value)) || 1, // Set max based on highest count
-                        colorMappingBy: 'name', // Use name for color mapping, but map based on status
-                        
-                        // Custom mapping of item status to the defined colors
-                        color: treemapData.map(item => ({
-                            target: { name: item.name },
-                            value: colorMap[item.itemStatus]
-                        }))
-                    }
-                ],
-                // Add a visual map control for the colors if you want an external legend
-                // Or you can hide the built-in visual map and create a manual legend.
-                // We'll rely on the custom color logic above and create a simpler legend manually below.
-            }
-        ]
+        series: [{
+            type: 'treemap',
+            // The data is now hierarchical
+            data: treemapData,
+            // We don't want to see the top-level category names ('Good', 'Low Stock') on the chart
+            leafDepth: 1, 
+            label: {
+                show: true,
+                position: 'inside',
+                formatter: '{b}\n{c}', // {b} is name, {c} is value
+                color: '#fff',
+                fontSize: 12,
+                // Add a stroke to make the text readable on all backgrounds
+                textBorderColor: 'rgba(0, 0, 0, 0.5)',
+                textBorderWidth: 1
+            },
+            // Style for the top-level categories (we make them invisible)
+            upperLabel: {
+                show: false
+            },
+            // Style for the individual product rectangles
+            itemStyle: {
+                borderColor: '#fff',
+                borderWidth: 1,
+                gapWidth: 1
+            },
+            // Disable navigation
+            nodeClick: false,
+            roam: false,
+            breadcrumb: { show: false }
+        }]
     };
 
     myChart.setOption(option);
     
-    // Resize observer (Good practice for responsive charts)
-    window.addEventListener('resize', function() {
-        myChart.resize();
-    });
-
-    // Manually render the simple legend since ECharts color mapping is complex here
-    renderSimpleLegend(colorMap);
+    // Add a resize listener
+    window.addEventListener('resize', () => myChart.resize());
 }
 
 
