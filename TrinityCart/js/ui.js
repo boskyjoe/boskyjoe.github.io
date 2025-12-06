@@ -15165,20 +15165,41 @@ function renderStockStatusTreemapPlotly(stockData) {
             // Use equal values for uniform box sizes
             const uniformValue = 100;
 
+            // Word wrap long names - split into multiple lines
+            let displayName = item.itemName;
+            const maxCharsPerLine = 15;
+            const words = displayName.split(' ');
+            let wrappedName = '';
+            let currentLine = '';
+            
+            words.forEach((word, idx) => {
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                if (testLine.length > maxCharsPerLine && currentLine !== '') {
+                    wrappedName += (wrappedName ? '<br>' : '') + currentLine;
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+                
+                if (idx === words.length - 1) {
+                    wrappedName += (wrappedName ? '<br>' : '') + currentLine;
+                }
+            });
+
             labels.push(item.itemName);
             parents.push("Root");
             values.push(uniformValue);
             colors.push(colorMap[status]);
             
-            // Custom hover text
+            // Custom hover text - shows full name
             hoverTexts.push(
                 `<b>${item.itemName}</b><br>` +
                 `Stock: <b>${item.inventoryCount} units</b><br>` +
                 `Status: <b>${status}</b>`
             );
             
-            // Custom text label for display
-            textLabels.push(`${item.itemName}<br>${item.inventoryCount} units`);
+            // Custom text label for display - wrapped name with quantity
+            textLabels.push(`<b>${wrappedName}</b><br><span style="font-size:18px;font-weight:bold">${item.inventoryCount}</span> units`);
         });
 
     // --- Plotly Trace Definition ---
@@ -15209,10 +15230,9 @@ function renderStockStatusTreemapPlotly(stockData) {
         
         textposition: "middle center",
         textfont: {
-            size: 13,
+            size: 11,
             color: "white",
-            family: "Inter, sans-serif",
-            weight: 600
+            family: "Inter, sans-serif"
         },
         
         // Layout Control
@@ -15224,8 +15244,14 @@ function renderStockStatusTreemapPlotly(stockData) {
             visible: false 
         },
         
-        // Show text
+        // Show text - use 'label+text' to ensure visibility
         textinfo: "text",
+        
+        // Control text display
+        insidetextorientation: "horizontal",
+        
+        // Enable text clipping at boundaries
+        cliponaxis: false,
         
         // Hover styling
         hoverlabel: {
@@ -15260,8 +15286,8 @@ function renderStockStatusTreemapPlotly(stockData) {
         paper_bgcolor: 'white',
         plot_bgcolor: 'white',
         uniformtext: {
-            minsize: 10,
-            mode: 'hide'
+            minsize: 6,
+            mode: 'show'
         }
     };
 
@@ -15309,7 +15335,6 @@ function renderSimpleLegendPlotly(colorMap) {
         </div>
     `).join('');
 }
-
 
 function renderStockStatusTreemapold(stockData) {
     console.log('Treemap function called with data:', stockData);
