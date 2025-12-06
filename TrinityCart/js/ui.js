@@ -14987,7 +14987,7 @@ function renderStockStatusTreemap(stockData) {
                 name: item.itemName,
                 // TRICK: Use a constant value for area. This forces all tiles 
                 // to have equal size, achieving the 'collage' effect.
-                value: calculatedValue,
+                value: 1000,
                 
                 actualCount: item.inventoryCount,
                 itemStatus: status,
