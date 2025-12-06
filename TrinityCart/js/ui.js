@@ -15199,7 +15199,7 @@ function renderStockStatusTreemapPlotly(stockData) {
             );
             
             // Custom text label for display - wrapped name with quantity
-            textLabels.push(`<b>${wrappedName}</b><br><span style="font-size:18px;font-weight:bold">${item.inventoryCount}</span> units`);
+            textLabels.push(`<b>${wrappedName}</b><br><br><span style="font-size:14px">${item.inventoryCount} units</span>`);
         });
 
     // --- Plotly Trace Definition ---
@@ -15221,11 +15221,17 @@ function renderStockStatusTreemapPlotly(stockData) {
                 width: 3
             },
             pad: {
-                t: 2,
-                l: 2,
-                r: 2,
-                b: 2
+                t: 1,
+                l: 1,
+                r: 1,
+                b: 1
             }
+        },
+        
+        // Use domain to control the size and position
+        domain: {
+            x: [0, 1],
+            y: [0, 1]
         },
         
         textposition: "middle center",
@@ -15282,7 +15288,7 @@ function renderStockStatusTreemapPlotly(stockData) {
         },
         width: containerWidth,
         height: 600,
-        margin: { t: 60, l: 10, r: 10, b: 10 },
+        margin: { t: 60, l: 5, r: 5, b: 5 },
         paper_bgcolor: 'white',
         plot_bgcolor: 'white',
         uniformtext: {
