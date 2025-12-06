@@ -12357,7 +12357,15 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
         // Here you would also call a function to render the stock status bar chart
         // renderBarChart('dashboard-stock-status-chart', summaryData.stockStatus);
         //Call the function to render the bar chart
-            renderStockStatusTreemap(summaryData.stockStatus);
+
+            const sampleData = [
+                { itemName: "Product A", inventoryCount: 50, status: "In Stock" },
+                { itemName: "Product B", inventoryCount: 5, status: "Low Stock" },
+                { itemName: "Product C", inventoryCount: 0, status: "Out of Stock" }
+            ];
+            renderStockStatusTreemap(sampleData);
+
+            //renderStockStatusTreemap(summaryData.stockStatus);
         }
 
         
@@ -14951,8 +14959,6 @@ function renderStockStatusTreemap(stockData) {
 
     const chartData = stockData;
 
-    console.log('data in tree chart',chartData) ;
-
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
         canvasElement.width = chartContainer.offsetWidth;
@@ -15138,24 +15144,8 @@ function renderStockStatusTreemap(stockData) {
     // Initial draw
     drawTreemap();
 
-    // Remove old event listeners if they exist
-    const newCanvas = canvasElement.cloneNode(true);
-    canvasElement.parentNode.replaceChild(newCanvas, canvasElement);
-    const newCtx = newCanvas.getContext('2d');
-    
-    // Re-assign references
-    const finalCanvas = document.getElementById('dashboard-stock-treemap-chart');
-    const finalCtx = finalCanvas.getContext('2d');
-    
-    // Redraw on the new canvas
-    ctx.clearRect(0, 0, containerWidth, containerHeight);
-    drawTreemap.call({ ctx: finalCtx, rectangles, containerWidth, containerHeight, padding });
-    
-    // Actually, let's simplify - just redraw
-    drawTreemap();
-
     // Add hover interaction
-    canvasElement.addEventListener('mousemove', function(e) {
+    const handleMouseMove = function(e) {
         const rect = canvasElement.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
@@ -15173,15 +15163,29 @@ function renderStockStatusTreemap(stockData) {
             drawTreemap(hoveredIndex);
             canvasElement.style.cursor = hoveredIndex >= 0 ? 'pointer' : 'default';
         }
-    });
+    };
 
-    canvasElement.addEventListener('mouseleave', function() {
+    const handleMouseLeave = function() {
         if (canvasElement.treemapData.hoveredIndex >= 0) {
             canvasElement.treemapData.hoveredIndex = -1;
             drawTreemap();
             canvasElement.style.cursor = 'default';
         }
-    });
+    };
+
+    // Remove old listeners if they exist
+    if (canvasElement.treemapData.mouseMove) {
+        canvasElement.removeEventListener('mousemove', canvasElement.treemapData.mouseMove);
+    }
+    if (canvasElement.treemapData.mouseLeave) {
+        canvasElement.removeEventListener('mouseleave', canvasElement.treemapData.mouseLeave);
+    }
+
+    // Add new listeners and store references
+    canvasElement.addEventListener('mousemove', handleMouseMove);
+    canvasElement.addEventListener('mouseleave', handleMouseLeave);
+    canvasElement.treemapData.mouseMove = handleMouseMove;
+    canvasElement.treemapData.mouseLeave = handleMouseLeave;
 }
 
 function renderStockStatusChart1(stockData) {
