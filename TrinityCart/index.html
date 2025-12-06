@@ -883,13 +883,27 @@
                         </div>
                     </div>
 
-                    <!-- ✅ NEW STRIP 3: Sold Products Overview -->
+                    <!-- NEW SECTION: Stock Inventory Treemap -->
+                    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Stock Inventory Visualization</h3>
+                        <div class="w-full">
+                            <div id="dashboard-stock-treemap-container"
+                                style="position: relative; height: 600px; width: 100%;">
+                                <div id="stock-treemap-legend" class="flex justify-center space-x-4 mb-2">
+                                    <!-- The legend items will be inserted here by JavaScript -->
+                                </div>
+                                <canvas id="dashboard-stock-treemap-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ STRIP 3: Sold Products Overview -->
                     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">Top Sold Products</h3>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <!-- Left Side: Grid -->
                             <div>
-                                <div id="dashboard-sold-products-grid" class="ag-theme-alpine" style="height: 300px; ">
+                                <div id="dashboard-sold-products-grid" class="ag-theme-alpine" style="height: 300px;">
                                 </div>
                             </div>
                             <!-- Right Side: Bar Graph -->
