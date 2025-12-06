@@ -15273,10 +15273,9 @@ function renderStockStatusTreemapPlotly(stockData) {
 
     // --- Plotly Layout ---
     const layout = {
-        
         width: containerWidth,
         height: 600,
-        margin: { t: 60, l: 5, r: 5, b: 5 },
+        margin: { t: 5, l: 5, r: 5, b: 5 },
         paper_bgcolor: 'white',
         plot_bgcolor: 'white',
         uniformtext: {
@@ -15290,6 +15289,18 @@ function renderStockStatusTreemapPlotly(stockData) {
         responsive: true,
         displayModeBar: false
     });
+
+    // Force a relayout after initial render to ensure full width
+    setTimeout(() => {
+        const actualWidth = chartDom.clientWidth;
+        if (actualWidth > 0) {
+            Plotly.relayout(chartDomId, { 
+                width: actualWidth,
+                'xaxis.autorange': true,
+                'yaxis.autorange': true
+            });
+        }
+    }, 100);
 
     // Handle window resize
     const handleResize = function() {
