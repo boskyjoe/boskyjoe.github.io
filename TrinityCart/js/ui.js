@@ -15177,6 +15177,8 @@ function renderStockStatusTreemapD3(stockData) {
         children: treemapItems
     };
 
+    console.log("Treemap Items (Pre-Hierarchy):", treemapItems);
+
     // 1. Create the D3 hierarchy structure
     const root = d3.hierarchy(rootData)
         .sum(d => d.value) // Sum the calculated 'value' for area
@@ -15190,6 +15192,8 @@ function renderStockStatusTreemapD3(stockData) {
         .tile(d3.treemapSquarify) // Use the squarified algorithm for the collage look
         (root);
 
+
+    console.log("Treemap Leaves (Post-Layout):", root.leaves());
 
     // --- Drawing the Chart (Data Binding) ---
 
