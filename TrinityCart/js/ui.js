@@ -15136,6 +15136,152 @@ function renderStockStatusTreemapPlotly(stockData) {
         'Out of Stock': '#EF4444' // Red
     };
 
+    // Icon mapping based on product name keywords
+    function getIconForProduct(productName) {
+        const name = productName.toLowerCase();
+        
+        // Specific Fruit Cakes & Fruits
+        if (name.includes('apple')) return '🍎';
+        if (name.includes('apricot')) return '🍑';
+        if (name.includes('banana')) return '🍌';
+        if (name.includes('blueberry') || name.includes('blue berry')) return '🫐';
+        if (name.includes('strawberry')) return '🍓';
+        if (name.includes('raspberry')) return '🍇';
+        if (name.includes('blackberry') || name.includes('black berry')) return '🫐';
+        if (name.includes('cranberry')) return '🔴';
+        if (name.includes('cherry') || name.includes('cherries')) return '🍒';
+        if (name.includes('lemon')) return '🍋';
+        if (name.includes('orange')) return '🍊';
+        if (name.includes('lime')) return '🟢';
+        if (name.includes('grapefruit')) return '🍊';
+        if (name.includes('tangerine') || name.includes('mandarin')) return '🍊';
+        if (name.includes('currant')) return '🍇';
+        if (name.includes('date')) return '🟫';
+        if (name.includes('fig')) return '🫐';
+        if (name.includes('grape')) return '🍇';
+        if (name.includes('kiwi')) return '🥝';
+        if (name.includes('mango')) return '🥭';
+        if (name.includes('watermelon')) return '🍉';
+        if (name.includes('melon') || name.includes('cantaloupe') || name.includes('honeydew')) return '🍈';
+        if (name.includes('peach')) return '🍑';
+        if (name.includes('pear')) return '🍐';
+        if (name.includes('pineapple')) return '🍍';
+        if (name.includes('plum')) return '🟣';
+        if (name.includes('prune')) return '🟤';
+        if (name.includes('raisin')) return '�葡';
+        if (name.includes('rhubarb')) return '🌱';
+        if (name.includes('coconut')) return '🥥';
+        if (name.includes('passion fruit')) return '🟣';
+        if (name.includes('pomegranate')) return '🔴';
+        if (name.includes('mixed fruit') || name.includes('fruit mix')) return '🍇';
+        
+        // Vegetable-based Cakes/Items
+        if (name.includes('avocado')) return '🥑';
+        if (name.includes('beet') || name.includes('beetroot')) return '🫒';
+        if (name.includes('broccoli')) return '🥦';
+        if (name.includes('butternut') || name.includes('squash')) return '🎃';
+        if (name.includes('carrot')) return '🥕';
+        if (name.includes('cauliflower')) return '🥦';
+        if (name.includes('corn')) return '🌽';
+        if (name.includes('cucumber')) return '🥒';
+        if (name.includes('eggplant') || name.includes('aubergine')) return '🍆';
+        if (name.includes('kale')) return '🥬';
+        if (name.includes('parsnip')) return '🥕';
+        if (name.includes('peas') || name.includes('pea')) return '🫛';
+        if (name.includes('potato')) return '🥔';
+        if (name.includes('sweet potato') || name.includes('yam')) return '🍠';
+        if (name.includes('pumpkin')) return '🎃';
+        if (name.includes('spinach')) return '🥬';
+        if (name.includes('swede') || name.includes('rutabaga')) return '🥔';
+        if (name.includes('tomato')) return '🍅';
+        if (name.includes('zucchini') || name.includes('courgette')) return '🥒';
+        
+        // Wines & Alcoholic Beverages
+        if (name.includes('red wine')) return '🍷';
+        if (name.includes('white wine')) return '🥂';
+        if (name.includes('rose') || name.includes('rosé')) return '🌹';
+        if (name.includes('champagne') || name.includes('sparkling')) return '🍾';
+        if (name.includes('port wine') || name.includes('port')) return '🍷';
+        if (name.includes('sherry')) return '🥃';
+        if (name.includes('wine')) return '🍷';
+        if (name.includes('rum')) return '🥃';
+        if (name.includes('brandy') || name.includes('cognac')) return '🥃';
+        if (name.includes('whisky') || name.includes('whiskey')) return '🥃';
+        if (name.includes('beer')) return '🍺';
+        if (name.includes('cider')) return '🍺';
+        
+        // Pickles & Preserves
+        if (name.includes('pickle')) return '🥒';
+        if (name.includes('chutney')) return '🫙';
+        if (name.includes('jam') || name.includes('jelly')) return '🫙';
+        if (name.includes('marmalade')) return '🍊';
+        if (name.includes('preserve')) return '🫙';
+        if (name.includes('relish')) return '🥒';
+        if (name.includes('kimchi')) return '🌶️';
+        if (name.includes('sauerkraut')) return '🥬';
+        
+        // Cakes - by type
+        if (name.includes('slice') || name.includes('pastry')) return '🍰';
+        if (name.includes('chocolate cake') || name.includes('choco cake')) return '🍫';
+        if (name.includes('vanilla cake')) return '🎂';
+        if (name.includes('red velvet')) return '❤️';
+        if (name.includes('cheese cake') || name.includes('cheesecake')) return '🧀';
+        if (name.includes('black forest')) return '🌲';
+        if (name.includes('tiramisu')) return '☕';
+        if (name.includes('coffee cake')) return '☕';
+        
+        // Indian Snacks - Savory
+        if (name.includes('samosa')) return '🥟';
+        if (name.includes('pakora') || name.includes('pakoda')) return '🧆';
+        if (name.includes('vada') || name.includes('wada')) return '🍩';
+        if (name.includes('bhaji') || name.includes('bhajji')) return '🌶️';
+        if (name.includes('kachori')) return '🥟';
+        if (name.includes('puri') || name.includes('poori')) return '🫓';
+        if (name.includes('paratha')) return '🫓';
+        if (name.includes('dosa') || name.includes('dosai')) return '🥞';
+        if (name.includes('idli') || name.includes('idly')) return '⚪';
+        if (name.includes('uttapam')) return '🥞';
+        if (name.includes('dhokla')) return '🟨';
+        if (name.includes('namkeen') || name.includes('mixture')) return '🥜';
+        if (name.includes('sev')) return '🍜';
+        if (name.includes('chivda') || name.includes('chevda')) return '🌾';
+        if (name.includes('chakli') || name.includes('murukku')) return '🌀';
+        if (name.includes('bonda')) return '🥎';
+        if (name.includes('bajji')) return '🌶️';
+        
+        // Indian Snacks - Sweet
+        if (name.includes('laddu') || name.includes('laddoo')) return '🟡';
+        if (name.includes('jalebi')) return '🟠';
+        if (name.includes('gulab jamun')) return '🔴';
+        if (name.includes('barfi') || name.includes('burfi')) return '🟩';
+        if (name.includes('halwa') || name.includes('halva')) return '🟧';
+        if (name.includes('mysore pak')) return '🟨';
+        if (name.includes('rasgulla')) return '⚪';
+        if (name.includes('kheer')) return '🥛';
+        if (name.includes('peda')) return '🟤';
+        if (name.includes('kaju katli') || name.includes('kaju barfi')) return '💎';
+        
+        // Pastries & Baked Goods
+        if (name.includes('croissant')) return '🥐';
+        if (name.includes('muffin')) return '🧁';
+        if (name.includes('cupcake')) return '🧁';
+        if (name.includes('donut') || name.includes('doughnut')) return '🍩';
+        if (name.includes('cookie') || name.includes('biscuit')) return '🍪';
+        if (name.includes('brownie')) return '🟫';
+        if (name.includes('macaron')) return '🌸';
+        if (name.includes('eclair')) return '🍫';
+        if (name.includes('tart')) return '🥧';
+        if (name.includes('pie')) return '🥧';
+        if (name.includes('bread') || name.includes('bun')) return '🍞';
+        if (name.includes('roll')) return '🥐';
+        
+        // General cake if no specific match
+        if (name.includes('cake')) return '🎂';
+        
+        // Default bakery/snack icon
+        return '🧁';
+    }
+
     const labels = [];         // Product names
     const parents = [];        // Parent for each product
     const values = [];         // Equal values for uniform sizing
@@ -15164,6 +15310,9 @@ function renderStockStatusTreemapPlotly(stockData) {
             
             // Use equal values for uniform box sizes
             const uniformValue = 100;
+
+            // Get icon for this product
+            const icon = getIconForProduct(item.itemName);
 
             // Word wrap long names - split into multiple lines
             let displayName = item.itemName;
@@ -15198,8 +15347,8 @@ function renderStockStatusTreemapPlotly(stockData) {
                 `Status: <b>${status}</b>`
             );
             
-            // Custom text label for display - wrapped name with quantity
-            textLabels.push(`<b>${wrappedName}</b><br><br><span style="font-size:14px">${item.inventoryCount} units</span>`);
+            // Custom text label for display - icon + wrapped name with quantity
+            textLabels.push(`<span style="font-size:24px">${icon}</span><br><b>${wrappedName}</b><br><br><span style="font-size:14px">${item.inventoryCount} units</span>`);
         });
 
     // --- Plotly Trace Definition ---
@@ -15340,6 +15489,8 @@ function renderSimpleLegendPlotly(colorMap) {
         </div>
     `).join('');
 }
+
+
 
 function renderStockStatusTreemapold(stockData) {
     console.log('Treemap function called with data:', stockData);
