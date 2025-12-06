@@ -15048,7 +15048,7 @@ function renderStockStatusTreemap(stockData) {
                         name: {
                             fontSize: 10,
                             fontWeight: 500,
-                            color: '#0000', // Light Gray/Silver for the product name
+                            color: 'rgba(19, 18, 19, 1)', // Light Gray/Silver for the product name
                             lineHeight: 16,
                             fontFamily: 'Inter, sans-serif',
                             // Set a max width and allow break/truncate to manage wrapping
@@ -15059,7 +15059,7 @@ function renderStockStatusTreemap(stockData) {
                         value: {
                             fontSize: 10,
                             fontWeight: 700,
-                            color: '#AEDD', // Gold/Yellow for the inventory count (High contrast)
+                            color: 'rgba(92, 13, 250, 1)', // Gold/Yellow for the inventory count (High contrast)
                             lineHeight: 24,
                             fontFamily: 'Inter, sans-serif'
                         }
