@@ -14942,7 +14942,6 @@ function renderStockStatusChart(stockData) {
  */
 
 
-
 function renderStockStatusTreemap(stockData) {
     // 1. Get the chart container and initialize ECharts
     const chartDom = document.getElementById('dashboard-stock-treemap-chart');
