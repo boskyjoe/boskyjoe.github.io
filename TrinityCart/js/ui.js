@@ -15273,19 +15273,7 @@ function renderStockStatusTreemapPlotly(stockData) {
 
     // --- Plotly Layout ---
     const layout = {
-        title: {
-            text: 'Stock Inventory Overview',
-            font: { 
-                size: 20, 
-                color: '#1f2937', 
-                family: 'Inter, sans-serif',
-                weight: 700
-            },
-            x: 0.02,
-            y: 0.98,
-            xanchor: 'left',
-            yanchor: 'top'
-        },
+        
         width: containerWidth,
         height: 600,
         margin: { t: 60, l: 5, r: 5, b: 5 },
