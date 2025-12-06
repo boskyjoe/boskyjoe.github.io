@@ -14941,142 +14941,213 @@ function renderStockStatusChart(stockData) {
  * @param {Array<Object>} stockData - The array of inventory objects.
  */
 function renderStockStatusTreemap(stockData) {
+    // 1. Get the chart container and initialize ECharts
     const chartDom = document.getElementById('dashboard-stock-treemap-chart');
-    if (!chartDom) return;
+    if (!chartDom) {
+        console.error("ECharts container 'dashboard-stock-treemap-chart' was not found.");
+        return;
+    }
 
-    // Destroy any old instance to prevent memory leaks
-    echarts.dispose(chartDom);
+    // Dispose existing chart instance if it exists
+    if (window.stockTreemapChart) {
+        window.stockTreemapChart.dispose();
+    }
+
+    // Initialize the ECharts instance
     const myChart = echarts.init(chartDom);
+    window.stockTreemapChart = myChart;
 
-    // --- Data Preprocessing ---
-    // We need to group the data by status for the visualMap to work correctly.
-    const dataByStatus = {
-        'Good': [],
-        'Low Stock': [],
-        'Out of Stock': []
+    // --- Color Mapping & Visual Configuration ---
+    const colorMap = {
+        'Good': 'rgba(34, 197, 94, 0.85)',       // Green
+        'Low Stock': 'rgba(245, 158, 11, 0.85)',  // Amber
+        'Out of Stock': 'rgba(239, 68, 68, 0.85)' // Red
     };
 
-    stockData.forEach(item => {
-        if (item.status in dataByStatus) {
-            dataByStatus[item.status].push({
+    // --- Data Preprocessing ---
+    const treemapData = stockData
+        .filter(item => item.inventoryCount >= 0)
+        .map(item => {
+            // Determine status for color mapping
+            let status = 'Good';
+            if (item.inventoryCount === 0) {
+                status = 'Out of Stock';
+            } else if (item.inventoryCount < 10) {
+                status = 'Low Stock';
+            }
+            
+            return {
                 name: item.itemName,
-                value: item.inventoryCount,
-                // Pass the status along for the tooltip
-                itemStatus: item.status
-            });
-        }
-    });
-
-    // Create the final data structure for the treemap
-    const treemapData = [
-        { name: 'Good', children: dataByStatus['Good'] },
-        { name: 'Low Stock', children: dataByStatus['Low Stock'] },
-        { name: 'Out of Stock', children: dataByStatus['Out of Stock'] }
-    ];
+                value: Math.max(item.inventoryCount, 1), // Use at least 1 for visualization
+                actualCount: item.inventoryCount,
+                itemStatus: status,
+                itemStyle: {
+                    color: colorMap[status],
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    borderRadius: 4
+                }
+            };
+        })
+        .sort((a, b) => b.value - a.value);
 
     // --- ECharts Configuration ---
     const option = {
         title: {
-            text: 'Stock Inventory Status',
-            subtext: 'Area is proportional to stock quantity',
-            left: 'center',
-            textStyle: { fontWeight: 'bold', fontSize: 18 }
+            text: 'Stock Inventory Treemap',
+            subtext: 'Area proportional to inventory count',
+            left: 'left',
+            top: 10,
+            textStyle: {
+                fontWeight: '700',
+                fontSize: 20,
+                fontFamily: 'Inter, sans-serif',
+                color: '#1f2937'
+            },
+            subtextStyle: {
+                fontSize: 13,
+                color: '#6b7280'
+            }
         },
         tooltip: {
             formatter: function (info) {
-                // The data is now nested, so we access it via info.data
-                return `
-                    <strong>${info.data.name}</strong><br>
-                    Status: ${info.data.itemStatus}<br>
-                    Stock: <strong>${info.data.value}</strong>
-                `;
-            }
-        },
-        
-        // ✅ THE FIX: Use a 'visualMap' component for color coding.
-        visualMap: {
-            type: 'piecewise', // Use 'piecewise' for discrete categories
-            show: true,        // Set to 'false' to hide the default legend
-            orient: 'horizontal',
-            left: 'center',
-            bottom: 10,
-            itemWidth: 20,
-            itemHeight: 12,
-            // Define the categories and their corresponding colors
-            pieces: [
-                { value: 'Good', label: 'Good Stock (10+)', color: '#22C55E' },
-                { value: 'Low Stock', label: 'Low Stock (1-9)', color: '#F59E0B' },
-                { value: 'Out of Stock', label: 'Out of Stock', color: '#EF4444' }
-            ],
-            // This tells the visualMap which dimension of the data to look at
-            dimension: 'itemStatus' // We will add this to our data items
-        },
-
-        series: [{
-            type: 'treemap',
-            // The data is now hierarchical
-            data: treemapData,
-            // We don't want to see the top-level category names ('Good', 'Low Stock') on the chart
-            leafDepth: 1, 
-            label: {
-                show: true,
-                position: 'inside',
-                formatter: '{b}\n{c}', // {b} is name, {c} is value
+                const data = info.data;
+                const statusColors = {
+                    'Good': '#22C55E',
+                    'Low Stock': '#F59E0B',
+                    'Out of Stock': '#EF4444'
+                };
+                const statusColor = statusColors[data.itemStatus] || '#9CA3AF';
+                
+                return [
+                    `<div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${info.name}</div>`,
+                    `<div style="display: flex; align-items: center; gap: 6px;">`,
+                    `  <span style="color: ${statusColor}; font-weight: 600;">●</span>`,
+                    `  <span>Status: <strong>${data.itemStatus}</strong></span>`,
+                    `</div>`,
+                    `<div>Stock: <strong>${data.actualCount} units</strong></div>`
+                ].join('');
+            },
+            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            textStyle: {
                 color: '#fff',
-                fontSize: 12,
-                // Add a stroke to make the text readable on all backgrounds
-                textBorderColor: 'rgba(0, 0, 0, 0.5)',
-                textBorderWidth: 1
+                fontSize: 13
             },
-            // Style for the top-level categories (we make them invisible)
-            upperLabel: {
-                show: false
-            },
-            // Style for the individual product rectangles
-            itemStyle: {
-                borderColor: '#fff',
-                borderWidth: 1,
-                gapWidth: 1
-            },
-            // Disable navigation
-            nodeClick: false,
-            roam: false,
-            breadcrumb: { show: false }
-        }]
+            padding: 12,
+            extraCssText: 'border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'
+        },
+        series: [
+            {
+                type: 'treemap',
+                data: treemapData,
+                leafDepth: 1,
+                roam: false,
+                nodeClick: false,
+                breadcrumb: {
+                    show: false
+                },
+                label: {
+                    show: true,
+                    formatter: function (params) {
+                        const data = params.data;
+                        // Show label based on rectangle size
+                        if (params.rect.width > 80 && params.rect.height > 50) {
+                            return `{name|${params.name}}\n{value|${data.actualCount} units}`;
+                        } else if (params.rect.width > 50 && params.rect.height > 40) {
+                            return `{value|${data.actualCount}}`;
+                        }
+                        return '';
+                    },
+                    rich: {
+                        name: {
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: '#fff',
+                            lineHeight: 20,
+                            fontFamily: 'Inter, sans-serif'
+                        },
+                        value: {
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: '#fff',
+                            lineHeight: 24,
+                            fontFamily: 'Inter, sans-serif'
+                        }
+                    },
+                    color: '#fff'
+                },
+                upperLabel: {
+                    show: false
+                },
+                itemStyle: {
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    gapWidth: 2,
+                    borderRadius: 4
+                },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.3)',
+                        shadowOffsetX: 0,
+                        shadowOffsetY: 4,
+                        borderWidth: 3
+                    },
+                    label: {
+                        show: true
+                    }
+                },
+                levels: [
+                    {
+                        itemStyle: {
+                            borderWidth: 2,
+                            gapWidth: 2
+                        }
+                    }
+                ]
+            }
+        ]
     };
 
     myChart.setOption(option);
     
-    // Add a resize listener
-    window.addEventListener('resize', () => myChart.resize());
+    // Resize observer
+    const resizeObserver = new ResizeObserver(() => {
+        myChart.resize();
+    });
+    resizeObserver.observe(chartDom);
+    
+    // Also handle window resize
+    window.addEventListener('resize', function() {
+        myChart.resize();
+    });
+
+    // Render the legend
+    renderSimpleLegend();
 }
 
-
-function renderSimpleLegend(colorMap) {
+function renderSimpleLegend() {
     const legendContainer = document.getElementById('stock-treemap-legend');
     if (!legendContainer) return;
 
-    legendContainer.innerHTML = ''; // Clear existing legend
+    const legendItems = [
+        { status: 'Good', color: 'rgba(34, 197, 94, 0.9)', label: 'Good Stock (10+)' },
+        { status: 'Low Stock', color: 'rgba(245, 158, 11, 0.9)', label: 'Low Stock (1-9)' },
+        { status: 'Out of Stock', color: 'rgba(239, 68, 68, 0.9)', label: 'Out of Stock (0)' }
+    ];
 
-    const legendDescriptions = {
-        'Good': 'Good Stock (10+)',
-        'Low Stock': 'Low Stock (1-9)',
-        'Out of Stock': 'Out of Stock (0)'
-    };
-
-    Object.keys(colorMap).forEach(status => {
-        const color = colorMap[status];
-        const description = legendDescriptions[status] || status;
-
-        const legendItem = document.createElement('div');
-        legendItem.className = 'flex items-center gap-1';
-        legendItem.innerHTML = `
-            <span class="w-4 h-4 rounded-md shadow-sm" style="background-color: ${color};"></span>
-            <span class="text-sm font-medium text-gray-700">${description}</span>
-        `;
-        legendContainer.appendChild(legendItem);
-    });
+    legendContainer.innerHTML = legendItems.map(item => `
+        <div class="flex items-center gap-1">
+            <span class="w-4 h-4 rounded-md shadow-sm" style="background: linear-gradient(135deg, ${item.color}, ${item.color.replace('0.9', '0.75')});"></span>
+            <span class="text-sm font-medium text-gray-700">${item.label}</span>
+        </div>
+    `).join('');
 }
+
+
+
 
 function renderStockStatusTreemapold(stockData) {
     console.log('Treemap function called with data:', stockData);
