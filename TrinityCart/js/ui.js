@@ -12367,7 +12367,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
         
 
-            renderStockStatusTreemapD3(summaryData.stockStatus);
+            renderStockStatusTreemapPlotly(summaryData.stockStatus);
         }
 
         
@@ -15107,47 +15107,44 @@ function renderSimpleLegend() {
 
 
 /**
- * Renders an equal-area, collage-style visualization using D3.js Treemap.
- * Area is calculated based on the length of the product name for optimal label display.
+ * Renders an equal-area, collage-style visualization using Plotly.js Treemap.
+ * Area is calculated based on the length of the product name for readability.
  *
  * @param {Array<Object>} stockData - The array of inventory objects.
  */
-function renderStockStatusTreemapD3(stockData) {
-    const chartDom = document.getElementById('dashboard-stock-treemap-chart');
+function renderStockStatusTreemapPlotly(stockData) {
+    const chartDomId = 'dashboard-stock-treemap-chart';
+    const chartDom = document.getElementById(chartDomId);
     if (!chartDom) {
-        console.error("D3 chart container 'dashboard-stock-treemap-chart' was not found.");
+        console.error(`Plotly container '${chartDomId}' was not found.`);
         return;
     }
 
-    // Set dimensions
-    const containerWidth = chartDom.clientWidth;
-    const containerHeight = 600;
-    const padding = 6;
-    const titleHeight = 50;
+    // Set a safe width fallback, as done in the D3 code, to prevent rendering issues
+    let containerWidth = chartDom.clientWidth;
+    if (containerWidth === 0) {
+        containerWidth = 800;
+        console.warn("Chart container width was 0. Using fallback 800px.");
+    }
 
-    // Clear previous chart and set dimensions
-    d3.select(chartDom).select("svg").remove();
-    const svg = d3.select(chartDom).append("svg")
-        .attr("width", containerWidth)
-        .attr("height", containerHeight);
-
-    const chartArea = svg.append("g")
-        .attr("transform", `translate(${padding}, ${titleHeight})`);
-
-    const width = containerWidth - 2 * padding;
-    const height = containerHeight - titleHeight - padding;
-
-    // --- Color and Status Mapping ---
+    // --- Data Preprocessing and Styling ---
+    
+    // Define the colors for the three status categories
     const colorMap = {
         'Good': '#22C55E',       // Green
         'Low Stock': '#F59E0B',  // Amber
         'Out of Stock': '#EF4444' // Red
     };
 
-    // --- Data Preprocessing and Hierarchy ---
-    const treemapItems = stockData
+    const labels = [];    // Product names
+    const parents = [];   // Parent for each product (will be a constant 'Root')
+    const values = [];    // Area calculation (based on name length)
+    const statusArray = []; // Status for coloring
+    const customData = []; // Extra data for tooltips
+
+    stockData
         .filter(item => item.inventoryCount >= 0)
-        .map(item => {
+        .forEach(item => {
             let status = 'Good';
             if (item.inventoryCount === 0) {
                 status = 'Out of Stock';
@@ -15158,117 +15155,101 @@ function renderStockStatusTreemapD3(stockData) {
             // Value based on Name Length:
             const nameLength = item.itemName.length;
             const calculatedValue = Math.max(
-                Math.pow(nameLength, 1.8), // Use 1.8 for slightly softer size differences
-                80 // Minimum base value for very short names
+                Math.pow(nameLength, 1.8), // Use 1.8 for size distinction
+                80 // Minimum base value for short names
             );
 
-            return {
-                name: item.itemName,
-                value: calculatedValue,
-                actualCount: item.inventoryCount,
-                status: status,
-                color: colorMap[status]
-            };
+            labels.push(item.itemName);
+            parents.push("Root"); // All items have a single invisible parent
+            values.push(calculatedValue);
+            statusArray.push(status);
+            customData.push(item.actualCount || item.inventoryCount);
         });
 
-    // D3 requires a single root node for the hierarchy
-    const rootData = {
-        name: "Inventory",
-        children: treemapItems
+    // --- Plotly Trace Definition ---
+    const data = [{
+        type: "treemap",
+        
+        // 1. Data Structure
+        labels: labels,
+        parents: parents,
+        values: values, // Area proportional to calculated value
+        
+        // 2. Color Mapping
+        marker: {
+            colors: statusArray,
+            colorscale: [ // Map categorical status to specific color codes
+                [0, colorMap['Out of Stock']],
+                [0.001, colorMap['Low Stock']],
+                [1, colorMap['Good']]
+            ],
+            // Use an array of colors to map to the status
+            // NOTE: Plotly's treemap coloring is often easier with numerical mapping, 
+            // so we will rely on hovertext for the full status.
+        },
+        
+        // 3. Labeling and Tooltips
+        textinfo: "label+value", // Shows name (label) and area (value), though we'll customize this
+        // Use customdata and a custom hovertemplate for the actual inventory count
+        customdata: customData, 
+        hovertemplate: 
+            `<b>%{label}</b><br>` + // Product Name
+            `Stock: <b>%{customdata} units</b><br>` + // Actual Count
+            `Status: <b>%{currentPath}/${statusArray}</b><br>` + // This is complicated to do cleanly in Plotly
+            `<extra></extra>`, // Removes the default trace info
+            
+        // 4. Layout Control (Squarified Collage)
+        tiling: {
+            // Plotly defaults to 'squarify', which gives the collage effect.
+            // You can optionally specify: 'squarify', 'slice', 'dice', 'slice-dice'
+            // We ensure it is set just in case:
+            packing: 'squarify', 
+            // The items are sorted by the 'values' array (longest name first), 
+            // which Plotly handles correctly for the squarified layout.
+        },
+        
+        // 5. Visual Styling (This is less flexible than ECharts/D3 but works)
+        // Set the opacity and line style
+        opacity: 0.9,
+        domain: { x: [0, 1], y: [0, 1] },
+        // Set border style
+        pathbar: { visible: false }, // Hide the navigation bar
+        outsidetextfont: { color: "white", size: 14 },
+    }];
+
+    // --- Plotly Layout ---
+    const layout = {
+        title: {
+            text: 'Stock Inventory Collage (Plotly.js)',
+            font: { size: 20, color: '#1f2937', family: 'Inter, sans-serif' },
+            x: 0.05, // Place title slightly to the left
+            xref: 'paper',
+        },
+        // Force the chart size based on the container
+        width: containerWidth,
+        height: 600, 
+        margin: { t: 50, l: 5, r: 5, b: 5 },
+        uniformtext: {
+            minsize: 10,
+            mode: 'hide' // Hide text if it doesn't fit
+        },
+        // We will use a custom color mapping function to apply the status colors
+        // Plotly uses its 'colorway' for sequential colors by default, but we can override this
+        colorway: Object.values(colorMap) 
     };
 
-    console.log("Treemap Items (Pre-Hierarchy):", treemapItems);
+    // --- Render Chart ---
+    Plotly.newPlot(chartDomId, data, layout, { responsive: true });
 
-    // 1. Create the D3 hierarchy structure
-    const root = d3.hierarchy(rootData)
-        .sum(d => d.value) // Sum the calculated 'value' for area
-        .sort((a, b) => b.value - a.value);
-
-    // 2. Generate the Treemap layout
-    d3.treemap()
-        .size([width, height])
-        .paddingOuter(4)
-        .paddingInner(4)
-        .tile(d3.treemapSquarify) // Use the squarified algorithm for the collage look
-        (root);
-
-
-    console.log("Treemap Leaves (Post-Layout):", root.leaves());
-
-    // --- Drawing the Chart (Data Binding) ---
-
-    // 1. Draw Rectangles (The tiles)
-    const cell = chartArea.selectAll("g")
-        .data(root.leaves()) // Bind data to the leaf nodes (individual products)
-        .join("g")
-            .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
-    cell.append("rect")
-        .attr("id", d => d.data.name.replace(/\s/g, '-'))
-        .attr("width", d => d.x1 - d.x0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("fill", d => d.data.color)
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 2)
-        .attr("rx", 4)
-        .attr("ry", 4)
-        .style("cursor", "pointer")
-        .on("mouseover", function(event, d) {
-            d3.select(this).style("filter", "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4))");
-            // Tooltip logic needs to be implemented separately in D3 (not included here for brevity)
-        })
-        .on("mouseout", function() {
-            d3.select(this).style("filter", null);
-        });
-
-    // 2. Draw Text (Labels)
-    cell.append("text")
-        .selectAll("tspan")
-        .data(d => {
-            // Data for two lines: Name (light gray) and Count (gold)
-            const count = d.data.actualCount;
-            let name = d.data.name;
-            
-            // Basic text truncation for smaller tiles
-            const tileWidth = d.x1 - d.x0;
-            if (name.length > 20 && tileWidth < 120) {
-                 name = name.substring(0, 17) + '...';
-            }
-            
-            return [
-                { text: name, class: 'name-text', color: '#D1D5DB', dy: 18, size: 13, weight: 500 },
-                { text: `${count} units`, class: 'value-text', color: '#FCD34D', dy: 24, size: 16, weight: 700 }
-            ];
-        })
-        .join("tspan")
-            .attr("x", 4) // X position (small padding from left)
-            .attr("y", 0)
-            .attr("dy", d => d.dy) // Vertical offset for stacking lines
-            .style("fill", d => d.color)
-            .style("font-size", d => `${d.size}px`)
-            .style("font-weight", d => d.weight)
-            .text(d => d.text);
-    
-    // 3. Draw Title (Top of the SVG)
-    svg.append("text")
-        .attr("x", padding)
-        .attr("y", 30)
-        .attr("font-size", "20px")
-        .attr("font-weight", "700")
-        .attr("fill", "#1f2937")
-        .text("Stock Inventory Collage (D3.js)");
-
-
-    // 4. Render the Legend (using the existing helper, modified slightly)
-    renderSimpleLegendD3(colorMap);
+    // Render the simple legend (using the existing helper)
+    renderSimpleLegendPlotly(colorMap);
 }
 
-// Helper function for the legend (re-using logic from ECharts)
-function renderSimpleLegendD3(colorMap) {
+// Helper function for the legend
+function renderSimpleLegendPlotly(colorMap) {
     const legendContainer = document.getElementById('stock-treemap-legend');
     if (!legendContainer) return;
 
-    // ... [Logic to build the legend from colorMap remains the same] ...
     const legendDescriptions = {
         'Good': 'Good Stock (10+)',
         'Low Stock': 'Low Stock (1-9)',
