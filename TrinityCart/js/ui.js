@@ -14960,17 +14960,18 @@ function renderStockStatusTreemap(stockData) {
     window.stockTreemapChart = myChart;
 
     // --- Color Mapping & Visual Configuration ---
+    // Define the colors for the three status categories
     const colorMap = {
         'Good': 'rgba(34, 197, 94, 0.85)',       // Green
         'Low Stock': 'rgba(245, 158, 11, 0.85)',  // Amber
         'Out of Stock': 'rgba(239, 68, 68, 0.85)' // Red
     };
-
-    // --- Data Preprocessing ---
-    const treemapData = stockData
+    
+    // --- Data Preprocessing for Grid ---
+    const gridData = stockData
         .filter(item => item.inventoryCount >= 0)
-        .map(item => {
-            // Determine status for color mapping
+        .map((item, index) => {
+            // Determine status based on count
             let status = 'Good';
             if (item.inventoryCount === 0) {
                 status = 'Out of Stock';
@@ -14978,26 +14979,26 @@ function renderStockStatusTreemap(stockData) {
                 status = 'Low Stock';
             }
             
+            // For a grid, we need X, Y coordinates and the value.
+            // We use the index to generate a sequential layout.
             return {
-                name: item.itemName,
-                value: Math.max(item.inventoryCount, 1), // Use at least 1 for visualization
+                // The actual value that will determine the tile color/label
+                value: [index, 0, item.inventoryCount], 
+                
+                // Custom data fields for labeling and tooltips
+                itemName: item.itemName,
                 actualCount: item.inventoryCount,
                 itemStatus: status,
-                itemStyle: {
-                    color: colorMap[status],
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    borderRadius: 4
-                }
+                itemColor: colorMap[status]
             };
         })
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => b.value[2] - a.value[2]); // Sort by actualCount
 
     // --- ECharts Configuration ---
     const option = {
         title: {
-            text: 'Stock Inventory Treemap',
-            subtext: 'Area proportional to inventory count',
+            text: 'Stock Inventory Grid',
+            subtext: 'Equal area per product, color by status',
             left: 'left',
             top: 10,
             textStyle: {
@@ -15011,9 +15012,32 @@ function renderStockStatusTreemap(stockData) {
                 color: '#6b7280'
             }
         },
+        
+        // Hide X and Y axes which are not needed for a simple grid
+        grid: {
+            left: '3%', right: '3%', top: '100px', bottom: '3%',
+            containLabel: true 
+        },
+        xAxis: { show: false, type: 'category' },
+        yAxis: { show: false, type: 'category' },
+        
+        // This component maps the status category to a color
+        visualMap: {
+            show: false, // Hide the visual map legend
+            type: 'piecewise', // Use discrete pieces for categories
+            pieces: [
+                { gt: 9, color: colorMap['Good'] },
+                { gte: 1, lte: 9, color: colorMap['Low Stock'] },
+                { lte: 0, color: colorMap['Out of Stock'] }
+            ],
+            // Map the value in the data array (item.inventoryCount)
+            dimension: 2, 
+            seriesIndex: 0 
+        },
+
         tooltip: {
-            formatter: function (info) {
-                const data = info.data;
+            formatter: function (params) {
+                const data = params.data;
                 const statusColors = {
                     'Good': '#22C55E',
                     'Low Stock': '#F59E0B',
@@ -15022,7 +15046,7 @@ function renderStockStatusTreemap(stockData) {
                 const statusColor = statusColors[data.itemStatus] || '#9CA3AF';
                 
                 return [
-                    `<div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${info.name}</div>`,
+                    `<div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${data.itemName}</div>`,
                     `<div style="display: flex; align-items: center; gap: 6px;">`,
                     `  <span style="color: ${statusColor}; font-weight: 600;">●</span>`,
                     `  <span>Status: <strong>${data.itemStatus}</strong></span>`,
@@ -15032,6 +15056,7 @@ function renderStockStatusTreemap(stockData) {
             },
             backgroundColor: 'rgba(17, 24, 39, 0.95)',
             borderColor: 'rgba(255, 255, 255, 0.1)',
+            // ... rest of tooltip styles
             borderWidth: 1,
             textStyle: {
                 color: '#fff',
@@ -15040,22 +15065,36 @@ function renderStockStatusTreemap(stockData) {
             padding: 12,
             extraCssText: 'border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'
         },
+        
         series: [
             {
-                type: 'treemap',
-                data: treemapData,
-                leafDepth: 1,
-                roam: false,
-                nodeClick: false,
-                breadcrumb: {
-                    show: false
+                name: 'Inventory Grid',
+                type: 'heatmap', // Changed from 'treemap' to 'heatmap'
+                data: gridData,
+                
+                // Configure how many tiles fit per row/column
+                width: '100%',
+                height: '100%',
+                
+                // Style for the equal-sized tiles
+                itemStyle: {
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    gap: 2,
+                    borderRadius: 4
                 },
+                
+                // Labeling to show name and quantity inside the tile
                 label: {
                     show: true,
                     formatter: function (params) {
                         const data = params.data;
-                        // Always show name and value - ECharts will handle sizing
-                        return `{name|${params.name}}\n{value|${data.actualCount} units}`;
+                        // Truncate name if necessary and format output
+                        let name = data.itemName;
+                        if (name.length > 20) {
+                            name = name.substring(0, 17) + '...';
+                        }
+                        return `{name|${name}}\n{value|${data.actualCount} units}`;
                     },
                     rich: {
                         name: {
@@ -15063,7 +15102,10 @@ function renderStockStatusTreemap(stockData) {
                             fontWeight: 600,
                             color: '#fff',
                             lineHeight: 20,
-                            fontFamily: 'Inter, sans-serif'
+                            fontFamily: 'Inter, sans-serif',
+                            overflow: 'truncate',
+                            ellipsis: '...',
+                            width: 150 
                         },
                         value: {
                             fontSize: 16,
@@ -15075,15 +15117,8 @@ function renderStockStatusTreemap(stockData) {
                     },
                     color: '#fff'
                 },
-                upperLabel: {
-                    show: false
-                },
-                itemStyle: {
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    gapWidth: 2,
-                    borderRadius: 4
-                },
+                
+                // Style when hovering
                 emphasis: {
                     itemStyle: {
                         shadowBlur: 10,
@@ -15091,37 +15126,25 @@ function renderStockStatusTreemap(stockData) {
                         shadowOffsetX: 0,
                         shadowOffsetY: 4,
                         borderWidth: 3
-                    },
-                    label: {
-                        show: true
                     }
-                },
-                levels: [
-                    {
-                        itemStyle: {
-                            borderWidth: 2,
-                            gapWidth: 2
-                        }
-                    }
-                ]
+                }
             }
         ]
     };
 
     myChart.setOption(option);
     
-    // Resize observer
+    // Resize observer (Good practice for responsive charts)
     const resizeObserver = new ResizeObserver(() => {
         myChart.resize();
     });
     resizeObserver.observe(chartDom);
     
-    // Also handle window resize
     window.addEventListener('resize', function() {
         myChart.resize();
     });
 
-    // Render the legend
+    // Render the legend (same as before)
     renderSimpleLegend();
 }
 
