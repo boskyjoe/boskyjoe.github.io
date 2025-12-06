@@ -14433,7 +14433,7 @@ let dashboardStockChart = null;
  */
 
 
-function renderStockStatusChart(stockData) {
+function renderStockStatusChart2(stockData) {
     // 1. Get the canvas element and its 2D rendering context.
     const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
     const canvasElement = document.getElementById('dashboard-stock-status-chart');
@@ -14921,22 +14921,16 @@ function renderStockStatusChart(stockData) {
 }
 
 function renderStockStatusTreemap(stockData) {
-    // Get the canvas element and its 2D rendering context.
-    const chartContainer = document.getElementById('dashboard-stock-status-chart-container');
-    const canvasElement = document.getElementById('dashboard-stock-status-chart');
-    const gridContainer = document.getElementById('dashboard-stock-status-grid');
-    const legendContainer = document.getElementById('stock-chart-legend');
+    // Get the canvas element and its 2D rendering context - using treemap-specific IDs
+    const chartContainer = document.getElementById('dashboard-stock-treemap-container');
+    const canvasElement = document.getElementById('dashboard-stock-treemap-chart');
+    const legendContainer = document.getElementById('stock-treemap-legend');
 
-    if (!canvasElement || !chartContainer || !gridContainer) {
-        console.error("A required chart or grid container was not found.");
+    if (!canvasElement || !chartContainer) {
+        console.error("Treemap chart container was not found.");
         return;
     }
     const ctx = canvasElement.getContext('2d');
-
-    // If a chart instance already exists, destroy it completely.
-    if (dashboardStockChart) {
-        dashboardStockChart.destroy();
-    }
 
     if (legendContainer) {
         legendContainer.innerHTML = `
@@ -14959,8 +14953,6 @@ function renderStockStatusTreemap(stockData) {
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
-        chartContainer.style.height = '300px';
-        gridContainer.style.height = '300px';
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         ctx.font = '16px Inter, sans-serif';
         ctx.fillStyle = '#9ca3af';
@@ -14970,101 +14962,208 @@ function renderStockStatusTreemap(stockData) {
         return;
     }
 
-    // Set fixed height for treemap
-    const treemapHeight = 600;
-    chartContainer.style.height = `${treemapHeight}px`;
-    gridContainer.style.height = `${treemapHeight}px`;
-
-    // Prepare treemap data structure
-    const treemapData = {
-        datasets: [{
-            label: 'Stock Inventory',
-            tree: chartData.map(item => ({
-                name: item.itemName,
-                value: Math.max(item.inventoryCount, 1), // Use at least 1 to show out-of-stock items
-                status: item.status,
-                actualCount: item.inventoryCount
-            })),
-            key: 'value',
-            groups: ['name'],
-            spacing: 1,
-            borderWidth: 2,
-            borderColor: 'rgba(255, 255, 255, 0.8)',
-            backgroundColor: (ctx) => {
-                if (ctx.type !== 'data') return 'transparent';
-                const item = ctx.raw._data;
-                if (item.status === 'Out of Stock') {
-                    return 'rgba(239, 68, 68, 0.85)';
-                }
-                if (item.status === 'Low Stock') {
-                    return 'rgba(245, 158, 11, 0.85)';
-                }
-                return 'rgba(34, 197, 94, 0.85)';
-            },
-            labels: {
-                display: true,
-                align: 'center',
-                position: 'top',
-                formatter: (ctx) => {
-                    if (ctx.type !== 'data') return '';
-                    const item = ctx.raw._data;
-                    return [item.name, `${item.actualCount} units`];
-                },
-                color: 'white',
-                font: {
-                    size: 12,
-                    weight: '600',
-                    family: 'Inter, sans-serif'
-                },
-                padding: 4
+    // Calculate total stock for proportions
+    const totalStock = chartData.reduce((sum, item) => sum + Math.max(item.inventoryCount, 1), 0);
+    
+    // Simple squarified treemap algorithm
+    function squarify(data, x, y, width, height) {
+        if (data.length === 0) return [];
+        
+        const total = data.reduce((sum, item) => sum + item.value, 0);
+        const normalized = data.map(item => ({
+            ...item,
+            normalizedValue: (item.value / total) * width * height
+        }));
+        
+        const rectangles = [];
+        let currentX = x;
+        let currentY = y;
+        let remainingWidth = width;
+        let remainingHeight = height;
+        
+        normalized.forEach((item, idx) => {
+            const area = item.normalizedValue;
+            let rectWidth, rectHeight;
+            
+            if (remainingWidth > remainingHeight) {
+                rectWidth = area / remainingHeight;
+                rectHeight = remainingHeight;
+                
+                rectangles.push({
+                    ...item,
+                    x: currentX,
+                    y: currentY,
+                    width: rectWidth,
+                    height: rectHeight
+                });
+                
+                currentX += rectWidth;
+                remainingWidth -= rectWidth;
+            } else {
+                rectWidth = remainingWidth;
+                rectHeight = area / remainingWidth;
+                
+                rectangles.push({
+                    ...item,
+                    x: currentX,
+                    y: currentY,
+                    width: rectWidth,
+                    height: rectHeight
+                });
+                
+                currentY += rectHeight;
+                remainingHeight -= rectHeight;
             }
-        }]
-    };
+        });
+        
+        return rectangles;
+    }
 
-    // Create the new treemap chart instance
-    dashboardStockChart = new Chart(ctx, {
-        type: 'treemap',
-        data: treemapData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                title: {
-                    display: true,
-                    text: 'Stock Inventory Treemap',
-                    align: 'start',
-                    padding: { top: 15, bottom: 25 },
-                    font: {
-                        size: 20,
-                        family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                        weight: '700'
-                    },
-                    color: '#1f2937'
-                },
-                tooltip: {
-                    enabled: true,
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    titleFont: { size: 14, weight: '600', family: 'Inter, sans-serif' },
-                    bodyFont: { size: 13, family: 'Inter, sans-serif' },
-                    padding: 12,
-                    cornerRadius: 8,
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: 1,
-                    callbacks: {
-                        title: (tooltipItems) => {
-                            return tooltipItems[0].raw._data.name;
-                        },
-                        label: (context) => {
-                            const item = context.raw._data;
-                            return [
-                                `Stock: ${item.actualCount} units`,
-                                `Status: ${item.status}`
-                            ];
-                        }
-                    }
-                }
+    // Prepare data for treemap
+    const treemapItems = chartData.map(item => ({
+        name: item.itemName,
+        value: Math.max(item.inventoryCount, 1),
+        status: item.status,
+        actualCount: item.inventoryCount
+    }));
+
+    // Set canvas size
+    const dpr = window.devicePixelRatio || 1;
+    const rect = chartContainer.getBoundingClientRect();
+    canvasElement.width = rect.width * dpr;
+    canvasElement.height = 600 * dpr;
+    canvasElement.style.width = rect.width + 'px';
+    canvasElement.style.height = '600px';
+    ctx.scale(dpr, dpr);
+
+    // Calculate rectangles
+    const padding = 60;
+    const rectangles = squarify(treemapItems, padding, padding + 50, rect.width - padding * 2, 600 - padding * 2 - 50);
+
+    // Draw title
+    ctx.font = '700 20px Inter, sans-serif';
+    ctx.fillStyle = '#1f2937';
+    ctx.textAlign = 'left';
+    ctx.fillText('Stock Inventory Treemap', padding, 35);
+
+    // Store rectangles for hover detection
+    canvasElement.treemapRectangles = rectangles;
+    canvasElement.treemapHoveredIndex = -1;
+
+    function drawTreemap(hoveredIndex = -1) {
+        ctx.clearRect(0, 0, rect.width, 600);
+        
+        // Redraw title
+        ctx.font = '700 20px Inter, sans-serif';
+        ctx.fillStyle = '#1f2937';
+        ctx.textAlign = 'left';
+        ctx.fillText('Stock Inventory Treemap', padding, 35);
+
+        rectangles.forEach((rect, idx) => {
+            const isHovered = idx === hoveredIndex;
+            
+            // Determine color based on status
+            let fillColor, borderColor;
+            if (rect.status === 'Out of Stock') {
+                fillColor = isHovered ? 'rgba(239, 68, 68, 0.95)' : 'rgba(239, 68, 68, 0.85)';
+                borderColor = 'rgba(220, 38, 38, 0.9)';
+            } else if (rect.status === 'Low Stock') {
+                fillColor = isHovered ? 'rgba(245, 158, 11, 0.95)' : 'rgba(245, 158, 11, 0.85)';
+                borderColor = 'rgba(217, 119, 6, 0.9)';
+            } else {
+                fillColor = isHovered ? 'rgba(34, 197, 94, 0.95)' : 'rgba(34, 197, 94, 0.85)';
+                borderColor = 'rgba(22, 163, 74, 0.9)';
             }
+
+            // Draw shadow
+            if (isHovered) {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 2;
+            }
+
+            // Draw rectangle
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = isHovered ? 3 : 2;
+            
+            const radius = 6;
+            ctx.beginPath();
+            ctx.moveTo(rect.x + radius, rect.y);
+            ctx.lineTo(rect.x + rect.width - radius, rect.y);
+            ctx.quadraticCurveTo(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + radius);
+            ctx.lineTo(rect.x + rect.width, rect.y + rect.height - radius);
+            ctx.quadraticCurveTo(rect.x + rect.width, rect.y + rect.height, rect.x + rect.width - radius, rect.y + rect.height);
+            ctx.lineTo(rect.x + radius, rect.y + rect.height);
+            ctx.quadraticCurveTo(rect.x, rect.y + rect.height, rect.x, rect.y + rect.height - radius);
+            ctx.lineTo(rect.x, rect.y + radius);
+            ctx.quadraticCurveTo(rect.x, rect.y, rect.x + radius, rect.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+
+            // Draw text if rectangle is large enough
+            if (rect.width > 60 && rect.height > 40) {
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const centerX = rect.x + rect.width / 2;
+                const centerY = rect.y + rect.height / 2;
+                
+                // Draw name
+                ctx.font = '600 12px Inter, sans-serif';
+                const maxWidth = rect.width - 10;
+                let name = rect.name;
+                
+                // Truncate name if too long
+                while (ctx.measureText(name).width > maxWidth && name.length > 3) {
+                    name = name.slice(0, -4) + '...';
+                }
+                
+                ctx.fillText(name, centerX, centerY - 8);
+                
+                // Draw count
+                ctx.font = '700 14px Inter, sans-serif';
+                ctx.fillText(`${rect.actualCount}`, centerX, centerY + 10);
+            }
+        });
+    }
+
+    // Initial draw
+    drawTreemap();
+
+    // Add hover interaction
+    canvasElement.addEventListener('mousemove', (e) => {
+        const canvasRect = canvasElement.getBoundingClientRect();
+        const mouseX = e.clientX - canvasRect.left;
+        const mouseY = e.clientY - canvasRect.top;
+
+        let hoveredIndex = -1;
+        rectangles.forEach((rect, idx) => {
+            if (mouseX >= rect.x && mouseX <= rect.x + rect.width &&
+                mouseY >= rect.y && mouseY <= rect.y + rect.height) {
+                hoveredIndex = idx;
+            }
+        });
+
+        if (hoveredIndex !== canvasElement.treemapHoveredIndex) {
+            canvasElement.treemapHoveredIndex = hoveredIndex;
+            drawTreemap(hoveredIndex);
+            canvasElement.style.cursor = hoveredIndex >= 0 ? 'pointer' : 'default';
+        }
+    });
+
+    canvasElement.addEventListener('mouseleave', () => {
+        if (canvasElement.treemapHoveredIndex >= 0) {
+            canvasElement.treemapHoveredIndex = -1;
+            drawTreemap();
+            canvasElement.style.cursor = 'default';
         }
     });
 }
