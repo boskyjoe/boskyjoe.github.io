@@ -14928,16 +14928,23 @@ function renderStockStatusChart(stockData) {
     });
 }
 
+
 function renderStockStatusTreemap(stockData) {
+    console.log('Treemap function called with data:', stockData);
+    
     // Get the canvas element and its 2D rendering context - using treemap-specific IDs
     const chartContainer = document.getElementById('dashboard-stock-treemap-container');
     const canvasElement = document.getElementById('dashboard-stock-treemap-chart');
     const legendContainer = document.getElementById('stock-treemap-legend');
 
+    console.log('Container found:', !!chartContainer);
+    console.log('Canvas found:', !!canvasElement);
+
     if (!canvasElement || !chartContainer) {
         console.error("Treemap chart container was not found.");
         return;
     }
+    
     const ctx = canvasElement.getContext('2d');
 
     if (legendContainer) {
@@ -14957,16 +14964,18 @@ function renderStockStatusTreemap(stockData) {
         `;
     }
 
-    const chartData = stockData;
+    const chartData = stockData || [];
 
     // If there are no items with stock, display a helpful message.
     if (chartData.length === 0) {
-        canvasElement.width = chartContainer.offsetWidth;
+        const width = chartContainer.offsetWidth || 800;
+        canvasElement.width = width;
         canvasElement.height = 600;
         ctx.font = '16px Inter, sans-serif';
         ctx.fillStyle = '#9ca3af';
         ctx.textAlign = 'center';
-        ctx.fillText("No stock data to display.", canvasElement.width / 2, canvasElement.height / 2);
+        ctx.textBaseline = 'middle';
+        ctx.fillText("No stock data to display.", width / 2, 300);
         if (legendContainer) legendContainer.innerHTML = '';
         return;
     }
@@ -14979,41 +14988,52 @@ function renderStockStatusTreemap(stockData) {
         actualCount: item.inventoryCount
     })).sort((a, b) => b.value - a.value);
 
+    console.log('Treemap items prepared:', treemapItems);
+
     // Set canvas size properly
-    const containerWidth = chartContainer.offsetWidth;
+    const containerWidth = chartContainer.offsetWidth || 800;
     const containerHeight = 600;
+    
     canvasElement.width = containerWidth;
     canvasElement.height = containerHeight;
     canvasElement.style.width = containerWidth + 'px';
     canvasElement.style.height = containerHeight + 'px';
 
+    console.log('Canvas size set:', containerWidth, 'x', containerHeight);
+
     // Simple treemap layout function
     function layoutTreemap(items, x, y, width, height) {
+        if (items.length === 0) return [];
+        
         const rectangles = [];
         const total = items.reduce((sum, item) => sum + item.value, 0);
         
-        let currentY = y;
-        const itemsPerRow = Math.ceil(Math.sqrt(items.length));
+        // Calculate grid dimensions
+        const cols = Math.ceil(Math.sqrt(items.length));
+        const rows = Math.ceil(items.length / cols);
         
-        for (let i = 0; i < items.length; i += itemsPerRow) {
-            const rowItems = items.slice(i, i + itemsPerRow);
-            const rowTotal = rowItems.reduce((sum, item) => sum + item.value, 0);
-            const rowHeight = (rowTotal / total) * height;
-            
-            let currentX = x;
-            rowItems.forEach(item => {
-                const itemWidth = (item.value / rowTotal) * width;
+        let index = 0;
+        for (let row = 0; row < rows && index < items.length; row++) {
+            for (let col = 0; col < cols && index < items.length; col++) {
+                const item = items[index];
+                const rectWidth = width / cols;
+                const rectHeight = height / rows;
+                
+                // Adjust size based on value
+                const scaleFactor = Math.sqrt(item.value / total) * 1.5;
+                const adjustedWidth = rectWidth * Math.min(scaleFactor, 1.2);
+                const adjustedHeight = rectHeight * Math.min(scaleFactor, 1.2);
+                
                 rectangles.push({
                     ...item,
-                    x: currentX,
-                    y: currentY,
-                    width: itemWidth,
-                    height: rowHeight
+                    x: x + (col * rectWidth),
+                    y: y + (row * rectHeight),
+                    width: adjustedWidth,
+                    height: adjustedHeight
                 });
-                currentX += itemWidth;
-            });
-            
-            currentY += rowHeight;
+                
+                index++;
+            }
         }
         
         return rectangles;
@@ -15021,25 +15041,30 @@ function renderStockStatusTreemap(stockData) {
 
     // Calculate rectangles with padding
     const padding = 40;
-    const titleHeight = 60;
+    const titleHeight = 70;
+    const availableWidth = containerWidth - (padding * 2);
+    const availableHeight = containerHeight - titleHeight - padding;
+    
     const rectangles = layoutTreemap(
         treemapItems, 
         padding, 
         titleHeight, 
-        containerWidth - padding * 2, 
-        containerHeight - titleHeight - padding
+        availableWidth,
+        availableHeight
     );
 
-    // Store rectangles for hover detection
-    if (!canvasElement.treemapData) {
-        canvasElement.treemapData = {};
-    }
-    canvasElement.treemapData.rectangles = rectangles;
-    canvasElement.treemapData.hoveredIndex = -1;
+    console.log('Rectangles calculated:', rectangles.length);
+
+    // Initialize treemap data storage
+    canvasElement.treemapData = {
+        rectangles: rectangles,
+        hoveredIndex: -1
+    };
 
     function drawTreemap(hoveredIndex = -1) {
-        // Clear canvas
-        ctx.clearRect(0, 0, containerWidth, containerHeight);
+        // Clear canvas with white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, containerWidth, containerHeight);
         
         // Draw title
         ctx.font = '700 20px Inter, sans-serif';
@@ -15071,74 +15096,77 @@ function renderStockStatusTreemap(stockData) {
                 ctx.shadowBlur = 10;
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 4;
+            } else {
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
             }
 
             // Draw rectangle with rounded corners
-            ctx.fillStyle = fillColor;
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = isHovered ? 3 : 2;
-            
-            const radius = 8;
             const rectX = item.x;
             const rectY = item.y;
-            const rectW = item.width - 2; // Small gap between rectangles
-            const rectH = item.height - 2;
+            const rectW = item.width - 4; // Gap between rectangles
+            const rectH = item.height - 4;
             
-            ctx.beginPath();
-            ctx.moveTo(rectX + radius, rectY);
-            ctx.lineTo(rectX + rectW - radius, rectY);
-            ctx.quadraticCurveTo(rectX + rectW, rectY, rectX + rectW, rectY + radius);
-            ctx.lineTo(rectX + rectW, rectY + rectH - radius);
-            ctx.quadraticCurveTo(rectX + rectW, rectY + rectH, rectX + rectW - radius, rectY + rectH);
-            ctx.lineTo(rectX + radius, rectY + rectH);
-            ctx.quadraticCurveTo(rectX, rectY + rectH, rectX, rectY + rectH - radius);
-            ctx.lineTo(rectX, rectY + radius);
-            ctx.quadraticCurveTo(rectX, rectY, rectX + radius, rectY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Reset shadow
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-
-            // Draw text if rectangle is large enough
-            if (rectW > 80 && rectH > 50) {
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+            if (rectW > 0 && rectH > 0) {
+                ctx.fillStyle = fillColor;
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = isHovered ? 3 : 2;
                 
+                const radius = 8;
+                
+                ctx.beginPath();
+                ctx.moveTo(rectX + radius, rectY);
+                ctx.lineTo(rectX + rectW - radius, rectY);
+                ctx.quadraticCurveTo(rectX + rectW, rectY, rectX + rectW, rectY + radius);
+                ctx.lineTo(rectX + rectW, rectY + rectH - radius);
+                ctx.quadraticCurveTo(rectX + rectW, rectY + rectH, rectX + rectW - radius, rectY + rectH);
+                ctx.lineTo(rectX + radius, rectY + rectH);
+                ctx.quadraticCurveTo(rectX, rectY + rectH, rectX, rectY + rectH - radius);
+                ctx.lineTo(rectX, rectY + radius);
+                ctx.quadraticCurveTo(rectX, rectY, rectX + radius, rectY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+
+                // Draw text if rectangle is large enough
                 const centerX = rectX + rectW / 2;
                 const centerY = rectY + rectH / 2;
                 
-                // Draw name
-                ctx.font = '600 13px Inter, sans-serif';
-                const maxWidth = rectW - 16;
-                let name = item.name;
-                
-                // Truncate name if too long
-                let textWidth = ctx.measureText(name).width;
-                while (textWidth > maxWidth && name.length > 3) {
-                    name = name.slice(0, -4) + '...';
-                    textWidth = ctx.measureText(name).width;
-                }
-                
-                ctx.fillText(name, centerX, centerY - 10);
-                
-                // Draw count
-                ctx.font = '700 16px Inter, sans-serif';
-                ctx.fillText(`${item.actualCount} units`, centerX, centerY + 12);
-            } else if (rectW > 50 && rectH > 30) {
-                // Just show the count for smaller rectangles
                 ctx.fillStyle = 'white';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.font = '700 14px Inter, sans-serif';
-                ctx.fillText(`${item.actualCount}`, rectX + rectW / 2, rectY + rectH / 2);
+                
+                if (rectW > 100 && rectH > 60) {
+                    // Draw name
+                    ctx.font = '600 14px Inter, sans-serif';
+                    const maxWidth = rectW - 16;
+                    let name = item.name;
+                    
+                    // Truncate name if too long
+                    let textWidth = ctx.measureText(name).width;
+                    while (textWidth > maxWidth && name.length > 3) {
+                        name = name.slice(0, -4) + '...';
+                        textWidth = ctx.measureText(name).width;
+                    }
+                    
+                    ctx.fillText(name, centerX, centerY - 12);
+                    
+                    // Draw count
+                    ctx.font = '700 18px Inter, sans-serif';
+                    ctx.fillText(`${item.actualCount} units`, centerX, centerY + 12);
+                } else if (rectW > 50 && rectH > 40) {
+                    // Just show the count for smaller rectangles
+                    ctx.font = '700 16px Inter, sans-serif';
+                    ctx.fillText(`${item.actualCount}`, centerX, centerY);
+                }
             }
         });
+        
+        console.log('Treemap drawn with', rectangles.length, 'rectangles');
     }
 
     // Initial draw
@@ -15166,7 +15194,7 @@ function renderStockStatusTreemap(stockData) {
     };
 
     const handleMouseLeave = function() {
-        if (canvasElement.treemapData.hoveredIndex >= 0) {
+        if (canvasElement.treemapData && canvasElement.treemapData.hoveredIndex >= 0) {
             canvasElement.treemapData.hoveredIndex = -1;
             drawTreemap();
             canvasElement.style.cursor = 'default';
@@ -15186,6 +15214,8 @@ function renderStockStatusTreemap(stockData) {
     canvasElement.addEventListener('mouseleave', handleMouseLeave);
     canvasElement.treemapData.mouseMove = handleMouseMove;
     canvasElement.treemapData.mouseLeave = handleMouseLeave;
+    
+    console.log('Treemap rendering complete');
 }
 
 function renderStockStatusChart1(stockData) {
