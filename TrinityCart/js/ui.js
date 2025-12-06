@@ -15046,9 +15046,9 @@ function renderStockStatusTreemap(stockData) {
                     },
                     rich: {
                         name: {
-                            fontSize: 13,
+                            fontSize: 10,
                             fontWeight: 500,
-                            color: '#D1D5DB', // Light Gray/Silver for the product name
+                            color: '#0000', // Light Gray/Silver for the product name
                             lineHeight: 16,
                             fontFamily: 'Inter, sans-serif',
                             // Set a max width and allow break/truncate to manage wrapping
@@ -15057,9 +15057,9 @@ function renderStockStatusTreemap(stockData) {
                             ellipsis: '...'
                         },
                         value: {
-                            fontSize: 16,
+                            fontSize: 10,
                             fontWeight: 700,
-                            color: '#FCD34D', // Gold/Yellow for the inventory count (High contrast)
+                            color: '#AEDD', // Gold/Yellow for the inventory count (High contrast)
                             lineHeight: 24,
                             fontFamily: 'Inter, sans-serif'
                         }
