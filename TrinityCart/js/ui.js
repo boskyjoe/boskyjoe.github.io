@@ -12363,9 +12363,9 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
                 { itemName: "Product B", inventoryCount: 5, status: "Low Stock" },
                 { itemName: "Product C", inventoryCount: 0, status: "Out of Stock" }
             ];
-            renderStockStatusTreemap(sampleData);
+            //renderStockStatusTreemap(sampleData);
 
-            //renderStockStatusTreemap(summaryData.stockStatus);
+            renderStockStatusTreemap(summaryData.stockStatus);
         }
 
         
