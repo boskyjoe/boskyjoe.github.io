@@ -12367,7 +12367,7 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
 
         
 
-            renderStockStatusTreemap(summaryData.stockStatus);
+            renderStockStatusTreemapD3(summaryData.stockStatus);
         }
 
         
@@ -15104,6 +15104,181 @@ function renderSimpleLegend() {
         </div>
     `).join('');
 }
+
+
+/**
+ * Renders an equal-area, collage-style visualization using D3.js Treemap.
+ * Area is calculated based on the length of the product name for optimal label display.
+ *
+ * @param {Array<Object>} stockData - The array of inventory objects.
+ */
+function renderStockStatusTreemapD3(stockData) {
+    const chartDom = document.getElementById('dashboard-stock-treemap-chart');
+    if (!chartDom) {
+        console.error("D3 chart container 'dashboard-stock-treemap-chart' was not found.");
+        return;
+    }
+
+    // Set dimensions
+    const containerWidth = chartDom.clientWidth;
+    const containerHeight = 600;
+    const padding = 6;
+    const titleHeight = 50;
+
+    // Clear previous chart and set dimensions
+    d3.select(chartDom).select("svg").remove();
+    const svg = d3.select(chartDom).append("svg")
+        .attr("width", containerWidth)
+        .attr("height", containerHeight);
+
+    const chartArea = svg.append("g")
+        .attr("transform", `translate(${padding}, ${titleHeight})`);
+
+    const width = containerWidth - 2 * padding;
+    const height = containerHeight - titleHeight - padding;
+
+    // --- Color and Status Mapping ---
+    const colorMap = {
+        'Good': '#22C55E',       // Green
+        'Low Stock': '#F59E0B',  // Amber
+        'Out of Stock': '#EF4444' // Red
+    };
+
+    // --- Data Preprocessing and Hierarchy ---
+    const treemapItems = stockData
+        .filter(item => item.inventoryCount >= 0)
+        .map(item => {
+            let status = 'Good';
+            if (item.inventoryCount === 0) {
+                status = 'Out of Stock';
+            } else if (item.inventoryCount < 10) {
+                status = 'Low Stock';
+            }
+            
+            // Value based on Name Length:
+            const nameLength = item.itemName.length;
+            const calculatedValue = Math.max(
+                Math.pow(nameLength, 1.8), // Use 1.8 for slightly softer size differences
+                80 // Minimum base value for very short names
+            );
+
+            return {
+                name: item.itemName,
+                value: calculatedValue,
+                actualCount: item.inventoryCount,
+                status: status,
+                color: colorMap[status]
+            };
+        });
+
+    // D3 requires a single root node for the hierarchy
+    const rootData = {
+        name: "Inventory",
+        children: treemapItems
+    };
+
+    // 1. Create the D3 hierarchy structure
+    const root = d3.hierarchy(rootData)
+        .sum(d => d.value) // Sum the calculated 'value' for area
+        .sort((a, b) => b.value - a.value);
+
+    // 2. Generate the Treemap layout
+    d3.treemap()
+        .size([width, height])
+        .paddingOuter(4)
+        .paddingInner(4)
+        .tile(d3.treemapSquarify) // Use the squarified algorithm for the collage look
+        (root);
+
+
+    // --- Drawing the Chart (Data Binding) ---
+
+    // 1. Draw Rectangles (The tiles)
+    const cell = chartArea.selectAll("g")
+        .data(root.leaves()) // Bind data to the leaf nodes (individual products)
+        .join("g")
+            .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+    cell.append("rect")
+        .attr("id", d => d.data.name.replace(/\s/g, '-'))
+        .attr("width", d => d.x1 - d.x0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", d => d.data.color)
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 2)
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .style("cursor", "pointer")
+        .on("mouseover", function(event, d) {
+            d3.select(this).style("filter", "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4))");
+            // Tooltip logic needs to be implemented separately in D3 (not included here for brevity)
+        })
+        .on("mouseout", function() {
+            d3.select(this).style("filter", null);
+        });
+
+    // 2. Draw Text (Labels)
+    cell.append("text")
+        .selectAll("tspan")
+        .data(d => {
+            // Data for two lines: Name (light gray) and Count (gold)
+            const count = d.data.actualCount;
+            let name = d.data.name;
+            
+            // Basic text truncation for smaller tiles
+            const tileWidth = d.x1 - d.x0;
+            if (name.length > 20 && tileWidth < 120) {
+                 name = name.substring(0, 17) + '...';
+            }
+            
+            return [
+                { text: name, class: 'name-text', color: '#D1D5DB', dy: 18, size: 13, weight: 500 },
+                { text: `${count} units`, class: 'value-text', color: '#FCD34D', dy: 24, size: 16, weight: 700 }
+            ];
+        })
+        .join("tspan")
+            .attr("x", 4) // X position (small padding from left)
+            .attr("y", 0)
+            .attr("dy", d => d.dy) // Vertical offset for stacking lines
+            .style("fill", d => d.color)
+            .style("font-size", d => `${d.size}px`)
+            .style("font-weight", d => d.weight)
+            .text(d => d.text);
+    
+    // 3. Draw Title (Top of the SVG)
+    svg.append("text")
+        .attr("x", padding)
+        .attr("y", 30)
+        .attr("font-size", "20px")
+        .attr("font-weight", "700")
+        .attr("fill", "#1f2937")
+        .text("Stock Inventory Collage (D3.js)");
+
+
+    // 4. Render the Legend (using the existing helper, modified slightly)
+    renderSimpleLegendD3(colorMap);
+}
+
+// Helper function for the legend (re-using logic from ECharts)
+function renderSimpleLegendD3(colorMap) {
+    const legendContainer = document.getElementById('stock-treemap-legend');
+    if (!legendContainer) return;
+
+    // ... [Logic to build the legend from colorMap remains the same] ...
+    const legendDescriptions = {
+        'Good': 'Good Stock (10+)',
+        'Low Stock': 'Low Stock (1-9)',
+        'Out of Stock': 'Out of Stock (0)'
+    };
+
+    legendContainer.innerHTML = Object.keys(colorMap).map(status => `
+        <div class="flex items-center gap-1">
+            <span class="w-4 h-4 rounded-md shadow-sm" style="background-color: ${colorMap[status]};"></span>
+            <span class="text-sm font-medium text-gray-700">${legendDescriptions[status]}</span>
+        </div>
+    `).join('');
+}
+
 
 
 function renderStockStatusTreemapold(stockData) {
