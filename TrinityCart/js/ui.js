@@ -14940,6 +14940,7 @@ function renderStockStatusChart(stockData) {
  *
  * @param {Array<Object>} stockData - The array of inventory objects.
  */
+
 function renderStockStatusTreemap(stockData) {
     // 1. Get the chart container and initialize ECharts
     const chartDom = document.getElementById('dashboard-stock-treemap-chart');
@@ -15052,13 +15053,8 @@ function renderStockStatusTreemap(stockData) {
                     show: true,
                     formatter: function (params) {
                         const data = params.data;
-                        // Show label based on rectangle size
-                        if (params.rect.width > 80 && params.rect.height > 50) {
-                            return `{name|${params.name}}\n{value|${data.actualCount} units}`;
-                        } else if (params.rect.width > 50 && params.rect.height > 40) {
-                            return `{value|${data.actualCount}}`;
-                        }
-                        return '';
+                        // Always show name and value - ECharts will handle sizing
+                        return `{name|${params.name}}\n{value|${data.actualCount} units}`;
                     },
                     rich: {
                         name: {
@@ -15145,7 +15141,6 @@ function renderSimpleLegend() {
         </div>
     `).join('');
 }
-
 
 
 
