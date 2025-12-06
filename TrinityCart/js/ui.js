@@ -15036,8 +15036,24 @@ function renderStockStatusTreemap(stockData) {
                         return `{name|${params.name}}\n{value|${data.actualCount} units}`;
                     },
                     rich: {
-                        name: { /* ... name styles ... */ },
-                        value: { /* ... value styles ... */ }
+                        name: {
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#D1D5DB', // Light Gray/Silver for the product name
+                            lineHeight: 16,
+                            fontFamily: 'Inter, sans-serif',
+                            // Set a max width and allow break/truncate to manage wrapping
+                            width: '90%', // Set width relative to tile for better wrapping
+                            overflow: 'truncate',
+                            ellipsis: '...'
+                        },
+                        value: {
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: '#FCD34D', // Gold/Yellow for the inventory count (High contrast)
+                            lineHeight: 24,
+                            fontFamily: 'Inter, sans-serif'
+                        }
                     },
                     color: '#fff'
                 },
