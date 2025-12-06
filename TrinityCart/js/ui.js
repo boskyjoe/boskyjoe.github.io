@@ -14973,12 +14973,21 @@ function renderStockStatusTreemap(stockData) {
             } else if (item.inventoryCount < 10) {
                 status = 'Low Stock';
             }
+
+            // Sizing based on Name Length:
+            // Use the length of the product name, squared, or multiplied by a factor.
+            // Math.pow ensures a bigger difference for long names.
+            const nameLength = item.itemName.length;
+            const calculatedValue = Math.max(
+                Math.pow(nameLength, 2), // Square the length for better size distinction
+                100 // Set a minimum base value (e.g., 100) for very short names
+            );
             
             return {
                 name: item.itemName,
                 // TRICK: Use a constant value for area. This forces all tiles 
                 // to have equal size, achieving the 'collage' effect.
-                value: 1000, 
+                value: calculatedValue,
                 
                 actualCount: item.inventoryCount,
                 itemStatus: status,
