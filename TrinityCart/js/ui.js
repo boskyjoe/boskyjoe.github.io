@@ -15120,7 +15120,7 @@ function renderStockStatusTreemapPlotly(stockData) {
         return;
     }
 
-    // Set a safe width fallback, as done in the D3 code, to prevent rendering issues
+    // Set a safe width fallback
     let containerWidth = chartDom.clientWidth;
     if (containerWidth === 0) {
         containerWidth = 800;
@@ -15136,12 +15136,22 @@ function renderStockStatusTreemapPlotly(stockData) {
         'Out of Stock': '#EF4444' // Red
     };
 
-    const labels = [];    // Product names
-    const parents = [];   // Parent for each product (will be a constant 'Root')
-    const values = [];    // Area calculation (based on name length)
-    const statusArray = []; // Status for coloring
-    const customData = []; // Extra data for tooltips
+    const labels = [];         // Product names
+    const parents = [];        // Parent for each product
+    const values = [];         // Equal values for uniform sizing
+    const colors = [];         // Direct color assignment
+    const hoverTexts = [];     // Custom hover text
+    const textLabels = [];     // Custom text labels
 
+    // Add invisible root
+    labels.push("Root");
+    parents.push("");
+    values.push(0);
+    colors.push("rgba(0,0,0,0)");
+    hoverTexts.push("");
+    textLabels.push("");
+
+    // Process stock data
     stockData
         .filter(item => item.inventoryCount >= 0)
         .forEach(item => {
@@ -15152,96 +15162,130 @@ function renderStockStatusTreemapPlotly(stockData) {
                 status = 'Low Stock';
             }
             
-            // Value based on Name Length:
-            const nameLength = item.itemName.length;
-            const calculatedValue = Math.max(
-                Math.pow(nameLength, 1.8), // Use 1.8 for size distinction
-                80 // Minimum base value for short names
-            );
+            // Use equal values for uniform box sizes
+            const uniformValue = 100;
 
             labels.push(item.itemName);
-            parents.push("Root"); // All items have a single invisible parent
-            values.push(calculatedValue);
-            statusArray.push(status);
-            customData.push(item.actualCount || item.inventoryCount);
+            parents.push("Root");
+            values.push(uniformValue);
+            colors.push(colorMap[status]);
+            
+            // Custom hover text
+            hoverTexts.push(
+                `<b>${item.itemName}</b><br>` +
+                `Stock: <b>${item.inventoryCount} units</b><br>` +
+                `Status: <b>${status}</b>`
+            );
+            
+            // Custom text label for display
+            textLabels.push(`${item.itemName}<br>${item.inventoryCount} units`);
         });
 
     // --- Plotly Trace Definition ---
     const data = [{
         type: "treemap",
         
-        // 1. Data Structure
         labels: labels,
         parents: parents,
-        values: values, // Area proportional to calculated value
+        values: values,
+        text: textLabels,
+        hovertext: hoverTexts,
+        hoverinfo: "text",
         
-        // 2. Color Mapping
+        // Direct color assignment (bypassing colorscale)
         marker: {
-            colors: statusArray,
-            colorscale: [ // Map categorical status to specific color codes
-                [0, colorMap['Out of Stock']],
-                [0.001, colorMap['Low Stock']],
-                [1, colorMap['Good']]
-            ],
-            // Use an array of colors to map to the status
-            // NOTE: Plotly's treemap coloring is often easier with numerical mapping, 
-            // so we will rely on hovertext for the full status.
+            colors: colors,
+            line: {
+                color: 'white',
+                width: 3
+            },
+            pad: {
+                t: 2,
+                l: 2,
+                r: 2,
+                b: 2
+            }
         },
         
-        // 3. Labeling and Tooltips
-        textinfo: "label+value", // Shows name (label) and area (value), though we'll customize this
-        // Use customdata and a custom hovertemplate for the actual inventory count
-        customdata: customData, 
-        hovertemplate: 
-            `<b>%{label}</b><br>` + // Product Name
-            `Stock: <b>%{customdata} units</b><br>` + // Actual Count
-            `Status: <b>%{currentPath}/${statusArray}</b><br>` + // This is complicated to do cleanly in Plotly
-            `<extra></extra>`, // Removes the default trace info
-            
-        // 4. Layout Control (Squarified Collage)
+        textposition: "middle center",
+        textfont: {
+            size: 13,
+            color: "white",
+            family: "Inter, sans-serif",
+            weight: 600
+        },
+        
+        // Layout Control
         tiling: {
-            // Plotly defaults to 'squarify', which gives the collage effect.
-            // You can optionally specify: 'squarify', 'slice', 'dice', 'slice-dice'
-            // We ensure it is set just in case:
-            packing: 'squarify', 
-            // The items are sorted by the 'values' array (longest name first), 
-            // which Plotly handles correctly for the squarified layout.
+            packing: 'squarify'
         },
         
-        // 5. Visual Styling (This is less flexible than ECharts/D3 but works)
-        // Set the opacity and line style
-        opacity: 0.9,
-        domain: { x: [0, 1], y: [0, 1] },
-        // Set border style
-        pathbar: { visible: false }, // Hide the navigation bar
-        outsidetextfont: { color: "white", size: 14 },
+        pathbar: { 
+            visible: false 
+        },
+        
+        // Show text
+        textinfo: "text",
+        
+        // Hover styling
+        hoverlabel: {
+            bgcolor: "rgba(17, 24, 39, 0.96)",
+            bordercolor: "rgba(255, 255, 255, 0.15)",
+            font: {
+                size: 13,
+                color: "white",
+                family: "Inter, sans-serif"
+            }
+        }
     }];
 
     // --- Plotly Layout ---
     const layout = {
         title: {
-            text: 'Stock Inventory Collage (Plotly.js)',
-            font: { size: 20, color: '#1f2937', family: 'Inter, sans-serif' },
-            x: 0.05, // Place title slightly to the left
-            xref: 'paper',
+            text: 'Stock Inventory Overview',
+            font: { 
+                size: 20, 
+                color: '#1f2937', 
+                family: 'Inter, sans-serif',
+                weight: 700
+            },
+            x: 0.02,
+            y: 0.98,
+            xanchor: 'left',
+            yanchor: 'top'
         },
-        // Force the chart size based on the container
         width: containerWidth,
-        height: 600, 
-        margin: { t: 50, l: 5, r: 5, b: 5 },
+        height: 600,
+        margin: { t: 60, l: 10, r: 10, b: 10 },
+        paper_bgcolor: 'white',
+        plot_bgcolor: 'white',
         uniformtext: {
             minsize: 10,
-            mode: 'hide' // Hide text if it doesn't fit
-        },
-        // We will use a custom color mapping function to apply the status colors
-        // Plotly uses its 'colorway' for sequential colors by default, but we can override this
-        colorway: Object.values(colorMap) 
+            mode: 'hide'
+        }
     };
 
     // --- Render Chart ---
-    Plotly.newPlot(chartDomId, data, layout, { responsive: true });
+    Plotly.newPlot(chartDomId, data, layout, { 
+        responsive: true,
+        displayModeBar: false
+    });
 
-    // Render the simple legend (using the existing helper)
+    // Handle window resize
+    const handleResize = function() {
+        const newWidth = chartDom.clientWidth || 800;
+        Plotly.relayout(chartDomId, { width: newWidth });
+    };
+    
+    // Remove old resize listener if exists
+    if (window.stockTreemapResizeHandlerPlotly) {
+        window.removeEventListener('resize', window.stockTreemapResizeHandlerPlotly);
+    }
+    
+    window.addEventListener('resize', handleResize);
+    window.stockTreemapResizeHandlerPlotly = handleResize;
+
+    // Render the legend
     renderSimpleLegendPlotly(colorMap);
 }
 
@@ -15256,14 +15300,15 @@ function renderSimpleLegendPlotly(colorMap) {
         'Out of Stock': 'Out of Stock (0)'
     };
 
-    legendContainer.innerHTML = Object.keys(colorMap).map(status => `
-        <div class="flex items-center gap-1">
+    const legendOrder = ['Good', 'Low Stock', 'Out of Stock'];
+
+    legendContainer.innerHTML = legendOrder.map(status => `
+        <div class="flex items-center gap-2">
             <span class="w-4 h-4 rounded-md shadow-sm" style="background-color: ${colorMap[status]};"></span>
             <span class="text-sm font-medium text-gray-700">${legendDescriptions[status]}</span>
         </div>
     `).join('');
 }
-
 
 
 function renderStockStatusTreemapold(stockData) {
