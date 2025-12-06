@@ -12365,6 +12365,8 @@ async function loadAdminLandingDashboard(user, forceRefresh = false) {
             ];
             //renderStockStatusTreemap(sampleData);
 
+        
+
             renderStockStatusTreemap(summaryData.stockStatus);
         }
 
@@ -14928,8 +14930,162 @@ function renderStockStatusChart(stockData) {
     });
 }
 
-
+/**
+ * Renders a professional Treemap visualization using Apache ECharts.
+ * The size of each rectangle is based on 'inventoryCount', and the color is
+ * based on the 'status' (Good, Low, Out of Stock).
+ *
+ * NOTE: Ensure the ECharts library is loaded and the HTML uses a <div>
+ * with the ID 'dashboard-stock-treemap-chart'.
+ *
+ * @param {Array<Object>} stockData - The array of inventory objects.
+ */
 function renderStockStatusTreemap(stockData) {
+    // 1. Get the chart container and initialize ECharts
+    const chartDom = document.getElementById('dashboard-stock-treemap-chart');
+    if (!chartDom) {
+        console.error("ECharts container 'dashboard-stock-treemap-chart' was not found.");
+        return;
+    }
+
+    // Initialize the ECharts instance
+    const myChart = echarts.init(chartDom);
+    let option;
+
+    // --- Data Preprocessing ---
+    // ECharts Treemap expects data in a specific hierarchical format.
+    // We will group all items under a single 'root' for a flat treemap,
+    // but use the 'status' to define the color and visual style.
+
+    const treemapData = stockData
+        .filter(item => item.inventoryCount >= 0) // Ensure valid data
+        .map(item => ({
+            name: item.itemName,
+            value: item.inventoryCount,
+            // Custom data for better tooltips/labels
+            itemStatus: item.status,
+            category: item.categoryName // ECharts will not use this, but good to keep
+        }))
+        // Sorting helps ECharts lay out the largest items first, improving readability.
+        .sort((a, b) => b.value - a.value);
+
+
+    // --- Color Mapping & Visual Configuration ---
+    // Define the colors based on your original intent for consistency.
+    const colorMap = {
+        'Good': '#22C55E',       // Green
+        'Low Stock': '#F59E0B',  // Amber
+        'Out of Stock': '#EF4444' // Red
+    };
+
+    // --- ECharts Configuration ---
+    option = {
+        title: {
+            text: 'Stock Inventory Treemap',
+            subtext: 'Area proportional to inventory count',
+            left: 'center',
+            textStyle: {
+                fontWeight: '700'
+            }
+        },
+        tooltip: {
+            // Customize the tooltip to show item details clearly
+            formatter: function (info) {
+                const statusColor = colorMap[info.data.itemStatus] || '#9CA3AF';
+                return [
+                    `<div style="font-weight: bold;">${info.name}</div>`,
+                    `Status: <span style="color: ${statusColor}; font-weight: bold;">${info.data.itemStatus}</span>`,
+                    `Count: <span style="font-weight: bold;">${info.value} units</span>`,
+                ].join('<br>');
+            }
+        },
+        series: [
+            {
+                type: 'treemap',
+                data: treemapData,
+                // Use a single root for a flat treemap
+                leafDepth: 1, 
+                breadcrumb: {
+                    show: false // Hide the breadcrumb bar
+                },
+                nodeClick: false, // Disable drilling down
+
+                // Color mapping logic: use the itemStatus to determine the color
+                visualDimension: 1, // Use the value (inventoryCount) for visual mapping
+                levels: [
+                    {
+                        // Level 1 (All items)
+                        itemStyle: {
+                            gapWidth: 1, // Small gap between items
+                            borderColor: '#fff'
+                        },
+                        label: {
+                            show: true,
+                            formatter: function (params) {
+                                // Only show label if rectangle is large enough
+                                return params.name + '\n' + params.value;
+                            },
+                            color: '#fff',
+                            fontSize: 12
+                        },
+                        // Define color logic based on a visual property (the status)
+                        visualMin: 0,
+                        visualMax: Math.max(...treemapData.map(d => d.value)) || 1, // Set max based on highest count
+                        colorMappingBy: 'name', // Use name for color mapping, but map based on status
+                        
+                        // Custom mapping of item status to the defined colors
+                        color: treemapData.map(item => ({
+                            target: { name: item.name },
+                            value: colorMap[item.itemStatus]
+                        }))
+                    }
+                ],
+                // Add a visual map control for the colors if you want an external legend
+                // Or you can hide the built-in visual map and create a manual legend.
+                // We'll rely on the custom color logic above and create a simpler legend manually below.
+            }
+        ]
+    };
+
+    myChart.setOption(option);
+    
+    // Resize observer (Good practice for responsive charts)
+    window.addEventListener('resize', function() {
+        myChart.resize();
+    });
+
+    // Manually render the simple legend since ECharts color mapping is complex here
+    renderSimpleLegend(colorMap);
+}
+
+
+function renderSimpleLegend(colorMap) {
+    const legendContainer = document.getElementById('stock-treemap-legend');
+    if (!legendContainer) return;
+
+    legendContainer.innerHTML = ''; // Clear existing legend
+
+    const legendDescriptions = {
+        'Good': 'Good Stock (10+)',
+        'Low Stock': 'Low Stock (1-9)',
+        'Out of Stock': 'Out of Stock (0)'
+    };
+
+    Object.keys(colorMap).forEach(status => {
+        const color = colorMap[status];
+        const description = legendDescriptions[status] || status;
+
+        const legendItem = document.createElement('div');
+        legendItem.className = 'flex items-center gap-1';
+        legendItem.innerHTML = `
+            <span class="w-4 h-4 rounded-md shadow-sm" style="background-color: ${color};"></span>
+            <span class="text-sm font-medium text-gray-700">${description}</span>
+        `;
+        legendContainer.appendChild(legendItem);
+    });
+}
+
+function renderStockStatusTreemapold(stockData) {
     console.log('Treemap function called with data:', stockData);
     
     // Get the canvas element and its 2D rendering context - using treemap-specific IDs
