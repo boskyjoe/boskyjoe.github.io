@@ -14979,7 +14979,7 @@ function renderStockStatusTreemap(stockData) {
             // Math.pow ensures a bigger difference for long names.
             const nameLength = item.itemName.length;
             const calculatedValue = Math.max(
-                Math.pow(nameLength, 2), // Square the length for better size distinction
+                Math.pow(nameLength, 2)*5, // Square the length for better size distinction
                 100 // Set a minimum base value (e.g., 100) for very short names
             );
             
