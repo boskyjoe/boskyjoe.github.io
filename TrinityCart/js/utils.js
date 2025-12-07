@@ -158,7 +158,7 @@ export function generateDynamicEmail(baseString) {
  * @param {string} currency - Currency code (USD, EUR, GBP, INR, etc.)
  * @returns {string} - Amount in words
  */
-function amountToWords(amount, currency = 'USD') {
+export function amountToWords(amount, currency = 'USD') {
     if (isNaN(amount) || amount < 0) {
         return 'Invalid amount';
     }
