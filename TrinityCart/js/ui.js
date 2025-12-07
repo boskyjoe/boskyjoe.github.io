@@ -15812,6 +15812,7 @@ let dashboardSoldChart = null;
  * ✅ NEW: Renders or updates the Top Sold Products bar chart on the dashboard.
  * @param {Array<object>} topSoldData - The array of top sold product objects from the summary.
  */
+
 function renderTopSoldChart(topSoldData) {
     const canvasElement = document.getElementById('dashboard-sold-products-chart');
     if (!canvasElement) {
@@ -15819,34 +15820,63 @@ function renderTopSoldChart(topSoldData) {
         return;
     }
     const ctx = canvasElement.getContext('2d');
-
+    
     // Destroy any old chart instance before creating a new one
     if (dashboardSoldChart) {
         dashboardSoldChart.destroy();
     }
-
+    
     // Since this chart doesn't need a dynamic legend, we can clear it.
     const legendContainer = document.getElementById('sold-products-chart-legend');
     if (legendContainer) {
         legendContainer.innerHTML = ''; // No legend needed for a single-color chart
     }
-
+    
     // Take the top 10 products for a clean chart
     const chartData = topSoldData.slice(0, 10);
-
+    
     if (chartData.length === 0) {
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#888";
+        ctx.font = "16px Inter, sans-serif";
+        ctx.fillStyle = "#9ca3af";
         ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         ctx.fillText("No sales data available for this period.", canvasElement.width / 2, canvasElement.height / 2);
         return;
     }
-
+    
     // Prepare the data for Chart.js
     const labels = chartData.map(item => item.productName);
     const data = chartData.map(item => item.totalQuantity);
-
+    
+    // Create gradient colors for bars - different shades of blue
+    const backgroundColors = chartData.map((item, idx) => {
+        const ctx = document.createElement('canvas').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 500, 0);
+        
+        // Alternate between different blue shades for visual variety
+        const blueShades = [
+            ['rgba(59, 130, 246, 0.9)', 'rgba(37, 99, 235, 0.75)'],   // Blue
+            ['rgba(99, 102, 241, 0.9)', 'rgba(79, 70, 229, 0.75)'],   // Indigo
+            ['rgba(139, 92, 246, 0.9)', 'rgba(124, 58, 237, 0.75)']   // Purple
+        ];
+        
+        const colorPair = blueShades[idx % blueShades.length];
+        gradient.addColorStop(0, colorPair[0]);
+        gradient.addColorStop(1, colorPair[1]);
+        
+        return gradient;
+    });
+    
+    const borderColors = chartData.map((item, idx) => {
+        const colors = [
+            'rgba(37, 99, 235, 0.4)',
+            'rgba(79, 70, 229, 0.4)',
+            'rgba(124, 58, 237, 0.4)'
+        ];
+        return colors[idx % colors.length];
+    });
+    
     // Create the new chart
     dashboardSoldChart = new Chart(ctx, {
         type: 'bar',
@@ -15855,51 +15885,142 @@ function renderTopSoldChart(topSoldData) {
             datasets: [{
                 label: 'Units Sold',
                 data: data,
-                backgroundColor: 'rgba(59, 130, 246, 0.7)', // A nice blue color
-                borderColor: 'rgba(37, 99, 235, 1)',
-                borderWidth: 1
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+                barPercentage: 0.7,
+                categoryPercentage: 0.85
             }]
         },
         options: {
             indexAxis: 'y', // Horizontal bar chart
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: { left: 15, right: 25, top: 5, bottom: 15 }
+            },
             plugins: {
                 legend: {
                     display: false // Hide the legend as there's only one dataset
                 },
                 title: {
                     display: true,
-                    text: 'Top 10 Sold Products (Last 30 Days)',
-                    font: { size: 16, weight: 'bold' }
-                },
-                datalabels: { // <-- Just add the same block here
-                    anchor: 'center',
-                    align: 'center',
-                    padding: 4,
-                    color: '#333',
+                    text: 'Top 10 Sold Products',
+                    align: 'start',
+                    padding: { top: 15, bottom: 25 },
                     font: {
-                        weight: 'bold'
+                        size: 20,
+                        family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+                        weight: '700'
                     },
-                    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-                    textShadowBlur: 2,
+                    color: '#1f2937'
+                },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleFont: { size: 14, weight: '600', family: 'Inter, sans-serif' },
+                    bodyFont: { size: 13, family: 'Inter, sans-serif' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    boxPadding: 6,
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: (tooltipItems) => tooltipItems[0].label,
+                        label: (context) => {
+                            return [
+                                `Units Sold: ${context.parsed.x}`,
+                                `Rank: #${context.dataIndex + 1}`
+                            ];
+                        }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    offset: 8,
+                    color: function(context) {
+                        // Cycle through colors matching the bar colors
+                        const colors = ['#1e40af', '#4338ca', '#6b21a8'];
+                        return colors[context.dataIndex % colors.length];
+                    },
+                    font: { 
+                        weight: '700',
+                        size: 12,
+                        family: 'Inter, sans-serif'
+                    },
+                    formatter: (value) => value,
+                    backgroundColor: function(context) {
+                        const bgColors = [
+                            'rgba(219, 234, 254, 0.9)',
+                            'rgba(224, 231, 255, 0.9)',
+                            'rgba(237, 233, 254, 0.9)'
+                        ];
+                        return bgColors[context.dataIndex % bgColors.length];
+                    },
+                    borderRadius: 4,
+                    padding: { top: 4, bottom: 4, left: 8, right: 8 }
                 }
             },
             scales: {
                 x: {
                     beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(229, 231, 235, 0.7)',
+                        lineWidth: 1,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        font: { 
+                            size: 11,
+                            family: 'Inter, sans-serif',
+                            weight: '500'
+                        },
+                        padding: 8
+                    },
                     title: {
                         display: true,
-                        text: 'Total Units Sold'
+                        text: 'Total Units Sold',
+                        color: '#374151',
+                        font: { 
+                            size: 13, 
+                            weight: '600',
+                            family: 'Inter, sans-serif'
+                        },
+                        padding: { top: 10 }
                     }
                 },
                 y: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
                     ticks: {
-                        font: {
-                            size: 10
-                        }
+                        color: '#374151',
+                        font: { 
+                            size: 12,
+                            family: 'Inter, sans-serif',
+                            weight: '500'
+                        },
+                        padding: 12
                     }
                 }
+            },
+            animation: {
+                duration: 800,
+                easing: 'easeInOutQuart'
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'y',
+                intersect: false
             }
         }
     });
