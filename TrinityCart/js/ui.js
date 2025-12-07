@@ -15814,8 +15814,9 @@ let dashboardSoldChart = null;
  */
 
 function renderTopSoldChart(topSoldData) {
+    const chartContainer = document.getElementById('dashboard-sold-products-chart-container');
     const canvasElement = document.getElementById('dashboard-sold-products-chart');
-    if (!canvasElement) {
+    if (!canvasElement || !chartContainer) {
         console.error("Chart canvas 'dashboard-sold-products-chart' not found.");
         return;
     }
@@ -15836,6 +15837,7 @@ function renderTopSoldChart(topSoldData) {
     const chartData = topSoldData.slice(0, 10);
     
     if (chartData.length === 0) {
+        chartContainer.style.height = '300px';
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         ctx.font = "16px Inter, sans-serif";
         ctx.fillStyle = "#9ca3af";
@@ -15844,6 +15846,15 @@ function renderTopSoldChart(topSoldData) {
         ctx.fillText("No sales data available for this period.", canvasElement.width / 2, canvasElement.height / 2);
         return;
     }
+    
+    // Calculate dynamic height based on number of items
+    const heightPerBar = 45;
+    const chartPadding = 120;
+    const calculatedHeight = (chartData.length * heightPerBar) + chartPadding;
+    
+    // Set minimum and maximum height
+    const finalHeight = Math.max(400, Math.min(calculatedHeight, 700));
+    chartContainer.style.height = `${finalHeight}px`;
     
     // Prepare the data for Chart.js
     const labels = chartData.map(item => item.productName);
@@ -15890,8 +15901,8 @@ function renderTopSoldChart(topSoldData) {
                 borderWidth: 2,
                 borderRadius: 8,
                 borderSkipped: false,
-                barPercentage: 0.7,
-                categoryPercentage: 0.85
+                barPercentage: 0.75,
+                categoryPercentage: 0.9
             }]
         },
         options: {
@@ -15899,7 +15910,7 @@ function renderTopSoldChart(topSoldData) {
             responsive: true,
             maintainAspectRatio: false,
             layout: {
-                padding: { left: 15, right: 25, top: 5, bottom: 15 }
+                padding: { left: 15, right: 30, top: 10, bottom: 15 }
             },
             plugins: {
                 legend: {
@@ -15943,7 +15954,7 @@ function renderTopSoldChart(topSoldData) {
                 datalabels: {
                     anchor: 'end',
                     align: 'end',
-                    offset: 8,
+                    offset: 6,
                     color: function(context) {
                         // Cycle through colors matching the bar colors
                         const colors = ['#1e40af', '#4338ca', '#6b21a8'];
@@ -15951,20 +15962,21 @@ function renderTopSoldChart(topSoldData) {
                     },
                     font: { 
                         weight: '700',
-                        size: 12,
+                        size: 13,
                         family: 'Inter, sans-serif'
                     },
                     formatter: (value) => value,
                     backgroundColor: function(context) {
                         const bgColors = [
-                            'rgba(219, 234, 254, 0.9)',
-                            'rgba(224, 231, 255, 0.9)',
-                            'rgba(237, 233, 254, 0.9)'
+                            'rgba(219, 234, 254, 0.95)',
+                            'rgba(224, 231, 255, 0.95)',
+                            'rgba(237, 233, 254, 0.95)'
                         ];
                         return bgColors[context.dataIndex % bgColors.length];
                     },
-                    borderRadius: 4,
-                    padding: { top: 4, bottom: 4, left: 8, right: 8 }
+                    borderRadius: 5,
+                    padding: { top: 5, bottom: 5, left: 10, right: 10 },
+                    clip: false // Allow labels to extend beyond chart area
                 }
             },
             scales: {
@@ -16005,11 +16017,14 @@ function renderTopSoldChart(topSoldData) {
                     ticks: {
                         color: '#374151',
                         font: { 
-                            size: 12,
+                            size: 13,
                             family: 'Inter, sans-serif',
                             weight: '500'
                         },
-                        padding: 12
+                        padding: 12,
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0
                     }
                 }
             },
