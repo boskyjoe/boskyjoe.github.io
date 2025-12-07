@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency } from './utils.js'; 
+import { formatCurrency,amountToWords } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
@@ -328,7 +328,7 @@ async function handleSavePurchaseInvoice() {
             if (!masterProductId) continue;
 
             const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
-            
+
             const masterProduct = masterData.products.find(p => p.id === masterProductId);
             const netWeightKg = masterProduct?.netWeightKg || 0;
 
@@ -8534,7 +8534,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: 'Not AV',
+            amountInWords: amountToWords(currentBalance,'INR'),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
