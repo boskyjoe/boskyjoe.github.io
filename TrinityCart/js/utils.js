@@ -148,3 +148,141 @@ export function generateDynamicEmail(baseString) {
     // 5. Combine the parts to form the final email address
     return `${truncatedBase}${randomNumber}@gmail.com`;
 }
+
+
+/**
+ * Converts a numeric amount to words based on currency
+ * Supports USD, EUR, GBP, INR, and other currencies
+ * 
+ * @param {number} amount - The numeric amount to convert
+ * @param {string} currency - Currency code (USD, EUR, GBP, INR, etc.)
+ * @returns {string} - Amount in words
+ */
+function amountToWords(amount, currency = 'USD') {
+    if (isNaN(amount) || amount < 0) {
+        return 'Invalid amount';
+    }
+
+    // Split amount into integer and decimal parts
+    const parts = amount.toFixed(2).split('.');
+    const integerPart = parseInt(parts[0]);
+    const decimalPart = parseInt(parts[1]);
+
+    // Get currency configuration
+    const currencyConfig = getCurrencyConfig(currency);
+
+    // Convert integer part to words
+    let words = '';
+    
+    if (integerPart === 0) {
+        words = 'Zero';
+    } else {
+        if (currency === 'INR') {
+            words = convertToIndianWords(integerPart);
+        } else {
+            words = convertToInternationalWords(integerPart);
+        }
+    }
+
+    // Add major currency unit
+    words += ' ' + currencyConfig.major;
+    if (integerPart !== 1) {
+        words += currencyConfig.majorPlural || 's';
+    }
+
+    // Add decimal part if exists
+    if (decimalPart > 0) {
+        words += ' and ';
+        words += convertToInternationalWords(decimalPart);
+        words += ' ' + currencyConfig.minor;
+        if (decimalPart !== 1) {
+            words += currencyConfig.minorPlural || 's';
+        }
+    }
+
+    return words.trim();
+}
+
+/**
+ * Get currency configuration
+ */
+function getCurrencyConfig(currency) {
+    const configs = {
+        'USD': { major: 'Dollar', majorPlural: 's', minor: 'Cent', minorPlural: 's' },
+        'EUR': { major: 'Euro', majorPlural: 's', minor: 'Cent', minorPlural: 's' },
+        'GBP': { major: 'Pound', majorPlural: 's', minor: 'Pence', minorPlural: '' },
+        'INR': { major: 'Rupee', majorPlural: 's', minor: 'Paisa', minorPlural: '' },
+        'AUD': { major: 'Dollar', majorPlural: 's', minor: 'Cent', minorPlural: 's' },
+        'CAD': { major: 'Dollar', majorPlural: 's', minor: 'Cent', minorPlural: 's' },
+        'JPY': { major: 'Yen', majorPlural: '', minor: 'Sen', minorPlural: '' },
+        'CNY': { major: 'Yuan', majorPlural: '', minor: 'Fen', minorPlural: '' },
+        'AED': { major: 'Dirham', majorPlural: 's', minor: 'Fil', minorPlural: 's' },
+        'SAR': { major: 'Riyal', majorPlural: 's', minor: 'Halala', minorPlural: 's' }
+    };
+    
+    return configs[currency.toUpperCase()] || { major: currency, majorPlural: 's', minor: 'Cent', minorPlural: 's' };
+}
+
+/**
+ * Convert number to words (International system: thousands, millions, billions)
+ */
+function convertToInternationalWords(num) {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    if (num === 0) return '';
+    if (num < 10) return ones[num];
+    if (num < 20) return teens[num - 10];
+    if (num < 100) {
+        return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '');
+    }
+    if (num < 1000) {
+        return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' ' + convertToInternationalWords(num % 100) : '');
+    }
+    if (num < 1000000) {
+        return convertToInternationalWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convertToInternationalWords(num % 1000) : '');
+    }
+    if (num < 1000000000) {
+        return convertToInternationalWords(Math.floor(num / 1000000)) + ' Million' + (num % 1000000 !== 0 ? ' ' + convertToInternationalWords(num % 1000000) : '');
+    }
+    if (num < 1000000000000) {
+        return convertToInternationalWords(Math.floor(num / 1000000000)) + ' Billion' + (num % 1000000000 !== 0 ? ' ' + convertToInternationalWords(num % 1000000000) : '');
+    }
+    
+    return convertToInternationalWords(Math.floor(num / 1000000000000)) + ' Trillion' + (num % 1000000000000 !== 0 ? ' ' + convertToInternationalWords(num % 1000000000000) : '');
+}
+
+/**
+ * Convert number to words (Indian system: thousands, lakhs, crores)
+ */
+function convertToIndianWords(num) {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    function convertUpTo99(n) {
+        if (n === 0) return '';
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+    }
+
+    if (num === 0) return '';
+    if (num < 100) return convertUpTo99(num);
+    if (num < 1000) {
+        return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' ' + convertUpTo99(num % 100) : '');
+    }
+    if (num < 100000) {
+        return convertToIndianWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convertToIndianWords(num % 1000) : '');
+    }
+    if (num < 10000000) {
+        return convertToIndianWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 !== 0 ? ' ' + convertToIndianWords(num % 100000) : '');
+    }
+    if (num < 1000000000) {
+        return convertToIndianWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 !== 0 ? ' ' + convertToIndianWords(num % 10000000) : '');
+    }
+    
+    return convertToIndianWords(Math.floor(num / 1000000000)) + ' Arab' + (num % 1000000000 !== 0 ? ' ' + convertToIndianWords(num % 1000000000) : '');
+}
+
