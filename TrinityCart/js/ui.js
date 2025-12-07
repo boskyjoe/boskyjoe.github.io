@@ -15834,7 +15834,9 @@ function renderTopSoldChart(topSoldData) {
     }
     
     // Take the top 10 products for a clean chart
-    const chartData = topSoldData.slice(0, 10);
+    //const chartData = topSoldData.slice(0, 10);
+
+    const chartData = topSoldData ;
     
     if (chartData.length === 0) {
         chartContainer.style.height = '300px';
