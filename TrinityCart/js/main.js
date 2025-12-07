@@ -8534,7 +8534,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: amountToWords(currentBalance,'INR'),
+            amountInWords: amountToWords(invoiceData.balanceDue,'INR'),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
