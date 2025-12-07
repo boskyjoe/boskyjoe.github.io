@@ -15849,7 +15849,7 @@ function renderTopSoldChart(topSoldData) {
     
     // Calculate dynamic height based on number of items
     const heightPerBar = 45;
-    const chartPadding = 120;
+    const chartPadding = 80;
     const calculatedHeight = (chartData.length * heightPerBar) + chartPadding;
     
     // Set minimum and maximum height
@@ -15917,16 +15917,7 @@ function renderTopSoldChart(topSoldData) {
                     display: false // Hide the legend as there's only one dataset
                 },
                 title: {
-                    display: true,
-                    text: 'Top 10 Sold Products',
-                    align: 'start',
-                    padding: { top: 15, bottom: 25 },
-                    font: {
-                        size: 20,
-                        family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                        weight: '700'
-                    },
-                    color: '#1f2937'
+                    display: false
                 },
                 tooltip: {
                     enabled: true,
