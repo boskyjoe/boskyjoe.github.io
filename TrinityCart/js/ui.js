@@ -5247,10 +5247,27 @@ const requestProductsGridOptions = {
             width: 150,
             editable: true,
             cellEditor: 'agNumberCellEditor',
-            cellEditorParams: {
-                min: 0,
-                precision: 0 // Only whole numbers
-            }
+            cellEditorParams: (params) => {
+                // Find the product in the masterData cache to get its current stock.
+                const product = masterData.products.find(p => p.id === params.data.productId);
+                const availableStock = product ? product.inventoryCount : 0;
+
+                return {
+                    min: 0,
+                    max: availableStock, // The user cannot enter a value higher than the available stock.
+                    precision: 0
+                };
+            },
+            valueSetter: params => {
+                const product = masterData.products.find(p => p.id === params.data.productId);
+                const availableStock = product ? product.inventoryCount : 0;
+                const newValue = Number(params.newValue) || 0;
+                
+                // Clamp the value to the available stock.
+                params.data.quantityRequested = Math.min(newValue, availableStock);
+                return true; // Indicate that the value was successfully set.
+            },
+            cellStyle: { backgroundColor: '#eef2ff', fontWeight: 'bold' } 
         }
     ],
     onCellValueChanged: (params) => {
