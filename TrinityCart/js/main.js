@@ -4819,7 +4819,8 @@ async function handleConsignmentRequestSubmit(e) {
         };
 
         ProgressToast.updateProgress('Submitting to database...', 90, 'Step 7/7');
-        await createConsignmentRequest(requestData, requestedItems, user);
+        const newOrderRef = await createConsignmentRequest(requestData, requestedItems, user);
+        const newOrderId = newOrderRef.id;
 
         // --- Step 6: Success Handling ---
         ProgressToast.showSuccess('Consignment request submitted successfully!');
@@ -4828,14 +4829,32 @@ async function handleConsignmentRequestSubmit(e) {
         const totalQuantity = requestedItems.reduce((sum, item) => sum + item.quantityRequested, 0);
         const estimatedValue = requestedItems.reduce((sum, item) => sum + (item.quantityRequested * item.sellingPrice), 0);
 
-        setTimeout(() => {
-            showModal('success', 'Request Submitted', 
-                `Your request for ${teamName} has been created and is now pending fulfillment.\n\n` +
-                `• Requesting Member: ${requestingMemberName}\n` +
-                `• Total Items: ${totalQuantity} units\n` +
-                `• Estimated Value: ${formatCurrency(estimatedValue)}`
+        if (user.role === 'admin') {
+
+            const fulfillNow = await showModal('confirm', 
+                'Request Submitted! Fulfill Now?',
+                `The request for <strong>${requestData.teamName}</strong> has been created.<br><br>Do you want to fulfill and activate this order immediately?`,
+                { confirmText: 'Fulfill & Activate', cancelText: 'Do It Later' }
             );
-        }, 500);
+
+            if (fulfillNow) {
+                appState.selectedConsignmentId = newOrderId;
+                await handleFulfillConsignmentClick(); 
+            } else {
+                // Admin chose "Do It Later". Do nothing. The order remains pending.
+            }
+
+
+        } else {
+            setTimeout(() => {
+                showModal('success', 'Request Submitted', 
+                    `Your request for ${teamName} has been created and is now pending fulfillment.\n\n` +
+                    `• Requesting Member: ${requestingMemberName}\n` +
+                    `• Total Items: ${totalQuantity} units\n` +
+                    `• Estimated Value: ${formatCurrency(estimatedValue)}`
+                );
+            }, 500);
+        }
 
     } catch (error) {
         console.error("Error creating consignment request:", error);
