@@ -4834,11 +4834,11 @@ async function handleConsignmentRequestSubmit(e) {
             setTimeout(() => ProgressToast.hide(300), 10);
             const fulfillNow = await showModal('confirm', 
                 'Request Submitted! Fulfill Now?',
-                `The request for ${requestData.teamName} has been created.\n\nDo you want to fulfill and activate this order immediately?`,
-                { confirmText: 'Fulfill & Activate', cancelText: 'Do It Later' }
+                `The request for ${requestData.teamName} has been created.\n\nDo you want to fulfill and activate this order immediately?`
             );
 
             if (fulfillNow) {
+                console.log('[main.js] in fulfillmentnow condition')
                 appState.selectedConsignmentId = newOrderId;
                 await handleFulfillConsignmentClick(); 
             } else {
