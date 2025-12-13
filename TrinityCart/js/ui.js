@@ -4534,21 +4534,29 @@ const consignmentOrdersGridOptions = {
                 if (!user || !params.data) return '';
 
                 let buttonsHTML = '';
+                const docId = params.data.id;
+                const status = params.data.status;
+                const hasAdminAccess = ['admin', 'finance'].includes(user.role); 
 
                 const viewIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-blue-600"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.404a1.651 1.651 0 0 1 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.404ZM10 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" clip-rule="evenodd" /></svg>`;
 
                 buttonsHTML += `<button class="action-btn-icon action-btn-view-consignment" data-id="${params.data.id}" title="View Order Details">${viewIcon}</button>`;
 
-                // Only show for Admin and Finance on Active orders
-                if ((user.role === 'admin' || user.role === 'finance') && params.data.status === 'Active') {
+                if (hasAdminAccess && status === 'Active') {
                     const expenseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-600">
                             <path d="M3.5 3A1.5 1.5 0 0 0 2 4.5v11A1.5 1.5 0 0 0 3.5 17h13a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 16.5 3h-13zM10 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM10 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
                             <path d="m14.06 7.94-3-3a.75.75 0 0 0-1.06 1.06L11.94 8 9 10.94a.75.75 0 0 0 1.06 1.06l3-3a.75.75 0 0 0 0-1.06z" />
                         </svg>`;
                     buttonsHTML += `<button class="action-btn-icon action-btn-log-expense" data-id="${params.data.id}" title="Log Expense">${expenseIcon}</button>`;
-                    return buttonsHTML;
                 }
-                return ''; // Return empty for other roles or statuses
+
+                // Only show for Admin and Finance on Active orders
+                if (user.role === 'admin' && status === 'Pending') {
+                    const deleteIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-gray-400 hover:text-red-600"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" /></svg>`;
+                    buttonsHTML += `<button class="action-btn-icon action-btn-delete-consignment" data-id="${docId}" title="Delete Pending Request">${deleteIcon}</button>`;
+                }
+                
+                return buttonsHTML;
             }
         }
     ],
