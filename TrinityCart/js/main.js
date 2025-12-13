@@ -7226,7 +7226,7 @@ function validateConsignmentStep1() {
 
     // Check if either condition is met
     const isDropdownPathValid = teamId && memberData;
-    const isFreeFormPathValid = altName && altEmail && altVenue && altPh;
+    const isFreeFormPathValid = altName && altVenue && altPh;
 
     if (isDropdownPathValid || isFreeFormPathValid) {
         nextButton.disabled = false;
