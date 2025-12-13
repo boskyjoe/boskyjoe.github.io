@@ -4845,12 +4845,41 @@ async function handleConsignmentRequestSubmit(e) {
             );
 
             if (fulfillNow) {
-                appState.selectedConsignmentId = newOrderId;
-                console.log('[main.js] in fulfillmentnow condition',appState.selectedConsignmentId) ;
+                const rowWasSelected = selectConsignmentOrderInGrid(newOrderId);
+
+                if (!rowWasSelected) {
+                    // If for some reason the row isn't in the grid yet (e.g., listener delay),
+                    // we can't proceed. Show an error.
+                    throw new Error("Could not find the new order in the grid to fulfill it.");
+                }
+
+                // Wait for the fulfillment grid to be ready.
+                // This promise-based wait is still necessary.
+                await new Promise((resolve, reject) => {
+                    const startTime = Date.now();
+                    const waitInterval = setInterval(() => {
+                        // We check a global variable that is set in ui.js when the grid is ready
+                        if (window.fulfillmentItemsGridApi) { // Check the global API variable
+                            clearInterval(waitInterval);
+                            resolve();
+                        } else if (Date.now() - startTime > 3000) {
+                            clearInterval(waitInterval);
+                            reject(new Error("Fulfillment grid did not become ready in time."));
+                        }
+                    }, 50);
+                });
                 
                 await handleFulfillConsignmentClick(true); 
             } else {
                 // Admin chose "Do It Later". Do nothing. The order remains pending.
+                setTimeout(() => {
+                    showModal('success', 'Request Submitted', 
+                        `Your request for ${teamName} has been created and is now pending fulfillment.\n\n` +
+                        `• Requesting Member: ${requestingMemberName}\n` +
+                        `• Total Items: ${totalQuantity} units\n` +
+                        `• Estimated Value: ${formatCurrency(estimatedValue)}`
+                    );
+                }, 500);
             }
 
 
