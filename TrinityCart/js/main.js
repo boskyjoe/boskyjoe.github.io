@@ -4830,10 +4830,11 @@ async function handleConsignmentRequestSubmit(e) {
         const estimatedValue = requestedItems.reduce((sum, item) => sum + (item.quantityRequested * item.sellingPrice), 0);
 
         if (user.role === 'admin') {
-
+            
+            setTimeout(() => ProgressToast.hide(300), 10);
             const fulfillNow = await showModal('confirm', 
                 'Request Submitted! Fulfill Now?',
-                `The request for <strong>${requestData.teamName}</strong> has been created.<br><br>Do you want to fulfill and activate this order immediately?`,
+                `The request for ${requestData.teamName} has been created.\n\nDo you want to fulfill and activate this order immediately?`,
                 { confirmText: 'Fulfill & Activate', cancelText: 'Do It Later' }
             );
 
