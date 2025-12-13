@@ -2151,6 +2151,7 @@ export async function rejectConsignmentRequest(orderId, reason, user) {
  * @param {object} user - The currently authenticated user.
  */
 
+
 export async function createConsignmentRequest(requestData, items, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -2185,7 +2186,8 @@ export async function createConsignmentRequest(requestData, items, user) {
         });
     });
 
-    return batch.commit();
+    await batch.commit();
+    return orderRef;
 }
 
 /**
