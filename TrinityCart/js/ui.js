@@ -4653,19 +4653,20 @@ const fulfillmentItemsGridOptions = {
             headerName: "Qty to Fulfill",
             width: 150,
             editable: true, // Admin can edit this
-            valueParser: p => parseInt(p.newValue, 10) || 0
+            valueParser: p => parseInt(p.newValue, 10) || 0,
+            cellEditor: 'agNumberCellEditor',
+            cellEditorParams: (params) => {
+                const product = masterData.products.find(p => p.id === params.data.productId);
+                const availableStock = product ? product.inventoryCount : 0;
+                const maxQuantity = Math.min(params.data.quantityRequested, availableStock);
+                return { min: 0, max: maxQuantity, precision: 0 };
+            },
+            cellStyle: { backgroundColor: '#eef2ff', fontWeight: 'bold' }
         }
     ],
     onGridReady: (params) => {
         fulfillmentItemsGridApi = params.api; 
         console.log('[UI] Fulfillment grid is now ready.');
-        
-        // ✅ THE FIX: Check for and call the global resolver function.
-        if (typeof window.resolveFulfillmentGridReady === 'function') {
-            console.log('[UI] Found a resolver. Calling it now.');
-            window.resolveFulfillmentGridReady();
-            window.resolveFulfillmentGridReady = null; // Clean up after use
-        }
     }
 };
 
