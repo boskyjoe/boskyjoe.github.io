@@ -90,7 +90,7 @@ import {
 import {
     showConsignmentView,
     showConsignmentRequestModal,
-    closeConsignmentRequestModal,
+    closeConsignmentRequestModal,selectConsignmentOrderInGrid,
     showConsignmentRequestStep2,
     getFulfillmentItems, refreshConsignmentDetailPanel,
     showReportActivityModal, closeReportActivityModal, switchConsignmentTab, renderConsignmentDetail,
