@@ -4706,7 +4706,7 @@ async function handleConsignmentRequestSubmit(e) {
 
         // Free-form ad-hoc fields (for Admin Path B)
         const altName = document.getElementById('admin-select-member-alt').value.trim();
-        const altEmail = document.getElementById('admin-select-member-alt-email').value.trim();
+        let altEmail = document.getElementById('admin-select-member-alt-email').value.trim();
         const altPhone = document.getElementById('admin-select-member-alt-ph').value.trim();
         const altVenue = document.getElementById('admin-select-member-venue').value.trim();
         const isAdHocPath = user.role === 'admin' && (altName || altEmail || altPhone || altVenue);
@@ -4738,7 +4738,7 @@ async function handleConsignmentRequestSubmit(e) {
             // --- ADMIN PATH B: Create Ad-Hoc Team ---
             console.log("[Main.js] Admin Ad-Hoc Team Path Detected.");
             if (!altName || !altPhone || !altVenue) {
-                throw new Error('To create an ad-hoc request, please fill all four alternate fields: Name, Email, Phone, and Venue.');
+                throw new Error('To create an ad-hoc request, please fill all four alternate fields: Name, Phone, and Venue.');
             }
 
             if (!altEmail) {
