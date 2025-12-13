@@ -4845,6 +4845,21 @@ async function handleConsignmentRequestSubmit(e) {
             );
 
             if (fulfillNow) {
+
+                // Create a promise that will resolve when we hear the 'fulfillmentGridReady' event.
+                const waitForGrid = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error("Fulfillment grid did not become ready in time."));
+                    }, 5000); // 5-second timeout for safety
+
+                    document.addEventListener('fulfillmentItemsGridReady', () => {
+                        clearTimeout(timeout); // Cancel the timeout
+                        resolve();
+                    }, { once: true }); // { once: true } is crucial - it removes the listener after it fires.
+                });
+
+
+                
                 const rowWasSelected = selectConsignmentOrderInGrid(newOrderId);
 
                 if (!rowWasSelected) {
@@ -4853,21 +4868,7 @@ async function handleConsignmentRequestSubmit(e) {
                     throw new Error("Could not find the new order in the grid to fulfill it.");
                 }
 
-                // Wait for the fulfillment grid to be ready.
-                // This promise-based wait is still necessary.
-                await new Promise((resolve, reject) => {
-                    const startTime = Date.now();
-                    const waitInterval = setInterval(() => {
-                        // We check a global variable that is set in ui.js when the grid is ready
-                        if (window.fulfillmentItemsGridApi) { // Check the global API variable
-                            clearInterval(waitInterval);
-                            resolve();
-                        } else if (Date.now() - startTime > 3000) {
-                            clearInterval(waitInterval);
-                            reject(new Error("Fulfillment grid did not become ready in time."));
-                        }
-                    }, 50);
-                });
+                await waitForGrid;
                 
                 await handleFulfillConsignmentClick(true); 
             } else {
