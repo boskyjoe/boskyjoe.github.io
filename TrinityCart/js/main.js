@@ -1000,6 +1000,13 @@ function setupGlobalClickHandler() {
                 } catch (error) {
                     console.error("Error deleting consignment request:", error);
                     ProgressToast.showError(`Deletion Failed: ${error.message}`);
+                } finally {
+                    // 5. ✅ THE FIX: This block always runs.
+                    // It waits 1.5 seconds to give the "Success" toast time to be read,
+                    // then it ensures any toast is hidden.
+                    setTimeout(() => {
+                        ProgressToast.hide(300);
+                    }, 1500);
                 }
             }
             return;
