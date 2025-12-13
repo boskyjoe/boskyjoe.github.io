@@ -4841,7 +4841,10 @@ async function handleConsignmentRequestSubmit(e) {
             setTimeout(() => ProgressToast.hide(300), 10);
             const fulfillNow = await showModal('confirm', 
                 'Request Submitted! Fulfill Now?',
-                `The request for ${requestData.teamName} has been created.\n\nDo you want to fulfill and activate this order immediately?`
+                `Your request for ${teamName} has been created and is now pending fulfillment.\n\n` +
+                        `• Requesting Member: ${requestingMemberName}\n` +
+                        `• Total Items: ${totalQuantity} units\n` +
+                        `• Estimated Value: ${formatCurrency(estimatedValue)}`
             );
 
             if (fulfillNow) {
