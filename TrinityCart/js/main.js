@@ -117,7 +117,7 @@ import {
     getUserMembershipInfo,
     getMembersForTeam,
     createConsignmentRequest,
-    fulfillConsignmentAndUpdateInventory,
+    fulfillConsignmentAndUpdateInventory,deleteConsignmentRequest,
     logActivityAndUpdateConsignment, getConsignmentOrderById,getItemsForConsignmentOrder,
     submitPaymentRecord, updatePaymentRecord,updateConsignmentPayment,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
@@ -975,6 +975,36 @@ function setupGlobalClickHandler() {
             }
             return;
         }
+
+        const deleteConsignmentBtn = target.closest('.action-btn-delete-consignment');
+        if (deleteConsignmentBtn) {
+            const orderId = deleteConsignmentBtn.dataset.id;
+            const orderData = getConsignmentOrderById(orderId); // Helper to get data for the modal
+            
+
+            if (!orderData) {
+                return showModal('error', 'Error', 'Could not find data for the order to delete.');
+            }
+
+            const confirmed = await showModal('confirm', 
+                'Confirm Deletion', 
+                `Are you sure you want to permanently delete the pending request for <strong>${orderData.teamName}</strong> (Voucher: ${orderData.manualVoucherNumber})?<br><br>This action cannot be undone.`
+            );
+
+            if (confirmed) {
+                ProgressToast.show('Deleting request...', 'warning');
+                try {
+                    await deleteConsignmentRequest(orderId);
+                    ProgressToast.showSuccess('Request deleted successfully!');
+                    // The grid's real-time listener will automatically remove the row.
+                } catch (error) {
+                    console.error("Error deleting consignment request:", error);
+                    ProgressToast.showError(`Deletion Failed: ${error.message}`);
+                }
+            }
+            return;
+        }
+
 
         const changeStoreBtn = target.closest('.action-btn-change-store');
         if (changeStoreBtn) {
