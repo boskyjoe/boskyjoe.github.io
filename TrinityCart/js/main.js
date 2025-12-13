@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency,amountToWords } from './utils.js'; 
+import { formatCurrency,amountToWords,generateDynamicEmail } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
