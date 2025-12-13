@@ -2191,6 +2191,35 @@ export async function createConsignmentRequest(requestData, items, user) {
 }
 
 /**
+ * ✅ NEW: Deletes a pending consignment order and all its requested items.
+ * @param {string} orderId The ID of the consignment order to delete.
+ */
+export async function deleteConsignmentRequest(orderId) {
+    const db = firebase.firestore();
+    const orderRef = db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).doc(orderId);
+
+    // First, get all the documents in the 'items' sub-collection.
+    const itemsSnapshot = await orderRef.collection('items').get();
+
+    // Start a batch write to delete everything atomically.
+    const batch = db.batch();
+
+    // Queue up the deletion for each item in the sub-collection.
+    itemsSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    // Queue up the deletion for the main order document itself.
+    batch.delete(orderRef);
+
+    // Commit all the deletions at once.
+    return batch.commit();
+}
+
+
+
+
+/**
  * [NEW] Fetches a single consignment order document by its ID.
  * @param {string} orderId - The Firestore document ID of the order.
  * @returns {Promise<object|null>} The order data or null if not found.
