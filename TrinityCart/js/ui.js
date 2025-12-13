@@ -4638,7 +4638,7 @@ const fulfillmentItemsGridOptions = {
     paginationPageSize: 100, // You can adjust this default value if you like
     paginationPageSizeSelector: [25, 50, 100],
     columnDefs: [
-        { field: "productName", headerName: "Product", flex: 1, filter: 'agDateColumnFilter' },
+        { field: "productName", headerName: "Product", flex: 1, filter: 'agTextColumnFilter' },
         {
             field: "sellingPrice",
             headerName: "Selling Price",
@@ -4656,10 +4656,16 @@ const fulfillmentItemsGridOptions = {
             valueParser: p => parseInt(p.newValue, 10) || 0
         }
     ],
-    onGridReady: params => { fulfillmentItemsGridApi = params.api; 
+    onGridReady: (params) => {
+        fulfillmentItemsGridApi = params.api; 
         console.log('[UI] Fulfillment grid is now ready.');
-        document.dispatchEvent(new CustomEvent('fulfillmentItemsGridReady'));
         
+        // ✅ THE FIX: Check for and call the global resolver function.
+        if (typeof window.resolveFulfillmentGridReady === 'function') {
+            console.log('[UI] Found a resolver. Calling it now.');
+            window.resolveFulfillmentGridReady();
+            window.resolveFulfillmentGridReady = null; // Clean up after use
+        }
     }
 };
 
