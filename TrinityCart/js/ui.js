@@ -4656,7 +4656,11 @@ const fulfillmentItemsGridOptions = {
             valueParser: p => parseInt(p.newValue, 10) || 0
         }
     ],
-    onGridReady: params => { fulfillmentItemsGridApi = params.api; }
+    onGridReady: params => { fulfillmentItemsGridApi = params.api; 
+        console.log('[UI] Fulfillment grid is now ready.');
+        document.dispatchEvent(new CustomEvent('fulfillmentItemsGridReady'));
+        
+    }
 };
 
 // DETAIL GRID 2: Items on Hand (for Active orders)
