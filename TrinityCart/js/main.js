@@ -4838,7 +4838,7 @@ async function handleConsignmentRequestSubmit(e) {
             );
 
             if (fulfillNow) {
-                console.log('[main.js] in fulfillmentnow condition')
+                console.log('[main.js] in fulfillmentnow condition') ;
                 appState.selectedConsignmentId = newOrderId;
                 await handleFulfillConsignmentClick(); 
             } else {
