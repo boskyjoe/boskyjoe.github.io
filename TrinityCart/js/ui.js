@@ -5274,6 +5274,41 @@ export function getFulfillmentItems() {
 }
 
 /**
+ * ✅ NEW: Finds and programmatically selects a row in the main consignment grid by its ID.
+ * This will trigger the grid's onSelectionChanged event handler.
+ * @param {string} orderId The ID of the consignment order to select.
+ * @returns {boolean} True if the row was found and selected, false otherwise.
+ */
+export function selectConsignmentOrderInGrid(orderId) {
+    if (!consignmentOrdersGridApi) {
+        console.error("[UI] Cannot select row: consignmentOrdersGridApi is not available.");
+        return false;
+    }
+
+    let rowFound = false;
+    // Loop through all rows to find the one with the matching ID
+    consignmentOrdersGridApi.forEachNode(node => {
+        if (node.data && node.data.id === orderId) {
+            // Deselect all other rows first to ensure single selection
+            node.setSelected(true, true); // (select, clearSelection)
+            
+            // Ensure the node is visible if it's on a different page
+            consignmentOrdersGridApi.ensureNodeVisible(node);
+            
+            rowFound = true;
+            console.log(`[UI] Programmatically selected new order: ${orderId}`);
+        }
+    });
+
+    if (!rowFound) {
+        console.warn(`[UI] Could not find row with ID ${orderId} to select it.`);
+    }
+    
+    return rowFound;
+}
+
+
+/**
  * [NEW] Refreshes the consignment detail panel for a given order ID.
  * It finds the latest data from the master grid and re-renders the panel.
  * @param {string} orderId - The ID of the order to refresh.
