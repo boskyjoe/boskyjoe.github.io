@@ -4836,6 +4836,8 @@ async function handleConsignmentRequestSubmit(e) {
         const totalQuantity = requestedItems.reduce((sum, item) => sum + item.quantityRequested, 0);
         const estimatedValue = requestedItems.reduce((sum, item) => sum + (item.quantityRequested * item.sellingPrice), 0);
 
+        let resolveFulfillmentGridReady = null;
+
         if (user.role === 'admin') {
             
             setTimeout(() => ProgressToast.hide(300), 10);
@@ -4846,29 +4848,32 @@ async function handleConsignmentRequestSubmit(e) {
 
             if (fulfillNow) {
 
-                // Create a promise that will resolve when we hear the 'fulfillmentGridReady' event.
-                const waitForGrid = new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        reject(new Error("Fulfillment grid did not become ready in time."));
-                    }, 5000); // 5-second timeout for safety
+                ProgressToast.show('Preparing for fulfillment...', 'info');
 
-                    document.addEventListener('fulfillmentItemsGridReady', () => {
-                        clearTimeout(timeout); // Cancel the timeout
-                        resolve();
-                    }, { once: true }); // { once: true } is crucial - it removes the listener after it fires.
+                // 1. Create a promise and store its 'resolve' function globally.
+                const waitForGrid = new Promise((resolve, reject) => {
+                    window.resolveFulfillmentGridReady = resolve; // Store the resolver
+
+                    // Safety timeout
+                    setTimeout(() => {
+                        if (window.resolveFulfillmentGridReady) { // If it hasn't been called yet
+                            window.resolveFulfillmentGridReady = null;
+                            reject(new Error("Fulfillment grid did not become ready in time."));
+                        }
+                    }, 5000);
                 });
 
-
-                
+                // 2. Trigger the UI update by selecting the row.
                 const rowWasSelected = selectConsignmentOrderInGrid(newOrderId);
-
                 if (!rowWasSelected) {
-                    // If for some reason the row isn't in the grid yet (e.g., listener delay),
-                    // we can't proceed. Show an error.
                     throw new Error("Could not find the new order in the grid to fulfill it.");
                 }
 
+                // 3. Wait for the promise to be resolved by the onGridReady handler.
                 await waitForGrid;
+                
+                console.log('[Main.js] Fulfillment grid is ready. Proceeding with fulfillment.');
+                
                 
                 await handleFulfillConsignmentClick(true); 
             } else {
