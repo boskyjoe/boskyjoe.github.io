@@ -678,7 +678,7 @@ async function handleRequestConsignmentClick() {
  * Gathers data from the fulfillment grid and calls the transactional API function.
  */
 let isFulfilling = false;
-async function handleFulfillConsignmentClick() {
+async function handleFulfillConsignmentClick(skipConfirmation = false) {
     if (isFulfilling) {
         console.warn("Fulfillment is already in progress. Ignoring duplicate click.");
         return;
@@ -698,9 +698,16 @@ async function handleFulfillConsignmentClick() {
     }
 
     // Use the promise-based modal for confirmation
-    const confirmed = await showModal('confirm', 'Confirm Fulfillment', 
-        'This will decrement main store inventory and activate the consignment order.\n\nThis action cannot be undone. Are you sure you want to proceed?'
-    );
+    let confirmed = false;
+
+    if (!skipConfirmation) {
+        confirmed = await showModal('confirm', 'Confirm Fulfillment', 
+            'This will decrement main store inventory and activate the consignment order. This action cannot be undone. Are you sure?'
+        );
+    } else {
+        // If we are skipping, we automatically confirm.
+        confirmed = true;
+    }
 
     if (!confirmed) {
         console.log("User cancelled fulfillment.");
@@ -4838,9 +4845,10 @@ async function handleConsignmentRequestSubmit(e) {
             );
 
             if (fulfillNow) {
-                console.log('[main.js] in fulfillmentnow condition') ;
                 appState.selectedConsignmentId = newOrderId;
-                await handleFulfillConsignmentClick(); 
+                console.log('[main.js] in fulfillmentnow condition',appState.selectedConsignmentId) ;
+                
+                await handleFulfillConsignmentClick(true); 
             } else {
                 // Admin chose "Do It Later". Do nothing. The order remains pending.
             }
