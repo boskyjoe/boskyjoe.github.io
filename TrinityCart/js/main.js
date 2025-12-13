@@ -4875,7 +4875,7 @@ async function handleConsignmentRequestSubmit(e) {
                 console.log('[Main.js] Fulfillment grid is ready. Proceeding with fulfillment.');
                 
                 
-                await handleFulfillConsignmentClick(true); 
+                //await handleFulfillConsignmentClick(true); 
             } else {
                 // Admin chose "Do It Later". Do nothing. The order remains pending.
                 setTimeout(() => {
