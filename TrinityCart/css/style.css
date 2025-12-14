@@ -546,44 +546,46 @@ main {
     border-top: 2px solid #d1d5db !important;
 }
 
-
 /* ===================================================================== */
-/* MODAL WATERMARK STYLES */
+/* MODAL WATERMARK STYLES (FINAL & CORRECT) */
 /* ===================================================================== */
 
-/* This is the main container of your modal's visible content */
+/* 1. Target the main modal container itself. */
 #view-consignment-details-modal .relative.bg-white {
-    position: relative; /* This is required for the watermark positioning */
-    z-index: 1; /* Ensure it's on a layer that can have something behind it */
+    position: relative; /* This is the positioning context. */
 }
 
-/* Base style for the watermark pseudo-element */
+/* 2. Create the watermark pseudo-element. */
 #view-consignment-details-modal .relative.bg-white::after {
     content: ''; /* Default to empty content */
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    transform-origin: center center;
-    font-size: 80px; /* Large font */
-    font-weight: 900; /* Extra bold */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    font-size: 9vw; /* Use viewport width for responsive font size */
+    font-weight: 900;
     text-transform: uppercase;
-    z-index: -1; /* CRITICAL: Push it behind the modal's content */
+    transform: rotate(-30deg);
+    
+    /* CRITICAL: This ensures the content on top is not affected. */
     pointer-events: none;
     user-select: none;
-    width: 100%;
-    text-align: center;
 }
 
-/* Specific style for PENDING status */
+/* 3. Define the styles for each status. */
+/* We use the class on the parent modal container to control the child's pseudo-element. */
+
 #view-consignment-details-modal.status-pending .relative.bg-white::after {
     content: "Pending";
-    color: rgba(245, 158, 11, 0.15); /* Semi-transparent Amber/Yellow */
+    color: rgba(245, 158, 11, 0.1); /* Amber/Yellow, made even more transparent */
 }
 
-/* Specific style for REJECTED status */
 #view-consignment-details-modal.status-rejected .relative.bg-white::after {
     content: "Rejected";
-    color: rgba(107, 114, 128, 0.15); /* Semi-transparent Gray */
+    color: rgba(107, 114, 128, 0.1); /* Gray, made even more transparent */
 }
-
