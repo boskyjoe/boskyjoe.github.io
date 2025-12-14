@@ -16551,9 +16551,20 @@ const consignmentDetailModalGridOptions = {
 };
 
 // ✅ NEW: Function to show the modal and populate it
+
 export async function showViewConsignmentDetailsModal(orderData) {
     const modal = document.getElementById('view-consignment-details-modal');
     if (!modal) return;
+
+    // First, remove any existing status classes to ensure a clean state.
+    modal.classList.remove('status-pending', 'status-rejected');
+
+    // Then, add the correct class based on the order's status.
+    if (orderData.status === 'Pending') {
+        modal.classList.add('status-pending');
+    } else if (orderData.status === 'Rejected') {
+        modal.classList.add('status-rejected');
+    }
 
     appState.activeConsignmentModalData = orderData;
 
