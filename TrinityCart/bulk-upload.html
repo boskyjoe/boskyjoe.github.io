@@ -73,6 +73,8 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+
         
         // DOM Elements
         const loginBtn = document.getElementById('login-btn');
@@ -88,6 +90,12 @@
         const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
         const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/products`;
         const DRAFT_SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/draftSales`;
+
+        // --- HARDCODED VALUES ---
+        const SALES_CATALOGUE_ID = 'Q5na6STsXh0tQYKSJBmL';
+        const SALES_CATALOGUE_NAME = '2025 Christmas Catalogue';
+        const SALES_SEASON_ID = 'fw3i6m4P0pioWmmumK8A';
+        const SALES_SEASON_NAME = 'Christmas 2025';
 
         let masterData = { products: [], stores: [] };
 
@@ -125,16 +133,45 @@
 
         // --- STEP 1: TEMPLATE GENERATION ---
         downloadBtn.addEventListener('click', () => {
-            log('Generating Excel template...');
-            // This is the template generation function from our previous discussion
+            log('Generating Excel template with hardcoded catalogue/season...');
             const workbook = XLSX.utils.book_new();
-            // ... (Add Instructions sheet)
-            const headers = ['SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 'OrderDiscountAmount', 'OrderDiscountPercent', 'ProductName', 'Quantity', 'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)'];
+            
+            // --- Instructions Sheet (can be more detailed) ---
+            const instructionsData = [
+                ['Bulk Sales Upload Instructions for:', `${SALES_CATALOGUE_NAME}`],
+                [],
+                ['IMPORTANT RULES:'],
+                ['1. Do NOT change the headers in the "Sales Data" sheet.'],
+                ['2. The "ManualVoucherNumber" MUST be filled for every single row to group items.'],
+                ['3. "SaleDate", "Store", "CustomerName" only need to be filled on the FIRST line of each invoice.'],
+                ['4. "DeliveryAddress" is REQUIRED if the "Store" is "Tasty Treats".'],
+            ];
+            const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+            wsInstructions['!cols'] = [{ wch: 100 }];
+            XLSX.utils.book_append_sheet(workbook, wsInstructions, "Instructions");
+
+            // --- Sales Data Sheet ---
+            // ✅ NEW: Added the new optional columns
+            const headers = [
+                'SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 
+                'OrderDiscountAmount', 'OrderDiscountPercent', 
+                'ProductName', 'Quantity', 'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)',
+                'CustomerEmail (Optional)', 'CustomerPhone (Optional)', 'DeliveryAddress (for Tasty Treats)'
+            ];
             const wsSales = XLSX.utils.aoa_to_sheet([headers]);
-            wsSales['!cols'] = [ {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, {wch:40}, {wch:10}, {wch:20}, {wch:25} ];
+            wsSales['!cols'] = [
+                {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, 
+                {wch:40}, {wch:10}, {wch:20}, {wch:25}, 
+                {wch:25}, {wch:20}, {wch:40} // Added widths for new columns
+            ];
             XLSX.utils.book_append_sheet(workbook, wsSales, "Sales Data");
-            // ... (Add Data Validation sheet and apply it)
-            XLSX.writeFile(workbook, `Bulk_Sales_Upload_Template.xlsx`);
+
+            // ... (Data Validation sheet logic can be added here if needed)
+
+            workbook.SheetNames.splice(workbook.SheetNames.indexOf("Sales Data"), 1);
+            workbook.SheetNames.unshift("Sales Data");
+
+            XLSX.writeFile(workbook, `Bulk_Sales_Upload_Template_${SALES_SEASON_NAME}.xlsx`);
             log('✅ Template downloaded.');
         });
 
@@ -166,7 +203,7 @@
                 try {
                     log('Reading and parsing Excel file...');
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // Use cellDates: true
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
@@ -176,10 +213,18 @@
                     // --- PARSE AND GROUP DATA ---
                     const invoicesMap = new Map();
                     let currentInvoiceHeader = null;
-                    jsonData.forEach(row => {
+                    let validationErrors = [];
+
+                    jsonData.forEach((row, index) => {
                         const voucher = row.ManualVoucherNumber;
                         if (!voucher) return;
-                        if (row.SaleDate) {
+
+                        // ✅ NEW: Validate that address exists for Tasty Treats
+                        if (row.Store === 'Tasty Treats' && !row['DeliveryAddress (for Tasty Treats)']) {
+                            validationErrors.push(`Row ${index + 2}: DeliveryAddress is missing for a 'Tasty Treats' sale.`);
+                        }
+
+                        if (row['SaleDate (YYYY-MM-DD)']) {
                             currentInvoiceHeader = {
                                 SaleDate: row['SaleDate (YYYY-MM-DD)'],
                                 Store: row.Store,
@@ -187,6 +232,15 @@
                                 ManualVoucherNumber: voucher,
                                 OrderDiscountAmount: row.OrderDiscountAmount || 0,
                                 OrderDiscountPercent: row.OrderDiscountPercent || 0,
+                                // ✅ NEW: Add the optional customer info
+                                CustomerEmail: row['CustomerEmail (Optional)'] || '',
+                                CustomerPhone: row['CustomerPhone (Optional)'] || '',
+                                DeliveryAddress: row['DeliveryAddress (for Tasty Treats)'] || '',
+                                // ✅ NEW: Add the hardcoded catalogue/season info
+                                salesCatalogueId: SALES_CATALOGUE_ID,
+                                salesCatalogueName: SALES_CATALOGUE_NAME,
+                                salesSeasonId: SALES_SEASON_ID,
+                                salesSeasonName: SALES_SEASON_NAME,
                                 lineItems: []
                             };
                             invoicesMap.set(voucher, currentInvoiceHeader);
@@ -200,6 +254,14 @@
                             });
                         }
                     });
+
+                    // If there were validation errors, stop and report them.
+                    if (validationErrors.length > 0) {
+                        log('\n❌ UPLOAD FAILED: Validation errors found in your file.');
+                        log(validationErrors.join('\n'));
+                        return;
+                    }
+
                     const invoicesToUpload = Array.from(invoicesMap.values());
                     log(`Grouped data into ${invoicesToUpload.length} unique invoices.`);
 
