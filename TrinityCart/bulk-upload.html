@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrinityCart - Bulk Sales Upload Utility</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 40px auto; padding: 20px; }
+        h1, h2, h3 { color: #1e3a8a; }
+        #app { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
+        button { font-size: 1rem; padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; transition: background-color 0.2s; background-color: #2563eb; color: white; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        #login-btn { background-color: #4285F4; }
+        #log-output { margin-top: 20px; padding: 15px; background-color: #1f2937; color: #d1d5db; border-radius: 6px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; max-height: 500px; overflow-y: auto; }
+        .step { border-top: 2px solid #d1d5db; margin-top: 2rem; padding-top: 1.5rem; }
+        #drop-zone { border: 2px dashed #9ca3af; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; background-color: #f3f4f6; }
+        #drop-zone.dragover { border-color: #2563eb; background-color: #eff6ff; }
+    </style>
+    <!-- SheetJS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <div id="app">
+        <h1>Bulk Sales Upload Utility</h1>
+        <p>This tool allows an admin to generate an Excel template, fill it with sales data, and upload it to create draft sales records in the system.</p>
+
+        <div id="auth-status">
+            <p><strong>Status:</strong> <span id="status-text">Not Logged In</span></p>
+            <button id="login-btn">Login with Google as Admin</button>
+        </div>
+
+        <div id="main-content" style="display: none;">
+            <!-- Step 1: Download Template -->
+            <div class="step">
+                <h2>Step 1: Download the Template</h2>
+                <p>Download the pre-formatted Excel file. Fill it out with your sales data, making sure to follow the instructions in the first sheet.</p>
+                <button id="download-template-btn">Download Excel Template</button>
+            </div>
+
+            <!-- Step 2: Upload File -->
+            <div class="step">
+                <h2>Step 2: Upload the Completed File</h2>
+                <p>Drag and drop your completed Excel file below, or click to select it.</p>
+                <div id="drop-zone">
+                    <p>Drag & Drop Excel File Here or Click to Select</p>
+                </div>
+                <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;">
+            </div>
+        </div>
+
+        <pre id="log-output">Awaiting login...</pre>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script type="module">
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAt_2gMhSPPSBi0zApb7z05ODZjMceDOk",
+            authDomain: "trinitycart-9e055.firebaseapp.com",
+            projectId: "trinitycart-9e055",
+            storageBucket: "trinitycart-9e055.appspot.com",
+            messagingSenderId: "450216949740",
+            appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
+            measurementId: "G-57JRDMJB14"
+        };
+
+        // --- INITIALIZE FIREBASE & GET DOM ELEMENTS ---
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // DOM Elements
+        const loginBtn = document.getElementById('login-btn');
+        const statusText = document.getElementById('status-text');
+        const mainContent = document.getElementById('main-content');
+        const logOutput = document.getElementById('log-output');
+        const downloadBtn = document.getElementById('download-template-btn');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        // --- PATHS ---
+        const BASE_DOC_PATH = 'artifacts/TrinityCart-default-app-id';
+        const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
+        const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/products`;
+        const DRAFT_SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/draftSales`;
+
+        let masterData = { products: [], stores: [] };
+
+        function log(message) {
+            console.log(message);
+            logOutput.textContent += `\n[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // --- AUTHENTICATION ---
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userDoc = await db.collection(USERS_COLLECTION_PATH).doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().role === 'admin') {
+                    statusText.textContent = `Logged in as ADMIN: ${user.email}`;
+                    loginBtn.style.display = 'none';
+                    mainContent.style.display = 'block';
+                    log('Admin authenticated. Loading master data...');
+                    // Fetch necessary master data
+                    const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
+                    masterData.products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Assuming stores are in a config or another collection
+                    masterData.stores = ['Church Store', 'Tasty Treats']; 
+                    log(`✅ Loaded ${masterData.products.length} products. Ready to generate template or upload.`);
+                } else {
+                    statusText.textContent = `Access Denied: Not an admin.`;
+                    mainContent.style.display = 'none';
+                }
+            } else {
+                statusText.textContent = 'Not Logged In';
+                mainContent.style.display = 'none';
+            }
+        });
+        loginBtn.addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+
+        // --- STEP 1: TEMPLATE GENERATION ---
+        downloadBtn.addEventListener('click', () => {
+            log('Generating Excel template...');
+            // This is the template generation function from our previous discussion
+            const workbook = XLSX.utils.book_new();
+            // ... (Add Instructions sheet)
+            const headers = ['SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 'OrderDiscountAmount', 'OrderDiscountPercent', 'ProductName', 'Quantity', 'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)'];
+            const wsSales = XLSX.utils.aoa_to_sheet([headers]);
+            wsSales['!cols'] = [ {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, {wch:40}, {wch:10}, {wch:20}, {wch:25} ];
+            XLSX.utils.book_append_sheet(workbook, wsSales, "Sales Data");
+            // ... (Add Data Validation sheet and apply it)
+            XLSX.writeFile(workbook, `Bulk_Sales_Upload_Template.xlsx`);
+            log('✅ Template downloaded.');
+        });
+
+        // --- STEP 2: UPLOAD AND PROCESSING ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                handleFileUpload(files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        async function handleFileUpload(file) {
+            log(`File selected: ${file.name}`);
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    log('Reading and parsing Excel file...');
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    log(`Found ${jsonData.length} rows in the Excel file.`);
+                    
+                    // --- PARSE AND GROUP DATA ---
+                    const invoicesMap = new Map();
+                    let currentInvoiceHeader = null;
+                    jsonData.forEach(row => {
+                        const voucher = row.ManualVoucherNumber;
+                        if (!voucher) return;
+                        if (row.SaleDate) {
+                            currentInvoiceHeader = {
+                                SaleDate: row['SaleDate (YYYY-MM-DD)'],
+                                Store: row.Store,
+                                CustomerName: row.CustomerName,
+                                ManualVoucherNumber: voucher,
+                                OrderDiscountAmount: row.OrderDiscountAmount || 0,
+                                OrderDiscountPercent: row.OrderDiscountPercent || 0,
+                                lineItems: []
+                            };
+                            invoicesMap.set(voucher, currentInvoiceHeader);
+                        }
+                        if (currentInvoiceHeader && currentInvoiceHeader.ManualVoucherNumber === voucher) {
+                            currentInvoiceHeader.lineItems.push({
+                                ProductName: row.ProductName,
+                                Quantity: row.Quantity,
+                                UnitPrice: row['UnitPrice (Optional)'],
+                                LineDiscountPercentage: row['LineDiscountPercentage (Optional)']
+                            });
+                        }
+                    });
+                    const invoicesToUpload = Array.from(invoicesMap.values());
+                    log(`Grouped data into ${invoicesToUpload.length} unique invoices.`);
+
+                    // --- UPLOAD TO DRAFT COLLECTION ---
+                    log('Starting upload to "draftSales" collection...');
+                    const batch = db.batch();
+                    const uploaderEmail = auth.currentUser.email;
+                    const uploadedOn = firebase.firestore.FieldValue.serverTimestamp();
+
+                    invoicesToUpload.forEach(invoice => {
+                        const docRef = db.collection(DRAFT_SALES_COLLECTION_PATH).doc();
+                        batch.set(docRef, {
+                            status: 'Pending',
+                            uploaderEmail,
+                            uploadedOn,
+                            invoiceData: invoice,
+                            validationError: null
+                        });
+                    });
+
+                    await batch.commit();
+                    log('\n========================================');
+                    log(`✅ SUCCESS: ${invoicesToUpload.length} draft sales have been uploaded successfully!`);
+                    log('You can now go to the main application to process them.');
+                    log('========================================');
+
+                } catch (error) {
+                    log(`\n❌ UPLOAD FAILED: ${error.message}`);
+                    console.error(error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+
+</body>
+</html>
