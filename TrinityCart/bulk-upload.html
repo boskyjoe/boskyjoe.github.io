@@ -215,6 +215,8 @@
                     let currentInvoiceHeader = null;
                     let validationErrors = [];
 
+                    const productLookup = new Map(masterData.products.map(p => [p.itemName.toLowerCase(), p.id]));
+
                     jsonData.forEach((row, index) => {
                         const voucher = row.ManualVoucherNumber;
                         if (!voucher) return;
