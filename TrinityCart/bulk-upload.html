@@ -216,6 +216,7 @@
                     let validationErrors = [];
 
                     const productLookup = new Map(masterData.products.map(p => [p.itemName.toLowerCase(), p.id]));
+                    log('products',productLookup);
 
                     jsonData.forEach((row, index) => {
                         const voucher = row.ManualVoucherNumber;
