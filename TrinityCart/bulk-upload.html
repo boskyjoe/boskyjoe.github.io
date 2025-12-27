@@ -246,11 +246,19 @@
                             invoicesMap.set(voucher, currentInvoiceHeader);
                         }
                         if (currentInvoiceHeader && currentInvoiceHeader.ManualVoucherNumber === voucher) {
+                            const productName = row.ProductName;
+                            const quantity = row.Quantity;
+
+                            if (!productName || !quantity) {
+                                validationErrors.push(`Row ${index + 2}: Missing required ProductName or Quantity.`);
+                                return; // Skip this invalid line item
+                            }
                             currentInvoiceHeader.lineItems.push({
-                                ProductName: row.ProductName,
-                                Quantity: row.Quantity,
-                                UnitPrice: row['UnitPrice (Optional)'],
-                                LineDiscountPercentage: row['LineDiscountPercentage (Optional)']
+                                ProductName: productName,
+                                Quantity: Number(quantity) || 0,
+                                // ✅ SANITIZE: Provide defaults for optional line item fields
+                                UnitPrice: row['UnitPrice (Optional)'] || null, // Use null to indicate "not provided"
+                                LineDiscountPercentage: row['LineDiscountPercentage (Optional)'] || 0
                             });
                         }
                     });
