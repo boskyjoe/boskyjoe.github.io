@@ -253,7 +253,16 @@
                                 validationErrors.push(`Row ${index + 2}: Missing required ProductName or Quantity.`);
                                 return; // Skip this invalid line item
                             }
+
+                            const productId = productLookup.get(productName.toLowerCase());
+
+                            if (!productId) {
+                                validationErrors.push(`Row ${index + 2}: Product "${productName}" not found in the master product catalogue. Please check for typos.`);
+                                return; // Skip this invalid line item
+                            }
+
                             currentInvoiceHeader.lineItems.push({
+                                productId: productId,
                                 ProductName: productName,
                                 Quantity: Number(quantity) || 0,
                                 // ✅ SANITIZE: Provide defaults for optional line item fields
