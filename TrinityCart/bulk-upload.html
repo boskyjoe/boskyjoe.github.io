@@ -112,11 +112,17 @@
                 if (userDoc.exists && userDoc.data().role === 'admin') {
                     statusText.textContent = `Logged in as ADMIN: ${user.email}`;
                     loginBtn.style.display = 'none';
-                    mainContent.style.display = 'block';
-                    log('Admin authenticated. Loading master data...');
-                    // Fetch necessary master data
-                    const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
-                    masterData.products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    try {
+                         log('Admin authenticated. Loading required master data...');
+                        const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
+                        masterData.products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        
+                        log(`✅ Loaded ${masterData.products.length} products. Ready to generate template or upload.`);
+                        mainContent.style.display = 'block'; 
+                    } catch {
+                        log(`❌ FAILED to load master data: ${error.message}`);
+                        statusText.textContent = 'Error loading data. Please refresh.';
+                    }
                     // Assuming stores are in a config or another collection
                     masterData.stores = ['Church Store', 'Tasty Treats']; 
                     log(`✅ Loaded ${masterData.products.length} products. Ready to generate template or upload.`);
