@@ -90,6 +90,7 @@
         const USERS_COLLECTION_PATH = `${BASE_DOC_PATH}/users`;
         const PRODUCTS_CATALOGUE_COLLECTION_PATH = `${BASE_DOC_PATH}/productCatalogue`;
         const DRAFT_SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/draftSales`;
+        const SALES_CATALOGUES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesCatalogues`;
 
 
         // --- HARDCODED VALUES ---
@@ -98,7 +99,7 @@
         const SALES_SEASON_ID = 'fw3i6m4P0pioWmmumK8A';
         const SALES_SEASON_NAME = 'Christmas 2025';
 
-        let masterData = { products: [], stores: [] };
+        let masterData = { products: [], stores: [],cataloguePrices: new Map() };
 
         function log(message) {
             console.log(message);
@@ -115,11 +116,20 @@
                     loginBtn.style.display = 'none';
                     try {
                          log('Admin authenticated. Loading required master data...');
-                        const productsSnapshot = await db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get();
+                        const [productsSnapshot, catalogueItemsSnapshot] = await Promise.all([
+                            db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).get(),
+                            db.collection(SALES_CATALOGUES_COLLECTION_PATH).doc(SALES_CATALOGUE_ID).collection('items').get()
+                        ]);
                         masterData.products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        log(`✅ Loaded ${masterData.products.length} products. Ready to generate template or upload.`);
-                        mainContent.style.display = 'block'; 
+
+                        // Create the price lookup map
+                        catalogueItemsSnapshot.forEach(doc => {
+                            const item = doc.data();
+                            masterData.cataloguePrices.set(item.productId, item.sellingPrice);
+                        });
+
+                        log(`✅ Loaded ${masterData.products.length} products and ${masterData.cataloguePrices.size} catalogue prices. Ready.`);
+                        mainContent.style.display = 'block';
                     } catch {
                         log(`❌ FAILED to load master data: ${error.message}`);
                         statusText.textContent = 'Error loading data. Please refresh.';
@@ -271,12 +281,23 @@
                                 return; // Skip this invalid line item
                             }
 
+                            // ✅ THE FIX: Get the price from the correct source
+                            let unitPrice = row['UnitPrice (Optional)'];
+                            if (unitPrice === undefined || unitPrice === null || unitPrice === '') {
+                                // If user left it blank, get it from our new catalogue price map
+                                unitPrice = masterData.cataloguePrices.get(productId);
+                                if (unitPrice === undefined) {
+                                    validationErrors.push(`Row ${index + 2}: Price for "${productName}" not found in catalogue. Please provide a UnitPrice.`);
+                                    return;
+                                }
+                            }
+
                             currentInvoiceHeader.lineItems.push({
                                 productId: productId,
                                 ProductName: productName,
                                 Quantity: Number(quantity) || 0,
                                 // ✅ SANITIZE: Provide defaults for optional line item fields
-                                UnitPrice: row['UnitPrice (Optional)'] || null, // Use null to indicate "not provided"
+                                UnitPrice: Number(unitPrice),
                                 LineDiscountPercentage: row['LineDiscountPercentage (Optional)'] || 0
                             });
                         }
