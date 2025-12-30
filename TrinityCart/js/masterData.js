@@ -3,7 +3,7 @@
 import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
     PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
     PAYMENT_MODES_COLLECTION_PATH,
-SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH } from './config.js';
+SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH,DRAFT_SALES_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -16,8 +16,10 @@ export const masterData = {
     teams: [],
     salesEvents: [],
     systemSetups: {},
-    isDataReady: false 
+    isDataReady: false,
+    draftSales: [],
 };
+
 
 /**
  * Sets up real-time listeners for all master data collections.
@@ -174,6 +176,18 @@ export function initializeMasterDataListeners() {
         }
     }, error => console.error("Error listening to systemSetups document:", error));
     unsubscribeFunctions.push(systemSetupsUnsub);
+
+
+    const draftSalesUnsub = db.collection(DRAFT_SALES_COLLECTION_PATH)
+        .where('status', '==', 'Pending') // Only listen for pending drafts
+        .onSnapshot(snapshot => {
+            masterData.draftSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Master data updated: Pending Draft Sales", masterData.draftSales.length);
+            // Dispatch an event so the UI can update the dropdown if needed
+            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'draftSales' } }));
+        }, error => console.error("Error listening to draftSales:", error));
+    unsubscribeFunctions.push(draftSalesUnsub);
+
 
     isInitialized = true;
 }
