@@ -37,6 +37,8 @@ export const SUPPLIER_PAYMENTS_LEDGER_COLLECTION_PATH = `${BASE_DOC_PATH}/suppli
 
 export const SALES_CATALOGUES_COLLECTION_PATH = `${BASE_DOC_PATH}/salesCatalogues`;
 
+export const DRAFT_SALES_COLLECTION_PATH = `${BASE_DOC_PATH}/draftSales`;
+
 export const CHURCH_TEAMS_COLLECTION_PATH = `${BASE_DOC_PATH}/churchTeams`;
 export const USER_TEAM_MEMBERSHIPS_COLLECTION_PATH = `${BASE_DOC_PATH}/userTeamMemberships`;
 
