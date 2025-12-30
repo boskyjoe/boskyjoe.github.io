@@ -6594,6 +6594,19 @@ export function showSalesView() {
 
         //document.getElementById('sale-pay-now-container').classList.add('hidden');
 
+        // ✅ NEW: Populate the draft sales dropdown
+        const draftSaleSelect = document.getElementById('draft-sales-dropdown');
+        if (draftSaleSelect) {
+            draftSaleSelect.innerHTML = '<option value="">-- Select a Draft Invoice to Load --</option>';
+            masterData.draftSales.forEach(draft => {
+                const option = document.createElement('option');
+                option.value = draft.id;
+                // Display useful info in the dropdown text
+                option.textContent = `${draft.invoiceData.ManualVoucherNumber} - ${draft.invoiceData.CustomerName} (${draft.invoiceData.lineItems.length} items)`;
+                draftSaleSelect.appendChild(option);
+            });
+        }
+
         // 3. Populate the dropdowns on the form.
 
         
