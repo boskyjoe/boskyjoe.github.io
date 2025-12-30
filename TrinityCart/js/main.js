@@ -5421,6 +5421,50 @@ async function handleConsignmentPaymentUpdate(detail) {
 }
 
 
+function programmaticallyAddToCart(productId, quantity, unitPrice) {
+    const product = masterData.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    addItemToCart({
+        productId: product.id,
+        productName: product.itemName,
+        quantity: quantity,
+        // Use the price from the draft if provided, otherwise the current catalogue price
+        unitPrice: unitPrice || product.sellingPrice || 0,
+        costPrice: product.costPrice || 0,
+        discountPercentage:0,
+        taxPercentage: 0
+    });
+}
+
+function loadDraftSaleIntoForm(draftSaleId) {
+    
+    const draft = masterData.draftSales.find(d => d.id === draftSaleId);
+    if (!draft) return;
+    const saleData = draft.invoiceData;
+
+    // 1. Reset form and cart
+    //resetSalesForm();
+
+    // 2. Populate header fields
+    document.getElementById('sale-date').value = new Date(saleData.SaleDate).toISOString().split('T')[0];
+    document.getElementById('sale-store-select').value = saleData.Store;
+    document.getElementById('sale-customer-name').value = saleData.CustomerName;
+    document.getElementById('sale-manual-voucher-number').value = saleData.ManualVoucherNumber;
+    document.getElementById('sales-order-discount-amt').value = saleData.OrderDiscountAmount || 0;
+    document.getElementById('sale-order-discount').value = saleData.OrderDiscountPercent || 0;
+    // ... populate other optional customer fields ...
+    
+    // 3. Programmatically add all line items to the cart
+    saleData.lineItems.forEach(item => {
+        programmaticallyAddToCart(item.productId, item.Quantity, item.UnitPrice);
+    });
+
+    // 4. Final calculation to update all totals
+    calculateSalesTotals();
+    console.log(`[Main.js] Successfully loaded draft invoice ${saleData.ManualVoucherNumber} into the form.`);
+}
+
 
 /**
  * Handles direct sales form submission with comprehensive validation, payment processing, and progress tracking.
@@ -7081,6 +7125,10 @@ function setupInputListeners() {
         
     }
 
+    const draftSaleSelect = document.getElementById('draft-sales-dropdown');
+    if (draftSaleSelect) {
+        draftSaleSelect.addEventListener('change', (e) => loadDraftSaleIntoForm(e.target.value));
+    }
 
 
     // Get all relevant elements
