@@ -5813,6 +5813,18 @@
                                     <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Sale
                                         Information</h4>
                                 </div>
+
+                                <!-- ✅ NEW: Add the Draft Sales dropdown -->
+                                <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-6">
+                                    <label for="draft-sales-dropdown" class="form-label font-semibold text-amber-800 flex items-center">
+                                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.25 13.25a.75.75 0 0 1-.75.75H4.75a.75.75 0 0 1 0-1.5H8.5a.75.75 0 0 1 .75.75Z M9.25 8.25a.75.75 0 0 1-.75.75H4.75a.75.75 0 0 1 0-1.5H8.5a.75.75 0 0 1 .75.75Z M14 6.5a.75.75 0 0 0-1.28-.53l-3 3a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06L11.81 9l2.72-2.72A.75.75 0 0 0 14 6.5Z"/></svg>
+                                        Load from Bulk Upload (Optional)
+                                    </label>
+                                    <select id="draft-sales-dropdown" class="form-input w-full mt-1">
+                                        <option value="">-- Select a Draft Invoice to Load --</option>
+                                    </select>
+                                </div>
+                                
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <label for="sale-date" class="form-label flex items-center">
