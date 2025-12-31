@@ -168,19 +168,16 @@
             XLSX.utils.book_append_sheet(workbook, wsInstructions, "Instructions");
 
             // --- Sales Data Sheet ---
-            // ✅ NEW: Added the new optional columns
             const headers = [
-                'SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 
-                'SaleType (Revenue/Sample)', // New Header
-                'OrderDiscountAmount', 'OrderDiscountPercent', 
-                'ProductName', 'Quantity', 'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)',
-                'CustomerEmail (Optional)', 'CustomerPhone (Optional)', 'DeliveryAddress (for Tasty Treats)'
+                'SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 'SaleType (Revenue/Sample)',
+                'OrderDiscountAmount', 'OrderDiscountPercent', 'ProductName', 'Quantity', 
+                'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)', 'CustomerEmail (Optional)', 
+                'CustomerPhone (Optional)', 'DeliveryAddress (for Tasty Treats)'
             ];
             const wsSales = XLSX.utils.aoa_to_sheet([headers]);
             wsSales['!cols'] = [
-                {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, 
-                {wch:40}, {wch:10}, {wch:20}, {wch:25}, 
-                {wch:25}, {wch:20}, {wch:40},{wch: 25} // Added widths for new columns
+                {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:25}, {wch:20}, {wch:20}, {wch:40}, 
+                {wch:10}, {wch:20}, {wch:25}, {wch:25}, {wch:20}, {wch:40}
             ];
             XLSX.utils.book_append_sheet(workbook, wsSales, "Sales Data");
 
