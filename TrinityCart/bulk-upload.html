@@ -171,6 +171,7 @@
             // ✅ NEW: Added the new optional columns
             const headers = [
                 'SaleDate (YYYY-MM-DD)', 'Store', 'CustomerName', 'ManualVoucherNumber', 
+                'SaleType (Revenue/Sample)', // New Header
                 'OrderDiscountAmount', 'OrderDiscountPercent', 
                 'ProductName', 'Quantity', 'UnitPrice (Optional)', 'LineDiscountPercentage (Optional)',
                 'CustomerEmail (Optional)', 'CustomerPhone (Optional)', 'DeliveryAddress (for Tasty Treats)'
@@ -179,14 +180,45 @@
             wsSales['!cols'] = [
                 {wch:20}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, 
                 {wch:40}, {wch:10}, {wch:20}, {wch:25}, 
-                {wch:25}, {wch:20}, {wch:40} // Added widths for new columns
+                {wch:25}, {wch:20}, {wch:40},{wch: 25} // Added widths for new columns
             ];
             XLSX.utils.book_append_sheet(workbook, wsSales, "Sales Data");
 
-            // ... (Data Validation sheet logic can be added here if needed)
+            // --- Data Validation Sheet ---
+            const stores = masterData.stores || ['Church Store', 'Tasty Treats'];
+            const productNames = masterData.products.map(p => p.itemName);
+            const saleTypes = ['Revenue', 'Sample']; // ✅ List of valid sale types
 
+            const validationData = [
+                ['Valid Stores', 'Valid Product Names', 'Valid Sale Types'], // Add header
+                ...Array(Math.max(stores.length, productNames.length, saleTypes.length)).fill([]).map((_, i) => [
+                    stores[i] || '', 
+                    productNames[i] || '',
+                    saleTypes[i] || '' // Add sale types to the sheet
+                ])
+            ];
+            const wsValidation = XLSX.utils.aoa_to_sheet(validationData);
+            wsValidation['!cols'] = [{ hidden: true }, { hidden: true }, { hidden: true }];
+            XLSX.utils.book_append_sheet(workbook, wsValidation, "DataValidation");
+            
+            // --- Apply Data Validation Dropdowns ---
+            const storeValidation = { type: "list", formula1: `DataValidation!$A$2:$A$${stores.length + 1}` };
+            const productValidation = { type: "list", formula1: `DataValidation!$B$2:$B$${productNames.length + 1}` };
+            const saleTypeValidation = { type: "list", formula1: `DataValidation!$C$2:$C$${saleTypes.length + 1}` }; // ✅ New validation rule
+
+            for (let i = 2; i <= 1002; i++) {
+                if (!wsSales[`B${i}`]) wsSales[`B${i}`] = { t: 's', v: '' };
+                if (!wsSales[`E${i}`]) wsSales[`E${i}`] = { t: 's', v: '' };
+                if (!wsSales[`H${i}`]) wsSales[`H${i}`] = { t: 's', v: '' };
+                wsSales[`B${i}`].v = storeValidation;
+                wsSales[`E${i}`].v = saleTypeValidation; // ✅ Apply to SaleType column (E)
+                wsSales[`H${i}`].v = productValidation; // ✅ Note: This is now column H
+            }
+
+            XLSX.utils.book_append_sheet(workbook, wsSales, "Sales Data");
             workbook.SheetNames.splice(workbook.SheetNames.indexOf("Sales Data"), 1);
             workbook.SheetNames.unshift("Sales Data");
+
 
             XLSX.writeFile(workbook, `Bulk_Sales_Upload_Template_${SALES_SEASON_NAME}.xlsx`);
             log('✅ Template downloaded.');
@@ -244,12 +276,20 @@
                             validationErrors.push(`Row ${index + 2}: DeliveryAddress is missing for a 'Tasty Treats' sale.`);
                         }
 
+                        const saleType = row['SaleType (Revenue/Sample)']; // ✅ Get the new field
+
+                        // ✅ Add validation for the new field
+                        if (row.SaleDate && (!saleType || !['Revenue', 'Sample'].includes(saleType))) {
+                            validationErrors.push(`Row ${index + 2}: Invalid or missing SaleType. Must be 'Revenue' or 'Sample'.`);
+                        }
+
                         if (row['SaleDate (YYYY-MM-DD)']) {
                             currentInvoiceHeader = {
                                 SaleDate: row['SaleDate (YYYY-MM-DD)'],
                                 Store: row.Store,
                                 CustomerName: row.CustomerName,
                                 ManualVoucherNumber: voucher,
+                                SaleType: saleType,
                                 OrderDiscountAmount: row.OrderDiscountAmount || 0,
                                 OrderDiscountPercent: row.OrderDiscountPercent || 0,
                                 // ✅ NEW: Add the optional customer info
