@@ -6727,6 +6727,7 @@ export function showSalesView() {
  * instead of adding a duplicate row, which prevents the "Duplicate node id" error.
  * @param {object} itemData - The item object from handleAddToCart.
  */
+
 export function addItemToCart(itemData) {
     if (!salesCartGridApi) {
         console.error("Cannot add item to cart: salesCartGridApi is not ready.");
@@ -6777,6 +6778,45 @@ export function addItemToCart(itemData) {
 
     // Finally, recalculate all totals. This will run after either an add or an update.
     calculateSalesTotals();
+}
+
+/**
+ * ✅ NEW: Adds a list of items from a draft sale directly to the cart grid.
+ * This is used for the bulk upload feature and bypasses the standard addItemToCart.
+ * @param {Array<object>} items - An array of line item objects from the draft sale.
+ */
+export function addDraftItemsToCart(items) {
+    if (!salesCartGridApi) {
+        console.error("Cannot add draft items: salesCartGridApi is not ready.");
+        return;
+    }
+
+    const selectedStore = document.getElementById('sale-store-select').value;
+    const taxConfig = (selectedStore === 'Tasty Treats') ? storeConfig['Tasty Treats'].taxInfo : null;
+
+    // Prepare the full row data for the grid
+    const rowsToAdd = items.map(item => {
+        const product = masterData.products.find(p => p.id === item.productId);
+        if (!product) return null; // Skip if product not found
+
+        return {
+            productId: product.id,
+            productName: product.itemName,
+            quantity: item.Quantity,
+            // Use the price from the draft if it exists, otherwise use the product's current price
+            unitPrice: item.UnitPrice || product.sellingPrice || 0,
+            costPrice: product.costPrice || 0,
+            discountPercentage: item.LineDiscountPercentage || 0,
+            cgstPercentage: taxConfig ? taxConfig.cgstRate : 0,
+            sgstPercentage: taxConfig ? taxConfig.sgstRate : 0,
+        };
+    }).filter(item => item !== null); // Remove any items where the product wasn't found
+
+    if (rowsToAdd.length > 0) {
+        // Use a single transaction to add all rows at once for better performance
+        salesCartGridApi.applyTransaction({ add: rowsToAdd });
+        console.log(`[UI] Added ${rowsToAdd.length} items from draft to the cart.`);
+    }
 }
 
 /**
