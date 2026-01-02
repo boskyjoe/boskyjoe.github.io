@@ -98,7 +98,7 @@ import {
     showSalesView,
     showAddProductModal,
     closeAddProductModal,
-    calculateSalesTotals, addItemToCart, getSalesCartItems,
+    calculateSalesTotals, addItemToCart, addDraftItemsToCart, getSalesCartItems,
     removeItemFromCart, showRecordSalePaymentModal,
     closeRecordSalePaymentModal, getSalesHistoryDataById,
     getSalePaymentDataFromGridById, switchPaymentModalTab, resetSalePaymentForm,
@@ -5438,31 +5438,73 @@ function programmaticallyAddToCart(productId, quantity, unitPrice) {
 }
 
 function loadDraftSaleIntoForm(draftSaleId) {
+
+    if (!draftSaleId) {
+        resetSalesForm(); // Assuming you have a function that clears the form
+        return;
+    }
     
     const draft = masterData.draftSales.find(d => d.id === draftSaleId);
-    if (!draft) return;
+    if (!draft) {
+        showModal('error', 'Draft Not Found', 'Could not find the selected draft sale data.');
+        return;
+    }
+    
+    console.log(`[Main.js] Loading draft invoice: ${draft.invoiceData.ManualVoucherNumber}`);
     const saleData = draft.invoiceData;
 
     // 1. Reset form and cart
     //resetSalesForm();
 
+    try {
+        document.getElementById('sale-date').value = new Date(saleData.SaleDate).toISOString().split('T')[0];
+    } catch (e) {
+        console.error("Invalid date format in draft sale:", saleData.SaleDate);
+        document.getElementById('sale-date').valueAsDate = new Date(); // Fallback to today
+    }
+
     // 2. Populate header fields
-    document.getElementById('sale-date').value = new Date(saleData.SaleDate).toISOString().split('T')[0];
     document.getElementById('sale-store-select').value = saleData.Store;
+    document.getElementById('sale-catalogue-select').value = saleData.salesCatalogueId;
+    document.getElementById('sale-type-select').value = saleData.SaleType;
     document.getElementById('sale-customer-name').value = saleData.CustomerName;
-    document.getElementById('sale-manual-voucher-number').value = saleData.ManualVoucherNumber;
-    document.getElementById('sales-order-discount-amt').value = saleData.OrderDiscountAmount || 0;
-    document.getElementById('sale-order-discount').value = saleData.OrderDiscountPercent || 0;
-    // ... populate other optional customer fields ...
+    document.getElementById('sale-customer-email').value = saleData.CustomerEmail || '';
+    document.getElementById('sale-customer-phone').value = saleData.CustomerPhone || '';
+    document.getElementById('sale-voucher-number').value = saleData.ManualVoucherNumber;
     
+    // Handle the "either/or" discount fields
+    document.getElementById('sale-order-discount').value = saleData.OrderDiscountPercent || 0;
+    document.getElementById('sales-order-discount-amt').value = saleData.OrderDiscountAmount || 0;
+
+
+    // Conditionally handle the Tasty Treats address
+    const addressContainer = document.getElementById('tasty-treats-address-container');
+    const addressInput = document.getElementById('sale-customer-address');
+    if (saleData.Store === 'Tasty Treats') {
+        addressInput.value = saleData.DeliveryAddress || '';
+        addressContainer.classList.remove('hidden');
+    } else {
+        addressInput.value = '';
+        addressContainer.classList.add('hidden');
+    }
+       
     // 3. Programmatically add all line items to the cart
-    saleData.lineItems.forEach(item => {
-        programmaticallyAddToCart(item.productId, item.Quantity, item.UnitPrice);
-    });
+    if (saleData.lineItems && saleData.lineItems.length > 0) {
+        // We need to add the productId to the items first
+        const itemsWithProductId = saleData.lineItems.map(item => {
+            const product = masterData.products.find(p => p.itemName.toLowerCase() === item.ProductName.toLowerCase());
+            return { ...item, productId: product ? product.id : null };
+        });
+        
+        addDraftItemsToCart(itemsWithProductId);
+    }
 
     // 4. Final calculation to update all totals
-    calculateSalesTotals();
-    console.log(`[Main.js] Successfully loaded draft invoice ${saleData.ManualVoucherNumber} into the form.`);
+    // Use a small timeout to ensure the DOM has updated from the cart additions
+    setTimeout(() => {
+        calculateSalesTotals();
+        console.log(`[Main.js] Successfully loaded and calculated draft invoice ${saleData.ManualVoucherNumber}.`);
+    }, 50); // A small delay is often safer
 }
 
 
