@@ -286,3 +286,38 @@ function convertToIndianWords(num) {
     return convertToIndianWords(Math.floor(num / 1000000000)) + ' Arab' + (num % 1000000000 !== 0 ? ' ' + convertToIndianWords(num % 1000000000) : '');
 }
 
+/**
+ * ✅ NEW: Converts an Excel date serial number or a date string into a JS Date object.
+ * Handles the "Excel epoch" starting from 1900.
+ * @param {number|string|Date} excelDate - The value from the Excel sheet.
+ * @returns {Date|null} A valid JavaScript Date object, or null if conversion fails.
+ */
+export function convertExcelDate(excelDate) {
+    if (!excelDate) return null;
+
+    // If it's already a JS Date object, just return it.
+    if (excelDate instanceof Date) {
+        return excelDate;
+    }
+
+    // If it's a number (Excel serial date), convert it.
+    if (typeof excelDate === 'number') {
+        // Excel's epoch starts on 1899-12-30 for compatibility with Lotus 1-2-3 bug.
+        // The formula is (excelDate - 25569) * 86400 * 1000.
+        const jsDate = new Date((excelDate - 25569) * 86400 * 1000);
+        // Adjust for timezone offset to prevent the date from being off by one day.
+        jsDate.setMinutes(jsDate.getMinutes() + jsDate.getTimezoneOffset());
+        return jsDate;
+    }
+    
+    // If it's a string, try to parse it.
+    if (typeof excelDate === 'string') {
+        const parsedDate = new Date(excelDate);
+        if (!isNaN(parsedDate)) {
+            return parsedDate;
+        }
+    }
+
+    // If all else fails, return null.
+    return null;
+}
