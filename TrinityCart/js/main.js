@@ -5457,11 +5457,14 @@ function loadDraftSaleIntoForm(draftSaleId) {
     //resetSalesForm();
 
     try {
-        const saleDate = convertExcelDate(saleData.SaleDate);
-        if (saleDate) {
-            document.getElementById('sale-date').value = saleDate.toISOString().split('T')[0];
+        // First, check if the toDate method exists on the object.
+        if (saleData.SaleDate && typeof saleData.SaleDate.toDate === 'function') {
+            const jsDate = saleData.SaleDate.toDate();
+            // Then, format it for the input field.
+            document.getElementById('sale-date').value = jsDate.toISOString().split('T')[0];
         } else {
-            throw new Error('Invalid date found in draft.');
+            // Fallback for string or JS Date objects (from older drafts, perhaps)
+            document.getElementById('sale-date').value = new Date(saleData.SaleDate).toISOString().split('T')[0];
         }
     } catch (e) {
         console.error("Invalid date format in draft sale:", saleData.SaleDate, e);
