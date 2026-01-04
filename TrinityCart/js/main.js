@@ -34,7 +34,7 @@ import { addSeason, updateSeason, setSeasonStatus } from './api.js';
 import { showSalesEventsView } from './ui.js';
 import { addSalesEvent, updateSalesEvent, setSalesEventStatus } from './api.js';
 
-import { formatCurrency,amountToWords,generateDynamicEmail } from './utils.js'; 
+import { formatCurrency,amountToWords,generateDynamicEmail,convertExcelDate } from './utils.js'; 
 
 import { showProductsView,
     showAddProductToCatalogueModal,  // ← NEW - Different from existing
@@ -5457,9 +5457,14 @@ function loadDraftSaleIntoForm(draftSaleId) {
     //resetSalesForm();
 
     try {
-        document.getElementById('sale-date').value = new Date(saleData.SaleDate).toISOString().split('T')[0];
+        const saleDate = convertExcelDate(saleData.SaleDate);
+        if (saleDate) {
+            document.getElementById('sale-date').value = saleDate.toISOString().split('T')[0];
+        } else {
+            throw new Error('Invalid date found in draft.');
+        }
     } catch (e) {
-        console.error("Invalid date format in draft sale:", saleData.SaleDate);
+        console.error("Invalid date format in draft sale:", saleData.SaleDate, e);
         document.getElementById('sale-date').valueAsDate = new Date(); // Fallback to today
     }
 
