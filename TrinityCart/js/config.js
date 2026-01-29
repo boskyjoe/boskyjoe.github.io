@@ -54,6 +54,9 @@ export const DONATIONS_COLLECTION_PATH = `${BASE_DOC_PATH}/donations`;
 
 export const EXPENSES_COLLECTION_PATH = `${BASE_DOC_PATH}/expenses`;
 
+export const LEADS_COLLECTION_PATH = `${BASE_DOC_PATH}/leads`;
+
+
 
 
 export const DONATION_SOURCES = {
@@ -175,6 +178,9 @@ export const imageKitConfig = {
     urlEndpoint: "https://ik.imagekit.io/MONETA"
 };
 
+export const leadSourceOptions = ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other'];
+export const leadStatusOptions = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
+
 
 
 
@@ -219,8 +225,19 @@ export const navConfig = [
         viewId: "dashboard-view",
         roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"]
     },
+
+    // NEW: 2. Leads Management - Outline
+    {
+        type: "link",
+        label: "Leads Management",
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-sky-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.962a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM12 21a9.094 9.094 0 01-3.741-.479 3 3 0 01-4.682-2.72M12 3a3.75 3.75 0 01.479 7.462M12 3a3.75 3.75 0 00-.479 7.462m0 0a3 3 0 004.682 2.72m-7.5 2.962a3.75 3.75 0 017.5 0m-7.5 0a3 3 0 00-4.682 2.72m2.24-4.22a3.75 3.75 0 007.5 0m-7.5 0a3.75 3.75 0 01-7.5 0" />
+        </svg>`,
+        viewId: "leads-view",
+        roles: ["admin", "sales_staff", "team_lead"]
+    },
     
-    // 2. Product Management - Outline
+    // 3. Product Management - Outline
     {
         type: "link",
         label: "Product Management",
@@ -231,7 +248,7 @@ export const navConfig = [
         roles: ["admin", "inventory_manager"]
     },
     
-    // 3. Sales Catalogue - Outline
+    // 4. Sales Catalogue - Outline
     {
         type: "link",
         label: "Sales Catalogue",
@@ -243,7 +260,7 @@ export const navConfig = [
         roles: ["admin", "inventory_manager"]
     },
     
-    // 4. Purchase Management - Outline
+    // 5. Purchase Management - Outline
     {
         type: "link",
         label: "Purchase Management",
@@ -254,7 +271,7 @@ export const navConfig = [
         roles: ["admin", "inventory_manager"]
     },
     
-    // 5. Sales Management - Outline
+    // 6. Sales Management - Outline
     {
         type: "link",
         label: "Sales Management",
@@ -265,7 +282,7 @@ export const navConfig = [
         roles: ["admin", "sales_staff", "team_lead","guest","inventory_manager"]
     },
     
-    // 6. Consignment - Outline
+    // 7. Consignment - Outline
     {
         type: "link",
         label: "Consignment Mgmt",
@@ -276,7 +293,7 @@ export const navConfig = [
         roles: ["admin", "team_lead", "sales_staff", "finance", "guest","inventory_manager"]
     },
     
-    // 7. Supplier - Outline
+    // 8. Supplier - Outline
     {
         type: "link",
         label: "Supplier Management",
@@ -287,7 +304,7 @@ export const navConfig = [
         roles: ["admin", "finance"]
     },
     
-    // 8. Payment - Outline
+    // 9. Payment - Outline
     {
         type: "link",
         label: "Payment Management",
@@ -297,7 +314,7 @@ export const navConfig = [
         viewId: 'pmt-mgmt-view',  
         roles: ["admin", "finance"]
     },
-    // 9. Expenses 
+    // 10. Expenses 
     {
         type: "link",
         label: "Log Expenses",
@@ -308,7 +325,7 @@ export const navConfig = [
         roles: ["admin", "finance"]
     },
     
-    // 10. Admin - Outline
+    // 11. Admin - Outline
     {
         type: "link",
         label: "Admin Modules",
@@ -320,7 +337,7 @@ export const navConfig = [
         roles: ["admin"]
     },
     
-    // 11. Reports - Outline
+    // 12. Reports - Outline
     {
         type: "link",
         label: "Reports & Analytics",
