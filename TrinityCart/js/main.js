@@ -176,6 +176,9 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 
 import { initializeLeadsModule } from './leads.js';
 
+import { showLeadsView, openLeadModal, closeLeadModal } from './ui.js'; 
+import { saveLead, convertLeadToSale } from './leads.js'; 
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -2433,6 +2436,7 @@ function handleStandaloneButtons(target, event) {
         '#cancel-edit-btn': () => resetPurchaseForm(),
         '#payment-modal-close': () => closePaymentModal(),
         '#add-member-btn': () => showMemberModal(),
+        '#create-new-lead-btn': () => openLeadModal() ,
         '#request-consignment-btn': () => handleRequestConsignmentClick(),
         '#consignment-next-btn': () => handleConsignmentNext(),
         '#fulfill-checkout-btn': () => handleFulfillConsignmentClick(),
