@@ -20,7 +20,7 @@ import {
     CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,
     SALES_PAYMENTS_LEDGER_COLLECTION_PATH, DONATIONS_COLLECTION_PATH,
     DONATION_SOURCES,
-    getDonationSourceByStore, EXPENSES_COLLECTION_PATH, EXPENSE_RECEIPTS_STORAGE_PATH, imageKitConfig
+    getDonationSourceByStore, EXPENSES_COLLECTION_PATH, EXPENSE_RECEIPTS_STORAGE_PATH, imageKitConfig,DRAFT_SALES_COLLECTION_PATH
 } from './config.js';
 
 import { masterData } from './masterData.js';
@@ -260,6 +260,42 @@ export async function setSupplierStatus(docId, newStatus, user) {
     return updateSupplier(docId, { isActive: newStatus }, user);
 }
 
+/**
+ * Creates a new lead document in Firestore.
+ * @param {object} leadData - The data for the new lead.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function addLead(leadData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const leadId = `LEAD-${Date.now()}`;
+
+    return db.collection(LEADS_COLLECTION_PATH).add({
+        ...leadData,
+        leadId: leadId,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
+
+/**
+ * Updates an existing lead document in Firestore.
+ * @param {string} docId - The Firestore document ID of the lead.
+ * @param {object} updatedData - The fields to update.
+ * @param {object} user - The currently authenticated user.
+ */
+export async function updateLead(docId, updatedData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    return db.collection(LEADS_COLLECTION_PATH).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now,
+    });
+}
 
 // --- CATEGORY API FUNCTIONS ---
 
@@ -5326,3 +5362,20 @@ export async function addDirectSaleExpense(invoiceId, expenseData, user) {
     });
 }
 
+/**
+ * ✅ NEW: Updates the status of a document in the draftSales collection.
+ * @param {string} draftId - The ID of the draft document to update.
+ * @param {string} newStatus - The new status (e.g., 'Processed', 'Error').
+ * @param {object} user - The user performing the action, for auditing.
+ */
+export async function updateDraftSaleStatus(draftId, newStatus, user) {
+    if (!draftId) return;
+    const db = firebase.firestore();
+    const draftRef = db.collection(DRAFT_SALES_COLLECTION_PATH).doc(draftId);
+
+    return draftRef.update({
+        status: newStatus,
+        processedBy: user.email,
+        processedOn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
