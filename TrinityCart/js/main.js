@@ -108,6 +108,7 @@ import {
     getBulkSelectedProducts, addBulkLineItems, bulkSelectAllVisibleProducts, bulkClearAllSelections, bulkSelectProductsWithPrices,updateNoItemsMessageVisibility,
     showBulkPaymentModal, closeBulkPaymentModal,getSelectedPurchaseInvoices,
     deselectAllPurchaseInvoices,showViewCatalogueItemsModal,showSalesDetailModal,handleExportProductCatalogue,
+    showLeadsView
 } from './ui.js';
 
 import { updateSaleInfo } from './api.js';
@@ -798,6 +799,7 @@ const EventHandlers = {
     // Navigation handlers
     navigation: {
         'suppliers-view': showSuppliersView,
+        'leads-view': showLeadsView,
         'products-view': showProductsView,
         'sales-catalogue-view': showSalesCatalogueView,
         'categories-view': showCategoriesView,
