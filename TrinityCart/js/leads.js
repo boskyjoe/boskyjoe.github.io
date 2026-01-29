@@ -2,7 +2,9 @@
 
 import { masterData } from './masterData.js';
 import { showView } from './ui.js';
-import { showModal, openLeadModal } from './ui.js';
+import { openLeadModal } from './ui.js';
+import { showModal } from './modal.js';
+
 
 
 
