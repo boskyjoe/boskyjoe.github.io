@@ -3,7 +3,8 @@
 import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
     PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
     PAYMENT_MODES_COLLECTION_PATH,
-SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH,DRAFT_SALES_COLLECTION_PATH } from './config.js';
+SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH,DRAFT_SALES_COLLECTION_PATH
+,LEADS_COLLECTION_PATH  } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -18,6 +19,7 @@ export const masterData = {
     systemSetups: {},
     isDataReady: false,
     draftSales: [],
+    leads: [] 
 };
 
 
@@ -188,6 +190,15 @@ export function initializeMasterDataListeners() {
         }, error => console.error("Error listening to draftSales:", error));
     unsubscribeFunctions.push(draftSalesUnsub);
 
+    const leadsUnsub = db.collection(LEADS_COLLECTION_PATH)
+        .orderBy('createdDate', 'desc') // Show newest leads first
+        .onSnapshot(snapshot => {
+            masterData.leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Master data updated: Leads", masterData.leads.length);
+            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'leads' } }));
+            // Note: We don't add this to the `checkDataReady` function as it's not essential for initial app load.
+        }, error => console.error("Error listening to leads:", error));
+    unsubscribeFunctions.push(leadsUnsub);
 
     isInitialized = true;
 }
