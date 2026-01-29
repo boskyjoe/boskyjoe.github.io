@@ -1,6 +1,6 @@
 // js/leads.js
 
-import { masterData } from './config.js';
+import { masterData } from './masterData.js';
 import { showView } from './ui.js';
 import { showModal } from './modal.js';
 
