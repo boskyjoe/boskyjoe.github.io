@@ -1617,10 +1617,135 @@ export function switchConsignmentTab(tabId) {
 
 
 
+let leadsGridApi = null;
+let isLeadsGridInitialized = false;
+let unsubscribeLeadsListener = null;
 
 
+const leadsGridOptions = {
+    getRowId: params => params.data.id,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100, 200],
+    theme: 'legacy', // Matching your established theme
+    columnDefs: [
+        { field: "customerName", headerName: "Customer Name", flex: 2, editable: true },
+        { field: "customerPhone", headerName: "Phone", flex: 1, editable: true },
+        { field: "customerEmail", headerName: "Email", flex: 1, editable: true },
+        {
+            field: "status",
+            headerName: "Status",
+            width: 150,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'] // Directly from your config plan
+            },
+            cellStyle: params => {
+                if (params.value === 'New') return { color: 'blue', fontWeight: 'bold' };
+                if (params.value === 'Converted') return { color: 'green', fontWeight: 'bold' };
+                if (params.value === 'Lost') return { color: 'red' };
+                return null;
+            }
+        },
+        {
+            field: "source",
+            headerName: "Source",
+            width: 150,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other'] // Directly from your config plan
+            }
+        },
+        {
+            field: "enquiryDate",
+            headerName: "Enquiry Date",
+            width: 150,
+            editable: true,
+            cellEditor: 'agDateCellEditor',
+            valueFormatter: p => p.value ? (p.value.toDate ? p.value.toDate() : new Date(p.value)).toLocaleDateString() : ''
+        },
+        {
+            headerName: "Actions",
+            width: 120,
+            cellClass: 'flex items-center justify-center space-x-2',
+            cellRenderer: params => {
+                const leadId = params.data.id;
+                const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>`;
+                const convertIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>`;
+                return `
+                    <button title="Edit Lead" class="text-blue-600 hover:text-blue-800 edit-lead-btn" data-id="${leadId}">${editIcon}</button>
+                    <button title="Convert to Sale" class="text-green-600 hover:text-green-800 convert-lead-btn" data-id="${leadId}">${convertIcon}</button>
+                `;
+            },
+            editable: false, sortable: false, filter: false
+        }
+    ],
+    defaultColDef: {
+        sortable: true, filter: true, resizable: true, wrapText: true, autoHeight: true,
+    },
+    rowData: [],
+    onGridReady: (params) => {
+        console.log("[ui.js] Leads Grid is now ready.");
+        leadsGridApi = params.api;
+    },
+    onCellValueChanged: (params) => {
+        const docId = params.data.id;
+        const field = params.colDef.field;
+        const newValue = params.newValue;
+        // Dispatch a custom event for main.js to handle the API call
+        document.dispatchEvent(new CustomEvent('updateLead', {
+            detail: { docId, updatedData: { [field]: newValue } }
+        }));
+    }
+};
 
+function initializeLeadsGrid() {
+    if (isLeadsGridInitialized) return;
+    const leadsGridDiv = document.getElementById('leads-grid');
+    if (leadsGridDiv) {
+        console.log("[ui.js] Initializing Leads Grid for the first time.");
+        createGrid(leadsGridDiv, leadsGridOptions);
+        isLeadsGridInitialized = true;
+    }
+}
 
+export function showLeadsView() {
+    showView('leads-view');
+    initializeLeadsGrid();
+
+    // Populate dropdowns in the modal once
+    const sourceSelect = document.getElementById('leadSource');
+    const statusSelect = document.getElementById('leadStatus');
+    if (sourceSelect.options.length <= 1) { // Check if not already populated
+        leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
+        leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
+    }
+
+    const waitForGrid = setInterval(() => {
+        if (leadsGridApi) {
+            clearInterval(waitForGrid);
+
+            console.log("[ui.js] Grid is ready. Attaching real-time leads listener.");
+            const db = firebase.firestore();
+            leadsGridApi.setGridOption('loading', true);
+
+            unsubscribeLeadsListener = db.collection(LEADS_COLLECTION_PATH)
+                .orderBy('createdDate', 'desc')
+                .onSnapshot(snapshot => {
+                    console.log("[Firestore] Received real-time update for leads.");
+                    const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    leadsGridApi.setGridOption('rowData', leads);
+                    leadsGridApi.setGridOption('loading', false);
+                }, error => {
+                    console.error("Error with leads real-time listener:", error);
+                    leadsGridApi.setGridOption('loading', false);
+                    leadsGridApi.showNoRowsOverlay();
+                });
+        }
+    }, 50);
+}
 
 let productsGridApi = null;
 let isProductsGridInitialized = false;
