@@ -16842,3 +16842,43 @@ export function closeEditSaleInfoModal() {
     const modal = document.getElementById('edit-sale-info-modal');
     if (modal) modal.style.display = 'none';
 }
+
+
+
+
+export function openLeadModal(leadData = null) {
+    const modal = document.getElementById('lead-modal');
+    const form = document.getElementById('lead-form');
+    const title = document.getElementById('lead-modal-title');
+
+    form.reset();
+    
+    if (leadData) {
+        // --- EDIT MODE ---
+        title.textContent = 'Edit Lead';
+        document.getElementById('lead-id-input').value = leadData.id;
+        document.getElementById('customerName').value = leadData.customerName || '';
+        document.getElementById('customerPhone').value = leadData.customerPhone || '';
+        document.getElementById('customerEmail').value = leadData.customerEmail || '';
+        document.getElementById('enquiryDate').valueAsDate = leadData.enquiryDate ? new Date(leadData.enquiryDate.seconds * 1000) : new Date();
+        document.getElementById('leadSource').value = leadData.source || '';
+        document.getElementById('leadStatus').value = leadData.status || 'New';
+        document.getElementById('leadNotes').value = leadData.notes || '';
+    } else {
+        // --- ADD NEW MODE ---
+        title.textContent = 'Add New Lead';
+        document.getElementById('lead-id-input').value = '';
+        document.getElementById('enquiryDate').valueAsDate = new Date();
+        document.getElementById('leadStatus').value = 'New';
+    }
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeLeadModal() {
+    const modal = document.getElementById('lead-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
