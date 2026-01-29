@@ -174,6 +174,8 @@ import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processE
 
 import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-templates.js';
 
+import { initializeLeadsModule } from './leads.js';
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -3222,6 +3224,7 @@ function setupFormSubmissions() {
     const formConfigs = [
         { id: 'add-supplier-form', handler: handleSupplierSubmit },
         { id: 'add-product-form', handler: handleProductSubmit },
+        { id: 'lead-form', handler: handleLeadSubmit },
         { id: 'add-product-to-catalogue-form', handler: handleProductCatalogueSubmit },
         { id: 'purchase-invoice-form', handler: handlePurchaseInvoiceSubmit },
         { id: 'record-payment-form', handler: handlePaymentSubmit },
@@ -3579,6 +3582,52 @@ async function handleEditSaleInfoSubmit(e) {
     }
 }
 
+
+async function handleLeadSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    if (!user) {
+        return showModal('error', 'Not Logged In', 'You must be logged in to save a lead.');
+    }
+
+    ProgressToast.show('Saving Lead...', 'info');
+
+    try {
+        const leadId = document.getElementById('lead-id-input').value;
+        const isEditMode = !!leadId;
+
+        const leadData = {
+            customerName: document.getElementById('customerName').value.trim(),
+            customerPhone: document.getElementById('customerPhone').value.trim(),
+            customerEmail: document.getElementById('customerEmail').value.trim(),
+            source: document.getElementById('leadSource').value,
+            status: document.getElementById('leadStatus').value,
+            notes: document.getElementById('leadNotes').value.trim(),
+            enquiryDate: new Date(document.getElementById('enquiryDate').value),
+        };
+
+        if (!leadData.customerName || !leadData.enquiryDate) {
+            ProgressToast.hide(0);
+            return showModal('error', 'Missing Information', 'Customer Name and Enquiry Date are required.');
+        }
+
+        if (isEditMode) {
+            await updateLead(leadId, leadData, user);
+            ProgressToast.showSuccess('Lead updated successfully!');
+        } else {
+            await addLead(leadData, user);
+            ProgressToast.showSuccess('New lead created successfully!');
+        }
+        
+        closeLeadModal(); // Close the modal on success
+
+    } catch (error) {
+        console.error("Error saving lead:", error);
+        ProgressToast.showError(`Save Failed: ${error.message}`);
+    } finally {
+        setTimeout(() => ProgressToast.hide(300), 1500);
+    }
+}
 
 /**
  * Handles supplier form submission with validation, database save, and progress feedback.
@@ -6974,6 +7023,7 @@ async function handleEventSubmit(e) {
 function setupCustomEventListeners() {
     const customEvents = {
         'updateSupplier': handleUpdateSupplier,
+        'updateLead': handleUpdateLead,
         'updateProduct': handleUpdateProduct,
         'updateChurchTeam': handleUpdateChurchTeam,
         'updateCatalogueItemPrice': handleUpdateCatalogueItemPrice,
@@ -6999,6 +7049,20 @@ function setupCustomEventListeners() {
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
     
 
+}
+
+async function handleUpdateLead(e) {
+    const { docId, updatedData } = e.detail;
+    const user = appState.currentUser;
+    if (!user) return;
+
+    try {
+        await updateLead(docId, updatedData, user);
+        // No modal needed for inline grid edits, as the UI updates in real-time.
+    } catch (error) {
+        console.error("Error updating lead:", error);
+        await showModal('error', 'Error', 'Failed to update the lead. Please try again.');
+    }
 }
 
 async function handleUpdateSupplier(e) {
