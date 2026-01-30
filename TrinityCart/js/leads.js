@@ -57,6 +57,9 @@ export function initializeLeadsModule() {
     const leadForm = document.getElementById('lead-form');
     if (saveLeadBtn && leadForm) {
         saveLeadBtn.addEventListener('click', () => {
+            // --- ADD THIS LINE FOR DEBUGGING ---
+            console.log('✅ STEP 1: "Save Lead" button in leads.js was clicked!'); 
+            // ------------------------------------
             leadForm.requestSubmit();
         });
     }
