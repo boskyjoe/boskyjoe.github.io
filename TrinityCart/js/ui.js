@@ -37,7 +37,8 @@ import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from '
 
 import {
     CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,EXPENSES_COLLECTION_PATH,
-    productType
+    productType,leadSourceOptions,
+    leadStatusOptions
 } from './config.js';
 
 import { 
@@ -1715,10 +1716,12 @@ export function showLeadsView() {
     showView('leads-view');
     initializeLeadsGrid();
 
-    // Populate dropdowns in the modal once
+    // Populate dropdowns in the modal once using the imported config variables
     const sourceSelect = document.getElementById('leadSource');
     const statusSelect = document.getElementById('leadStatus');
-    if (sourceSelect.options.length <= 1) { // Check if not already populated
+
+    // This check correctly prevents re-populating the dropdowns every time the view is shown
+    if (sourceSelect.options.length <= 1) { 
         leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
         leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
     }
@@ -1730,6 +1733,10 @@ export function showLeadsView() {
             console.log("[ui.js] Grid is ready. Attaching real-time leads listener.");
             const db = firebase.firestore();
             leadsGridApi.setGridOption('loading', true);
+
+            if (unsubscribeLeadsListener) {
+                unsubscribeLeadsListener();
+            }
 
             unsubscribeLeadsListener = db.collection(LEADS_COLLECTION_PATH)
                 .orderBy('createdDate', 'desc')
