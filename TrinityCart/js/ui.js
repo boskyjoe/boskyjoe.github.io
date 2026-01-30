@@ -1622,13 +1622,13 @@ let leadsGridApi = null;
 let isLeadsGridInitialized = false;
 let unsubscribeLeadsListener = null;
 
-
+// --- Step 2: Define the grid options object, following your established pattern ---
 const leadsGridOptions = {
     getRowId: params => params.data.id,
     pagination: true,
     paginationPageSize: 50,
     paginationPageSizeSelector: [25, 50, 100, 200],
-    theme: 'legacy', // Matching your established theme
+    theme: 'legacy',
     columnDefs: [
         { field: "customerName", headerName: "Customer Name", flex: 2, editable: true },
         { field: "customerPhone", headerName: "Phone", flex: 1, editable: true },
@@ -1640,7 +1640,7 @@ const leadsGridOptions = {
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'] // Directly from your config plan
+                values: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost']
             },
             cellStyle: params => {
                 if (params.value === 'New') return { color: 'blue', fontWeight: 'bold' };
@@ -1656,7 +1656,7 @@ const leadsGridOptions = {
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other'] // Directly from your config plan
+                values: ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other']
             }
         },
         {
@@ -1695,13 +1695,13 @@ const leadsGridOptions = {
         const docId = params.data.id;
         const field = params.colDef.field;
         const newValue = params.newValue;
-        // Dispatch a custom event for main.js to handle the API call
         document.dispatchEvent(new CustomEvent('updateLead', {
             detail: { docId, updatedData: { [field]: newValue } }
         }));
     }
 };
 
+// --- Step 3: Create the one-time initialization function ---
 function initializeLeadsGrid() {
     if (isLeadsGridInitialized) return;
     const leadsGridDiv = document.getElementById('leads-grid');
@@ -1712,16 +1712,15 @@ function initializeLeadsGrid() {
     }
 }
 
+// --- Step 4: Create the main view function that EXACTLY matches your reference ---
 export function showLeadsView() {
     showView('leads-view');
     initializeLeadsGrid();
 
-    // Populate dropdowns in the modal once using the imported config variables
+    // Populate dropdowns in the modal once
     const sourceSelect = document.getElementById('leadSource');
     const statusSelect = document.getElementById('leadStatus');
-
-    // This check correctly prevents re-populating the dropdowns every time the view is shown
-    if (sourceSelect.options.length <= 1) { 
+    if (sourceSelect.options.length <= 1) {
         leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
         leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
     }
@@ -1731,6 +1730,7 @@ export function showLeadsView() {
             clearInterval(waitForGrid);
 
             console.log("[ui.js] Grid is ready. Attaching real-time leads listener.");
+            // ✅ THIS IS THE CORRECT PATTERN
             const db = firebase.firestore();
             leadsGridApi.setGridOption('loading', true);
 
@@ -1753,6 +1753,8 @@ export function showLeadsView() {
         }
     }, 50);
 }
+
+
 
 let productsGridApi = null;
 let isProductsGridInitialized = false;
