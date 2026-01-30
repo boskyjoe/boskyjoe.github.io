@@ -123,7 +123,7 @@ import {
     submitPaymentRecord, updatePaymentRecord,updateConsignmentPayment,
     verifyConsignmentPayment, cancelPaymentRecord,rejectConsignmentRequest,
     createSaleAndUpdateInventory, recordSalePayment,
-    voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment,deleteSaleAndReverseClientSide,updateSalePayment
+    voidSalePayment, getSalesInvoiceById,processBulkSupplierPayment,deleteSaleAndReverseClientSide,updateSalePayment,addLead,updateLead
 } from './api.js';
 
 
