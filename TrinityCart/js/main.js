@@ -177,7 +177,6 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 import { initializeLeadsModule } from './leads.js';
 
 import {  openLeadModal, closeLeadModal } from './ui.js'; 
-import { saveLead, convertLeadToSale } from './leads.js'; 
 
 
 
