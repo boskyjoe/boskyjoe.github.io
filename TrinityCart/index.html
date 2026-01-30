@@ -7345,9 +7345,20 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3">
-                    <button type="button" id="cancel-lead-btn" class="modal-btn modal-btn-secondary modal-close-trigger">Cancel</button>
-                    <button type="button" id="save-lead-btn" class="modal-btn modal-btn-primary">Save Lead</button>
+                <div
+                    class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
+                    <button type="button"
+                        class="modal-btn modal-btn-secondary modal-close-trigger transition-all hover:shadow-md">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="modal-btn modal-btn-primary transition-all hover:shadow-lg hover:scale-105">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Save Lead
+                    </button>
                 </div>
             </form>
         </div>
