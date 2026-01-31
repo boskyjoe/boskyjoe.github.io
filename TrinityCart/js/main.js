@@ -2433,6 +2433,8 @@ function handleStandaloneButtons(target, event) {
             }, 50);
         },
         '#cancel-edit-btn': () => resetPurchaseForm(),
+        '#cancel-lead-btn': () => closeLeadModal(),
+        '#lead-modal .modal-close-trigger': () => closeLeadModal(),
         '#payment-modal-close': () => closePaymentModal(),
         '#add-member-btn': () => showMemberModal(),
         '#create-new-lead-btn': () => openLeadModal() ,
@@ -2847,12 +2849,6 @@ function handleStandaloneButtons(target, event) {
 
     // ADD: New modal close trigger (different ID)
     if (target.closest('#add-product-to-catalogue-modal .modal-close-trigger')) {
-        closeAddProductToCatalogueModal();
-        return true;
-    }
-
-    // ADD: New modal close trigger (different ID)
-    if (target.closest('#lead-modal .modal-close-trigger')) {
         closeAddProductToCatalogueModal();
         return true;
     }
