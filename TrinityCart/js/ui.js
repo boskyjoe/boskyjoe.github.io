@@ -1730,7 +1730,6 @@ export function showLeadsView() {
             clearInterval(waitForGrid);
 
             console.log("[ui.js] Grid is ready. Attaching real-time leads listener.");
-            // ✅ THIS IS THE CORRECT PATTERN
             const db = firebase.firestore();
             leadsGridApi.setGridOption('loading', true);
 
@@ -1739,7 +1738,7 @@ export function showLeadsView() {
             }
 
             unsubscribeLeadsListener = db.collection(LEADS_COLLECTION_PATH)
-                .orderBy('createdDate', 'desc')
+                .orderBy('createdOn', 'desc')
                 .onSnapshot(snapshot => {
                     console.log("[Firestore] Received real-time update for leads.");
                     const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
