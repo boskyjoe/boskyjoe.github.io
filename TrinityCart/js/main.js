@@ -2851,6 +2851,12 @@ function handleStandaloneButtons(target, event) {
         return true;
     }
 
+    // ADD: New modal close trigger (different ID)
+    if (target.closest('#lead-modal .modal-close-trigger')) {
+        closeAddProductToCatalogueModal();
+        return true;
+    }
+
     // Check modal close triggers for all modals
     if (target.closest('#supplier-payment-modal .modal-close-trigger')) {
         closeSupplierPaymentModal();
