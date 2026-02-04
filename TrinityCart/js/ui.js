@@ -1780,9 +1780,9 @@ const leadsWorkLogGridOptions = {
             valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '',
             sort: 'desc'
         },
-        { field: "logType", headerName: "Type", width: 120 },
-        { field: "notes", headerName: "Notes", flex: 1, wrapText: true, autoHeight: true },
-        { field: "loggedBy", headerName: "User", width: 150 }
+        { field: "logType", headerName: "Type", width: 200 },
+        { field: "notes", headerName: "Notes", width:500, wrapText: true, autoHeight: true },
+        { field: "loggedBy", headerName: "User", width: 250 }
     ],
     defaultColDef: {
         sortable: true,
