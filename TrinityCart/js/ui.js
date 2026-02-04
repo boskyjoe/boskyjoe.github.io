@@ -1800,6 +1800,18 @@ export function showWorkLogModal(leadData) {
     document.getElementById('work-log-modal-subtitle').textContent = `Interaction history for: ${leadData.customerName}`;
     document.getElementById('selected-lead-id-for-log').value = leadData.id;
     
+    const logTypeSelect = document.getElementById('log-type-select');
+    if (logTypeSelect) {
+        // Clear previous options to be safe
+        logTypeSelect.innerHTML = '';
+        // Populate from the imported config array
+        leadLogTypeOptions.forEach(opt => {
+            logTypeSelect.add(new Option(opt, opt));
+        });
+        // Optionally set a default value
+        logTypeSelect.value = 'General Note';
+    }
+    
     // Initialize the grid if it's the first time
     const gridDiv = document.getElementById('lead-work-log-grid');
     if (gridDiv && !leadsWorkLogGridApi) {
