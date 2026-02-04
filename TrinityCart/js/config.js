@@ -180,7 +180,8 @@ export const imageKitConfig = {
 
 export const leadSourceOptions = ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other'];
 export const leadStatusOptions = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
-
+export const LEADS_WORKLOG_SUBCOLLECTION = 'workLog';
+export const leadLogTypeOptions = ['Phone Call', 'Email Sent', 'Meeting', 'Quote Sent', 'General Note'];
 
 
 
