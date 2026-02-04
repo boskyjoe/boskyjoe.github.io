@@ -169,7 +169,7 @@ import {
 import { addConsignmentExpense} from './api.js';
 import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal,showViewConsignmentDetailsModal } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense,getLeadById} from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense,getLeadById,addWorkLog} from './api.js';
 
 
 import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-templates.js';
@@ -3250,6 +3250,7 @@ function setupFormSubmissions() {
         { id: 'add-supplier-form', handler: handleSupplierSubmit },
         { id: 'add-product-form', handler: handleProductSubmit },
         { id: 'lead-form', handler: handleLeadSubmit },
+        { id: 'add-work-log-form', handler: handleWorkLogSubmit },
         { id: 'add-product-to-catalogue-form', handler: handleProductCatalogueSubmit },
         { id: 'purchase-invoice-form', handler: handlePurchaseInvoiceSubmit },
         { id: 'record-payment-form', handler: handlePaymentSubmit },
@@ -3651,6 +3652,35 @@ async function handleLeadSubmit(e) {
         ProgressToast.showError(`Save Failed: ${error.message}`);
     } finally {
         setTimeout(() => ProgressToast.hide(300), 1500);
+    }
+}
+
+async function handleWorkLogSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    const leadId = document.getElementById('selected-lead-id-for-log').value;
+
+    if (!user || !leadId) {
+        return showModal('error', 'Error', 'No lead selected. Please select a lead from the grid first.');
+    }
+
+    const logData = {
+        logType: document.getElementById('log-type-select').value,
+        notes: document.getElementById('log-notes-textarea').value.trim()
+    };
+
+    if (!logData.logType || !logData.notes) {
+        return showModal('error', 'Missing Information', 'Please select a log type and enter notes.');
+    }
+
+    try {
+        await addWorkLog(leadId, logData, user);
+        // The real-time listener will update the grid automatically.
+        // We just need to clear the form for the next entry.
+        e.target.reset();
+    } catch (error) {
+        console.error("Error adding work log:", error);
+        showModal('error', 'Failed to Save Log', error.message);
     }
 }
 
