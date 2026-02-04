@@ -169,14 +169,14 @@ import {
 import { addConsignmentExpense} from './api.js';
 import { showLogExpenseModal, closeLogExpenseModal,showLogDirectSaleExpenseModal, closeLogDirectSaleExpenseModal,showViewConsignmentDetailsModal } from './ui.js';
 
-import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense} from './api.js';
+import { addExpense, updateExpense, deleteExpense,replaceExpenseReceipt,processExpense , updateConsignmentExpense, addDirectSaleExpense,getLeadById} from './api.js';
 
 
 import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-templates.js';
 
 import { initializeLeadsModule } from './leads.js';
 
-import {  openLeadModal, closeLeadModal } from './ui.js'; 
+import {  openLeadModal, closeLeadModal,showWorkLogModal } from './ui.js'; 
 
 
 
@@ -1018,6 +1018,25 @@ function setupGlobalClickHandler() {
             return;
         }
 
+        const viewWorkLogBtn = e.target.closest('.view-work-log-btn');
+        if (viewWorkLogBtn) {
+            const leadId = viewWorkLogBtn.dataset.id;
+            try {
+                ProgressToast.show('Loading Work Log...', 'info');
+                const leadData = await getLeadById(leadId); // We'll create this API function
+                ProgressToast.hide(0);
+                if (leadData) {
+                    showWorkLogModal(leadData); // We'll create this UI function
+                } else {
+                    showModal('error', 'Lead Not Found', 'Could not find the selected lead.');
+                }
+            } catch (error) {
+                ProgressToast.hide(0);
+                showModal('error', 'Error', 'Could not retrieve the work log.');
+                console.error("Error fetching lead for work log:", error);
+            }
+            return; // Action handled
+        }
 
         const changeStoreBtn = target.closest('.action-btn-change-store');
         if (changeStoreBtn) {
@@ -2438,6 +2457,7 @@ function handleStandaloneButtons(target, event) {
         '#payment-modal-close': () => closePaymentModal(),
         '#add-member-btn': () => showMemberModal(),
         '#create-new-lead-btn': () => openLeadModal() ,
+        '#lead-work-log-modal .modal-close-trigger': () => closeWorkLogModal(),
         '#request-consignment-btn': () => handleRequestConsignmentClick(),
         '#consignment-next-btn': () => handleConsignmentNext(),
         '#fulfill-checkout-btn': () => handleFulfillConsignmentClick(),
