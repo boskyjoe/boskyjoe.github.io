@@ -38,7 +38,7 @@ import { SALES_CATALOGUES_COLLECTION_PATH, CHURCH_TEAMS_COLLECTION_PATH } from '
 import {
     CONSIGNMENT_ORDERS_COLLECTION_PATH, CONSIGNMENT_PAYMENTS_LEDGER_COLLECTION_PATH, SALES_COLLECTION_PATH,SALES_PAYMENTS_LEDGER_COLLECTION_PATH,EXPENSES_COLLECTION_PATH,
     productType,leadSourceOptions,LEADS_COLLECTION_PATH,
-    leadStatusOptions,LEADS_WORKLOG_SUBCOLLECTION
+    leadStatusOptions,LEADS_WORKLOG_SUBCOLLECTION,leadLogTypeOptions
 } from './config.js';
 
 import { 
@@ -1811,7 +1811,7 @@ export function showWorkLogModal(leadData) {
         // Optionally set a default value
         logTypeSelect.value = 'General Note';
     }
-    
+
     // Initialize the grid if it's the first time
     const gridDiv = document.getElementById('lead-work-log-grid');
     if (gridDiv && !leadsWorkLogGridApi) {
