@@ -1762,6 +1762,64 @@ export function showLeadsView() {
 }
 
 
+let leadsWorkLogGridApi = null;
+let unsubscribeWorkLogListener = null;
+
+// --- Add the grid options object ---
+const leadsWorkLogGridOptions = {
+    // ... (same grid options as my previous reply)
+};
+
+// --- Add the function to show the modal ---
+export function showWorkLogModal(leadData) {
+    const modal = document.getElementById('lead-work-log-modal');
+    if (!modal) return;
+
+    // Populate modal header
+    document.getElementById('work-log-modal-subtitle').textContent = `Interaction history for: ${leadData.customerName}`;
+    document.getElementById('selected-lead-id-for-log').value = leadData.id;
+    
+    // Initialize the grid if it's the first time
+    const gridDiv = document.getElementById('lead-work-log-grid');
+    if (gridDiv && !leadsWorkLogGridApi) {
+        leadsWorkLogGridApi = createGrid(gridDiv, leadsWorkLogGridOptions);
+    }
+    
+    // Show modal and attach listener
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+    
+    if (unsubscribeWorkLogListener) unsubscribeWorkLogListener();
+    
+    const db = firebase.firestore();
+    if (leadsWorkLogGridApi) leadsWorkLogGridApi.setGridOption('loading', true);
+    
+    unsubscribeWorkLogListener = db.collection(LEADS_COLLECTION_PATH).doc(leadData.id).collection(LEADS_WORKLOG_SUBCOLLECTION)
+        .orderBy('logDate', 'desc')
+        .onSnapshot(snapshot => {
+            const logEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (leadsWorkLogGridApi) {
+                leadsWorkLogGridApi.setGridOption('rowData', logEntries);
+                leadsWorkLogGridApi.setGridOption('loading', false);
+            }
+        });
+}
+
+// --- Add the function to close the modal ---
+export function closeWorkLogModal() {
+    const modal = document.getElementById('lead-work-log-modal');
+    if (!modal) return;
+
+    if (unsubscribeWorkLogListener) {
+        unsubscribeWorkLogListener();
+        unsubscribeWorkLogListener = null;
+    }
+
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+
 
 let productsGridApi = null;
 let isProductsGridInitialized = false;
