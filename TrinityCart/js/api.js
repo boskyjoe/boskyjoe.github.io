@@ -314,6 +314,25 @@ export async function getLeadById(leadId) {
     }
 }
 
+/**
+ * Adds a new work log entry to a lead's sub-collection.
+ * @param {string} leadId - The ID of the parent lead document.
+ * @param {object} logData - The data for the new log entry.
+ * @param {object} user - The user creating the log.
+ */
+export async function addWorkLog(leadId, logData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    const logRef = db.collection(LEADS_COLLECTION_PATH).doc(leadId).collection(LEADS_WORKLOG_SUBCOLLECTION).doc();
+
+    return logRef.set({
+        ...logData,
+        logDate: now,
+        loggedBy: user.email
+    });
+}
+
 
 // --- CATEGORY API FUNCTIONS ---
 
@@ -5397,4 +5416,5 @@ export async function updateDraftSaleStatus(draftId, newStatus, user) {
         processedOn: firebase.firestore.FieldValue.serverTimestamp()
     });
 }
+
 
