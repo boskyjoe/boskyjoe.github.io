@@ -297,6 +297,24 @@ export async function updateLead(docId, updatedData, user) {
     });
 }
 
+/**
+ * Fetches a single lead document by its ID.
+ * @param {string} leadId - The Firestore document ID of the lead.
+ * @returns {Promise<object|null>} The lead data or null if not found.
+ */
+export async function getLeadById(leadId) {
+    const db = firebase.firestore();
+    const leadRef = db.collection(LEADS_COLLECTION_PATH).doc(leadId);
+    const docSnap = await leadRef.get();
+    if (docSnap.exists) {
+        return { id: docSnap.id, ...docSnap.data() };
+    } else {
+        console.error(`Lead with ID ${leadId} not found.`);
+        return null;
+    }
+}
+
+
 // --- CATEGORY API FUNCTIONS ---
 
 export async function getCategories() {
@@ -5379,3 +5397,4 @@ export async function updateDraftSaleStatus(draftId, newStatus, user) {
         processedOn: firebase.firestore.FieldValue.serverTimestamp()
     });
 }
+
