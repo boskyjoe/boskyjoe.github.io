@@ -1776,8 +1776,8 @@ const leadsWorkLogGridOptions = {
         { 
             field: "logDate", 
             headerName: "Date", 
-            width: 120, 
-            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '',
+            width: 200, 
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '',
             sort: 'desc'
         },
         { field: "logType", headerName: "Type", width: 120 },
