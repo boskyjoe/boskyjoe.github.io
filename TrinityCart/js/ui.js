@@ -1767,8 +1767,29 @@ let unsubscribeWorkLogListener = null;
 
 // --- Add the grid options object ---
 const leadsWorkLogGridOptions = {
-    // ... (same grid options as my previous reply)
+    theme: 'legacy',
+    columnDefs: [
+        { 
+            field: "logDate", 
+            headerName: "Date", 
+            width: 120, 
+            valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '',
+            sort: 'desc'
+        },
+        { field: "logType", headerName: "Type", width: 120 },
+        { field: "notes", headerName: "Notes", flex: 1, wrapText: true, autoHeight: true },
+        { field: "loggedBy", headerName: "User", width: 150 }
+    ],
+    defaultColDef: {
+        sortable: true,
+        resizable: true,
+    },
+    onGridReady: (params) => {
+        leadsWorkLogGridApi = params.api;
+        console.log('[ui.js] Leads Work Log Grid is ready.');
+    }
 };
+
 
 // --- Add the function to show the modal ---
 export function showWorkLogModal(leadData) {
