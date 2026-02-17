@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>License Usage MFE</title>
+  <title>License Usage Rollup MFE</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -27,25 +26,24 @@
     tr:nth-child(even) {
       background-color: #333;
     }
+    .nested-table {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      width: 95%;
+      margin-left: 20px;
+    }
+    .nested-table th, .nested-table td {
+      border-color: #777;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
-  <h1>3M Acelity Service Centers - License Usage</h1>
-  <table id="license-table">
-    <thead>
-      <tr>
-        <th>Billing SKU</th>
-        <th>License Feature</th>
-        <th>Network Name</th>
-        <th>Entitled Quantity</th>
-        <th>Total Usage</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h1>3M Acelity Service Centers - License Usage Rollup</h1>
+  <div id="rollup-container"></div>
 
   <script>
-    // Fetch JSON data and render table rows
+    // Fetch JSON data and roll up at Org -> Network -> LicenseFeature
     fetch('./data/licenses.json')
       .then(response => {
         if (!response.ok) {
@@ -54,17 +52,75 @@
         return response.json();
       })
       .then(data => {
-        const tbody = document.querySelector('#license-table tbody');
+        // Aggregate data by organization, then network, then licenseFeature
+        const rollup = {};
+
         data.forEach(item => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${item.billingSku}</td>
-            <td>${item.licenseFeature}</td>
-            <td>${item.networkName}</td>
-            <td>${item.entitledQuantity}</td>
-            <td>${item.totalUsage}</td>
-          `;
-          tbody.appendChild(tr);
+          const org = item.organizationName || 'Unknown Org';
+          const network = item.networkName || 'Unknown Network';
+          const licenseFeature = item.licenseFeature || 'Unknown Feature';
+
+          if (!rollup[org]) {
+            rollup[org] = {};
+          }
+          if (!rollup[org][network]) {
+            rollup[org][network] = {};
+          }
+          if (!rollup[org][network][licenseFeature]) {
+            rollup[org][network][licenseFeature] = {
+              entitledQuantity: 0,
+              totalUsage: 0
+            };
+          }
+
+          rollup[org][network][licenseFeature].entitledQuantity += item.entitledQuantity || 0;
+          rollup[org][network][licenseFeature].totalUsage += item.totalUsage || 0;
+        });
+
+        // Render the rollup data
+        const container = document.getElementById('rollup-container');
+
+        Object.entries(rollup).forEach(([orgName, networks]) => {
+          const orgDiv = document.createElement('div');
+          orgDiv.innerHTML = `<h2>Organization: ${orgName}</h2>`;
+
+          Object.entries(networks).forEach(([networkName, licenseFeatures]) => {
+            const networkDiv = document.createElement('div');
+            networkDiv.style.marginLeft = '20px';
+            networkDiv.innerHTML = `<h3>Network: ${networkName}</h3>`;
+
+            // Create table for license features under this network
+            const table = document.createElement('table');
+            table.classList.add('nested-table');
+            table.innerHTML = `
+              <thead>
+                <tr>
+                  <th>License Feature</th>
+                  <th>Entitled Quantity</th>
+                  <th>Total Usage</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            `;
+
+            const tbody = table.querySelector('tbody');
+
+            Object.entries(licenseFeatures).forEach(([featureName, values]) => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${featureName}</td>
+                <td>${values.entitledQuantity.toFixed(2)}</td>
+                <td>${values.totalUsage.toFixed(2)}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+
+            networkDiv.appendChild(table);
+            orgDiv.appendChild(networkDiv);
+          });
+
+          container.appendChild(orgDiv);
         });
       })
       .catch(error => {
