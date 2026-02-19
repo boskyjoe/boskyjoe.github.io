@@ -16989,3 +16989,165 @@ export function closeLeadModal() {
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
+
+// In js/ui.js
+
+// --- Step 1: Add new variables at the top of the file ---
+let consignmentOrdersGridApiV2 = null;
+let consignmentItemsGridApiV2 = null;
+let isConsignmentGridsInitializedV2 = false;
+let unsubscribeConsignmentListenerV2 = null;
+
+// --- Step 2: Define the grid options objects ---
+
+const consignmentOrdersGridOptionsV2 = {
+    getRowId: params => params.data.id,
+    theme: 'legacy',
+    columnDefs: [
+        { field: "consignmentId", headerName: "Order ID", width: 180 },
+        { field: "teamName", headerName: "Team", flex: 1 },
+        { field: "teamMemberName", headerName: "Member", flex: 1 },
+        { field: "checkoutDate", headerName: "Date Out", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
+        { field: "status", headerName: "Status", width: 120 },
+        { field: "balanceDue", headerName: "Balance Due", valueFormatter: p => formatCurrency(p.value || 0) },
+        {
+            headerName: "Actions", width: 120,
+            cellRenderer: params => `<button class="text-blue-600 hover:underline settle-consignment-btn-v2" data-id="${params.data.id}">Open / Settle</button>`
+        }
+    ],
+    onGridReady: params => { consignmentOrdersGridApiV2 = params.api; }
+};
+
+const consignmentItemsGridOptionsV2 = {
+    getRowId: params => params.data.productId,
+    theme: 'legacy',
+    defaultColDef: { resizable: true },
+    onCellValueChanged: (params) => {
+        // Logic to recalculate totals when a "settle" cell changes
+        if (params.data.status !== 'Active') return; // Only calc in settle mode
+        // This will be implemented later
+    },
+    onGridReady: params => { consignmentItemsGridApiV2 = params.api; }
+};
+
+// --- Step 3: Create the UI management functions ---
+
+function initializeConsignmentV2Grids() {
+    if (isConsignmentGridsInitializedV2) return;
+    const mainGridDiv = document.getElementById('consignment-orders-grid-v2');
+    const itemsGridDiv = document.getElementById('consignment-items-grid-v2');
+    if (mainGridDiv && itemsGridDiv) {
+        createGrid(mainGridDiv, consignmentOrdersGridOptionsV2);
+        createGrid(itemsGridDiv, consignmentItemsGridOptionsV2);
+        isConsignmentGridsInitializedV2 = true;
+    }
+}
+
+export function showConsignmentModalV2(orderData = null) {
+    const modal = document.getElementById('consignment-checkout-modal-v2');
+    const form = document.getElementById('consignment-form-v2');
+    form.reset();
+
+    const title = document.getElementById('consignment-modal-title-v2');
+    const subtitle = document.getElementById('consignment-modal-subtitle-v2');
+    const headerDiv = document.getElementById('consignment-checkout-header-v2');
+    const financialsDiv = document.getElementById('consignment-financials-section-v2');
+    const checkoutBtn = document.getElementById('consignment-checkout-btn-v2');
+    const settleBtns = [
+        document.getElementById('consignment-save-progress-btn-v2'),
+        document.getElementById('consignment-finalize-btn-v2')
+    ];
+
+    if (orderData) {
+        // --- SETTLE MODE ---
+        title.textContent = "Settle Consignment Order";
+        subtitle.textContent = `For: ${orderData.teamMemberName} (${orderData.teamName})`;
+        headerDiv.style.display = 'none'; // Hide team selection
+        financialsDiv.classList.remove('hidden');
+        checkoutBtn.classList.add('hidden');
+        settleBtns.forEach(btn => btn.classList.remove('hidden'));
+
+        document.getElementById('consignment-order-id-v2').value = orderData.id;
+        
+        // Configure grid for settling
+        const settleColumns = [
+            { field: "productName", headerName: "Product", flex: 1 },
+            { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
+            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
+            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
+            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
+            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
+            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} }
+        ];
+        consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
+        consignmentItemsGridApiV2.setGridOption('rowData', orderData.items);
+
+    } else {
+        // --- NEW CHECKOUT MODE ---
+        title.textContent = "New Consignment Checkout";
+        subtitle.textContent = "Select a team and add products to check out.";
+        headerDiv.style.display = 'grid';
+        financialsDiv.classList.add('hidden');
+        checkoutBtn.classList.remove('hidden');
+        settleBtns.forEach(btn => btn.classList.add('hidden'));
+
+        document.getElementById('consignment-order-id-v2').value = '';
+
+        // Configure grid for checkout
+        const checkoutColumns = [
+            { field: "productName", headerName: "Product", flex: 1 },
+            { field: "sellingPrice", headerName: "Price", valueFormatter: p => formatCurrency(p.value) },
+            { field: "quantityCheckedOut", headerName: "Qty to Checkout", editable: true, cellEditor: 'agNumberCellEditor' }
+        ];
+        consignmentItemsGridApiV2.setGridOption('columnDefs', checkoutColumns);
+        consignmentItemsGridApiV2.setGridOption('rowData', []);
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('visible'), 10);
+}
+
+export function closeConsignmentModalV2() {
+    const modal = document.getElementById('consignment-checkout-modal-v2');
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+// Helper to get items from the modal grid
+export function getConsignmentItemsV2() {
+    if (!consignmentItemsGridApiV2) return [];
+    const items = [];
+    consignmentItemsGridApiV2.forEachNode(node => items.push(node.data));
+    return items;
+}
+
+// Helper to update the modal grid
+export function updateConsignmentItemsGridV2(items) {
+    if (consignmentItemsGridApiV2) {
+        consignmentItemsGridApiV2.setGridOption('rowData', items);
+    }
+}
+
+// --- Main View Function ---
+export function showConsignmentViewV2() {
+    showView('consignment-view-v2');
+    initializeConsignmentV2Grids();
+
+    const waitForGrid = setInterval(() => {
+        if (consignmentOrdersGridApiV2) {
+            clearInterval(waitForGrid);
+            const db = firebase.firestore();
+            consignmentOrdersGridApiV2.setGridOption('loading', true);
+
+            if (unsubscribeConsignmentListenerV2) unsubscribeConsignmentListenerV2();
+
+            unsubscribeConsignmentListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH)
+                .orderBy('checkoutDate', 'desc')
+                .onSnapshot(snapshot => {
+                    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    consignmentOrdersGridApiV2.setGridOption('rowData', orders);
+                    consignmentOrdersGridApiV2.setGridOption('loading', false);
+                });
+        }
+    }, 50);
+}
