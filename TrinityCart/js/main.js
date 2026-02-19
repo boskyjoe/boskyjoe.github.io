@@ -178,6 +178,11 @@ import { initializeLeadsModule } from './leads.js';
 
 import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal } from './ui.js'; 
 
+import { showConsignmentViewV2 } from './ui.js';
+import { initializeConsignmentV2Module } from './consignment-v2.js';
+import { createSimpleConsignment, settleSimpleConsignment } from './api.js';
+
+
 
 
 // --- FIREBASE INITIALIZATION ---
@@ -816,6 +821,7 @@ const EventHandlers = {
         'church-teams-view': showChurchTeamsView,
         'expenses-view': showExpensesView,
         'consignment-view': showConsignmentView,
+        'consignment-view-v2': showConsignmentViewV2,
         'sales-view': showSalesView,
         'pmt-mgmt-view': showPaymentManagementView, // ✅ FROM: payment-management.js
         // ADD THESE NEW REPORT VIEWS:
@@ -3259,6 +3265,7 @@ function setupFormSubmissions() {
         { id: 'member-form', handler: handleMemberSubmit },
         { id: 'sales-catalogue-form', handler: handleCatalogueSubmit },
         { id: 'consignment-request-form', handler: handleConsignmentRequestSubmit },
+        { id: 'consignment-form-v2', handler: handleSimpleConsignmentSubmit },
         { id: 'report-activity-form', handler: handleActivityReportSubmit },
         { id: 'make-payment-form', handler: handleMakePaymentSubmit },
         { id: 'new-sale-form', handler: handleNewSaleSubmit },
@@ -5044,6 +5051,54 @@ async function handleConsignmentRequestSubmit(e) {
             showModal('error', 'Request Failed', `The consignment request could not be submitted.\n\nError: ${error.message}`);
         }
     } finally {setTimeout(() => ProgressToast.hide(300), 1500);}
+}
+
+async function handleSimpleConsignmentSubmit(e) {
+    e.preventDefault();
+    const user = appState.currentUser;
+    const orderId = document.getElementById('consignment-order-id-v2').value;
+    const isEditMode = !!orderId;
+
+    const items = getConsignmentItemsV2();
+    if (items.length === 0) {
+        return showModal('error', 'No Items', 'Please add at least one product.');
+    }
+
+    if (isEditMode) {
+        // This is a "Settle" operation
+        ProgressToast.show('Saving Settlement Progress...', 'info');
+        try {
+            await settleSimpleConsignment(orderId, items, user);
+            ProgressToast.showSuccess('Progress saved!');
+        } catch (error) {
+            ProgressToast.showError('Save failed.');
+            console.error(error);
+        }
+    } else {
+        // This is a "New Checkout" operation
+        const orderData = {
+            teamId: document.getElementById('consignment-team-select-v2').value,
+            teamName: document.getElementById('consignment-team-select-v2').options[document.getElementById('consignment-team-select-v2').selectedIndex].text,
+            teamMemberId: document.getElementById('consignment-member-select-v2').value,
+            teamMemberName: document.getElementById('consignment-member-select-v2').options[document.getElementById('consignment-member-select-v2').selectedIndex].text,
+            manualVoucherNumber: document.getElementById('consignment-voucher-input-v2').value,
+        };
+        
+        if (!orderData.teamId || !orderData.teamMemberId || !orderData.manualVoucherNumber) {
+            return showModal('error', 'Missing Info', 'Please select a Team, Member, and enter a Voucher Number.');
+        }
+
+        ProgressToast.show('Processing Checkout...', 'info');
+        try {
+            await createSimpleConsignment(orderData, items, user);
+            ProgressToast.showSuccess('Checkout successful!');
+            closeConsignmentModalV2();
+        } catch (error) {
+            ProgressToast.showError('Checkout failed.');
+            console.error(error);
+        }
+    }
+    setTimeout(() => ProgressToast.hide(500), 1200);
 }
 
 
@@ -9041,6 +9096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ProgressToast.updateProgress('Initializing all Master date...', 150);
     
     initializeMasterDataListeners();
+    initializeConsignmentV2Module();
 
     ProgressToast.showSuccess('Application Loaded successfully.. Welcome to MONETA');
     setTimeout(() => ProgressToast.hide(1500), 1500);
