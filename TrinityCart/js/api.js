@@ -5418,3 +5418,77 @@ export async function updateDraftSaleStatus(draftId, newStatus, user) {
 }
 
 
+/**
+ * Creates a new Simple Consignment order and atomically decrements inventory.
+ * @param {object} orderData - The header data for the order.
+ * @param {Array<object>} items - The items being checked out.
+ * @param {object} user - The admin creating the order.
+ */
+export async function createSimpleConsignment(orderData, items, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc();
+
+    return db.runTransaction(async (transaction) => {
+        // 1. Create the main order document
+        transaction.set(orderRef, {
+            ...orderData,
+            status: 'Active',
+            checkoutDate: now,
+            items: items, // Embed the items array directly
+            // Initial financial state
+            totalValueCheckedOut: items.reduce((sum, item) => sum + (item.quantityCheckedOut * item.sellingPrice), 0),
+            totalValueSold: 0,
+            totalAmountPaid: 0,
+            totalExpenses: 0,
+            balanceDue: 0,
+            audit: { createdBy: user.email, createdOn: now }
+        });
+
+        // 2. Decrement inventory for each item
+        for (const item of items) {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-item.quantityCheckedOut)
+            });
+        }
+    });
+}
+
+/**
+ * Settles a Simple Consignment order, updating item quantities and financials.
+ * @param {string} orderId - The ID of the order to settle.
+ * @param {Array<object>} updatedItems - The final state of the items array.
+ * @param {object} user - The admin settling the order.
+ */
+export async function settleSimpleConsignment(orderId, updatedItems, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
+
+    return db.runTransaction(async (transaction) => {
+        // 1. Calculate new financial totals from the updated items
+        const totalValueSold = updatedItems.reduce((sum, item) => sum + (item.quantitySold * item.sellingPrice), 0);
+        // We'll handle payments separately for simplicity in this version.
+
+        // 2. Identify items being returned to stock
+        const itemsToRestock = updatedItems.filter(item => item.quantityReturned > 0);
+
+        // 3. Update the main order document
+        transaction.update(orderRef, {
+            items: updatedItems,
+            totalValueSold: totalValueSold,
+            balanceDue: totalValueSold, // For now, balance is total sold. Payments will reduce this.
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now
+        });
+
+        // 4. Increment inventory for returned items
+        for (const item of itemsToRestock) {
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(item.quantityReturned)
+            });
+        }
+    });
+}
