@@ -56,6 +56,7 @@ export const EXPENSES_COLLECTION_PATH = `${BASE_DOC_PATH}/expenses`;
 
 export const LEADS_COLLECTION_PATH = `${BASE_DOC_PATH}/leads`;
 
+export const SIMPLE_CONSIGNMENT_COLLECTION_PATH = `${BASE_DOC_PATH}/consignmentOrdersV2`;
 
 
 
@@ -292,6 +293,16 @@ export const navConfig = [
         </svg>`,
         viewId: "consignment-view",
         roles: ["admin", "team_lead", "sales_staff", "finance", "guest","inventory_manager"]
+    },
+    {
+        type: "link",
+        label: "Simple Consignment",
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-cyan-500">
+            <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h10zM13 16l-2-2m2 2l2-2m-2 2v-2m2 2h-2M13 16a1 1 0 011 1v4h-2.5a1 1 0 01-.8-.4l-1-1.4a1 1 0 00-1.4 0l-1 1.4a1 1 0 01-.8.4H7v-4a1 1 0 011-1h5z" />
+        </svg>`,
+        viewId: "consignment-view-v2", // <-- NEW, UNIQUE viewId
+        roles: ["admin", "inventory_manager"] // Initially only for admin/inventory roles
     },
     
     // 8. Supplier - Outline
