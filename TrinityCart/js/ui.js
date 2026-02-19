@@ -17043,13 +17043,18 @@ function initializeConsignmentV2Grids() {
     }
 }
 
+
 export function showConsignmentModalV2(orderData = null) {
     const modal = document.getElementById('consignment-checkout-modal-v2');
     const form = document.getElementById('consignment-form-v2');
     form.reset();
 
     const title = document.getElementById('consignment-modal-title-v2');
-    const subtitle = document.getElementById('consignment-modal-subtitle-v2');
+    
+    // --- THIS IS THE FIX ---
+    const subtitle = document.getElementById('consignment-modal-subtitle-v2'); 
+    // -----------------------
+
     const headerDiv = document.getElementById('consignment-checkout-header-v2');
     const financialsDiv = document.getElementById('consignment-financials-section-v2');
     const checkoutBtn = document.getElementById('consignment-checkout-btn-v2');
@@ -17061,15 +17066,14 @@ export function showConsignmentModalV2(orderData = null) {
     if (orderData) {
         // --- SETTLE MODE ---
         title.textContent = "Settle Consignment Order";
-        subtitle.textContent = `For: ${orderData.teamMemberName} (${orderData.teamName})`;
-        headerDiv.style.display = 'none'; // Hide team selection
+        subtitle.textContent = `For: ${orderData.teamMemberName} (${orderData.teamName})`; // This line will now work
+        headerDiv.style.display = 'none';
         financialsDiv.classList.remove('hidden');
         checkoutBtn.classList.add('hidden');
         settleBtns.forEach(btn => btn.classList.remove('hidden'));
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
         
-        // Configure grid for settling
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
             { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
@@ -17085,7 +17089,7 @@ export function showConsignmentModalV2(orderData = null) {
     } else {
         // --- NEW CHECKOUT MODE ---
         title.textContent = "New Consignment Checkout";
-        subtitle.textContent = "Select a team and add products to check out.";
+        subtitle.textContent = "Select a team and add products to check out."; // This line will now work
         headerDiv.style.display = 'grid';
         financialsDiv.classList.add('hidden');
         checkoutBtn.classList.remove('hidden');
@@ -17093,7 +17097,6 @@ export function showConsignmentModalV2(orderData = null) {
 
         document.getElementById('consignment-order-id-v2').value = '';
 
-        // Configure grid for checkout
         const checkoutColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
             { field: "sellingPrice", headerName: "Price", valueFormatter: p => formatCurrency(p.value) },
