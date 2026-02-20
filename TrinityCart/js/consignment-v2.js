@@ -37,24 +37,37 @@ export function initializeConsignmentV2Module() {
     });
 
     // Button inside the modal to add products
-    document.getElementById('add-consignment-products-btn-v2').addEventListener('click', () => {
-        // This can reuse your existing product selection modal logic
-        // For now, we'll simulate adding an item.
-        const currentItems = getConsignmentItemsV2();
-        const product = masterData.products[0]; // Just an example
-        
-        if (product && !currentItems.some(item => item.productId === product.id)) {
-            const newItem = {
-                productId: product.id,
-                productName: product.itemName,
-                sellingPrice: product.sellingPrice,
-                quantityCheckedOut: 10, // Default checkout quantity
-                quantitySold: 0,
-                quantityReturned: 0,
-                quantityDamaged: 0,
-                quantityGifted: 0
-            };
-            updateConsignmentItemsGridV2([...currentItems, newItem]);
+    document.getElementById('add-consignment-products-btn-v2').addEventListener('click', async () => {
+        const catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
+
+        // 1. Validation: Ensure a catalogue is selected first
+        if (!catalogueId) {
+            showModal('error', 'No Catalogue Selected', 'Please select a Sales Catalogue before adding products.');
+            return;
         }
+
+        // 2. Fetch items for the selected catalogue
+        const itemsFromCatalogue = await getItemsForCatalogue(catalogueId);
+        if (!itemsFromCatalogue || itemsFromCatalogue.length === 0) {
+            showModal('info', 'Empty Catalogue', 'This sales catalogue has no products in it.');
+            return;
+        }
+
+        // 3. Update the items grid with the products from the selected catalogue
+        // We will default the checkout quantity to 0. The admin will edit this.
+        const gridItems = itemsFromCatalogue.map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            sellingPrice: item.sellingPrice,
+            quantityCheckedOut: 0, // Default to 0
+            // Add other fields with default 0 values
+            quantitySold: 0,
+            quantityReturned: 0,
+            quantityDamaged: 0,
+            quantityGifted: 0
+        }));
+
+        updateConsignmentItemsGridV2(gridItems);
+        showModal('success', 'Products Loaded', `${gridItems.length} products from the catalogue have been loaded into the grid. Please enter the quantities to check out.`);
     });
 }
