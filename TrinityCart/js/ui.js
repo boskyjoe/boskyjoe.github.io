@@ -17097,6 +17097,19 @@ export function showConsignmentModalV2(orderData = null) {
 
         document.getElementById('consignment-order-id-v2').value = '';
 
+        const catalogueSelect = document.getElementById('consignment-catalogue-select-v2');
+        catalogueSelect.innerHTML = '<option value="">Select a catalogue...</option>';
+        catalogueSelect.disabled = true; // Disable until teams are loaded
+        const activeCatalogues = masterData.salesCatalogues.filter(c => c.isActive);
+        if (activeCatalogues.length > 0) {
+            activeCatalogues.forEach(cat => {
+                catalogueSelect.add(new Option(`${cat.catalogueName} (${cat.seasonName})`, cat.id));
+            });
+            catalogueSelect.disabled = false;
+        } else {
+            catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
+        }
+
         const checkoutColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
             { field: "sellingPrice", headerName: "Price", valueFormatter: p => formatCurrency(p.value) },
