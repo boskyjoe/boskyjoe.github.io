@@ -8405,7 +8405,8 @@
             <form id="consignment-form-v2" class="flex-1 flex flex-col min-h-0">
                 <input type="hidden" id="consignment-order-id-v2">
                 <div class="flex-1 p-6 space-y-6 overflow-y-auto">
-                    <div id="consignment-checkout-header-v2" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Section 1: Header Info -->
+                    <div id="consignment-checkout-header-v2" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="consignment-team-select-v2" class="form-label">Team <span class="text-red-500">*</span></label>
                             <select id="consignment-team-select-v2" class="form-input w-full" required></select>
@@ -8413,6 +8414,24 @@
                         <div>
                             <label for="consignment-member-select-v2" class="form-label">Team Member <span class="text-red-500">*</span></label>
                             <select id="consignment-member-select-v2" class="form-input w-full" required disabled></select>
+                        </div>
+                        <div>
+                            <label for="consignment-member-phone-v2" class="form-label">Member Phone <span class="text-red-500">*</span></label>
+                            <input type="tel" id="consignment-member-phone-v2" class="form-input w-full" required placeholder="Enter member's phone number">
+                        </div>
+                        <div>
+                            <label for="consignment-member-email-v2" class="form-label">Member Email (Optional)</label>
+                            <input type="email" id="consignment-member-email-v2" class="form-input w-full" placeholder="Enter member's email">
+                        </div>
+                        <div>
+                            <label for="consignment-venue-v2" class="form-label">Venue / Purpose <span class="text-red-500">*</span></label>
+                            <input type="text" id="consignment-venue-v2" class="form-input w-full" required placeholder="e.g., Sunday Sale at St. Mark's, Youth Fundraiser">
+                        </div>
+                        <div>
+                            <label for="consignment-catalogue-select-v2" class="form-label">Sales Catalogue <span class="text-red-500">*</span></label>
+                            <select id="consignment-catalogue-select-v2" class="form-input w-full" required>
+                                <option value="">Select a catalogue...</option>
+                            </select>
                         </div>
                         <div>
                             <label for="consignment-voucher-input-v2" class="form-label">Manual Voucher # <span class="text-red-500">*</span></label>
