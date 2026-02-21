@@ -17050,11 +17050,7 @@ export function showConsignmentModalV2(orderData = null) {
     form.reset();
 
     const title = document.getElementById('consignment-modal-title-v2');
-    
-    // --- THIS IS THE FIX ---
-    const subtitle = document.getElementById('consignment-modal-subtitle-v2'); 
-    // -----------------------
-
+    const subtitle = document.getElementById('consignment-modal-subtitle-v2');
     const headerDiv = document.getElementById('consignment-checkout-header-v2');
     const financialsDiv = document.getElementById('consignment-financials-section-v2');
     const checkoutBtn = document.getElementById('consignment-checkout-btn-v2');
@@ -17062,6 +17058,7 @@ export function showConsignmentModalV2(orderData = null) {
         document.getElementById('consignment-save-progress-btn-v2'),
         document.getElementById('consignment-finalize-btn-v2')
     ];
+    const addProductsBtn = document.getElementById('add-consignment-products-btn-v2');
 
     if (orderData) {
         // --- SETTLE MODE ---
@@ -17089,17 +17086,18 @@ export function showConsignmentModalV2(orderData = null) {
     } else {
         // --- NEW CHECKOUT MODE ---
         title.textContent = "New Consignment Checkout";
-        subtitle.textContent = "Select a team and add products to check out."; // This line will now work
+        subtitle.textContent = "Enter details and add products to check out.";
         headerDiv.style.display = 'grid';
         financialsDiv.classList.add('hidden');
         checkoutBtn.classList.remove('hidden');
         settleBtns.forEach(btn => btn.classList.add('hidden'));
+        addProductsBtn.classList.remove('hidden');
 
         document.getElementById('consignment-order-id-v2').value = '';
 
+        // Populate Sales Catalogue Dropdown (this part is still needed)
         const catalogueSelect = document.getElementById('consignment-catalogue-select-v2');
         catalogueSelect.innerHTML = '<option value="">Select a catalogue...</option>';
-        catalogueSelect.disabled = true; // Disable until teams are loaded
         const activeCatalogues = masterData.salesCatalogues.filter(c => c.isActive);
         if (activeCatalogues.length > 0) {
             activeCatalogues.forEach(cat => {
@@ -17108,8 +17106,10 @@ export function showConsignmentModalV2(orderData = null) {
             catalogueSelect.disabled = false;
         } else {
             catalogueSelect.innerHTML = '<option value="">No active catalogues found</option>';
+            catalogueSelect.disabled = true;
         }
 
+        // Configure grid for checkout
         const checkoutColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
             { field: "sellingPrice", headerName: "Price", valueFormatter: p => formatCurrency(p.value) },
