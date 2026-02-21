@@ -8408,12 +8408,14 @@
                     <!-- Section 1: Header Info -->
                     <div id="consignment-checkout-header-v2" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="consignment-team-select-v2" class="form-label">Team <span class="text-red-500">*</span></label>
-                            <select id="consignment-team-select-v2" class="form-input w-full" required></select>
+                            <label for="consignment-team-input-v2" class="form-label">Team / Group Name <span class="text-red-500">*</span></label>
+                            <!-- CHANGED from select to input -->
+                            <input type="text" id="consignment-team-input-v2" class="form-input w-full" required placeholder="e.g., Sunday School Teachers">
                         </div>
                         <div>
-                            <label for="consignment-member-select-v2" class="form-label">Team Member <span class="text-red-500">*</span></label>
-                            <select id="consignment-member-select-v2" class="form-input w-full" required disabled></select>
+                            <label for="consignment-member-input-v2" class="form-label">Team Member Name <span class="text-red-500">*</span></label>
+                            <!-- CHANGED from select to input -->
+                            <input type="text" id="consignment-member-input-v2" class="form-input w-full" required placeholder="e.g., Jane Smith">
                         </div>
                         <div>
                             <label for="consignment-member-phone-v2" class="form-label">Member Phone <span class="text-red-500">*</span></label>
