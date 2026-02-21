@@ -5059,9 +5059,9 @@ async function handleSimpleConsignmentSubmit(e) {
     const orderId = document.getElementById('consignment-order-id-v2').value;
     const isEditMode = !!orderId;
 
-    const items = getConsignmentItemsV2();
-    if (items.length === 0) {
-        return showModal('error', 'No Items', 'Please add at least one product.');
+    const items = getConsignmentItemsV2().filter(item => item.quantityCheckedOut > 0); // Only include items with a quantity
+    if (items.length === 0 && !isEditMode) {
+        return showModal('error', 'No Items', 'Please add products and set a quantity greater than 0.');
     }
 
     if (isEditMode) {
@@ -5076,16 +5076,23 @@ async function handleSimpleConsignmentSubmit(e) {
         }
     } else {
         // This is a "New Checkout" operation
+        const catalogueSelect = document.getElementById('consignment-catalogue-select-v2');
         const orderData = {
             teamId: document.getElementById('consignment-team-select-v2').value,
             teamName: document.getElementById('consignment-team-select-v2').options[document.getElementById('consignment-team-select-v2').selectedIndex].text,
             teamMemberId: document.getElementById('consignment-member-select-v2').value,
             teamMemberName: document.getElementById('consignment-member-select-v2').options[document.getElementById('consignment-member-select-v2').selectedIndex].text,
             manualVoucherNumber: document.getElementById('consignment-voucher-input-v2').value,
+            // --- NEW FIELDS TO SAVE ---
+            memberPhone: document.getElementById('consignment-member-phone-v2').value.trim(),
+            memberEmail: document.getElementById('consignment-member-email-v2').value.trim(),
+            venue: document.getElementById('consignment-venue-v2').value.trim(),
+            salesCatalogueId: catalogueSelect.value,
+            salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text
         };
         
-        if (!orderData.teamId || !orderData.teamMemberId || !orderData.manualVoucherNumber) {
-            return showModal('error', 'Missing Info', 'Please select a Team, Member, and enter a Voucher Number.');
+        if (!orderData.teamId || !orderData.teamMemberId || !orderData.manualVoucherNumber || !orderData.memberPhone || !orderData.venue || !orderData.salesCatalogueId) {
+            return showModal('error', 'Missing Info', 'Please fill out all mandatory (*) fields.');
         }
 
         ProgressToast.show('Processing Checkout...', 'info');
