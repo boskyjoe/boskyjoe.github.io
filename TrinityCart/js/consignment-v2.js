@@ -8,6 +8,8 @@ import {
     getConsignmentItemsV2 
 } from './ui.js';
 
+import { getItemsForCatalogue } from './api.js';
+
 /**
  * Main initialization function for the Simple Consignment module.
  * This is called once from main.js.
