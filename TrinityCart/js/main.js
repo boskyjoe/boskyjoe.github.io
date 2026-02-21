@@ -5078,12 +5078,12 @@ async function handleSimpleConsignmentSubmit(e) {
         // This is a "New Checkout" operation
         const catalogueSelect = document.getElementById('consignment-catalogue-select-v2');
         const orderData = {
-            teamId: document.getElementById('consignment-team-select-v2').value,
-            teamName: document.getElementById('consignment-team-select-v2').options[document.getElementById('consignment-team-select-v2').selectedIndex].text,
-            teamMemberId: document.getElementById('consignment-member-select-v2').value,
-            teamMemberName: document.getElementById('consignment-member-select-v2').options[document.getElementById('consignment-member-select-v2').selectedIndex].text,
-            manualVoucherNumber: document.getElementById('consignment-voucher-input-v2').value,
-            // --- NEW FIELDS TO SAVE ---
+            // --- CHANGED: Read from input fields ---
+            teamName: document.getElementById('consignment-team-input-v2').value.trim(),
+            teamMemberName: document.getElementById('consignment-member-input-v2').value.trim(),
+            // --- No more teamId or teamMemberId needed ---
+
+            manualVoucherNumber: document.getElementById('consignment-voucher-input-v2').value.trim(),
             memberPhone: document.getElementById('consignment-member-phone-v2').value.trim(),
             memberEmail: document.getElementById('consignment-member-email-v2').value.trim(),
             venue: document.getElementById('consignment-venue-v2').value.trim(),
@@ -5091,7 +5091,8 @@ async function handleSimpleConsignmentSubmit(e) {
             salesCatalogueName: catalogueSelect.options[catalogueSelect.selectedIndex].text
         };
         
-        if (!orderData.teamId || !orderData.teamMemberId || !orderData.manualVoucherNumber || !orderData.memberPhone || !orderData.venue || !orderData.salesCatalogueId) {
+        // --- UPDATED VALIDATION ---
+        if (!orderData.teamName || !orderData.teamMemberName || !orderData.manualVoucherNumber || !orderData.memberPhone || !orderData.venue || !orderData.salesCatalogueId) {
             return showModal('error', 'Missing Info', 'Please fill out all mandatory (*) fields.');
         }
 
