@@ -42,34 +42,39 @@ export function initializeConsignmentV2Module() {
     document.getElementById('add-consignment-products-btn-v2').addEventListener('click', async () => {
         const catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
 
-        // 1. Validation: Ensure a catalogue is selected first
         if (!catalogueId) {
             showModal('error', 'No Catalogue Selected', 'Please select a Sales Catalogue before adding products.');
             return;
         }
 
-        // 2. Fetch items for the selected catalogue
         const itemsFromCatalogue = await getItemsForCatalogue(catalogueId);
         if (!itemsFromCatalogue || itemsFromCatalogue.length === 0) {
             showModal('info', 'Empty Catalogue', 'This sales catalogue has no products in it.');
             return;
         }
 
-        // 3. Update the items grid with the products from the selected catalogue
-        // We will default the checkout quantity to 0. The admin will edit this.
-        const gridItems = itemsFromCatalogue.map(item => ({
-            productId: item.productId,
-            productName: item.productName,
-            sellingPrice: item.sellingPrice,
-            quantityCheckedOut: 0, // Default to 0
-            // Add other fields with default 0 values
-            quantitySold: 0,
-            quantityReturned: 0,
-            quantityDamaged: 0,
-            quantityGifted: 0
-        }));
+        // --- THIS IS THE NEW LOGIC ---
+        // Cross-reference with masterData to get the current inventory count
+        const gridItems = itemsFromCatalogue.map(item => {
+            const masterProduct = masterData.products.find(p => p.id === item.productId);
+            const inventoryCount = masterProduct ? masterProduct.inventoryCount : 0;
+
+            return {
+                productId: item.productId,
+                productName: item.productName,
+                sellingPrice: item.sellingPrice,
+                inventoryCount: inventoryCount, // <-- ADDED: The current stock level
+                quantityCheckedOut: 0,
+                // Add other fields with default 0 values
+                quantitySold: 0,
+                quantityReturned: 0,
+                quantityDamaged: 0,
+                quantityGifted: 0
+            };
+        });
+        // --- END OF NEW LOGIC ---
 
         updateConsignmentItemsGridV2(gridItems);
-        showModal('success', 'Products Loaded', `${gridItems.length} products from the catalogue have been loaded into the grid. Please enter the quantities to check out.`);
+        showModal('success', 'Products Loaded', `${gridItems.length} products from the catalogue have been loaded. You can now enter the quantities to check out.`);
     });
 }
