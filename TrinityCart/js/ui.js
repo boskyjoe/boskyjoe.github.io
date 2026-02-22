@@ -17112,8 +17112,26 @@ export function showConsignmentModalV2(orderData = null) {
         // Configure grid for checkout
         const checkoutColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
-            { field: "sellingPrice", headerName: "Price", valueFormatter: p => formatCurrency(p.value) },
-            { field: "quantityCheckedOut", headerName: "Qty to Checkout", editable: true, cellEditor: 'agNumberCellEditor' }
+            { 
+                field: "inventoryCount", 
+                headerName: "Available", 
+                width: 120,
+                cellStyle: { 'font-weight': 'bold', 'text-align': 'center' }
+            },
+            { 
+                field: "sellingPrice", 
+                headerName: "Price", 
+                width: 120,
+                valueFormatter: p => formatCurrency(p.value) 
+            },
+            { 
+                field: "quantityCheckedOut", 
+                headerName: "Qty to Checkout", 
+                width: 150,
+                editable: true, 
+                cellEditor: 'agNumberCellEditor',
+                cellStyle: { backgroundColor: '#eef2ff' } // Highlight the editable cell
+            }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', checkoutColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', []);
