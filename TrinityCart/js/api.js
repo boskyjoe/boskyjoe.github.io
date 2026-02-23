@@ -5430,10 +5430,13 @@ export async function createSimpleConsignment(orderData, items, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc();
 
+    const consignmentId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+
     return db.runTransaction(async (transaction) => {
         // 1. Create the main order document
         transaction.set(orderRef, {
             ...orderData,
+            consignmentId: consignmentId,
             status: 'Active',
             checkoutDate: now,
             items: items, // Embed the items array directly
