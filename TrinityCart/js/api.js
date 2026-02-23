@@ -5471,14 +5471,25 @@ export async function settleSimpleConsignment(orderId, updatedItems, user) {
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
     return db.runTransaction(async (transaction) => {
+        // First, READ the existing order to get current payment/expense info
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) throw new Error("Order not found.");
+        const currentOrderData = orderDoc.data();
+
         // 1. Calculate new financial totals from the updated items
         const totalValueSold = updatedItems.reduce((sum, item) => sum + (item.quantitySold * item.sellingPrice), 0);
+
+         // 2. Use existing payment and expense data to calculate the new balance
+        const totalAmountPaid = currentOrderData.totalAmountPaid || 0;
+        const totalExpenses = currentOrderData.totalExpenses || 0;
+        const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
+
         // We'll handle payments separately for simplicity in this version.
 
-        // 2. Identify items being returned to stock
+        // 3. Identify items being returned to stock
         const itemsToRestock = updatedItems.filter(item => item.quantityReturned > 0);
 
-        // 3. Update the main order document
+        // 4. Update the main order document with all new values
         transaction.update(orderRef, {
             items: updatedItems,
             totalValueSold: totalValueSold,
@@ -5487,7 +5498,7 @@ export async function settleSimpleConsignment(orderId, updatedItems, user) {
             'audit.updatedOn': now
         });
 
-        // 4. Increment inventory for returned items
+        // 5. Increment inventory for returned items
         for (const item of itemsToRestock) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
             transaction.update(productRef, {
