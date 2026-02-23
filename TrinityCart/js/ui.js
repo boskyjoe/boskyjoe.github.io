@@ -17070,6 +17070,19 @@ export function showConsignmentModalV2(orderData = null) {
         settleBtns.forEach(btn => btn.classList.remove('hidden'));
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
+
+        const updateSettleFinancials = () => {
+            const items = getConsignmentItemsV2(); // Helper to get current grid data
+            const totalValueSold = items.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
+            const totalExpenses = orderData.totalExpenses || 0; // Get existing expenses
+            const totalAmountPaid = orderData.totalAmountPaid || 0; // Get existing payments
+            
+            const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
+
+            document.getElementById('consignment-total-sold').textContent = formatCurrency(totalValueSold);
+            document.getElementById('consignment-total-expenses').textContent = formatCurrency(totalExpenses);
+            document.getElementById('consignment-amount-due').textContent = formatCurrency(newBalanceDue);
+        };
         
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
@@ -17082,6 +17095,13 @@ export function showConsignmentModalV2(orderData = null) {
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', orderData.items);
+        consignmentItemsGridApiV2.setGridOption('onCellValueChanged', (params) => {
+            // When any cell in the settle grid changes (like quantitySold),
+            // update the financial summary display instantly.
+            updateSettleFinancials();
+        });
+
+        updateSettleFinancials();
 
     } else {
         // --- NEW CHECKOUT MODE ---
