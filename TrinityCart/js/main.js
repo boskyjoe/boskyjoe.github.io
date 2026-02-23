@@ -178,7 +178,7 @@ import { initializeLeadsModule } from './leads.js';
 
 import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal } from './ui.js'; 
 
-import { showConsignmentViewV2,getConsignmentItemsV2 } from './ui.js';
+import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2 } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
 import { createSimpleConsignment, settleSimpleConsignment } from './api.js';
 
