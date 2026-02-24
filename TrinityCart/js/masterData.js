@@ -4,7 +4,7 @@ import { CATEGORIES_COLLECTION_PATH, SEASONS_COLLECTION_PATH,
     PRODUCTS_CATALOGUE_COLLECTION_PATH, SUPPLIERS_COLLECTION_PATH,
     PAYMENT_MODES_COLLECTION_PATH,
 SALES_CATALOGUES_COLLECTION_PATH,CHURCH_TEAMS_COLLECTION_PATH,EVENTS_COLLECTION_PATH,SYSTEM_SETUPS_COLLECTION_PATH,DRAFT_SALES_COLLECTION_PATH
-,LEADS_COLLECTION_PATH  } from './config.js';
+,LEADS_COLLECTION_PATH , SIMPLE_CONSIGNMENT_COLLECTION_PATH } from './config.js';
 
 // This object will be our local, always-up-to-date cache of master data.
 export const masterData = {
@@ -19,7 +19,8 @@ export const masterData = {
     systemSetups: {},
     isDataReady: false,
     draftSales: [],
-    leads: [] 
+    leads: [] ,
+    simpleConsignments: []
 };
 
 
@@ -212,4 +213,27 @@ export function detachMasterDataListeners() {
     unsubscribeFunctions.length = 0; // Clear the array
     isInitialized = false;
     masterData.isDataReady = false; // Reset the ready flag for the next login
+}
+
+
+export function initializeMasterDataListeners() {
+    // ... (all your existing listeners for categories, products, etc.)
+
+    const draftSalesUnsub = db.collection(DRAFT_SALES_COLLECTION_PATH)
+        // ... (this listener is unchanged)
+    unsubscribeFunctions.push(draftSalesUnsub);
+
+
+    // --- ADD THIS NEW LISTENER FOR SIMPLE CONSIGNMENTS ---
+    const simpleConsignmentsUnsub = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH)
+        .onSnapshot(snapshot => {
+            masterData.simpleConsignments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Master data updated: Simple Consignments", masterData.simpleConsignments.length);
+            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'simpleConsignments' } }));
+        }, error => console.error("Error listening to simple consignments:", error));
+    unsubscribeFunctions.push(simpleConsignmentsUnsub);
+    // --- END OF NEW LISTENER ---
+
+
+    isInitialized = true;
 }
