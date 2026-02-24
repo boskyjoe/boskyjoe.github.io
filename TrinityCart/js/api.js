@@ -5507,3 +5507,66 @@ export async function settleSimpleConsignment(orderId, updatedItems, user) {
         }
     });
 }
+
+/**
+ * Records a payment for a Simple Consignment order, updating totals and handling donations.
+ * @param {string} orderId - The ID of the consignment order.
+ * @param {object} paymentData - Details of the payment being made.
+ * @param {object} user - The admin recording the payment.
+ */
+export async function recordSimpleConsignmentPayment(orderId, paymentData, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
+
+    // This transaction ensures that the payment is recorded AND the order is updated together.
+    return db.runTransaction(async (transaction) => {
+        // 1. READ the current order to get its financial state
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) throw new Error("Consignment order not found.");
+        const orderData = orderDoc.data();
+
+        // 2. CALCULATE new totals and any donation amount
+        const amountPaid = paymentData.amount;
+        const currentBalance = orderData.balanceDue || 0;
+        const amountToApplyToBalance = Math.min(amountPaid, currentBalance);
+        const donationAmount = Math.max(0, amountPaid - currentBalance);
+
+        const newTotalAmountPaid = (orderData.totalAmountPaid || 0) + amountToApplyToBalance;
+        const newBalanceDue = currentBalance - amountToApplyToBalance;
+
+        // 3. WRITE: Create the new payment record in a sub-collection for a clean audit trail
+        const paymentRef = orderRef.collection('payments').doc();
+        transaction.set(paymentRef, {
+            ...paymentData,
+            logDate: now,
+            loggedBy: user.email,
+            amountApplied: amountToApplyToBalance,
+            donationAmount: donationAmount
+        });
+
+        // 4. WRITE: Update the main order document with the new totals
+        transaction.update(orderRef, {
+            totalAmountPaid: newTotalAmountPaid,
+            balanceDue: newBalanceDue
+        });
+
+        // 5. WRITE: If there was a donation, create a record in the main donations collection
+        if (donationAmount > 0) {
+            const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+            transaction.set(donationRef, {
+                amount: donationAmount,
+                donationDate: now,
+                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT, // Use your constant
+                sourceDetails: {
+                    teamName: orderData.teamName,
+                    orderId: orderId,
+                    consignmentId: orderData.consignmentId,
+                    paymentRef: paymentData.reference
+                },
+                recordedBy: user.email,
+                status: 'Verified'
+            });
+        }
+    });
+}
