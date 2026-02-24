@@ -8447,8 +8447,43 @@
                         </div>
                         <div id="consignment-items-grid-v2" class="ag-theme-alpine" style="height: 250px; width: 100%;"></div>
                     </div>
+                    <!-- Section 3: Financials (Hidden in Checkout Mode) -->
                     <div id="consignment-financials-section-v2" class="hidden pt-4 border-t">
-                        <!-- Financials section content here -->
+                        <h4 class="font-semibold text-gray-700 mb-3">Settlement & Payment</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <!-- Left Side: Financial Summary -->
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-lg border">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">Total Value Sold:</span>
+                                    <!-- THIS IS THE ELEMENT THAT WAS MISSING -->
+                                    <span id="consignment-total-sold" class="font-bold text-lg text-green-600"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">Total Expenses:</span>
+                                    <!-- THIS IS THE ELEMENT THAT WAS MISSING -->
+                                    <span id="consignment-total-expenses" class="font-bold text-lg text-orange-600"></span>
+                                </div>
+                                <hr>
+                                <div class="flex justify-between items-center text-xl">
+                                    <span class="font-bold text-gray-800">Amount Due:</span>
+                                    <!-- THIS IS THE ELEMENT THAT WAS MISSING -->
+                                    <span id="consignment-amount-due" class="font-bold text-blue-600"></span>
+                                </div>
+                            </div>
+
+                            <!-- Right Side: Payment Input -->
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-lg border">
+                                <div>
+                                    <label for="consignment-amount-paid-v2" class="form-label">Amount Paid Now</label>
+                                    <input type="number" id="consignment-amount-paid-v2" class="form-input w-full" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="text-right">
+                                    <button type="button" id="consignment-record-payment-btn-v2" class="modal-btn modal-btn-primary text-sm">Record Payment</button>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3 flex-shrink-0">
