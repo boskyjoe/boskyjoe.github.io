@@ -17086,6 +17086,18 @@ export function showConsignmentModalV2(orderData = null) {
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
 
+        const paymentDateInput = document.getElementById('consignment-payment-date-v2');
+        paymentDateInput.valueAsDate = new Date(); // Default to today
+
+        const paymentModeSelect = document.getElementById('consignment-payment-mode-v2');
+        paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+        masterData.paymentModes.forEach(mode => {
+            if (mode.isActive) {
+                paymentModeSelect.add(new Option(mode.paymentMode, mode.paymentMode));
+            }
+        });
+
+
         const updateSettleFinancials = () => {
             const items = getConsignmentItemsV2(); // Helper to get current grid data
             const totalValueSold = items.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
