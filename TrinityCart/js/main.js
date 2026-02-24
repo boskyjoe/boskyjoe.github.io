@@ -2502,6 +2502,8 @@ function handleStandaloneButtons(target, event) {
         '#add-expense-row-btn': () => addNewExpenseRow(),
         '#bulk-purchase-payment-btn': () => handleBulkPaymentClick(),
 
+        '#consignment-checkout-modal-v2 .modal-close-trigger': () => closeConsignmentModalV2(),
+        
         '#refresh-executive-dashboard': async () => {
             console.log('[main.js] Executive dashboard manual refresh');
             await loadExecutiveDashboard();
