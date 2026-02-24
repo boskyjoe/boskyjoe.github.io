@@ -201,6 +201,16 @@ export function initializeMasterDataListeners() {
         }, error => console.error("Error listening to leads:", error));
     unsubscribeFunctions.push(leadsUnsub);
 
+    // --- ADD THIS NEW LISTENER FOR SIMPLE CONSIGNMENTS ---
+    const simpleConsignmentsUnsub = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH)
+        .onSnapshot(snapshot => {
+            masterData.simpleConsignments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Master data updated: Simple Consignments", masterData.simpleConsignments.length);
+            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'simpleConsignments' } }));
+        }, error => console.error("Error listening to simple consignments:", error));
+    unsubscribeFunctions.push(simpleConsignmentsUnsub);
+    // --- END OF NEW LISTENER ---
+
     isInitialized = true;
 }
 
@@ -215,25 +225,3 @@ export function detachMasterDataListeners() {
     masterData.isDataReady = false; // Reset the ready flag for the next login
 }
 
-
-export function initializeMasterDataListeners() {
-    // ... (all your existing listeners for categories, products, etc.)
-
-    const draftSalesUnsub = db.collection(DRAFT_SALES_COLLECTION_PATH)
-        // ... (this listener is unchanged)
-    unsubscribeFunctions.push(draftSalesUnsub);
-
-
-    // --- ADD THIS NEW LISTENER FOR SIMPLE CONSIGNMENTS ---
-    const simpleConsignmentsUnsub = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH)
-        .onSnapshot(snapshot => {
-            masterData.simpleConsignments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log("Master data updated: Simple Consignments", masterData.simpleConsignments.length);
-            document.dispatchEvent(new CustomEvent('masterDataUpdated', { detail: { type: 'simpleConsignments' } }));
-        }, error => console.error("Error listening to simple consignments:", error));
-    unsubscribeFunctions.push(simpleConsignmentsUnsub);
-    // --- END OF NEW LISTENER ---
-
-
-    isInitialized = true;
-}
