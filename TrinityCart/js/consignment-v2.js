@@ -8,7 +8,7 @@ import {
     getConsignmentItemsV2 
 } from './ui.js';
 
-import { getItemsForCatalogue } from './api.js';
+import { getItemsForCatalogue ,recordSimpleConsignmentPayment } from './api.js';
 
 /**
  * Main initialization function for the Simple Consignment module.
@@ -38,6 +38,45 @@ export function initializeConsignmentV2Module() {
         }
     });
 
+    document.getElementById('consignment-record-payment-btn-v2').addEventListener('click', async () => {
+        const user = appState.currentUser;
+        const orderId = document.getElementById('consignment-order-id-v2').value;
+
+        if (!user || !orderId) {
+            return showModal('error', 'Error', 'Cannot record payment without a selected order.');
+        }
+
+        const paymentData = {
+            amount: parseFloat(document.getElementById('consignment-amount-paid-v2').value) || 0,
+            date: new Date(document.getElementById('consignment-payment-date-v2').value),
+            mode: document.getElementById('consignment-payment-mode-v2').value,
+            reference: document.getElementById('consignment-payment-ref-v2').value.trim(),
+            contact: document.getElementById('consignment-payment-contact-v2').value.trim(),
+            notes: document.getElementById('consignment-payment-notes-v2').value.trim()
+        };
+
+        // Validation
+        if (paymentData.amount <= 0 || !paymentData.date || !paymentData.mode || !paymentData.reference) {
+            return showModal('error', 'Missing Information', 'Please fill out all mandatory (*) payment fields.');
+        }
+
+        ProgressToast.show('Recording Payment...', 'info');
+        try {
+            await recordSimpleConsignmentPayment(orderId, paymentData, user);
+            ProgressToast.showSuccess('Payment recorded successfully!');
+            // The real-time listener on the order will automatically update the UI.
+            // We just need to clear the payment form fields.
+            document.getElementById('consignment-amount-paid-v2').value = '';
+            document.getElementById('consignment-payment-ref-v2').value = '';
+            document.getElementById('consignment-payment-contact-v2').value = '';
+            document.getElementById('consignment-payment-notes-v2').value = '';
+        } catch (error) {
+            ProgressToast.showError('Failed to record payment.');
+            console.error(error);
+        }
+        setTimeout(() => ProgressToast.hide(500), 1200);
+    });
+    
     // Button inside the modal to add products
     document.getElementById('add-consignment-products-btn-v2').addEventListener('click', async () => {
         const catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
@@ -72,6 +111,7 @@ export function initializeConsignmentV2Module() {
                 quantityGifted: 0
             };
         });
+        
         // --- END OF NEW LOGIC ---
 
         updateConsignmentItemsGridV2(gridItems);
