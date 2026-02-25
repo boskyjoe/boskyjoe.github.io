@@ -17086,29 +17086,18 @@ export function showConsignmentModalV2(orderData = null) {
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
 
-        const paymentDateInput = document.getElementById('consignment-payment-date-v2');
-        paymentDateInput.valueAsDate = new Date(); // Default to today
-
-        const paymentModeSelect = document.getElementById('consignment-payment-mode-v2');
-        paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
-        masterData.paymentModes.forEach(mode => {
-            if (mode.isActive) {
-                paymentModeSelect.add(new Option(mode.paymentMode, mode.paymentMode));
-            }
-        });
-
 
         const updateSettleFinancials = () => {
-            const items = getConsignmentItemsV2(); // Helper to get current grid data
+            const items = getConsignmentItemsV2();
             const totalValueSold = items.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
-            const totalExpenses = orderData.totalExpenses || 0; // Get existing expenses
-            const totalAmountPaid = orderData.totalAmountPaid || 0; // Get existing payments
-            
+            const totalExpenses = orderData.totalExpenses || 0;
+            const totalAmountPaid = orderData.totalAmountPaid || 0;
             const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
 
-            document.getElementById('consignment-total-sold').textContent = formatCurrency(totalValueSold);
-            document.getElementById('consignment-total-expenses').textContent = formatCurrency(totalExpenses);
-            document.getElementById('consignment-amount-due').textContent = formatCurrency(newBalanceDue);
+            // Add the "-v2" suffix to all IDs here
+            document.getElementById('consignment-total-sold-v2').textContent = formatCurrency(totalValueSold);
+            document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
+            document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
         };
         
         const settleColumns = [
@@ -17129,6 +17118,17 @@ export function showConsignmentModalV2(orderData = null) {
         });
 
         updateSettleFinancials();
+
+        const paymentDateInput = document.getElementById('consignment-payment-date-v2');
+        paymentDateInput.valueAsDate = new Date();
+        const paymentModeSelect = document.getElementById('consignment-payment-mode-v2');
+        paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
+        masterData.paymentModes.forEach(mode => {
+            if (mode.isActive) {
+                paymentModeSelect.add(new Option(mode.paymentMode, mode.paymentMode));
+            }
+        });
+
 
     } else {
         // --- NEW CHECKOUT MODE ---
