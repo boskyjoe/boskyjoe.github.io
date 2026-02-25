@@ -17042,6 +17042,26 @@ const consignmentItemsGridOptionsV2 = {
         if (params.data.status !== 'Active') return; // Only calc in settle mode
         // This will be implemented later
     },
+    onCellValueChanged: (params) => {
+        const orderId = document.getElementById('consignment-order-id-v2').value;
+        const productId = params.data.productId;
+        const field = params.colDef.field;
+        const newValue = Number(params.newValue) || 0;
+        
+        // Dispatch a custom event with all the necessary info
+        document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
+            detail: {
+                orderId,
+                productId,
+                fieldToUpdate: field,
+                newQuantity: newValue
+            }
+        }));
+
+        // Also trigger the visual update of the financial summary
+        // This requires a small refactor of showConsignmentModalV2
+        document.dispatchEvent(new Event('recalculateConsignmentTotals'));
+    },
     onGridReady: params => { consignmentItemsGridApiV2 = params.api; }
 };
 
@@ -17102,6 +17122,13 @@ export function showConsignmentModalV2(orderData = null) {
         
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
+            { 
+                field: "sellingPrice", 
+                headerName: "Price", 
+                width: 110,
+                valueFormatter: p => formatCurrency(p.value),
+                cellStyle: { 'font-weight': 'bold', color: '#1e40af' } // Blue to stand out
+            },
             { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
             { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
             { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
