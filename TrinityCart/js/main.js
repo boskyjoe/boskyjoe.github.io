@@ -180,7 +180,7 @@ import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal } fro
 
 import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
-import { createSimpleConsignment, settleSimpleConsignment,updateSimpleConsignmentItem } from './api.js';
+import { createSimpleConsignment, settleSimpleConsignment,updateSimpleConsignmentItemQuantity } from './api.js';
 
 
 
@@ -7168,15 +7168,21 @@ function setupCustomEventListeners() {
 
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
 
-    document.addEventListener('updateSimpleConsignmentItem', (e) => {
-        const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
-        // No need for a modal, just save in the background
-        updateSimpleConsignmentItem(orderId, productId, fieldToUpdate, newQuantity, appState.currentUser)
-            .catch(error => {
-                console.error("Failed to update consignment item:", error);
-                // Here you could revert the grid cell's value on failure
-            });
-    });
+    document.addEventListener('updateSimpleConsignmentItem', async (e) => {
+    const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
+    const user = appState.currentUser;
+    if (!user) return;
+
+    try {
+        // Call the new, correct API function
+        await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
+        // No success message needed for this background save.
+    } catch (error) {
+        console.error("Failed to update consignment item:", error);
+        showModal('error', 'Update Failed', error.message);
+        // You could add logic here to revert the grid cell if the save fails.
+    }
+});
     
 
 }
