@@ -5571,56 +5571,61 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
     });
 }
 
+
 /**
- * Updates a single item's quantities within a Simple Consignment order.
- * This is a more granular and efficient way to update settlement progress.
+ * Updates a single item's quantity within a Simple Consignment order's items array.
+ * This function performs a full read-modify-write cycle to ensure array integrity.
  * @param {string} orderId - The ID of the parent consignment order.
  * @param {string} productId - The ID of the product within the items array to update.
  * @param {string} fieldToUpdate - The quantity field to change (e.g., 'quantitySold').
  * @param {number} newQuantity - The new value for the quantity field.
  * @param {object} user - The admin performing the update.
  */
-export async function updateSimpleConsignmentItem(orderId, productId, fieldToUpdate, newQuantity, user) {
+export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
     const db = firebase.firestore();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
-    return db.runTransaction(async (transaction) => {
-        const orderDoc = await transaction.get(orderRef);
-        if (!orderDoc.exists) throw new Error("Order not found.");
+    try {
+        // This is not a transaction, but a standard read-modify-write operation.
+        // It's safe because only one user (the admin) should be settling an order at a time.
 
+        // 1. READ the entire document
+        const orderDoc = await orderRef.get();
+        if (!orderDoc.exists) {
+            throw new Error("Order document not found for update.");
+        }
         const orderData = orderDoc.data();
         const items = orderData.items || [];
-        
-        let itemUpdated = false;
-        let totalValueSold = 0;
-        let itemsToRestock = [];
 
+        // 2. MODIFY the array in JavaScript
+        let itemUpdated = false;
         const updatedItems = items.map(item => {
             if (item.productId === productId) {
+                // Before updating, validate the change
+                const currentAccounted = (item.quantitySold || 0) + (item.quantityReturned || 0) + (item.quantityDamaged || 0) + (item.quantityGifted || 0);
+                const changeDelta = newQuantity - (item[fieldToUpdate] || 0);
+                const newTotalAccounted = currentAccounted + changeDelta;
+
+                if (newTotalAccounted > item.quantityCheckedOut) {
+                    throw new Error(`Invalid quantity. Total accounted for (${newTotalAccounted}) cannot exceed checked out quantity (${item.quantityCheckedOut}).`);
+                }
+                
                 item[fieldToUpdate] = newQuantity;
                 itemUpdated = true;
             }
-
-            // Recalculate total sold value
-            totalValueSold += (item.quantitySold || 0) * item.sellingPrice;
-            
-            // Check for returns to restock
-            if (fieldToUpdate === 'quantityReturned' && item.productId === productId) {
-                // This logic needs to be smarter to handle changes, not just final values.
-                // For now, we'll assume this is the final return amount.
-                itemsToRestock.push({ productId: item.productId, quantity: newQuantity });
-            }
-
             return item;
         });
 
-        if (!itemUpdated) throw new Error("Product not found in this consignment order.");
+        if (!itemUpdated) {
+            throw new Error(`Product with ID ${productId} not found in this order's items array.`);
+        }
 
-        // Recalculate balance due
+        // Recalculate financial totals based on the entire updated array
+        const totalValueSold = updatedItems.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
         const newBalanceDue = totalValueSold - (orderData.totalAmountPaid || 0) - (orderData.totalExpenses || 0);
 
-        // Update the main order document
-        transaction.update(orderRef, {
+        // 3. WRITE the entire updated array and recalculated totals back to Firestore
+        return orderRef.update({
             items: updatedItems,
             totalValueSold: totalValueSold,
             balanceDue: newBalanceDue,
@@ -5628,11 +5633,9 @@ export async function updateSimpleConsignmentItem(orderId, productId, fieldToUpd
             'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Handle inventory restock for returned items
-        for (const restock of itemsToRestock) {
-             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(restock.productId);
-             // This needs to be a delta, not an absolute value. This part is complex.
-             // For now, let's focus on saving the item state.
-        }
-    });
+    } catch (error) {
+        console.error("API Error in updateSimpleConsignmentItemQuantity:", error);
+        // Re-throw the error so the calling function in main.js can handle it
+        throw error;
+    }
 }
