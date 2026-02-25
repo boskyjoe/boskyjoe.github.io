@@ -178,9 +178,9 @@ import { initializeLeadsModule } from './leads.js';
 
 import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal } from './ui.js'; 
 
-import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2 } from './ui.js';
+import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
-import { createSimpleConsignment, settleSimpleConsignment } from './api.js';
+import { createSimpleConsignment, settleSimpleConsignment,updateSimpleConsignmentItem } from './api.js';
 
 
 
@@ -2503,7 +2503,7 @@ function handleStandaloneButtons(target, event) {
         '#bulk-purchase-payment-btn': () => handleBulkPaymentClick(),
 
         '#consignment-checkout-modal-v2 .modal-close-trigger': () => closeConsignmentModalV2(),
-        
+
         '#refresh-executive-dashboard': async () => {
             console.log('[main.js] Executive dashboard manual refresh');
             await loadExecutiveDashboard();
@@ -7167,6 +7167,16 @@ function setupCustomEventListeners() {
     document.addEventListener('salePaymentUpdated', e => handleSalePaymentUpdate(e.detail));
 
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
+
+    document.addEventListener('updateSimpleConsignmentItem', (e) => {
+        const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
+        // No need for a modal, just save in the background
+        updateSimpleConsignmentItem(orderId, productId, fieldToUpdate, newQuantity, appState.currentUser)
+            .catch(error => {
+                console.error("Failed to update consignment item:", error);
+                // Here you could revert the grid cell's value on failure
+            });
+    });
     
 
 }
