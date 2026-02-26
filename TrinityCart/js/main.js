@@ -7169,20 +7169,20 @@ function setupCustomEventListeners() {
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
 
     document.addEventListener('updateSimpleConsignmentItem', async (e) => {
-    const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
-    const user = appState.currentUser;
-    if (!user) return;
+        const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
+        const user = appState.currentUser;
+        if (!user) return;
 
-    try {
-        // Call the new, correct API function
-        await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
-        // No success message needed for this background save.
-    } catch (error) {
-        console.error("Failed to update consignment item:", error);
-        showModal('error', 'Update Failed', error.message);
-        // You could add logic here to revert the grid cell if the save fails.
-    }
-});
+        try {
+            // Call the new, correct API function
+            await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
+            // No success message needed for this background save.
+        } catch (error) {
+            console.error("Failed to update consignment item:", error);
+            showModal('error', 'Update Failed', error.message);
+            // You could add logic here to revert the grid cell if the save fails.
+        }
+    });
     
 
 }
