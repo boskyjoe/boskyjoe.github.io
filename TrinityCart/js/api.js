@@ -5582,6 +5582,11 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
  * @param {object} user - The admin performing the update.
  */
 export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
+    console.log('✅ 3. [api.js] updateSimpleConsignmentItemQuantity() function was called.');
+    console.log('   - Order ID:', orderId);
+    console.log('   - Product ID:', productId);
+    console.log('   - Field to Update:', fieldToUpdate);
+    console.log('   - New Quantity:', newQuantity);
     const db = firebase.firestore();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
