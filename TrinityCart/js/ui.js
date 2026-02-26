@@ -17043,10 +17043,16 @@ const consignmentItemsGridOptionsV2 = {
         // This will be implemented later
     },
     onCellValueChanged: (params) => {
+        console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
         const orderId = document.getElementById('consignment-order-id-v2').value;
         const productId = params.data.productId;
         const field = params.colDef.field;
         const newValue = Number(params.newValue) || 0;
+        
+
+        console.log('   - Dispatching custom event: "updateSimpleConsignmentItem"');
+        console.log('   - Details:', { orderId, productId, fieldToUpdate: field, newQuantity: newValue });
+        // ---------------------------------
         
         // Dispatch a custom event with all the necessary info
         document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
