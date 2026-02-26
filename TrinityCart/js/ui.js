@@ -17038,11 +17038,6 @@ const consignmentItemsGridOptionsV2 = {
     theme: 'legacy',
     defaultColDef: { resizable: true },
     onCellValueChanged: (params) => {
-        // Logic to recalculate totals when a "settle" cell changes
-        if (params.data.status !== 'Active') return; // Only calc in settle mode
-        // This will be implemented later
-    },
-    onCellValueChanged: (params) => {
         console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
         const orderId = document.getElementById('consignment-order-id-v2').value;
         const productId = params.data.productId;
@@ -17053,7 +17048,7 @@ const consignmentItemsGridOptionsV2 = {
         console.log('   - Dispatching custom event: "updateSimpleConsignmentItem"');
         console.log('   - Details:', { orderId, productId, fieldToUpdate: field, newQuantity: newValue });
         // ---------------------------------
-        
+
         // Dispatch a custom event with all the necessary info
         document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
             detail: {
