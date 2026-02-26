@@ -17096,6 +17096,10 @@ export function showConsignmentModalV2(orderData = null) {
     ];
     const addProductsBtn = document.getElementById('add-consignment-products-btn-v2');
 
+    if (consignmentItemsGridApi && consignmentItemsGridApi.cellValueChangeHandler) {
+        consignmentItemsGridApi.removeEventListener('cellValueChanged', consignmentItemsGridApi.cellValueChangeHandler);
+    }
+
     if (orderData) {
         // --- SETTLE MODE ---
         title.textContent = "Settle Consignment Order";
@@ -17139,11 +17143,24 @@ export function showConsignmentModalV2(orderData = null) {
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', orderData.items);
-        consignmentItemsGridApiV2.setGridOption('onCellValueChanged', (params) => {
-            // When any cell in the settle grid changes (like quantitySold),
-            // update the financial summary display instantly.
-            updateSettleFinancials();
-        });
+
+        const cellChangeHandler = (params) => {
+            console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
+            updateSettleFinancials(); // Update the visuals
+            
+            // Dispatch the event to save the data
+            const orderId = document.getElementById('consignment-order-id-v2').value;
+            const productId = params.data.productId;
+            const field = params.colDef.field;
+            const newValue = Number(params.newValue) || 0;
+            
+            document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
+                detail: { orderId, productId, fieldToUpdate: field, newQuantity: newValue }
+            }));
+        };
+
+        consignmentItemsGridApiV2.addEventListener('cellValueChanged', cellChangeHandler);
+        consignmentItemsGridApiV2.cellValueChangeHandler = cellChangeHandler;
 
         updateSettleFinancials();
 
