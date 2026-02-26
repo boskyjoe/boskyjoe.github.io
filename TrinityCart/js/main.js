@@ -7169,11 +7169,14 @@ function setupCustomEventListeners() {
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
 
     document.addEventListener('updateSimpleConsignmentItem', async (e) => {
+        console.log('✅ 2. [main.js] "updateSimpleConsignmentItem" event was caught.');
+        console.log('   - Event detail received:', e.detail);
         const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
         const user = appState.currentUser;
         if (!user) return;
 
         try {
+            console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
             // Call the new, correct API function
             await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
             // No success message needed for this background save.
