@@ -5581,7 +5581,7 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
  * @param {number} newQuantity - The new value for the quantity field.
  * @param {object} user - The admin performing the update.
  */
-export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
+export async function updateSimpleConsignmentItemQuantitybk(orderId, productId, fieldToUpdate, newQuantity, user) {
     console.log('✅ 3. [api.js] updateSimpleConsignmentItemQuantity() function was called.');
     console.log('   - Order ID:', orderId);
     console.log('   - Product ID:', productId);
@@ -5643,4 +5643,83 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
         // Re-throw the error so the calling function in main.js can handle it
         throw error;
     }
+}
+
+/**
+ * Updates a single item's quantity within a Simple Consignment order's items array.
+ * This function performs a full read-modify-write cycle and handles inventory restock for returns.
+ * @param {string} orderId - The ID of the parent consignment order.
+ * @param {string} productId - The ID of the product within the items array to update.
+ * @param {string} fieldToUpdate - The quantity field to change (e.g., 'quantitySold', 'quantityReturned').
+ * @param {number} newQuantity - The new value for the quantity field.
+ * @param {object} user - The admin performing the update.
+ */
+export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
+    const db = firebase.firestore();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
+
+    // --- THIS IS THE RECOMMENDED TRY...CATCH BLOCK ---
+    try {
+        // This operation MUST be a transaction to ensure both the order and the main inventory are updated together.
+        await db.runTransaction(async (transaction) => {
+            // 1. READ PHASE
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists) {
+                throw new Error("Order document not found for update.");
+            }
+            const orderData = orderDoc.data();
+            const items = orderData.items || [];
+
+            const itemIndex = items.findIndex(item => item.productId === productId);
+            if (itemIndex === -1) {
+                throw new Error(`Product with ID ${productId} not found in this order's items array.`);
+            }
+            const oldItemData = { ...items[itemIndex] };
+
+            // 2. MODIFY PHASE
+            const updatedItems = [...items];
+            updatedItems[itemIndex][fieldToUpdate] = newQuantity;
+
+            // Validation within the transaction
+            const currentAccounted = (updatedItems[itemIndex].quantitySold || 0) + (updatedItems[itemIndex].quantityReturned || 0) + (updatedItems[itemIndex].quantityDamaged || 0) + (updatedItems[itemIndex].quantityGifted || 0);
+            if (currentAccounted > updatedItems[itemIndex].quantityCheckedOut) {
+                throw new Error(`Invalid quantity. Total accounted for (${currentAccounted}) cannot exceed checked out quantity (${updatedItems[itemIndex].quantityCheckedOut}).`);
+            }
+
+            const totalValueSold = updatedItems.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
+            const newBalanceDue = totalValueSold - (orderData.totalAmountPaid || 0) - (orderData.totalExpenses || 0);
+
+            // 3. WRITE PHASE
+            transaction.update(orderRef, {
+                items: updatedItems,
+                totalValueSold: totalValueSold,
+                balanceDue: newBalanceDue,
+                'audit.updatedBy': user.email,
+                'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            if (fieldToUpdate === 'quantityReturned') {
+                const oldReturnedQty = oldItemData.quantityReturned || 0;
+                const quantityDelta = newQuantity - oldReturnedQty;
+
+                if (quantityDelta !== 0) {
+                    console.log(`[API] Restocking inventory for ${productId}. Change: ${quantityDelta}`);
+                    const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+                    transaction.update(productRef, {
+                        inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
+                    });
+                }
+            }
+        });
+
+        console.log(`[API] Transaction for ${fieldToUpdate} successful.`);
+
+    } catch (error) {
+        // This block will now catch errors from the transaction itself (e.g., permissions)
+        // or from the validation logic inside it.
+        console.error("API Error in updateSimpleConsignmentItemQuantity:", error);
+        // Re-throw the error so the calling function in main.js can handle it and show a modal to the user.
+        throw error;
+    }
+    // --- END OF RECOMMENDED BLOCK ---
 }
