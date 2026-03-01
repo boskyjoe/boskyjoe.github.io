@@ -71,33 +71,51 @@ export function initializeConsignmentV2Module() {
             return showModal('error', 'Error', 'Cannot record payment without a selected order.');
         }
 
+        // 1. Capture the values
+        const amountVal = document.getElementById('consignment-amount-paid-v2').value;
+        const dateVal = document.getElementById('consignment-payment-date-v2').value;
+        const modeVal = document.getElementById('consignment-payment-mode-v2').value;
+        const refVal = document.getElementById('consignment-payment-ref-v2').value.trim();
+
         const paymentData = {
-            amount: parseFloat(document.getElementById('consignment-amount-paid-v2').value) || 0,
-            date: new Date(document.getElementById('consignment-payment-date-v2').value),
-            paymentMode: document.getElementById('consignment-payment-mode-v2').value,
-            reference: document.getElementById('consignment-payment-ref-v2').value.trim(),
+            amount: parseFloat(amountVal) || 0,
+            date: new Date(dateVal),
+            mode: modeVal,
+            reference: refVal,
             contact: document.getElementById('consignment-payment-contact-v2').value.trim(),
             notes: document.getElementById('consignment-payment-notes-v2').value.trim()
         };
 
-        // Validation
-        if (paymentData.amount <= 0 || !paymentData.date || !paymentData.mode || !paymentData.reference) {
-            return showModal('error', 'Missing Information', 'Please fill out all mandatory (*) payment fields.');
+        // --- DEBUG LOGS: Open your console (F12) to see these ---
+        console.log("Checking Payment Validation:");
+        console.log("- Amount:", paymentData.amount, (paymentData.amount <= 0 ? "❌ INVALID" : "✅ OK"));
+        console.log("- Date String:", dateVal, (dateVal === "" ? "❌ EMPTY" : "✅ OK"));
+        console.log("- Date Object:", paymentData.date, (isNaN(paymentData.date.getTime()) ? "❌ INVALID DATE" : "✅ OK"));
+        console.log("- Mode:", paymentData.mode, (paymentData.mode === "" ? "❌ EMPTY" : "✅ OK"));
+        console.log("- Reference:", paymentData.reference, (paymentData.reference === "" ? "❌ EMPTY" : "✅ OK"));
+
+        // 2. IMPROVED VALIDATION
+        // We check if the amount is > 0, if the date is valid, and if mode/ref are not empty strings
+        const isDateInvalid = isNaN(paymentData.date.getTime());
+        
+        if (paymentData.amount <= 0 || isDateInvalid || !paymentData.mode || !paymentData.reference) {
+            return showModal('error', 'Missing Information', 'Please fill out all mandatory (*) payment fields with valid data.');
         }
 
+        // 3. Proceed to save if valid
         ProgressToast.show('Recording Payment...', 'info');
         try {
             await recordSimpleConsignmentPayment(orderId, paymentData, user);
             ProgressToast.showSuccess('Payment recorded successfully!');
-            // The real-time listener on the order will automatically update the UI.
-            // We just need to clear the payment form fields.
+            
+            // Clear fields
             document.getElementById('consignment-amount-paid-v2').value = '';
             document.getElementById('consignment-payment-ref-v2').value = '';
             document.getElementById('consignment-payment-contact-v2').value = '';
             document.getElementById('consignment-payment-notes-v2').value = '';
         } catch (error) {
+            console.error("Record Payment Error:", error);
             ProgressToast.showError('Failed to record payment.');
-            console.error(error);
         }
         setTimeout(() => ProgressToast.hide(500), 1200);
     });
