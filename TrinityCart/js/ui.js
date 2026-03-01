@@ -17157,21 +17157,30 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
         };
         
-        const db = firebase.firestore();
         unsubscribeOrderDetailsListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderData.id)
-            .onSnapshot(doc => {
-                if (doc.exists) {
-                    const freshData = doc.data();
-                    console.log("✅ [ui.js] Main Order Document updated. Refreshing Summary.");
-                    
-                    // Update our local state with the latest totals from the DB
-                    currentDBTotals.totalAmountPaid = freshData.totalAmountPaid || 0;
-                    currentDBTotals.totalExpenses = freshData.totalExpenses || 0;
-                    
-                    // Trigger the UI refresh
-                    updateSettleFinancials();
-                }
-            });
+        .onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                console.log("✅ [ui.js] Main Order Document updated. Updating Summary Spans.");
+
+                // 1. Get the values directly from the document snapshot
+                const totalSold = data.totalValueSold || 0;
+                const totalExpenses = data.totalExpenses || 0;
+                const balanceDue = data.balanceDue || 0;
+
+                // 2. Update the UI Spans directly
+                // We use the exact IDs from your HTML
+                const soldSpan = document.getElementById('consignment-total-sold-v2');
+                const expSpan = document.getElementById('consignment-total-expenses-v2');
+                const dueSpan = document.getElementById('consignment-amount-due-v2');
+
+                if (soldSpan) soldSpan.textContent = formatCurrency(totalSold);
+                if (expSpan) expSpan.textContent = formatCurrency(totalExpenses);
+                if (dueSpan) dueSpan.textContent = formatCurrency(balanceDue);
+                
+                console.log(`   - UI Updated: Sold: ${totalSold}, Exp: ${totalExpenses}, Due: ${balanceDue}`);
+            }
+        });
 
 
         const settleColumns = [
