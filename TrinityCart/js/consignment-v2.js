@@ -8,7 +8,7 @@ import {
     getConsignmentItemsV2 ,ProgressToast
 } from './ui.js';
 
-import { getItemsForCatalogue ,recordSimpleConsignmentPayment } from './api.js';
+import { getItemsForCatalogue ,recordSimpleConsignmentPayment,voidSimpleConsignmentPayment } from './api.js';
 import { appState } from './state.js';
 
 /**
@@ -35,6 +35,30 @@ export function initializeConsignmentV2Module() {
                 showConsignmentModalV2(orderData);
             } else {
                 showModal('error', 'Order Not Found', 'Could not find the data for the selected order.');
+            }
+        }
+    });
+
+    document.addEventListener('click', async (event) => {
+        const voidBtn = event.target.closest('.void-payment-btn-v2');
+        if (voidBtn) {
+            const paymentId = voidBtn.dataset.id;
+            const orderId = document.getElementById('consignment-order-id-v2').value;
+            const user = appState.currentUser;
+
+            const confirmed = await showModal('confirm', 'Void Payment', 
+                'Are you sure you want to void this payment? This will create a reversal entry and increase the balance due.');
+
+            if (confirmed) {
+                ProgressToast.show('Voiding Payment...', 'info');
+                try {
+                    await voidSimpleConsignmentPayment(orderId, paymentId, user);
+                    ProgressToast.showSuccess('Payment voided and balance adjusted.');
+                } catch (error) {
+                    console.error("Void failed:", error);
+                    showModal('error', 'Void Failed', error.message);
+                }
+                setTimeout(() => ProgressToast.hide(500), 1200);
             }
         }
     });
