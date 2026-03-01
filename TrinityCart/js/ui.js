@@ -17100,6 +17100,11 @@ export function showConsignmentModalV2(orderData = null) {
         consignmentItemsGridApi.removeEventListener('cellValueChanged', consignmentItemsGridApi.cellValueChangeHandler);
     }
 
+
+    // Detach any previous listeners to prevent memory leaks
+    if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
+
+
     if (orderData) {
         // --- SETTLE MODE ---
         title.textContent = "Settle Consignment Order";
@@ -17111,6 +17116,26 @@ export function showConsignmentModalV2(orderData = null) {
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
 
+
+        // Initialize the new payment history grid if it doesn't exist
+        const historyGridDiv = document.getElementById('consignment-payment-history-grid-v2');
+        if (historyGridDiv && !consignmentPaymentHistoryGridApiV2) {
+            createGrid(historyGridDiv, consignmentPaymentHistoryGridOptionsV2);
+        }
+
+        // Attach a real-time listener for the payment history of THIS order
+        const waitForHistoryGrid = setInterval(() => {
+            if (consignmentPaymentHistoryGridApiV2) {
+                clearInterval(waitForHistoryGrid);
+                const db = firebase.firestore();
+                unsubscribePaymentHistoryListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderData.id).collection('payments')
+                    .orderBy('logDate', 'desc')
+                    .onSnapshot(snapshot => {
+                        const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        consignmentPaymentHistoryGridApiV2.setGridOption('rowData', payments);
+                    });
+            }
+        }, 50);
 
         const updateSettleFinancials = () => {
             const items = getConsignmentItemsV2();
@@ -17235,6 +17260,9 @@ export function showConsignmentModalV2(orderData = null) {
 
 export function closeConsignmentModalV2() {
     const modal = document.getElementById('consignment-checkout-modal-v2');
+
+    if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
+    
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
@@ -17277,3 +17305,20 @@ export function showConsignmentViewV2() {
         }
     }, 50);
 }
+
+// --- Step 1: Add new variables at the top ---
+let consignmentPaymentHistoryGridApiV2 = null;
+let unsubscribePaymentHistoryListenerV2 = null;
+// --- Step 2: Define the grid options for the new payment history grid ---
+const consignmentPaymentHistoryGridOptionsV2 = {
+    theme: 'legacy',
+    columnDefs: [
+        { field: "logDate", headerName: "Date", width: 180, valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' },
+        { field: "amountApplied", headerName: "Amount Applied", width: 150, valueFormatter: p => formatCurrency(p.value) },
+        { field: "donationAmount", headerName: "Donation", width: 120, valueFormatter: p => p.value > 0 ? formatCurrency(p.value) : '' },
+        { field: "paymentMode", headerName: "Mode", width: 120 },
+        { field: "reference", headerName: "Reference #", flex: 1 },
+        { field: "loggedBy", headerName: "Recorded By", width: 180 }
+    ],
+    onGridReady: params => { consignmentPaymentHistoryGridApiV2 = params.api; }
+};
