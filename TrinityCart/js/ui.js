@@ -17103,6 +17103,7 @@ export function showConsignmentModalV2(orderData = null) {
 
     // Detach any previous listeners to prevent memory leaks
     if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
+    if (unsubscribeOrderDetailsListenerV2) unsubscribeOrderDetailsListenerV2();
 
 
     if (orderData) {
@@ -17115,6 +17116,12 @@ export function showConsignmentModalV2(orderData = null) {
         settleBtns.forEach(btn => btn.classList.remove('hidden'));
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
+
+        // 1. Create a local state to hold the latest totals from the DB
+        let currentDBTotals = {
+            totalAmountPaid: orderData.totalAmountPaid || 0,
+            totalExpenses: orderData.totalExpenses || 0
+        };
 
 
         // Initialize the new payment history grid if it doesn't exist
@@ -17150,6 +17157,23 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
         };
         
+        const db = firebase.firestore();
+        unsubscribeOrderDetailsListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderData.id)
+            .onSnapshot(doc => {
+                if (doc.exists) {
+                    const freshData = doc.data();
+                    console.log("✅ [ui.js] Main Order Document updated. Refreshing Summary.");
+                    
+                    // Update our local state with the latest totals from the DB
+                    currentDBTotals.totalAmountPaid = freshData.totalAmountPaid || 0;
+                    currentDBTotals.totalExpenses = freshData.totalExpenses || 0;
+                    
+                    // Trigger the UI refresh
+                    updateSettleFinancials();
+                }
+            });
+
+
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
             { 
@@ -17262,6 +17286,7 @@ export function closeConsignmentModalV2() {
     const modal = document.getElementById('consignment-checkout-modal-v2');
 
     if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
+    if (unsubscribeOrderDetailsListenerV2) unsubscribeOrderDetailsListenerV2(); 
     
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; }, 300);
@@ -17309,6 +17334,8 @@ export function showConsignmentViewV2() {
 // --- Step 1: Add new variables at the top ---
 let consignmentPaymentHistoryGridApiV2 = null;
 let unsubscribePaymentHistoryListenerV2 = null;
+let unsubscribeOrderDetailsListenerV2 = null;
+
 // --- Step 2: Define the grid options for the new payment history grid ---
 const consignmentPaymentHistoryGridOptionsV2 = {
     theme: 'legacy',
