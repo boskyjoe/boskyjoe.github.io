@@ -50,7 +50,7 @@ export function initializeConsignmentV2Module() {
         const paymentData = {
             amount: parseFloat(document.getElementById('consignment-amount-paid-v2').value) || 0,
             date: new Date(document.getElementById('consignment-payment-date-v2').value),
-            mode: document.getElementById('consignment-payment-mode-v2').value,
+            paymentMode: document.getElementById('consignment-payment-mode-v2').value,
             reference: document.getElementById('consignment-payment-ref-v2').value.trim(),
             contact: document.getElementById('consignment-payment-contact-v2').value.trim(),
             notes: document.getElementById('consignment-payment-notes-v2').value.trim()
