@@ -9,6 +9,7 @@ import {
 } from './ui.js';
 
 import { getItemsForCatalogue ,recordSimpleConsignmentPayment } from './api.js';
+import { appState } from './state.js';
 
 /**
  * Main initialization function for the Simple Consignment module.
