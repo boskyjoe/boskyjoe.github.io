@@ -5723,3 +5723,69 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
     }
     // --- END OF RECOMMENDED BLOCK ---
 }
+
+/**
+ * Voids a simple consignment payment, creates a reversal entry, and adjusts order totals.
+ */
+export async function voidSimpleConsignmentPayment(orderId, paymentId, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
+    const paymentRef = orderRef.collection('payments').doc(paymentId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const paymentDoc = await transaction.get(paymentRef);
+            const orderDoc = await transaction.get(orderRef);
+
+            if (!paymentDoc.exists) throw new Error("Payment record not found.");
+            const pData = paymentDoc.data();
+            const oData = orderDoc.data();
+
+            // 1. Create the reversal entry (Negative amounts)
+            const reversalRef = orderRef.collection('payments').doc();
+            transaction.set(reversalRef, {
+                ...pData,
+                amountApplied: -pData.amountApplied,
+                donationAmount: -(pData.donationAmount || 0),
+                status: 'Reversal',
+                voidRef: paymentId,
+                logDate: now,
+                loggedBy: user.email,
+                notes: `REVERSAL of payment ref: ${pData.reference}.`
+            });
+
+            // 2. Update original payment status
+            transaction.update(paymentRef, { 
+                status: 'Voided',
+                'audit.updatedBy': user.email,
+                'audit.updatedOn': now
+            });
+
+            // 3. Adjust parent order totals
+            transaction.update(orderRef, {
+                totalAmountPaid: firebase.firestore.FieldValue.increment(-pData.amountApplied),
+                balanceDue: firebase.firestore.FieldValue.increment(pData.amountApplied)
+            });
+
+            // 4. Reverse Donation if applicable
+            if (pData.donationAmount > 0) {
+                const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
+                transaction.set(donationRef, {
+                    amount: -pData.donationAmount,
+                    donationDate: now,
+                    source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
+                    sourceDetails: {
+                        notes: `VOID REVERSAL for Order ${oData.consignmentId}`,
+                        originalPaymentId: paymentId
+                    },
+                    recordedBy: user.email,
+                    status: 'Voided'
+                });
+            }
+        });
+    } catch (error) {
+        console.error("API Error in voidSimpleConsignmentPayment:", error);
+        throw error;
+    }
+}
