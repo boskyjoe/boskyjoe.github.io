@@ -17156,6 +17156,8 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
         };
+
+        const db = firebase.firestore();
         
         unsubscribeOrderDetailsListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderData.id)
         .onSnapshot(doc => {
