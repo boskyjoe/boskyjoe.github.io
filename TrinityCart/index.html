@@ -8713,6 +8713,13 @@
                                 </div>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label for="consignment-transaction-type-v2" class="form-label">Transaction Type <span class="text-red-500">*</span></label>
+                                        <select id="consignment-transaction-type-v2" class="form-input w-full" required>
+                                            <option value="Payment">Cash Payment (Money returned to Church)</option>
+                                            <option value="Expense">Expense (Transport, Setup, etc. - Deducted from Due)</option>
+                                        </select>
+                                    </div>
                                     <div class="group">
                                         <label for="consignment-payment-date-v2" class="form-label flex items-center space-x-1">
                                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
