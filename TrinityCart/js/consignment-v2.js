@@ -76,8 +76,10 @@ export function initializeConsignmentV2Module() {
         const dateVal = document.getElementById('consignment-payment-date-v2').value;
         const modeVal = document.getElementById('consignment-payment-mode-v2').value;
         const refVal = document.getElementById('consignment-payment-ref-v2').value.trim();
+        const paymentType = document.getElementById('consignment-transaction-type-v2').value ;
 
         const paymentData = {
+            paymentType:paymentType,
             amount: parseFloat(amountVal) || 0,
             date: new Date(dateVal),
             mode: modeVal,
