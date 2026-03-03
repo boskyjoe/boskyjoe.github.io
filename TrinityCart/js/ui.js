@@ -17353,6 +17353,16 @@ const consignmentPaymentHistoryGridOptionsV2 = {
     getRowId: params => params.data.id, // Ensure we can find rows by ID
     columnDefs: [
         { field: "logDate", headerName: "Date", width: 180, valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' },
+        { 
+            field: "paymentType", 
+            headerName: "Type", 
+            width: 100,
+            cellRenderer: p => {
+                const type = p.value || 'Payment';
+                const color = type === 'Expense' ? 'text-orange-600' : 'text-blue-600';
+                return `<span class="font-bold ${color}">${type}</span>`;
+            }
+        },
         { field: "amountApplied", headerName: "Amount Applied", width: 150, valueFormatter: p => formatCurrency(p.value) },
         { field: "donationAmount", headerName: "Donation", width: 120, valueFormatter: p => p.value > 0 ? formatCurrency(p.value) : '' },
         { field: "mode", headerName: "Mode", width: 120 },
