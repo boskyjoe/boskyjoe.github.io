@@ -5519,55 +5519,71 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
-    // This transaction ensures that the payment is recorded AND the order is updated together.
     return db.runTransaction(async (transaction) => {
-        // 1. READ the current order to get its financial state
+        // 1. READ the current order state
         const orderDoc = await transaction.get(orderRef);
         if (!orderDoc.exists) throw new Error("Consignment order not found.");
         const orderData = orderDoc.data();
 
-        // 2. CALCULATE new totals and any donation amount
-        const amountPaid = paymentData.amount;
+        const amount = paymentData.amount;
+        const paymentType = paymentData.paymentType; // 'Payment' or 'Expense'
         const currentBalance = orderData.balanceDue || 0;
-        const amountToApplyToBalance = Math.min(amountPaid, currentBalance);
-        const donationAmount = Math.max(0, amountPaid - currentBalance);
+        
+        // Both types reduce the balance due. 
+        // We only apply up to the current balance; anything over is a donation (for Payments only).
+        const amountToApply = Math.min(amount, currentBalance);
+        
+        // Donations only apply to actual cash payments, not expenses.
+        const donationAmount = (paymentType === 'Payment') ? Math.max(0, amount - currentBalance) : 0;
 
-        const newTotalAmountPaid = (orderData.totalAmountPaid || 0) + amountToApplyToBalance;
-        const newBalanceDue = currentBalance - amountToApplyToBalance;
-
-        // 3. WRITE: Create the new payment record in a sub-collection for a clean audit trail
+        // 2. WRITE: Create the ledger record in the sub-collection
         const paymentRef = orderRef.collection('payments').doc();
         transaction.set(paymentRef, {
             ...paymentData,
+            amountApplied: amountToApply,
+            donationAmount: donationAmount,
+            status: 'Verified',
             logDate: now,
-            loggedBy: user.email,
-            amountApplied: amountToApplyToBalance,
-            donationAmount: donationAmount
+            loggedBy: user.email
         });
 
-        // 4. WRITE: Update the main order document with the new totals
-        transaction.update(orderRef, {
-            totalAmountPaid: newTotalAmountPaid,
-            balanceDue: newBalanceDue
-        });
+        // 3. WRITE: Update the main order document totals
+        // We prepare the update object with the balance reduction and audit info
+        const updateObj = {
+            balanceDue: firebase.firestore.FieldValue.increment(-amountToApply),
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now
+        };
 
-        // 5. WRITE: If there was a donation, create a record in the main donations collection
+        // Branch logic: Update the specific total counter based on transaction type
+        if (paymentType === 'Payment') {
+            updateObj.totalAmountPaid = firebase.firestore.FieldValue.increment(amountToApply);
+        } else if (type === 'Expense') {
+            updateObj.totalExpenses = firebase.firestore.FieldValue.increment(amountToApply);
+        }
+
+        transaction.update(orderRef, updateObj);
+
+        // 4. WRITE: If a donation was generated (Payment type only), log it centrally
         if (donationAmount > 0) {
             const donationRef = db.collection(DONATIONS_COLLECTION_PATH).doc();
             transaction.set(donationRef, {
                 amount: donationAmount,
                 donationDate: now,
-                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT, // Use your constant
+                source: DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT,
                 sourceDetails: {
                     teamName: orderData.teamName,
                     orderId: orderId,
                     consignmentId: orderData.consignmentId,
-                    paymentRef: paymentData.reference
+                    paymentRef: paymentData.reference,
+                    context: 'Consignment overpayment recorded during settlement'
                 },
                 recordedBy: user.email,
                 status: 'Verified'
             });
         }
+        
+        console.log(`[API] Recorded ${type} of ${amountToApply} for order ${orderId}. Donation: ${donationAmount}`);
     });
 }
 
@@ -5788,4 +5804,19 @@ export async function voidSimpleConsignmentPayment(orderId, paymentId, user) {
         console.error("API Error in voidSimpleConsignmentPayment:", error);
         throw error;
     }
+}
+
+/**
+ * Formally closes a consignment order.
+ */
+export async function closeSimpleConsignment(orderId, user) {
+    const db = firebase.firestore();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    
+    return db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId).update({
+        status: 'Settled',
+        settledDate: now,
+        'audit.updatedBy': user.email,
+        'audit.updatedOn': now
+    });
 }
