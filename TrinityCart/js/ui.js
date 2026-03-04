@@ -17151,10 +17151,26 @@ export function showConsignmentModalV2(orderData = null) {
             const totalAmountPaid = orderData.totalAmountPaid || 0;
             const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
 
+            // 2. Check if all items are accounted for (Total On Hand is 0)
+            const totalOnHand = items.reduce((sum, item) => {
+                return sum + (item.quantityCheckedOut - ((item.quantitySold || 0) + (item.quantityReturned || 0) + (item.quantityDamaged || 0) + (item.quantityGifted || 0)));
+            }, 0);
+
+
             // Add the "-v2" suffix to all IDs here
             document.getElementById('consignment-total-sold-v2').textContent = formatCurrency(totalValueSold);
             document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
+
+            const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
+            if (finalizeBtn) {
+                // Button is only clickable if balance is 0 AND no items are left with the team
+                const isReadyToClose = (newBalanceDue === 0 && totalOnHand === 0);
+                finalizeBtn.disabled = !isReadyToClose;
+                
+                // Optional: Add a visual hint
+                finalizeBtn.title = isReadyToClose ? "Ready to close" : "Cannot close: Balance must be 0 and all items accounted for.";
+            }
         };
 
         const db = firebase.firestore();
