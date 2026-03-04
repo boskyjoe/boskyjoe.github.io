@@ -122,6 +122,30 @@ export function initializeConsignmentV2Module() {
         setTimeout(() => ProgressToast.hide(500), 1200);
     });
     
+
+    document.getElementById('consignment-finalize-btn-v2').addEventListener('click', async () => {
+        const orderId = document.getElementById('consignment-order-id-v2').value;
+        const user = appState.currentUser;
+
+        const confirmed = await showModal('confirm', 'Finalize & Close', 
+            'This will mark the order as Settled and lock it from further edits. Proceed?');
+
+        if (confirmed) {
+            ProgressToast.show('Closing Order...', 'info');
+            try {
+                await closeSimpleConsignment(orderId, user);
+                ProgressToast.showSuccess('Order Settled and Closed.');
+                closeConsignmentModalV2();
+            } catch (error) {
+                showModal('error', 'Error', error.message);
+            }
+            setTimeout(() => ProgressToast.hide(500), 1200);
+        }
+    });
+
+
+
+
     // Button inside the modal to add products
     document.getElementById('add-consignment-products-btn-v2').addEventListener('click', async () => {
         const catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
