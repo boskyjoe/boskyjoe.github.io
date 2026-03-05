@@ -17163,13 +17163,20 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
 
             const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
-            if (finalizeBtn) {
-                // Button is only clickable if balance is 0 AND no items are left with the team
-                const isReadyToClose = (newBalanceDue === 0 && totalOnHand === 0);
-                finalizeBtn.disabled = !isReadyToClose;
-                
-                // Optional: Add a visual hint
-                finalizeBtn.title = isReadyToClose ? "Ready to close" : "Cannot close: Balance must be 0 and all items accounted for.";
+            if (isSettled) {
+                finalizeBtn.textContent = "Order Closed";
+                finalizeBtn.disabled = true;
+                finalizeBtn.classList.replace('bg-green-600', 'bg-gray-400');
+            } else {
+                finalizeBtn.textContent = "Finalize & Close Order";
+                if (finalizeBtn) {
+                    // Button is only clickable if balance is 0 AND no items are left with the team
+                    const isReadyToClose = (newBalanceDue === 0 && totalOnHand === 0);
+                    finalizeBtn.disabled = !isReadyToClose;
+                    
+                    // Optional: Add a visual hint
+                    finalizeBtn.title = isReadyToClose ? "Ready to close" : "Cannot close: Balance must be 0 and all items accounted for.";
+                }
             }
         };
 
@@ -17200,6 +17207,7 @@ export function showConsignmentModalV2(orderData = null) {
             }
         });
 
+        const isSettled = orderData && orderData.status === 'Settled';
 
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
@@ -17211,10 +17219,10 @@ export function showConsignmentModalV2(orderData = null) {
                 cellStyle: { 'font-weight': 'bold', color: '#1e40af' } // Blue to stand out
             },
             { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
-            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
-            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
-            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
-            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: true, cellEditor: 'agNumberCellEditor' },
+            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
+            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
             { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
