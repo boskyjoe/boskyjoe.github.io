@@ -5813,10 +5813,15 @@ export async function closeSimpleConsignment(orderId, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     
-    return db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId).update({
-        status: 'Settled',
-        settledDate: now,
-        'audit.updatedBy': user.email,
-        'audit.updatedOn': now
-    });
+    try {
+        return await db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId).update({
+            status: 'Settled',
+            settledDate: now,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': now
+        });
+    } catch (error) {
+        console.error("Error closing consignment:", error);
+        throw error;
+    }
 }
