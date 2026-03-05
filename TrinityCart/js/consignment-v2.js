@@ -123,25 +123,29 @@ export function initializeConsignmentV2Module() {
     });
     
 
-    document.getElementById('consignment-finalize-btn-v2').addEventListener('click', async () => {
-        const orderId = document.getElementById('consignment-order-id-v2').value;
-        const user = appState.currentUser;
+    const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
+    if (finalizeBtn) {
+        finalizeBtn.addEventListener('click', async () => {
+            const orderId = document.getElementById('consignment-order-id-v2').value;
+            const user = appState.currentUser;
 
-        const confirmed = await showModal('confirm', 'Finalize & Close', 
-            'This will mark the order as Settled and lock it from further edits. Proceed?');
+            const confirmed = await showModal('confirm', 'Finalize & Close Order', 
+                'Are you sure? This will lock the order and all quantities from further changes.');
 
-        if (confirmed) {
-            ProgressToast.show('Closing Order...', 'info');
-            try {
-                await closeSimpleConsignment(orderId, user);
-                ProgressToast.showSuccess('Order Settled and Closed.');
-                closeConsignmentModalV2();
-            } catch (error) {
-                showModal('error', 'Error', error.message);
+            if (confirmed) {
+                ProgressToast.show('Closing Order...', 'info');
+                try {
+                    await closeSimpleConsignment(orderId, user);
+                    ProgressToast.showSuccess('Order finalized and locked.');
+                    // The real-time listener in ui.js will automatically 
+                    // refresh the modal to its read-only state.
+                } catch (error) {
+                    showModal('error', 'Closure Failed', error.message);
+                }
+                setTimeout(() => ProgressToast.hide(500), 1200);
             }
-            setTimeout(() => ProgressToast.hide(500), 1200);
-        }
-    });
+        });
+    }
 
 
 
