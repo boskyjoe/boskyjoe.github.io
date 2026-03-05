@@ -8,7 +8,7 @@ import {
     getConsignmentItemsV2 ,ProgressToast
 } from './ui.js';
 
-import { getItemsForCatalogue ,recordSimpleConsignmentPayment,voidSimpleConsignmentPayment } from './api.js';
+import { getItemsForCatalogue ,recordSimpleConsignmentPayment,voidSimpleConsignmentPayment,closeSimpleConsignment } from './api.js';
 import { appState } from './state.js';
 
 /**
