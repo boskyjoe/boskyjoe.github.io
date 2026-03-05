@@ -17162,6 +17162,20 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
 
+            const addProductsBtn = document.getElementById('add-consignment-products-btn-v2');
+
+            if (addProductsBtn) {
+                addProductsBtn.disabled = isSettled;
+                // ✅ ADD: Visual feedback for the disabled state
+                if (isSettled) {
+                    addProductsBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    addProductsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+
+
             const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
             if (isSettled) {
                 finalizeBtn.textContent = "Order Closed";
