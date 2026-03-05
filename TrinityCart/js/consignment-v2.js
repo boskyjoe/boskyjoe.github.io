@@ -5,7 +5,7 @@ import { showModal } from './modal.js';
 import { 
     showConsignmentModalV2, 
     updateConsignmentItemsGridV2,
-    getConsignmentItemsV2 ,ProgressToast
+    getConsignmentItemsV2 ,ProgressToast,closeConsignmentModalV2
 } from './ui.js';
 
 import { getItemsForCatalogue ,recordSimpleConsignmentPayment,voidSimpleConsignmentPayment,closeSimpleConsignment } from './api.js';
