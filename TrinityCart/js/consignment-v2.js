@@ -152,22 +152,46 @@ export function initializeConsignmentV2Module() {
 
     // Button inside the modal to add products
     document.getElementById('add-consignment-products-btn-v2').addEventListener('click', async () => {
-        const catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
+        // 1. Determine Mode and Get Catalogue ID
+        const orderId = document.getElementById('consignment-order-id-v2').value;
+        const isEditMode = !!orderId;
+        let catalogueId;
 
+        if (isEditMode) {
+            // In Settle Mode, find the order in masterData to get its catalogueId
+            const order = masterData.simpleConsignments.find(o => o.id === orderId);
+            catalogueId = order ? order.salesCatalogueId : null;
+        } else {
+            // In New Checkout Mode, get it from the dropdown
+            catalogueId = document.getElementById('consignment-catalogue-select-v2').value;
+        }
+
+        // 2. Validation: Ensure we have a catalogue ID
         if (!catalogueId) {
             showModal('error', 'No Catalogue Selected', 'Please select a Sales Catalogue before adding products.');
             return;
         }
 
+        // 3. Fetch items from the catalogue
         const itemsFromCatalogue = await getItemsForCatalogue(catalogueId);
         if (!itemsFromCatalogue || itemsFromCatalogue.length === 0) {
             showModal('info', 'Empty Catalogue', 'This sales catalogue has no products in it.');
             return;
         }
 
-        // --- THIS IS THE NEW LOGIC ---
-        // Cross-reference with masterData to get the current inventory count
-        const gridItems = itemsFromCatalogue.map(item => {
+        // 4. Filter out products already present in the current grid
+        const currentGridItems = getConsignmentItemsV2();
+        const existingProductIds = new Set(currentGridItems.map(item => item.productId));
+
+        const itemsToAdd = itemsFromCatalogue.filter(item => !existingProductIds.has(item.productId));
+
+        if (itemsToAdd.length === 0) {
+            showModal('info', 'No New Products', 'All products from this catalogue are already in the order.');
+            return;
+        }
+
+        // 5. Map new items to the required structure
+        const processedNewItems = itemsToAdd.map(item => {
             const masterProduct = masterData.products.find(p => p.id === item.productId);
             const inventoryCount = masterProduct ? masterProduct.inventoryCount : 0;
 
@@ -175,19 +199,19 @@ export function initializeConsignmentV2Module() {
                 productId: item.productId,
                 productName: item.productName,
                 sellingPrice: item.sellingPrice,
-                inventoryCount: inventoryCount, // <-- ADDED: The current stock level
+                inventoryCount: inventoryCount,
                 quantityCheckedOut: 0,
-                // Add other fields with default 0 values
                 quantitySold: 0,
                 quantityReturned: 0,
                 quantityDamaged: 0,
                 quantityGifted: 0
             };
         });
-        
-        // --- END OF NEW LOGIC ---
 
-        updateConsignmentItemsGridV2(gridItems);
-        showModal('success', 'Products Loaded', `${gridItems.length} products from the catalogue have been loaded. You can now enter the quantities to check out.`);
+        // 6. Combine existing items with the new ones and update the grid
+        const finalGridData = [...currentGridItems, ...processedNewItems];
+        updateConsignmentItemsGridV2(finalGridData);
+
+        showModal('success', 'Products Added', `${processedNewItems.length} new products from the catalogue have been added to the list.`);
     });
 }
