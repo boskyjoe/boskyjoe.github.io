@@ -17038,18 +17038,26 @@ const consignmentItemsGridOptionsV2 = {
     theme: 'legacy',
     defaultColDef: { resizable: true },
     onCellValueChanged: (params) => {
-        console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
         const orderId = document.getElementById('consignment-order-id-v2').value;
+
+        // --- ✅ THE FIX: Guard Clause ---
+        // If there is no orderId, we are in "New Checkout" mode.
+        // We should NOT try to update the database in the background.
+        if (!orderId) {
+            console.log('ℹ️ [ui.js] New Checkout Mode: Skipping background database update.');
+            return; 
+        }
+        // --------------------------------
+
+        console.log('✅ 1. [ui.js] Settle Mode: Cell value changed.');
         const productId = params.data.productId;
         const field = params.colDef.field;
         const newValue = Number(params.newValue) || 0;
         
-
         console.log('   - Dispatching custom event: "updateSimpleConsignmentItem"');
         console.log('   - Details:', { orderId, productId, fieldToUpdate: field, newQuantity: newValue });
-        // ---------------------------------
 
-        // Dispatch a custom event with all the necessary info
+        // Dispatch the event ONLY if we have a valid orderId (Settle Mode)
         document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
             detail: {
                 orderId,
@@ -17059,8 +17067,7 @@ const consignmentItemsGridOptionsV2 = {
             }
         }));
 
-        // Also trigger the visual update of the financial summary
-        // This requires a small refactor of showConsignmentModalV2
+        // Trigger the visual update of the financial summary
         document.dispatchEvent(new Event('recalculateConsignmentTotals'));
     },
     onGridReady: params => { consignmentItemsGridApiV2 = params.api; }
