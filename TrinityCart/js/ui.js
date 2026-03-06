@@ -17105,6 +17105,8 @@ export function showConsignmentModalV2(orderData = null) {
     if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
     if (unsubscribeOrderDetailsListenerV2) unsubscribeOrderDetailsListenerV2();
 
+    const isSettled = orderData && orderData.status === 'Settled';
+
 
     if (orderData) {
         // --- SETTLE MODE ---
@@ -17161,8 +17163,6 @@ export function showConsignmentModalV2(orderData = null) {
             document.getElementById('consignment-total-sold-v2').textContent = formatCurrency(totalValueSold);
             document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
-
-            const addProductsBtn = document.getElementById('add-consignment-products-btn-v2');
 
             if (addProductsBtn) {
                 addProductsBtn.disabled = isSettled;
@@ -17221,7 +17221,7 @@ export function showConsignmentModalV2(orderData = null) {
             }
         });
 
-        const isSettled = orderData && orderData.status === 'Settled';
+       
 
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
