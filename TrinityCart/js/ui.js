@@ -17107,6 +17107,16 @@ export function showConsignmentModalV2(orderData = null) {
         consignmentItemsGridApi.removeEventListener('cellValueChanged', consignmentItemsGridApi.cellValueChangeHandler);
     }
 
+    // Define the groups of inputs
+    const headerInputs = [
+        'consignment-team-input-v2', 'consignment-member-input-v2', 
+        'consignment-member-phone-v2', 'consignment-venue-v2', 
+        'consignment-catalogue-select-v2', 'consignment-voucher-input-v2'
+    ];
+    const paymentInputs = [
+        'consignment-amount-paid-v2', 'consignment-payment-mode-v2', 'consignment-payment-ref-v2'
+    ];
+
 
     // Detach any previous listeners to prevent memory leaks
     if (unsubscribePaymentHistoryListenerV2) unsubscribePaymentHistoryListenerV2();
@@ -17125,6 +17135,11 @@ export function showConsignmentModalV2(orderData = null) {
         settleBtns.forEach(btn => btn.classList.remove('hidden'));
 
         document.getElementById('consignment-order-id-v2').value = orderData.id;
+
+        headerInputs.forEach(id => document.getElementById(id).required = false);
+
+        paymentInputs.forEach(id => document.getElementById(id).required = true);
+
 
         // 1. Create a local state to hold the latest totals from the DB
         let currentDBTotals = {
@@ -17291,6 +17306,10 @@ export function showConsignmentModalV2(orderData = null) {
         addProductsBtn.classList.remove('hidden');
 
         document.getElementById('consignment-order-id-v2').value = '';
+
+        headerInputs.forEach(id => document.getElementById(id).required = true);
+
+        paymentInputs.forEach(id => document.getElementById(id).required = false);
 
         // Populate Sales Catalogue Dropdown (this part is still needed)
         const catalogueSelect = document.getElementById('consignment-catalogue-select-v2');
