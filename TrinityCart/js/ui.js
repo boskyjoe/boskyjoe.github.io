@@ -17254,7 +17254,17 @@ export function showConsignmentModalV2(orderData = null) {
                 valueFormatter: p => formatCurrency(p.value),
                 cellStyle: { 'font-weight': 'bold', color: '#1e40af' } // Blue to stand out
             },
-            { field: "quantityCheckedOut", headerName: "Qty Out", width: 100 },
+            { 
+                field: "quantityCheckedOut", 
+                headerName: "Qty Out", 
+                width: 100, 
+                editable: !isSettled, // Allow editing if the order is not closed
+                cellEditor: 'agNumberCellEditor',
+                cellStyle: params => {
+                    // Give it a subtle blue background to show it's editable
+                    return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
+                }
+            },
             { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
             { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
             { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
