@@ -5674,9 +5674,7 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
     const db = firebase.firestore();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
-    // --- THIS IS THE RECOMMENDED TRY...CATCH BLOCK ---
     try {
-        // This operation MUST be a transaction to ensure both the order and the main inventory are updated together.
         await db.runTransaction(async (transaction) => {
             // 1. READ PHASE
             const orderDoc = await transaction.get(orderRef);
@@ -5684,60 +5682,99 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
                 throw new Error("Order document not found for update.");
             }
             const orderData = orderDoc.data();
-            const items = orderData.items || [];
+            
+            // Create a mutable copy of the items array
+            const items = [...(orderData.items || [])]; 
 
-            const itemIndex = items.findIndex(item => item.productId === productId);
+            // Find the specific item being updated
+            let itemIndex = items.findIndex(item => item.productId === productId);
+            let oldItemData;
+
+            // --- ✅ CRITICAL FIX: HANDLE NEW ITEMS ADDED DURING SETTLEMENT ---
             if (itemIndex === -1) {
-                throw new Error(`Product with ID ${productId} not found in this order's items array.`);
+                console.log(`[API] Product ${productId} not found in order. Creating new entry...`);
+                
+                // Fetch product details from the masterData cache
+                const productMaster = masterData.products.find(p => p.id === productId);
+                if (!productMaster) throw new Error(`Product master data not found for ID: ${productId}`);
+
+                // Create the new item structure
+                oldItemData = {
+                    productId: productId,
+                    productName: productMaster.itemName,
+                    sellingPrice: productMaster.sellingPrice,
+                    quantityCheckedOut: 0,
+                    quantitySold: 0,
+                    quantityReturned: 0,
+                    quantityDamaged: 0,
+                    quantityGifted: 0
+                };
+                
+                // Add it to our local array copy
+                items.push(oldItemData);
+                itemIndex = items.length - 1;
+            } else {
+                // Item exists, just copy the old data for delta calculations
+                oldItemData = { ...items[itemIndex] };
             }
-            const oldItemData = { ...items[itemIndex] };
 
             // 2. MODIFY PHASE
-            const updatedItems = [...items];
-            updatedItems[itemIndex][fieldToUpdate] = newQuantity;
+            items[itemIndex][fieldToUpdate] = newQuantity;
 
-            // Validation within the transaction
-            const currentAccounted = (updatedItems[itemIndex].quantitySold || 0) + (updatedItems[itemIndex].quantityReturned || 0) + (updatedItems[itemIndex].quantityDamaged || 0) + (updatedItems[itemIndex].quantityGifted || 0);
-            if (currentAccounted > updatedItems[itemIndex].quantityCheckedOut) {
-                throw new Error(`Invalid quantity. Total accounted for (${currentAccounted}) cannot exceed checked out quantity (${updatedItems[itemIndex].quantityCheckedOut}).`);
+            // VALIDATION: Ensure total accounted for does not exceed checkout quantity
+            const itm = items[itemIndex];
+            const totalAccounted = (itm.quantitySold || 0) + (itm.quantityReturned || 0) + 
+                                   (itm.quantityDamaged || 0) + (itm.quantityGifted || 0);
+            
+            if (totalAccounted > itm.quantityCheckedOut) {
+                throw new Error(`Invalid quantity. Total accounted for (${totalAccounted}) cannot exceed Qty Out (${itm.quantityCheckedOut}).`);
             }
 
-            const totalValueSold = updatedItems.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
-            const newBalanceDue = totalValueSold - (orderData.totalAmountPaid || 0) - (orderData.totalExpenses || 0);
+            // RECALCULATE FINANCIAL TOTALS
+            const totalValueCheckedOut = items.reduce((sum, i) => sum + ((i.quantityCheckedOut || 0) * i.sellingPrice), 0);
+            const totalValueSold = items.reduce((sum, i) => sum + ((i.quantitySold || 0) * i.sellingPrice), 0);
+            const totalExpenses = orderData.totalExpenses || 0;
+            const totalAmountPaid = orderData.totalAmountPaid || 0;
+            const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
 
-            // 3. WRITE PHASE
+            // 3. WRITE PHASE (Order Document)
             transaction.update(orderRef, {
-                items: updatedItems,
+                items: items,
+                totalValueCheckedOut: totalValueCheckedOut,
                 totalValueSold: totalValueSold,
                 balanceDue: newBalanceDue,
                 'audit.updatedBy': user.email,
                 'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            if (fieldToUpdate === 'quantityReturned') {
-                const oldReturnedQty = oldItemData.quantityReturned || 0;
-                const quantityDelta = newQuantity - oldReturnedQty;
+            // 4. WRITE PHASE (Inventory Management)
+            const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
 
-                if (quantityDelta !== 0) {
-                    console.log(`[API] Restocking inventory for ${productId}. Change: ${quantityDelta}`);
-                    const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+            if (fieldToUpdate === 'quantityCheckedOut') {
+                // If increasing checkout qty (Qty Out), main inventory goes DOWN
+                const delta = newQuantity - (oldItemData.quantityCheckedOut || 0);
+                if (delta !== 0) {
                     transaction.update(productRef, {
-                        inventoryCount: firebase.firestore.FieldValue.increment(quantityDelta)
+                        inventoryCount: firebase.firestore.FieldValue.increment(-delta)
+                    });
+                }
+            } else if (fieldToUpdate === 'quantityReturned') {
+                // If increasing return qty, main inventory goes UP
+                const delta = newQuantity - (oldItemData.quantityReturned || 0);
+                if (delta !== 0) {
+                    transaction.update(productRef, {
+                        inventoryCount: firebase.firestore.FieldValue.increment(delta)
                     });
                 }
             }
         });
 
-        console.log(`[API] Transaction for ${fieldToUpdate} successful.`);
+        console.log(`[API] ✅ Successfully updated ${fieldToUpdate} for product ${productId}`);
 
     } catch (error) {
-        // This block will now catch errors from the transaction itself (e.g., permissions)
-        // or from the validation logic inside it.
         console.error("API Error in updateSimpleConsignmentItemQuantity:", error);
-        // Re-throw the error so the calling function in main.js can handle it and show a modal to the user.
-        throw error;
+        throw error; // Re-throw so main.js can show the error modal
     }
-    // --- END OF RECOMMENDED BLOCK ---
 }
 
 /**
