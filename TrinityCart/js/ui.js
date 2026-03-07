@@ -17244,9 +17244,24 @@ export function showConsignmentModalV2(orderData = null) {
         });
 
        
+        const enrichedItems = (orderData.items || []).map(item => {
+            const masterProduct = masterData.products.find(p => p.id === item.productId);
+            return {
+                ...item,
+                // Add the live stock count from the master catalogue
+                inventoryCount: masterProduct ? masterProduct.inventoryCount : 0 
+            };
+        });
 
         const settleColumns = [
             { field: "productName", headerName: "Product", flex: 1 },
+            { 
+                field: "inventoryCount", 
+                headerName: "Store Stock", 
+                width: 110,
+                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'center' },
+                tooltipValueGetter: () => "Current quantity available in the main store"
+            },
             { 
                 field: "sellingPrice", 
                 headerName: "Price", 
@@ -17272,7 +17287,7 @@ export function showConsignmentModalV2(orderData = null) {
             { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
-        consignmentItemsGridApiV2.setGridOption('rowData', orderData.items);
+        consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
 
         const cellChangeHandler = (params) => {
             console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
