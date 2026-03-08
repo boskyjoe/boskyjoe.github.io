@@ -17003,12 +17003,32 @@ let unsubscribeConsignmentListenerV2 = null;
 const consignmentOrdersGridOptionsV2 = {
     getRowId: params => params.data.id,
     theme: 'legacy',
+    rowClassRules: {
+        // Apply a light cyan background for active orders
+        'bg-cyan-50': params => params.data && params.data.status === 'Active',
+        // Dim the row and apply a light gray background for settled orders
+        'opacity-60 bg-gray-50': params => params.data && params.data.status === 'Settled'
+    },
     columnDefs: [
         { field: "consignmentId", headerName: "Order ID", width: 180 },
         { field: "teamName", headerName: "Team", flex: 1 },
         { field: "teamMemberName", headerName: "Member", flex: 1 },
         { field: "checkoutDate", headerName: "Date Out", valueFormatter: p => p.value ? p.value.toDate().toLocaleDateString() : '' },
-        { field: "status", headerName: "Status", width: 120 },
+        { 
+            field: "status", 
+            headerName: "Status", 
+            width: 120,
+            cellRenderer: p => {
+                const status = p.value;
+                if (status === 'Active') {
+                    return `<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">ACTIVE</span>`;
+                }
+                if (status === 'Settled') {
+                    return `<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">SETTLED</span>`;
+                }
+                return status;
+            }
+        },
         { field: "balanceDue", headerName: "Balance Due", valueFormatter: p => formatCurrency(p.value || 0) },
         {
             // --- THIS IS THE ONLY PART THAT CHANGES ---
@@ -17259,7 +17279,7 @@ export function showConsignmentModalV2(orderData = null) {
                 field: "inventoryCount", 
                 headerName: "Store Stock", 
                 width: 110,
-                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'center' },
+                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'left' },
                 tooltipValueGetter: () => "Current quantity available in the main store"
             },
             { 
