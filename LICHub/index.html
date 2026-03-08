@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Hub | Filter Model</title>
+    <title>License Hub | Dashboard</title>
     <style>
         :root {
             --primary-blue: #2563eb;
-            --bg-gray: #f8fafc;
+            --bg-gray: #f1f5f9;
             --border-color: #e2e8f0;
             --text-main: #1e293b;
         }
@@ -15,68 +15,96 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-gray);
-            display: flex;
-            justify-content: center;
-            padding: 40px;
+            margin: 0;
             color: var(--text-main);
         }
 
-        .filter-container {
+        /* Landing Page Styles */
+        .navbar {
             background: white;
-            width: 400px;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .filter-header {
+        .filter-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        /* Filter Modal */
+        .filter-modal {
+            background: white;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: modalSlideUp 0.3s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
             padding: 16px 20px;
-            background: #fff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .filter-header h2 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .toggle-all-btn {
-            background: none;
-            border: none;
-            color: var(--primary-blue);
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .toggle-all-btn:hover {
-            background: #eff6ff;
-        }
+        .modal-header h2 { margin: 0; font-size: 1.1rem; }
 
         .tree-root {
-            padding: 10px 20px 20px 20px;
-            max-height: 500px;
+            padding: 10px 20px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
-        .tree-node {
-            margin: 8px 0;
-        }
+        .tree-node { margin: 12px 0; }
 
         .category-header {
             display: flex;
             align-items: center;
             cursor: pointer;
             font-weight: 600;
-            padding: 6px 0;
-            user-select: none;
+            padding: 4px 0;
         }
 
         .category-header::before {
@@ -87,33 +115,27 @@
             transition: transform 0.2s;
         }
 
-        .tree-node.expanded > .category-header::before {
-            transform: rotate(90deg);
-        }
+        .tree-node.expanded > .category-header::before { transform: rotate(90deg); }
 
         .options-list {
             display: none;
             margin-left: 24px;
-            padding-top: 4px;
+            padding-top: 6px;
         }
 
-        .tree-node.expanded > .options-list {
-            display: block;
-        }
+        .tree-node.expanded > .options-list { display: block; }
 
         .filter-option {
             display: flex;
             align-items: center;
-            padding: 4px 0;
-            font-size: 0.95rem;
-        }
-
-        .filter-option input {
-            margin-right: 10px;
+            padding: 6px 0;
+            font-size: 0.9rem;
             cursor: pointer;
         }
 
-        .footer {
+        .filter-option input { margin-right: 10px; }
+
+        .modal-footer {
             padding: 16px 20px;
             border-top: 1px solid var(--border-color);
             display: flex;
@@ -121,101 +143,121 @@
             gap: 12px;
         }
 
-        button.apply-btn {
+        .btn-primary {
             background: var(--primary-blue);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 20px;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: 500;
         }
 
-        button.apply-btn:hover { background: #1d4ed8; }
+        .text-btn {
+            background: none;
+            border: none;
+            color: var(--primary-blue);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
 
-<div class="filter-container">
-    <div class="filter-header">
-        <h2>Filters</h2>
-        <button class="toggle-all-btn" id="toggleAll">Expand All</button>
+    <nav class="navbar">
+        <div style="font-weight: 700; font-size: 1.2rem;">License Hub</div>
+        <button class="filter-btn" id="openFilter">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filters
+        </button>
+    </nav>
+
+    <div style="padding: 40px; text-align: center; color: #64748b;">
+        <h1>Dashboard Content</h1>
+        <p>Click the filter icon above to refine the data view.</p>
     </div>
 
-    <div class="tree-root" id="filterTree">
-        <div class="tree-node expanded">
-            <div class="category-header">Licensing Method</div>
-            <div class="options-list">
-                <label class="filter-option"><input type="checkbox"> Smar</label>
-                <label class="filter-option"><input type="checkbox"> Traditional</label>
-                <label class="filter-option"><input type="checkbox"> Cloud</label>
-                <label class="filter-option"><input type="checkbox"> Co-Term</label>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="filter-modal">
+            <div class="modal-header">
+                <h2>Filters</h2>
+                <button class="text-btn" id="toggleAll">Expand All</button>
             </div>
-        </div>
 
-        <div class="tree-node expanded">
-            <div class="category-header">Billing Type</div>
-            <div class="options-list">
-                <label class="filter-option"><input type="checkbox"> Prepaid</label>
-                <label class="filter-option"><input type="checkbox"> By Usage</label>
-                <label class="filter-option"><input type="checkbox"> Hybrid</label>
+            <div class="tree-root">
+                <div class="tree-node expanded">
+                    <div class="category-header">Licensing Method</div>
+                    <div class="options-list">
+                        <label class="filter-option"><input type="checkbox"> Smar</label>
+                        <label class="filter-option"><input type="checkbox"> Traditional</label>
+                        <label class="filter-option"><input type="checkbox"> Cloud</label>
+                        <label class="filter-option"><input type="checkbox"> Co-Term</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Billing Type</div>
+                    <div class="options-list">
+                        <label class="filter-option"><input type="checkbox"> Prepaid</label>
+                        <label class="filter-option"><input type="checkbox"> By Usage</label>
+                        <label class="filter-option"><input type="checkbox"> Hybrid</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Usage</div>
+                    <div class="options-list">
+                        <label class="filter-option"><input type="checkbox"> Overusage</label>
+                        <label class="filter-option"><input type="checkbox"> Full Usage</label>
+                        <label class="filter-option"><input type="checkbox"> Underusage</label>
+                        <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="tree-node expanded">
-            <div class="category-header">Usage</div>
-            <div class="options-list">
-                <label class="filter-option"><input type="checkbox"> Overusage</label>
-                <label class="filter-option"><input type="checkbox"> Full Usage</label>
-                <label class="filter-option"><input type="checkbox"> Underusage</label>
-                <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
+            <div class="modal-footer">
+                <button class="text-btn" style="color: #64748b;" id="closeModal">Cancel</button>
+                <button class="btn-primary" id="applyBtn">Apply Filters</button>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        <button class="toggle-all-btn" style="color: #64748b;" onclick="clearFilters()">Clear All</button>
-        <button class="apply-btn" onclick="applyFilters()">Apply Filters</button>
-    </div>
-</div>
+    <script>
+        const overlay = document.getElementById('modalOverlay');
+        const openBtn = document.getElementById('openFilter');
+        const closeBtn = document.getElementById('closeModal');
+        const toggleAllBtn = document.getElementById('toggleAll');
+        const nodes = document.querySelectorAll('.tree-node');
+        
+        let allExpanded = true;
 
-<script>
-    const toggleAllBtn = document.getElementById('toggleAll');
-    const nodes = document.querySelectorAll('.tree-node');
-    let allExpanded = true;
+        // Toggle Modal Visibility
+        openBtn.onclick = () => overlay.classList.add('active');
+        closeBtn.onclick = () => overlay.classList.remove('active');
 
-    // Handle Individual Expand/Collapse
-    document.querySelectorAll('.category-header').forEach(header => {
-        header.addEventListener('click', () => {
-            header.parentElement.classList.toggle('expanded');
+        // Close on clicking outside the modal box
+        window.onclick = (event) => {
+            if (event.target == overlay) overlay.classList.remove('active');
+        }
+
+        // Tree Expand/Collapse Logic
+        document.querySelectorAll('.category-header').forEach(header => {
+            header.onclick = () => header.parentElement.classList.toggle('expanded');
         });
-    });
 
-    // Expand/Collapse All Logic
-    toggleAllBtn.addEventListener('click', () => {
-        allExpanded = !allExpanded;
-        nodes.forEach(node => {
-            if (allExpanded) {
-                node.classList.add('expanded');
-            } else {
-                node.classList.remove('expanded');
-            }
-        });
-        toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
-    });
+        // Expand/Collapse All
+        toggleAllBtn.onclick = () => {
+            allExpanded = !allExpanded;
+            nodes.forEach(n => n.classList.toggle('expanded', allExpanded));
+            toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+        };
 
-    function clearFilters() {
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-    }
-
-    function applyFilters() {
-        const selected = [];
-        document.querySelectorAll('input:checked').forEach(cb => {
-            selected.push(cb.parentElement.textContent.trim());
-        });
-        alert('Selected Filters: ' + (selected.join(', ') || 'None'));
-    }
-</script>
-
+        // Apply Logic
+        document.getElementById('applyBtn').onclick = () => {
+            const selected = Array.from(document.querySelectorAll('input:checked'))
+                                  .map(cb => cb.parentElement.textContent.trim());
+            console.log("Applying filters:", selected);
+            overlay.classList.remove('active');
+        };
+    </script>
 </body>
 </html>
