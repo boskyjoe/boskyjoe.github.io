@@ -3,448 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Flow Diagram</title>
+    <title>License Hub | Filter Model</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-blue: #2563eb;
+            --bg-gray: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto 20px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-gray);
+            display: flex;
+            justify-content: center;
             padding: 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 40px;
-            position: relative;
-        }
-        
-        .title::after {
-            content: '';
-            display: block;
-            width: 100px;
-            height: 4px;
-            background: linear-gradient(90deg, #3498db, #9b59b6);
-            margin: 15px auto 0;
-            border-radius: 2px;
-        }
-        
-        /* Main container for the entire diagram, enables horizontal scrolling */
-        .diagram-container {
-            display: flex;
-            flex-direction: row; 
-            align-items: flex-start; /* Align to the top */
-            gap: 50px;
-            margin-bottom: 50px;
-            padding-bottom: 20px; /* Add padding for scrollbar */
-            overflow-x: auto; /* Allow horizontal scrolling */
-            width: 100%;
+            color: var(--text-main);
         }
 
-        .data-sources-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(52, 152, 219, 0.05);
-            padding: 30px 20px;
-            border-radius: 15px;
-            border: 2px dashed #3498db;
-            position: relative;
-            flex-shrink: 0; /* Prevents this container from shrinking */
-            min-width: 250px;
-        }
-        
-        .consumers-outer-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(230, 126, 34, 0.05);
-            padding: 30px 20px;
-            border-radius: 15px;
-            border: 2px dashed #e67e22;
-            position: relative;
-            flex-shrink: 0; /* Prevents this container from shrinking */
-        }
-        
-        .sources-title, .consumers-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 25px;
-            text-align: center;
-            padding-bottom: 10px;
-            border-bottom: 2px solid;
-            width: 100%;
-        }
-        
-        .sources-title {
-            border-color: #3498db;
-        }
-
-        .consumers-title {
-            border-color: #e67e22;
-        }
-
-        .sources-grid, .consumers-grid {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: nowrap; /* Prevent wrapping inside source/consumer containers */
-            flex-direction: column;
-        }
-
-        .component {
+        .filter-container {
             background: white;
+            width: 400px;
             border-radius: 12px;
-            padding: 10px 8px; 
-            text-align: center;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-            transition: all 0.3s ease;
-            min-height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            position: relative;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
             overflow: hidden;
-            width: 180px;
-            flex-shrink: 0;
         }
-        
-        .component::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--accent-color);
-        }
-        
-        .component:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        
-        .component-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
-        }
-        
-        .component-title {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #2c3e50;
-            line-height: 1.2;
-        }
-        
-        .component-subtitle {
-            font-size: 10px;
-            color: #7f8c8d;
-            line-height: 1.4;
-        }
-        
-        .source {
-            --accent-color: #3498db;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%);
-        }
-        
-        .warehouse {
-            --accent-color: #9b59b6;
-            background: linear-gradient(135deg, #f3e5f5 0%, #faf8ff 100%);
-        }
-        
-        .processing {
-            --accent-color: #27ae60;
-            background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%);
-        }
-        
-        .consumer {
-            --accent-color: #e67e22;
-            background: linear-gradient(135deg, #fff3e0 0%, #fffbf5 100%);
-        }
-        
-        .horizontal-flow-container {
+
+        .filter-header {
+            padding: 16px 20px;
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 40px;
-            flex-wrap: nowrap; /* Prevents wrapping, enforcing horizontal flow */
-            flex-shrink: 0;
         }
-        
-        .horizontal-arrow {
-            font-size: 28px;
-            color: #3498db;
-            flex-shrink: 0;
-        }
-        
-        .arrow-label {
-            font-size: 11px;
-            color: #5d6d7e;
-            text-align: center;
+
+        .filter-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
             font-weight: 600;
-            background: rgba(255,255,255,0.9);
-            padding: 5px 10px;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            white-space: nowrap;
         }
-        
-        .legend-wrapper {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .legend {
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-            padding: 30px;
-            border-radius: 12px;
-            border-left: 5px solid #3498db;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        }
-        
-        .legend-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #2c3e50;
-        }
-        
-        .legend-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-        }
-        
-        .legend-item:hover {
-            background: rgba(52, 152, 219, 0.05);
-        }
-        
-        .legend-color {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-            position: relative;
-        }
-        
-        .legend-color::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--legend-accent);
-            border-radius: 6px 6px 0 0;
-        }
-        
-        .legend-text {
+
+        .toggle-all-btn {
+            background: none;
+            border: none;
+            color: var(--primary-blue);
+            font-size: 0.85rem;
             font-weight: 500;
-            color: #2c3e50;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
-        
-        @media (max-width: 900px) {
-            /* On smaller screens, the horizontal flow will still scroll */
-            .diagram-container {
-                justify-content: flex-start;
-            }
+
+        .toggle-all-btn:hover {
+            background: #eff6ff;
         }
+
+        .tree-root {
+            padding: 10px 20px 20px 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .tree-node {
+            margin: 8px 0;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 6px 0;
+            user-select: none;
+        }
+
+        .category-header::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+
+        .tree-node.expanded > .category-header::before {
+            transform: rotate(90deg);
+        }
+
+        .options-list {
+            display: none;
+            margin-left: 24px;
+            padding-top: 4px;
+        }
+
+        .tree-node.expanded > .options-list {
+            display: block;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.95rem;
+        }
+
+        .filter-option input {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        button.apply-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button.apply-btn:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="title">🏗️ Enterprise Data Architecture Flow</div>
-        
-        <div class="diagram-container">
-            <!-- Data Sources Container (Left Column) -->
-            <div class="data-sources-container">
-                <div class="sources-title">Data Sources</div>
-                <div class="sources-grid">
-                    <div class="component source">
-                        <div class="component-icon">🌐</div>
-                        <div class="component-title">Meraki Dashboard</div>
-                        <div class="component-subtitle">Network monitoring & analytics</div>
-                        <div style="margin-top: 10px; display: flex; justify-content: center;">
-                            <div style="display: flex; flex-direction: column; align-items: center; background: rgba(52, 152, 219, 0.1); padding: 8px; border-radius: 6px; position: relative;">
-                                <div style="font-size: 16px; margin-bottom: 3px;">⚙️</div>
-                                <div style="font-size: 8px; color: #2980b9; font-weight: bold;">API's</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="component source">
-                        <div class="component-icon">📦</div>
-                        <div class="component-title">Product Data</div>
-                        <div class="component-subtitle">Product catalog & specs</div>
-                    </div>
-                    
-                    <div class="component source">
-                        <div class="component-icon">🔗</div>
-                        <div class="component-title">Product-License Mapping</div>
-                        <div class="component-subtitle">License associations</div>
-                    </div>
-                    
-                    <div class="component source">
-                        <div class="component-icon">📋</div>
-                        <div class="component-title">Orders Data</div>
-                        <div class="component-subtitle">Purchase & transactions</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Full Horizontal Flow Container for the rest of the components -->
-            <div class="horizontal-flow-container">
-                <!-- Horizontal Flow Connector from Data Sources to Meraki Snowflake -->
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <div class="arrow-label">Multiple Data Streams</div>
-                    <div class="horizontal-arrow">→</div>
-                </div>
-                
-                <!-- Meraki Snowflake -->
-                <div class="single-component">
-                    <div class="component warehouse">
-                        <div class="component-icon">❄️</div>
-                        <div class="component-title">Meraki Snowflake</div>
-                        <div class="component-subtitle">Cloud data warehouse & analytics platform</div>
-                    </div>
-                </div>
-                
-                <!-- Horizontal Arrow and Label between Snowflake and LIC Hub -->
-                <div style="display: flex; flex-direction: column; align-items: center;">
-                    <div class="arrow-label">Consolidated Data</div>
-                    <div class="horizontal-arrow">→</div>
-                </div>
-                
-                <!-- LIC Hub -->
-                <div class="single-component">
-                    <div class="component processing" style="min-height: 280px; padding: 20px;">
-                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                            <div class="component-icon" style="margin-bottom: 0; margin-right: 10px; font-size: 32px;">🔧</div>
-                            <div>
-                                <div class="component-title" style="margin-bottom: 0; font-size: 18px;">LIC Hub</div>
-                                <div class="component-subtitle" style="font-size: 10px;">Data processing & API services</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Data Layer -->
-                        <div style="background: rgba(52, 152, 219, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #3498db;">
-                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                                <span style="font-size: 16px; margin-right: 8px;">💾</span>
-                                Data Layer
-                            </div>
-                            <div style="font-size: 9px; color: #7f8c8d;">Raw data ingestion & storage</div>
-                        </div>
-                        
-                        <!-- Transformation & Enrichment Layer -->
-                        <div style="background: rgba(155, 89, 182, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px; border-left: 3px solid #9b59b6;">
-                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; display: flex; align-items: center;">
-                                <span style="font-size: 16px; margin-right: 8px;">⚡</span>
-                                Transformation & Enrichment
-                            </div>
-                            <div style="font-size: 9px; color: #7f8c8d;">Business logic & data enhancement</div>
-                        </div>
-                        
-                        <!-- Publication Layer -->
-                        <div style="background: rgba(39, 174, 96, 0.1); border-radius: 8px; padding: 12px; border-left: 3px solid #27ae60;">
-                            <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center;">
-                                <span style="font-size: 16px; margin-right: 8px;">📤</span>
-                                Publication Layer
-                            </div>
-                            <div style="display: flex; justify-content: center; gap: 20px;">
-                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 18px; margin-bottom: 3px;">☁️</div>
-                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">API</div>
-                                </div>
-                                <div style="display: flex; flex-direction: column; align-items: center; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 18px; margin-bottom: 3px;">📊</div>
-                                    <div style="font-size: 8px; color: #27ae60; font-weight: bold;">Views</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Horizontal Arrow and Label between LIC Hub and Consumer Systems -->
-                <div style="display: flex; flex-direction: column; align-items: center;">
-                    <div class="arrow-label">API & Data Views</div>
-                    <div class="horizontal-arrow">→</div>
-                </div>
-                
-                <!-- Consumer Systems Container -->
-                <div class="consumers-outer-container">
-                    <div class="consumers-title">Consumer Systems</div>
-                    <div class="consumers-grid">
-                        <div class="component consumer" style="width: 180px;">
-                            <div class="component-icon">👥</div>
-                            <div class="component-title">CSM Systems</div>
-                            <div class="component-subtitle">Customer Success Management</div>
-                        </div>
-                        
-                        <div class="component consumer" style="width: 180px;">
-                            <div class="component-icon">⚙️</div>
-                            <div class="component-title">Other Systems</div>
-                            <div class="component-subtitle">External integrations & services</div>
-                        </div>
-                    </div>
-                </div>
+<div class="filter-container">
+    <div class="filter-header">
+        <h2>Filters</h2>
+        <button class="toggle-all-btn" id="toggleAll">Expand All</button>
+    </div>
+
+    <div class="tree-root" id="filterTree">
+        <div class="tree-node expanded">
+            <div class="category-header">Licensing Method</div>
+            <div class="options-list">
+                <label class="filter-option"><input type="checkbox"> Smar</label>
+                <label class="filter-option"><input type="checkbox"> Traditional</label>
+                <label class="filter-option"><input type="checkbox"> Cloud</label>
+                <label class="filter-option"><input type="checkbox"> Co-Term</label>
+            </div>
+        </div>
+
+        <div class="tree-node expanded">
+            <div class="category-header">Billing Type</div>
+            <div class="options-list">
+                <label class="filter-option"><input type="checkbox"> Prepaid</label>
+                <label class="filter-option"><input type="checkbox"> By Usage</label>
+                <label class="filter-option"><input type="checkbox"> Hybrid</label>
+            </div>
+        </div>
+
+        <div class="tree-node expanded">
+            <div class="category-header">Usage</div>
+            <div class="options-list">
+                <label class="filter-option"><input type="checkbox"> Overusage</label>
+                <label class="filter-option"><input type="checkbox"> Full Usage</label>
+                <label class="filter-option"><input type="checkbox"> Underusage</label>
+                <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
             </div>
         </div>
     </div>
-    
-    <!-- Legend is now a separate, full-width section -->
-    <div class="legend-wrapper">
-        <div class="legend">
-            <div class="legend-title">Component Legend</div>
-            <div class="legend-grid">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%); --legend-accent: #3498db;"></div>
-                    <div class="legend-text">Data Sources</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #f3e5f5 0%, #faf8ff 100%); --legend-accent: #9b59b6;"></div>
-                    <div class="legend-text">Data Warehouse</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #e8f5e8 0%, #f8fff8 100%); --legend-accent: #27ae60;"></div>
-                    <div class="legend-text">Processing & API Layer</div>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #fff3e0 0%, #fffbf5 100%); --legend-accent: #e67e22;"></div>
-                    <div class="legend-text">Consumer Systems</div>
-                </div>
-            </div>
-        </div>
+
+    <div class="footer">
+        <button class="toggle-all-btn" style="color: #64748b;" onclick="clearFilters()">Clear All</button>
+        <button class="apply-btn" onclick="applyFilters()">Apply Filters</button>
     </div>
+</div>
+
+<script>
+    const toggleAllBtn = document.getElementById('toggleAll');
+    const nodes = document.querySelectorAll('.tree-node');
+    let allExpanded = true;
+
+    // Handle Individual Expand/Collapse
+    document.querySelectorAll('.category-header').forEach(header => {
+        header.addEventListener('click', () => {
+            header.parentElement.classList.toggle('expanded');
+        });
+    });
+
+    // Expand/Collapse All Logic
+    toggleAllBtn.addEventListener('click', () => {
+        allExpanded = !allExpanded;
+        nodes.forEach(node => {
+            if (allExpanded) {
+                node.classList.add('expanded');
+            } else {
+                node.classList.remove('expanded');
+            }
+        });
+        toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    });
+
+    function clearFilters() {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+
+    function applyFilters() {
+        const selected = [];
+        document.querySelectorAll('input:checked').forEach(cb => {
+            selected.push(cb.parentElement.textContent.trim());
+        });
+        alert('Selected Filters: ' + (selected.join(', ') || 'None'));
+    }
+</script>
+
 </body>
 </html>
