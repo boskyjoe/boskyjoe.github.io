@@ -209,3 +209,51 @@ button:active {
     height: 500px;
   }
 }
+
+.grid-toolbar {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.quick-search {
+  width: 100%;
+  max-width: 420px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+}
+
+.quick-search:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.35);
+}
+
+/* Alternate row colors (zebra) */
+.ag-theme-quartz .ag-row-even .ag-cell {
+  background-color: #fcfdff;
+}
+
+.ag-theme-quartz .ag-row-odd .ag-cell {
+  background-color: #f7faff;
+}
+
+/* Hover effect */
+.ag-theme-quartz .ag-row-hover .ag-cell {
+  background-color: #eaf2ff !important;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Optional: make row feel clickable */
+.ag-theme-quartz .ag-row {
+  cursor: pointer;
+}
+
+.ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
+  background-color: #dbeafe !important;
+}
