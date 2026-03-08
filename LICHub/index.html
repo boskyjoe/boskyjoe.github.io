@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,6 +13,7 @@
   <!-- App CSS -->
   <link rel="stylesheet" href="css/main.css" />
 </head>
+
 <body>
   <div class="app-container">
 
@@ -21,12 +23,7 @@
       <p class="subtitle">Sign in to continue</p>
 
       <label for="emailInput">User Email</label>
-      <input
-        type="email"
-        id="emailInput"
-        placeholder="Enter your email"
-        value="jean.l.picard@walmart.com"
-      />
+      <input type="email" id="emailInput" placeholder="Enter your email" value="jean.l.picard@walmart.com" />
       <button id="loginBtn" type="button">Login</button>
       <p id="loginError" class="error-msg"></p>
     </section>
@@ -46,13 +43,39 @@
 
         <div class="accordion-body expanded" id="accordionBody">
           <div class="grid-toolbar">
-            <input
-              type="text"
-              id="quickSearchInput"
-              class="quick-search"
-              placeholder="Quick search across all columns..."
-              aria-label="Quick search"
-            />
+            <div class="search-wrap">
+              <input type="text" id="quickSearchInput" class="quick-search"
+                placeholder="Quick search across all columns..." aria-label="Quick search" />
+
+              <button id="openFilterBtn" class="icon-btn" type="button" aria-label="Open filters">
+                <!-- Filter SVG icon -->
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M3 5h18l-7 8v5l-4 2v-7L3 5z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <!-- Filter Modal -->
+          <div id="filterModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle">
+            <div class="modal-card">
+              <div class="modal-header">
+                <h2 id="filterModalTitle">Filters</h2>
+                <button id="closeFilterBtn" class="icon-btn" type="button" aria-label="Close filters">✕</button>
+              </div>
+
+              <div class="modal-body">
+                <div class="filter-actions-top">
+                  <button id="collapseAllBtn" class="link-btn" type="button">Collapse All</button>
+                </div>
+
+                <div id="filterGroups"></div>
+              </div>
+
+              <div class="modal-footer">
+                <button id="clearFiltersBtn" class="btn-secondary" type="button">Clear</button>
+                <button id="applyFiltersBtn" type="button">Apply Filters</button>
+              </div>
+            </div>
           </div>
           <div class="grid-frame">
             <div id="summaryGrid" class="ag-theme-quartz"></div>
@@ -69,4 +92,5 @@
   <!-- App JS -->
   <script src="js/main.js"></script>
 </body>
+
 </html>
