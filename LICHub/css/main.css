@@ -88,33 +88,36 @@ button:hover {
   display: none;
 }
 
-/* Accordion */
+/* Make accordion container light where grid lives */
 .accordion {
-  margin-top: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--panel);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
 }
 
 .accordion-header {
-  width: 100%;
-  text-align: left;
-  background: var(--panel-2);
-  color: var(--text);
-  padding: 14px 16px;
-  border: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: #f8fafc;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .accordion-body {
-  padding: 14px;
-  border-top: 1px solid var(--border);
+  background: #ffffff;
+  border-top: none;
 }
 
+/* Grid container */
 #summaryGrid {
   width: 100%;
-  height: 480px;
+  height: 520px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Quartz density/padding */
+.ag-theme-quartz {
+  --ag-font-size: 14px;
+  --ag-cell-horizontal-padding: 14px;
+  --ag-row-height: 46px;
+  --ag-header-height: 50px;
 }
