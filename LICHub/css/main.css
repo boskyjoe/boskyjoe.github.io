@@ -171,12 +171,14 @@ button:active {
 
 /* Grid frame (professional container around AG Grid) */
 .grid-frame {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid #e6eaf0;
+  border-radius: 14px;
+  background: #ffffff;
   overflow: hidden;
+  box-shadow:
+    0 14px 34px rgba(15, 23, 42, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.08);
 }
-
 /* AG Grid host */
 #summaryGrid {
   width: 100%;
@@ -210,10 +212,11 @@ button:active {
   }
 }
 
+/* Toolbar should match the grid surface */
 .grid-toolbar {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e6eaf0;
 }
 
 .quick-search {
@@ -234,13 +237,12 @@ button:active {
   box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.35);
 }
 
-/* Alternate row colors (zebra) */
-.ag-theme-quartz .ag-row-even .ag-cell {
-  background-color: #fcfdff;
-}
+/* Softer zebra + cleaner hover */
+.ag-theme-quartz .ag-row-even .ag-cell { background: #ffffff; }
+.ag-theme-quartz .ag-row-odd  .ag-cell { background: #fbfdff; }
 
-.ag-theme-quartz .ag-row-odd .ag-cell {
-  background-color: #f7faff;
+.ag-theme-quartz .ag-row-hover .ag-cell {
+  background: #eef6ff !important;
 }
 
 /* Hover effect */
@@ -256,6 +258,13 @@ button:active {
 
 .ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
   background-color: #dbeafe !important;
+}
+
+/* Better vertical alignment when wrapText/autoHeight is on */
+.ag-theme-quartz .ag-cell-wrapper {
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 /* 3D frame around the whole grid area */
@@ -276,18 +285,17 @@ button:active {
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
-/* Header looks slightly raised */
+/* Header: slightly calmer than default */
 .ag-theme-quartz .ag-header {
-  background: linear-gradient(180deg, #fdfefe 0%, #f3f7fc 100%);
-  box-shadow:
-    inset 0 -1px 0 #dbe4f0,
-    inset 0 1px 0 #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7fb 100%);
+  border-bottom: 1px solid #e6eaf0;
 }
 
-/* Cells with very light beveled separators */
+/* Reduce “gridline noise” */
 .ag-theme-quartz .ag-cell {
-  border-right: 1px solid #edf2f8;
+  border-right-color: #eef2f7;
 }
+
 
 /* Hover pops up a bit */
 .ag-theme-quartz .ag-row-hover .ag-cell {
@@ -316,16 +324,9 @@ button:active {
 }
 
 .quick-search {
-  width: 100%;
-  max-width: 520px;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #111827;
-  background: #fff;
-  outline: none;
+  max-width: 560px;
+  border-radius: 12px;
+  border: 1px solid #d7dde7;
 }
 
 .quick-search:focus {
@@ -334,16 +335,8 @@ button:active {
 }
 
 .icon-btn {
-  height: 38px;
-  width: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #111827;
-  border-radius: 10px;
-  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid #d7dde7;
 }
 
 .icon-btn:hover { background: #f3f4f6; }
