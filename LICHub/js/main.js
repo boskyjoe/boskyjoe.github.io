@@ -118,7 +118,12 @@ async function initializeGrid() {
       columnDefs,
       rowData: rows,
       getRowId: (params) => String(params.data.rowId),
-      defaultColDef: { sortable: true, filter: true, resizable: true },
+      defaultColDef: {
+        sortable: true,
+        filter: true,
+        floatingFilter: false,
+        resizable: true
+      },
       animateRows: true,
       pagination: true,
       paginationPageSize: 10,
