@@ -1,5 +1,4 @@
 const VALID_EMAIL = "jean.l.picard@walmart.com";
-const SESSION_KEY = "lichub_logged_in_email";
 
 const loginView = document.getElementById("loginView");
 const landingView = document.getElementById("landingView");
@@ -13,21 +12,15 @@ const accordionBody = document.getElementById("accordionBody");
 let gridApi = null;
 let gridInitialized = false;
 
-// ---------- Startup ----------
-document.addEventListener("DOMContentLoaded", async () => {
-  const savedEmail = (localStorage.getItem(SESSION_KEY) || "").toLowerCase();
-
-  if (savedEmail === VALID_EMAIL) {
-    showLanding();
-    await initializeGrid();
-  } else {
-    showLogin();
-  }
+// Always show login on page load
+document.addEventListener("DOMContentLoaded", () => {
+  showLogin();
 });
 
-// ---------- Login ----------
+// Login click
 loginBtn.addEventListener("click", handleLogin);
 
+// Enter key support
 emailInput.addEventListener("keydown", async (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -44,8 +37,6 @@ async function handleLogin() {
   }
 
   loginError.textContent = "";
-  localStorage.setItem(SESSION_KEY, email);
-
   showLanding();
 
   if (!gridInitialized) {
@@ -63,19 +54,17 @@ function showLanding() {
   landingView.classList.remove("hidden");
 }
 
-// ---------- Accordion ----------
+// Accordion
 accordionToggle.addEventListener("click", () => {
-  const isExpanded = accordionToggle.getAttribute("aria-expanded") === "true";
-  accordionToggle.setAttribute("aria-expanded", String(!isExpanded));
-  accordionBody.classList.toggle("hidden", isExpanded);
+  const expanded = accordionToggle.getAttribute("aria-expanded") === "true";
+  accordionToggle.setAttribute("aria-expanded", String(!expanded));
+  accordionBody.classList.toggle("hidden", expanded);
 
-  // Let AG Grid recalculate size after expand
-  if (!isExpanded && gridApi) {
+  if (!expanded && gridApi) {
     setTimeout(() => gridApi.sizeColumnsToFit(), 0);
   }
 });
 
-// ---------- Grid ----------
 async function initializeGrid() {
   const gridDiv = document.getElementById("summaryGrid");
 
@@ -86,26 +75,28 @@ async function initializeGrid() {
     }
 
     const summary = await response.json();
-
     const columns = Array.isArray(summary.columns) ? summary.columns : [];
     const rows = Array.isArray(summary.data) ? summary.data : [];
 
     const columnDefs = columns.map((col) => ({
       field: col,
-      headerName: col,
+      headerName: col === "rowId" ? "Row ID" : col,
       sortable: true,
       filter: true,
       resizable: true,
       tooltipField: col,
-      wrapText: true,
-      autoHeight: true,
-      flex: 1,
-      minWidth: 170
+      wrapText: col !== "rowId",
+      autoHeight: col !== "rowId",
+      pinned: col === "rowId" ? "left" : undefined,
+      width: col === "rowId" ? 110 : undefined,
+      flex: col === "rowId" ? undefined : 1,
+      minWidth: col === "rowId" ? undefined : 170
     }));
 
     const gridOptions = {
       columnDefs,
       rowData: rows,
+      getRowId: (params) => String(params.data.rowId),
       defaultColDef: {
         sortable: true,
         filter: true,
@@ -115,7 +106,6 @@ async function initializeGrid() {
       pagination: true,
       paginationPageSize: 10,
       paginationPageSizeSelector: [10, 20, 50, 100],
-      suppressDragLeaveHidesColumns: true,
       onGridReady: (params) => {
         gridApi = params.api;
         params.api.sizeColumnsToFit();
@@ -125,7 +115,6 @@ async function initializeGrid() {
     agGrid.createGrid(gridDiv, gridOptions);
     gridInitialized = true;
 
-    // Optional title enrichment from JSON
     const dashboardTitle = document.querySelector("#landingView h1");
     const userName = summary?.user?.name;
     if (dashboardTitle && userName) {
