@@ -1,75 +1,52 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Executive License Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LICHub</title>
+
+  <!-- AG Grid -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine-dark.css">
+
+  <!-- App CSS -->
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-logo" aria-hidden="true">🛡️</span>
-        <span class="brand-name">Executive License Dashboard</span>
+  <div class="app-container">
+
+    <!-- Login View -->
+    <section id="loginView" class="card login-card">
+      <h1>LICHub Login</h1>
+      <p class="subtitle">Sign in to continue</p>
+
+      <label for="emailInput">User Email</label>
+      <input type="email" id="emailInput" placeholder="Enter your email" />
+      <button id="loginBtn">Login</button>
+      <p id="loginError" class="error-msg"></p>
+    </section>
+
+    <!-- Landing View -->
+    <section id="landingView" class="hidden">
+      <h1>LICHub Dashboard</h1>
+
+      <div class="accordion">
+        <button class="accordion-header" id="accordionToggle" aria-expanded="true">
+          Summary Grid
+          <span class="chevron">▼</span>
+        </button>
+        <div class="accordion-body expanded" id="accordionBody">
+          <div id="summaryGrid" class="ag-theme-alpine-dark"></div>
+        </div>
       </div>
-      <div class="user-controls">
-        <span id="user-email" class="user-email"></span>
-        <button id="logout-btn" class="btn btn-secondary" hidden>Log out</button>
-      </div>
-    </header>
+    </section>
 
-    <main class="container">
-      <section id="login-view" class="view">
-        <div class="card card-center">
-          <h1>Sign in</h1>
-          <p class="muted">Use your email to access the executive dashboard.</p>
-          <form id="login-form" novalidate>
-            <label for="email" class="sr-only">Email</label>
-            <input id="email" name="email" type="email" placeholder="jean.l.picard@walmart.com" autocomplete="username" required />
-            <button type="submit" class="btn btn-primary">Sign in</button>
-            <p id="login-error" class="error" role="alert" aria-live="polite"></p>
-          </form>
-        </div>
-      </section>
-
-      <section id="dashboard-view" class="view" hidden>
-        <div class="page-header">
-          <h1>Welcome, <span id="user-name">Jean-Luc Picard</span></h1>
-          <p class="muted">Company: <span id="company-name">Walmart</span></p>
-        </div>
-
-        <div id="summary-cards" class="cards"></div>
-
-        <div class="table-wrap">
-          <div class="table-header">
-            <h2>License Usage</h2>
-            <input id="table-filter" type="search" placeholder="Filter licenses..." />
-          </div>
-          <table id="usage-table" class="table">
-            <thead>
-              <tr>
-                <th>License</th>
-                <th>SKU</th>
-                <th class="num">Seats Total</th>
-                <th class="num">Seats Used</th>
-                <th class="num">Available</th>
-                <th>Renewal</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <p id="last-updated" class="muted small"></p>
-        </div>
-      </section>
-    </main>
-
-    <div id="loading" class="loading" hidden>
-      <div class="spinner" aria-hidden="true"></div>
-      <span class="sr-only">Loading</span>
-    </div>
   </div>
 
-  <script src="js/main.js" defer></script>
+  <!-- AG Grid JS -->
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+  <!-- App JS -->
+  <script src="js/main.js"></script>
 </body>
 </html>
