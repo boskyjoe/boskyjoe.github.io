@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Hub | Advanced Filters</title>
+    <title>License Hub | Filter Model</title>
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -14,21 +14,18 @@
 
         body { font-family: -apple-system, sans-serif; background: var(--bg-gray); color: var(--text-main); margin: 0; }
         
-        /* Layout */
         .navbar { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
         .filter-btn { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
 
-        /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
         .modal-overlay.active { display: flex; }
         .filter-modal { background: white; width: 480px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
         @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .tree-root { padding: 10px 20px; max-height: 450px; overflow-y: auto; }
+        .tree-root { padding: 10px 20px; max-height: 500px; overflow-y: auto; }
 
-        /* Tree Styles */
-        .tree-node { margin: 12px 0; border-bottom: 1px fafafa solid; padding-bottom: 8px; }
+        .tree-node { margin: 12px 0; border-bottom: 1px solid #f8fafc; padding-bottom: 8px; }
         .category-header { font-weight: 600; cursor: pointer; display: flex; align-items: center; margin-bottom: 6px; }
         .category-header::before { content: '▶'; font-size: 0.7rem; margin-right: 8px; transition: 0.2s; }
         .tree-node.expanded > .category-header::before { transform: rotate(90deg); }
@@ -37,12 +34,9 @@
         .tree-node.expanded > .options-list { display: block; }
 
         .filter-option { display: flex; align-items: center; padding: 4px 0; font-size: 0.9rem; cursor: pointer; }
+        .filter-option.hidden { display: none; }
         .filter-option input { margin-right: 10px; }
         
-        /* Sub-Arch Specific */
-        #subArchContainer { background: #f8fafc; border-radius: 6px; padding: 8px; margin-top: 5px; border: 1px dashed #cbd5e1; }
-        .empty-msg { font-style: italic; color: #94a3b8; font-size: 0.85rem; }
-
         .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
         .btn-primary { background: var(--primary-blue); color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
         .text-btn { background: none; border: none; color: var(--primary-blue); cursor: pointer; font-size: 0.85rem; }
@@ -52,7 +46,7 @@
 
     <nav class="navbar">
         <div style="font-weight: 700;">License Hub</div>
-        <button class="filter-btn" id="openFilter">Refine Results</button>
+        <button class="filter-btn" id="openFilter">Filters</button>
     </nav>
 
     <div class="modal-overlay" id="modalOverlay">
@@ -64,24 +58,6 @@
 
             <div class="tree-root">
                 <div class="tree-node expanded">
-                    <div class="category-header">Architecture</div>
-                    <div class="options-list" id="archList">
-                        <label class="filter-option"><input type="checkbox" value="EntRouting"> Enterprise Routing</label>
-                        <label class="filter-option"><input type="checkbox" value="EntSwitching"> Enterprise Switching</label>
-                        <label class="filter-option"><input type="checkbox" value="Wireless"> Wireless</label>
-                        <label class="filter-option"><input type="checkbox" value="DataCenter"> Data Center Networking</label>
-                        <label class="filter-option"><input type="checkbox" value="Compute"> Cisco Compute</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Sub-Architecture</div>
-                    <div class="options-list" id="subArchContainer">
-                        <div class="empty-msg">Select an Architecture to see sub-options</div>
-                    </div>
-                </div>
-
-                <div class="tree-node">
                     <div class="category-header">Licensing Method</div>
                     <div class="options-list">
                         <label class="filter-option"><input type="checkbox"> Smar</label>
@@ -89,6 +65,42 @@
                         <label class="filter-option"><input type="checkbox"> Cloud</label>
                         <label class="filter-option"><input type="checkbox"> Co-Term</label>
                     </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Billing Type</div>
+                    <div class="options-list">
+                        <label class="filter-option"><input type="checkbox"> Prepaid</label>
+                        <label class="filter-option"><input type="checkbox"> By Usage</label>
+                        <label class="filter-option"><input type="checkbox"> Hybrid</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Usage</div>
+                    <div class="options-list">
+                        <label class="filter-option"><input type="checkbox"> Overusage</label>
+                        <label class="filter-option"><input type="checkbox"> Full Usage</label>
+                        <label class="filter-option"><input type="checkbox"> Underusage</label>
+                        <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Architecture</div>
+                    <div class="options-list" id="archList">
+                        <label class="filter-option"><input type="checkbox" data-arch="EntRouting"> Enterprise Routing</label>
+                        <label class="filter-option"><input type="checkbox" data-arch="EntSwitching"> Enterprise Switching</label>
+                        <label class="filter-option"><input type="checkbox" data-arch="Wireless"> Wireless</label>
+                        <label class="filter-option"><input type="checkbox" data-arch="DataCenter"> Data Center Networking</label>
+                        <label class="filter-option"><input type="checkbox" data-arch="Compute"> Cisco Compute</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Sub-Architecture</div>
+                    <div class="options-list" id="subArchList">
+                        </div>
                 </div>
             </div>
 
@@ -100,53 +112,63 @@
     </div>
 
     <script>
-        // 1. Dependency Mapping
-        const subArchMap = {
-            "EntRouting": ["Ent. Access Routing", "Ent. Edge Routing", "Ent. Switching-Access", "IIoT Routing"],
-            "EntSwitching": ["Ent. Switching - Access", "Ent. Switching - Core", "Ent. Switching - Connected Platforms", "Ent. - Other", "Ent. - Wireless", "Ent. Edge Routing", "IIoT Switching"],
-            "Wireless": ["Aironet", "Catalyst Wireless", "Meraki Wireless"],
-            "DataCenter": ["Nexus Cloud", "ACI", "NX-OS"],
-            "Compute": ["UCS Server", "HyperFlex"]
-        };
+        // Data Mapping
+        const subArchData = [
+            { name: "Ent. Access Routing", parents: ["EntRouting"] },
+            { name: "Ent. Edge Routing", parents: ["EntRouting", "EntSwitching"] },
+            { name: "Ent. Switching-Access", parents: ["EntRouting", "EntSwitching"] },
+            { name: "IIoT Routing", parents: ["EntRouting"] },
+            { name: "Ent. Switching - Core", parents: ["EntSwitching"] },
+            { name: "Ent. Switching - Connected Platforms", parents: ["EntSwitching"] },
+            { name: "Ent. - Other", parents: ["EntSwitching"] },
+            { name: "Ent. - Wireless", parents: ["EntSwitching"] },
+            { name: "IIoT Switching", parents: ["EntSwitching"] },
+            { name: "Aironet", parents: ["Wireless"] },
+            { name: "Catalyst Wireless", parents: ["Wireless"] },
+            { name: "Nexus Cloud", parents: ["DataCenter"] },
+            { name: "UCS Server", parents: ["Compute"] }
+        ];
 
         const overlay = document.getElementById('modalOverlay');
+        const subArchList = document.getElementById('subArchList');
         const archCheckboxes = document.querySelectorAll('#archList input');
-        const subArchContainer = document.getElementById('subArchContainer');
 
-        // 2. Open/Close Logic
-        document.getElementById('openFilter').onclick = () => overlay.classList.add('active');
-        document.getElementById('closeModal').onclick = () => overlay.classList.remove('active');
-
-        // 3. Conditional Filtering Logic
-        function updateSubArchitectures() {
-            const selectedArches = Array.from(archCheckboxes)
-                .filter(i => i.checked)
-                .map(i => i.value);
-
-            if (selectedArches.length === 0) {
-                subArchContainer.innerHTML = '<div class="empty-msg">Select an Architecture to see sub-options</div>';
-                return;
-            }
-
-            // Collect unique sub-architectures from all selected parents
-            let availableSubs = new Set();
-            selectedArches.forEach(arch => {
-                if (subArchMap[arch]) {
-                    subArchMap[arch].forEach(s => availableSubs.add(s));
-                }
-            });
-
-            // Render checkboxes
-            subArchContainer.innerHTML = Array.from(availableSubs).map(sub => `
-                <label class="filter-option">
-                    <input type="checkbox" value="${sub}"> ${sub}
+        // Initial Render of Sub-Architectures
+        function renderSubArches() {
+            subArchList.innerHTML = subArchData.map(item => `
+                <label class="filter-option" data-parents="${item.parents.join(',')}">
+                    <input type="checkbox"> ${item.name}
                 </label>
             `).join('');
         }
 
-        archCheckboxes.forEach(cb => cb.addEventListener('change', updateSubArchitectures));
+        // Filter Visibility Logic
+        function filterSubArches() {
+            const activeParents = Array.from(archCheckboxes)
+                .filter(i => i.checked)
+                .map(i => i.getAttribute('data-arch'));
 
-        // 4. UI General Logic (Expand/Collapse)
+            const options = subArchList.querySelectorAll('.filter-option');
+
+            options.forEach(opt => {
+                if (activeParents.length === 0) {
+                    opt.classList.remove('hidden'); // Show all if nothing selected
+                } else {
+                    const optParents = opt.getAttribute('data-parents').split(',');
+                    const isVisible = activeParents.some(p => optParents.includes(p));
+                    opt.classList.toggle('hidden', !isVisible);
+                }
+            });
+        }
+
+        // Initialization
+        renderSubArches();
+        document.getElementById('openFilter').onclick = () => overlay.classList.add('active');
+        document.getElementById('closeModal').onclick = () => overlay.classList.remove('active');
+        
+        archCheckboxes.forEach(cb => cb.addEventListener('change', filterSubArches));
+
+        // UI Helpers
         document.querySelectorAll('.category-header').forEach(h => {
             h.onclick = () => h.parentElement.classList.toggle('expanded');
         });
@@ -156,6 +178,11 @@
             const isExpanding = this.textContent === 'Expand All';
             nodes.forEach(n => n.classList.toggle('expanded', isExpanding));
             this.textContent = isExpanding ? 'Collapse All' : 'Expand All';
+        };
+
+        document.getElementById('applyBtn').onclick = () => {
+            overlay.classList.remove('active');
+            alert('Filters Applied!');
         };
     </script>
 </body>
