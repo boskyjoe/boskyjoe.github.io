@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Hub | Dashboard</title>
+    <title>License Hub | Advanced Filters</title>
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -12,179 +12,76 @@
             --text-main: #1e293b;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-gray);
-            margin: 0;
-            color: var(--text-main);
-        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-gray); color: var(--text-main); margin: 0; }
+        
+        /* Layout */
+        .navbar { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .filter-btn { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
 
-        /* Landing Page Styles */
-        .navbar {
-            background: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+        .modal-overlay.active { display: flex; }
+        .filter-modal { background: white; width: 480px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .filter-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: white;
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .tree-root { padding: 10px 20px; max-height: 450px; overflow-y: auto; }
 
-        .filter-btn:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-        }
-
-        /* Modal Overlay */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.5);
-            display: none; /* Hidden by default */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(2px);
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        /* Filter Modal */
-        .filter-modal {
-            background: white;
-            width: 90%;
-            max-width: 450px;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            animation: modalSlideUp 0.3s ease-out;
-        }
-
-        @keyframes modalSlideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .modal-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h2 { margin: 0; font-size: 1.1rem; }
-
-        .tree-root {
-            padding: 10px 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .tree-node { margin: 12px 0; }
-
-        .category-header {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-weight: 600;
-            padding: 4px 0;
-        }
-
-        .category-header::before {
-            content: '▶';
-            display: inline-block;
-            margin-right: 8px;
-            font-size: 0.7rem;
-            transition: transform 0.2s;
-        }
-
+        /* Tree Styles */
+        .tree-node { margin: 12px 0; border-bottom: 1px fafafa solid; padding-bottom: 8px; }
+        .category-header { font-weight: 600; cursor: pointer; display: flex; align-items: center; margin-bottom: 6px; }
+        .category-header::before { content: '▶'; font-size: 0.7rem; margin-right: 8px; transition: 0.2s; }
         .tree-node.expanded > .category-header::before { transform: rotate(90deg); }
-
-        .options-list {
-            display: none;
-            margin-left: 24px;
-            padding-top: 6px;
-        }
-
+        
+        .options-list { display: none; margin-left: 20px; }
         .tree-node.expanded > .options-list { display: block; }
 
-        .filter-option {
-            display: flex;
-            align-items: center;
-            padding: 6px 0;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-
+        .filter-option { display: flex; align-items: center; padding: 4px 0; font-size: 0.9rem; cursor: pointer; }
         .filter-option input { margin-right: 10px; }
+        
+        /* Sub-Arch Specific */
+        #subArchContainer { background: #f8fafc; border-radius: 6px; padding: 8px; margin-top: 5px; border: 1px dashed #cbd5e1; }
+        .empty-msg { font-style: italic; color: #94a3b8; font-size: 0.85rem; }
 
-        .modal-footer {
-            padding: 16px 20px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .btn-primary {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .text-btn {
-            background: none;
-            border: none;
-            color: var(--primary-blue);
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+        .btn-primary { background: var(--primary-blue); color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+        .text-btn { background: none; border: none; color: var(--primary-blue); cursor: pointer; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div style="font-weight: 700; font-size: 1.2rem;">License Hub</div>
-        <button class="filter-btn" id="openFilter">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            Filters
-        </button>
+        <div style="font-weight: 700;">License Hub</div>
+        <button class="filter-btn" id="openFilter">Refine Results</button>
     </nav>
-
-    <div style="padding: 40px; text-align: center; color: #64748b;">
-        <h1>Dashboard Content</h1>
-        <p>Click the filter icon above to refine the data view.</p>
-    </div>
 
     <div class="modal-overlay" id="modalOverlay">
         <div class="filter-modal">
             <div class="modal-header">
                 <h2>Filters</h2>
-                <button class="text-btn" id="toggleAll">Expand All</button>
+                <button class="text-btn" id="toggleAll">Collapse All</button>
             </div>
 
             <div class="tree-root">
                 <div class="tree-node expanded">
+                    <div class="category-header">Architecture</div>
+                    <div class="options-list" id="archList">
+                        <label class="filter-option"><input type="checkbox" value="EntRouting"> Enterprise Routing</label>
+                        <label class="filter-option"><input type="checkbox" value="EntSwitching"> Enterprise Switching</label>
+                        <label class="filter-option"><input type="checkbox" value="Wireless"> Wireless</label>
+                        <label class="filter-option"><input type="checkbox" value="DataCenter"> Data Center Networking</label>
+                        <label class="filter-option"><input type="checkbox" value="Compute"> Cisco Compute</label>
+                    </div>
+                </div>
+
+                <div class="tree-node expanded">
+                    <div class="category-header">Sub-Architecture</div>
+                    <div class="options-list" id="subArchContainer">
+                        <div class="empty-msg">Select an Architecture to see sub-options</div>
+                    </div>
+                </div>
+
+                <div class="tree-node">
                     <div class="category-header">Licensing Method</div>
                     <div class="options-list">
                         <label class="filter-option"><input type="checkbox"> Smar</label>
@@ -193,70 +90,72 @@
                         <label class="filter-option"><input type="checkbox"> Co-Term</label>
                     </div>
                 </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Billing Type</div>
-                    <div class="options-list">
-                        <label class="filter-option"><input type="checkbox"> Prepaid</label>
-                        <label class="filter-option"><input type="checkbox"> By Usage</label>
-                        <label class="filter-option"><input type="checkbox"> Hybrid</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Usage</div>
-                    <div class="options-list">
-                        <label class="filter-option"><input type="checkbox"> Overusage</label>
-                        <label class="filter-option"><input type="checkbox"> Full Usage</label>
-                        <label class="filter-option"><input type="checkbox"> Underusage</label>
-                        <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
-                    </div>
-                </div>
             </div>
 
             <div class="modal-footer">
-                <button class="text-btn" style="color: #64748b;" id="closeModal">Cancel</button>
+                <button class="text-btn" id="closeModal">Cancel</button>
                 <button class="btn-primary" id="applyBtn">Apply Filters</button>
             </div>
         </div>
     </div>
 
     <script>
-        const overlay = document.getElementById('modalOverlay');
-        const openBtn = document.getElementById('openFilter');
-        const closeBtn = document.getElementById('closeModal');
-        const toggleAllBtn = document.getElementById('toggleAll');
-        const nodes = document.querySelectorAll('.tree-node');
-        
-        let allExpanded = true;
-
-        // Toggle Modal Visibility
-        openBtn.onclick = () => overlay.classList.add('active');
-        closeBtn.onclick = () => overlay.classList.remove('active');
-
-        // Close on clicking outside the modal box
-        window.onclick = (event) => {
-            if (event.target == overlay) overlay.classList.remove('active');
-        }
-
-        // Tree Expand/Collapse Logic
-        document.querySelectorAll('.category-header').forEach(header => {
-            header.onclick = () => header.parentElement.classList.toggle('expanded');
-        });
-
-        // Expand/Collapse All
-        toggleAllBtn.onclick = () => {
-            allExpanded = !allExpanded;
-            nodes.forEach(n => n.classList.toggle('expanded', allExpanded));
-            toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+        // 1. Dependency Mapping
+        const subArchMap = {
+            "EntRouting": ["Ent. Access Routing", "Ent. Edge Routing", "Ent. Switching-Access", "IIoT Routing"],
+            "EntSwitching": ["Ent. Switching - Access", "Ent. Switching - Core", "Ent. Switching - Connected Platforms", "Ent. - Other", "Ent. - Wireless", "Ent. Edge Routing", "IIoT Switching"],
+            "Wireless": ["Aironet", "Catalyst Wireless", "Meraki Wireless"],
+            "DataCenter": ["Nexus Cloud", "ACI", "NX-OS"],
+            "Compute": ["UCS Server", "HyperFlex"]
         };
 
-        // Apply Logic
-        document.getElementById('applyBtn').onclick = () => {
-            const selected = Array.from(document.querySelectorAll('input:checked'))
-                                  .map(cb => cb.parentElement.textContent.trim());
-            console.log("Applying filters:", selected);
-            overlay.classList.remove('active');
+        const overlay = document.getElementById('modalOverlay');
+        const archCheckboxes = document.querySelectorAll('#archList input');
+        const subArchContainer = document.getElementById('subArchContainer');
+
+        // 2. Open/Close Logic
+        document.getElementById('openFilter').onclick = () => overlay.classList.add('active');
+        document.getElementById('closeModal').onclick = () => overlay.classList.remove('active');
+
+        // 3. Conditional Filtering Logic
+        function updateSubArchitectures() {
+            const selectedArches = Array.from(archCheckboxes)
+                .filter(i => i.checked)
+                .map(i => i.value);
+
+            if (selectedArches.length === 0) {
+                subArchContainer.innerHTML = '<div class="empty-msg">Select an Architecture to see sub-options</div>';
+                return;
+            }
+
+            // Collect unique sub-architectures from all selected parents
+            let availableSubs = new Set();
+            selectedArches.forEach(arch => {
+                if (subArchMap[arch]) {
+                    subArchMap[arch].forEach(s => availableSubs.add(s));
+                }
+            });
+
+            // Render checkboxes
+            subArchContainer.innerHTML = Array.from(availableSubs).map(sub => `
+                <label class="filter-option">
+                    <input type="checkbox" value="${sub}"> ${sub}
+                </label>
+            `).join('');
+        }
+
+        archCheckboxes.forEach(cb => cb.addEventListener('change', updateSubArchitectures));
+
+        // 4. UI General Logic (Expand/Collapse)
+        document.querySelectorAll('.category-header').forEach(h => {
+            h.onclick = () => h.parentElement.classList.toggle('expanded');
+        });
+
+        document.getElementById('toggleAll').onclick = function() {
+            const nodes = document.querySelectorAll('.tree-node');
+            const isExpanding = this.textContent === 'Expand All';
+            nodes.forEach(n => n.classList.toggle('expanded', isExpanding));
+            this.textContent = isExpanding ? 'Collapse All' : 'Expand All';
         };
     </script>
 </body>
