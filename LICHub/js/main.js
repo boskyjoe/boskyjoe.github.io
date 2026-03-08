@@ -9,6 +9,8 @@ const loginError = document.getElementById("loginError");
 const accordionToggle = document.getElementById("accordionToggle");
 const accordionBody = document.getElementById("accordionBody");
 
+const quickSearchInput = document.getElementById("quickSearchInput");
+
 let gridApi = null;
 let gridInitialized = false;
 
@@ -109,6 +111,13 @@ async function initializeGrid() {
       onGridReady: (params) => {
         gridApi = params.api;
         params.api.sizeColumnsToFit();
+
+        if (quickSearchInput) {
+          quickSearchInput.addEventListener("input", (e) => {
+            const value = e.target.value || "";
+            gridApi.setGridOption("quickFilterText", value);
+          });
+        }
       }
     };
 
