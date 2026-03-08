@@ -60,10 +60,29 @@ async function initializeGrid() {
         wrapText: true,
         autoHeight: true
       },
-      headerHeight: 54,
       rowHeight: 52,
+      headerHeight: 54,
       pagination: true,
-      paginationPageSize: 10
+      paginationPageSize: 10,
+
+      sideBar: {
+        toolPanels: [
+          {
+            id: "columns",
+            labelDefault: "Columns",
+            labelKey: "columns",
+            iconKey: "columns",
+            toolPanel: "agColumnsToolPanel",
+            toolPanelParams: {
+              suppressRowGroups: true,
+              suppressValues: true,
+              suppressPivots: true,
+              suppressPivotMode: true
+            }
+          }
+        ],
+        defaultToolPanel: "columns"
+      }
     };
 
     agGrid.createGrid(gridDiv, gridOptions);
