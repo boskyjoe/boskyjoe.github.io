@@ -54,12 +54,14 @@ async function initializeGrid() {
       columnDefs,
       rowData: summary.data || [],
       defaultColDef: {
-        flex: 1,
-        minWidth: 170,
-        filter: true,
         sortable: true,
-        resizable: true
+        filter: true,
+        resizable: true,
+        wrapText: true,
+        autoHeight: true
       },
+      headerHeight: 54,
+      rowHeight: 52,
       pagination: true,
       paginationPageSize: 10
     };
