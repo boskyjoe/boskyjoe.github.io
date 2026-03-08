@@ -1,189 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Hub | Filter Model</title>
-    <style>
-        :root {
-            --primary-blue: #2563eb;
-            --bg-gray: #f1f5f9;
-            --border-color: #e2e8f0;
-            --text-main: #1e293b;
-        }
-
-        body { font-family: -apple-system, sans-serif; background: var(--bg-gray); color: var(--text-main); margin: 0; }
-        
-        .navbar { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
-        .filter-btn { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
-        .modal-overlay.active { display: flex; }
-        .filter-modal { background: white; width: 480px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideUp 0.3s; }
-        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .tree-root { padding: 10px 20px; max-height: 500px; overflow-y: auto; }
-
-        .tree-node { margin: 12px 0; border-bottom: 1px solid #f8fafc; padding-bottom: 8px; }
-        .category-header { font-weight: 600; cursor: pointer; display: flex; align-items: center; margin-bottom: 6px; }
-        .category-header::before { content: '▶'; font-size: 0.7rem; margin-right: 8px; transition: 0.2s; }
-        .tree-node.expanded > .category-header::before { transform: rotate(90deg); }
-        
-        .options-list { display: none; margin-left: 20px; }
-        .tree-node.expanded > .options-list { display: block; }
-
-        .filter-option { display: flex; align-items: center; padding: 4px 0; font-size: 0.9rem; cursor: pointer; }
-        .filter-option.hidden { display: none; }
-        .filter-option input { margin-right: 10px; }
-        
-        .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-primary { background: var(--primary-blue); color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
-        .text-btn { background: none; border: none; color: var(--primary-blue); cursor: pointer; font-size: 0.85rem; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Executive License Dashboard</title>
+  <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">🛡️</span>
+        <span class="brand-name">Executive License Dashboard</span>
+      </div>
+      <div class="user-controls">
+        <span id="user-email" class="user-email"></span>
+        <button id="logout-btn" class="btn btn-secondary" hidden>Log out</button>
+      </div>
+    </header>
 
-    <nav class="navbar">
-        <div style="font-weight: 700;">License Hub</div>
-        <button class="filter-btn" id="openFilter">Filters</button>
-    </nav>
-
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="filter-modal">
-            <div class="modal-header">
-                <h2>Filters</h2>
-                <button class="text-btn" id="toggleAll">Collapse All</button>
-            </div>
-
-            <div class="tree-root">
-                <div class="tree-node expanded">
-                    <div class="category-header">Licensing Method</div>
-                    <div class="options-list">
-                        <label class="filter-option"><input type="checkbox"> Smart</label>
-                        <label class="filter-option"><input type="checkbox"> Traditional</label>
-                        <label class="filter-option"><input type="checkbox"> Cloud</label>
-                        <label class="filter-option"><input type="checkbox"> Co-Term</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Billing Type</div>
-                    <div class="options-list">
-                        <label class="filter-option"><input type="checkbox"> Prepaid</label>
-                        <label class="filter-option"><input type="checkbox"> By Usage</label>
-                        <label class="filter-option"><input type="checkbox"> Hybrid</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Usage</div>
-                    <div class="options-list">
-                        <label class="filter-option"><input type="checkbox"> Overusage</label>
-                        <label class="filter-option"><input type="checkbox"> Full Usage</label>
-                        <label class="filter-option"><input type="checkbox"> Underusage</label>
-                        <label class="filter-option"><input type="checkbox"> By Usage - Postpaid</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Architecture</div>
-                    <div class="options-list" id="archList">
-                        <label class="filter-option"><input type="checkbox" data-arch="EntRouting"> Enterprise Routing</label>
-                        <label class="filter-option"><input type="checkbox" data-arch="EntSwitching"> Enterprise Switching</label>
-                        <label class="filter-option"><input type="checkbox" data-arch="Wireless"> Wireless</label>
-                        <label class="filter-option"><input type="checkbox" data-arch="DataCenter"> Data Center Networking</label>
-                        <label class="filter-option"><input type="checkbox" data-arch="Compute"> Cisco Compute</label>
-                    </div>
-                </div>
-
-                <div class="tree-node expanded">
-                    <div class="category-header">Sub-Architecture</div>
-                    <div class="options-list" id="subArchList">
-                        </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="text-btn" id="closeModal">Cancel</button>
-                <button class="btn-primary" id="applyBtn">Apply Filters</button>
-            </div>
+    <main class="container">
+      <section id="login-view" class="view">
+        <div class="card card-center">
+          <h1>Sign in</h1>
+          <p class="muted">Use your email to access the executive dashboard.</p>
+          <form id="login-form" novalidate>
+            <label for="email" class="sr-only">Email</label>
+            <input id="email" name="email" type="email" placeholder="jean.l.picard@walmart.com" autocomplete="username" required />
+            <button type="submit" class="btn btn-primary">Sign in</button>
+            <p id="login-error" class="error" role="alert" aria-live="polite"></p>
+          </form>
         </div>
+      </section>
+
+      <section id="dashboard-view" class="view" hidden>
+        <div class="page-header">
+          <h1>Welcome, <span id="user-name">Jean-Luc Picard</span></h1>
+          <p class="muted">Company: <span id="company-name">Walmart</span></p>
+        </div>
+
+        <div id="summary-cards" class="cards"></div>
+
+        <div class="table-wrap">
+          <div class="table-header">
+            <h2>License Usage</h2>
+            <input id="table-filter" type="search" placeholder="Filter licenses..." />
+          </div>
+          <table id="usage-table" class="table">
+            <thead>
+              <tr>
+                <th>License</th>
+                <th>SKU</th>
+                <th class="num">Seats Total</th>
+                <th class="num">Seats Used</th>
+                <th class="num">Available</th>
+                <th>Renewal</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <p id="last-updated" class="muted small"></p>
+        </div>
+      </section>
+    </main>
+
+    <div id="loading" class="loading" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <span class="sr-only">Loading</span>
     </div>
+  </div>
 
-    <script>
-        // Data Mapping
-        const subArchData = [
-            { name: "Ent. Access Routing", parents: ["EntRouting"] },
-            { name: "Ent. Edge Routing", parents: ["EntRouting", "EntSwitching"] },
-            { name: "Ent. Switching-Access", parents: ["EntRouting", "EntSwitching"] },
-            { name: "IIoT Routing", parents: ["EntRouting"] },
-            { name: "Ent. Switching - Core", parents: ["EntSwitching"] },
-            { name: "Ent. Switching - Connected Platforms", parents: ["EntSwitching"] },
-            { name: "Ent. - Other", parents: ["EntSwitching"] },
-            { name: "Ent. - Wireless", parents: ["EntSwitching"] },
-            { name: "IIoT Switching", parents: ["EntSwitching"] },
-            { name: "Aironet", parents: ["Wireless"] },
-            { name: "Catalyst Wireless", parents: ["Wireless"] },
-            { name: "Nexus Cloud", parents: ["DataCenter"] },
-            { name: "UCS Server", parents: ["Compute"] }
-        ];
-
-        const overlay = document.getElementById('modalOverlay');
-        const subArchList = document.getElementById('subArchList');
-        const archCheckboxes = document.querySelectorAll('#archList input');
-
-        // Initial Render of Sub-Architectures
-        function renderSubArches() {
-            subArchList.innerHTML = subArchData.map(item => `
-                <label class="filter-option" data-parents="${item.parents.join(',')}">
-                    <input type="checkbox"> ${item.name}
-                </label>
-            `).join('');
-        }
-
-        // Filter Visibility Logic
-        function filterSubArches() {
-            const activeParents = Array.from(archCheckboxes)
-                .filter(i => i.checked)
-                .map(i => i.getAttribute('data-arch'));
-
-            const options = subArchList.querySelectorAll('.filter-option');
-
-            options.forEach(opt => {
-                if (activeParents.length === 0) {
-                    opt.classList.remove('hidden'); // Show all if nothing selected
-                } else {
-                    const optParents = opt.getAttribute('data-parents').split(',');
-                    const isVisible = activeParents.some(p => optParents.includes(p));
-                    opt.classList.toggle('hidden', !isVisible);
-                }
-            });
-        }
-
-        // Initialization
-        renderSubArches();
-        document.getElementById('openFilter').onclick = () => overlay.classList.add('active');
-        document.getElementById('closeModal').onclick = () => overlay.classList.remove('active');
-        
-        archCheckboxes.forEach(cb => cb.addEventListener('change', filterSubArches));
-
-        // UI Helpers
-        document.querySelectorAll('.category-header').forEach(h => {
-            h.onclick = () => h.parentElement.classList.toggle('expanded');
-        });
-
-        document.getElementById('toggleAll').onclick = function() {
-            const nodes = document.querySelectorAll('.tree-node');
-            const isExpanding = this.textContent === 'Expand All';
-            nodes.forEach(n => n.classList.toggle('expanded', isExpanding));
-            this.textContent = isExpanding ? 'Collapse All' : 'Expand All';
-        };
-
-        document.getElementById('applyBtn').onclick = () => {
-            overlay.classList.remove('active');
-            alert('Filters Applied!');
-        };
-    </script>
+  <script src="js/main.js" defer></script>
 </body>
 </html>
