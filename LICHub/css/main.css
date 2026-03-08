@@ -257,3 +257,47 @@ button:active {
 .ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
   background-color: #dbeafe !important;
 }
+
+/* 3D frame around the whole grid area */
+.grid-frame {
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 #ffffff;
+  overflow: hidden;
+}
+
+/* Subtle inner depth for AG Grid container */
+#summaryGrid {
+  border-top: 1px solid #eef2f7;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* Header looks slightly raised */
+.ag-theme-quartz .ag-header {
+  background: linear-gradient(180deg, #fdfefe 0%, #f3f7fc 100%);
+  box-shadow:
+    inset 0 -1px 0 #dbe4f0,
+    inset 0 1px 0 #ffffff;
+}
+
+/* Cells with very light beveled separators */
+.ag-theme-quartz .ag-cell {
+  border-right: 1px solid #edf2f8;
+}
+
+/* Hover pops up a bit */
+.ag-theme-quartz .ag-row-hover .ag-cell {
+  background-color: #eaf2ff !important;
+  box-shadow: inset 0 1px 0 #ffffff, inset 0 -1px 0 #d8e6ff;
+  transition: all 0.15s ease-in-out;
+}
+
+/* Optional: selected row "pressed/active" look */
+.ag-theme-quartz .ag-row.ag-row-selected .ag-cell {
+  background: linear-gradient(180deg, #dbeafe 0%, #cfe5ff 100%) !important;
+  box-shadow: inset 0 1px 0 #ffffff, inset 0 -1px 0 #bcd7ff;
+}
