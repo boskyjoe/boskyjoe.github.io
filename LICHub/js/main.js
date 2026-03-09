@@ -1,5 +1,6 @@
 const VALID_EMAIL = "jean.l.picard@walmart.com";
 
+/* ---------- DOM ---------- */
 const loginView = document.getElementById("loginView");
 const landingView = document.getElementById("landingView");
 const emailInput = document.getElementById("emailInput");
@@ -19,37 +20,21 @@ const applyFiltersBtn = document.getElementById("applyFiltersBtn");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const filterTreeRoot = document.getElementById("filterTreeRoot");
 
-
-const SUBARCH_PARENT_MAP = [
-  { name: "Ent. Access Routing", parents: ["Enterprise Routing"] },
-  { name: "Ent. Edge Routing", parents: ["Enterprise Routing", "Enterprise Switching"] },
-  { name: "Ent. Switching-Access", parents: ["Enterprise Routing", "Enterprise Switching"] },
-  { name: "IIoT Routing", parents: ["Enterprise Routing"] },
-  { name: "Ent. Switching - Core", parents: ["Enterprise Switching"] },
-  { name: "Ent. Switching - Connected Platforms", parents: ["Enterprise Switching"] },
-  { name: "Ent. - Other", parents: ["Enterprise Switching"] },
-  { name: "Ent. - Wireless", parents: ["Enterprise Switching"] },
-  { name: "IIoT Switching", parents: ["Enterprise Switching"] },
-  { name: "Aironet", parents: ["Wireless"] },
-  { name: "Catalyst Wireless", parents: ["Wireless"] },
-  { name: "Nexus Cloud", parents: ["Data Center Networking"] },
-  { name: "UCS Server", parents: ["Cisco Compute"] }
-];
-
-
+/* ---------- State ---------- */
 let gridApi = null;
 let gridInitialized = false;
 
 let latestSummary = null;
 
 // Derived from summary.json at runtime:
-let archToSubArch = new Map(); // key: Architecture, value: Set(Sub-Architecture)
-let allSubArchitectures = [];  // sorted list of all sub-architectures
+let archToSubArch = new Map(); // Architecture -> Set(Sub-Architecture)
+let allSubArchitectures = [];  // all unique sub-architectures
 
-// modal state
+// External filter state (Community-safe)
+let activeExternalFilters = {}; // { "Architecture": ["Meraki"], "Billing Type": ["PREPAID"] }
+
 let allExpanded = true;
 
-// Choose which fields appear as groups (must match your JSON keys)
 const FILTER_GROUPS = [
   { id: "licenseMethod", field: "License Method", title: "Licensing Method" },
   { id: "billingType", field: "Billing Type", title: "Billing Type" },
@@ -57,16 +42,15 @@ const FILTER_GROUPS = [
   { id: "subArchitecture", field: "Sub-Architecture", title: "Sub-Architecture" }
 ];
 
-// Always show login on page load
+/* ---------- Startup ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   showLogin();
 });
 
-// Login click
-loginBtn.addEventListener("click", handleLogin);
+/* ---------- Login ---------- */
+loginBtn?.addEventListener("click", handleLogin);
 
-// Enter key support
-emailInput.addEventListener("keydown", async (e) => {
+emailInput?.addEventListener("keydown", async (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
     await handleLogin();
@@ -90,17 +74,17 @@ async function handleLogin() {
 }
 
 function showLogin() {
-  loginView.classList.remove("hidden");
-  landingView.classList.add("hidden");
+  loginView?.classList.remove("hidden");
+  landingView?.classList.add("hidden");
 }
 
 function showLanding() {
-  loginView.classList.add("hidden");
-  landingView.classList.remove("hidden");
+  loginView?.classList.add("hidden");
+  landingView?.classList.remove("hidden");
 }
 
-// Accordion
-accordionToggle.addEventListener("click", () => {
+/* ---------- Accordion ---------- */
+accordionToggle?.addEventListener("click", () => {
   const expanded = accordionToggle.getAttribute("aria-expanded") === "true";
   accordionToggle.setAttribute("aria-expanded", String(!expanded));
   accordionBody.classList.toggle("hidden", expanded);
@@ -110,39 +94,27 @@ accordionToggle.addEventListener("click", () => {
   }
 });
 
+/* ---------- Grid ---------- */
 async function initializeGrid() {
   const gridDiv = document.getElementById("summaryGrid");
 
   try {
     const response = await fetch("data/summary.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} while loading summary.json`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status} while loading summary.json`);
 
     const summary = await response.json();
-
     latestSummary = summary;
-
-    deriveArchSubArchMap(summary.data || []);
 
     const columns = Array.isArray(summary.columns) ? summary.columns : [];
     const rows = Array.isArray(summary.data) ? summary.data : [];
 
-
-    const SET_FILTER_FIELDS = new Set([
-      "License Method",
-      "Billing Type",
-      "Architecture",
-      "Sub-Architecture"
-    ]);
-
-
+    deriveArchSubArchMap(rows);
 
     const columnDefs = columns.map((col) => ({
       field: col,
       headerName: col === "rowId" ? "Row ID" : col,
       sortable: true,
-      filter: SET_FILTER_FIELDS.has(col) ? "agSetColumnFilter" : true,
+      filter: true,
       resizable: true,
       tooltipField: col,
       wrapText: col !== "rowId",
@@ -157,24 +129,47 @@ async function initializeGrid() {
       columnDefs,
       rowData: rows,
       getRowId: (params) => String(params.data.rowId),
+
       defaultColDef: {
         sortable: true,
         filter: true,
         resizable: true
       },
+
       animateRows: true,
       pagination: true,
       paginationPageSize: 10,
       paginationPageSizeSelector: [10, 20, 50, 100],
+
+      // External filter hooks (Community-safe)
+      isExternalFilterPresent: () => {
+        return Object.keys(activeExternalFilters).some(
+          (k) => Array.isArray(activeExternalFilters[k]) && activeExternalFilters[k].length > 0
+        );
+      },
+
+      doesExternalFilterPass: (node) => {
+        const row = node.data || {};
+
+        // AND across fields, OR within a field
+        for (const [field, selectedValues] of Object.entries(activeExternalFilters)) {
+          if (!selectedValues || selectedValues.length === 0) continue;
+
+          const cellValue = row[field];
+          if (cellValue === null || cellValue === undefined) return false;
+
+          if (!selectedValues.includes(String(cellValue))) return false;
+        }
+        return true;
+      },
+
       onGridReady: (params) => {
         gridApi = params.api;
         params.api.sizeColumnsToFit();
 
-        if (quickSearchInput) {
-          quickSearchInput?.addEventListener("input", (e) => {
-            gridApi.setGridOption("quickFilterText", e.target.value || "");
-          });
-        }
+        quickSearchInput?.addEventListener("input", (e) => {
+          gridApi.setGridOption("quickFilterText", e.target.value || "");
+        });
       }
     };
 
@@ -193,20 +188,16 @@ async function initializeGrid() {
   }
 }
 
-function openFilters() {
-  modalOverlay.classList.add("active");
-  modalOverlay.setAttribute("aria-hidden", "false");
-}
+/* ---------- Filter Modal (Professional UI) ---------- */
+openFilterBtn?.addEventListener("click", () => {
+  if (!latestSummary || !gridApi) return;
+  renderFilterTree(latestSummary.data || []);
+  openFilters();
+});
 
-function closeFilters() {
-  modalOverlay.classList.remove("active");
-  modalOverlay.setAttribute("aria-hidden", "true");
-}
-
-openFilterBtn?.addEventListener("click", openFilters);
 cancelFiltersBtn?.addEventListener("click", closeFilters);
 
-// click outside modal closes
+// click outside closes
 modalOverlay?.addEventListener("click", (e) => {
   if (e.target === modalOverlay) closeFilters();
 });
@@ -226,115 +217,24 @@ toggleAllBtn?.addEventListener("click", () => {
 
 applyFiltersBtn?.addEventListener("click", () => {
   if (!gridApi) return;
-  const model = buildFilterModelFromTree();
-  gridApi.setFilterModel(model);
+
+  activeExternalFilters = buildExternalFilterStateFromTree();
   gridApi.onFilterChanged();
+
   closeFilters();
 });
 
 clearFiltersBtn?.addEventListener("click", () => {
   if (!gridApi) return;
-  gridApi.setFilterModel(null);
+
+  activeExternalFilters = {};
+  filterTreeRoot.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
   gridApi.onFilterChanged();
+
   closeFilters();
 });
 
-
-
-function getUniqueValues(rows, field) {
-  const set = new Set();
-  for (const r of rows) {
-    const v = r?.[field];
-    if (v === null || v === undefined || v === "") continue;
-    set.add(String(v));
-  }
-  return Array.from(set).sort((a, b) => a.localeCompare(b));
-}
-
-function renderFilterModalFromData(rows) {
-  if (!filterGroupsEl) return;
-
-  // read existing grid filter state (so modal reflects current selection)
-  const existingModel = gridApi?.getFilterModel?.() || {};
-
-  filterGroupsEl.innerHTML = "";
-
-  FILTER_FIELDS.forEach(({ field, title }) => {
-    const values = getUniqueValues(rows, field);
-    if (values.length === 0) return;
-
-    const group = document.createElement("div");
-    group.className = "filter-group";
-
-    const header = document.createElement("div");
-    header.className = "filter-group-header";
-    header.innerHTML = `<span>${title}</span><span class="caret">▼</span>`;
-
-    const body = document.createElement("div");
-    body.className = "filter-group-body";
-
-    // If filter already applied, mark corresponding checkboxes checked
-    const selected = new Set(
-      (existingModel?.[field]?.values || []).map((x) => String(x))
-    );
-
-    values.forEach((val) => {
-      const id = `flt_${field.replace(/\W+/g, "_")}_${val.replace(/\W+/g, "_")}`.slice(0, 180);
-
-      const item = document.createElement("label");
-      item.className = "filter-item";
-      item.innerHTML = `
-        <input type="checkbox" data-field="${field}" value="${escapeHtml(val)}" id="${id}" ${selected.has(val) ? "checked" : ""}/>
-        <span>${escapeHtml(val)}</span>
-      `;
-      body.appendChild(item);
-    });
-
-    header.addEventListener("click", () => group.classList.toggle("collapsed"));
-
-    group.appendChild(header);
-    group.appendChild(body);
-    filterGroupsEl.appendChild(group);
-  });
-}
-
-function buildFilterModelFromModal() {
-  const model = {};
-  const inputs = document.querySelectorAll('#filterGroups input[type="checkbox"]:checked');
-
-  // Collect selections per field
-  const map = new Map();
-  inputs.forEach((cb) => {
-    const field = cb.getAttribute("data-field");
-    const value = cb.value;
-    if (!map.has(field)) map.set(field, []);
-    map.get(field).push(value);
-  });
-
-  // AG Grid "set filter" model
-  for (const [field, values] of map.entries()) {
-    model[field] = {
-      filterType: "set",
-      values
-    };
-  }
-
-  return model;
-}
-
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function openFilters() {
-  if (!latestSummary || !gridApi) return;
-  renderFilterTree(latestSummary.data || []);
   modalOverlay.classList.add("active");
   modalOverlay.setAttribute("aria-hidden", "false");
 }
@@ -344,34 +244,15 @@ function closeFilters() {
   modalOverlay.setAttribute("aria-hidden", "true");
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function uniqueValues(rows, field) {
-  const set = new Set();
-  for (const r of rows) {
-    const v = r?.[field];
-    if (v === null || v === undefined || v === "") continue;
-    set.add(String(v));
-  }
-  return Array.from(set).sort((a, b) => a.localeCompare(b));
-}
-
+/* ---------- Build filter tree from data ---------- */
 function renderFilterTree(rows) {
-  const existingModel = gridApi.getFilterModel() || {};
   filterTreeRoot.innerHTML = "";
 
   FILTER_GROUPS.forEach(({ id, field, title }) => {
     let values = [];
 
     if (field === "Sub-Architecture") {
-      values = allSubArchitectures; // derived list
+      values = allSubArchitectures;
     } else {
       values = uniqueValues(rows, field);
     }
@@ -390,21 +271,17 @@ function renderFilterTree(rows) {
     list.className = "options-list";
     list.dataset.field = field;
 
-    const selected = new Set((existingModel?.[field]?.values || []).map(String));
-
     if (field === "Sub-Architecture") {
       list.innerHTML = values
         .map((sub) => {
-          // find which architectures contain this sub-architecture
           const parents = [];
           for (const [arch, subSet] of archToSubArch.entries()) {
             if (subSet.has(sub)) parents.push(arch);
           }
 
-          const checked = selected.has(sub) ? "checked" : "";
           return `
             <label class="filter-option" data-parents="${escapeHtml(parents.join(","))}">
-              <input type="checkbox" data-field="${escapeHtml(field)}" value="${escapeHtml(sub)}" ${checked}/>
+              <input type="checkbox" data-field="${escapeHtml(field)}" value="${escapeHtml(sub)}" />
               ${escapeHtml(sub)}
             </label>`;
         })
@@ -412,10 +289,9 @@ function renderFilterTree(rows) {
     } else {
       list.innerHTML = values
         .map((v) => {
-          const checked = selected.has(v) ? "checked" : "";
           return `
             <label class="filter-option">
-              <input type="checkbox" data-field="${escapeHtml(field)}" value="${escapeHtml(v)}" ${checked}/>
+              <input type="checkbox" data-field="${escapeHtml(field)}" value="${escapeHtml(v)}" />
               ${escapeHtml(v)}
             </label>`;
         })
@@ -429,32 +305,30 @@ function renderFilterTree(rows) {
     filterTreeRoot.appendChild(node);
   });
 
-  // Hook dependency logic after render
+  // enable Architecture -> Sub-Architecture dependency
   wireArchitectureDependency();
   filterSubArchitecturesVisibility();
 
+  // reset toggle label
   allExpanded = true;
   if (toggleAllBtn) toggleAllBtn.textContent = "Collapse All";
 }
 
-function buildFilterModelFromTree() {
-  const model = {};
+function buildExternalFilterStateFromTree() {
+  const state = {};
   const checked = filterTreeRoot.querySelectorAll('input[type="checkbox"]:checked');
 
-  const byField = new Map();
   checked.forEach((cb) => {
     const field = cb.getAttribute("data-field");
-    const value = cb.value;
-    if (!byField.has(field)) byField.set(field, []);
-    byField.get(field).push(value);
+    const value = String(cb.value);
+    if (!state[field]) state[field] = [];
+    state[field].push(value);
   });
 
-  for (const [field, values] of byField.entries()) {
-    model[field] = { filterType: "set", values };
-  }
-  return model;
+  return state;
 }
 
+/* ---------- Architecture -> Sub-Architecture dependency ---------- */
 function wireArchitectureDependency() {
   const archNode = filterTreeRoot.querySelector('[data-group-id="architecture"]');
   if (!archNode) return;
@@ -478,6 +352,7 @@ function filterSubArchitecturesVisibility() {
   if (!subNode) return;
 
   const options = subNode.querySelectorAll(".filter-option");
+
   options.forEach((opt) => {
     const parentsCsv = opt.getAttribute("data-parents") || "";
     const parents = parentsCsv ? parentsCsv.split(",") : [];
@@ -490,12 +365,13 @@ function filterSubArchitecturesVisibility() {
     const visible = selectedArchitectures.some((a) => parents.includes(a));
     opt.classList.toggle("hidden", !visible);
 
-    // uncheck hidden selections
+    // If it becomes hidden, uncheck it (prevents invisible selections)
     const cb = opt.querySelector('input[type="checkbox"]');
     if (!visible && cb?.checked) cb.checked = false;
   });
 }
 
+/* ---------- Data helpers ---------- */
 function deriveArchSubArchMap(rows) {
   const map = new Map();
   const subSet = new Set();
@@ -503,18 +379,36 @@ function deriveArchSubArchMap(rows) {
   for (const r of rows) {
     const arch = r?.["Architecture"];
     const sub = r?.["Sub-Architecture"];
-
     if (!arch || !sub) continue;
 
     const archKey = String(arch);
     const subVal = String(sub);
 
-    subSet.add(subVal);
-
     if (!map.has(archKey)) map.set(archKey, new Set());
     map.get(archKey).add(subVal);
+
+    subSet.add(subVal);
   }
 
   archToSubArch = map;
   allSubArchitectures = Array.from(subSet).sort((a, b) => a.localeCompare(b));
+}
+
+function uniqueValues(rows, field) {
+  const set = new Set();
+  for (const r of rows) {
+    const v = r?.[field];
+    if (v === null || v === undefined || v === "") continue;
+    set.add(String(v));
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
