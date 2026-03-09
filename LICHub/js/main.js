@@ -142,7 +142,7 @@ async function initializeGrid() {
       field: col,
       headerName: col === "rowId" ? "Row ID" : col,
       sortable: true,
-      filter: SET_FILTER_FIELDS.has(col) ? "agSetColumnFilter" : true,,
+      filter: SET_FILTER_FIELDS.has(col) ? "agSetColumnFilter" : true,
       resizable: true,
       tooltipField: col,
       wrapText: col !== "rowId",
