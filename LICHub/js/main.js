@@ -128,11 +128,21 @@ async function initializeGrid() {
     const columns = Array.isArray(summary.columns) ? summary.columns : [];
     const rows = Array.isArray(summary.data) ? summary.data : [];
 
+
+    const SET_FILTER_FIELDS = new Set([
+      "License Method",
+      "Billing Type",
+      "Architecture",
+      "Sub-Architecture"
+    ]);
+
+
+
     const columnDefs = columns.map((col) => ({
       field: col,
       headerName: col === "rowId" ? "Row ID" : col,
       sortable: true,
-      filter: true,
+      filter: SET_FILTER_FIELDS.has(col) ? "agSetColumnFilter" : true,,
       resizable: true,
       tooltipField: col,
       wrapText: col !== "rowId",
@@ -147,7 +157,11 @@ async function initializeGrid() {
       columnDefs,
       rowData: rows,
       getRowId: (params) => String(params.data.rowId),
-      defaultColDef: { sortable: true, filter: true, resizable: true },
+      defaultColDef: {
+        sortable: true,
+        filter: true,
+        resizable: true
+      },
       animateRows: true,
       pagination: true,
       paginationPageSize: 10,
