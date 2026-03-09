@@ -213,11 +213,40 @@ button:active {
 }
 
 /* Toolbar should match the grid surface */
-.grid-toolbar {
-  padding: 12px 14px;
-  background: #ffffff;
-  border-bottom: 1px solid #eef2f7;
+.grid-toolbar{
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
+
+.grid-toolbar input[type="text"],
+.grid-toolbar .quick-search,
+.grid-toolbar button,
+.grid-toolbar .btn{
+  height: 40px;              /* <- set the shared height */
+  padding: 0 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+  line-height: 40px;         /* makes input text visually centered */
+}
+
+/* Input-specific tweaks */
+.grid-toolbar input[type="text"],
+.grid-toolbar .quick-search{
+  line-height: normal;       /* inputs don’t like line-height:40px in some browsers */
+  padding: 0 12px;
+}
+
+/* Button-specific tweaks (keeps icon/text centered) */
+.grid-toolbar button,
+.grid-toolbar .btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#quickFilter { height: 40px; }
 
 .quick-search {
   max-width: 600px;
@@ -229,6 +258,8 @@ button:active {
 .quick-search:focus {
   border-color: #93c5fd;
   box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.35);
+  height: 40px;
+  padding: 0 12px;
 }
 
 /* Softer zebra + cleaner hover */
@@ -312,17 +343,16 @@ button:active {
   background: #f1f7ff !important;
 }
 
-/* Toolbar row */
-.grid-toolbar {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
-}
 
 .search-wrap {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+#quickSearchInput.quick-search {
+  height: 40px;
+  padding: 0 12px;
 }
 
 .quick-search {
@@ -480,7 +510,8 @@ button:active {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
+  height: 40px; /* was 38px */
+  margin-top: 0;
   padding: 0 14px;
   border-radius: 10px;
   cursor: pointer;
@@ -609,4 +640,84 @@ button:active {
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+
+/* ===== Clean table look (like your reference image) ===== */
+.ag-theme-quartz.clean-grid {
+  /* Typography + spacing */
+  --ag-font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --ag-font-size: 16px;
+
+  --ag-grid-size: 8px;                 /* controls general spacing */
+  --ag-row-height: 56px;               /* taller rows like the screenshot */
+  --ag-header-height: 56px;
+
+  --ag-cell-horizontal-padding: 18px;
+
+  /* Colors */
+  --ag-background-color: #ffffff;
+  --ag-foreground-color: #111827;      /* slate-900-ish */
+  --ag-secondary-foreground-color: #6b7280; /* slate-500 */
+  --ag-header-foreground-color: #111827;
+
+  /* Lines: remove strong borders; keep subtle row dividers */
+  --ag-borders: none;
+  --ag-borders-critical: none;
+  --ag-border-color: transparent;
+
+  --ag-row-border-style: solid;
+  --ag-row-border-width: 0 0 1px 0;
+  --ag-row-border-color: #e5e7eb;      /* light divider */
+
+  /* Header look */
+  --ag-header-background-color: #ffffff;
+  --ag-header-column-resize-handle-display: none;
+
+  /* Hover/selection */
+  --ag-row-hover-color: #f9fafb;
+  --ag-selected-row-background-color: #eef2ff; /* subtle indigo tint */
+
+  /* Faint vertical separators */
+  --ag-borders: solid;
+  --ag-border-color: #eef2f7;          /* very faint */
+  --ag-borders-critical: solid;
+
+  --ag-cell-horizontal-border: solid;
+  --ag-cell-horizontal-border-color: #e5e7eb; /* row divider (a touch stronger) */
+
+  --ag-cell-vertical-border: solid;
+  --ag-cell-vertical-border-color: #f1f5f9;   /* very faint verticals */
+
+  /* Ensure header separators are also faint (not hidden) */
+  --ag-header-column-separator-display: block;
+  --ag-header-column-separator-color: #f1f5f9;
+
+}
+
+/* Make header feel “flat” and airy */
+.ag-theme-quartz.clean-grid .ag-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Remove cell focus outline box (optional, matches clean look) */
+.ag-theme-quartz.clean-grid .ag-cell:focus,
+.ag-theme-quartz.clean-grid .ag-cell-focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* If you have multiline cells, keep them readable */
+.ag-theme-quartz.clean-grid .ag-cell {
+  line-height: 1.25;
+}
+
+.ag-theme-quartz.clean-grid .ag-header-cell,
+.ag-theme-quartz.clean-grid .ag-cell {
+  border-right: 1px solid #f1f5f9;
+}
+
+.ag-theme-quartz.clean-grid .ag-header-cell:last-child,
+.ag-theme-quartz.clean-grid .ag-cell:last-child {
+  border-right: none;
 }
