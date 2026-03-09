@@ -44,39 +44,45 @@
         <div class="accordion-body expanded" id="accordionBody">
           <div class="grid-toolbar">
             <div class="search-wrap">
-              <input type="text" id="quickSearchInput" class="quick-search"
-                placeholder="Quick search across all columns..." aria-label="Quick search" />
+              <input
+                type="text"
+                id="quickSearchInput"
+                class="quick-search"
+                placeholder="Quick search across all columns..."
+                aria-label="Quick search"
+              />
 
-              <button id="openFilterBtn" class="icon-btn" type="button" aria-label="Open filters">
-                <!-- Filter SVG icon -->
-                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <button class="filter-btn" id="openFilterBtn" type="button" aria-label="Open filters">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="currentColor" d="M3 5h18l-7 8v5l-4 2v-7L3 5z"></path>
                 </svg>
+                <span>Filters</span>
               </button>
             </div>
           </div>
+
           <!-- Filter Modal -->
-          <div id="filterModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle">
-            <div class="modal-card">
+          <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+            <div class="filter-modal" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
               <div class="modal-header">
-                <h2 id="filterModalTitle">Filters</h2>
-                <button id="closeFilterBtn" class="icon-btn" type="button" aria-label="Close filters">✕</button>
+                <h2 id="filterTitle">Filters</h2>
+                <button class="text-btn" id="toggleAllBtn" type="button">Collapse All</button>
               </div>
 
-              <div class="modal-body">
-                <div class="filter-actions-top">
-                  <button id="collapseAllBtn" class="link-btn" type="button">Collapse All</button>
-                </div>
-
-                <div id="filterGroups"></div>
+              <div class="tree-root" id="filterTreeRoot">
+                <!-- JS will render groups here -->
               </div>
 
               <div class="modal-footer">
-                <button id="clearFiltersBtn" class="btn-secondary" type="button">Clear</button>
-                <button id="applyFiltersBtn" type="button">Apply Filters</button>
+                <button class="text-btn" id="cancelFiltersBtn" type="button">Cancel</button>
+                <button class="text-btn" id="clearFiltersBtn" type="button">Clear</button>
+                <button class="btn-primary" id="applyFiltersBtn" type="button">Apply Filters</button>
               </div>
             </div>
           </div>
+
+
+
           <div class="grid-frame">
             <div id="summaryGrid" class="ag-theme-quartz"></div>
           </div>
