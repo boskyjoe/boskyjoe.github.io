@@ -136,6 +136,12 @@ async function initializeGrid() {
         resizable: true
       },
 
+      headerHeight: 56,
+      rowHeight: 56,
+      suppressCellFocus: true,       // cleaner look
+      suppressRowClickSelection: true, // optional
+      rowSelection: { mode: 'singleRow' }, // or remove if you don't need selection
+
       animateRows: true,
       pagination: true,
       paginationPageSize: 10,
