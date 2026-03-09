@@ -1,4 +1,4 @@
-const VALID_EMAIL = "jean.l.picard@walmart.com";
+const VALID_EMAIL = "jean.l.picard@cyberdyne.com";
 
 /* ---------- DOM ---------- */
 const loginView = document.getElementById("loginView");
