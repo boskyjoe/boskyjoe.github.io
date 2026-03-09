@@ -26,7 +26,7 @@ let gridInitialized = false;
 
 let latestSummary = null;
 
-// Derived from summary.json at runtime:
+// Derived from summaryData.json at runtime:
 let archToSubArch = new Map(); // Architecture -> Set(Sub-Architecture)
 let allSubArchitectures = [];  // all unique sub-architectures
 
@@ -99,8 +99,8 @@ async function initializeGrid() {
   const gridDiv = document.getElementById("summaryGrid");
 
   try {
-    const response = await fetch("data/summary.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status} while loading summary.json`);
+    const response = await fetch("data/summaryData.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status} while loading summaryData.json`);
 
     const summary = await response.json();
     latestSummary = summary;
