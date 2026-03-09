@@ -116,6 +116,8 @@ async function initializeGrid() {
       sortable: true,
       filter: true,
       resizable: true,
+      checkboxSelection: false,
+      headerCheckboxSelection: false,
       tooltipField: col,
       wrapText: col !== "rowId",
       autoHeight: col !== "rowId",
@@ -140,7 +142,6 @@ async function initializeGrid() {
       rowHeight: 56,
       suppressCellFocus: true,       // cleaner look
       suppressRowClickSelection: true, // optional
-      rowSelection: { mode: 'singleRow' }, // or remove if you don't need selection
 
       animateRows: true,
       pagination: true,
