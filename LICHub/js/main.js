@@ -179,16 +179,15 @@ async function initializeGrid() {
   }
 }
 
-function openFilterModal() {
-  if (!latestSummary) return;
-  renderFilterModalFromData(latestSummary.data || []);
-  filterModal.classList.remove("hidden");
+function openFilters() {
+  modalOverlay.classList.add("active");
+  modalOverlay.setAttribute("aria-hidden", "false");
 }
 
-function closeFilterModal() {
-  filterModal.classList.add("hidden");
+function closeFilters() {
+  modalOverlay.classList.remove("active");
+  modalOverlay.setAttribute("aria-hidden", "true");
 }
-
 
 openFilterBtn?.addEventListener("click", openFilters);
 cancelFiltersBtn?.addEventListener("click", closeFilters);
@@ -211,17 +210,17 @@ toggleAllBtn?.addEventListener("click", () => {
   toggleAllBtn.textContent = allExpanded ? "Collapse All" : "Expand All";
 });
 
-clearFiltersBtn?.addEventListener("click", () => {
-  if (!gridApi) return;
-  gridApi.setFilterModel(null);
-  gridApi.onFilterChanged();
-  closeFilters();
-});
-
 applyFiltersBtn?.addEventListener("click", () => {
   if (!gridApi) return;
   const model = buildFilterModelFromTree();
   gridApi.setFilterModel(model);
+  gridApi.onFilterChanged();
+  closeFilters();
+});
+
+clearFiltersBtn?.addEventListener("click", () => {
+  if (!gridApi) return;
+  gridApi.setFilterModel(null);
   gridApi.onFilterChanged();
   closeFilters();
 });
@@ -309,19 +308,6 @@ function buildFilterModelFromModal() {
   return model;
 }
 
-clearFiltersBtn?.addEventListener("click", () => {
-  if (!gridApi) return;
-  gridApi.setFilterModel(null);
-  closeFilterModal();
-});
-
-applyFiltersBtn?.addEventListener("click", () => {
-  if (!gridApi) return;
-  const model = buildFilterModelFromModal();
-  gridApi.setFilterModel(model);
-  gridApi.onFilterChanged();
-  closeFilterModal();
-});
 
 function escapeHtml(str) {
   return String(str)
