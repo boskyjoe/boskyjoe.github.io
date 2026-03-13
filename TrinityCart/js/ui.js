@@ -17009,6 +17009,8 @@ const consignmentOrdersGridOptionsV2 = {
         // Dim the row and apply a light gray background for settled orders
         'opacity-60 bg-gray-50': params => params.data && params.data.status === 'Settled'
     },
+    onModelUpdated: (params) => updateConsignmentV2HeaderStats(params.api),
+    onFilterChanged: (params) => updateConsignmentV2HeaderStats(params.api),
     columnDefs: [
         { field: "consignmentId", headerName: "Order ID", width: 180 },
         { field: "teamName", headerName: "Team", flex: 1 },
@@ -17300,11 +17302,11 @@ export function showConsignmentModalV2(orderData = null) {
                     return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
                 }
             },
+            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} },
             { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
             { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
             { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
-            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
-            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} }
+            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
@@ -17432,6 +17434,33 @@ export function showConsignmentViewV2() {
     showView('consignment-view-v2');
     initializeConsignmentV2Grids();
 
+    const activePill = document.getElementById('filter-active-v2');
+    const settledPill = document.getElementById('filter-settled-v2');
+
+    if (activePill && settledPill) {
+        activePill.onclick = () => {
+            // Filter the 'status' column for 'Active'
+            consignmentOrdersGridApiV2.setColumnFilterModel('status', {
+                filterType: 'text',
+                type: 'equals',
+                filter: 'Active'
+            }).then(() => {
+                consignmentOrdersGridApiV2.onFilterChanged();
+            });
+        };
+
+        settledPill.onclick = () => {
+            // Filter the 'status' column for 'Settled'
+            consignmentOrdersGridApiV2.setColumnFilterModel('status', {
+                filterType: 'text',
+                type: 'equals',
+                filter: 'Settled'
+            }).then(() => {
+                consignmentOrdersGridApiV2.onFilterChanged();
+            });
+        };
+    }
+
     const waitForGrid = setInterval(() => {
         if (consignmentOrdersGridApiV2) {
             clearInterval(waitForGrid);
@@ -17509,3 +17538,27 @@ const consignmentPaymentHistoryGridOptionsV2 = {
     ],
     onGridReady: params => { consignmentPaymentHistoryGridApiV2 = params.api; }
 };
+
+/**
+ * Calculates and updates the header stats for the Simple Consignment view.
+ */
+function updateConsignmentV2HeaderStats(gridApi) {
+    let totalOrders = 0;
+    let totalValue = 0;
+
+    // Iterate only through nodes that pass the current filter
+    gridApi.forEachNodeAfterFilter((node) => {
+        if (node.data) {
+            totalOrders++;
+            // We use totalValueCheckedOut as the "Total Value" of the business operation
+            totalValue += (node.data.totalValueCheckedOut || 0);
+        }
+    });
+
+    // Update the HTML elements
+    const countEl = document.getElementById('consignment-v2-stat-count');
+    const valueEl = document.getElementById('consignment-v2-stat-value');
+
+    if (countEl) countEl.textContent = totalOrders;
+    if (valueEl) valueEl.textContent = formatCurrency(totalValue);
+}
