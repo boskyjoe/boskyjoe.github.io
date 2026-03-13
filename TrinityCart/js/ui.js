@@ -17020,6 +17020,7 @@ const consignmentOrdersGridOptionsV2 = {
             field: "status", 
             headerName: "Status", 
             width: 120,
+            filter: 'agTextColumnFilter',
             cellRenderer: p => {
                 const status = p.value;
                 if (status === 'Active') {
@@ -17472,7 +17473,7 @@ export function showConsignmentViewV2() {
         activePill.onclick = () => applyStatusFilter('Active');
         settledPill.onclick = () => applyStatusFilter('Settled');
     }
-    
+
     const waitForGrid = setInterval(() => {
         if (consignmentOrdersGridApiV2) {
             clearInterval(waitForGrid);
