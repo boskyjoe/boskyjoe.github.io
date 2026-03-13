@@ -17303,7 +17303,16 @@ export function showConsignmentModalV2(orderData = null) {
                     return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
                 }
             },
-            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} },
+            // --- GROUP 1: SALES ---
+            { field: "quantitySold", headerName: "Qty Sold", width: 90, editable: !isSettled, cellEditor: 'agNumberCellEditor', cellClass: 'bg-green-50' },
+            { 
+                headerName: "Value Sold", 
+                width: 110, 
+                valueGetter: p => (p.data.quantitySold || 0) * (p.data.sellingPrice || 0),
+                valueFormatter: p => formatCurrency(p.value),
+                cellStyle: { color: '#059669', fontWeight: 'bold' },
+                cellClass: 'bg-green-50'
+            },
             { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
             { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
             { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
