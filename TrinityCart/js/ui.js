@@ -17020,7 +17020,7 @@ const consignmentOrdersGridOptionsV2 = {
             field: "status", 
             headerName: "Status", 
             width: 120,
-            filter: 'agTextColumnFilter',
+            filter: true,
             cellRenderer: p => {
                 const status = p.value;
                 if (status === 'Active') {
@@ -17439,33 +17439,49 @@ export function showConsignmentViewV2() {
     const settledPill = document.getElementById('filter-settled-v2');
 
     const applyStatusFilter = async (status) => {
-        if (!consignmentOrdersGridApiV2) return;
+        if (!consignmentOrdersGridApiV2) {
+            console.error("Grid API not ready yet!");
+            return;
+        }
 
-        // 1. Get current filter state
-        const currentModel = consignmentOrdersGridApiV2.getColumnFilterModel('status');
+        // 1. Get the current filter model for the whole grid
+        const currentModel = consignmentOrdersGridApiV2.getFilterModel();
 
-        // 2. Toggle Logic
-        if (currentModel && currentModel.filter === status) {
-            // If already filtering by this status, clear it
-            await consignmentOrdersGridApiV2.setColumnFilterModel('status', null);
+        // 2. Check if we are already filtering by THIS specific status
+        const isAlreadyFilteringThisStatus = currentModel && 
+                                            currentModel.status && 
+                                            currentModel.status.filter === status;
+
+        if (isAlreadyFilteringThisStatus) {
+            // TOGGLE OFF: Clear all filters
+            console.log(`[Filter] Clearing filter for: ${status}`);
+            consignmentOrdersGridApiV2.setFilterModel(null);
+            
+            // Reset UI Visuals
             activePill.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-100');
             settledPill.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-100');
         } else {
-            // Apply the filter
-            await consignmentOrdersGridApiV2.setColumnFilterModel('status', {
-                filterType: 'text',
-                type: 'equals',
-                filter: status
-            });
+            // TOGGLE ON: Apply the status filter
+            console.log(`[Filter] Applying filter for: ${status}`);
             
-            // Update UI visuals
+            const newModel = {
+                status: { // This key MUST match the 'field' name in columnDefs
+                    filterType: 'text',
+                    type: 'equals',
+                    filter: status
+                }
+            };
+
+            consignmentOrdersGridApiV2.setFilterModel(newModel);
+
+            // Update UI Visuals
             activePill.classList.toggle('ring-2', status === 'Active');
             activePill.classList.toggle('ring-purple-500', status === 'Active');
             settledPill.classList.toggle('ring-2', status === 'Settled');
             settledPill.classList.toggle('ring-purple-500', status === 'Settled');
         }
-
-        // 3. Tell the grid to process the change
+        
+        // 3. Force the grid to process the change (Required in some Community versions)
         consignmentOrdersGridApiV2.onFilterChanged();
     };
 
