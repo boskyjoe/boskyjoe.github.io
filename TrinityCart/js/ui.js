@@ -17437,30 +17437,42 @@ export function showConsignmentViewV2() {
     const activePill = document.getElementById('filter-active-v2');
     const settledPill = document.getElementById('filter-settled-v2');
 
+    const applyStatusFilter = async (status) => {
+        if (!consignmentOrdersGridApiV2) return;
+
+        // 1. Get current filter state
+        const currentModel = consignmentOrdersGridApiV2.getColumnFilterModel('status');
+
+        // 2. Toggle Logic
+        if (currentModel && currentModel.filter === status) {
+            // If already filtering by this status, clear it
+            await consignmentOrdersGridApiV2.setColumnFilterModel('status', null);
+            activePill.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-100');
+            settledPill.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-100');
+        } else {
+            // Apply the filter
+            await consignmentOrdersGridApiV2.setColumnFilterModel('status', {
+                filterType: 'text',
+                type: 'equals',
+                filter: status
+            });
+            
+            // Update UI visuals
+            activePill.classList.toggle('ring-2', status === 'Active');
+            activePill.classList.toggle('ring-purple-500', status === 'Active');
+            settledPill.classList.toggle('ring-2', status === 'Settled');
+            settledPill.classList.toggle('ring-purple-500', status === 'Settled');
+        }
+
+        // 3. Tell the grid to process the change
+        consignmentOrdersGridApiV2.onFilterChanged();
+    };
+
     if (activePill && settledPill) {
-        activePill.onclick = () => {
-            // Filter the 'status' column for 'Active'
-            consignmentOrdersGridApiV2.setColumnFilterModel('status', {
-                filterType: 'text',
-                type: 'equals',
-                filter: 'Active'
-            }).then(() => {
-                consignmentOrdersGridApiV2.onFilterChanged();
-            });
-        };
-
-        settledPill.onclick = () => {
-            // Filter the 'status' column for 'Settled'
-            consignmentOrdersGridApiV2.setColumnFilterModel('status', {
-                filterType: 'text',
-                type: 'equals',
-                filter: 'Settled'
-            }).then(() => {
-                consignmentOrdersGridApiV2.onFilterChanged();
-            });
-        };
+        activePill.onclick = () => applyStatusFilter('Active');
+        settledPill.onclick = () => applyStatusFilter('Settled');
     }
-
+    
     const waitForGrid = setInterval(() => {
         if (consignmentOrdersGridApiV2) {
             clearInterval(waitForGrid);
