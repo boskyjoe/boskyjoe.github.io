@@ -17345,7 +17345,7 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 field: "productName", 
                 headerName: "Product", 
-                flex: 1,
+                width:250,
                 // --- ✅ ADD THESE TWO PROPERTIES ---
                 wrapText: true, 
                 autoHeight: true,
