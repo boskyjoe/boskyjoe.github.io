@@ -17060,6 +17060,7 @@ const consignmentItemsGridOptionsV2 = {
     getRowId: params => params.data.productId,
     theme: 'legacy',
     defaultColDef: { resizable: true },
+    onModelUpdated: (params) => updateConsignmentItemsV2Totals(params.api),
     onCellValueChanged: (params) => {
         const orderId = document.getElementById('consignment-order-id-v2').value;
 
@@ -17090,6 +17091,8 @@ const consignmentItemsGridOptionsV2 = {
             }
         }));
 
+        updateConsignmentItemsV2Totals(params.api);
+
         // Trigger the visual update of the financial summary
         document.dispatchEvent(new Event('recalculateConsignmentTotals'));
     },
@@ -17109,6 +17112,68 @@ function initializeConsignmentV2Grids() {
     }
 }
 
+/**
+ * Calculates and updates the Pinned Bottom Row (Grand Totals) 
+ * for the Consignment Items Grid.
+ */
+function updateConsignmentItemsV2Totals(gridApi) {
+    if (!gridApi) return;
+
+    const totals = {
+        quantityCheckedOut: 0,
+        quantitySold: 0,
+        valueSold: 0,
+        quantityReturned: 0,
+        valueReturned: 0,
+        quantityDamaged: 0,
+        valueDamaged: 0,
+        quantityGifted: 0,
+        valueGifted: 0,
+        onHand: 0
+    };
+
+    gridApi.forEachNode((node) => {
+        const d = node.data;
+        const price = d.sellingPrice || 0;
+
+        totals.quantityCheckedOut += (Number(d.quantityCheckedOut) || 0);
+        
+        const s = (Number(d.quantitySold) || 0);
+        totals.quantitySold += s;
+        totals.valueSold += (s * price);
+
+        const r = (Number(d.quantityReturned) || 0);
+        totals.quantityReturned += r;
+        totals.valueReturned += (r * price);
+
+        const dm = (Number(d.quantityDamaged) || 0);
+        totals.quantityDamaged += dm;
+        totals.valueDamaged += (dm * price);
+
+        const g = (Number(d.quantityGifted) || 0);
+        totals.quantityGifted += g;
+        totals.valueGifted += (g * price);
+
+        totals.onHand += (d.quantityCheckedOut - (s + r + dm + g));
+    });
+
+    // Create the pinned row data object
+    const pinnedRow = {
+        productName: 'GRAND TOTALS:',
+        quantityCheckedOut: totals.quantityCheckedOut,
+        quantitySold: totals.quantitySold,
+        valueSold: totals.valueSold, // We'll use valueFormatters to show currency
+        quantityReturned: totals.quantityReturned,
+        valueReturned: totals.valueReturned,
+        quantityDamaged: totals.quantityDamaged,
+        valueDamaged: totals.valueDamaged,
+        quantityGifted: totals.quantityGifted,
+        valueGifted: totals.valueGifted,
+        onHand: totals.onHand
+    };
+
+    gridApi.setGridOption('pinnedBottomRowData', [pinnedRow]);
+}
 
 export function showConsignmentModalV2(orderData = null) {
     const modal = document.getElementById('consignment-checkout-modal-v2');
@@ -17303,19 +17368,32 @@ export function showConsignmentModalV2(orderData = null) {
                     return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
                 }
             },
-            // --- GROUP 1: SALES ---
-            { field: "quantitySold", headerName: "Qty Sold", width: 90, editable: !isSettled, cellEditor: 'agNumberCellEditor', cellClass: 'bg-green-50' },
+            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} },
+            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
             { 
+                field: "valueSold", // Map to the field in our pinnedRow object
                 headerName: "Value Sold", 
                 width: 110, 
-                valueGetter: p => (p.data.quantitySold || 0) * (p.data.sellingPrice || 0),
+                valueGetter: p => p.node.isRowPinned() ? p.data.valueSold : (p.data.quantitySold || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value),
-                cellStyle: { color: '#059669', fontWeight: 'bold' },
-                cellClass: 'bg-green-50'
+                cellStyle: { fontWeight: 'bold' }
             },
-            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
             { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { 
+                field: "valueReturned",
+                headerName: "Value Rtrn", 
+                width: 110, 
+                valueGetter: p => p.node.isRowPinned() ? p.data.valueReturned : (p.data.quantityReturned || 0) * (p.data.sellingPrice || 0),
+                valueFormatter: p => formatCurrency(p.value)
+            },
             { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { 
+                field: "valueDamaged",
+                headerName: "Value Dmg", 
+                width: 110, 
+                valueGetter: p => p.node.isRowPinned() ? p.data.valueDamaged : (p.data.quantityDamaged || 0) * (p.data.sellingPrice || 0),
+                valueFormatter: p => formatCurrency(p.value)
+            },
             { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
