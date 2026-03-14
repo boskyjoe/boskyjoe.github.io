@@ -17342,7 +17342,7 @@ export function showConsignmentModalV2(orderData = null) {
         });
 
         const settleColumns = [
-            { field: "productName", headerName: "Product", flex: 1 },
+            { field: "productName", headerName: "Product", width: 200 },
             { 
                 field: "inventoryCount", 
                 headerName: "Store Stock", 
