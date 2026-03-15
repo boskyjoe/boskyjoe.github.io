@@ -17175,6 +17175,35 @@ function updateConsignmentItemsV2Totals(gridApi) {
     gridApi.setGridOption('pinnedBottomRowData', [pinnedRow]);
 }
 
+// --- 1. Define the Reusable Validation Logic ---
+const qtyValueSetter = (params) => {
+    const newValue = Number(params.newValue) || 0;
+    const d = params.data;
+    const field = params.colDef.field;
+
+    // Calculate the total of ALL other quantity fields (excluding the one being edited)
+    let otherFieldsTotal = 0;
+    if (field !== 'quantitySold') otherFieldsTotal += (d.quantitySold || 0);
+    if (field !== 'quantityReturned') otherFieldsTotal += (d.quantityReturned || 0);
+    if (field !== 'quantityDamaged') otherFieldsTotal += (d.quantityDamaged || 0);
+    if (field !== 'quantityGifted') otherFieldsTotal += (d.quantityGifted || 0);
+
+    const newTotalAccountedFor = otherFieldsTotal + newValue;
+
+    // VALIDATION: Total cannot exceed what was physically checked out
+    if (newTotalAccountedFor > d.quantityCheckedOut) {
+        showModal('error', 'Invalid Quantity', 
+            `The total accounted for (${newTotalAccountedFor}) cannot exceed the quantity checked out (${d.quantityCheckedOut}).`
+        );
+        return false; // ❌ REJECT the change (grid keeps the old value)
+    }
+
+    // If valid, update the data object
+    d[field] = newValue;
+    return true; // ✅ ACCEPT the change
+};
+
+
 export function showConsignmentModalV2(orderData = null) {
     const modal = document.getElementById('consignment-checkout-modal-v2');
     const form = document.getElementById('consignment-form-v2');
@@ -17372,13 +17401,14 @@ export function showConsignmentModalV2(orderData = null) {
                 width: 100, 
                 editable: !isSettled, // Allow editing if the order is not closed
                 cellEditor: 'agNumberCellEditor',
+                valueSetter: qtyValueSetter ,
                 cellStyle: params => {
                     // Give it a subtle blue background to show it's editable
                     return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
                 }
             },
             { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} },
-            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor' },
+            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  },
             { 
                 field: "valueSold", // Map to the field in our pinnedRow object
                 headerName: "Value Sold", 
@@ -17387,7 +17417,7 @@ export function showConsignmentModalV2(orderData = null) {
                 valueFormatter: p => formatCurrency(p.value),
                 cellStyle: { fontWeight: 'bold' }
             },
-            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' ,valueSetter: qtyValueSetter },
             { 
                 field: "valueReturned",
                 headerName: "Value Rtrn", 
@@ -17395,7 +17425,7 @@ export function showConsignmentModalV2(orderData = null) {
                 valueGetter: p => p.node.isRowPinned() ? p.data.valueReturned : (p.data.quantityReturned || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value)
             },
-            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' },
+            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  },
             { 
                 field: "valueDamaged",
                 headerName: "Value Dmg", 
@@ -17403,7 +17433,7 @@ export function showConsignmentModalV2(orderData = null) {
                 valueGetter: p => p.node.isRowPinned() ? p.data.valueDamaged : (p.data.quantityDamaged || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value)
             },
-            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' }
+            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  }
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
