@@ -17060,6 +17060,23 @@ const consignmentItemsGridOptionsV2 = {
     getRowId: params => params.data.productId,
     theme: 'legacy',
     defaultColDef: { resizable: true },
+    rowClassRules: {
+        // Apply 'bg-gray-100' and 'opacity-70' when the item is fully accounted for
+        'bg-gray-100 opacity-70 italic': (params) => {
+            if (!params.data) return false;
+            
+            const d = params.data;
+            const onHand = (d.quantityCheckedOut || 0) - (
+                (d.quantitySold || 0) + 
+                (d.quantityReturned || 0) + 
+                (d.quantityDamaged || 0) + 
+                (d.quantityGifted || 0)
+            );
+
+            // Only highlight if it's fully accounted for AND it was actually checked out
+            return onHand === 0 && (d.quantityCheckedOut > 0);
+        }
+    },
     onModelUpdated: (params) => updateConsignmentItemsV2Totals(params.api),
     onCellValueChanged: (params) => {
         const orderId = document.getElementById('consignment-order-id-v2').value;
@@ -17092,6 +17109,9 @@ const consignmentItemsGridOptionsV2 = {
         }));
 
         updateConsignmentItemsV2Totals(params.api);
+
+        params.api.redrawRows({ rowNodes: [params.node] });
+
 
         // Trigger the visual update of the financial summary
         document.dispatchEvent(new Event('recalculateConsignmentTotals'));
