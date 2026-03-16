@@ -17061,10 +17061,9 @@ const consignmentItemsGridOptionsV2 = {
     theme: 'legacy',
     defaultColDef: { resizable: true },
     rowClassRules: {
-        // Apply 'bg-gray-100' and 'opacity-70' when the item is fully accounted for
-        'bg-gray-100 opacity-70 italic': (params) => {
+        // 1. COMPLETED ROWS: Gray, dimmed, and italicized
+        'bg-gray-100 text-gray-400 opacity-60 italic': (params) => {
             if (!params.data) return false;
-            
             const d = params.data;
             const onHand = (d.quantityCheckedOut || 0) - (
                 (d.quantitySold || 0) + 
@@ -17072,9 +17071,21 @@ const consignmentItemsGridOptionsV2 = {
                 (d.quantityDamaged || 0) + 
                 (d.quantityGifted || 0)
             );
-
-            // Only highlight if it's fully accounted for AND it was actually checked out
             return onHand === 0 && (d.quantityCheckedOut > 0);
+        },
+
+        // 2. ACTIVE/EDITABLE ROWS: Forced crisp white and bold text
+        // This ensures that if onHand > 0, the row is clearly "Active"
+        'bg-white text-gray-900 font-medium': (params) => {
+            if (!params.data) return false;
+            const d = params.data;
+            const onHand = (d.quantityCheckedOut || 0) - (
+                (d.quantitySold || 0) + 
+                (d.quantityReturned || 0) + 
+                (d.quantityDamaged || 0) + 
+                (d.quantityGifted || 0)
+            );
+            return onHand > 0;
         }
     },
     onModelUpdated: (params) => updateConsignmentItemsV2Totals(params.api),
@@ -17399,7 +17410,36 @@ export function showConsignmentModalV2(orderData = null) {
                 wrapText: true, 
                 autoHeight: true,
                 // ------------------------------------
+                cellRenderer: params => {
+                    if (!params.data) return params.value;
+
+                    const d = params.data;
+                    const onHand = (d.quantityCheckedOut || 0) - (
+                        (d.quantitySold || 0) + 
+                        (d.quantityReturned || 0) + 
+                        (d.quantityDamaged || 0) + 
+                        (d.quantityGifted || 0)
+                    );
+
+                    const isLocked = onHand === 0 && (d.quantityCheckedOut > 0);
+
+                    if (isLocked) {
+                        // Return the name with a padlock icon
+                        return `
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="line-through text-gray-400">${params.value}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Return the normal name
+                        return `<span class="font-semibold text-gray-800">${params.value}</span>`;
+                    }
+                },
                 cellStyle: { 'line-height': '1.4', 'padding-top': '8px', 'padding-bottom': '8px' }
+
             },
             { 
                 field: "inventoryCount", 
