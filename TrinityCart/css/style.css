@@ -164,6 +164,15 @@
     z-index: 1 !important;
 }
 
+.ag-theme-alpine .bg-gray-100.ag-row-hover {
+    background-color: #f3f4f6 !important; 
+}
+
+.ag-row.bg-gray-100 [col-id="productName"] {
+    text-decoration: line-through;
+    color: #9ca3af;
+}
+
 main {
     position: relative;
     z-index: 1;
