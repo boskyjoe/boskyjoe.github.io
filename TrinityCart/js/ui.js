@@ -17121,6 +17121,12 @@ const consignmentItemsGridOptionsV2 = {
 
         updateConsignmentItemsV2Totals(params.api);
 
+        params.api.refreshCells({
+            rowNodes: [params.node],
+            columns: ['productName'], // Specifically refresh the name column to show/hide the lock
+            force: true
+        });
+        
         params.api.redrawRows({ rowNodes: [params.node] });
 
 
