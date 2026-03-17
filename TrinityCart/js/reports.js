@@ -5046,37 +5046,35 @@ export async function generatePLStatement(startDate, endDate) {
  */
 
 export async function generateAdminDashboardSummary(daysBack = 365) {
-    console.log(`[Reports] Fetching FRESH Admin Dashboard Summary data...`);
-
-
+    console.log(`[Reports] Fetching FRESH Admin Dashboard Summary data (V2 Optimized)...`);
 
     const db = firebase.firestore();
     const { startDate, endDate } = createDateRange(daysBack);
-    console.log(`[Reports] Generating Admin Dashboard Summary from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+    
+    // Import the V2 path constant (ensure it's imported at the top of reports.js)
+    // import { SIMPLE_CONSIGNMENT_COLLECTION_PATH } from './config.js';
 
-    // --- 1. Fetch All Necessary Data in Parallel ---
+    // --- 1. Fetch Necessary Data in Parallel ---
+    // Note: We removed the collectionGroup query because V2 data is embedded in the order
     const [
         directSalesSnapshot,
-        consignmentOrdersSnapshot,
+        simpleConsignmentSnapshot, // This is the V2 collection
         allProductsSnapshot,
-        consignmentActivitiesSnapshot, // Needed for Top Sold Products calculation
         donationsSnapshot
     ] = await Promise.all([
         db.collection(SALES_COLLECTION_PATH).get(),
-        db.collection(CONSIGNMENT_ORDERS_COLLECTION_PATH).where('status', 'in', ['Active', 'Settled']).get(),
+        db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).where('status', 'in', ['Active', 'Settled']).get(),
         db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).where('isActive', '==', true).get(),
-        // This query is only for calculating top sold items from consignment
-        db.collectionGroup('activityLog').where('activityType', '==', 'Sale').get(),
         db.collection(DONATIONS_COLLECTION_PATH).where('status', '==', 'Verified').get()
     ]);
 
     // --- 2. Process Sales Financials ---
     let totalDonations = 0, consignmentDonations = 0, churchStoreDonations = 0, tastyTreatsDonations = 0;
-    let totalInvoiced = 0, totalCash = 0, totalExpenses = 0 ;
+    let totalInvoiced = 0, totalCash = 0, totalExpenses = 0;
     let tastyInvoiced = 0, tastyCash = 0, tastyExpenses = 0;
     let churchInvoiced = 0, churchCash = 0, churchExpenses = 0;
 
-    // Process Direct Sales using the correct field names
+    // A. Process Direct Sales
     directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
         const invoicedAmount = sale.financials?.totalAmount || 0;
@@ -5085,34 +5083,31 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
 
         totalInvoiced += invoicedAmount;
         totalCash += cashAmount;
-        totalExpenses += expenseAmount; 
-        
+        totalExpenses += expenseAmount;
+
         if (sale.store === 'Tasty Treats') {
             tastyInvoiced += invoicedAmount;
             tastyCash += cashAmount;
             tastyExpenses += expenseAmount;
-        } else { // Assume everything else is Church Store
+        } else {
             churchInvoiced += invoicedAmount;
             churchCash += cashAmount;
             churchExpenses += expenseAmount;
         }
     });
 
+    // B. Process Simple Consignment (V2)
     let consignmentSold = 0;
     let consignmentCash = 0;
-    let consignmentCheckedOut = 0; // New field for total value out with teams
-    let consignmentExpenses = 0 ;
+    let consignmentCheckedOut = 0;
+    let consignmentExpenses = 0;
 
-
-    // Process Consignment Orders using pre-calculated totals
-    consignmentOrdersSnapshot.forEach(doc => {
+    simpleConsignmentSnapshot.forEach(doc => {
         const order = doc.data();
-        // The actual revenue generated from consignment
-        consignmentSold += order.totalValueSold || 0; 
-        // The cash collected from teams
+        consignmentSold += order.totalValueSold || 0;
         consignmentCash += order.totalAmountPaid || 0;
-        consignmentExpenses += order.totalExpenses || 0 ;
-        // The total value of inventory currently active with teams
+        consignmentExpenses += order.totalExpenses || 0;
+        
         if (order.status === 'Active') {
             consignmentCheckedOut += order.totalValueCheckedOut || 0;
         }
@@ -5120,9 +5115,9 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
 
     totalInvoiced += consignmentSold;
     totalCash += consignmentCash;
-    totalExpenses += consignmentExpenses ;
+    totalExpenses += consignmentExpenses;
 
-    // --- 3. Process Stock Status ---
+    // --- 3. Process Stock Status (Unchanged) ---
     const stockStatus = allProductsSnapshot.docs.map(doc => {
         const product = doc.data();
         const stock = product.inventoryCount || 0;
@@ -5130,69 +5125,74 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         if (stock === 0) status = 'Out of Stock';
         else if (stock < 10) status = 'Low Stock';
 
-        // ✅ Find the category name from the masterData cache
         const category = masterData.categories.find(c => c.id === product.categoryId);
 
-        return { 
-            itemName: product.itemName, 
-            inventoryCount: stock, 
+        return {
+            itemName: product.itemName,
+            inventoryCount: stock,
             status: status,
             categoryName: category ? category.categoryName : 'N/A'
         };
-    }).sort((a, b) => a.inventoryCount - b.inventoryCount); // Sort by lowest stock first
+    }).sort((a, b) => a.inventoryCount - b.inventoryCount);
 
-    // --- 4. Process Top Sold Products (within the date range) ---
+    // --- 4. Process Top Sold Products (V2 Logic) ---
     const soldProducts = new Map();
 
-    // Tally from Direct Sales
+    // Tally from Direct Sales (Unchanged)
     directSalesSnapshot.forEach(doc => {
         const sale = doc.data();
-        if (sale.saleDate.toDate() >= startDate && sale.saleDate.toDate() <= endDate) {
-            sale.lineItems.forEach(item => {
-                const productId = item.productId; // Use the ID
+        const saleDate = sale.saleDate?.toDate();
+        if (saleDate >= startDate && saleDate <= endDate) {
+            (sale.lineItems || []).forEach(item => {
+                const productId = item.productId;
                 if (productId) {
                     const currentData = soldProducts.get(productId) || { totalQuantity: 0, productName: item.productName };
-                    currentData.totalQuantity += item.quantity;
+                    currentData.totalQuantity += (item.quantity || 0);
                     soldProducts.set(productId, currentData);
                 }
             });
         }
     });
 
-    // Tally from Consignment Sales
-    consignmentActivitiesSnapshot.forEach(doc => {
-        const activity = doc.data();
-        if (activity.activityDate.toDate() >= startDate && activity.activityDate.toDate() <= endDate) {
-            const productId = activity.productId; // Use the ID
-            if (productId) {
-                const currentData = soldProducts.get(productId) || { totalQuantity: 0, productName: activity.productName };
-                const quantity = activity.quantity || activity.quantityDelta || 0;
-                currentData.totalQuantity += quantity;
-                soldProducts.set(productId, currentData);
-            }
+    // ✅ NEW: Tally from Simple Consignment (V2)
+    // We iterate through the 'items' array inside each order document
+    simpleConsignmentSnapshot.forEach(doc => {
+        const order = doc.data();
+        const orderDate = order.checkoutDate?.toDate();
+        
+        // Only count sales from orders within the date range
+        if (orderDate >= startDate && orderDate <= endDate) {
+            (order.items || []).forEach(item => {
+                const productId = item.productId;
+                const qtySold = item.quantitySold || 0;
+                
+                if (productId && qtySold > 0) {
+                    const currentData = soldProducts.get(productId) || { totalQuantity: 0, productName: item.productName };
+                    currentData.totalQuantity += qtySold;
+                    soldProducts.set(productId, currentData);
+                }
+            });
         }
     });
 
     const topSold = Array.from(soldProducts.entries()).map(([productId, data]) => {
-        // Find the product in masterData to get its category
         const product = masterData.products.find(p => p.id === productId);
         const category = masterData.categories.find(c => c.id === product?.categoryId);
-        
-        return { 
+
+        return {
             productId: productId,
-            productName: data.productName, 
+            productName: data.productName,
             totalQuantity: data.totalQuantity,
             categoryName: category ? category.categoryName : 'N/A'
         };
     }).sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-
+    // --- 5. Process Donations (Unchanged) ---
     donationsSnapshot.forEach(doc => {
         const donation = doc.data();
         const amount = donation.amount || 0;
         totalDonations += amount;
 
-        // Use the 'source' field you created to categorize the donation
         if (donation.source === DONATION_SOURCES.CONSIGNMENT_OVERPAYMENT) {
             consignmentDonations += amount;
         } else if (donation.source === DONATION_SOURCES.DIRECT_SALE_CHURCH_STORE) {
@@ -5202,33 +5202,31 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         }
     });
 
-
-
-    // --- 5. Assemble and Return the Final Object ---
+    // --- 6. Assemble Final Object ---
     const summary = {
         salesSummary: {
-            total: { 
-                invoiced: totalInvoiced - totalExpenses, 
-                cash: totalCash, 
+            total: {
+                invoiced: totalInvoiced - totalExpenses,
+                cash: totalCash,
                 diff: totalInvoiced - totalCash,
-                expenses:totalExpenses
+                expenses: totalExpenses
             },
-            consignment: { 
-                invoiced: consignmentSold, // Represents actual sales revenue
-                cash: consignmentCash, 
+            consignment: {
+                invoiced: consignmentSold,
+                cash: consignmentCash,
                 diff: consignmentSold - (consignmentCash + consignmentExpenses),
-                checkout: consignmentCheckedOut, // Value of goods currently with teams
-                consignmentExpenses:consignmentExpenses
+                checkout: consignmentCheckedOut,
+                consignmentExpenses: consignmentExpenses
             },
-            tastyTreats: { 
-                invoiced: tastyInvoiced - tastyExpenses, 
-                cash: tastyCash, 
+            tastyTreats: {
+                invoiced: tastyInvoiced - tastyExpenses,
+                cash: tastyCash,
                 diff: tastyInvoiced - (tastyCash + tastyExpenses),
                 tastyExpenses: tastyExpenses
             },
-            churchStore: { 
-                invoiced: churchInvoiced - churchExpenses, 
-                cash: churchCash, 
+            churchStore: {
+                invoiced: churchInvoiced - churchExpenses,
+                cash: churchCash,
                 diff: churchInvoiced - (churchCash + churchExpenses),
                 churchExpenses: churchExpenses
             }
@@ -5245,7 +5243,6 @@ export async function generateAdminDashboardSummary(daysBack = 365) {
         topSoldProducts: topSold
     };
 
-
-    console.log("[Reports] Admin Dashboard Summary Generated:", summary);
+    console.log("[Reports] Admin Dashboard Summary Generated (V2):", summary);
     return summary;
 }
