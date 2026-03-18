@@ -5558,7 +5558,7 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
         // Branch logic: Update the specific total counter based on transaction type
         if (paymentType === 'Payment') {
             updateObj.totalAmountPaid = firebase.firestore.FieldValue.increment(amountToApply);
-        } else if (type === 'Expense') {
+        } else if (paymentType === 'Expense') {
             updateObj.totalExpenses = firebase.firestore.FieldValue.increment(amountToApply);
         }
 
