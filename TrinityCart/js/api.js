@@ -5583,7 +5583,7 @@ export async function recordSimpleConsignmentPayment(orderId, paymentData, user)
             });
         }
         
-        console.log(`[API] Recorded ${type} of ${amountToApply} for order ${orderId}. Donation: ${donationAmount}`);
+        console.log(`[API] Recorded ${paymentType} of ${amountToApply} for order ${orderId}. Donation: ${donationAmount}`);
     });
 }
 
