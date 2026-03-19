@@ -17416,13 +17416,12 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 field: "productName", 
                 headerName: "Product", 
-                width:250,
-                // --- ✅ ADD THESE TWO PROPERTIES ---
+                width: 250,
                 wrapText: true, 
-                //autoHeight: true,
-                // ------------------------------------
+                autoHeight: true, // ✅ UNCOMMENTED: Required for wrapText to work
+                pinned: 'left',
                 cellRenderer: params => {
-                    if (!params.data) return params.value;
+                    if (!params.data || params.node.isRowPinned()) return params.value;
 
                     const d = params.data;
                     const onHand = (d.quantityCheckedOut || 0) - (
@@ -17435,7 +17434,6 @@ export function showConsignmentModalV2(orderData = null) {
                     const isLocked = onHand === 0 && (d.quantityCheckedOut > 0);
 
                     if (isLocked) {
-                        // Return the name with a padlock icon
                         return `
                             <div class="flex items-center space-x-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -17445,66 +17443,59 @@ export function showConsignmentModalV2(orderData = null) {
                             </div>
                         `;
                     } else {
-                        // Return the normal name
                         return `<span class="font-semibold text-gray-800">${params.value}</span>`;
                     }
                 },
                 cellStyle: { 'line-height': '1.4', 'padding-top': '8px', 'padding-bottom': '8px' }
-
             },
             { 
-                // field: "inventoryCount", // We remove the direct field mapping
+                // ✅ DYNAMIC VERSION KEPT: This looks up live stock from masterData
                 headerName: "Store Stock", 
                 width: 110,
                 cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'left' },
-                // --- ✅ THE FIX: Dynamic Value Getter ---
                 valueGetter: params => {
-                    if (!params.data) return 0;
-                    // 1. Look up the product in the real-time masterData cache
+                    if (!params.data || params.node.isRowPinned()) return '';
                     const masterProduct = masterData.products.find(p => p.id === params.data.productId);
-                    // 2. Return the LIVE inventory count from the master record
                     return masterProduct ? masterProduct.inventoryCount : 0;
                 },
-                // ----------------------------------------
-                tooltipValueGetter: () => "Current live quantity available in the main store"
-            },
-            { 
-                field: "inventoryCount", 
-                headerName: "Store Stock", 
-                width: 110,
-                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'left' },
                 tooltipValueGetter: () => "Current quantity available in the main store"
             },
+            // ❌ DUPLICATE "Store Stock" REMOVED FROM HERE
             { 
                 field: "sellingPrice", 
                 headerName: "Price", 
                 width: 110,
                 valueFormatter: p => formatCurrency(p.value),
-                cellStyle: { 'font-weight': 'bold', color: '#1e40af' } // Blue to stand out
+                cellStyle: { 'font-weight': 'bold', color: '#1e40af' }
             },
             { 
                 field: "quantityCheckedOut", 
                 headerName: "Qty Out", 
                 width: 100, 
-                editable: !isSettled, // Allow editing if the order is not closed
+                editable: !isSettled,
                 cellEditor: 'agNumberCellEditor',
-                valueSetter: qtyValueSetter ,
-                cellStyle: params => {
-                    // Give it a subtle blue background to show it's editable
-                    return !isSettled ? { backgroundColor: '#f0f9ff' } : null;
+                valueSetter: qtyValueSetter,
+                cellStyle: params => !isSettled ? { backgroundColor: '#f0f9ff' } : null
+            },
+            { 
+                headerName: "On Hand", 
+                width: 100, 
+                cellStyle: {'font-weight': 'bold'},
+                valueGetter: p => {
+                    if (p.node.isRowPinned()) return p.data.onHand; // Support for pinned totals
+                    return (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0));
                 }
             },
-            { headerName: "On Hand", width: 100, valueGetter: p => (p.data.quantityCheckedOut || 0) - ((p.data.quantitySold || 0) + (p.data.quantityReturned || 0) + (p.data.quantityDamaged || 0) + (p.data.quantityGifted || 0)), cellStyle: {'font-weight': 'bold'} },
-            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  },
+            { field: "quantitySold", headerName: "Qty Sold", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor', valueSetter: qtyValueSetter },
             { 
-                field: "valueSold", // Map to the field in our pinnedRow object
+                field: "valueSold",
                 headerName: "Value Sold", 
                 width: 110, 
                 valueGetter: p => p.node.isRowPinned() ? p.data.valueSold : (p.data.quantitySold || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value),
                 cellStyle: { fontWeight: 'bold' }
             },
-            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor' ,valueSetter: qtyValueSetter },
+            { field: "quantityReturned", headerName: "Qty Rtrn", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor', valueSetter: qtyValueSetter },
             { 
                 field: "valueReturned",
                 headerName: "Value Rtrn", 
@@ -17512,7 +17503,7 @@ export function showConsignmentModalV2(orderData = null) {
                 valueGetter: p => p.node.isRowPinned() ? p.data.valueReturned : (p.data.quantityReturned || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value)
             },
-            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  },
+            { field: "quantityDamaged", headerName: "Qty Dmg", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor', valueSetter: qtyValueSetter },
             { 
                 field: "valueDamaged",
                 headerName: "Value Dmg", 
@@ -17520,8 +17511,10 @@ export function showConsignmentModalV2(orderData = null) {
                 valueGetter: p => p.node.isRowPinned() ? p.data.valueDamaged : (p.data.quantityDamaged || 0) * (p.data.sellingPrice || 0),
                 valueFormatter: p => formatCurrency(p.value)
             },
-            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled,  cellEditor: 'agNumberCellEditor',valueSetter: qtyValueSetter  }
+            { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor', valueSetter: qtyValueSetter }
         ];
+
+        
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
 
