@@ -300,6 +300,7 @@ export function hideLoader() {
     modalLoaders.forEach(ml => ml.classList.add('hidden'));
 }
 
+
 // --- UPDATE THE GLOBAL EVENT LISTENER ---
 document.addEventListener('masterDataUpdated', (e) => {
     const { type } = e.detail;
@@ -312,6 +313,9 @@ document.addEventListener('masterDataUpdated', (e) => {
         setTimeout(() => {
             updateInventoryLegendCounts();
         }, 200);
+        if (consignmentItemsGridApiV2) {
+            consignmentItemsGridApiV2.refreshCells({ columns: ['inventoryCount'], force: true });
+        }
     }
 
     if (type === 'seasons') {
