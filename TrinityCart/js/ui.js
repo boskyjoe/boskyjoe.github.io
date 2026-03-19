@@ -93,6 +93,47 @@ const DASHBOARD_CACHE_CONFIG = {
     VISUAL_INDICATORS: true
 };
 
+/**
+ * Custom Header Component for AG-Grid Community
+ * Adds a manual refresh button to the column header.
+ */
+class StoreStockHeaderComponent {
+    init(params) {
+        this.params = params;
+        this.eGui = document.createElement('div');
+        this.eGui.className = 'flex items-center justify-between w-full';
+        
+        // We use a simple template with your display name and an SVG icon
+        this.eGui.innerHTML = `
+            <span class="ag-header-cell-text">${params.displayName}</span>
+            <button type="button" class="refresh-stock-btn p-1 hover:bg-blue-100 rounded-md transition-all ml-2" title="Click to refresh live store stock">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        `;
+
+        this.btn = this.eGui.querySelector('.refresh-stock-btn');
+        this.btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 🛑 CRITICAL: Prevents AG-Grid from sorting the column when you click the icon
+            
+            // 1. Trigger the refresh for this specific column ID
+            this.params.api.refreshCells({
+                columns: [this.params.column.getColId()],
+                force: true
+            });
+            
+            // 2. Visual feedback (spin the icon)
+            const svg = this.btn.querySelector('svg');
+            svg.classList.add('animate-spin');
+            setTimeout(() => svg.classList.remove('animate-spin'), 600);
+            
+            console.log(`[UI] Manually refreshed: ${this.params.displayName}`);
+        });
+    }
+
+    getGui() { return this.eGui; }
+}
 
 
 /**
@@ -343,19 +384,6 @@ document.addEventListener('masterDataUpdated', (e) => {
         setTimeout(() => {
             updateInventoryLegendCounts();
         }, 200);
-        if (consignmentItemsGridApiV2) {
-            console.log("[ui.js] Products updated. Forcing Store Stock refresh.");
-            
-            // 1. Refresh the specific column
-            consignmentItemsGridApiV2.refreshCells({ 
-                columns: ['inventoryCount'], 
-                force: true 
-            });
-
-            // 2. If the value still feels "stuck", redrawRows is the nuclear option 
-            // that always works in the Community edition.
-            consignmentItemsGridApiV2.redrawRows(); 
-        }
     }
 
     if (type === 'seasons') {
@@ -17105,6 +17133,9 @@ const consignmentItemsGridOptionsV2 = {
     getRowId: params => params.data.productId,
     theme: 'legacy',
     defaultColDef: { resizable: true },
+    components: {
+        'storeStockHeader': StoreStockHeaderComponent 
+    },
     rowClassRules: {
         // 1. COMPLETED ROWS: Gray, dimmed, and italicized
         'bg-gray-100 text-gray-400 opacity-60 italic': (params) => {
@@ -17489,18 +17520,20 @@ export function showConsignmentModalV2(orderData = null) {
                 cellStyle: { 'line-height': '1.4', 'padding-top': '8px', 'padding-bottom': '8px' }
             },
             { 
-                // ✅ DYNAMIC VERSION KEPT: This looks up live stock from masterData
+                colId: "inventoryCount",
                 headerName: "Store Stock", 
-                width: 110,
-                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'left' },
+                width: 130, 
+                cellStyle: { color: '#6b7280', fontStyle: 'italic' },
+                
+                // ✅ Tell AG-Grid to use our custom header for THIS column only
+                headerComponent: 'storeStockHeader', 
+                
                 valueGetter: params => {
                     if (!params.data || params.node.isRowPinned()) return '';
                     const masterProduct = masterData.products.find(p => p.id === params.data.productId);
                     return masterProduct ? masterProduct.inventoryCount : 0;
-                },
-                tooltipValueGetter: () => "Current quantity available in the main store"
+                }
             },
-            // ❌ DUPLICATE "Store Stock" REMOVED FROM HERE
             { 
                 field: "sellingPrice", 
                 headerName: "Price", 
