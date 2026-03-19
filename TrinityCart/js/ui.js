@@ -12631,6 +12631,7 @@ export async function loadLimitedAccessDashboard(user) {
  * ADMIN LANDING DASHBOARD: Complete system metrics and financial overview
  */
 
+
 async function loadAdminLandingDashboard(user, forceRefresh = false) {
     console.log(`[ui.js] 👑 Loading admin dashboard (forceRefresh: ${forceRefresh})`);
 
@@ -17414,7 +17415,7 @@ export function showConsignmentModalV2(orderData = null) {
                 width:250,
                 // --- ✅ ADD THESE TWO PROPERTIES ---
                 wrapText: true, 
-                autoHeight: true,
+                //autoHeight: true,
                 // ------------------------------------
                 cellRenderer: params => {
                     if (!params.data) return params.value;
@@ -17446,6 +17447,22 @@ export function showConsignmentModalV2(orderData = null) {
                 },
                 cellStyle: { 'line-height': '1.4', 'padding-top': '8px', 'padding-bottom': '8px' }
 
+            },
+            { 
+                // field: "inventoryCount", // We remove the direct field mapping
+                headerName: "Store Stock", 
+                width: 110,
+                cellStyle: { color: '#6b7280', fontStyle: 'italic', textAlign: 'left' },
+                // --- ✅ THE FIX: Dynamic Value Getter ---
+                valueGetter: params => {
+                    if (!params.data) return 0;
+                    // 1. Look up the product in the real-time masterData cache
+                    const masterProduct = masterData.products.find(p => p.id === params.data.productId);
+                    // 2. Return the LIVE inventory count from the master record
+                    return masterProduct ? masterProduct.inventoryCount : 0;
+                },
+                // ----------------------------------------
+                tooltipValueGetter: () => "Current live quantity available in the main store"
             },
             { 
                 field: "inventoryCount", 
