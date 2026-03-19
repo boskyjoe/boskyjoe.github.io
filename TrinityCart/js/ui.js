@@ -306,7 +306,37 @@ document.addEventListener('masterDataUpdated', (e) => {
     const { type } = e.detail;
 
     if (type === 'categories') {
-        // ... (existing logic for categories) ...
+        console.log("[ui.js] Categories updated. Refreshing UI components...");
+
+        // 1. Refresh Grids: Any grid using a valueFormatter to look up category names 
+        // needs to be told to refresh those specific cells.
+        if (productsGridApi) {
+            productsGridApi.refreshCells({ columns: ['categoryId'], force: true });
+        }
+        if (availableProductsGridApi) {
+            availableProductsGridApi.refreshCells({ columns: ['categoryId'], force: true });
+        }
+
+        // 2. Update Form Dropdowns: Repopulate category selectors in your modals
+        const categorySelects = [
+            document.getElementById('itemCategory-select'),           // Product Management Form
+            document.getElementById('catalogue-itemCategory-select'), // Add to Catalogue Modal
+            document.getElementById('bulk-category-filter')           // Bulk Upload Filter
+        ];
+
+        categorySelects.forEach(select => {
+            if (select) {
+                const currentValue = select.value; // Save current selection
+                select.innerHTML = '<option value="">Select a category...</option>';
+                
+                masterData.categories.forEach(cat => {
+                    const option = new Option(cat.categoryName, cat.id);
+                    select.add(option);
+                });
+                
+                select.value = currentValue; // Restore selection if it still exists
+            }
+        });
     }
 
     if (type === 'products') {
@@ -314,7 +344,17 @@ document.addEventListener('masterDataUpdated', (e) => {
             updateInventoryLegendCounts();
         }, 200);
         if (consignmentItemsGridApiV2) {
-            consignmentItemsGridApiV2.refreshCells({ columns: ['inventoryCount'], force: true });
+            console.log("[ui.js] Products updated. Forcing Store Stock refresh.");
+            
+            // 1. Refresh the specific column
+            consignmentItemsGridApiV2.refreshCells({ 
+                columns: ['inventoryCount'], 
+                force: true 
+            });
+
+            // 2. If the value still feels "stuck", redrawRows is the nuclear option 
+            // that always works in the Community edition.
+            // consignmentItemsGridApiV2.redrawRows(); 
         }
     }
 
@@ -17514,7 +17554,7 @@ export function showConsignmentModalV2(orderData = null) {
             { field: "quantityGifted", headerName: "Qty Gift", width: 100, editable: !isSettled, cellEditor: 'agNumberCellEditor', valueSetter: qtyValueSetter }
         ];
 
-        
+
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
 
