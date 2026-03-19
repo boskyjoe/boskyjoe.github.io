@@ -354,7 +354,7 @@ document.addEventListener('masterDataUpdated', (e) => {
 
             // 2. If the value still feels "stuck", redrawRows is the nuclear option 
             // that always works in the Community edition.
-            // consignmentItemsGridApiV2.redrawRows(); 
+            consignmentItemsGridApiV2.redrawRows(); 
         }
     }
 
