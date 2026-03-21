@@ -192,14 +192,13 @@ export function initializeConsignmentV2Module() {
 
         // 5. Map new items to the required structure
         const processedNewItems = itemsToAdd.map(item => {
-            const masterProduct = masterData.products.find(p => p.id === item.productId);
-            const inventoryCount = masterProduct ? masterProduct.inventoryCount : 0;
-
+            // We look up the inventory count ONLY for the UI to use in the valueGetter
+            // We do NOT add it to the object that will be saved.
             return {
                 productId: item.productId,
                 productName: item.productName,
                 sellingPrice: item.sellingPrice,
-                inventoryCount: inventoryCount,
+                // ❌ REMOVED: inventoryCount: inventoryCount,
                 quantityCheckedOut: 0,
                 quantitySold: 0,
                 quantityReturned: 0,
