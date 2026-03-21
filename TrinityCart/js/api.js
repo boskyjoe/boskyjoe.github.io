@@ -5425,23 +5425,36 @@ export async function updateDraftSaleStatus(draftId, newStatus, user) {
  * @param {Array<object>} items - The items being checked out.
  * @param {object} user - The admin creating the order.
  */
+
+const sanitizeConsignmentItem = (item) => ({
+    productId: item.productId,
+    productName: item.productName,
+    sellingPrice: Number(item.sellingPrice) || 0,
+    quantityCheckedOut: Number(item.quantityCheckedOut) || 0,
+    quantitySold: Number(item.quantitySold) || 0,
+    quantityReturned: Number(item.quantityReturned) || 0,
+    quantityDamaged: Number(item.quantityDamaged) || 0,
+    quantityGifted: Number(item.quantityGifted) || 0
+    // ❌ 'inventoryCount' is NOT in this list, so it will never be saved.
+});
+
 export async function createSimpleConsignment(orderData, items, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc();
-
     const consignmentId = `SC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
+    // Sanitize all items before saving
+    const cleanItems = items.map(item => sanitizeConsignmentItem(item));
+
     return db.runTransaction(async (transaction) => {
-        // 1. Create the main order document
         transaction.set(orderRef, {
             ...orderData,
             consignmentId: consignmentId,
             status: 'Active',
             checkoutDate: now,
-            items: items, // Embed the items array directly
-            // Initial financial state
-            totalValueCheckedOut: items.reduce((sum, item) => sum + (item.quantityCheckedOut * item.sellingPrice), 0),
+            items: cleanItems, // ✅ SAVING CLEAN DATA
+            totalValueCheckedOut: cleanItems.reduce((sum, i) => sum + (i.quantityCheckedOut * i.sellingPrice), 0),
             totalValueSold: 0,
             totalAmountPaid: 0,
             totalExpenses: 0,
@@ -5449,8 +5462,7 @@ export async function createSimpleConsignment(orderData, items, user) {
             audit: { createdBy: user.email, createdOn: now }
         });
 
-        // 2. Decrement inventory for each item
-        for (const item of items) {
+        for (const item of cleanItems) {
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(item.productId);
             transaction.update(productRef, {
                 inventoryCount: firebase.firestore.FieldValue.increment(-item.quantityCheckedOut)
@@ -5458,7 +5470,6 @@ export async function createSimpleConsignment(orderData, items, user) {
         }
     });
 }
-
 /**
  * Settles a Simple Consignment order, updating item quantities and financials.
  * @param {string} orderId - The ID of the order to settle.
@@ -5676,70 +5687,43 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
 
     try {
         await db.runTransaction(async (transaction) => {
-            // 1. READ PHASE
             const orderDoc = await transaction.get(orderRef);
-            if (!orderDoc.exists) {
-                throw new Error("Order document not found for update.");
-            }
-            const orderData = orderDoc.data();
+            if (!orderDoc.exists) throw new Error("Order not found.");
             
-            // Create a mutable copy of the items array
-            const items = [...(orderData.items || [])]; 
+            const orderData = orderDoc.data();
+            const items = [...(orderData.items || [])];
 
-            // Find the specific item being updated
             let itemIndex = items.findIndex(item => item.productId === productId);
-            let oldItemData;
+            let oldQuantityCheckedOut = 0;
+            let oldQuantityReturned = 0;
 
-            // --- ✅ CRITICAL FIX: HANDLE NEW ITEMS ADDED DURING SETTLEMENT ---
             if (itemIndex === -1) {
-                console.log(`[API] Product ${productId} not found in order. Creating new entry...`);
-                
-                // Fetch product details from the masterData cache
                 const productMaster = masterData.products.find(p => p.id === productId);
-                if (!productMaster) throw new Error(`Product master data not found for ID: ${productId}`);
-
-                // Create the new item structure
-                oldItemData = {
+                if (!productMaster) throw new Error("Product master data not found.");
+                items.push({
                     productId: productId,
                     productName: productMaster.itemName,
                     sellingPrice: productMaster.sellingPrice,
-                    quantityCheckedOut: 0,
-                    quantitySold: 0,
-                    quantityReturned: 0,
-                    quantityDamaged: 0,
-                    quantityGifted: 0
-                };
-                
-                // Add it to our local array copy
-                items.push(oldItemData);
+                    quantityCheckedOut: 0, quantitySold: 0, quantityReturned: 0, quantityDamaged: 0, quantityGifted: 0
+                });
                 itemIndex = items.length - 1;
             } else {
-                // Item exists, just copy the old data for delta calculations
-                oldItemData = { ...items[itemIndex] };
+                oldQuantityCheckedOut = items[itemIndex].quantityCheckedOut || 0;
+                oldQuantityReturned = items[itemIndex].quantityReturned || 0;
             }
 
-            // 2. MODIFY PHASE
             items[itemIndex][fieldToUpdate] = newQuantity;
 
-            // VALIDATION: Ensure total accounted for does not exceed checkout quantity
-            const itm = items[itemIndex];
-            const totalAccounted = (itm.quantitySold || 0) + (itm.quantityReturned || 0) + 
-                                   (itm.quantityDamaged || 0) + (itm.quantityGifted || 0);
-            
-            if (totalAccounted > itm.quantityCheckedOut) {
-                throw new Error(`Invalid quantity. Total accounted for (${totalAccounted}) cannot exceed Qty Out (${itm.quantityCheckedOut}).`);
-            }
+            // ✅ SANITIZE THE ENTIRE ARRAY before writing back to DB
+            // This "cleans" any old bad data that might already be in the document
+            const cleanItems = items.map(item => sanitizeConsignmentItem(item));
 
-            // RECALCULATE FINANCIAL TOTALS
-            const totalValueCheckedOut = items.reduce((sum, i) => sum + ((i.quantityCheckedOut || 0) * i.sellingPrice), 0);
-            const totalValueSold = items.reduce((sum, i) => sum + ((i.quantitySold || 0) * i.sellingPrice), 0);
-            const totalExpenses = orderData.totalExpenses || 0;
-            const totalAmountPaid = orderData.totalAmountPaid || 0;
-            const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
+            const totalValueCheckedOut = cleanItems.reduce((sum, i) => sum + (i.quantityCheckedOut * i.sellingPrice), 0);
+            const totalValueSold = cleanItems.reduce((sum, i) => sum + (i.quantitySold * i.sellingPrice), 0);
+            const newBalanceDue = totalValueSold - (orderData.totalAmountPaid || 0) - (orderData.totalExpenses || 0);
 
-            // 3. WRITE PHASE (Order Document)
             transaction.update(orderRef, {
-                items: items,
+                items: cleanItems, // ✅ WRITING CLEAN DATA
                 totalValueCheckedOut: totalValueCheckedOut,
                 totalValueSold: totalValueSold,
                 balanceDue: newBalanceDue,
@@ -5747,33 +5731,19 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
                 'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // 4. WRITE PHASE (Inventory Management)
+            // Inventory logic (unchanged)
             const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
-
             if (fieldToUpdate === 'quantityCheckedOut') {
-                // If increasing checkout qty (Qty Out), main inventory goes DOWN
-                const delta = newQuantity - (oldItemData.quantityCheckedOut || 0);
-                if (delta !== 0) {
-                    transaction.update(productRef, {
-                        inventoryCount: firebase.firestore.FieldValue.increment(-delta)
-                    });
-                }
+                const delta = newQuantity - oldQuantityCheckedOut;
+                transaction.update(productRef, { inventoryCount: firebase.firestore.FieldValue.increment(-delta) });
             } else if (fieldToUpdate === 'quantityReturned') {
-                // If increasing return qty, main inventory goes UP
-                const delta = newQuantity - (oldItemData.quantityReturned || 0);
-                if (delta !== 0) {
-                    transaction.update(productRef, {
-                        inventoryCount: firebase.firestore.FieldValue.increment(delta)
-                    });
-                }
+                const delta = newQuantity - oldQuantityReturned;
+                transaction.update(productRef, { inventoryCount: firebase.firestore.FieldValue.increment(delta) });
             }
         });
-
-        console.log(`[API] ✅ Successfully updated ${fieldToUpdate} for product ${productId}`);
-
     } catch (error) {
-        console.error("API Error in updateSimpleConsignmentItemQuantity:", error);
-        throw error; // Re-throw so main.js can show the error modal
+        console.error("API Error:", error);
+        throw error;
     }
 }
 
