@@ -17474,14 +17474,7 @@ export function showConsignmentModalV2(orderData = null) {
         });
 
        
-        const enrichedItems = (orderData.items || []).map(item => {
-            const masterProduct = masterData.products.find(p => p.id === item.productId);
-            return {
-                ...item,
-                // Add the live stock count from the master catalogue
-                inventoryCount: masterProduct ? masterProduct.inventoryCount : 0 
-            };
-        });
+        const rawItems = orderData.items || [];
 
         const settleColumns = [
             { 
@@ -17522,12 +17515,10 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 colId: "inventoryCount",
                 headerName: "Store Stock", 
-                width: 130, 
+                width: 130,
+                headerComponent: 'storeStockHeader',
                 cellStyle: { color: '#6b7280', fontStyle: 'italic' },
-                
-                // ✅ Tell AG-Grid to use our custom header for THIS column only
-                headerComponent: 'storeStockHeader', 
-                
+                // ✅ THE FIX: The value is looked up but NEVER saved to params.data
                 valueGetter: params => {
                     if (!params.data || params.node.isRowPinned()) return '';
                     const masterProduct = masterData.products.find(p => p.id === params.data.productId);
@@ -17589,7 +17580,7 @@ export function showConsignmentModalV2(orderData = null) {
 
 
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
-        consignmentItemsGridApiV2.setGridOption('rowData', enrichedItems);
+        consignmentItemsGridApiV2.setGridOption('rowData', rawItems);
 
         const cellChangeHandler = (params) => {
             console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
