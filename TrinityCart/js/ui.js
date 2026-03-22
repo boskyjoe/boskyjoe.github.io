@@ -17650,7 +17650,14 @@ export function showConsignmentModalV2(orderData = null) {
                 field: "inventoryCount", 
                 headerName: "Available", 
                 width: 120,
-                cellStyle: { 'font-weight': 'bold', 'text-align': 'center' }
+                cellStyle: { 'font-weight': 'bold', 'text-align': 'center' },
+                valueGetter: params => {
+                    if (!params.data) return 0;
+                    // Look up the product in the real-time masterData cache
+                    const masterProduct = masterData.products.find(p => p.id === params.data.productId);
+                    // Return the LIVE inventory count from the master record
+                    return masterProduct ? masterProduct.inventoryCount : 0;
+                }
             },
             { 
                 field: "sellingPrice", 
@@ -17664,6 +17671,12 @@ export function showConsignmentModalV2(orderData = null) {
                 width: 150,
                 editable: true, 
                 cellEditor: 'agNumberCellEditor',
+                valueFormatter: params => {
+                    if (params.value === null || params.value === undefined || params.value === '') {
+                        return 0;
+                    }
+                    return params.value;
+                },
                 cellStyle: { backgroundColor: '#eef2ff' } // Highlight the editable cell
             }
         ];
