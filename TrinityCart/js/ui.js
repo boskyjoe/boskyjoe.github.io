@@ -17288,32 +17288,49 @@ function updateConsignmentItemsV2Totals(gridApi) {
     gridApi.setGridOption('pinnedBottomRowData', [pinnedRow]);
 }
 
-// --- 1. Define the Reusable Validation Logic ---
+/**
+ * Smart validator for consignment quantities.
+ * Allows setting 'Qty Out' while ensuring 'Sold/Returned/etc' don't exceed it.
+ */
 const qtyValueSetter = (params) => {
     const newValue = Number(params.newValue) || 0;
     const d = params.data;
     const field = params.colDef.field;
 
-    // Calculate the total of ALL other quantity fields (excluding the one being edited)
-    let otherFieldsTotal = 0;
-    if (field !== 'quantitySold') otherFieldsTotal += (d.quantitySold || 0);
-    if (field !== 'quantityReturned') otherFieldsTotal += (d.quantityReturned || 0);
-    if (field !== 'quantityDamaged') otherFieldsTotal += (d.quantityDamaged || 0);
-    if (field !== 'quantityGifted') otherFieldsTotal += (d.quantityGifted || 0);
+    // 1. Calculate the total of items already reported (Sold + Returned + Damaged + Gifted)
+    const totalAccountedFor = (field === 'quantitySold' ? newValue : (d.quantitySold || 0)) +
+                              (field === 'quantityReturned' ? newValue : (d.quantityReturned || 0)) +
+                              (field === 'quantityDamaged' ? newValue : (d.quantityDamaged || 0)) +
+                              (field === 'quantityGifted' ? newValue : (d.quantityGifted || 0));
 
-    const newTotalAccountedFor = otherFieldsTotal + newValue;
-
-    // VALIDATION: Total cannot exceed what was physically checked out
-    if (newTotalAccountedFor > d.quantityCheckedOut) {
-        showModal('error', 'Invalid Quantity', 
-            `The total accounted for (${newTotalAccountedFor}) cannot exceed the quantity checked out (${d.quantityCheckedOut}).`
-        );
-        return false; // ❌ REJECT the change (grid keeps the old value)
+    // 2. APPLY LOGIC BASED ON WHICH COLUMN IS BEING EDITED
+    if (field === 'quantityCheckedOut') {
+        // --- CASE A: Editing "Qty Out" ---
+        // We only need to ensure that the new "Qty Out" isn't LOWER than 
+        // what has already been reported as sold/returned.
+        const currentReportedTotal = (d.quantitySold || 0) + (d.quantityReturned || 0) + 
+                                     (d.quantityDamaged || 0) + (d.quantityGifted || 0);
+        
+        if (newValue < currentReportedTotal) {
+            showModal('error', 'Invalid Quantity', 
+                `Checkout quantity cannot be less than the total already accounted for (${currentReportedTotal}).`
+            );
+            return false; // Reject
+        }
+    } else {
+        // --- CASE B: Editing Sold, Returned, Damaged, or Gifted ---
+        // We ensure the new total doesn't exceed the "Qty Out" limit.
+        if (totalAccountedFor > d.quantityCheckedOut) {
+            showModal('error', 'Invalid Quantity', 
+                `The total accounted for (${totalAccountedFor}) cannot exceed the quantity checked out (${d.quantityCheckedOut}).`
+            );
+            return false; // Reject
+        }
     }
 
-    // If valid, update the data object
+    // 3. If validation passes, update the data object
     d[field] = newValue;
-    return true; // ✅ ACCEPT the change
+    return true; // Accept
 };
 
 
@@ -17480,7 +17497,7 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 field: "productName", 
                 headerName: "Product", 
-                width: 250,
+                width: 150,
                 wrapText: true, 
                 autoHeight: true, // ✅ UNCOMMENTED: Required for wrapText to work
                 pinned: 'left',
