@@ -17489,26 +17489,6 @@ export function showConsignmentModalV2(orderData = null) {
             // --- END OF NEW LOGIC ---
         };
 
-
-
-            const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
-            if (isSettled) {
-                finalizeBtn.textContent = "Order Closed";
-                finalizeBtn.disabled = true;
-                finalizeBtn.classList.replace('bg-green-600', 'bg-gray-400');
-            } else {
-                finalizeBtn.textContent = "Finalize & Close Order";
-                if (finalizeBtn) {
-                    // Button is only clickable if balance is 0 AND no items are left with the team
-                    const isReadyToClose = (newBalanceDue === 0 && totalOnHand === 0);
-                    finalizeBtn.disabled = !isReadyToClose;
-                    
-                    // Optional: Add a visual hint
-                    finalizeBtn.title = isReadyToClose ? "Ready to close" : "Cannot close: Balance must be 0 and all items accounted for.";
-                }
-            }
-        };
-
         const db = firebase.firestore();
         
         unsubscribeOrderDetailsListenerV2 = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderData.id)
