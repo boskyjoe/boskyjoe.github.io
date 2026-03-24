@@ -17662,7 +17662,7 @@ export function showConsignmentModalV2(orderData = null) {
 
         // Configure grid for checkout
         const checkoutColumns = [
-            { field: "productName", headerName: "Product", width: 300 },
+            { field: "productName", headerName: "Product", width: 450 },
             { 
                 field: "inventoryCount", 
                 headerName: "Available", 
