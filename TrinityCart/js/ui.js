@@ -17417,31 +17417,77 @@ export function showConsignmentModalV2(orderData = null) {
 
         const updateSettleFinancials = () => {
             const items = getConsignmentItemsV2();
+            
+            // 1. Calculate Financials
             const totalValueSold = items.reduce((sum, item) => sum + ((item.quantitySold || 0) * item.sellingPrice), 0);
             const totalExpenses = orderData.totalExpenses || 0;
             const totalAmountPaid = orderData.totalAmountPaid || 0;
             const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
 
-            // 2. Check if all items are accounted for (Total On Hand is 0)
+            // 2. Calculate if any items are still "On Hand"
             const totalOnHand = items.reduce((sum, item) => {
-                return sum + (item.quantityCheckedOut - ((item.quantitySold || 0) + (item.quantityReturned || 0) + (item.quantityDamaged || 0) + (item.quantityGifted || 0)));
+                return sum + (item.quantityCheckedOut - (
+                    (item.quantitySold || 0) + 
+                    (item.quantityReturned || 0) + 
+                    (item.quantityDamaged || 0) + 
+                    (item.quantityGifted || 0)
+                ));
             }, 0);
 
-
-            // Add the "-v2" suffix to all IDs here
+            // 3. Update the Summary Spans
             document.getElementById('consignment-total-sold-v2').textContent = formatCurrency(totalValueSold);
             document.getElementById('consignment-total-expenses-v2').textContent = formatCurrency(totalExpenses);
             document.getElementById('consignment-amount-due-v2').textContent = formatCurrency(newBalanceDue);
 
+            // 4. Handle "Add Products" button state
             if (addProductsBtn) {
                 addProductsBtn.disabled = isSettled;
-                // ✅ ADD: Visual feedback for the disabled state
                 if (isSettled) {
                     addProductsBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 } else {
                     addProductsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             }
+
+            // --- ✅ NEW: Finalize Button Logic ---
+            const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
+            if (finalizeBtn) {
+                if (isSettled) {
+                    // Case A: Already Settled
+                    finalizeBtn.disabled = true;
+                    finalizeBtn.textContent = "Order Closed";
+                    finalizeBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                } else {
+                    // Case B: Active Order - Check if ready to close
+                    // We use Math.abs < 0.01 for the balance to handle decimal math safety
+                    const isBalanceZero = Math.abs(newBalanceDue) < 0.01;
+                    const areItemsAccountedFor = totalOnHand === 0;
+
+                    const isReadyToClose = isBalanceZero && areItemsAccountedFor;
+
+                    finalizeBtn.disabled = !isReadyToClose;
+
+                    if (isReadyToClose) {
+                        // Visual state: Ready (Green)
+                        finalizeBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                        finalizeBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                        finalizeBtn.title = "All items and cash accounted for. Click to close order.";
+                    } else {
+                        // Visual state: Not Ready (Gray)
+                        finalizeBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                        finalizeBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        
+                        // Provide a helpful tooltip explaining why it's disabled
+                        let reason = "";
+                        if (!isBalanceZero) reason += `Balance is ${formatCurrency(newBalanceDue)}. `;
+                        if (!areItemsAccountedFor) reason += `${totalOnHand} items still on hand.`;
+                        finalizeBtn.title = `Cannot close: ${reason}`;
+                    }
+                }
+            }
+            // --- END OF NEW LOGIC ---
+        };
 
 
 
