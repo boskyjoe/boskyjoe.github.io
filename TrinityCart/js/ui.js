@@ -17662,11 +17662,11 @@ export function showConsignmentModalV2(orderData = null) {
 
         // Configure grid for checkout
         const checkoutColumns = [
-            { field: "productName", headerName: "Product", flex: 1 },
+            { field: "productName", headerName: "Product", width: 300 },
             { 
                 field: "inventoryCount", 
                 headerName: "Available", 
-                width: 120,
+                width: 150,
                 cellStyle: { 'font-weight': 'bold', 'text-align': 'center' },
                 valueGetter: params => {
                     if (!params.data) return 0;
@@ -17679,7 +17679,7 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 field: "sellingPrice", 
                 headerName: "Price", 
-                width: 120,
+                width: 150,
                 valueFormatter: p => formatCurrency(p.value) 
             },
             { 
