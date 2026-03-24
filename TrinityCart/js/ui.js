@@ -17497,7 +17497,7 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 field: "productName", 
                 headerName: "Product", 
-                width: 150,
+                width: 250,
                 wrapText: true, 
                 autoHeight: true, // ✅ UNCOMMENTED: Required for wrapText to work
                 pinned: 'left',
@@ -17532,7 +17532,7 @@ export function showConsignmentModalV2(orderData = null) {
             { 
                 colId: "inventoryCount",
                 headerName: "Store Stock", 
-                width: 130,
+                width: 150,
                 headerComponent: 'storeStockHeader',
                 cellStyle: { color: '#6b7280', fontStyle: 'italic' },
                 // ✅ THE FIX: The value is looked up but NEVER saved to params.data
