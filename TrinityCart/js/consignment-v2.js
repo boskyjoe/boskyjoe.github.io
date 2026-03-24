@@ -133,16 +133,25 @@ export function initializeConsignmentV2Module() {
                 'Are you sure? This will lock the order and all quantities from further changes.');
 
             if (confirmed) {
-                ProgressToast.show('Closing Order...', 'info');
+                ProgressToast.show('Finalizing Order...', 'info');
                 try {
                     await closeSimpleConsignment(orderId, user);
                     ProgressToast.showSuccess('Order finalized and locked.');
                     // The real-time listener in ui.js will automatically 
                     // refresh the modal to its read-only state.
+                    setTimeout(() => {
+                        closeConsignmentModalV2();
+                        console.log('[consignment-v2.js] Order finalized. Closing modal.');
+                    }, 1000);
+
                 } catch (error) {
-                    showModal('error', 'Closure Failed', error.message);
+                    console.error("Finalize Error:", error);
+                    ProgressToast.showError('Closure failed.');
+                    showModal('error', 'Error', `Could not close the order: ${error.message}`);
+                } finally {
+                    // Clean up the toast
+                    setTimeout(() => ProgressToast.hide(500), 1500);
                 }
-                setTimeout(() => ProgressToast.hide(500), 1200);
             }
         });
     }
