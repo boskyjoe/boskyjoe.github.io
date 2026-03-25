@@ -17541,6 +17541,11 @@ export function showConsignmentModalV2(orderData = null) {
                 field: "productName", 
                 headerName: "Product", 
                 width: 250,
+                filter: 'agTextColumnFilter', // ✅ Added text filter
+                filterParams: {
+                    buttons: ['reset', 'apply'],
+                    closeOnApply: true,
+                },
                 wrapText: true, 
                 autoHeight: true, // ✅ UNCOMMENTED: Required for wrapText to work
                 pinned: 'left',
