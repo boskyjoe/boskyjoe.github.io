@@ -17642,6 +17642,12 @@ export function showConsignmentModalV2(orderData = null) {
         consignmentItemsGridApiV2.setGridOption('columnDefs', settleColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', rawItems);
 
+        setTimeout(() => {
+            if (consignmentItemsGridApiV2) {
+                consignmentItemsGridApiV2.sizeColumnsToFit();
+            }
+        }, 100);
+
         const cellChangeHandler = (params) => {
             console.log('✅ 1. [ui.js] Cell value changed in settlement grid.');
             updateSettleFinancials(); // Update the visuals
