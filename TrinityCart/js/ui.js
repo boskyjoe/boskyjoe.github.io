@@ -17449,6 +17449,23 @@ export function showConsignmentModalV2(orderData = null) {
                 }
             }
 
+            // --- ✅ NEW: Action Button Visibility Logic ---
+            const saveProgressBtn = document.getElementById('consignment-save-progress-btn-v2');
+            const recordPaymentBtn = document.getElementById('consignment-record-payment-btn-v2');
+
+            if (isSettled) {
+                // If settled, hide ALL action buttons to make it a "Receipt" view
+                if (checkoutBtn) checkoutBtn.classList.add('hidden');
+                if (saveProgressBtn) saveProgressBtn.classList.add('hidden');
+                if (recordPaymentBtn) recordPaymentBtn.classList.add('hidden');
+            } else {
+                // If active, ensure settle-specific buttons are visible
+                if (saveProgressBtn) saveProgressBtn.classList.remove('hidden');
+                if (recordPaymentBtn) recordPaymentBtn.classList.remove('hidden');
+                // Checkout button is always hidden in Settle Mode
+                if (checkoutBtn) checkoutBtn.classList.add('hidden'); 
+            }
+
             // --- ✅ NEW: Finalize Button Logic ---
             const finalizeBtn = document.getElementById('consignment-finalize-btn-v2');
             if (finalizeBtn) {
@@ -17845,7 +17862,7 @@ const consignmentPaymentHistoryGridOptionsV2 = {
     theme: 'legacy',
     getRowId: params => params.data.id, // Ensure we can find rows by ID
     columnDefs: [
-        { field: "logDate", headerName: "Date", width: 180, valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' },
+        { field: "logDate", headerName: "Date", width: 200, valueFormatter: p => p.value ? p.value.toDate().toLocaleString() : '' },
         { 
             field: "paymentType", 
             headerName: "Type", 
@@ -17859,7 +17876,7 @@ const consignmentPaymentHistoryGridOptionsV2 = {
         { field: "amountApplied", headerName: "Amount Applied", width: 150, valueFormatter: p => formatCurrency(p.value) },
         { field: "donationAmount", headerName: "Donation", width: 120, valueFormatter: p => p.value > 0 ? formatCurrency(p.value) : '' },
         { field: "mode", headerName: "Mode", width: 120 },
-        { field: "reference", headerName: "Reference #", flex: 1 },
+        { field: "reference", headerName: "Reference #", width:150 },
         { field: "loggedBy", headerName: "Recorded By", width: 180 },
         
         // --- NEW: Status Column ---
