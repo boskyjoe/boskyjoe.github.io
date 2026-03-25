@@ -17705,7 +17705,16 @@ export function showConsignmentModalV2(orderData = null) {
 
         // Configure grid for checkout
         const checkoutColumns = [
-            { field: "productName", headerName: "Product", width: 450 },
+            { 
+                field: "productName", 
+                headerName: "Product", 
+                flex: 3, // ✅ Takes up 3 parts of the available space
+                filter: 'agTextColumnFilter', // ✅ Adds the text filter
+                wrapText: true,
+                autoHeight: true,
+                width:450,
+                cellStyle: { 'line-height': '1.4', 'padding-top': '8px', 'padding-bottom': '8px' }
+            },
             { 
                 field: "inventoryCount", 
                 headerName: "Available", 
@@ -17742,6 +17751,11 @@ export function showConsignmentModalV2(orderData = null) {
         ];
         consignmentItemsGridApiV2.setGridOption('columnDefs', checkoutColumns);
         consignmentItemsGridApiV2.setGridOption('rowData', []);
+        setTimeout(() => {
+            if (consignmentItemsGridApiV2) {
+                consignmentItemsGridApiV2.sizeColumnsToFit();
+            }
+        }, 100);
     }
 
     modal.style.display = 'flex';
