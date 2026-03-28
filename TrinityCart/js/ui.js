@@ -17087,6 +17087,7 @@ function initLeadProductsGrid() {
 }
 
 const leadProductsGridOptions = {
+    theme: 'legacy',
     columnDefs: [
         { 
             field: "productName", 
@@ -17171,33 +17172,40 @@ export function openLeadModal(leadData = null) {
     // 2. Populate Dropdowns (Source, Status, and the new Sales Catalogue)
     populateLeadDropdowns();
 
-    // 3. Initialize the Product Grid (only if not already initialized)
-    initLeadProductsGrid();
-
-    // 4. Set up Catalogue Change Listener
-    const catalogueSelect = document.getElementById('leadCatalogueSelect');
-    catalogueSelect.onchange = (e) => {
-        const selectedCatId = e.target.value;
-        if (leadProductsGridApi) {
-            const products = masterData.products
-                .filter(p => p.catalogueId === selectedCatId)
-                .map(p => ({
-                    productId: p.id,
-                    productName: p.itemName,
-                    sellingPrice: p.sellingPrice,
-                    requestedQty: 0
-                }));
-            leadProductsGridApi.setGridOption('rowData', products);
-        }
-    };
-
-    // 5. Wait for Grid API to be ready before populating data
+    // 3. WAIT for the Grid API to be ready
     const waitForLeadGrid = setInterval(() => {
         if (leadProductsGridApi) {
             clearInterval(waitForLeadGrid);
+            console.log("✅ [ui.js] Lead Product Grid API detected. Setting up listeners.");
 
+            // --- ATTACH LISTENER HERE (Inside the interval) ---
+            const catalogueSelect = document.getElementById('leadCatalogueSelect');
+            
+            catalogueSelect.onchange = (e) => {
+                const selectedCatId = e.target.value;
+                console.log("🔍 [ui.js] Catalogue changed to:", selectedCatId);
+                
+                if (!selectedCatId) {
+                    leadProductsGridApi.setGridOption('rowData', []);
+                    return;
+                }
+
+                // Filter products from masterData
+                const filteredProducts = masterData.products
+                    .filter(p => p.catalogueId === selectedCatId)
+                    .map(p => ({
+                        productId: p.id,
+                        productName: p.itemName,
+                        sellingPrice: p.sellingPrice,
+                        requestedQty: 0
+                    }));
+                
+                console.log(`📦 [ui.js] Loading ${filteredProducts.length} products into Lead Grid.`);
+                leadProductsGridApi.setGridOption('rowData', filteredProducts);
+            };
+
+            // 4. Handle Edit Mode vs Add Mode
             if (leadData) {
-                // --- EDIT MODE ---
                 title.textContent = 'Edit Lead Record';
                 document.getElementById('lead-id-input').value = leadData.id;
                 document.getElementById('customerName').value = leadData.customerName || '';
@@ -17206,13 +17214,11 @@ export function openLeadModal(leadData = null) {
                 document.getElementById('customerAddress').value = leadData.customerAddress || '';
                 document.getElementById('assignedTo').value = leadData.assignedTo || '';
                 
-                // Date Handling (Firestore Timestamp to Date Input)
                 if (leadData.enquiryDate) {
                     const d = leadData.enquiryDate.toDate ? leadData.enquiryDate.toDate() : new Date(leadData.enquiryDate);
                     document.getElementById('enquiryDate').value = d.toISOString().split('T')[0];
                 }
                 document.getElementById('expectedDeliveryDate').value = leadData.expectedDeliveryDate || '';
-
                 document.getElementById('leadSource').value = leadData.leadSource || '';
                 document.getElementById('leadStatus').value = leadData.leadStatus || 'New';
                 document.getElementById('leadCatalogueSelect').value = leadData.catalogueId || '';
@@ -17223,7 +17229,6 @@ export function openLeadModal(leadData = null) {
                     leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
                 }
             } else {
-                // --- ADD NEW MODE ---
                 title.textContent = 'Add New Lead';
                 document.getElementById('lead-id-input').value = '';
                 document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
