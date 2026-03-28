@@ -7189,7 +7189,7 @@ function setupCustomEventListeners() {
         try {
             console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
             // Call the new, correct API function
-            await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
+            await updateSimpleConsignmentItemQuantity(orderId, productId, productName, fieldToUpdate, newQuantity, user);
             // No success message needed for this background save.
             setTimeout(() => {
                 ProgressToast.hide(0);
