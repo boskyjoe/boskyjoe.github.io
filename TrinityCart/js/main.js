@@ -7171,7 +7171,7 @@ function setupCustomEventListeners() {
     document.addEventListener('updateSimpleConsignmentItem', async (e) => {
         console.log('✅ 2. [main.js] "updateSimpleConsignmentItem" event was caught.');
         console.log('   - Event detail received:', e.detail);
-        const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
+        const { orderId, productId, productName, fieldToUpdate, newQuantity } = e.detail;
         const user = appState.currentUser;
         if (!user) {
             await showModal('error', 'Not Logged In', 'You must be logged in to update records.');
@@ -7189,7 +7189,7 @@ function setupCustomEventListeners() {
         try {
             console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
             // Call the new, correct API function
-            await updateSimpleConsignmentItemQuantity(orderId, productId, productName, fieldToUpdate, newQuantity, user);
+            await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
             // No success message needed for this background save.
             setTimeout(() => {
                 ProgressToast.hide(0);
