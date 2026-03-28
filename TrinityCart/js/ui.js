@@ -17080,6 +17080,11 @@ function initLeadProductsGrid() {
     const gridDiv = document.getElementById('lead-products-grid');
     if (!gridDiv || leadProductsGridApi) return; // Don't re-init if already exists
 
+    if (typeof agGrid === 'undefined') {
+        console.error("AG-Grid library is not loaded!");
+        return;
+    }
+
     const gridOptions = {
         columnDefs: [
             { 
@@ -17113,7 +17118,7 @@ function initLeadProductsGrid() {
         }
     };
 
-    new agGrid.Grid(gridDiv, gridOptions);
+    leadProductsGridApi = agGrid.createGrid(gridDiv, gridOptions);
 }
 
 // Populate products based on selected catalogue
