@@ -7173,17 +7173,49 @@ function setupCustomEventListeners() {
         console.log('   - Event detail received:', e.detail);
         const { orderId, productId, fieldToUpdate, newQuantity } = e.detail;
         const user = appState.currentUser;
-        if (!user) return;
+        if (!user) {
+            await showModal('error', 'Not Logged In', 'You must be logged in to update records.');
+            return;
+        }
+
+        // 1. Show Progress Toast immediately to block the UI
+        // This prevents the user from clicking other cells while this update is in flight.
+        ProgressToast.show(`Updating ${productName || 'Item'}...`, 'info');
+
+        // Hard Lock: Disable pointer events on the modal so nothing can be clicked
+        const modalContent = document.querySelector('#consignment-checkout-modal-v2 .modal-content');
+        if (modalContent) modalContent.style.pointerEvents = 'none';
 
         try {
             console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
             // Call the new, correct API function
             await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
             // No success message needed for this background save.
+            setTimeout(() => {
+                ProgressToast.hide(0);
+            }, 500);
         } catch (error) {
             console.error("Failed to update consignment item:", error);
-            showModal('error', 'Update Failed', error.message);
-            // You could add logic here to revert the grid cell if the save fails.
+            ProgressToast.showError(`Update Failed: ${error.message}`);
+        
+            // Show a modal for more detailed error reporting
+            setTimeout(async () => {
+                await showModal('error', 'Update Failed', 
+                    `The system could not save the change for "${productName || 'this item'}".\n\n` +
+                    `Error: ${error.message}\n\n` +
+                    `The grid will now refresh to show the last saved values.`
+                );
+                ProgressToast.hide(0);
+                
+                // Optional: If you have access to the grid API here, refresh it
+                // if (window.consignmentSettlementGridOptions?.api) {
+                //     window.consignmentSettlementGridOptions.api.refreshCells();
+                // }
+            }, 1500);
+        } finally {
+            // Unlock: Re-enable pointer events
+            if (modalContent) modalContent.style.pointerEvents = 'auto';
+            ProgressToast.hide(0);
         }
     });
     
