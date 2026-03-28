@@ -176,7 +176,7 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 
 import { initializeLeadsModule } from './leads.js';
 
-import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal } from './ui.js'; 
+import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid } from './ui.js'; 
 
 import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
@@ -3632,20 +3632,7 @@ async function handleLeadSubmit(e) {
         const isEditMode = !!leadId;
 
         // 1. Collect Requested Products from the Grid
-        const requestedProducts = [];
-        if (leadProductsGridApi) {
-            leadProductsGridApi.forEachNode(node => {
-                const qty = Number(node.data.requestedQty) || 0;
-                if (qty > 0) {
-                    requestedProducts.push({
-                        productId: node.data.productId,
-                        productName: node.data.productName,
-                        sellingPrice: node.data.sellingPrice,
-                        requestedQty: qty
-                    });
-                }
-            });
-        }
+        const requestedProducts = getLeadRequestedProductsFromGrid();
 
         // 2. Collect all Form Data including new fields
         const leadData = {
