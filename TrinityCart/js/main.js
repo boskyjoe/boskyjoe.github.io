@@ -3625,27 +3625,51 @@ async function handleLeadSubmit(e) {
         return showModal('error', 'Not Logged In', 'You must be logged in to save a lead.');
     }
 
-    ProgressToast.show('Saving Lead...', 'info');
+    ProgressToast.show('Saving Lead Record...', 'info');
 
     try {
-        const leadId = document.getElementById('lead-id-input').value;
+        const leadId = document.getElementById('lead-id-input').value; // Firestore Doc ID
         const isEditMode = !!leadId;
 
+        // 1. Collect Requested Products from the Grid
+        const requestedProducts = [];
+        if (leadProductsGridApi) {
+            leadProductsGridApi.forEachNode(node => {
+                const qty = Number(node.data.requestedQty) || 0;
+                if (qty > 0) {
+                    requestedProducts.push({
+                        productId: node.data.productId,
+                        productName: node.data.productName,
+                        sellingPrice: node.data.sellingPrice,
+                        requestedQty: qty
+                    });
+                }
+            });
+        }
+
+        // 2. Collect all Form Data including new fields
         const leadData = {
             customerName: document.getElementById('customerName').value.trim(),
             customerPhone: document.getElementById('customerPhone').value.trim(),
             customerEmail: document.getElementById('customerEmail').value.trim(),
+            customerAddress: document.getElementById('customerAddress').value.trim(),
+            assignedTo: document.getElementById('assignedTo').value.trim(),
+            expectedDeliveryDate: document.getElementById('expectedDeliveryDate').value,
+            catalogueId: document.getElementById('leadCatalogueSelect').value,
             source: document.getElementById('leadSource').value,
             status: document.getElementById('leadStatus').value,
             notes: document.getElementById('leadNotes').value.trim(),
             enquiryDate: new Date(document.getElementById('enquiryDate').value),
+            requestedProducts: requestedProducts, // The array of selected items
         };
 
-        if (!leadData.customerName || !leadData.enquiryDate) {
+        // 3. Basic Validation
+        if (!leadData.customerName || isNaN(leadData.enquiryDate.getTime())) {
             ProgressToast.hide(0);
             return showModal('error', 'Missing Information', 'Customer Name and Enquiry Date are required.');
         }
 
+        // 4. Call API
         if (isEditMode) {
             await updateLead(leadId, leadData, user);
             ProgressToast.showSuccess('Lead updated successfully!');
@@ -3654,7 +3678,7 @@ async function handleLeadSubmit(e) {
             ProgressToast.showSuccess('New lead created successfully!');
         }
         
-        closeLeadModal(); // Close the modal on success
+        closeLeadModal(); 
 
     } catch (error) {
         console.error("Error saving lead:", error);
@@ -7168,6 +7192,9 @@ function setupCustomEventListeners() {
 
     document.addEventListener('consignmentPaymentUpdated', e => handleConsignmentPaymentUpdate(e.detail));
 
+    let consignmentUpdateQueue = Promise.resolve();
+
+
     document.addEventListener('updateSimpleConsignmentItem', async (e) => {
         console.log('✅ 2. [main.js] "updateSimpleConsignmentItem" event was caught.');
         console.log('   - Event detail received:', e.detail);
@@ -7178,45 +7205,48 @@ function setupCustomEventListeners() {
             return;
         }
 
-        // 1. Show Progress Toast immediately to block the UI
-        // This prevents the user from clicking other cells while this update is in flight.
-        ProgressToast.show(`Updating ${productName || 'Item'}...`, 'info');
+        consignmentUpdateQueue = consignmentUpdateQueue.then(async () => {
 
-        // Hard Lock: Disable pointer events on the modal so nothing can be clicked
-        const modalContent = document.querySelector('#consignment-checkout-modal-v2 .modal-content');
-        if (modalContent) modalContent.style.pointerEvents = 'none';
+            // 1. Show Progress Toast immediately to block the UI
+            // This prevents the user from clicking other cells while this update is in flight.
+            ProgressToast.show(`Updating ${productName || 'Item'}...`, 'info');
 
-        try {
-            console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
-            // Call the new, correct API function
-            await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
-            // No success message needed for this background save.
-            setTimeout(() => {
+            // Hard Lock: Disable pointer events on the modal so nothing can be clicked
+            const modalContent = document.querySelector('#consignment-checkout-modal-v2 .modal-content');
+            if (modalContent) modalContent.style.pointerEvents = 'none';
+
+            try {
+                console.log('   - Calling API function: updateSimpleConsignmentItemQuantity()');
+                // Call the new, correct API function
+                await updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user);
+                // No success message needed for this background save.
+                setTimeout(() => {
+                    ProgressToast.hide(0);
+                }, 500);
+            } catch (error) {
+                console.error("Failed to update consignment item:", error);
+                ProgressToast.showError(`Update Failed: ${error.message}`);
+            
+                // Show a modal for more detailed error reporting
+                setTimeout(async () => {
+                    await showModal('error', 'Update Failed', 
+                        `The system could not save the change for "${productName || 'this item'}".\n\n` +
+                        `Error: ${error.message}\n\n` +
+                        `The grid will now refresh to show the last saved values.`
+                    );
+                    ProgressToast.hide(0);
+                    
+                    // Optional: If you have access to the grid API here, refresh it
+                    // if (window.consignmentSettlementGridOptions?.api) {
+                    //     window.consignmentSettlementGridOptions.api.refreshCells();
+                    // }
+                }, 1500);
+            } finally {
+                // Unlock: Re-enable pointer events
+                if (modalContent) modalContent.style.pointerEvents = 'auto';
                 ProgressToast.hide(0);
-            }, 500);
-        } catch (error) {
-            console.error("Failed to update consignment item:", error);
-            ProgressToast.showError(`Update Failed: ${error.message}`);
-        
-            // Show a modal for more detailed error reporting
-            setTimeout(async () => {
-                await showModal('error', 'Update Failed', 
-                    `The system could not save the change for "${productName || 'this item'}".\n\n` +
-                    `Error: ${error.message}\n\n` +
-                    `The grid will now refresh to show the last saved values.`
-                );
-                ProgressToast.hide(0);
-                
-                // Optional: If you have access to the grid API here, refresh it
-                // if (window.consignmentSettlementGridOptions?.api) {
-                //     window.consignmentSettlementGridOptions.api.refreshCells();
-                // }
-            }, 1500);
-        } finally {
-            // Unlock: Re-enable pointer events
-            if (modalContent) modalContent.style.pointerEvents = 'auto';
-            ProgressToast.hide(0);
-        }
+            }
+        });
     });
     
 
