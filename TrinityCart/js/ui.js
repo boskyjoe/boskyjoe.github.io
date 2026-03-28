@@ -17078,13 +17078,12 @@ let leadProductsGridApi = null; // This will store the API
 
 // 2. Update the initialization function to use your project's 'createGrid'
 function initLeadProductsGrid() {
-    if (isLeadProductsGridInitialized) return;
     const gridDiv = document.getElementById('lead-products-grid');
-    if (gridDiv) {
-        // Use your project's internal helper to avoid "agGrid is not defined"
-        createGrid(gridDiv, leadProductsGridOptions);
-        isLeadProductsGridInitialized = true;
-    }
+    if (!gridDiv || isLeadProductsGridInitialized) return;
+
+    // Use your project's internal helper
+    createGrid(gridDiv, leadProductsGridOptions);
+    isLeadProductsGridInitialized = true;
 }
 
 const leadProductsGridOptions = {
@@ -17161,6 +17160,7 @@ function populateLeadDropdowns() {
     }
 }
 
+
 async function loadLeadCatalogueItems(catalogueId) {
     if (!leadProductsGridApi) return;
 
@@ -17197,40 +17197,39 @@ async function loadLeadCatalogueItems(catalogueId) {
     }
 }
 
-
 export function openLeadModal(leadData = null) {
     const modal = document.getElementById('lead-modal');
     const form = document.getElementById('lead-form');
     const title = document.getElementById('lead-modal-title');
     
-    // 1. Reset Form
     form.reset();
     
-    // 2. Populate Dropdowns (Source, Status, and the new Sales Catalogue)
+    // 1. Initialize Grid (Ensure container is ready)
+    initLeadProductsGrid();
+
+    // 2. Populate Dropdowns
     populateLeadDropdowns();
 
-    // 3. WAIT for the Grid API to be ready
     const waitForLeadGrid = setInterval(() => {
         if (leadProductsGridApi) {
             clearInterval(waitForLeadGrid);
-            console.log("✅ [ui.js] Lead Product Grid API detected. Setting up listeners.");
-
-            // --- ATTACH LISTENER HERE (Inside the interval) ---
+            
             const catalogueSelect = document.getElementById('leadCatalogueSelect');
             
-            catalogueSelect.onchange = async (e) => {
-                const selectedCatId = e.target.value;
-                if (!selectedCatId) {
+            // 3. Define the change logic in a reusable function
+            const handleCatalogueChange = async (catalogueId) => {
+                if (!catalogueId) {
                     leadProductsGridApi.setGridOption('rowData', []);
                     return;
                 }
-                // Call the new fetcher function
-                await loadLeadCatalogueItems(selectedCatId);
+                await loadLeadCatalogueItems(catalogueId);
             };
 
+            // 4. Attach the listener for manual user changes
+            catalogueSelect.onchange = (e) => handleCatalogueChange(e.target.value);
 
-            // 4. Handle Edit Mode vs Add Mode
             if (leadData) {
+                // --- EDIT MODE ---
                 title.textContent = 'Edit Lead Record';
                 document.getElementById('lead-id-input').value = leadData.id;
                 document.getElementById('customerName').value = leadData.customerName || '';
@@ -17246,20 +17245,33 @@ export function openLeadModal(leadData = null) {
                 document.getElementById('expectedDeliveryDate').value = leadData.expectedDeliveryDate || '';
                 document.getElementById('leadSource').value = leadData.leadSource || '';
                 document.getElementById('leadStatus').value = leadData.leadStatus || 'New';
-                document.getElementById('leadCatalogueSelect').value = leadData.catalogueId || '';
                 document.getElementById('leadNotes').value = leadData.leadNotes || '';
 
-                // Load saved products
-                if (leadData.requestedProducts) {
+                // ✅ FIX 1: Set value AND manually trigger the load
+                const catId = leadData.catalogueId || '';
+                catalogueSelect.value = catId;
+                
+                if (leadData.requestedProducts && leadData.requestedProducts.length > 0) {
+                    // Load the specific products saved to this lead
                     leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
+                } else if (catId) {
+                    // If no products saved but catalogue selected, load from catalogue
+                    handleCatalogueChange(catId);
                 }
+
             } else {
+                // --- ADD NEW MODE ---
                 title.textContent = 'Add New Lead';
                 document.getElementById('lead-id-input').value = '';
                 document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('leadStatus').value = 'New';
+                
+                // ✅ FIX 2: Explicitly set empty rowData to force headers to show
                 leadProductsGridApi.setGridOption('rowData', []);
             }
+            
+            // ✅ FIX 3: Force grid to calculate layout now that modal is appearing
+            leadProductsGridApi.sizeColumnsToFit();
         }
     }, 50);
     
