@@ -1024,6 +1024,37 @@ function setupGlobalClickHandler() {
             return;
         }
 
+
+        // 1. HANDLE EDIT LEAD
+        const editLeadBtn = e.target.closest('.edit-lead-btn');
+        if (editLeadBtn) {
+            const leadId = editLeadBtn.dataset.id;
+            // Find the lead data from our real-time masterData cache
+            const leadData = masterData.leads.find(l => l.id === leadId);
+            
+            if (leadData) {
+                console.log(`[main.js] Opening Edit Modal for Lead: ${leadId}`);
+                openLeadModal(leadData);
+            } else {
+                showModal('error', 'Data Error', 'Could not find lead details in local cache.');
+            }
+            return;
+        }
+
+        // 2. HANDLE CONVERT LEAD
+        const convertLeadBtn = e.target.closest('.convert-lead-btn');
+        if (convertLeadBtn) {
+            const leadId = convertLeadBtn.dataset.id;
+            const leadData = masterData.leads.find(l => l.id === leadId);
+
+            if (leadData) {
+                // Trigger your conversion logic (e.g., opening the Sales view with this data)
+                handleConvertLeadToSale(leadData); 
+            }
+            return;
+        }
+
+        // 3. HANDLE VIEW WORK LOG (Your existing code)     
         const viewWorkLogBtn = e.target.closest('.view-work-log-btn');
         if (viewWorkLogBtn) {
             const leadId = viewWorkLogBtn.dataset.id;
@@ -1043,6 +1074,8 @@ function setupGlobalClickHandler() {
             }
             return; // Action handled
         }
+
+
 
         const changeStoreBtn = target.closest('.action-btn-change-store');
         if (changeStoreBtn) {
