@@ -3160,7 +3160,9 @@ export async function recordSalePayment(paymentData, user) {
 
             // === PHASE 3: INVOICE FINANCIAL UPDATES ===
             const newTotalAmountPaid = (currentSaleData.totalAmountPaid || 0) + amountPaid;
-            const newBalanceDue = Math.max(0, (currentSaleData.financials?.totalAmount || 0) - newTotalAmountPaid);
+            const currentBalance = currentSaleData.balanceDue || 0;
+            const newBalanceDue = Math.max(0, currentBalance - amountPaid);
+            
 
             // ✅ ENHANCED: Proper payment status calculation
             let newPaymentStatus;
@@ -3169,7 +3171,7 @@ export async function recordSalePayment(paymentData, user) {
             } else if (newTotalAmountPaid > 0) {
                 newPaymentStatus = 'Partially Paid';
             } else {
-                newPaymentStatus = 'Unpaid'; // Edge case
+                newPaymentStatus = 'Unpaid';
             }
 
             // ✅ ENHANCED: Cumulative amount tendered tracking
