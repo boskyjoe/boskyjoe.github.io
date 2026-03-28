@@ -1702,60 +1702,100 @@ const leadsGridOptions = {
     paginationPageSizeSelector: [25, 50, 100, 200],
     theme: 'legacy',
     columnDefs: [
-        { field: "customerName", headerName: "Customer Name", flex: 2, editable: true },
-        { field: "customerPhone", headerName: "Phone", flex: 1, editable: true },
-        { field: "customerEmail", headerName: "Email", flex: 1, editable: true },
+        { 
+            field: "customerName", 
+            headerName: "Customer Name", 
+            flex: 1.5, 
+            editable: true,
+            pinned: 'left',
+            cellStyle: { fontWeight: 'bold' }
+        },
+        { 
+            field: "customerPhone", 
+            headerName: "Phone", 
+            width: 130, 
+            editable: true 
+        },
+        { 
+            field: "customerAddress", 
+            headerName: "Address", 
+            flex: 1, 
+            editable: true,
+            cellStyle: { color: '#6b7280', fontSize: '12px' }
+        },
         {
             field: "status",
             headerName: "Status",
-            width: 150,
+            width: 130,
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost']
+                values: leadStatusOptions // Uses the array from your config.js
             },
-            cellStyle: params => {
-                if (params.value === 'New') return { color: 'blue', fontWeight: 'bold' };
-                if (params.value === 'Converted') return { color: 'green', fontWeight: 'bold' };
-                if (params.value === 'Lost') return { color: 'red' };
-                return null;
-            }
-        },
-        {
-            field: "source",
-            headerName: "Source",
-            width: 150,
-            editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: ['Walk-in', 'Phone Call', 'Website', 'Referral', 'Event', 'Other']
+            cellRenderer: params => {
+                const colors = {
+                    'New': 'bg-blue-100 text-blue-800',
+                    'Contacted': 'bg-purple-100 text-purple-800',
+                    'Qualified': 'bg-indigo-100 text-indigo-800',
+                    'Converted': 'bg-green-100 text-green-800',
+                    'Lost': 'bg-red-100 text-red-800'
+                };
+                const colorClass = colors[params.value] || 'bg-gray-100 text-gray-800';
+                return `<span class="px-2 py-1 rounded-full text-xs font-bold ${colorClass}">${params.value}</span>`;
             }
         },
         {
             field: "enquiryDate",
             headerName: "Enquiry Date",
-            width: 150,
+            width: 130,
             editable: true,
             cellEditor: 'agDateCellEditor',
-            valueFormatter: p => p.value ? (p.value.toDate ? p.value.toDate() : new Date(p.value)).toLocaleDateString() : ''
+            valueFormatter: p => p.value ? (p.value.toDate ? p.value.toDate() : new Date(p.value)).toLocaleDateString() : '',
+            valueGetter: p => p.data.enquiryDate?.toDate ? p.data.enquiryDate.toDate() : p.data.enquiryDate
+        },
+        { 
+            field: "expectedDeliveryDate", 
+            headerName: "Exp. Delivery", 
+            width: 130,
+            editable: true,
+            cellEditor: 'agDateCellEditor',
+            cellStyle: { color: '#2563eb', fontWeight: 'bold' }
+        },
+        { 
+            field: "assignedTo", 
+            headerName: "Assigned To", 
+            width: 140,
+            editable: true,
+            cellRenderer: params => params.value ? `👤 ${params.value}` : '<span class="text-gray-400 italic">Unassigned</span>'
         },
         {
             headerName: "Actions",
-            width: 150, // Increased width for more buttons
+            width: 180,
+            pinned: 'right',
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
                 const leadId = params.data.id;
+                // We stringify the data so it can be passed to the openLeadModal safely
+                const leadDataAttr = encodeURIComponent(JSON.stringify(params.data));
                 
-                // Define your icons
-                const logIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                            </svg>`;
-                
-                // Return the HTML for all buttons
                 return `
-                    <button title="View Work Log" class="text-purple-600 hover:text-purple-800 view-work-log-btn" data-id="${leadId}">${logIcon}</button>
+                    <button onclick="openLeadModal(JSON.parse(decodeURIComponent('${leadDataAttr}')))" 
+                            title="Edit Lead & Products" 
+                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    
+                    <button onclick="convertLeadToSale('${leadId}')" 
+                            title="Convert to Sale" 
+                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+
+                    <button title="View Work Log" 
+                            class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg view-work-log-btn" 
+                            data-id="${leadId}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
                 `;
             },
             editable: false,
@@ -1764,17 +1804,22 @@ const leadsGridOptions = {
         }
     ],
     defaultColDef: {
-        sortable: true, filter: true, resizable: true, wrapText: true, autoHeight: true,
+        sortable: true, 
+        filter: true, 
+        resizable: true, 
+        wrapText: true, 
+        autoHeight: true,
     },
     rowData: [],
     onGridReady: (params) => {
-        console.log("[ui.js] Leads Grid is now ready.");
         leadsGridApi = params.api;
     },
     onCellValueChanged: (params) => {
         const docId = params.data.id;
         const field = params.colDef.field;
         const newValue = params.newValue;
+        
+        // Dispatch event to main.js for auto-saving inline edits
         document.dispatchEvent(new CustomEvent('updateLead', {
             detail: { docId, updatedData: { [field]: newValue } }
         }));
@@ -1797,33 +1842,36 @@ export function showLeadsView() {
     showView('leads-view');
     initializeLeadsGrid();
 
-    // Populate dropdowns in the modal once
-    const sourceSelect = document.getElementById('leadSource');
-    const statusSelect = document.getElementById('leadStatus');
-    if (sourceSelect.options.length <= 1) {
-        leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
-        leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
-    }
-
     const waitForGrid = setInterval(() => {
         if (leadsGridApi) {
             clearInterval(waitForGrid);
 
-            console.log("[ui.js] Grid is ready. Attaching real-time leads listener.");
+            console.log("[ui.js] Leads List Grid is ready. Attaching real-time listener.");
             const db = firebase.firestore();
             leadsGridApi.setGridOption('loading', true);
 
+            // Clean up previous listener if it exists
             if (unsubscribeLeadsListener) {
                 unsubscribeLeadsListener();
             }
 
+            // 3. Real-time listener for the main collection
             unsubscribeLeadsListener = db.collection(LEADS_COLLECTION_PATH)
-                .orderBy('createdOn', 'desc')
+                .orderBy('enquiryDate', 'desc') // Changed from createdOn to enquiryDate for better relevance
                 .onSnapshot(snapshot => {
-                    console.log("[Firestore] Received real-time update for leads.");
-                    const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const leads = snapshot.docs.map(doc => ({ 
+                        id: doc.id, 
+                        ...doc.data() 
+                    }));
+                    
                     leadsGridApi.setGridOption('rowData', leads);
                     leadsGridApi.setGridOption('loading', false);
+                    
+                    if (leads.length === 0) {
+                        leadsGridApi.showNoRowsOverlay();
+                    } else {
+                        leadsGridApi.hideOverlay();
+                    }
                 }, error => {
                     console.error("Error with leads real-time listener:", error);
                     leadsGridApi.setGridOption('loading', false);
@@ -17023,33 +17071,157 @@ export function closeEditSaleInfoModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// Global variable to hold the grid API for the products inside the lead modal
+let leadProductsGridApi = null;
 
 
+// Initialize the AG-Grid inside the Lead Modal
+function initLeadProductsGrid() {
+    const gridDiv = document.getElementById('lead-products-grid');
+    if (!gridDiv || leadProductsGridApi) return; // Don't re-init if already exists
+
+    const gridOptions = {
+        columnDefs: [
+            { 
+                field: "productName", 
+                headerName: "Product", 
+                flex: 2, 
+                filter: 'agTextColumnFilter', // Search filter
+                floatingFilter: true,         // Inline search box
+                cellStyle: { fontWeight: '500' }
+            },
+            { 
+                field: "sellingPrice", 
+                headerName: "Price", 
+                width: 110, 
+                valueFormatter: p => formatCurrency(p.value) 
+            },
+            { 
+                field: "requestedQty", 
+                headerName: "Req. Qty", 
+                width: 120, 
+                editable: true, 
+                cellEditor: 'agNumberCellEditor',
+                cellStyle: { backgroundColor: '#f0f9ff', border: '1px solid #bae6fd' }
+            }
+        ],
+        rowData: [],
+        defaultColDef: { resizable: true, sortable: true },
+        onGridReady: (params) => {
+            leadProductsGridApi = params.api;
+            params.api.sizeColumnsToFit();
+        }
+    };
+
+    new agGrid.Grid(gridDiv, gridOptions);
+}
+
+// Populate products based on selected catalogue
+function updateLeadProductGridByCatalogue(catalogueId) {
+    if (!leadProductsGridApi) return;
+    if (!catalogueId) {
+        leadProductsGridApi.setGridOption('rowData', []);
+        return;
+    }
+
+    // Filter master products by the selected catalogue ID
+    const products = masterData.products
+        .filter(p => p.catalogueId === catalogueId)
+        .map(p => ({
+            productId: p.id,
+            productName: p.itemName,
+            sellingPrice: p.sellingPrice,
+            requestedQty: 0 // Default to zero for selection
+        }));
+
+    leadProductsGridApi.setGridOption('rowData', products);
+}
+
+// Populate the dropdown selects from masterData
+function populateLeadDropdowns() {
+    // 1. Catalogue Dropdown
+    const catSelect = document.getElementById('leadCatalogueSelect');
+    if (catSelect) {
+        catSelect.innerHTML = '<option value="">Select a catalogue...</option>';
+        masterData.salesCatalogues.filter(c => c.isActive).forEach(cat => {
+            catSelect.add(new Option(`${cat.catalogueName} (${cat.seasonName})`, cat.id));
+        });
+    }
+
+    // 2. Source Dropdown (from config.js options)
+    const sourceSelect = document.getElementById('leadSource');
+    if (sourceSelect && sourceSelect.options.length <= 1) {
+        leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
+    }
+
+    // 3. Status Dropdown (from config.js options)
+    const statusSelect = document.getElementById('leadStatus');
+    if (statusSelect && statusSelect.options.length <= 1) {
+        leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
+    }
+}
 
 export function openLeadModal(leadData = null) {
     const modal = document.getElementById('lead-modal');
     const form = document.getElementById('lead-form');
     const title = document.getElementById('lead-modal-title');
-
+    
+    // 1. Reset Form
     form.reset();
     
+    // 2. Populate Dropdowns (Source, Status, and the new Sales Catalogue)
+    populateLeadDropdowns();
+
+    // 3. Initialize the Product Grid (only if not already initialized)
+    initLeadProductsGrid();
+
+    // 4. Set up Catalogue Change Listener
+    const catalogueSelect = document.getElementById('leadCatalogueSelect');
+    catalogueSelect.onchange = (e) => {
+        const selectedCatId = e.target.value;
+        updateLeadProductGridByCatalogue(selectedCatId);
+    };
+
     if (leadData) {
         // --- EDIT MODE ---
-        title.textContent = 'Edit Lead';
+        title.textContent = 'Edit Lead Record';
         document.getElementById('lead-id-input').value = leadData.id;
         document.getElementById('customerName').value = leadData.customerName || '';
         document.getElementById('customerPhone').value = leadData.customerPhone || '';
         document.getElementById('customerEmail').value = leadData.customerEmail || '';
-        document.getElementById('enquiryDate').valueAsDate = leadData.enquiryDate ? new Date(leadData.enquiryDate.seconds * 1000) : new Date();
+        
+        // New Fields
+        document.getElementById('customerAddress').value = leadData.customerAddress || '';
+        document.getElementById('assignedTo').value = leadData.assignedTo || '';
+        
+        // Date handling
+        if (leadData.enquiryDate) {
+            document.getElementById('enquiryDate').valueAsDate = new Date(leadData.enquiryDate.seconds * 1000);
+        }
+        if (leadData.expectedDeliveryDate) {
+            document.getElementById('expectedDeliveryDate').value = leadData.expectedDeliveryDate;
+        }
+
         document.getElementById('leadSource').value = leadData.source || '';
         document.getElementById('leadStatus').value = leadData.status || 'New';
+        document.getElementById('leadCatalogueSelect').value = leadData.catalogueId || '';
         document.getElementById('leadNotes').value = leadData.notes || '';
+
+        // Load previously saved products into the grid
+        if (leadProductsGridApi && leadData.requestedProducts) {
+            leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
+        }
     } else {
         // --- ADD NEW MODE ---
         title.textContent = 'Add New Lead';
         document.getElementById('lead-id-input').value = '';
         document.getElementById('enquiryDate').valueAsDate = new Date();
         document.getElementById('leadStatus').value = 'New';
+        
+        // Clear the grid for new leads
+        if (leadProductsGridApi) {
+            leadProductsGridApi.setGridOption('rowData', []);
+        }
     }
     
     modal.style.display = 'flex';
@@ -17060,7 +17232,11 @@ export function closeLeadModal() {
     const modal = document.getElementById('lead-modal');
     if (!modal) return;
     modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; }, 300);
+    setTimeout(() => { 
+        modal.style.display = 'none'; 
+        // Clear grid data on close to ensure privacy/fresh start
+        if (leadProductsGridApi) leadProductsGridApi.setGridOption('rowData', []);
+    }, 300);
 }
 
 // In js/ui.js
@@ -17667,6 +17843,10 @@ export function showConsignmentModalV2(orderData = null) {
             document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
                 detail: { orderId, productId, productName, fieldToUpdate: field, newQuantity: newValue }
             }));
+
+            setTimeout(() => {
+                params.api.hideOverlay();
+            }, 1000); 
         };
 
         consignmentItemsGridApiV2.addEventListener('cellValueChanged', cellChangeHandler);
