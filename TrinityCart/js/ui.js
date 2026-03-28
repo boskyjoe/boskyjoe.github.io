@@ -1883,6 +1883,30 @@ export function showLeadsView() {
     }, 50);
 }
 
+/**
+ * Scans the Lead Products Grid and returns an array of items where Qty > 0
+ */
+export function getLeadRequestedProductsFromGrid() {
+    const requestedProducts = [];
+    
+    if (leadProductsGridApi) {
+        leadProductsGridApi.forEachNode(node => {
+            const qty = Number(node.data.requestedQty) || 0;
+            if (qty > 0) {
+                requestedProducts.push({
+                    productId: node.data.productId,
+                    productName: node.data.productName,
+                    sellingPrice: Number(node.data.sellingPrice) || 0,
+                    requestedQty: qty
+                });
+            }
+        });
+    } else {
+        console.warn("[ui.js] leadProductsGridApi is not initialized yet.");
+    }
+    
+    return requestedProducts;
+}
 
 let leadsWorkLogGridApi = null;
 let unsubscribeWorkLogListener = null;
