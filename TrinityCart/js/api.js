@@ -269,11 +269,13 @@ export async function setSupplierStatus(docId, newStatus, user) {
 export async function addLead(leadData, user) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    const leadId = `LEAD-${Date.now()}`;
+    
+    // Generate a unique business ID for reference
+    const businessLeadId = `LEAD-${Date.now()}`;
 
     return db.collection(LEADS_COLLECTION_PATH).add({
         ...leadData,
-        leadId: leadId,
+        businessLeadId: businessLeadId,
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
@@ -5683,7 +5685,8 @@ export async function updateSimpleConsignmentItemQuantitybk(orderId, productId, 
  * @param {number} newQuantity - The new value for the quantity field.
  * @param {object} user - The admin performing the update.
  */
-export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
+
+export async function updateSimpleConsignmentItemQuantity1111(orderId, productId, fieldToUpdate, newQuantity, user) {
     const db = firebase.firestore();
     const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
 
@@ -5747,6 +5750,86 @@ export async function updateSimpleConsignmentItemQuantity(orderId, productId, fi
         console.error("API Error:", error);
         throw error;
     }
+}
+
+export async function updateSimpleConsignmentItemQuantity(orderId, productId, fieldToUpdate, newQuantity, user) {
+    const db = firebase.firestore();
+    const orderRef = db.collection(SIMPLE_CONSIGNMENT_COLLECTION_PATH).doc(orderId);
+
+    // ✅ Return the promise so main.js can 'await' it properly
+    return db.runTransaction(async (transaction) => {
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) throw new Error("Order not found.");
+        
+        const orderData = orderDoc.data();
+        // Use a clean copy of the items array
+        const items = [...(orderData.items || [])];
+
+        let itemIndex = items.findIndex(item => item.productId === productId);
+        let oldQuantityCheckedOut = 0;
+        let oldQuantityReturned = 0;
+
+        if (itemIndex === -1) {
+            // Handle adding a product that wasn't in the original checkout
+            const productMaster = masterData.products.find(p => p.id === productId);
+            if (!productMaster) throw new Error("Product master data not found.");
+            
+            items.push({
+                productId: productId,
+                productName: productMaster.itemName,
+                sellingPrice: productMaster.sellingPrice,
+                quantityCheckedOut: 0, 
+                quantitySold: 0, 
+                quantityReturned: 0, 
+                quantityDamaged: 0, 
+                quantityGifted: 0
+            });
+            itemIndex = items.length - 1;
+        } else {
+            // Capture old values for inventory delta calculation
+            oldQuantityCheckedOut = Number(items[itemIndex].quantityCheckedOut) || 0;
+            oldQuantityReturned = Number(items[itemIndex].quantityReturned) || 0;
+        }
+
+        // Update the specific field
+        items[itemIndex][fieldToUpdate] = Number(newQuantity) || 0;
+
+        // ✅ SANITIZE: Ensure no 'inventoryCount' or other UI fields leak into the DB
+        const cleanItems = items.map(item => sanitizeConsignmentItem(item));
+
+        // ✅ CALCULATION SAFETY: Use || 0 to prevent NaN if data is missing
+        const totalValueCheckedOut = cleanItems.reduce((sum, i) => sum + ((Number(i.quantityCheckedOut) || 0) * (Number(i.sellingPrice) || 0)), 0);
+        const totalValueSold = cleanItems.reduce((sum, i) => sum + ((Number(i.quantitySold) || 0) * (Number(i.sellingPrice) || 0)), 0);
+        
+        // Use the latest totals from the orderData
+        const totalAmountPaid = Number(orderData.totalAmountPaid) || 0;
+        const totalExpenses = Number(orderData.totalExpenses) || 0;
+        const newBalanceDue = totalValueSold - totalAmountPaid - totalExpenses;
+
+        // Update the Order
+        transaction.update(orderRef, {
+            items: cleanItems,
+            totalValueCheckedOut: totalValueCheckedOut,
+            totalValueSold: totalValueSold,
+            balanceDue: newBalanceDue,
+            'audit.updatedBy': user.email,
+            'audit.updatedOn': firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Update the Product Inventory
+        const productRef = db.collection(PRODUCTS_CATALOGUE_COLLECTION_PATH).doc(productId);
+        if (fieldToUpdate === 'quantityCheckedOut') {
+            const delta = Number(newQuantity) - oldQuantityCheckedOut;
+            transaction.update(productRef, { 
+                inventoryCount: firebase.firestore.FieldValue.increment(-delta) 
+            });
+        } else if (fieldToUpdate === 'quantityReturned') {
+            const delta = Number(newQuantity) - oldQuantityReturned;
+            transaction.update(productRef, { 
+                inventoryCount: firebase.firestore.FieldValue.increment(delta) 
+            });
+        }
+    });
 }
 
 /**
