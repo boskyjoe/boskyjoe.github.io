@@ -1759,7 +1759,9 @@ const leadsGridOptions = {
             width: 130,
             editable: true,
             cellEditor: 'agDateCellEditor',
-            cellStyle: { color: '#2563eb', fontWeight: 'bold' }
+            cellStyle: { color: '#2563eb', fontWeight: 'bold' },
+            valueFormatter: p => p.value ? (p.value.toDate ? p.value.toDate() : new Date(p.value)).toLocaleDateString() : '',
+            valueGetter: p => p.data.expectedDeliveryDate?.toDate ? p.data.expectedDeliveryDate.toDate() : p.data.expectedDeliveryDate
         },
         { 
             field: "assignedTo", 
