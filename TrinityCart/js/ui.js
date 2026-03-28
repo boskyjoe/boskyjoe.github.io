@@ -17071,55 +17071,51 @@ export function closeEditSaleInfoModal() {
     if (modal) modal.style.display = 'none';
 }
 
-// Global variable to hold the grid API for the products inside the lead modal
-let leadProductsGridApi = null;
+// 1. Add this flag at the top of ui.js with your other flags
+let isLeadProductsGridInitialized = false;
+let leadProductsGridApi = null; // This will store the API
 
-
-// Initialize the AG-Grid inside the Lead Modal
+// 2. Update the initialization function to use your project's 'createGrid'
 function initLeadProductsGrid() {
+    if (isLeadProductsGridInitialized) return;
     const gridDiv = document.getElementById('lead-products-grid');
-    if (!gridDiv || leadProductsGridApi) return; // Don't re-init if already exists
-
-    if (typeof agGrid === 'undefined') {
-        console.error("AG-Grid library is not loaded!");
-        return;
+    if (gridDiv) {
+        // Use your project's internal helper to avoid "agGrid is not defined"
+        createGrid(gridDiv, leadProductsGridOptions);
+        isLeadProductsGridInitialized = true;
     }
-
-    const gridOptions = {
-        columnDefs: [
-            { 
-                field: "productName", 
-                headerName: "Product", 
-                flex: 2, 
-                filter: 'agTextColumnFilter', // Search filter
-                floatingFilter: true,         // Inline search box
-                cellStyle: { fontWeight: '500' }
-            },
-            { 
-                field: "sellingPrice", 
-                headerName: "Price", 
-                width: 110, 
-                valueFormatter: p => formatCurrency(p.value) 
-            },
-            { 
-                field: "requestedQty", 
-                headerName: "Req. Qty", 
-                width: 120, 
-                editable: true, 
-                cellEditor: 'agNumberCellEditor',
-                cellStyle: { backgroundColor: '#f0f9ff', border: '1px solid #bae6fd' }
-            }
-        ],
-        rowData: [],
-        defaultColDef: { resizable: true, sortable: true },
-        onGridReady: (params) => {
-            leadProductsGridApi = params.api;
-            params.api.sizeColumnsToFit();
-        }
-    };
-
-    leadProductsGridApi = agGrid.createGrid(gridDiv, gridOptions);
 }
+
+const leadProductsGridOptions = {
+    columnDefs: [
+        { 
+            field: "productName", 
+            headerName: "Product", 
+            flex: 2, 
+            filter: 'agTextColumnFilter', 
+            floatingFilter: true 
+        },
+        { 
+            field: "sellingPrice", 
+            headerName: "Price", 
+            width: 110, 
+            valueFormatter: p => formatCurrency(p.value) 
+        },
+        { 
+            field: "requestedQty", 
+            headerName: "Req. Qty", 
+            width: 120, 
+            editable: true, 
+            cellEditor: 'agNumberCellEditor',
+            cellStyle: { backgroundColor: '#f0f9ff', fontWeight: 'bold', border: '1px solid #bae6fd' }
+        }
+    ],
+    rowData: [],
+    onGridReady: (params) => {
+        leadProductsGridApi = params.api;
+        params.api.sizeColumnsToFit();
+    }
+};
 
 // Populate products based on selected catalogue
 function updateLeadProductGridByCatalogue(catalogueId) {
@@ -17144,7 +17140,6 @@ function updateLeadProductGridByCatalogue(catalogueId) {
 
 // Populate the dropdown selects from masterData
 function populateLeadDropdowns() {
-    // 1. Catalogue Dropdown
     const catSelect = document.getElementById('leadCatalogueSelect');
     if (catSelect) {
         catSelect.innerHTML = '<option value="">Select a catalogue...</option>';
@@ -17153,18 +17148,17 @@ function populateLeadDropdowns() {
         });
     }
 
-    // 2. Source Dropdown (from config.js options)
     const sourceSelect = document.getElementById('leadSource');
     if (sourceSelect && sourceSelect.options.length <= 1) {
         leadSourceOptions.forEach(opt => sourceSelect.add(new Option(opt, opt)));
     }
 
-    // 3. Status Dropdown (from config.js options)
     const statusSelect = document.getElementById('leadStatus');
     if (statusSelect && statusSelect.options.length <= 1) {
         leadStatusOptions.forEach(opt => statusSelect.add(new Option(opt, opt)));
     }
 }
+
 
 export function openLeadModal(leadData = null) {
     const modal = document.getElementById('lead-modal');
@@ -17184,50 +17178,60 @@ export function openLeadModal(leadData = null) {
     const catalogueSelect = document.getElementById('leadCatalogueSelect');
     catalogueSelect.onchange = (e) => {
         const selectedCatId = e.target.value;
-        updateLeadProductGridByCatalogue(selectedCatId);
+        if (leadProductsGridApi) {
+            const products = masterData.products
+                .filter(p => p.catalogueId === selectedCatId)
+                .map(p => ({
+                    productId: p.id,
+                    productName: p.itemName,
+                    sellingPrice: p.sellingPrice,
+                    requestedQty: 0
+                }));
+            leadProductsGridApi.setGridOption('rowData', products);
+        }
     };
 
-    if (leadData) {
-        // --- EDIT MODE ---
-        title.textContent = 'Edit Lead Record';
-        document.getElementById('lead-id-input').value = leadData.id;
-        document.getElementById('customerName').value = leadData.customerName || '';
-        document.getElementById('customerPhone').value = leadData.customerPhone || '';
-        document.getElementById('customerEmail').value = leadData.customerEmail || '';
-        
-        // New Fields
-        document.getElementById('customerAddress').value = leadData.customerAddress || '';
-        document.getElementById('assignedTo').value = leadData.assignedTo || '';
-        
-        // Date handling
-        if (leadData.enquiryDate) {
-            document.getElementById('enquiryDate').valueAsDate = new Date(leadData.enquiryDate.seconds * 1000);
-        }
-        if (leadData.expectedDeliveryDate) {
-            document.getElementById('expectedDeliveryDate').value = leadData.expectedDeliveryDate;
-        }
-
-        document.getElementById('leadSource').value = leadData.source || '';
-        document.getElementById('leadStatus').value = leadData.status || 'New';
-        document.getElementById('leadCatalogueSelect').value = leadData.catalogueId || '';
-        document.getElementById('leadNotes').value = leadData.notes || '';
-
-        // Load previously saved products into the grid
-        if (leadProductsGridApi && leadData.requestedProducts) {
-            leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
-        }
-    } else {
-        // --- ADD NEW MODE ---
-        title.textContent = 'Add New Lead';
-        document.getElementById('lead-id-input').value = '';
-        document.getElementById('enquiryDate').valueAsDate = new Date();
-        document.getElementById('leadStatus').value = 'New';
-        
-        // Clear the grid for new leads
+    // 5. Wait for Grid API to be ready before populating data
+    const waitForLeadGrid = setInterval(() => {
         if (leadProductsGridApi) {
-            leadProductsGridApi.setGridOption('rowData', []);
+            clearInterval(waitForLeadGrid);
+
+            if (leadData) {
+                // --- EDIT MODE ---
+                title.textContent = 'Edit Lead Record';
+                document.getElementById('lead-id-input').value = leadData.id;
+                document.getElementById('customerName').value = leadData.customerName || '';
+                document.getElementById('customerPhone').value = leadData.customerPhone || '';
+                document.getElementById('customerEmail').value = leadData.customerEmail || '';
+                document.getElementById('customerAddress').value = leadData.customerAddress || '';
+                document.getElementById('assignedTo').value = leadData.assignedTo || '';
+                
+                // Date Handling (Firestore Timestamp to Date Input)
+                if (leadData.enquiryDate) {
+                    const d = leadData.enquiryDate.toDate ? leadData.enquiryDate.toDate() : new Date(leadData.enquiryDate);
+                    document.getElementById('enquiryDate').value = d.toISOString().split('T')[0];
+                }
+                document.getElementById('expectedDeliveryDate').value = leadData.expectedDeliveryDate || '';
+
+                document.getElementById('leadSource').value = leadData.leadSource || '';
+                document.getElementById('leadStatus').value = leadData.leadStatus || 'New';
+                document.getElementById('leadCatalogueSelect').value = leadData.catalogueId || '';
+                document.getElementById('leadNotes').value = leadData.leadNotes || '';
+
+                // Load saved products
+                if (leadData.requestedProducts) {
+                    leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
+                }
+            } else {
+                // --- ADD NEW MODE ---
+                title.textContent = 'Add New Lead';
+                document.getElementById('lead-id-input').value = '';
+                document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('leadStatus').value = 'New';
+                leadProductsGridApi.setGridOption('rowData', []);
+            }
         }
-    }
+    }, 50);
     
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('visible'), 10);
