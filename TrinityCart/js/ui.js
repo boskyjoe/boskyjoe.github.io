@@ -6721,6 +6721,7 @@ export function calculateSalesTotals() {
  * 
  * @since 1.0.0 Enhanced with catalogue validation and inventory legend
  */
+
 export function showAddProductModal() {
     const modal = document.getElementById('add-product-modal');
     if (!modal) return;
@@ -17160,6 +17161,42 @@ function populateLeadDropdowns() {
     }
 }
 
+async function loadLeadCatalogueItems(catalogueId) {
+    if (!leadProductsGridApi) return;
+
+    try {
+        console.log(`📡 [Leads] Fetching items for catalogue: ${catalogueId}`);
+        leadProductsGridApi.setGridOption('loading', true);
+
+        const db = firebase.firestore();
+        
+        // ✅ ACCESS THE SUB-COLLECTION (The key fix)
+        const itemsSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH)
+            .doc(catalogueId)
+            .collection('items')
+            .get();
+
+        const catalogueProducts = itemsSnapshot.docs.map(doc => {
+            const item = doc.data();
+            return {
+                productId: item.productId,
+                productName: item.productName,
+                sellingPrice: item.sellingPrice,
+                requestedQty: 0 // Default for new lead
+            };
+        });
+
+        console.log(`✅ [Leads] Loaded ${catalogueProducts.length} items into grid.`);
+        leadProductsGridApi.setGridOption('rowData', catalogueProducts);
+        leadProductsGridApi.setGridOption('loading', false);
+
+    } catch (error) {
+        console.error('❌ [Leads] Error loading catalogue items:', error);
+        leadProductsGridApi.setGridOption('loading', false);
+        showModal('error', 'Loading Failed', 'Could not retrieve products for this catalogue.');
+    }
+}
+
 
 export function openLeadModal(leadData = null) {
     const modal = document.getElementById('lead-modal');
@@ -17181,32 +17218,16 @@ export function openLeadModal(leadData = null) {
             // --- ATTACH LISTENER HERE (Inside the interval) ---
             const catalogueSelect = document.getElementById('leadCatalogueSelect');
             
-            catalogueSelect.onchange = (e) => {
+            catalogueSelect.onchange = async (e) => {
                 const selectedCatId = e.target.value;
-                
                 if (!selectedCatId) {
                     leadProductsGridApi.setGridOption('rowData', []);
                     return;
                 }
-
-                // 1. Find the specific catalogue in masterData
-                const selectedCatalogue = masterData.salesCatalogues.find(c => c.id === selectedCatId);
-
-                if (selectedCatalogue && selectedCatalogue.items) {
-                    // 2. Map the items stored INSIDE that catalogue to the grid
-                    const catalogueProducts = selectedCatalogue.items.map(item => ({
-                        productId: item.productId, // Use the ID from the catalogue item
-                        productName: item.productName,
-                        sellingPrice: item.sellingPrice, // Use the price defined in this catalogue
-                        requestedQty: 0 
-                    }));
-                    
-                    leadProductsGridApi.setGridOption('rowData', catalogueProducts);
-                } else {
-                    console.warn("No items found in selected catalogue");
-                    leadProductsGridApi.setGridOption('rowData', []);
-                }
+                // Call the new fetcher function
+                await loadLeadCatalogueItems(selectedCatId);
             };
+
 
             // 4. Handle Edit Mode vs Add Mode
             if (leadData) {
