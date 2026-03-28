@@ -17660,11 +17660,12 @@ export function showConsignmentModalV2(orderData = null) {
             // Dispatch the event to save the data
             const orderId = document.getElementById('consignment-order-id-v2').value;
             const productId = params.data.productId;
+            const productName = params.data.productName;
             const field = params.colDef.field;
             const newValue = Number(params.newValue) || 0;
             
             document.dispatchEvent(new CustomEvent('updateSimpleConsignmentItem', {
-                detail: { orderId, productId, fieldToUpdate: field, newQuantity: newValue }
+                detail: { orderId, productId, productName, fieldToUpdate: field, newQuantity: newValue }
             }));
         };
 
