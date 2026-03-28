@@ -17183,25 +17183,29 @@ export function openLeadModal(leadData = null) {
             
             catalogueSelect.onchange = (e) => {
                 const selectedCatId = e.target.value;
-                console.log("🔍 [ui.js] Catalogue changed to:", selectedCatId);
                 
                 if (!selectedCatId) {
                     leadProductsGridApi.setGridOption('rowData', []);
                     return;
                 }
 
-                // Filter products from masterData
-                const filteredProducts = masterData.products
-                    .filter(p => p.catalogueId === selectedCatId)
-                    .map(p => ({
-                        productId: p.id,
-                        productName: p.itemName,
-                        sellingPrice: p.sellingPrice,
-                        requestedQty: 0
+                // 1. Find the specific catalogue in masterData
+                const selectedCatalogue = masterData.salesCatalogues.find(c => c.id === selectedCatId);
+
+                if (selectedCatalogue && selectedCatalogue.items) {
+                    // 2. Map the items stored INSIDE that catalogue to the grid
+                    const catalogueProducts = selectedCatalogue.items.map(item => ({
+                        productId: item.productId, // Use the ID from the catalogue item
+                        productName: item.productName,
+                        sellingPrice: item.sellingPrice, // Use the price defined in this catalogue
+                        requestedQty: 0 
                     }));
-                
-                console.log(`📦 [ui.js] Loading ${filteredProducts.length} products into Lead Grid.`);
-                leadProductsGridApi.setGridOption('rowData', filteredProducts);
+                    
+                    leadProductsGridApi.setGridOption('rowData', catalogueProducts);
+                } else {
+                    console.warn("No items found in selected catalogue");
+                    leadProductsGridApi.setGridOption('rowData', []);
+                }
             };
 
             // 4. Handle Edit Mode vs Add Mode
