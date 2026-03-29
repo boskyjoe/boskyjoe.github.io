@@ -17315,7 +17315,7 @@ export function openLeadModal(leadData = null) {
 
             if (leadData) {
                 // --- EDIT MODE ---
-                title.textContent = 'Edit Lead Record';
+                title.textContent = 'Edit Enquiry Record';
                 document.getElementById('lead-id-input').value = leadData.id;
                 document.getElementById('customerName').value = leadData.customerName || '';
                 document.getElementById('customerPhone').value = leadData.customerPhone || '';
@@ -17342,7 +17342,7 @@ export function openLeadModal(leadData = null) {
 
             } else {
                 // --- ADD NEW MODE ---
-                title.textContent = 'Add New Lead';
+                title.textContent = 'Add Enquiry Lead';
                 document.getElementById('lead-id-input').value = '';
                 document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('leadStatus').value = 'New';
