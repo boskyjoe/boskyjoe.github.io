@@ -9213,3 +9213,4 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => ProgressToast.hide(1500), 1500);
 
 });
+
