@@ -3676,9 +3676,9 @@ async function handleLeadSubmit(e) {
             assignedTo: document.getElementById('assignedTo').value.trim(),
             expectedDeliveryDate: document.getElementById('expectedDeliveryDate').value,
             catalogueId: document.getElementById('leadCatalogueSelect').value,
-            source: document.getElementById('leadSource').value,
-            status: document.getElementById('leadStatus').value,
-            notes: document.getElementById('leadNotes').value.trim(),
+            leadSource: document.getElementById('leadSource').value,
+            leadStatus: document.getElementById('leadStatus').value,
+            leadNotes: document.getElementById('leadNotes').value.trim(),
             enquiryDate: new Date(document.getElementById('enquiryDate').value),
             requestedProducts: requestedProducts, // The array of selected items
         };
@@ -9213,4 +9213,3 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => ProgressToast.hide(1500), 1500);
 
 });
-
