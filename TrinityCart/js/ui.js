@@ -17261,8 +17261,7 @@ export function openLeadModal(leadData = null) {
                 await loadAndMergeLeadProducts(selectedCatId, []);
             };
 
-            // 4. Attach the listener for manual user changes
-            catalogueSelect.onchange = (e) => handleCatalogueChange(e.target.value);
+            
 
             if (leadData) {
                 // --- EDIT MODE ---
@@ -17301,7 +17300,6 @@ export function openLeadModal(leadData = null) {
                 leadProductsGridApi.setGridOption('rowData', []);
             }
             
-            // ✅ FIX 3: Force grid to calculate layout now that modal is appearing
             leadProductsGridApi.sizeColumnsToFit();
         }
     }, 50);
