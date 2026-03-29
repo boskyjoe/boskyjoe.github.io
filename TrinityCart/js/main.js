@@ -176,7 +176,7 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 
 import { initializeLeadsModule } from './leads.js';
 
-import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid } from './ui.js'; 
+import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid,processLeadToSaleConversion } from './ui.js'; 
 
 import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
@@ -1048,11 +1048,22 @@ function setupGlobalClickHandler() {
             const leadData = masterData.leads.find(l => l.id === leadId);
 
             if (leadData) {
-                // Trigger your conversion logic (e.g., opening the Sales view with this data)
-                handleConvertLeadToSale(leadData); 
+                // 1. Ask for the Storefront
+                const choice = await showModal('choice', 'Convert to Direct Sale', 'Which store is processing this sale?', {
+                    buttons: [
+                        { id: 'Church', label: 'Church Store', class: 'bg-blue-600' },
+                        { id: 'Tasty Treats', label: 'Tasty Treats', class: 'bg-pink-600' }
+                    ]
+                });
+
+                if (choice) {
+                    // ✅ We call the UI function to handle the complex logic
+                    processLeadToSaleConversion(leadData, choice);
+                }
             }
             return;
         }
+
 
         // 3. HANDLE VIEW WORK LOG (Your existing code)     
         const viewWorkLogBtn = e.target.closest('.view-work-log-btn');
