@@ -1724,7 +1724,7 @@ const leadsGridOptions = {
             cellStyle: { color: '#6b7280', fontSize: '12px' }
         },
         {
-            field: "status",
+            field: "leadStatus",
             headerName: "Status",
             width: 130,
             editable: true,
