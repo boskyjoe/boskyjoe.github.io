@@ -7462,10 +7462,10 @@ function setupInputListeners() {
         
     }
 
-    const draftSaleSelect = document.getElementById('draft-sales-dropdown');
-    if (draftSaleSelect) {
-        draftSaleSelect.addEventListener('change', (e) => loadDraftSaleIntoForm(e.target.value));
-    }
+    //const draftSaleSelect = document.getElementById('draft-sales-dropdown');
+    //if (draftSaleSelect) {
+    //    draftSaleSelect.addEventListener('change', (e) => loadDraftSaleIntoForm(e.target.value));
+    //}
 
 
     // Get all relevant elements
