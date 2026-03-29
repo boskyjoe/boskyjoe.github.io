@@ -17369,7 +17369,135 @@ export function closeLeadModal() {
     }, 300);
 }
 
-// In js/ui.js
+/**
+ * Validates lead data against live catalogue/stock and opens the Sales Form
+ */
+export async function processLeadToSaleConversion(leadData, selectedStore) {
+    ProgressToast.show('Validating catalogue and stock...', 'info');
+
+    try {
+        const db = firebase.firestore();
+        // 1. Fetch the actual items in the selected catalogue (from sub-collection)
+        const itemsSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH)
+            .doc(leadData.catalogueId).collection('items').get();
+        
+        const catalogueItems = itemsSnapshot.docs.map(doc => doc.data());
+        
+        let warnings = [];
+        let itemsToTransfer = [];
+
+        // 2. Compare Lead Products against Catalogue and Master Stock
+        leadData.requestedProducts.forEach(lp => {
+            const catItem = catalogueItems.find(ci => ci.productId === lp.productId);
+            const masterProd = masterData.products.find(p => p.id === lp.productId);
+
+            // Issue A: Product not in this catalogue
+            if (!catItem) {
+                warnings.push(`❌ <b>${lp.productName}</b> is not in the selected catalogue.`);
+                return; 
+            }
+
+            // Issue B: Stock Level
+            if (masterProd && masterProd.inventoryCount < lp.requestedQty) {
+                warnings.push(`📉 <b>${lp.productName}</b>: Need ${lp.requestedQty}, but only ${masterProd.inventoryCount} available.`);
+            }
+
+            // Issue C: Pricing (Take new pricing)
+            if (catItem.sellingPrice !== lp.sellingPrice) {
+                warnings.push(`💰 <b>${lp.productName}</b>: Price changed from ${formatCurrency(lp.sellingPrice)} to ${formatCurrency(catItem.sellingPrice)}.`);
+            }
+
+            // Add to the list that will be pushed to the Sales Form
+            itemsToTransfer.push({
+                productId: lp.productId,
+                productName: lp.productName,
+                quantity: lp.requestedQty,
+                unitPrice: catItem.sellingPrice, // Always take new pricing
+                totalPrice: lp.requestedQty * catItem.sellingPrice
+            });
+        });
+
+        ProgressToast.hide(0);
+
+        // 3. Admin Decision Point
+        if (warnings.length > 0) {
+            const warningHtml = `
+                <div class="text-left space-y-2">
+                    <p class="font-bold text-orange-600">Discrepancies found in this conversion:</p>
+                    <ul class="text-sm list-disc pl-5 space-y-1 max-h-48 overflow-y-auto">
+                        ${warnings.map(w => `<li>${w}</li>`).join('')}
+                    </ul>
+                    <p class="pt-2">Proceed with available items and current pricing?</p>
+                </div>
+            `;
+            const proceed = await showModal('confirm', 'Conversion Warnings', warningHtml);
+            if (!proceed) return; // Admin cancelled
+        }
+
+        // 4. Prepare hand-off package
+        const conversionPackage = {
+            customerInfo: {
+                name: leadData.customerName,
+                phone: leadData.customerPhone,
+                email: leadData.customerEmail,
+                address: leadData.customerAddress
+            },
+            items: itemsToTransfer,
+            store: selectedStore,
+            catalogueId: leadData.catalogueId,
+            sourceLeadId: leadData.id
+        };
+
+        // 5. Switch to Sales View and Auto-fill
+        sessionStorage.setItem('pending_lead_conversion', JSON.stringify(conversionPackage));
+        showSalesView(); 
+
+        setTimeout(() => {
+            autoFillSalesFormFromLead();
+        }, 400);
+
+    } catch (error) {
+        console.error("Conversion Error:", error);
+        ProgressToast.hide(0);
+        showModal('error', 'Conversion Failed', 'Could not validate catalogue data.');
+    }
+}
+
+/**
+ * Injects the lead data into the standard Sales Modal
+ */
+function autoFillSalesFormFromLead() {
+    const rawData = sessionStorage.getItem('pending_lead_conversion');
+    if (!rawData) return;
+
+    const data = JSON.parse(rawData);
+    
+    // Open your standard New Sale Modal
+    showNewSaleModal(); 
+
+    const waitForSalesModal = setInterval(() => {
+        const nameInput = document.getElementById('sale-customer-name');
+        if (nameInput && window.salesCartGridApi) {
+            clearInterval(waitForSalesModal);
+
+            // Populate text fields
+            nameInput.value = data.customerInfo.name;
+            document.getElementById('sale-customer-phone').value = data.customerInfo.phone || '';
+            document.getElementById('sale-store-select').value = data.store;
+            document.getElementById('sale-catalogue-select').value = data.catalogueId || '';
+            
+            // Populate the Cart Grid
+            window.salesCartGridApi.setGridOption('rowData', data.items);
+            
+            // ✅ CRITICAL: Store the lead ID so when the sale is saved, 
+            // the API knows which lead to mark as "Converted"
+            appState.currentConversionSourceId = data.sourceLeadId;
+
+            sessionStorage.removeItem('pending_lead_conversion');
+            ProgressToast.showSuccess('Lead data imported. Please review and save.');
+        }
+    }, 100);
+}
 
 // --- Step 1: Add new variables at the top of the file ---
 let consignmentOrdersGridApiV2 = null;
