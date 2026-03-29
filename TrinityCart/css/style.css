@@ -20,6 +20,7 @@
     }
 }
 
+
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -168,7 +169,14 @@
     background-color: #f3f4f6 !important; 
 }
 
-
+.nav-link.active {
+    background-color: rgba(56, 189, 248, 0.15); /* Very subtle sky-blue tint */
+    color: #ffffff !important;
+    border-left: 3px solid #38bdf8; /* Bright sky-blue indicator */
+    border-radius: 0 8px 8px 0; /* Rounded only on the right side */
+    margin-left: 0 !important; /* Pull to the very edge for the border effect */
+    padding-left: 1.25rem; /* Adjust padding to compensate for margin change */
+}
 
 main {
     position: relative;
