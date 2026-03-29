@@ -7590,7 +7590,7 @@ export function resetSalePaymentForm() {
 
 // --- RENDER FUNCTIONS ---
 
-export function renderSidebar(role) {
+export function renderSidebarOld(role) {
     const sidebarNav = document.getElementById('sidebar-nav');
     sidebarNav.innerHTML = ''; // Clear existing links
     if (!role) return; // Don't render if no role
@@ -7619,6 +7619,53 @@ export function renderSidebar(role) {
 
 
 }
+
+
+export function renderSidebar(role) {
+    const sidebarNav = document.getElementById('sidebar-nav');
+    if (!sidebarNav) return;
+    
+    sidebarNav.innerHTML = ''; // Clear existing links
+    if (!role) return; 
+
+    navConfig.forEach(item => {
+        // Check if the user's role is allowed to see this item
+        if (item.roles.includes(role)) {
+            const li = document.createElement('li');
+
+            if (item.type === 'heading') {
+                // Styling for non-clickable headings
+                li.className = 'px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 select-none';
+                li.textContent = item.label;
+            }
+            else if (item.type === 'link') {
+                const link = document.createElement('a');
+                link.href = '#';
+                
+                // Base classes for links
+                let linkClasses = 'nav-link flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors hover:bg-gray-100 group';
+                
+                // Add indentation if the item is nested under a heading
+                if (item.indent) {
+                    linkClasses += ' ml-3'; // Slight shift to the right
+                }
+                
+                link.className = linkClasses;
+                link.dataset.viewId = item.viewId;
+                
+                // Icon and Label
+                link.innerHTML = `
+                    <span class="w-5 h-5 flex-shrink-0">${item.icon}</span>
+                    <span class="text-sm font-medium text-gray-700 group-hover:text-blue-600">${item.label}</span>
+                `;
+                
+                li.appendChild(link);
+            }
+            sidebarNav.appendChild(li);
+        }
+    });
+}
+
 
 
 
