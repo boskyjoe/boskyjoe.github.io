@@ -17135,7 +17135,11 @@ const leadProductsGridOptions = {
             width: 120, 
             editable: true, 
             cellEditor: 'agNumberCellEditor',
-            cellStyle: { backgroundColor: '#f0f9ff', fontWeight: 'bold', border: '1px solid #bae6fd' }
+            cellStyle: { backgroundColor: '#f0f9ff', fontWeight: 'bold', border: '1px solid #bae6fd' },
+            cellClassRules: {
+                // Apply a soft green background if the quantity is > 0
+                'bg-green-50 text-green-700 font-bold': params => params.value > 0
+            }
         }
     ],
     rowData: [],
