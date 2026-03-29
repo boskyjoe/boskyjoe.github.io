@@ -192,7 +192,7 @@ export function initializeMasterDataListeners() {
     unsubscribeFunctions.push(draftSalesUnsub);
 
     const leadsUnsub = db.collection(LEADS_COLLECTION_PATH)
-        .orderBy('createdDate', 'desc') // Show newest leads first
+        .orderBy('createdOn', 'desc') // Show newest leads first
         .onSnapshot(snapshot => {
             masterData.leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             console.log("Master data updated: Leads", masterData.leads.length);
