@@ -17342,7 +17342,7 @@ export function openLeadModal(leadData = null) {
 
             } else {
                 // --- ADD NEW MODE ---
-                title.textContent = 'Add Enquiry Lead';
+                title.textContent = 'Add Enquiry';
                 document.getElementById('lead-id-input').value = '';
                 document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('leadStatus').value = 'New';
