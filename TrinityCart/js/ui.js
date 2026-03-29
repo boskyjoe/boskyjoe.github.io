@@ -7632,36 +7632,35 @@ export function renderSidebar(role) {
     navConfig.forEach(item => {
         if (item.roles.includes(role)) {
             const li = document.createElement('li');
-            li.className = 'mb-1'; // Small spacing between items
 
             if (item.type === 'heading') {
-                // Heading: Muted gray, small, uppercase
-                li.className = 'px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 select-none';
+                // Heading: Brightened color (Sky-400), tighter spacing, with a bottom border
+                li.className = 'px-4 mt-5 mb-1 pb-1 text-[11px] font-black uppercase tracking-[0.2em] text-sky-400 border-b border-sky-900/50 select-none';
                 li.textContent = item.label;
             }
             else if (item.type === 'link') {
                 const link = document.createElement('a');
                 link.href = '#';
                 
-                // Base Classes: 
-                // - text-slate-300: Light gray text
-                // - hover:bg-white/10: Subtle white transparency highlight on hover
-                // - hover:text-white: Pure white text on hover
-                let linkClasses = 'nav-link flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:bg-white/10 hover:text-white group mx-2';
+                // Compact Classes:
+                // - py-1.5: Reduced vertical padding for compactness
+                // - text-slate-300: High contrast gray
+                // - mx-2: Horizontal margin to keep it away from edges
+                let linkClasses = 'nav-link flex items-center space-x-3 px-3 py-1.5 rounded-lg transition-all duration-150 text-slate-300 hover:bg-white/10 hover:text-white group mx-2 mb-0.5';
                 
                 // Indentation for Tree structure
                 if (item.indent) {
-                    linkClasses += ' ml-6 border-l border-slate-800 rounded-l-none'; 
+                    linkClasses += ' ml-5'; 
                 }
                 
                 link.className = linkClasses;
                 link.dataset.viewId = item.viewId;
                 
                 // Icon and Label
-                // Icon uses flex-shrink-0 to prevent squishing
+                // text-[13px]: Slightly smaller font to fit more items
                 link.innerHTML = `
-                    <span class="w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">${item.icon}</span>
-                    <span class="text-[13px] font-medium tracking-wide">${item.label}</span>
+                    <span class="w-4 h-4 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">${item.icon}</span>
+                    <span class="text-[13px] font-medium tracking-tight">${item.label}</span>
                 `;
                 
                 li.appendChild(link);
