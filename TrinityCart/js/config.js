@@ -243,7 +243,7 @@ export const navConfig = [
     { type: "heading", label: "POS", roles: ["admin", "sales_staff", "team_lead", "inventory_manager"] },
     {
         type: "link",
-        label: "Simple Consignment",
+        label: "Consignment",
         indent: true,
         icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-cyan-500"><path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h10zM13 16l-2-2m2 2l2-2m-2 2v-2m2 2h-2M13 16a1 1 0 011 1v4h-2.5a1 1 0 01-.8-.4l-1-1.4a1 1 0 00-1.4 0l-1 1.4a1 1 0 01-.8.4H7v-4a1 1 0 011-1h5z" /></svg>`,
         viewId: "consignment-view-v2",
@@ -251,7 +251,7 @@ export const navConfig = [
     },
     {
         type: "link",
-        label: "Sales Management",
+        label: "Retail (Store)",
         indent: true,
         icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-green-500"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
         viewId: "sales-view",
@@ -262,7 +262,7 @@ export const navConfig = [
     { type: "heading", label: "Inventory", roles: ["admin", "inventory_manager"] },
     {
         type: "link",
-        label: "Purchase Management",
+        label: "Stock Purchase",
         indent: true,
         icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-orange-500"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>`,
         viewId: "purchases-view",
@@ -273,7 +273,7 @@ export const navConfig = [
     { type: "heading", label: "Store Admin", roles: ["admin", "finance", "inventory_manager"] },
     {
         type: "link",
-        label: "Product Management",
+        label: "Product Catalogue",
         indent: true,
         icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-purple-500"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>`,
         viewId: "products-view",
