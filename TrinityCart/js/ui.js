@@ -1797,7 +1797,9 @@ const leadsGridOptions = {
                     <button title="View Work Log" 
                             class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg view-work-log-btn" 
                             data-id="${leadId}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round"  stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
                     </button>
                 `;
             },
@@ -7620,43 +7622,46 @@ export function renderSidebarOld(role) {
 
 }
 
-
 export function renderSidebar(role) {
     const sidebarNav = document.getElementById('sidebar-nav');
     if (!sidebarNav) return;
     
-    sidebarNav.innerHTML = ''; // Clear existing links
+    sidebarNav.innerHTML = ''; 
     if (!role) return; 
 
     navConfig.forEach(item => {
-        // Check if the user's role is allowed to see this item
         if (item.roles.includes(role)) {
             const li = document.createElement('li');
+            li.className = 'mb-1'; // Small spacing between items
 
             if (item.type === 'heading') {
-                // Styling for non-clickable headings
-                li.className = 'px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 select-none';
+                // Heading: Muted gray, small, uppercase
+                li.className = 'px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 select-none';
                 li.textContent = item.label;
             }
             else if (item.type === 'link') {
                 const link = document.createElement('a');
                 link.href = '#';
                 
-                // Base classes for links
-                let linkClasses = 'nav-link flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors hover:bg-gray-100 group';
+                // Base Classes: 
+                // - text-slate-300: Light gray text
+                // - hover:bg-white/10: Subtle white transparency highlight on hover
+                // - hover:text-white: Pure white text on hover
+                let linkClasses = 'nav-link flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:bg-white/10 hover:text-white group mx-2';
                 
-                // Add indentation if the item is nested under a heading
+                // Indentation for Tree structure
                 if (item.indent) {
-                    linkClasses += ' ml-3'; // Slight shift to the right
+                    linkClasses += ' ml-6 border-l border-slate-800 rounded-l-none'; 
                 }
                 
                 link.className = linkClasses;
                 link.dataset.viewId = item.viewId;
                 
                 // Icon and Label
+                // Icon uses flex-shrink-0 to prevent squishing
                 link.innerHTML = `
-                    <span class="w-5 h-5 flex-shrink-0">${item.icon}</span>
-                    <span class="text-sm font-medium text-gray-700 group-hover:text-blue-600">${item.label}</span>
+                    <span class="w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">${item.icon}</span>
+                    <span class="text-[13px] font-medium tracking-wide">${item.label}</span>
                 `;
                 
                 li.appendChild(link);
@@ -7665,7 +7670,6 @@ export function renderSidebar(role) {
         }
     });
 }
-
 
 
 
