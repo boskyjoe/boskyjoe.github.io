@@ -17187,42 +17187,45 @@ function populateLeadDropdowns() {
     }
 }
 
-
-async function loadLeadCatalogueItems(catalogueId) {
+async function loadAndMergeLeadProducts(catalogueId, savedProducts = []) {
     if (!leadProductsGridApi) return;
 
     try {
-        console.log(`📡 [Leads] Fetching items for catalogue: ${catalogueId}`);
         leadProductsGridApi.setGridOption('loading', true);
-
         const db = firebase.firestore();
         
-        // ✅ ACCESS THE SUB-COLLECTION (The key fix)
+        // Fetch all items belonging to this catalogue
         const itemsSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH)
             .doc(catalogueId)
             .collection('items')
             .get();
 
-        const catalogueProducts = itemsSnapshot.docs.map(doc => {
-            const item = doc.data();
+        const catalogueItems = itemsSnapshot.docs.map(doc => doc.data());
+
+        // MERGE LOGIC: Map through catalogue items and "inject" saved quantities
+        const mergedRows = catalogueItems.map(catItem => {
+            // Check if this specific product was already saved in the lead
+            const existingSavedItem = savedProducts.find(p => p.productId === catItem.productId);
+            
             return {
-                productId: item.productId,
-                productName: item.productName,
-                sellingPrice: item.sellingPrice,
-                requestedQty: 0 // Default for new lead
+                productId: catItem.productId,
+                productName: catItem.productName,
+                sellingPrice: catItem.sellingPrice,
+                // Use saved qty if it exists, otherwise 0
+                requestedQty: existingSavedItem ? existingSavedItem.requestedQty : 0 
             };
         });
 
-        console.log(`✅ [Leads] Loaded ${catalogueProducts.length} items into grid.`);
-        leadProductsGridApi.setGridOption('rowData', catalogueProducts);
+        leadProductsGridApi.setGridOption('rowData', mergedRows);
         leadProductsGridApi.setGridOption('loading', false);
+        leadProductsGridApi.sizeColumnsToFit();
 
     } catch (error) {
-        console.error('❌ [Leads] Error loading catalogue items:', error);
+        console.error('❌ [Leads] Error merging products:', error);
         leadProductsGridApi.setGridOption('loading', false);
-        showModal('error', 'Loading Failed', 'Could not retrieve products for this catalogue.');
     }
 }
+
 
 export function openLeadModal(leadData = null) {
     const modal = document.getElementById('lead-modal');
@@ -17243,13 +17246,15 @@ export function openLeadModal(leadData = null) {
             
             const catalogueSelect = document.getElementById('leadCatalogueSelect');
             
-            // 3. Define the change logic in a reusable function
-            const handleCatalogueChange = async (catalogueId) => {
-                if (!catalogueId) {
+            // Handle dropdown changes (User picking a new catalogue)
+            catalogueSelect.onchange = async (e) => {
+                const selectedCatId = e.target.value;
+                if (!selectedCatId) {
                     leadProductsGridApi.setGridOption('rowData', []);
                     return;
                 }
-                await loadLeadCatalogueItems(catalogueId);
+                // When manually changing, we have no "saved" products for the new catalogue
+                await loadAndMergeLeadProducts(selectedCatId, []);
             };
 
             // 4. Attach the listener for manual user changes
@@ -17274,16 +17279,12 @@ export function openLeadModal(leadData = null) {
                 document.getElementById('leadStatus').value = leadData.leadStatus || 'New';
                 document.getElementById('leadNotes').value = leadData.leadNotes || '';
 
-                // ✅ FIX 1: Set value AND manually trigger the load
                 const catId = leadData.catalogueId || '';
                 catalogueSelect.value = catId;
                 
-                if (leadData.requestedProducts && leadData.requestedProducts.length > 0) {
-                    // Load the specific products saved to this lead
-                    leadProductsGridApi.setGridOption('rowData', leadData.requestedProducts);
-                } else if (catId) {
-                    // If no products saved but catalogue selected, load from catalogue
-                    handleCatalogueChange(catId);
+                if (catId) {
+                    // Load ALL catalogue items, but highlight the ones already in the lead
+                    loadAndMergeLeadProducts(catId, leadData.requestedProducts || []);
                 }
 
             } else {
@@ -17293,7 +17294,6 @@ export function openLeadModal(leadData = null) {
                 document.getElementById('enquiryDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('leadStatus').value = 'New';
                 
-                // ✅ FIX 2: Explicitly set empty rowData to force headers to show
                 leadProductsGridApi.setGridOption('rowData', []);
             }
             
