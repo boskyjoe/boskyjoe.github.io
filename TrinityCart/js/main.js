@@ -176,7 +176,7 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 
 import { initializeLeadsModule } from './leads.js';
 
-import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid,processLeadToSaleConversion } from './ui.js'; 
+import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid,initiateLeadToSaleConversion } from './ui.js'; 
 
 import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
@@ -1048,16 +1048,20 @@ function setupGlobalClickHandler() {
             const leadData = masterData.leads.find(l => l.id === leadId);
 
             if (leadData) {
-                // 1. Ask for the Storefront
-                const choice = await showModal('choice', 'Convert to Direct Sale', 'Which store is processing this sale?', {
-                    buttons: [
-                        { id: 'Church', label: 'Church Store', class: 'bg-blue-600' },
-                        { id: 'Tasty Treats', label: 'Tasty Treats', class: 'bg-pink-600' }
+                // ✅ FIX: Use the 'actions' array inside the config object
+                const choice = await showModal({
+                    type: 'choice',
+                    title: 'Convert to Direct Sale',
+                    message: 'Which store is processing this sale?',
+                    actions: [
+                        { label: 'Church Store', primary: true, value: 'Church' },
+                        { label: 'Tasty Treats', primary: true, value: 'Tasty Treats' },
+                        { label: 'Cancel', primary: false, value: null }
                     ]
                 });
 
                 if (choice) {
-                    // ✅ We call the UI function to handle the complex logic
+                    // Call the logic-heavy function in ui.js
                     processLeadToSaleConversion(leadData, choice);
                 }
             }
