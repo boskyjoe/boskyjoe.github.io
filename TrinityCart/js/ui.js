@@ -17468,37 +17468,80 @@ export async function processLeadToSaleConversion(leadData, selectedStore) {
 
 
 /**
- * Injects the lead data into the standard Sales Modal
+ * Injects lead data into the Sales Management view form fields
  */
 function autoFillSalesFormFromLead() {
     const rawData = sessionStorage.getItem('pending_lead_conversion');
     if (!rawData) return;
 
     const data = JSON.parse(rawData);
-    
-    // showSalesView has already been called, now we populate the elements
+    console.log("💉 [ui.js] Auto-filling Sales Form from Lead:", data.sourceLeadId);
+
+    // We use an interval to ensure showSalesView() has finished rendering 
+    // and the Grid API is fully initialized.
     const waitForSalesElements = setInterval(() => {
         const nameInput = document.getElementById('sale-customer-name');
-        if (nameInput && window.salesCartGridApi) {
+        const storeSelect = document.getElementById('sale-store-select');
+        const cartGrid = window.salesCartGridApi;
+
+        if (nameInput && storeSelect && cartGrid) {
             clearInterval(waitForSalesElements);
 
-            // Populate Fields
-            nameInput.value = data.customerInfo.name;
+            // 1. Basic Customer Info
+            nameInput.value = data.customerInfo.name || '';
             document.getElementById('sale-customer-phone').value = data.customerInfo.phone || '';
+            document.getElementById('sale-customer-email').value = data.customerInfo.email || '';
+            
+            // 2. Address Logic (Specific to your HTML structure)
+            const addressContainer = document.getElementById('tasty-treats-address-container');
+            const addressTextArea = document.getElementById('sale-customer-address');
+            
+            if (data.store === 'Tasty Treats') {
+                if (addressContainer) addressContainer.classList.remove('hidden');
+                if (addressTextArea) addressTextArea.value = data.customerInfo.address || '';
+            } else {
+                if (addressContainer) addressContainer.classList.add('hidden');
+            }
+
+            // 3. Context Fields
             document.getElementById('sale-store-select').value = data.store;
             document.getElementById('sale-catalogue-select').value = data.catalogueId || '';
-
-            // Load items into the Cart Grid
-            window.salesCartGridApi.setGridOption('rowData', data.items);
+            document.getElementById('sale-date').valueAsDate = new Date();
             
-            // Recalculate totals using your existing function
-            if (typeof calculateSalesTotals === 'function') calculateSalesTotals();
+            // Set a default Sale Type
+            const typeSelect = document.getElementById('sale-type-select');
+            if (typeSelect) typeSelect.value = 'Revenue'; 
 
-            // Link the lead ID for the final save in addSale API
+            // 4. Load Items into the AG-Grid Cart
+            // We map the items to match the Sales Cart's expected column fields
+            const cartItems = data.items.map(item => ({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                taxAmount: 0, // Default tax
+                totalPrice: item.totalPrice
+            }));
+
+            cartGrid.setGridOption('rowData', cartItems);
+
+            // 5. Trigger Calculations
+            // This ensures the Grand Total, Subtotal, etc., update immediately
+            if (typeof calculateSalesTotals === 'function') {
+                calculateSalesTotals();
+            }
+
+            // 6. Audit Link
+            // Store the lead ID in appState so the addSale API can mark it "Converted" on save
             appState.currentConversionSourceId = data.sourceLeadId;
 
+            // 7. Cleanup
             sessionStorage.removeItem('pending_lead_conversion');
-            ProgressToast.showSuccess('Lead data imported! Please review and save.');
+            
+            ProgressToast.showSuccess(`Imported items for ${data.customerInfo.name}. Please review and complete the sale.`);
+            
+            // Scroll the user to the top of the form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, 100);
 }
