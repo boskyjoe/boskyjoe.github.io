@@ -17477,14 +17477,17 @@ function autoFillSalesFormFromLead() {
     const data = JSON.parse(rawData);
     console.log("💉 [ui.js] Auto-filling Sales Form from Lead:", data.sourceLeadId);
 
-    // We use an interval to ensure showSalesView() has finished rendering 
-    // and the Grid API is fully initialized.
     const waitForSalesElements = setInterval(() => {
         const nameInput = document.getElementById('sale-customer-name');
         const storeSelect = document.getElementById('sale-store-select');
+        const catSelect = document.getElementById('sale-catalogue-select');
         const cartGrid = window.salesCartGridApi;
 
-        if (nameInput && storeSelect && cartGrid) {
+        // ✅ FIX 1: Ensure dropdowns have been populated with options before trying to select them
+        const isStorePopulated = storeSelect && storeSelect.options.length > 1;
+        const isCatPopulated = catSelect && catSelect.options.length > 1;
+
+        if (nameInput && isStorePopulated && isCatPopulated && cartGrid) {
             clearInterval(waitForSalesElements);
 
             // 1. Basic Customer Info
@@ -17492,59 +17495,52 @@ function autoFillSalesFormFromLead() {
             document.getElementById('sale-customer-phone').value = data.customerInfo.phone || '';
             document.getElementById('sale-customer-email').value = data.customerInfo.email || '';
             
-            // 2. Address Logic (Specific to your HTML structure)
-            const addressContainer = document.getElementById('tasty-treats-address-container');
-            const addressTextArea = document.getElementById('sale-customer-address');
-            
+            // 2. Set Store and Trigger UI Logic
+            storeSelect.value = data.store;
+            // ✅ FIX 2: Manually trigger change event so the Address Container shows/hides
+            storeSelect.dispatchEvent(new Event('change'));
+
+            // 3. Set Address (if Tasty Treats)
             if (data.store === 'Tasty Treats') {
-                if (addressContainer) addressContainer.classList.remove('hidden');
+                const addressTextArea = document.getElementById('sale-customer-address');
                 if (addressTextArea) addressTextArea.value = data.customerInfo.address || '';
-            } else {
-                if (addressContainer) addressContainer.classList.add('hidden');
             }
 
-            // 3. Context Fields
-            document.getElementById('sale-store-select').value = data.store;
-            document.getElementById('sale-catalogue-select').value = data.catalogueId || '';
-            document.getElementById('sale-date').valueAsDate = new Date();
+            // 4. Set Catalogue and Sale Type
+            catSelect.value = data.catalogueId || '';
             
-            // Set a default Sale Type
             const typeSelect = document.getElementById('sale-type-select');
-            if (typeSelect) typeSelect.value = 'Revenue'; 
+            if (typeSelect) {
+                typeSelect.value = 'Revenue'; 
+                typeSelect.dispatchEvent(new Event('change')); // Trigger discount logic
+            }
 
-            // 4. Load Items into the AG-Grid Cart
-            // We map the items to match the Sales Cart's expected column fields
+            // 5. Load Items into the Cart Grid
             const cartItems = data.items.map(item => ({
                 productId: item.productId,
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                taxAmount: 0, // Default tax
+                taxAmount: 0, 
                 totalPrice: item.totalPrice
             }));
 
             cartGrid.setGridOption('rowData', cartItems);
 
-            // 5. Trigger Calculations
-            // This ensures the Grand Total, Subtotal, etc., update immediately
+            // 6. Finalize Calculations & State
             if (typeof calculateSalesTotals === 'function') {
                 calculateSalesTotals();
             }
 
-            // 6. Audit Link
-            // Store the lead ID in appState so the addSale API can mark it "Converted" on save
             appState.currentConversionSourceId = data.sourceLeadId;
-
-            // 7. Cleanup
             sessionStorage.removeItem('pending_lead_conversion');
             
-            ProgressToast.showSuccess(`Imported items for ${data.customerInfo.name}. Please review and complete the sale.`);
-            
-            // Scroll the user to the top of the form
+            ProgressToast.showSuccess(`Imported lead for ${data.customerInfo.name}`);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, 100);
 }
+
 
 // --- Step 1: Add new variables at the top of the file ---
 let consignmentOrdersGridApiV2 = null;
