@@ -17377,9 +17377,12 @@ export async function processLeadToSaleConversion(leadData, selectedStore) {
 
     try {
         const db = firebase.firestore();
+        
         // 1. Fetch the actual items in the selected catalogue (from sub-collection)
         const itemsSnapshot = await db.collection(SALES_CATALOGUES_COLLECTION_PATH)
-            .doc(leadData.catalogueId).collection('items').get();
+            .doc(leadData.catalogueId)
+            .collection('items')
+            .get();
         
         const catalogueItems = itemsSnapshot.docs.map(doc => doc.data());
         
@@ -17391,47 +17394,46 @@ export async function processLeadToSaleConversion(leadData, selectedStore) {
             const catItem = catalogueItems.find(ci => ci.productId === lp.productId);
             const masterProd = masterData.products.find(p => p.id === lp.productId);
 
-            // Issue A: Product not in this catalogue
+            // Check A: Product not in this catalogue
             if (!catItem) {
                 warnings.push(`❌ <b>${lp.productName}</b> is not in the selected catalogue.`);
                 return; 
             }
 
-            // Issue B: Stock Level
+            // Check B: Stock Level
             if (masterProd && masterProd.inventoryCount < lp.requestedQty) {
                 warnings.push(`📉 <b>${lp.productName}</b>: Need ${lp.requestedQty}, but only ${masterProd.inventoryCount} available.`);
             }
 
-            // Issue C: Pricing (Take new pricing)
+            // Check C: Pricing (Always take new pricing from catalogue)
             if (catItem.sellingPrice !== lp.sellingPrice) {
-                warnings.push(`💰 <b>${lp.productName}</b>: Price changed from ${formatCurrency(lp.sellingPrice)} to ${formatCurrency(catItem.sellingPrice)}.`);
+                warnings.push(`💰 <b>${lp.productName}</b>: Price updated to ${formatCurrency(catItem.sellingPrice)}.`);
             }
 
-            // Add to the list that will be pushed to the Sales Form
             itemsToTransfer.push({
                 productId: lp.productId,
                 productName: lp.productName,
                 quantity: lp.requestedQty,
-                unitPrice: catItem.sellingPrice, // Always take new pricing
+                unitPrice: catItem.sellingPrice, 
                 totalPrice: lp.requestedQty * catItem.sellingPrice
             });
         });
 
         ProgressToast.hide(0);
 
-        // 3. Admin Decision Point
+        // 3. Admin Decision Popup if there are issues
         if (warnings.length > 0) {
             const warningHtml = `
                 <div class="text-left space-y-2">
-                    <p class="font-bold text-orange-600">Discrepancies found in this conversion:</p>
+                    <p class="font-bold text-orange-600">Discrepancies found:</p>
                     <ul class="text-sm list-disc pl-5 space-y-1 max-h-48 overflow-y-auto">
                         ${warnings.map(w => `<li>${w}</li>`).join('')}
                     </ul>
-                    <p class="pt-2">Proceed with available items and current pricing?</p>
+                    <p class="pt-2 text-gray-700">Would you like to proceed with the conversion using current pricing and available data?</p>
                 </div>
             `;
             const proceed = await showModal('confirm', 'Conversion Warnings', warningHtml);
-            if (!proceed) return; // Admin cancelled
+            if (!proceed) return; // Admin chose to cancel
         }
 
         // 4. Prepare hand-off package
@@ -17448,13 +17450,14 @@ export async function processLeadToSaleConversion(leadData, selectedStore) {
             sourceLeadId: leadData.id
         };
 
-        // 5. Switch to Sales View and Auto-fill
+        // 5. Switch to Sales View
         sessionStorage.setItem('pending_lead_conversion', JSON.stringify(conversionPackage));
         showSalesView(); 
 
+        // 6. Trigger Auto-fill (Wait for showSalesView to finish reset)
         setTimeout(() => {
             autoFillSalesFormFromLead();
-        }, 400);
+        }, 500);
 
     } catch (error) {
         console.error("Conversion Error:", error);
@@ -17462,6 +17465,7 @@ export async function processLeadToSaleConversion(leadData, selectedStore) {
         showModal('error', 'Conversion Failed', 'Could not validate catalogue data.');
     }
 }
+
 
 /**
  * Injects the lead data into the standard Sales Modal
@@ -17472,29 +17476,29 @@ function autoFillSalesFormFromLead() {
 
     const data = JSON.parse(rawData);
     
-    // Open your standard New Sale Modal
-    showNewSaleModal(); 
-
-    const waitForSalesModal = setInterval(() => {
+    // showSalesView has already been called, now we populate the elements
+    const waitForSalesElements = setInterval(() => {
         const nameInput = document.getElementById('sale-customer-name');
         if (nameInput && window.salesCartGridApi) {
-            clearInterval(waitForSalesModal);
+            clearInterval(waitForSalesElements);
 
-            // Populate text fields
+            // Populate Fields
             nameInput.value = data.customerInfo.name;
             document.getElementById('sale-customer-phone').value = data.customerInfo.phone || '';
             document.getElementById('sale-store-select').value = data.store;
             document.getElementById('sale-catalogue-select').value = data.catalogueId || '';
-            
-            // Populate the Cart Grid
+
+            // Load items into the Cart Grid
             window.salesCartGridApi.setGridOption('rowData', data.items);
             
-            // ✅ CRITICAL: Store the lead ID so when the sale is saved, 
-            // the API knows which lead to mark as "Converted"
+            // Recalculate totals using your existing function
+            if (typeof calculateSalesTotals === 'function') calculateSalesTotals();
+
+            // Link the lead ID for the final save in addSale API
             appState.currentConversionSourceId = data.sourceLeadId;
 
             sessionStorage.removeItem('pending_lead_conversion');
-            ProgressToast.showSuccess('Lead data imported. Please review and save.');
+            ProgressToast.showSuccess('Lead data imported! Please review and save.');
         }
     }, 100);
 }
