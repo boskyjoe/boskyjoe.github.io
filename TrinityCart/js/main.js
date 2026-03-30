@@ -176,7 +176,7 @@ import { generateTastyTreatsInvoice,generateConsignmentDetailPDF } from './pdf-t
 
 import { initializeLeadsModule } from './leads.js';
 
-import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid,initiateLeadToSaleConversion } from './ui.js'; 
+import {  openLeadModal, closeLeadModal,showWorkLogModal,closeWorkLogModal,getLeadRequestedProductsFromGrid,processLeadToSaleConversion } from './ui.js'; 
 
 import { showConsignmentViewV2,getConsignmentItemsV2,closeConsignmentModalV2, } from './ui.js';
 import { initializeConsignmentV2Module } from './consignment-v2.js';
