@@ -6963,11 +6963,11 @@ export function showSalesView() {
     setTimeout(() => {
 
         // 2. Reset the "New Sale" form to its default state.
-        const form = document.getElementById('new-sale-form');
-        if (form) {
-            form.reset();
-        }
-
+        setTimeout(() => {
+            const form = document.getElementById('new-sale-form');
+            if (form) form.reset();
+            autoFillSalesFormFromLead(); 
+        }, 0); 
         // Default the sale date to today. This will now work.
         document.getElementById('sale-date').valueAsDate = new Date();
 
