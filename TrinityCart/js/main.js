@@ -1054,7 +1054,7 @@ function setupGlobalClickHandler() {
                     title: 'Convert to Direct Sale',
                     message: 'Which store is processing this sale?',
                     actions: [
-                        { label: 'Church Store', primary: true, value: 'Church' },
+                        { label: 'Church Store', primary: true, value: 'Church Store' },
                         { label: 'Tasty Treats', primary: true, value: 'Tasty Treats' },
                         { label: 'Cancel', primary: false, value: null }
                     ]
