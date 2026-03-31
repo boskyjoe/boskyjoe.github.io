@@ -6280,6 +6280,7 @@ const salesCartGridOptions = {
     onGridReady: (params) => {
         console.log("[ui.js] Sales Cart Grid is now ready.");
         salesCartGridApi = params.api;
+        window.salesCartGridApi = params.api;
     }
 };
 
@@ -17507,7 +17508,7 @@ function autoFillSalesFormFromLead() {
         const dateInput = document.getElementById('sale-date');
         
         // Grid API
-        const cartGrid = window.salesCartGridApi;
+        const cartGrid = salesCartGridApi || window.salesCartGridApi;
 
         console.log(`⏳ [AUTOFILL STEP 6] Checking elements: 
             - Name Input: ${!!nameInput} 
@@ -17559,10 +17560,11 @@ function autoFillSalesFormFromLead() {
             const cartItems = data.items.map(item => ({
                 productId: item.productId,
                 productName: item.productName,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                taxAmount: 0, 
-                totalPrice: item.totalPrice
+                quantity: item.quantity, // From lead requestedQty
+                unitPrice: item.unitPrice, // From current catalogue price
+                discountPercentage: 0,
+                cgstPercentage: 0,
+                sgstPercentage: 0
             }));
 
             cartGrid.setGridOption('rowData', cartItems);
