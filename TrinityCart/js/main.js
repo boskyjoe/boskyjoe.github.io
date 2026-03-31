@@ -6073,11 +6073,14 @@ async function handleNewSaleSubmit(e) {
             console.log(`[main.js] Sale donation source: ${donationSource} (${formatCurrency(donationAmount)})`);
         }
 
+        const sourceLeadId = document.getElementById('sale-source-lead-id')?.value || null;
+
         const saleData = {
             saleDate: new Date(document.getElementById('sale-date').value),
             store: selectedStore,
             manualVoucherNumber: voucherNumber,
             saleType:selectedSaleType,
+            sourceLeadId: sourceLeadId,
             
             // ✅ ENHANCED: Sales catalogue attribution
             salesCatalogueId: selectedCatalogueId,
@@ -6116,7 +6119,7 @@ async function handleNewSaleSubmit(e) {
         );
 
         // ✅ ENHANCED: Pass donation source to API
-        await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email, donationSource);
+        await createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, user.email, donationSource,sourceLeadId);
 
         // Step 9: Success Completion
         ProgressToast.updateProgress('Transaction completed successfully!', 100, 'Step 9 of 9');
@@ -6126,6 +6129,10 @@ async function handleNewSaleSubmit(e) {
             : `Invoice created for ${customerName} - Voucher ${voucherNumber}!`;
             
         ProgressToast.showSuccess(successMessage);
+
+        if (document.getElementById('sale-source-lead-id')) {
+            document.getElementById('sale-source-lead-id').value = '';
+        }
 
         setTimeout(async () => {
             ProgressToast.hide(800);
