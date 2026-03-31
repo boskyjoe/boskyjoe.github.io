@@ -2868,7 +2868,7 @@ function getDonorClassification(donationAmount) {
  * @param {string|null} donationSource - Standardized donation source from DONATION_SOURCES
  */
 
-export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail, donationSource = null) {
+export async function createSaleAndUpdateInventory(saleData, initialPaymentData, donationAmount, userEmail, donationSource = null,sourceLeadId=null) {
     const db = firebase.firestore();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
@@ -2886,6 +2886,18 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             const currentStock = productDoc.data().inventoryCount || 0;
             if (currentStock < item.quantity) {
                 throw new Error(`Not enough stock for "${item.productName}". Only ${currentStock} available.`);
+            }
+        }
+
+        let leadRef = null;
+        if (sourceLeadId) {
+            leadRef = db.collection(LEADS_COLLECTION_PATH).doc(sourceLeadId);
+            const leadDoc = await transaction.get(leadRef);
+            if (!leadDoc.exists) {
+                console.warn(`[API] Source lead ${sourceLeadId} not found. Proceeding with sale only.`);
+                leadRef = null; 
+            } else if (leadDoc.data().status === 'Converted') {
+                throw new Error("This lead has already been converted to a sale.");
             }
         }
 
@@ -2914,6 +2926,19 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             paymentStatus: paymentStatus,
             audit: { createdBy: userEmail, createdOn: now }
         });
+
+        if (leadRef) {
+            transaction.update(leadRef, {
+                status: 'Converted',
+                convertedToSaleId: saleId, // Human readable ID
+                convertedToSaleDocId: saleRef.id, // Firestore Doc ID
+                convertedDate: now,
+                convertedBy: userEmail,
+                'audit.updatedOn': now,
+                'audit.updatedBy': userEmail
+            });
+            console.log(`[API] ✅ Lead ${sourceLeadId} marked as Converted to Sale ${saleId}`);
+        }
 
         // B. Create the initial payment record if one was made
         if (initialPaymentData) {
