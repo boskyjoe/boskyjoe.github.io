@@ -17582,6 +17582,24 @@ function autoFillSalesFormFromLead() {
 }
 
 
+/**
+ * Clears the conversion state and resets the sales form.
+ */
+window.cancelLeadConversion = async function() {
+    const confirm = await showModal('confirm', 'Cancel Conversion?', 
+        'This will clear all lead-related data and reset the form. Continue?');
+    
+    if (confirm) {
+        sessionStorage.removeItem('pending_lead_conversion');
+        document.getElementById('lead-conversion-indicator').classList.add('hidden');
+        document.getElementById('sale-source-lead-id').value = '';
+        
+        // Use your existing function to reset the view
+        showSalesView(); 
+    }
+}
+
+
 // --- Step 1: Add new variables at the top of the file ---
 let consignmentOrdersGridApiV2 = null;
 let consignmentItemsGridApiV2 = null;
