@@ -17497,6 +17497,8 @@ function autoFillSalesFormFromLead() {
     const data = JSON.parse(rawData);
     console.log("💉 [ui.js] Auto-filling Sales Form from Lead:", data.sourceLeadId);
 
+    
+
     const waitForSalesElements = setInterval(() => {
         // Core Form Elements
         const nameInput = document.getElementById('sale-customer-name');
@@ -17507,6 +17509,10 @@ function autoFillSalesFormFromLead() {
         const typeSelect = document.getElementById('sale-type-select');
         const dateInput = document.getElementById('sale-date');
         
+        const leadIdField = document.getElementById('sale-source-lead-id');
+        if (leadIdField) {
+            leadIdField.value = data.sourceLeadId;
+        }
         // Grid API
         const cartGrid = salesCartGridApi || window.salesCartGridApi;
 
