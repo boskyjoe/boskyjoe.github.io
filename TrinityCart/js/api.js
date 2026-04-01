@@ -2929,7 +2929,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
 
         if (leadRef) {
             transaction.update(leadRef, {
-                status: 'Converted',
+                leadStatus: 'Converted',
                 convertedToSaleId: saleId, // Human readable ID
                 convertedToSaleDocId: saleRef.id, // Firestore Doc ID
                 convertedDate: now,
