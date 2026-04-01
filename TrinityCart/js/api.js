@@ -2896,7 +2896,7 @@ export async function createSaleAndUpdateInventory(saleData, initialPaymentData,
             if (!leadDoc.exists) {
                 console.warn(`[API] Source lead ${sourceLeadId} not found. Proceeding with sale only.`);
                 leadRef = null; 
-            } else if (leadDoc.data().status === 'Converted') {
+            } else if (leadDoc.data().leadStatus === 'Converted') {
                 throw new Error("This lead has already been converted to a sale.");
             }
         }
