@@ -5810,6 +5810,18 @@
                 <!-- =================================== -->
                 <div id="sales-view" class="view space-y-8">
 
+                    <div id="lead-conversion-indicator" class="hidden mb-4 p-3 bg-indigo-100 border border-indigo-300 rounded-lg flex justify-between items-center">
+                        <span class="text-indigo-800 text-sm font-bold">
+                            Converting Lead: <span id="display-lead-id"></span> (<span id="display-lead-name"></span>)
+                        </span>
+                        <button type="button" onclick="cancelLeadConversion()" class="text-xs bg-white px-2 py-1 rounded border border-indigo-300">Cancel</button>
+                    </div>
+                        <!-- Action to cancel conversion and clear form -->
+                        <button type="button" onclick="cancelLeadConversion()" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-white px-3 py-1.5 rounded-md border border-indigo-200 shadow-sm transition-all">
+                            Cancel & Clear Form
+                        </button>
+                    </div>
+
                     <!-- Card 1: New Sale / POS Interface -->
                     <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
 
