@@ -17561,6 +17561,14 @@ function autoFillSalesFormFromLead() {
                 typeSelect.dispatchEvent(new Event('change')); // Trigger discount/sample logic
             }
 
+            const paymentTypeSelect = document.getElementById('sale-payment-type');
+            if (paymentTypeSelect) {
+                paymentTypeSelect.value = 'Pay Later';
+                // Trigger 'change' to hide the payment-specific fields (Amount Received, Ref, etc.)
+                paymentTypeSelect.dispatchEvent(new Event('change'));
+                console.log("✅ [AUTOFILL] Payment type set to 'Pay Later (Invoice)'");
+            }
+            
             // 6. Load Items into the Cart Grid
             // Mapping fields to match your Sales Cart columns
             const cartItems = data.items.map(item => ({
