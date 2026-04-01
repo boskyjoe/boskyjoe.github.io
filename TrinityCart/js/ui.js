@@ -6966,59 +6966,56 @@ export function closeAddProductModal() {
 
 // 4. Create the main view function
 export function showSalesView() {
-    
-    // 1. Show the main view container and initialize all its grids.
+    // 1. Show the main view container and initialize grids.
     showView('sales-view');
-    initializeSalesGrids(); // This will create the grid and trigger its onGridReady event.
-
+    initializeSalesGrids();
 
     setTimeout(() => {
+        // 2. Reset the "New Sale" form
+        const form = document.getElementById('new-sale-form');
+        if (form) form.reset();
 
-        // 2. Reset the "New Sale" form to its default state.
-        setTimeout(() => {
-            const form = document.getElementById('new-sale-form');
-            if (form) form.reset();
-            autoFillSalesFormFromLead(); 
-        }, 0); 
-        // Default the sale date to today. This will now work.
+        // ✅ NEW: Reset Conversion UI for every fresh load
+        const leadIdField = document.getElementById('sale-source-lead-id');
+        if (leadIdField) leadIdField.value = '';
+        
+        const indicator = document.getElementById('lead-conversion-indicator');
+        if (indicator) indicator.classList.add('hidden');
+
+        // ✅ NEW: Check for and apply Lead Conversion data
+        autoFillSalesFormFromLead(); 
+
+        // Default the sale date to today
         document.getElementById('sale-date').valueAsDate = new Date();
 
-        if (salesCartGridApi) salesCartGridApi.setGridOption('rowData', []);
+        if (window.salesCartGridApi) window.salesCartGridApi.setGridOption('rowData', []);
         calculateSalesTotals();
 
-        //document.getElementById('sale-pay-now-container').classList.add('hidden');
-
-        // ✅ NEW: Populate the draft sales dropdown
+        // 3. Populate Drafts Dropdown
         const draftSaleSelect = document.getElementById('draft-sales-dropdown');
         if (draftSaleSelect) {
             draftSaleSelect.innerHTML = '<option value="">-- Select a Draft Invoice to Load --</option>';
             masterData.draftSales.forEach(draft => {
                 const option = document.createElement('option');
                 option.value = draft.id;
-                // Display useful info in the dropdown text
-                option.textContent = `${draft.invoiceData.ManualVoucherNumber} - ${draft.invoiceData.CustomerName} (${draft.invoiceData.lineItems.length} items)`;
+                option.textContent = `${draft.invoiceData.ManualVoucherNumber} - ${draft.invoiceData.CustomerName}`;
                 draftSaleSelect.appendChild(option);
             });
         }
 
-        // 3. Populate the dropdowns on the form.
-
-        
+        // 4. Populate Store Dropdown
         const storeSelect = document.getElementById('sale-store-select');
         storeSelect.innerHTML = '<option value="">Select a store...</option>';
-        if (masterData.systemSetups && masterData.systemSetups.Stores) {
+        if (masterData.systemSetups?.Stores) {
             masterData.systemSetups.Stores.forEach(store => {
                 const option = document.createElement('option');
                 option.value = store;
                 option.textContent = store;
                 storeSelect.appendChild(option);
             });
-            // Set default value to "Church Store"
-            //storeSelect.value = 'Church Store';
-            // Manually trigger the change event in case other logic depends on it
-            //storeSelect.dispatchEvent(new Event('change'));
         }
 
+        // 5. Populate Payment Modes
         const paymentModeSelect = document.getElementById('sale-payment-mode');
         paymentModeSelect.innerHTML = '<option value="">Select mode...</option>';
         masterData.paymentModes.forEach(mode => {
@@ -7030,89 +7027,49 @@ export function showSalesView() {
             }
         });
 
-         // ✅ ENHANCED: Populate sales catalogue dropdown
+        // 6. Populate Catalogues & Sale Types
         populateSalesCatalogueDropdown();
-
-        // ✅ ADD: Sales catalogue change listener
-        const catalogueSelect = document.getElementById('sale-catalogue-select');
-        if (catalogueSelect) {
-            catalogueSelect.addEventListener('change', (e) => {
-                console.log(`[ui.js] Sales catalogue changed to: ${e.target.value}`);
-                // Could refresh available products or show catalogue info
-            });
-        }
 
         const saleTypeSelect = document.getElementById('sale-type-select');
         if (saleTypeSelect) {
-            saleTypeSelect.innerHTML = '<option value="">Select Sale Type...</option>'; // Clear existing options
-            saleTypeOptions.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option.value;
-                optionElement.textContent = option.label;
-                saleTypeSelect.appendChild(optionElement);
+            saleTypeSelect.innerHTML = '<option value="">Select Sale Type...</option>';
+            saleTypeOptions.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.label;
+                saleTypeSelect.appendChild(el);
             });
-            //saleTypeSelect.value = 'Revenue';
         }
 
-        // ✅ Add the event listener for the Sale Type dropdown
-        const orderDiscountInput = document.getElementById('sale-order-discount');
+        // 7. Default Payment Type to Pay Later
         const paymentTypeSelect = document.getElementById('sale-payment-type');
+        const orderDiscountInput = document.getElementById('sale-order-discount');
 
         if (paymentTypeSelect) {
             paymentTypeSelect.value = 'Pay Later (Invoice)';
-            // Manually trigger the change event to ensure the "Pay Now" container is hidden
             paymentTypeSelect.dispatchEvent(new Event('change'));
         }
 
-        if (paymentTypeSelect) {
-            paymentTypeSelect.value = 'Pay Later (Invoice)';
-            // Manually trigger the change event to ensure the "Pay Now" container is hidden
-            paymentTypeSelect.dispatchEvent(new Event('change'));
-        }
-
+        // 8. Sale Type Logic (Sample vs Revenue)
         if (saleTypeSelect && orderDiscountInput && paymentTypeSelect) {
             saleTypeSelect.addEventListener('change', (e) => {
                 const selectedType = e.target.value;
-
                 if (selectedType === 'Sample') {
-                    // --- SAMPLE MODE ---
-                    // 1. Set discount to 100% and disable the input
                     orderDiscountInput.value = 100;
                     orderDiscountInput.disabled = true;
-
-                    // 2. Set payment type to "Pay Later" and disable it
                     paymentTypeSelect.value = 'Pay Later (Invoice)';
                     paymentTypeSelect.disabled = true;
-
-                    // 3. Manually trigger the 'change' event on the payment type dropdown.
-                    // This ensures your existing logic to hide the "Pay Now" container runs.
                     paymentTypeSelect.dispatchEvent(new Event('change'));
-
-                    // 4. Recalculate totals to show the user the new zero total immediately.
                     calculateSalesTotals();
-
-                    console.log("[UI] Sale Type set to 'Sample'. Applied 100% discount and locked payment type.");
-
                 } else {
-                    // --- REVENUE MODE (or any other type) ---
-                    // 1. Reset discount to 0 and re-enable it
                     orderDiscountInput.value = 0;
                     orderDiscountInput.disabled = false;
-
-                    // 2. Re-enable the payment type dropdown
                     paymentTypeSelect.disabled = false;
-
-                    // 3. Recalculate totals to remove the 100% discount
                     calculateSalesTotals();
-                    
-                    console.log("[UI] Sale Type set back to 'Revenue'. Unlocked fields.");
                 }
             });
         }
-
-    }, 0); 
-    
-
+    }, 0);
 }
 
 /**
@@ -17519,6 +17476,16 @@ function autoFillSalesFormFromLead() {
         const catSelect = document.getElementById('sale-catalogue-select');
         const typeSelect = document.getElementById('sale-type-select');
         const dateInput = document.getElementById('sale-date');
+
+        const indicator = document.getElementById('lead-conversion-indicator');
+        const displayId = document.getElementById('display-lead-id');
+        const displayName = document.getElementById('display-lead-name');
+
+        if (indicator && displayId && displayName) {
+            displayId.innerText = `#${data.sourceLeadId.slice(-6).toUpperCase()}`; // Show short ID
+            displayName.innerText = data.customerInfo.name;
+            indicator.classList.remove('hidden');
+        }
         
         const leadIdField = document.getElementById('sale-source-lead-id');
         if (leadIdField) {
