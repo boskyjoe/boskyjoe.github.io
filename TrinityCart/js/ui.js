@@ -1777,23 +1777,34 @@ const leadsGridOptions = {
             cellClass: 'flex items-center justify-center space-x-2',
             cellRenderer: params => {
                 const leadId = params.data.id;
+                const status = params.data.leadStatus;
+                
+                // ✅ Logic: Check if the lead is already converted
+                const isConverted = status === 'Converted';
                 
                 return `
-                    <!-- Edit Button -->
+                    <!-- Edit Button (Always visible) -->
                     <button title="Edit Lead & Products" 
                             class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors edit-lead-btn" 
                             data-id="${leadId}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     </button>
                     
-                    <!-- Convert Button -->
-                    <button title="Convert to Sale" 
-                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors convert-lead-btn" 
-                            data-id="${leadId}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </button>
+                    <!-- ✅ Convert Button: Only show if NOT 'Converted' -->
+                    ${!isConverted ? `
+                        <button title="Convert to Sale" 
+                                class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors convert-lead-btn" 
+                                data-id="${leadId}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </button>
+                    ` : `
+                        <!-- Optional: Placeholder or Disabled Icon to maintain spacing -->
+                        <div class="w-8 h-8 flex items-center justify-center text-green-500" title="Lead Converted">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        </div>
+                    `}
 
-                    <!-- Work Log Button -->
+                    <!-- Work Log Button (Always visible) -->
                     <button title="View Work Log" 
                             class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg view-work-log-btn" 
                             data-id="${leadId}">
