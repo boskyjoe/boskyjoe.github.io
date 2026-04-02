@@ -6401,7 +6401,7 @@ const salesHistoryGridOptions = {
                         <div class="inline-flex items-center justify-center w-6 h-6 mr-2 bg-indigo-100 text-indigo-600 rounded-md shadow-sm" 
                             title="Converted from Lead: ${sourceLeadId}">
                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0111 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.427z" clip-rule="evenodd"></path>
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 8.432 6 9.534 6 10.5c0 .966.602 2.068 1.324 2.746.388.364.82.632 1.176.792V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.568 14 12.466 14 11.5c0-.966-.602-2.068-1.324-2.746A4.535 4.535 0 0011 8.092V7z" clip-rule="evenodd" />
                             </svg>
                         </div>`;
                     
