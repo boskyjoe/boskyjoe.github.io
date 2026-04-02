@@ -3393,6 +3393,7 @@ export async function updateSalePayment(paymentId, updatedData, user) {
 export async function deleteSaleAndReverseClientSide(saleId) {
     const db = firebase.firestore();
     const FieldValue = firebase.firestore.FieldValue;
+    const now = FieldValue.serverTimestamp();
     const saleRef = db.collection(SALES_COLLECTION_PATH).doc(saleId);
 
     console.log(`[API] Initiating client-side deletion for sale: ${saleId}`);
@@ -3416,6 +3417,18 @@ export async function deleteSaleAndReverseClientSide(saleId) {
     const donationsSnapshot = await donationsQuery.get();
 
     console.log(`[API] Found ${paymentsSnapshot.size} payments and ${donationsSnapshot.size} donations to delete.`);
+
+    // ✅ NEW: Check if this sale was a Lead Conversion
+    let leadRef = null;
+    if (saleData.sourceLeadId) {
+        leadRef = db.collection(LEADS_COLLECTION_PATH).doc(saleData.sourceLeadId);
+        // We check if the lead exists now to avoid transaction errors later
+        const leadDoc = await leadRef.get();
+        if (!leadDoc.exists) {
+            console.warn(`[API] Source lead ${saleData.sourceLeadId} not found. Skipping lead reset.`);
+            leadRef = null;
+        }
+    }
 
     const collectionsToDelete = ['expenses']; // Add 'payments', 'donations' if they are sub-collections
     for (const subCollection of collectionsToDelete) {
@@ -3444,6 +3457,19 @@ export async function deleteSaleAndReverseClientSide(saleId) {
             transaction.update(productRef, { inventoryCount: FieldValue.increment(quantityToRestock) });
         }
 
+        if (leadRef) {
+            transaction.update(leadRef, {
+                status: 'Qualified', // Revert back to Qualified status
+                convertedToSaleId: FieldValue.delete(),
+                convertedToSaleDocId: FieldValue.delete(),
+                convertedDate: FieldValue.delete(),
+                convertedBy: FieldValue.delete(),
+                'audit.updatedOn': now,
+                'audit.updatedBy': 'System (Sale Deleted)'
+            });
+            console.log(`[API] ✅ Lead ${saleData.sourceLeadId} reset to 'Qualified'`);
+        }
+        
         // B. Delete Payments
         paymentsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
 
