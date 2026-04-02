@@ -3459,7 +3459,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
 
         if (leadRef) {
             transaction.update(leadRef, {
-                status: 'Qualified', // Revert back to Qualified status
+                leadStatus: 'Qualified', // Revert back to Qualified status
                 convertedToSaleId: FieldValue.delete(),
                 convertedToSaleDocId: FieldValue.delete(),
                 convertedDate: FieldValue.delete(),
@@ -3469,7 +3469,7 @@ export async function deleteSaleAndReverseClientSide(saleId) {
             });
             console.log(`[API] ✅ Lead ${saleData.sourceLeadId} reset to 'Qualified'`);
         }
-        
+
         // B. Delete Payments
         paymentsSnapshot.docs.forEach(doc => transaction.delete(doc.ref));
 
