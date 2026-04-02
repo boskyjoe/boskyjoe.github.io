@@ -6384,7 +6384,38 @@ const salesHistoryGridOptions = {
             field: "manualVoucherNumber",
             headerName: "Manual Voucher#",
             width: 200,
-            filter: 'agTextColumnFilter'
+            filter: 'agTextColumnFilter',
+            cellRenderer: params => {
+                // 1. Handle Pinned (Totals) Row
+                if (params.node.isRowPinned()) {
+                    return `<span class="font-bold text-gray-700">${params.value || ''}</span>`;
+                }
+
+                const voucher = params.value || 'N/A';
+                const sourceLeadId = params.data.sourceLeadId;
+
+                // 2. Check if this is a Lead Conversion
+                if (sourceLeadId) {
+                    // Indigo Lightning Bolt Icon
+                    const leadIcon = `
+                        <div class="inline-flex items-center justify-center w-6 h-6 mr-2 bg-indigo-100 text-indigo-600 rounded-md shadow-sm" 
+                            title="Converted from Lead: ${sourceLeadId}">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0111 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.427z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>`;
+                    
+                    return `
+                        <div class="flex items-center h-full">
+                            ${leadIcon}
+                            <span class="font-medium text-indigo-900">${voucher}</span>
+                        </div>
+                    `;
+                }
+
+                // 3. Standard Sale (No Icon)
+                return `<span class="text-gray-700">${voucher}</span>`;
+            }
         },
         //{ field: "saleId", headerName: "Invoice ID", width: 180, filter: 'agTextColumnFilter' },
         {
