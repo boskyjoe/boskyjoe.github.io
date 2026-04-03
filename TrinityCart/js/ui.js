@@ -16785,14 +16785,14 @@ export function showSalesDetailModal(saleData) {
         saleDetailItemsGridApi.setGridOption('rowData', saleData.lineItems || []);
     }
 
-    document.getElementById('sale-detail-subtotal').textContent = formatCurrency(saleData.financials?.subtotal || 0);
+    document.getElementById('sale-detail-subtotal').textContent = formatCurrency(saleData.financials?.itemsSubtotal || 0);
     document.getElementById('sale-detail-discount').textContent = `- ${formatCurrency(saleData.financials?.orderDiscountAmount || 0)}`;
     document.getElementById('sale-detail-tax').textContent = formatCurrency(saleData.financials?.totalTax || 0);
     
     document.getElementById('sale-detail-total').textContent = formatCurrency(saleData.financials?.totalAmount || 0);
     document.getElementById('sale-detail-paid').textContent = formatCurrency(saleData.totalAmountPaid || 0);
     document.getElementById('sale-detail-balance').textContent = formatCurrency(saleData.balanceDue || 0);
-    document.getElementById('sale-detail-expenses').textContent = formatCurrency(saleData.totalExpenses || 0);
+    document.getElementById('sale-detail-expenses').textContent = formatCurrency(saleData.financials?.totalExpenses || 0);
 
 
 
