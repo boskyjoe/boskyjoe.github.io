@@ -16792,6 +16792,8 @@ export function showSalesDetailModal(saleData) {
     document.getElementById('sale-detail-total').textContent = formatCurrency(saleData.financials?.totalAmount || 0);
     document.getElementById('sale-detail-paid').textContent = formatCurrency(saleData.totalAmountPaid || 0);
     document.getElementById('sale-detail-balance').textContent = formatCurrency(saleData.balanceDue || 0);
+    document.getElementById('sale-detail-expenses').textContent = formatCurrency(saleData.totalExpenses || 0);
+
 
 
     // Show the modal
