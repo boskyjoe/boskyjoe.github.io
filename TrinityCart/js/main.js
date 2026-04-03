@@ -8949,7 +8949,6 @@ async function handleGenerateInvoice(invoiceId) {
         });
 
 
-
         // This object's structure MUST match the placeholders in your template
         const invoicePrintData = {
             copyType: 'ORIGINAL FOR RECIPIENT',
@@ -9017,7 +9016,7 @@ async function handleGenerateInvoice(invoiceId) {
             currentBalance: formatCurrency(invoiceData.balanceDue || 0), // Or a different calculation if needed
 
             // Amount in Words
-            amountInWords: amountToWords(invoiceData.balanceDue,'INR'),
+            amountInWords: amountToWords(invoiceData.financials.totalAmount,'INR'),
 
             // Payment & Bank Details
             paymentMode: invoiceData.payments?.[0]?.paymentMode || 'N/A', // Get from first payment
