@@ -16732,6 +16732,7 @@ const saleDetailItemsGridOptions = {
 };
 
 // ✅ NEW: Function to show the modal and populate it with data
+
 export function showSalesDetailModal(saleData) {
     const modal = document.getElementById('view-sale-details-modal');
     if (!modal) return;
@@ -16757,7 +16758,21 @@ export function showSalesDetailModal(saleData) {
     document.getElementById('sale-detail-customer-phone').textContent = saleData.customerInfo?.phone || 'N/A';
     document.getElementById('sale-detail-customer-email').textContent = saleData.customerInfo?.email || 'N/A';
 
+    // ✅ NEW: Handle Lead Conversion Information
+    const leadContainer = document.getElementById('sale-detail-lead-container');
+    const leadIdSpan = document.getElementById('sale-detail-lead-id');
     
+    if (saleData.sourceLeadId) {
+        // If it's a conversion, show the container and the ID
+        leadContainer.classList.remove('hidden');
+        // We show a shortened version of the ID for better UI, or the full ID
+        leadIdSpan.textContent = `#${saleData.sourceLeadId.slice(-8).toUpperCase()}`;
+        leadIdSpan.title = `Full Lead ID: ${saleData.sourceLeadId}`; // Tooltip for full ID
+    } else {
+        // Otherwise, hide the lead section
+        leadContainer.classList.add('hidden');
+    }
+
 
     // Initialize the grid if it's the first time
     const gridDiv = document.getElementById('sale-detail-items-grid');
