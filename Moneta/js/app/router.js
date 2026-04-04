@@ -23,7 +23,7 @@ function hasRouteAccess(route, user) {
     if (route === LOGIN_ROUTE) return true;
     if (!user) return false;
 
-    const navItem = navConfig.find(item => item.route === route);
+    const navItem = navConfig.find(item => item.type !== "heading" && item.route === route);
     if (!navItem) return route === DEFAULT_AUTH_ROUTE;
 
     return navItem.roles.includes(user.role);
@@ -40,11 +40,11 @@ function getViewTitle(route) {
         case "#/dashboard":
             return "Dashboard";
         case "#/suppliers":
-            return "Suppliers";
+            return "Supplier Management";
         case "#/products":
-            return "Products";
+            return "Product Catalogue";
         case "#/purchases":
-            return "Purchases";
+            return "Stock Purchase";
         default:
             return "Login";
     }

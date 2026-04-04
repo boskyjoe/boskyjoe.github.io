@@ -1,4 +1,10 @@
 export const icons = {
+    monetaBrand: `
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 4 15 8.5v17L24 44 9 29.5v-17z"></path>
+            <path d="M17 29V18l7 6 7-6v11"></path>
+        </svg>
+    `,
     dashboard: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 13.5h8v7H3zm10-10h8v17h-8zm-10 0h8v8H3z"></path>

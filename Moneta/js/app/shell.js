@@ -8,13 +8,21 @@ function renderSidebarLinks(user) {
     nav.className = "sidebar-nav";
 
     navConfig
-        .filter(item => !user || item.roles.includes(user.role))
+        .filter(item => !item.roles || !user || item.roles.includes(user.role))
         .forEach(item => {
+            if (item.type === "heading") {
+                const heading = document.createElement("div");
+                heading.className = "sidebar-heading";
+                heading.textContent = item.label;
+                nav.appendChild(heading);
+                return;
+            }
+
             const link = document.createElement("a");
             link.href = item.route;
             link.className = `sidebar-link${window.location.hash === item.route ? " active" : ""}`;
             link.innerHTML = `
-                <span class="nav-icon">${item.icon || icons.dashboard}</span>
+                <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.dashboard}</span>
                 <span class="nav-label">${item.label}</span>
             `;
             link.addEventListener("click", event => {
@@ -71,9 +79,9 @@ export function renderShell({ title }) {
         const brand = document.createElement("div");
         brand.className = "sidebar-brand";
         brand.innerHTML = `
-            <span class="brand-mark">${icons.catalogue}</span>
+            <span class="brand-mark">${icons.monetaBrand}</span>
             <h1>MONETA</h1>
-            <p>Modular GitHub-hosted rebuild</p>
+            <p>Smart POS Solutions</p>
         `;
 
         sidebar.append(brand, renderSidebarLinks(currentUser));
