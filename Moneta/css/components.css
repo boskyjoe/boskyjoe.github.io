@@ -358,6 +358,10 @@ select {
     border: 0;
 }
 
+.ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
+    background: #f4fbf8;
+}
+
 .section-stack {
     display: grid;
     gap: 1rem;
@@ -397,6 +401,10 @@ select {
 .line-items-list {
     display: grid;
     gap: 1rem;
+}
+
+.purchase-line-items-panel {
+    margin-top: 1.5rem;
 }
 
 .bulk-product-picker,
