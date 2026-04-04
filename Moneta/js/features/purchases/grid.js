@@ -7,6 +7,11 @@ let currentPurchasesGridElement = null;
 let purchaseLineItemsGridApi = null;
 let currentPurchaseLineItemsGridElement = null;
 
+const rightAlignedNumberColumn = {
+    cellClass: "ag-right-aligned-cell",
+    headerClass: "ag-right-aligned-header"
+};
+
 function formatDate(value) {
     if (!value) return "-";
 
@@ -55,6 +60,7 @@ function buildInvoiceColumnDefs() {
             headerName: "Items",
             minWidth: 100,
             flex: 0.6,
+            ...rightAlignedNumberColumn,
             valueGetter: params => params.data?.lineItems?.length || 0
         },
         {
@@ -62,6 +68,7 @@ function buildInvoiceColumnDefs() {
             headerName: "Total",
             minWidth: 140,
             flex: 0.9,
+            ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
@@ -69,6 +76,7 @@ function buildInvoiceColumnDefs() {
             headerName: "Balance",
             minWidth: 140,
             flex: 0.9,
+            ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value ?? params.data?.invoiceTotal ?? 0)
         },
         {
@@ -145,15 +153,10 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Qty",
             minWidth: 95,
             maxWidth: 110,
+            ...rightAlignedNumberColumn,
             editable: true,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quantity", 0)
-        },
-        {
-            field: "itemId",
-            headerName: "Item ID",
-            minWidth: 130,
-            flex: 0.9
         },
         {
             field: "productName",
@@ -166,13 +169,15 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Stock",
             minWidth: 100,
             maxWidth: 120,
-            flex: 0.7
+            flex: 0.7,
+            ...rightAlignedNumberColumn
         },
         {
             field: "unitPurchasePrice",
             headerName: "Unit Price",
             minWidth: 135,
             flex: 0.9,
+            ...rightAlignedNumberColumn,
             editable: true,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPurchasePrice", 2),
@@ -193,6 +198,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Discount",
             minWidth: 120,
             flex: 0.85,
+            ...rightAlignedNumberColumn,
             editable: true,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("discountValue", 2)
@@ -202,6 +208,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Tax %",
             minWidth: 110,
             flex: 0.75,
+            ...rightAlignedNumberColumn,
             editable: true,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("taxPercentage", 2)
@@ -210,6 +217,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Line Total",
             minWidth: 150,
             flex: 0.95,
+            ...rightAlignedNumberColumn,
             valueGetter: params => getLineItemTotal(params.data || {}),
             valueFormatter: params => formatCurrency(params.value || 0)
         },
@@ -245,7 +253,11 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
         defaultColDef: {
             sortable: true,
             filter: true,
-            resizable: true
+            resizable: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            wrapText: true,
+            autoHeight: true
         },
         onModelUpdated: event => {
             onFilteredCountChange?.(event.api.getDisplayedRowCount());
@@ -285,7 +297,11 @@ export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
         defaultColDef: {
             sortable: true,
             filter: true,
-            resizable: true
+            resizable: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            wrapText: true,
+            autoHeight: true
         },
         getRowId: params => params.data.masterProductId,
         singleClickEdit: true,

@@ -5,6 +5,11 @@ import { formatCurrency } from "../../shared/utils/currency.js";
 let productsGridApi = null;
 let currentGridElement = null;
 
+const rightAlignedNumberColumn = {
+    cellClass: "ag-right-aligned-cell",
+    headerClass: "ag-right-aligned-header"
+};
+
 function getCategoryName(categoryId, categories) {
     const category = categories.find(item => item.id === categoryId);
     return category ? category.categoryName : "-";
@@ -51,12 +56,13 @@ function buildColumnDefs(categories) {
             valueFormatter: params => getCategoryName(params.value, categories)
         },
         { field: "itemType", headerName: "Type", minWidth: 120, flex: 0.8 },
-        { field: "inventoryCount", headerName: "Stock", minWidth: 110, flex: 0.7 },
+        { field: "inventoryCount", headerName: "Stock", minWidth: 110, flex: 0.7, ...rightAlignedNumberColumn },
         {
             field: "unitPrice",
             headerName: "Unit Price",
             minWidth: 135,
             flex: 0.9,
+            ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
@@ -64,6 +70,7 @@ function buildColumnDefs(categories) {
             headerName: "Selling Price",
             minWidth: 150,
             flex: 1,
+            ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
@@ -104,7 +111,11 @@ export function initializeProductsGrid(gridElement, categories) {
         defaultColDef: {
             sortable: true,
             filter: true,
-            resizable: true
+            resizable: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            wrapText: true,
+            autoHeight: true
         }
     });
 

@@ -103,7 +103,6 @@ function getPurchaseLineItemRows(snapshot) {
 
         return {
             masterProductId: product.id,
-            itemId: product.itemId || "Pending ID",
             productName: product.itemName || "Untitled Product",
             inventoryCount: Number(product.inventoryCount) || 0,
             quantity: Number(existing?.quantity) || 0,
