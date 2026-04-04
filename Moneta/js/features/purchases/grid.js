@@ -3,7 +3,9 @@ import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 
 let purchasesGridApi = null;
-let currentGridElement = null;
+let currentPurchasesGridElement = null;
+let purchaseLineItemsGridApi = null;
+let currentPurchaseLineItemsGridElement = null;
 
 function formatDate(value) {
     if (!value) return "-";
@@ -25,7 +27,7 @@ function paymentStatusMarkup(value) {
     return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
 }
 
-function actionMarkup(data) {
+function invoiceActionMarkup(data) {
     return `
         <div class="table-actions">
             <button class="button button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}">
@@ -36,7 +38,7 @@ function actionMarkup(data) {
     `;
 }
 
-function buildColumnDefs() {
+function buildInvoiceColumnDefs() {
     return [
         { field: "invoiceId", headerName: "Invoice ID", minWidth: 150, flex: 0.9 },
         { field: "invoiceName", headerName: "Invoice Name", minWidth: 220, flex: 1.4 },
@@ -82,7 +84,143 @@ function buildColumnDefs() {
             flex: 1,
             sortable: false,
             filter: false,
-            cellRenderer: params => actionMarkup(params.data)
+            cellRenderer: params => invoiceActionMarkup(params.data)
+        }
+    ];
+}
+
+function normalizeNumber(value, decimals = 2) {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return 0;
+    }
+
+    return Number(parsed.toFixed(decimals));
+}
+
+function buildNumberSetter(field, decimals = 2) {
+    return params => {
+        const normalized = normalizeNumber(params.newValue, decimals);
+        const changed = params.data[field] !== normalized;
+
+        params.data[field] = normalized;
+        return changed;
+    };
+}
+
+function discountTypeSetter(params) {
+    const nextValue = params.newValue === "Percentage" ? "Percentage" : "Fixed";
+    const changed = params.data.discountType !== nextValue;
+
+    params.data.discountType = nextValue;
+    return changed;
+}
+
+function getLineItemTotal(row) {
+    const quantity = normalizeNumber(row.quantity, 0);
+    const unitPurchasePrice = normalizeNumber(row.unitPurchasePrice, 2);
+    const discountValue = normalizeNumber(row.discountValue, 2);
+    const taxPercentage = normalizeNumber(row.taxPercentage, 2);
+    const grossPrice = quantity * unitPurchasePrice;
+    const discountAmount = row.discountType === "Percentage"
+        ? grossPrice * (discountValue / 100)
+        : discountValue;
+    const netPrice = Math.max(grossPrice - discountAmount, 0);
+    const taxAmount = netPrice * (taxPercentage / 100);
+
+    return Number((netPrice + taxAmount).toFixed(2));
+}
+
+function lineItemStatusMarkup(quantity) {
+    return quantity > 0
+        ? `<span class="purchase-status-pill purchase-status-paid">Active</span>`
+        : `<span class="purchase-status-pill purchase-status-unpaid">Idle</span>`;
+}
+
+function buildLineItemColumnDefs(onRowsChanged) {
+    return [
+        {
+            field: "quantity",
+            headerName: "Qty",
+            minWidth: 95,
+            maxWidth: 110,
+            editable: true,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("quantity", 0)
+        },
+        {
+            field: "itemId",
+            headerName: "Item ID",
+            minWidth: 130,
+            flex: 0.9
+        },
+        {
+            field: "productName",
+            headerName: "Product",
+            minWidth: 240,
+            flex: 1.5
+        },
+        {
+            field: "inventoryCount",
+            headerName: "Stock",
+            minWidth: 100,
+            maxWidth: 120,
+            flex: 0.7
+        },
+        {
+            field: "unitPurchasePrice",
+            headerName: "Unit Price",
+            minWidth: 135,
+            flex: 0.9,
+            editable: true,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("unitPurchasePrice", 2),
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "discountType",
+            headerName: "Discount Type",
+            minWidth: 150,
+            flex: 0.95,
+            editable: true,
+            cellEditor: "agSelectCellEditor",
+            cellEditorParams: { values: ["Percentage", "Fixed"] },
+            valueSetter: discountTypeSetter
+        },
+        {
+            field: "discountValue",
+            headerName: "Discount",
+            minWidth: 120,
+            flex: 0.85,
+            editable: true,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("discountValue", 2)
+        },
+        {
+            field: "taxPercentage",
+            headerName: "Tax %",
+            minWidth: 110,
+            flex: 0.75,
+            editable: true,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("taxPercentage", 2)
+        },
+        {
+            headerName: "Line Total",
+            minWidth: 150,
+            flex: 0.95,
+            valueGetter: params => getLineItemTotal(params.data || {}),
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Status",
+            minWidth: 120,
+            flex: 0.8,
+            sortable: false,
+            filter: false,
+            valueGetter: params => Number(params.data?.quantity) || 0,
+            cellRenderer: params => lineItemStatusMarkup(Number(params.value) || 0)
         }
     ];
 }
@@ -90,16 +228,16 @@ function buildColumnDefs() {
 export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
     if (!gridElement) return purchasesGridApi;
 
-    if (purchasesGridApi && currentGridElement !== gridElement) {
+    if (purchasesGridApi && currentPurchasesGridElement !== gridElement) {
         purchasesGridApi.destroy();
         purchasesGridApi = null;
-        currentGridElement = null;
+        currentPurchasesGridElement = null;
     }
 
     if (purchasesGridApi) return purchasesGridApi;
 
     purchasesGridApi = createGrid(gridElement, {
-        columnDefs: buildColumnDefs(),
+        columnDefs: buildInvoiceColumnDefs(),
         rowData: [],
         pagination: true,
         paginationPageSize: 25,
@@ -114,8 +252,7 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
         }
     });
 
-    currentGridElement = gridElement;
-
+    currentPurchasesGridElement = gridElement;
     return purchasesGridApi;
 }
 
@@ -126,4 +263,62 @@ export function refreshPurchasesGrid(rows) {
 
 export function updatePurchasesGridSearch(searchTerm) {
     purchasesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
+    if (!gridElement) return purchaseLineItemsGridApi;
+
+    if (purchaseLineItemsGridApi && currentPurchaseLineItemsGridElement !== gridElement) {
+        purchaseLineItemsGridApi.destroy();
+        purchaseLineItemsGridApi = null;
+        currentPurchaseLineItemsGridElement = null;
+    }
+
+    if (purchaseLineItemsGridApi) return purchaseLineItemsGridApi;
+
+    purchaseLineItemsGridApi = createGrid(gridElement, {
+        columnDefs: buildLineItemColumnDefs(onRowsChanged),
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 25,
+        paginationPageSizeSelector: [10, 25, 50, 100],
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true
+        },
+        getRowId: params => params.data.masterProductId,
+        singleClickEdit: true,
+        stopEditingWhenCellsLoseFocus: true,
+        rowClassRules: {
+            "purchase-line-item-active": params => (Number(params.data?.quantity) || 0) > 0
+        },
+        onCellValueChanged: params => {
+            params.api.refreshCells({ rowNodes: [params.node], force: true });
+            onRowsChanged?.();
+        }
+    });
+
+    currentPurchaseLineItemsGridElement = gridElement;
+    return purchaseLineItemsGridApi;
+}
+
+export function refreshPurchaseLineItemsGrid(rows) {
+    if (!purchaseLineItemsGridApi) return;
+    purchaseLineItemsGridApi.setGridOption("rowData", rows);
+}
+
+export function updatePurchaseLineItemsGridSearch(searchTerm) {
+    purchaseLineItemsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function getPurchaseLineItemsGridRows() {
+    if (!purchaseLineItemsGridApi) return [];
+
+    const rows = [];
+    purchaseLineItemsGridApi.forEachNode(node => {
+        rows.push(node.data);
+    });
+
+    return rows;
 }
