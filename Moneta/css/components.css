@@ -7,7 +7,10 @@ body {
     margin: 0;
     min-height: 100%;
     font-family: var(--font-sans);
-    background: linear-gradient(180deg, #edf4f8 0%, var(--bg-app) 100%);
+    background:
+        radial-gradient(circle at top left, rgba(20, 93, 160, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(17, 122, 101, 0.08), transparent 24%),
+        linear-gradient(180deg, #edf4f8 0%, var(--bg-app) 100%);
     color: var(--text-main);
 }
 
@@ -22,11 +25,16 @@ select {
     border-radius: 999px;
     cursor: pointer;
     padding: 0.8rem 1.2rem;
-    transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+    transition: transform 120ms ease, opacity 120ms ease, background 120ms ease, box-shadow 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
 }
 
 .button:hover {
     transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
 }
 
 .button:disabled {
@@ -37,6 +45,11 @@ select {
 
 .button-primary {
     background: var(--accent);
+    color: var(--text-inverse);
+}
+
+.button-primary-alt {
+    background: var(--accent-alt);
     color: var(--text-inverse);
 }
 
@@ -55,6 +68,31 @@ select {
     padding: 0.4rem 0.75rem;
     font-size: 0.85rem;
     font-weight: 600;
+}
+
+.button-icon,
+.inline-icon,
+.nav-icon,
+.search-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.button-icon svg,
+.inline-icon svg,
+.nav-icon svg,
+.panel-icon svg,
+.search-icon svg,
+.brand-mark svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
 }
 
 .placeholder-card,
@@ -87,6 +125,32 @@ select {
     padding: 1.25rem 1.5rem;
     background: linear-gradient(135deg, #eef6f5 0%, #f7fbfb 100%);
     border-bottom: 1px solid var(--border);
+}
+
+.panel-header-accent {
+    background: linear-gradient(135deg, #edf5fd 0%, #f8fbfe 100%);
+}
+
+.panel-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.panel-icon {
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-inverse);
+    background: linear-gradient(135deg, var(--accent) 0%, #1e9c82 100%);
+    box-shadow: var(--shadow-soft);
+}
+
+.panel-icon-alt {
+    background: linear-gradient(135deg, var(--accent-alt) 0%, #3677bb 100%);
 }
 
 .panel-header h2,
@@ -244,6 +308,53 @@ select {
 
 .toolbar-search {
     min-width: min(100%, 320px);
+}
+
+.search-wrap {
+    position: relative;
+}
+
+.search-wrap .input {
+    padding-left: 2.75rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+}
+
+.ag-shell {
+    min-height: 560px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.ag-theme-alpine.moneta-grid {
+    --ag-font-family: var(--font-sans);
+    --ag-background-color: #ffffff;
+    --ag-header-background-color: #f7fafc;
+    --ag-header-foreground-color: var(--text-muted);
+    --ag-foreground-color: var(--text-main);
+    --ag-border-color: var(--border);
+    --ag-row-border-color: #eef3f6;
+    --ag-selected-row-background-color: #e9f3fb;
+    --ag-header-height: 48px;
+    --ag-row-height: 52px;
+}
+
+.ag-theme-alpine.moneta-grid .ag-root-wrapper {
+    border: 0;
+}
+
+.grid-status-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
 }
 
 .section-kicker,

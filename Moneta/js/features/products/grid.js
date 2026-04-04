@@ -96,7 +96,6 @@ export function initializeProductsGrid(gridElement, categories) {
     if (productsGridApi) return productsGridApi;
 
     productsGridApi = createGrid(gridElement, {
-        theme: "legacy",
         columnDefs: buildColumnDefs(categories),
         rowData: [],
         pagination: true,
