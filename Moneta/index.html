@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONETA</title>
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/views.css">
+    <link rel="stylesheet" href="./css/app.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+    <div id="app-root" class="app-shell">
+        <aside id="app-sidebar" class="app-sidebar"></aside>
+        <div class="app-main">
+            <header class="app-header">
+                <div class="header-left">
+                    <button id="mobile-nav-toggle" class="header-toggle" type="button" aria-label="Toggle navigation">Menu</button>
+                    <div>
+                        <p class="header-kicker">MONETA</p>
+                        <h1 id="view-title" class="header-title">Loading</h1>
+                    </div>
+                </div>
+                <div id="auth-slot" class="auth-slot"></div>
+            </header>
+
+            <main id="app-content" class="app-content">
+                <section id="login-view" class="view active" data-view="login">
+                    <div class="hero-card">
+                        <p class="hero-kicker">Static GitHub Deployment Ready</p>
+                        <h2 class="hero-title">MONETA is being rebuilt in a clean modular structure.</h2>
+                        <p class="hero-copy">
+                            This Phase 1 shell is designed to run as a static GitHub-hosted Firebase app.
+                        </p>
+                        <div class="hero-actions">
+                            <button id="login-button" class="button button-primary" type="button">Login with Google</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="dashboard-view" class="view" data-view="dashboard">
+                    <div id="dashboard-root"></div>
+                </section>
+
+                <section id="suppliers-view" class="view" data-view="suppliers">
+                    <div id="suppliers-root"></div>
+                </section>
+
+                <section id="products-view" class="view" data-view="products">
+                    <div class="placeholder-card">
+                        <p class="section-kicker">Phase 3</p>
+                        <h2>Products</h2>
+                        <p>Product management will move into a dedicated feature with its own view, grid, service, and repository.</p>
+                    </div>
+                </section>
+
+                <section id="purchases-view" class="view" data-view="purchases">
+                    <div class="placeholder-card">
+                        <p class="section-kicker">Phase 3</p>
+                        <h2>Purchases</h2>
+                        <p>Purchase invoices and inventory transactions will be migrated next as the inventory backbone.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+    <div id="modal-root" class="modal-root" aria-hidden="true"></div>
+
+    <script type="module" src="./js/app/bootstrap.js"></script>
+</body>
+</html>
