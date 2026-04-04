@@ -358,6 +358,12 @@ select {
     border: 0;
 }
 
+.ag-theme-alpine.moneta-grid .ag-header-cell-text,
+.ag-theme-alpine.moneta-grid .ag-cell-value {
+    white-space: normal;
+    line-height: 1.35;
+}
+
 .ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
     background: #f4fbf8;
 }
