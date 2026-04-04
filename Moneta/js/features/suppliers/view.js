@@ -2,6 +2,7 @@ import { showModal } from "../../shared/modal.js";
 import { showToast } from "../../shared/toast.js";
 import { getState, subscribe } from "../../app/store.js";
 import { saveSupplier, toggleSupplierStatus } from "./service.js";
+import { icons } from "../../shared/icons.js";
 
 const featureState = {
     searchTerm: "",
@@ -59,6 +60,7 @@ function renderSupplierRows(suppliers) {
             <td>
                 <div class="table-actions">
                     <button class="button button-secondary supplier-edit-button" type="button" data-supplier-id="${supplier.id}">
+                        <span class="button-icon">${icons.edit}</span>
                         Edit
                     </button>
                     <button
@@ -66,6 +68,7 @@ function renderSupplierRows(suppliers) {
                         type="button"
                         data-supplier-id="${supplier.id}"
                         data-next-status="${supplier.isActive ? "inactive" : "active"}">
+                        <span class="button-icon">${supplier.isActive ? icons.inactive : icons.active}</span>
                         ${supplier.isActive ? "Deactivate" : "Activate"}
                     </button>
                 </div>
@@ -87,13 +90,16 @@ function renderForm(snapshot) {
     return `
         <div class="panel-card">
             <div class="panel-header">
-                <div>
-                    <h2>${editingSupplier ? "Edit Supplier" : "Add Supplier"}</h2>
-                    <p class="panel-copy">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.suppliers}</span>
+                    <div>
+                        <h2>${editingSupplier ? "Edit Supplier" : "Add Supplier"}</h2>
+                        <p class="panel-copy">
                         ${editingSupplier
                             ? "Update supplier details and keep the new app state in sync."
                             : "Start migrating operational data into the new Moneta feature model."}
-                    </p>
+                        </p>
+                    </div>
                 </div>
                 <span class="status-pill">${editingSupplier ? "Editing" : "Create"}</span>
             </div>
@@ -125,10 +131,12 @@ function renderForm(snapshot) {
                     <div class="form-actions">
                         ${editingSupplier ? `
                             <button id="supplier-cancel-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.inactive}</span>
                                 Cancel
                             </button>
                         ` : ""}
                         <button class="button button-primary" type="submit">
+                            <span class="button-icon">${editingSupplier ? icons.edit : icons.plus}</span>
                             ${editingSupplier ? "Update Supplier" : "Save Supplier"}
                         </button>
                     </div>
@@ -145,9 +153,12 @@ function renderTable(snapshot) {
     return `
         <div class="panel-card">
             <div class="panel-header">
-                <div>
-                    <h3>Supplier Directory</h3>
-                    <p class="panel-copy">Live Firestore-backed supplier records from the new Moneta store.</p>
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
+                    <div>
+                        <h3>Supplier Directory</h3>
+                        <p class="panel-copy">Live Firestore-backed supplier records from the new Moneta store.</p>
+                    </div>
                 </div>
                 <div class="toolbar-meta">
                     <span class="status-pill">${suppliers.length} visible</span>
@@ -160,12 +171,15 @@ function renderTable(snapshot) {
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">Suppliers</p>
                         <p class="panel-copy">Search, edit, and manage active supplier records.</p>
                     </div>
-                    <input
-                        id="supplier-search"
-                        class="input toolbar-search"
-                        type="search"
-                        placeholder="Search by name, id, phone, email, or address"
-                        value="${featureState.searchTerm}">
+                    <div class="search-wrap">
+                        <span class="search-icon">${icons.search}</span>
+                        <input
+                            id="supplier-search"
+                            class="input toolbar-search"
+                            type="search"
+                            placeholder="Search by name, id, phone, email, or address"
+                            value="${featureState.searchTerm}">
+                    </div>
                 </div>
                 <div class="table-wrap">
                     <table class="data-table">

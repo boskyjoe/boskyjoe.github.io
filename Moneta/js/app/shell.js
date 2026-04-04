@@ -1,6 +1,7 @@
 import { navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
+import { icons } from "../shared/icons.js";
 
 function renderSidebarLinks(user) {
     const nav = document.createElement("nav");
@@ -12,7 +13,10 @@ function renderSidebarLinks(user) {
             const link = document.createElement("a");
             link.href = item.route;
             link.className = `sidebar-link${window.location.hash === item.route ? " active" : ""}`;
-            link.textContent = item.label;
+            link.innerHTML = `
+                <span class="nav-icon">${item.icon || icons.dashboard}</span>
+                <span class="nav-label">${item.label}</span>
+            `;
             link.addEventListener("click", event => {
                 event.preventDefault();
                 navigateTo(item.route);
@@ -67,6 +71,7 @@ export function renderShell({ title }) {
         const brand = document.createElement("div");
         brand.className = "sidebar-brand";
         brand.innerHTML = `
+            <span class="brand-mark">${icons.catalogue}</span>
             <h1>MONETA</h1>
             <p>Modular GitHub-hosted rebuild</p>
         `;

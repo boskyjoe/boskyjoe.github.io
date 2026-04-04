@@ -5,6 +5,7 @@ import { initializeShell } from "./shell.js";
 import { detachMasterData, initializeMasterData } from "./master-data.js";
 import { subscribe } from "./store.js";
 import { initializeSuppliersModule } from "../features/suppliers/index.js";
+import { initializeProductsModule } from "../features/products/index.js";
 
 function initializeFirebase() {
     if (!firebase.apps.length) {
@@ -69,6 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeFirebase();
     initializeShell();
     initializeSuppliersModule();
+    initializeProductsModule();
     initializeRouter();
     initializeAuth();
     bindGlobalUiEvents();

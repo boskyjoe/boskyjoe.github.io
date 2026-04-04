@@ -4,6 +4,7 @@ import { renderShell } from "./shell.js";
 import { renderDashboardView } from "../features/dashboard/view.js";
 import { navConfig } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
+import { showProductsPage } from "../features/products/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
@@ -78,6 +79,10 @@ export function resolveRoute() {
 
     if (route === "#/suppliers") {
         showSuppliersPage();
+    }
+
+    if (route === "#/products") {
+        showProductsPage();
     }
 }
 
