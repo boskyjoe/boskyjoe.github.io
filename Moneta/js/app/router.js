@@ -5,6 +5,7 @@ import { renderDashboardView } from "../features/dashboard/view.js";
 import { navConfig } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
+import { showPurchasesPage } from "../features/purchases/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
@@ -83,6 +84,10 @@ export function resolveRoute() {
 
     if (route === "#/products") {
         showProductsPage();
+    }
+
+    if (route === "#/purchases") {
+        showPurchasesPage();
     }
 }
 

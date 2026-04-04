@@ -4,6 +4,7 @@ export const COLLECTIONS = {
     users: `${BASE_DOC_PATH}/users`,
     suppliers: `${BASE_DOC_PATH}/suppliers`,
     products: `${BASE_DOC_PATH}/productCatalogue`,
+    purchaseInvoices: `${BASE_DOC_PATH}/purchaseInvoices`,
     categories: `${BASE_DOC_PATH}/productCategories`,
     paymentModes: `${BASE_DOC_PATH}/paymentModes`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,

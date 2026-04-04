@@ -1,0 +1,227 @@
+import {
+    createPurchaseInvoiceRecord,
+    updatePurchaseInvoiceRecord
+} from "./repository.js";
+
+function normalizeText(value) {
+    return (value || "").trim();
+}
+
+function normalizeNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
+function roundWeight(value) {
+    return Number((Number(value) || 0).toFixed(3));
+}
+
+function normalizeDiscountType(value) {
+    return normalizeText(value) === "Percentage" ? "Percentage" : "Fixed";
+}
+
+function calculateDiscountAmount(baseAmount, discountType, discountValue) {
+    if (discountType === "Percentage") {
+        return roundCurrency(baseAmount * (discountValue / 100));
+    }
+
+    return roundCurrency(discountValue);
+}
+
+function calculateLineItem(rawItem, product) {
+    const quantity = normalizeNumber(rawItem.quantity);
+    const unitPurchasePrice = normalizeNumber(rawItem.unitPurchasePrice);
+    const discountType = normalizeDiscountType(rawItem.discountType);
+    const discountValue = normalizeNumber(rawItem.discountValue);
+    const taxPercentage = normalizeNumber(rawItem.taxPercentage);
+    const grossPrice = roundCurrency(quantity * unitPurchasePrice);
+    const discountAmount = calculateDiscountAmount(grossPrice, discountType, discountValue);
+    const netPrice = roundCurrency(grossPrice - discountAmount);
+    const taxAmount = roundCurrency(netPrice * (taxPercentage / 100));
+    const lineItemTotal = roundCurrency(netPrice + taxAmount);
+    const netWeightKg = roundWeight(product?.netWeightKg || rawItem.netWeightKg || 0);
+
+    return {
+        masterProductId: normalizeText(rawItem.masterProductId),
+        productName: product?.itemName || normalizeText(rawItem.productName),
+        quantity,
+        unitPurchasePrice,
+        discountType,
+        discountValue,
+        discountAmount,
+        taxPercentage,
+        grossPrice,
+        netPrice,
+        taxAmount,
+        lineItemTotal,
+        netWeightKg,
+        totalWeightKg: roundWeight(netWeightKg * quantity)
+    };
+}
+
+export function calculatePurchaseDraftSummary(payload, products = []) {
+    const productMap = new Map(products.map(product => [product.id, product]));
+    const lineItems = (payload.lineItems || []).map(item => {
+        const product = productMap.get(normalizeText(item.masterProductId));
+        return calculateLineItem(item, product);
+    });
+    const populatedLineItems = lineItems.filter(item => item.masterProductId);
+    const itemsSubtotal = roundCurrency(populatedLineItems.reduce((sum, item) => sum + item.netPrice, 0));
+    const totalItemLevelTax = roundCurrency(populatedLineItems.reduce((sum, item) => sum + item.taxAmount, 0));
+    const invoiceDiscountType = normalizeDiscountType(payload.invoiceDiscountType);
+    const invoiceDiscountValue = normalizeNumber(payload.invoiceDiscountValue);
+    const invoiceDiscountAmount = calculateDiscountAmount(itemsSubtotal, invoiceDiscountType, invoiceDiscountValue);
+    const taxableAmountForInvoice = roundCurrency(itemsSubtotal - invoiceDiscountAmount);
+    const invoiceTaxPercentage = normalizeNumber(payload.invoiceTaxPercentage);
+    const invoiceLevelTaxAmount = roundCurrency(taxableAmountForInvoice * (invoiceTaxPercentage / 100));
+    const totalTaxAmount = roundCurrency(totalItemLevelTax + invoiceLevelTaxAmount);
+    const invoiceTotal = roundCurrency(taxableAmountForInvoice + totalTaxAmount);
+
+    return {
+        lineItems,
+        populatedLineItems,
+        itemsSubtotal,
+        invoiceDiscountType,
+        invoiceDiscountValue,
+        invoiceDiscountAmount,
+        taxableAmountForInvoice,
+        totalItemLevelTax,
+        invoiceTaxPercentage,
+        invoiceLevelTaxAmount,
+        totalTaxAmount,
+        invoiceTotal
+    };
+}
+
+export function validatePurchaseInvoicePayload(payload, masterData) {
+    const purchaseDateInput = normalizeText(payload.purchaseDate);
+    const supplierId = normalizeText(payload.supplierId);
+    const supplierInvoiceNo = normalizeText(payload.supplierInvoiceNo);
+    const invoiceName = normalizeText(payload.invoiceName);
+    const suppliers = masterData.suppliers || [];
+    const products = masterData.products || [];
+    const supplier = suppliers.find(item => item.id === supplierId);
+    const summary = calculatePurchaseDraftSummary(payload, products);
+    const lineItems = summary.populatedLineItems;
+    const productIds = new Set();
+
+    if (!purchaseDateInput) {
+        throw new Error("Purchase date is required.");
+    }
+
+    if (!supplierId) {
+        throw new Error("Supplier is required.");
+    }
+
+    if (!supplier) {
+        throw new Error("The selected supplier could not be found.");
+    }
+
+    if (!invoiceName) {
+        throw new Error("Invoice name is required.");
+    }
+
+    if (lineItems.length === 0) {
+        throw new Error("Add at least one product to the invoice.");
+    }
+
+    lineItems.forEach(item => {
+        const product = products.find(entry => entry.id === item.masterProductId);
+
+        if (!product) {
+            throw new Error("One of the selected products could not be found.");
+        }
+
+        if (productIds.has(item.masterProductId)) {
+            throw new Error("Each product can only appear once in a purchase invoice.");
+        }
+
+        if (item.quantity <= 0) {
+            throw new Error(`Quantity for ${item.productName || "a line item"} must be greater than zero.`);
+        }
+
+        if (item.unitPurchasePrice < 0) {
+            throw new Error(`Unit purchase price for ${item.productName || "a line item"} cannot be negative.`);
+        }
+
+        if (item.discountValue < 0) {
+            throw new Error(`Discount for ${item.productName || "a line item"} cannot be negative.`);
+        }
+
+        if (item.discountType === "Percentage" && item.discountValue > 100) {
+            throw new Error(`Discount percentage for ${item.productName || "a line item"} cannot exceed 100%.`);
+        }
+
+        if (item.discountAmount > item.grossPrice) {
+            throw new Error(`Discount for ${item.productName || "a line item"} cannot exceed the gross amount.`);
+        }
+
+        if (item.taxPercentage < 0) {
+            throw new Error(`Tax percentage for ${item.productName || "a line item"} cannot be negative.`);
+        }
+
+        productIds.add(item.masterProductId);
+    });
+
+    if (summary.invoiceDiscountValue < 0) {
+        throw new Error("Invoice discount cannot be negative.");
+    }
+
+    if (summary.invoiceDiscountType === "Percentage" && summary.invoiceDiscountValue > 100) {
+        throw new Error("Invoice discount percentage cannot exceed 100%.");
+    }
+
+    if (summary.invoiceDiscountAmount > summary.itemsSubtotal) {
+        throw new Error("Invoice discount cannot exceed the subtotal.");
+    }
+
+    if (summary.invoiceTaxPercentage < 0) {
+        throw new Error("Invoice tax percentage cannot be negative.");
+    }
+
+    const purchaseDate = new Date(`${purchaseDateInput}T00:00:00`);
+    if (Number.isNaN(purchaseDate.getTime())) {
+        throw new Error("Purchase date is invalid.");
+    }
+
+    return {
+        purchaseDate,
+        supplierId,
+        supplierName: supplier.supplierName,
+        supplierInvoiceNo,
+        invoiceName,
+        lineItems,
+        itemsSubtotal: summary.itemsSubtotal,
+        invoiceDiscountType: summary.invoiceDiscountType,
+        invoiceDiscountValue: summary.invoiceDiscountValue,
+        invoiceDiscountAmount: summary.invoiceDiscountAmount,
+        taxableAmountForInvoice: summary.taxableAmountForInvoice,
+        totalItemLevelTax: summary.totalItemLevelTax,
+        invoiceTaxPercentage: summary.invoiceTaxPercentage,
+        invoiceLevelTaxAmount: summary.invoiceLevelTaxAmount,
+        totalTaxAmount: summary.totalTaxAmount,
+        invoiceTotal: summary.invoiceTotal,
+        productIds: Array.from(productIds)
+    };
+}
+
+export async function savePurchaseInvoice(payload, masterData, user) {
+    if (!user) {
+        throw new Error("You must be logged in to save a purchase invoice.");
+    }
+
+    const docId = normalizeText(payload.docId);
+    const invoiceData = validatePurchaseInvoicePayload(payload, masterData);
+
+    if (docId) {
+        await updatePurchaseInvoiceRecord(docId, invoiceData, user);
+        return { mode: "update" };
+    }
+
+    await createPurchaseInvoiceRecord(invoiceData, user);
+    return { mode: "create" };
+}
