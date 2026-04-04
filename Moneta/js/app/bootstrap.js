@@ -42,18 +42,25 @@ function initializeDebugSubscription() {
 
 function initializeDataLifecycle() {
     let hasActiveSession = false;
+    let isTransitioning = false;
 
     subscribe(snapshot => {
+        if (isTransitioning) return;
+
         const isAuthenticated = Boolean(snapshot.currentUser);
 
         if (isAuthenticated && !hasActiveSession) {
-            initializeMasterData();
+            isTransitioning = true;
             hasActiveSession = true;
+            initializeMasterData();
+            isTransitioning = false;
         }
 
         if (!isAuthenticated && hasActiveSession) {
-            detachMasterData();
+            isTransitioning = true;
             hasActiveSession = false;
+            detachMasterData();
+            isTransitioning = false;
         }
     });
 }
