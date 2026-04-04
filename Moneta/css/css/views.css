@@ -1,0 +1,62 @@
+.view {
+    display: none;
+}
+
+.view.active {
+    display: block;
+}
+
+.hero-title,
+.placeholder-card h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1.1;
+}
+
+.hero-copy,
+.placeholder-card p {
+    color: var(--text-muted);
+    max-width: 56rem;
+}
+
+.hero-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-card::after {
+    content: "";
+    position: absolute;
+    right: -2rem;
+    top: -2rem;
+    width: 10rem;
+    height: 10rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(17, 122, 101, 0.18) 0%, transparent 68%);
+}
+
+.hero-actions {
+    margin-top: 1.5rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.dashboard-card {
+    padding: 1.25rem;
+}
+
+.dashboard-value {
+    margin: 0.75rem 0 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.dashboard-label {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
