@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="./css/components.css">
     <link rel="stylesheet" href="./css/views.css">
     <link rel="stylesheet" href="./css/app.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -50,11 +52,7 @@
                 </section>
 
                 <section id="products-view" class="view" data-view="products">
-                    <div class="placeholder-card">
-                        <p class="section-kicker">Phase 3</p>
-                        <h2>Products</h2>
-                        <p>Product management will move into a dedicated feature with its own view, grid, service, and repository.</p>
-                    </div>
+                    <div id="products-root"></div>
                 </section>
 
                 <section id="purchases-view" class="view" data-view="purchases">
