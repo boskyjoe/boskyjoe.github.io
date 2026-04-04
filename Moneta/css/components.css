@@ -203,6 +203,14 @@ select {
     transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
+.input:disabled,
+.textarea:disabled,
+.select:disabled {
+    background: #f3f6f8;
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
 .input:focus,
 .textarea:focus,
 .select:focus {
@@ -362,9 +370,85 @@ select {
     font-weight: 700;
 }
 
+.purchase-status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.purchase-status-paid {
+    background: #dff5ef;
+    color: var(--accent-strong);
+}
+
+.purchase-status-partially-paid {
+    background: #fff1d9;
+    color: #9a5a00;
+}
+
+.purchase-status-unpaid {
+    background: #f5e2e2;
+    color: var(--danger);
+}
+
 .line-items-list {
     display: grid;
     gap: 1rem;
+}
+
+.bulk-product-picker,
+.purchase-adjustments {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #ffffff 0%, #f9fcfb 100%);
+}
+
+.bulk-product-picker-header,
+.purchase-adjustments-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.bulk-product-picker-meta {
+    margin-bottom: 0.75rem;
+}
+
+.bulk-product-list {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bulk-product-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: #fff;
+}
+
+.bulk-product-option input {
+    margin-top: 0.15rem;
+}
+
+.bulk-product-option-disabled {
+    opacity: 0.75;
+}
+
+.bulk-product-copy {
+    display: grid;
+    gap: 0.2rem;
+    flex: 1;
 }
 
 .line-item-row {
@@ -397,6 +481,12 @@ select {
     gap: 1rem;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     margin-top: 1.5rem;
+}
+
+.purchase-adjustments-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .summary-card {
@@ -494,8 +584,16 @@ select {
     }
 
     .line-item-grid,
-    .purchase-summary-grid {
+    .purchase-summary-grid,
+    .purchase-adjustments-grid,
+    .bulk-product-list {
         grid-template-columns: 1fr;
+    }
+
+    .bulk-product-picker-header,
+    .purchase-adjustments-header {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .field-wide {
