@@ -35,7 +35,7 @@ function paymentStatusMarkup(value) {
 function invoiceActionMarkup(data) {
     return `
         <div class="table-actions">
-            <button class="button button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
             </button>

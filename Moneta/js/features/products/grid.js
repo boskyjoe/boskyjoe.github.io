@@ -17,7 +17,7 @@ function getCategoryName(categoryId, categories) {
 
 function statusMarkup(isActive) {
     return `
-        <span class="grid-status-cell ${isActive ? "status-active" : "status-inactive"}">
+        <span class="grid-status-cell grid-status-pill ${isActive ? "status-active" : "status-inactive"}">
             <span class="inline-icon">${isActive ? icons.active : icons.inactive}</span>
             ${isActive ? "Active" : "Inactive"}
         </span>
@@ -27,12 +27,12 @@ function statusMarkup(isActive) {
 function actionMarkup(data) {
     return `
         <div class="table-actions">
-            <button class="button button-secondary product-edit-button" type="button" data-product-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-secondary product-edit-button" type="button" data-product-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
             </button>
             <button
-                class="button ${data.isActive ? "button-danger-soft" : "button-primary"} product-status-button"
+                class="button grid-action-button ${data.isActive ? "grid-action-button-danger" : "grid-action-button-primary"} product-status-button"
                 type="button"
                 data-product-id="${data.id}"
                 data-status-field="isActive"
