@@ -254,7 +254,7 @@ function renderPurchasesViewShell(snapshot) {
                                     <span class="panel-icon">${icons.catalogue}</span>
                                     <div>
                                         <h3>Line Items</h3>
-                                        <p class="panel-copy">Search the full active product list and set `Qty` above `0` to make a row part of the invoice.</p>
+                                        <p class="panel-copy">Search the full active product list and set Qty above 0 to make a row part of the invoice.</p>
                                     </div>
                                 </div>
                                 <div class="toolbar-meta">
