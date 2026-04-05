@@ -3,6 +3,7 @@ import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toa
 import { getState, subscribe } from "../../app/store.js";
 import { saveSupplier, toggleSupplierStatus } from "./service.js";
 import { icons } from "../../shared/icons.js";
+import { focusFormField } from "../../shared/focus.js";
 import { initializeSuppliersGrid, refreshSuppliersGrid, updateSuppliersGridSearch } from "./grid.js";
 
 const featureState = {
@@ -211,6 +212,10 @@ function handleSearchInput(target) {
 function handleEditSupplier(target) {
     featureState.editingSupplierId = target.dataset.supplierId || null;
     renderSuppliersView();
+    focusFormField({
+        formId: "supplier-form",
+        inputSelector: "#supplier-name"
+    });
 }
 
 async function handleStatusToggle(target) {

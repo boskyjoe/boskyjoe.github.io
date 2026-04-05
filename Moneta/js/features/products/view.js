@@ -2,6 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
+import { focusFormField } from "../../shared/focus.js";
 import { initializeProductsGrid, refreshProductsGrid, updateProductsGridSearch } from "./grid.js";
 import { calculateSellingPrice, saveProduct, toggleProductStatus } from "./service.js";
 
@@ -217,6 +218,10 @@ async function handleProductFormSubmit(event) {
 function handleProductEdit(target) {
     featureState.editingProductId = target.dataset.productId || null;
     renderProductsView();
+    focusFormField({
+        formId: "product-form",
+        inputSelector: "#product-name"
+    });
 }
 
 async function handleProductStatusToggle(target) {

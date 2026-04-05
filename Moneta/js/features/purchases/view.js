@@ -2,6 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
+import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
     subscribeToInvoicePayments,
@@ -887,7 +888,10 @@ function handleEditInvoice(button) {
     featureState.editingInvoiceId = button.dataset.invoiceId || null;
     featureState.lineItemSearchTerm = "";
     renderPurchasesView();
-    document.getElementById("purchase-invoice-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    focusFormField({
+        formId: "purchase-invoice-form",
+        inputSelector: "#purchase-invoice-name"
+    });
 }
 
 function handleOpenPaymentWorkspace(button) {

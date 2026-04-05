@@ -2,6 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
+import { focusFormField } from "../../shared/focus.js";
 import {
     initializeAvailableProductsGrid,
     initializeCatalogueItemsGrid,
@@ -539,6 +540,10 @@ function handleCatalogueEdit(button) {
     }
 
     renderSalesCataloguesView();
+    focusFormField({
+        formId: "sales-catalogue-form",
+        inputSelector: "#sales-catalogue-name"
+    });
 }
 
 async function handleCatalogueStatusToggle(button) {

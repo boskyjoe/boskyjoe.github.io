@@ -2,6 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
+import { focusFormField } from "../../shared/focus.js";
 import {
     initializeCategoriesGrid,
     initializePaymentModesGrid,
@@ -57,6 +58,21 @@ const featureState = {
         categories: null,
         seasons: null,
         paymentModes: null
+    }
+};
+
+const ADMIN_FORM_FOCUS_TARGETS = {
+    categories: {
+        formId: "admin-category-form",
+        inputSelector: "#admin-category-name"
+    },
+    seasons: {
+        formId: "admin-season-form",
+        inputSelector: "#admin-season-name"
+    },
+    paymentModes: {
+        formId: "admin-payment-mode-form",
+        inputSelector: "#admin-payment-mode-name"
     }
 };
 
@@ -624,6 +640,7 @@ async function handleEditRecord(button) {
         setActiveSection(entity);
         featureState.editingIds[entity] = recordId;
         renderAdminModulesView();
+        focusFormField(ADMIN_FORM_FOCUS_TARGETS[entity]);
     } catch (error) {
         console.error("[Moneta] Admin edit check failed:", error);
         showToast(error.message || "Could not open this record for editing.", "error");
