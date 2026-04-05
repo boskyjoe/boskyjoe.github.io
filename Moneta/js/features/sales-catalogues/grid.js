@@ -124,13 +124,6 @@ function buildCatalogueItemsColumnDefs() {
         { field: "productName", headerName: "Product", minWidth: 220, flex: 1.3 },
         { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
         {
-            field: "inventoryCount",
-            headerName: "Stock",
-            minWidth: 110,
-            flex: 0.65,
-            ...rightAlignedNumberColumn
-        },
-        {
             field: "costPrice",
             headerName: "Cost",
             minWidth: 130,

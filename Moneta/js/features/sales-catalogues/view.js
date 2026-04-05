@@ -60,6 +60,25 @@ function resolveSeasonName(snapshot, seasonId) {
     return snapshot.masterData.seasons.find(season => season.id === seasonId)?.seasonName || "-";
 }
 
+function enrichCatalogueItems(snapshot, items) {
+    const products = snapshot.masterData.products || [];
+    const categories = snapshot.masterData.categories || [];
+
+    return (items || []).map(item => {
+        const product = products.find(entry => entry.id === item.productId) || null;
+        const resolvedCategoryId = item.categoryId || product?.categoryId || "";
+        const resolvedCategoryName = item.categoryName
+            || categories.find(category => category.id === resolvedCategoryId)?.categoryName
+            || "-";
+
+        return {
+            ...item,
+            categoryId: resolvedCategoryId,
+            categoryName: resolvedCategoryName
+        };
+    });
+}
+
 function renderSeasonOptions(seasons, currentValue) {
     return seasons.map(season => `
         <option value="${season.id}" ${season.id === currentValue ? "selected" : ""}>
@@ -273,9 +292,11 @@ function syncAvailableProductsGrid(snapshot) {
     updateAvailableProductsGridSearch(featureState.availableSearchTerm);
 }
 
-function syncCatalogueItemsGrid() {
+function syncCatalogueItemsGrid(snapshot) {
     const gridElement = document.getElementById("sales-catalogue-items-grid");
-    const rows = getWorkingItems().slice().sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
+    const rows = enrichCatalogueItems(snapshot, getWorkingItems())
+        .slice()
+        .sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
 
     initializeCatalogueItemsGrid(gridElement, handleCatalogueItemPriceChange);
     refreshCatalogueItemsGrid(rows);
@@ -310,7 +331,7 @@ export function renderSalesCataloguesView() {
     `;
 
     syncAvailableProductsGrid(snapshot);
-    syncCatalogueItemsGrid();
+    syncCatalogueItemsGrid(snapshot);
     syncExistingCataloguesGrid(snapshot);
 }
 
@@ -379,7 +400,7 @@ async function handleAddProduct(button) {
         if (!featureState.editingCatalogueId) {
             featureState.draftItems = [...featureState.draftItems, item];
             syncAvailableProductsGrid(snapshot);
-            syncCatalogueItemsGrid();
+            syncCatalogueItemsGrid(snapshot);
         }
 
         showToast(`${product.itemName} added to the catalogue workspace.`, "success");
@@ -421,7 +442,7 @@ async function handleCatalogueItemRemoval(button) {
 
     featureState.draftItems = featureState.draftItems.filter(item => (item.tempId || item.id || item.productId) !== itemId);
     syncAvailableProductsGrid(getState());
-    syncCatalogueItemsGrid();
+    syncCatalogueItemsGrid(getState());
 }
 
 async function handleCatalogueItemPriceChange(params) {
