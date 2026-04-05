@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
 import { showModal } from "../../shared/modal.js";
-import { showToast } from "../../shared/toast.js";
+import { runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import {
     initializeAvailableProductsGrid,
@@ -362,20 +362,39 @@ async function handleSalesCatalogueSubmit(event) {
     try {
         const seasonSelect = document.getElementById("sales-catalogue-season");
         const selectedSeasonName = seasonSelect?.selectedOptions?.[0]?.textContent || "";
-        const result = await saveSalesCatalogue({
-            docId: document.getElementById("sales-catalogue-doc-id")?.value,
-            catalogueName: document.getElementById("sales-catalogue-name")?.value,
-            seasonId: seasonSelect?.value,
-            seasonName: selectedSeasonName,
-            items: featureState.draftItems
-        }, getState().currentUser);
+        const docId = document.getElementById("sales-catalogue-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Sales Catalogue" : "Building Sales Catalogue",
+            initialMessage: "Reading catalogue header and worksheet data...",
+            initialProgress: 14,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Sales Catalogue Updated" : "Sales Catalogue Created",
+            successMessage: docId ? "The sales catalogue was updated successfully." : "The sales catalogue was created successfully."
+        }, async ({ update }) => {
+            update("Validating season, catalogue details, and worksheet items...", 34, "Step 2 of 5");
 
-        resetSalesCatalogueWorkspace();
-        renderSalesCataloguesView();
-        showToast(result.mode === "create" ? "Sales catalogue created." : "Sales catalogue updated.", "success");
+            update("Writing catalogue and pricing data to the database...", 72, "Step 3 of 5");
+
+            const result = await saveSalesCatalogue({
+                docId,
+                catalogueName: document.getElementById("sales-catalogue-name")?.value,
+                seasonId: seasonSelect?.value,
+                seasonName: selectedSeasonName,
+                items: featureState.draftItems
+            }, getState().currentUser);
+
+            update("Refreshing the catalogue workspace...", 88, "Step 4 of 5");
+            resetSalesCatalogueWorkspace();
+            renderSalesCataloguesView();
+            update("Catalogue pricing is ready for sales operations.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Sales catalogue created." : "Sales catalogue updated.", "success", {
+            title: "Sales Catalogue"
+        });
     } catch (error) {
         console.error("[Moneta] Sales catalogue save failed:", error);
-        showToast(error.message || "Could not save sales catalogue.", "error");
     }
 }
 

@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
 import { showModal } from "../../shared/modal.js";
-import { showToast } from "../../shared/toast.js";
+import { runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import {
     initializeCategoriesGrid,
@@ -440,17 +440,36 @@ async function handleCategorySubmit(event) {
     event.preventDefault();
 
     try {
-        const result = await saveCategory({
-            docId: document.getElementById("admin-category-doc-id")?.value,
-            categoryName: document.getElementById("admin-category-name")?.value
-        }, getState().currentUser, getState().masterData.categories);
+        const docId = document.getElementById("admin-category-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Product Category" : "Adding Product Category",
+            initialMessage: "Reading the current category records...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Product Category Updated" : "Product Category Added",
+            successMessage: docId ? "The category was updated successfully." : "The category was added successfully."
+        }, async ({ update }) => {
+            update("Running validation and usage checks...", 38, "Step 2 of 5");
 
-        clearEditingState("categories");
-        renderAdminModulesView();
-        showToast(result.mode === "create" ? "Category created." : "Category updated.", "success");
+            update("Writing category changes to the database...", 72, "Step 3 of 5");
+
+            const result = await saveCategory({
+                docId,
+                categoryName: document.getElementById("admin-category-name")?.value
+            }, getState().currentUser, getState().masterData.categories);
+
+            update("Refreshing the admin workspace...", 88, "Step 4 of 5");
+            clearEditingState("categories");
+            renderAdminModulesView();
+            update("Category ready for use across Moneta.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Category created." : "Category updated.", "success", {
+            title: "Admin Modules"
+        });
     } catch (error) {
         console.error("[Moneta] Category save failed:", error);
-        showToast(error.message || "Could not save category.", "error");
     }
 }
 
@@ -458,20 +477,39 @@ async function handleSeasonSubmit(event) {
     event.preventDefault();
 
     try {
-        const result = await saveSeason({
-            docId: document.getElementById("admin-season-doc-id")?.value,
-            seasonName: document.getElementById("admin-season-name")?.value,
-            startDate: document.getElementById("admin-season-start-date")?.value,
-            endDate: document.getElementById("admin-season-end-date")?.value,
-            status: document.getElementById("admin-season-status")?.value
-        }, getState().currentUser, getState().masterData.seasons);
+        const docId = document.getElementById("admin-season-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Sales Season" : "Adding Sales Season",
+            initialMessage: "Reading season records and date inputs...",
+            initialProgress: 16,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Sales Season Updated" : "Sales Season Added",
+            successMessage: docId ? "The season was updated successfully." : "The season was created successfully."
+        }, async ({ update }) => {
+            update("Validating dates, workflow status, and duplicates...", 38, "Step 2 of 5");
 
-        clearEditingState("seasons");
-        renderAdminModulesView();
-        showToast(result.mode === "create" ? "Season created." : "Season updated.", "success");
+            update("Writing season changes to the database...", 72, "Step 3 of 5");
+
+            const result = await saveSeason({
+                docId,
+                seasonName: document.getElementById("admin-season-name")?.value,
+                startDate: document.getElementById("admin-season-start-date")?.value,
+                endDate: document.getElementById("admin-season-end-date")?.value,
+                status: document.getElementById("admin-season-status")?.value
+            }, getState().currentUser, getState().masterData.seasons);
+
+            update("Refreshing the admin workspace...", 88, "Step 4 of 5");
+            clearEditingState("seasons");
+            renderAdminModulesView();
+            update("Season timeline is now ready for catalogue planning.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Season created." : "Season updated.", "success", {
+            title: "Admin Modules"
+        });
     } catch (error) {
         console.error("[Moneta] Season save failed:", error);
-        showToast(error.message || "Could not save season.", "error");
     }
 }
 
@@ -479,17 +517,36 @@ async function handlePaymentModeSubmit(event) {
     event.preventDefault();
 
     try {
-        const result = await savePaymentMode({
-            docId: document.getElementById("admin-payment-mode-doc-id")?.value,
-            paymentMode: document.getElementById("admin-payment-mode-name")?.value
-        }, getState().currentUser, getState().masterData.paymentModes);
+        const docId = document.getElementById("admin-payment-mode-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Payment Mode" : "Adding Payment Mode",
+            initialMessage: "Reading payment mode records...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Payment Mode Updated" : "Payment Mode Added",
+            successMessage: docId ? "The payment mode was updated successfully." : "The payment mode was created successfully."
+        }, async ({ update }) => {
+            update("Validating duplicates and usage restrictions...", 40, "Step 2 of 5");
 
-        clearEditingState("paymentModes");
-        renderAdminModulesView();
-        showToast(result.mode === "create" ? "Payment mode created." : "Payment mode updated.", "success");
+            update("Writing payment mode changes to the database...", 72, "Step 3 of 5");
+
+            const result = await savePaymentMode({
+                docId,
+                paymentMode: document.getElementById("admin-payment-mode-name")?.value
+            }, getState().currentUser, getState().masterData.paymentModes);
+
+            update("Refreshing the payment mode directory...", 88, "Step 4 of 5");
+            clearEditingState("paymentModes");
+            renderAdminModulesView();
+            update("Payment mode is available for downstream workflows.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Payment mode created." : "Payment mode updated.", "success", {
+            title: "Admin Modules"
+        });
     } catch (error) {
         console.error("[Moneta] Payment mode save failed:", error);
-        showToast(error.message || "Could not save payment mode.", "error");
     }
 }
 

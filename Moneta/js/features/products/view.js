@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
 import { showModal } from "../../shared/modal.js";
-import { showToast } from "../../shared/toast.js";
+import { runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { initializeProductsGrid, refreshProductsGrid, updateProductsGridSearch } from "./grid.js";
 import { calculateSellingPrice, saveProduct, toggleProductStatus } from "./service.js";
@@ -163,23 +163,42 @@ async function handleProductFormSubmit(event) {
     event.preventDefault();
 
     try {
-        const result = await saveProduct({
-            docId: document.getElementById("product-doc-id")?.value,
-            itemName: document.getElementById("product-name")?.value,
-            categoryId: document.getElementById("product-category")?.value,
-            itemType: document.getElementById("product-type")?.value,
-            unitPrice: document.getElementById("product-unit-price")?.value,
-            unitMarginPercentage: document.getElementById("product-margin")?.value,
-            inventoryCount: document.getElementById("product-inventory")?.value,
-            netWeightKg: document.getElementById("product-weight")?.value
-        }, getState().currentUser);
+        const docId = document.getElementById("product-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Product" : "Adding New Product",
+            initialMessage: "Reading product form inputs...",
+            initialProgress: 16,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Product Updated" : "Product Added",
+            successMessage: docId ? "The product was updated successfully." : "The product was added successfully."
+        }, async ({ update }) => {
+            update("Validating category, pricing, and inventory data...", 36, "Step 2 of 5");
 
-        featureState.editingProductId = null;
-        renderProductsView();
-        showToast(result.mode === "create" ? "Product created." : "Product updated.", "success");
+            update("Writing product changes to the database...", 72, "Step 3 of 5");
+
+            const result = await saveProduct({
+                docId,
+                itemName: document.getElementById("product-name")?.value,
+                categoryId: document.getElementById("product-category")?.value,
+                itemType: document.getElementById("product-type")?.value,
+                unitPrice: document.getElementById("product-unit-price")?.value,
+                unitMarginPercentage: document.getElementById("product-margin")?.value,
+                inventoryCount: document.getElementById("product-inventory")?.value,
+                netWeightKg: document.getElementById("product-weight")?.value
+            }, getState().currentUser);
+
+            update("Refreshing the product catalogue workspace...", 88, "Step 4 of 5");
+            featureState.editingProductId = null;
+            renderProductsView();
+            update("Product catalogue is up to date.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Product created." : "Product updated.", "success", {
+            title: "Product Catalogue"
+        });
     } catch (error) {
         console.error("[Moneta] Product save failed:", error);
-        showToast(error.message || "Could not save product.", "error");
     }
 }
 

@@ -67,13 +67,6 @@ export async function getCategoryUsageStatus(categoryDocId) {
         };
     }
 
-    if (await queryHasMatch(db.collectionGroup("items").where("categoryId", "==", categoryDocId))) {
-        return {
-            isUsed: true,
-            message: "This category is already present in catalogue or item history and can only be activated or deactivated."
-        };
-    }
-
     return { isUsed: false };
 }
 
@@ -130,13 +123,6 @@ export async function getPaymentModeUsageStatus(paymentModeName) {
         return {
             isUsed: true,
             message: "This payment mode is already used in consignment payments and can only be activated or deactivated."
-        };
-    }
-
-    if (await queryHasMatch(db.collectionGroup("payments").where("paymentMode", "==", paymentModeName))) {
-        return {
-            isUsed: true,
-            message: "This payment mode is already used in payment history and can only be activated or deactivated."
         };
     }
 

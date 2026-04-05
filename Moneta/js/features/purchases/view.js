@@ -1,5 +1,5 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showToast } from "../../shared/toast.js";
+import { runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
@@ -687,26 +687,47 @@ async function handlePurchaseFormSubmit(event) {
     const adjustments = getInvoiceAdjustmentDraftFromDom();
 
     try {
-        const result = await savePurchaseInvoice({
-            docId: document.getElementById("purchase-invoice-doc-id")?.value,
-            purchaseDate: document.getElementById("purchase-date")?.value,
-            supplierId: document.getElementById("purchase-supplier")?.value,
-            supplierInvoiceNo: document.getElementById("supplier-invoice-no")?.value,
-            invoiceName: document.getElementById("purchase-invoice-name")?.value,
-            invoiceDiscountType: adjustments.discountType,
-            invoiceDiscountValue: adjustments.invoiceDiscountValue,
-            invoiceTaxPercentage: adjustments.invoiceTaxPercentage,
-            lineItems: getActiveLineItemsFromGrid()
-        }, getState().masterData, getState().currentUser);
+        const docId = document.getElementById("purchase-invoice-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Purchase Invoice" : "Creating Purchase Invoice",
+            initialMessage: "Reading supplier, invoice, and worksheet data...",
+            initialProgress: 14,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Purchase Invoice Updated" : "Purchase Invoice Created",
+            successMessage: docId
+                ? "The invoice and inventory reconciliation were completed successfully."
+                : "The invoice was saved and inventory was updated successfully."
+        }, async ({ update }) => {
+            update("Validating invoice totals and active line items...", 32, "Step 2 of 5");
 
-        featureState.editingInvoiceId = null;
-        renderPurchasesView();
+            update("Writing invoice and inventory changes to the database...", 72, "Step 3 of 5");
+
+            const result = await savePurchaseInvoice({
+                docId,
+                purchaseDate: document.getElementById("purchase-date")?.value,
+                supplierId: document.getElementById("purchase-supplier")?.value,
+                supplierInvoiceNo: document.getElementById("supplier-invoice-no")?.value,
+                invoiceName: document.getElementById("purchase-invoice-name")?.value,
+                invoiceDiscountType: adjustments.discountType,
+                invoiceDiscountValue: adjustments.invoiceDiscountValue,
+                invoiceTaxPercentage: adjustments.invoiceTaxPercentage,
+                lineItems: getActiveLineItemsFromGrid()
+            }, getState().masterData, getState().currentUser);
+
+            update("Refreshing invoice history and balances...", 88, "Step 4 of 5");
+            featureState.editingInvoiceId = null;
+            renderPurchasesView();
+            update("Purchase workspace is now in sync.", 96, "Step 5 of 5");
+            return result;
+        });
+
         showToast(result.mode === "create"
             ? "Purchase invoice saved and inventory updated."
-            : "Purchase invoice updated and inventory reconciled.", "success");
+            : "Purchase invoice updated and inventory reconciled.", "success", {
+            title: "Stock Purchase"
+        });
     } catch (error) {
         console.error("[Moneta] Purchase invoice save failed:", error);
-        showToast(error.message || "Could not save purchase invoice.", "error");
     }
 }
 
@@ -720,22 +741,40 @@ async function handlePurchasePaymentSubmit(event) {
     }
 
     try {
-        const paymentData = await savePurchasePayment(
-            getPaymentDraftFromDom(),
-            invoice,
-            getState().masterData,
-            getState().currentUser
-        );
+        const paymentData = await runProgressToastFlow({
+            title: "Recording Supplier Payment",
+            initialMessage: "Reading invoice and payment draft details...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Supplier Payment Recorded",
+            successMessage: `${formatCurrency(Number(getPaymentDraftFromDom().amountPaid) || 0)} was recorded successfully.`
+        }, async ({ update }) => {
+            const draft = getPaymentDraftFromDom();
+            update("Validating payment amount, mode, and outstanding balance...", 36, "Step 2 of 5");
 
-        resetPaymentDraft(invoice, { prefillAmount: false });
-        renderPurchasesView();
+            update("Writing payment and invoice balance updates...", 72, "Step 3 of 5");
+
+            const paymentData = await savePurchasePayment(
+                draft,
+                invoice,
+                getState().masterData,
+                getState().currentUser
+            );
+
+            update("Refreshing supplier payment history...", 88, "Step 4 of 5");
+            resetPaymentDraft(invoice, { prefillAmount: false });
+            renderPurchasesView();
+            update("Payment ledger is now in sync.", 96, "Step 5 of 5");
+            return paymentData;
+        });
+
         showToast(
             `${formatCurrency(paymentData.amountPaid)} recorded for ${invoice.supplierName || "the selected supplier"}.`,
-            "success"
+            "success",
+            { title: "Stock Purchase" }
         );
     } catch (error) {
         console.error("[Moneta] Purchase payment save failed:", error);
-        showToast(error.message || "Could not record purchase payment.", "error");
     }
 }
 
@@ -749,18 +788,36 @@ async function handlePurchasePaymentVoidSubmit(event) {
     }
 
     try {
-        await voidPurchasePayment(
-            payment,
-            document.getElementById("purchase-payment-void-reason")?.value || featureState.paymentVoidReason,
-            getState().currentUser
-        );
+        await runProgressToastFlow({
+            title: "Voiding Supplier Payment",
+            theme: "warning",
+            initialMessage: "Reading the original payment and invoice state...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Supplier Payment Voided",
+            successMessage: `Payment ${payment.paymentId || payment.id} was voided and reversed successfully.`
+        }, async ({ update }) => {
+            update("Validating the void reason and reversal eligibility...", 36, "Step 2 of 5");
 
-        resetPaymentVoidState();
-        renderPurchasesView();
-        showToast(`Payment ${payment.paymentId || payment.id} was voided and reversed.`, "success");
+            update("Writing reversal entries and invoice adjustments...", 72, "Step 3 of 5");
+
+            await voidPurchasePayment(
+                payment,
+                document.getElementById("purchase-payment-void-reason")?.value || featureState.paymentVoidReason,
+                getState().currentUser
+            );
+
+            update("Refreshing payment history and invoice balances...", 88, "Step 4 of 5");
+            resetPaymentVoidState();
+            renderPurchasesView();
+            update("Reversal audit trail is now in place.", 96, "Step 5 of 5");
+        });
+
+        showToast(`Payment ${payment.paymentId || payment.id} was voided and reversed.`, "success", {
+            title: "Stock Purchase"
+        });
     } catch (error) {
         console.error("[Moneta] Purchase payment void failed:", error);
-        showToast(error.message || "Could not void the supplier payment.", "error");
     }
 }
 

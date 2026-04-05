@@ -1,5 +1,5 @@
 import { showModal } from "../../shared/modal.js";
-import { showToast } from "../../shared/toast.js";
+import { runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { getState, subscribe } from "../../app/store.js";
 import { saveSupplier, toggleSupplierStatus } from "./service.js";
 import { icons } from "../../shared/icons.js";
@@ -154,21 +154,40 @@ async function handleSupplierFormSubmit(event) {
     const user = snapshot.currentUser;
 
     try {
-        const result = await saveSupplier({
-            docId: document.getElementById("supplier-doc-id")?.value,
-            supplierName: document.getElementById("supplier-name")?.value,
-            contactNo: document.getElementById("supplier-contact-number")?.value,
-            contactEmail: document.getElementById("supplier-contact-email")?.value,
-            address: document.getElementById("supplier-address")?.value,
-            creditTerm: document.getElementById("supplier-credit-term")?.value
-        }, user);
+        const docId = document.getElementById("supplier-doc-id")?.value;
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Supplier" : "Adding Supplier",
+            initialMessage: "Reading supplier form data...",
+            initialProgress: 16,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Supplier Updated" : "Supplier Added",
+            successMessage: docId ? "The supplier was updated successfully." : "The supplier was added successfully."
+        }, async ({ update }) => {
+            update("Validating supplier identity and contact details...", 36, "Step 2 of 5");
 
-        featureState.editingSupplierId = null;
-        renderSuppliersView();
-        showToast(result.mode === "create" ? "Supplier created." : "Supplier updated.", "success");
+            update("Writing supplier changes to the database...", 72, "Step 3 of 5");
+
+            const result = await saveSupplier({
+                docId,
+                supplierName: document.getElementById("supplier-name")?.value,
+                contactNo: document.getElementById("supplier-contact-number")?.value,
+                contactEmail: document.getElementById("supplier-contact-email")?.value,
+                address: document.getElementById("supplier-address")?.value,
+                creditTerm: document.getElementById("supplier-credit-term")?.value
+            }, user);
+
+            update("Refreshing supplier records...", 88, "Step 4 of 5");
+            featureState.editingSupplierId = null;
+            renderSuppliersView();
+            update("Supplier directory is up to date.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Supplier created." : "Supplier updated.", "success", {
+            title: "Supplier Management"
+        });
     } catch (error) {
         console.error("[Moneta] Supplier save failed:", error);
-        showToast(error.message || "Could not save supplier.", "error");
     }
 }
 
