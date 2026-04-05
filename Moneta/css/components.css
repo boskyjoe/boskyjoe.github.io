@@ -486,8 +486,39 @@ select {
     margin-top: 1.5rem;
 }
 
-.purchase-payments-panel {
-    scroll-margin-top: 1rem;
+.purchase-payment-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    background: rgba(10, 18, 25, 0.58);
+    backdrop-filter: blur(6px);
+}
+
+.purchase-payment-modal-card {
+    width: min(1180px, 100%);
+    max-height: calc(100vh - 2.5rem);
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: var(--bg-panel);
+    border: 1px solid rgba(59, 86, 107, 0.16);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 80px rgba(10, 18, 25, 0.28);
+}
+
+.purchase-payment-modal-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.purchase-payment-modal-body {
+    overflow: auto;
+}
+
+.purchase-payment-modal-close {
+    min-width: 0;
 }
 
 .bulk-product-picker,
@@ -633,49 +664,8 @@ select {
     margin-bottom: 1rem;
 }
 
-.payment-history-list {
-    display: grid;
-    gap: 0.85rem;
-}
-
-.payment-history-item {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: #fff;
-    padding: 1rem;
-}
-
-.payment-history-topline {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.payment-history-amount {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-}
-
-.payment-history-meta,
-.payment-history-notes {
-    margin: 0.35rem 0 0;
-    color: var(--text-muted);
-}
-
-.payment-history-detail-grid {
-    display: grid;
-    gap: 0.5rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 0.85rem;
-    font-size: 0.92rem;
-}
-
-.payment-empty-state {
-    min-height: 220px;
-    display: grid;
-    place-items: center;
+.purchase-payment-history-shell {
+    min-height: 420px;
 }
 
 .summary-card {
@@ -772,19 +762,27 @@ select {
         grid-template-columns: 1fr;
     }
 
+    .purchase-payment-modal-overlay {
+        padding: 0.75rem;
+    }
+
+    .purchase-payment-modal-card {
+        max-height: calc(100vh - 1.5rem);
+    }
+
     .line-item-grid,
     .purchase-summary-grid,
     .purchase-adjustments-grid,
     .purchase-payments-layout,
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
-    .payment-history-detail-grid,
     .bulk-product-list {
         grid-template-columns: 1fr;
     }
 
     .bulk-product-picker-header,
-    .purchase-adjustments-header {
+    .purchase-adjustments-header,
+    .purchase-payment-modal-header {
         flex-direction: column;
         align-items: stretch;
     }
