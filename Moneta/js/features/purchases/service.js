@@ -1,5 +1,6 @@
 import {
     createPurchaseInvoiceRecord,
+    recordPurchaseInvoicePayment,
     updatePurchaseInvoiceRecord
 } from "./repository.js";
 
@@ -224,4 +225,70 @@ export async function savePurchaseInvoice(payload, masterData, user) {
 
     await createPurchaseInvoiceRecord(invoiceData, user);
     return { mode: "create" };
+}
+
+export function validatePurchasePaymentPayload(payload, invoice, masterData) {
+    if (!invoice) {
+        throw new Error("Choose a purchase invoice before recording payment.");
+    }
+
+    const paymentDateInput = normalizeText(payload.paymentDate);
+    const paymentMode = normalizeText(payload.paymentMode);
+    const transactionRef = normalizeText(payload.transactionRef);
+    const notes = normalizeText(payload.notes);
+    const amountPaid = roundCurrency(normalizeNumber(payload.amountPaid));
+    const balanceDue = roundCurrency(normalizeNumber(invoice.balanceDue, normalizeNumber(invoice.invoiceTotal)));
+    const paymentModes = masterData.paymentModes || [];
+
+    if (!paymentDateInput) {
+        throw new Error("Payment date is required.");
+    }
+
+    if (Number.isNaN(new Date(`${paymentDateInput}T00:00:00`).getTime())) {
+        throw new Error("Payment date is invalid.");
+    }
+
+    if (amountPaid <= 0) {
+        throw new Error("Payment amount must be greater than zero.");
+    }
+
+    if (balanceDue <= 0) {
+        throw new Error("This invoice has already been fully paid.");
+    }
+
+    if (amountPaid > balanceDue) {
+        throw new Error("Payment amount cannot exceed the outstanding balance.");
+    }
+
+    if (!paymentMode) {
+        throw new Error("Payment mode is required.");
+    }
+
+    if (paymentModes.length > 0 && !paymentModes.some(mode => normalizeText(mode.paymentMode) === paymentMode)) {
+        throw new Error("The selected payment mode could not be found.");
+    }
+
+    return {
+        relatedInvoiceId: invoice.id,
+        relatedInvoiceNumber: invoice.invoiceId || "",
+        invoiceName: invoice.invoiceName || "",
+        supplierId: invoice.supplierId || "",
+        supplierName: invoice.supplierName || "",
+        paymentDate: new Date(`${paymentDateInput}T00:00:00`),
+        amountPaid,
+        paymentMode,
+        transactionRef,
+        notes
+    };
+}
+
+export async function savePurchasePayment(payload, invoice, masterData, user) {
+    if (!user) {
+        throw new Error("You must be logged in to record a supplier payment.");
+    }
+
+    const paymentData = validatePurchasePaymentPayload(payload, invoice, masterData);
+    await recordPurchaseInvoicePayment(invoice.id, paymentData, user);
+
+    return paymentData;
 }

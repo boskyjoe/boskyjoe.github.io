@@ -27,6 +27,13 @@ export const icons = {
             <circle cx="18" cy="20" r="1.8"></circle>
         </svg>
     `,
+    payment: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="6" width="18" height="12" rx="2"></rect>
+            <path d="M3 10h18"></path>
+            <path d="M7 15h4"></path>
+        </svg>
+    `,
     edit: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 20h4l10.4-10.4-4-4L4 16zm11.6-13.6 2-2a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2l-2 2z"></path>

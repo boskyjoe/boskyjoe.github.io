@@ -2,8 +2,15 @@ import { getState, subscribe } from "../../app/store.js";
 import { showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
-import { subscribeToPurchaseInvoices } from "./repository.js";
-import { calculatePurchaseDraftSummary, savePurchaseInvoice } from "./service.js";
+import {
+    subscribeToInvoicePayments,
+    subscribeToPurchaseInvoices
+} from "./repository.js";
+import {
+    calculatePurchaseDraftSummary,
+    savePurchaseInvoice,
+    savePurchasePayment
+} from "./service.js";
 import {
     getPurchaseLineItemsGridRows,
     initializePurchaseLineItemsGrid,
@@ -16,15 +23,42 @@ import {
 
 const featureState = {
     invoices: [],
+    payments: [],
     editingInvoiceId: null,
+    paymentInvoiceId: null,
+    paymentDraft: createDefaultPaymentDraft(),
+    paymentListenerInvoiceId: null,
     searchTerm: "",
     lineItemSearchTerm: "",
     unsubscribeInvoices: null,
+    unsubscribePayments: null,
     filteredInvoiceCount: 0
 };
 
+function createDefaultPaymentDraft(invoice = null, options = {}) {
+    const { prefillAmount = true } = options;
+    const balanceDue = Number(invoice?.balanceDue ?? invoice?.invoiceTotal) || 0;
+
+    return {
+        paymentDate: toDateInputValue(new Date()),
+        amountPaid: prefillAmount && balanceDue > 0 ? balanceDue.toFixed(2) : "",
+        paymentMode: "",
+        transactionRef: "",
+        notes: ""
+    };
+}
+
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function normalizeNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
 }
 
 function toDateInputValue(value) {
@@ -40,8 +74,28 @@ function toDateInputValue(value) {
     return `${year}-${month}-${day}`;
 }
 
+function formatDisplayDate(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
 function normalizeStoredDiscountType(value) {
     return normalizeText(value) === "Percentage" ? "Percentage" : "Fixed";
+}
+
+function getStatusMarkup(value, fallback = "Unpaid") {
+    const status = normalizeText(value) || fallback;
+    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+
+    return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
 }
 
 function getInvoiceDiscountFieldValues(invoice) {
@@ -60,12 +114,44 @@ function getEditingInvoice() {
     return featureState.invoices.find(invoice => invoice.id === featureState.editingInvoiceId) || null;
 }
 
+function getPaymentInvoice() {
+    if (!featureState.paymentInvoiceId) return null;
+    return featureState.invoices.find(invoice => invoice.id === featureState.paymentInvoiceId) || null;
+}
+
+function resetPaymentDraft(invoice = getPaymentInvoice(), options = {}) {
+    featureState.paymentDraft = createDefaultPaymentDraft(invoice, options);
+}
+
+function detachPaymentListener(options = {}) {
+    const { clearPayments = true } = options;
+
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.paymentListenerInvoiceId = null;
+
+    if (clearPayments) {
+        featureState.payments = [];
+    }
+}
+
 function renderSupplierOptions(suppliers, currentValue) {
     return suppliers.map(supplier => `
         <option value="${supplier.id}" ${supplier.id === currentValue ? "selected" : ""}>
             ${supplier.supplierName}
         </option>
     `).join("");
+}
+
+function renderPaymentModeOptions(paymentModes, currentValue) {
+    return paymentModes.map(mode => {
+        const value = normalizeText(mode.paymentMode);
+        return `
+            <option value="${value}" ${value === currentValue ? "selected" : ""}>
+                ${value}
+            </option>
+        `;
+    }).join("");
 }
 
 function getInvoiceAdjustmentDraftFromDom() {
@@ -77,6 +163,16 @@ function getInvoiceAdjustmentDraftFromDom() {
         discountType,
         invoiceDiscountValue: discountType === "Percentage" ? percentageValue : fixedValue,
         invoiceTaxPercentage: document.getElementById("invoice-tax-percentage")?.value || 0
+    };
+}
+
+function getPaymentDraftFromDom() {
+    return {
+        paymentDate: document.getElementById("purchase-payment-date")?.value || featureState.paymentDraft.paymentDate,
+        amountPaid: document.getElementById("purchase-payment-amount")?.value || featureState.paymentDraft.amountPaid,
+        paymentMode: document.getElementById("purchase-payment-mode")?.value || featureState.paymentDraft.paymentMode,
+        transactionRef: document.getElementById("purchase-payment-reference")?.value || featureState.paymentDraft.transactionRef,
+        notes: document.getElementById("purchase-payment-notes")?.value || featureState.paymentDraft.notes
     };
 }
 
@@ -185,6 +281,173 @@ function updatePurchaseDraftPreview() {
     if (totalNode) totalNode.textContent = formatCurrency(summary.invoiceTotal);
 
     syncInvoiceAdjustmentInputs();
+}
+
+function updatePaymentDraftPreview() {
+    const invoice = getPaymentInvoice();
+    if (!invoice) return;
+
+    const balanceDue = roundCurrency(invoice.balanceDue ?? invoice.invoiceTotal);
+    const draftAmount = roundCurrency(normalizeNumber(document.getElementById("purchase-payment-amount")?.value));
+    const remainingBalance = roundCurrency(Math.max(balanceDue - draftAmount, 0));
+    const remainingBalanceNode = document.getElementById("purchase-payment-balance-after-draft");
+
+    if (remainingBalanceNode) {
+        remainingBalanceNode.textContent = formatCurrency(remainingBalance);
+    }
+}
+
+function renderPaymentHistoryList(payments) {
+    if (payments.length === 0) {
+        return `
+            <div class="empty-state payment-empty-state">
+                <p>No supplier payments recorded yet for this invoice.</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="payment-history-list">
+            ${payments.map(payment => `
+                <article class="payment-history-item">
+                    <div class="payment-history-topline">
+                        <div>
+                            <p class="payment-history-amount">${formatCurrency(payment.amountPaid || 0)}</p>
+                            <p class="payment-history-meta">
+                                ${formatDisplayDate(payment.paymentDate)}${payment.paymentMode ? ` | ${payment.paymentMode}` : ""}
+                            </p>
+                        </div>
+                        ${getStatusMarkup(payment.paymentStatus || payment.status, "Verified")}
+                    </div>
+                    <div class="payment-history-detail-grid">
+                        <span><strong>Reference:</strong> ${payment.transactionRef || "Not provided"}</span>
+                        <span><strong>Recorded By:</strong> ${payment.recordedBy || payment.audit?.createdBy || "-"}</span>
+                    </div>
+                    ${payment.notes ? `<p class="payment-history-notes">${payment.notes}</p>` : ""}
+                </article>
+            `).join("")}
+        </div>
+    `;
+}
+
+function renderPaymentWorkspace(snapshot) {
+    const paymentInvoice = getPaymentInvoice();
+    if (!paymentInvoice) return "";
+
+    const paymentModes = snapshot.masterData.paymentModes || [];
+    const balanceDue = roundCurrency(paymentInvoice.balanceDue ?? paymentInvoice.invoiceTotal);
+    const amountPaid = roundCurrency(paymentInvoice.amountPaid);
+    const invoiceTotal = roundCurrency(paymentInvoice.invoiceTotal);
+    const draftAmount = roundCurrency(normalizeNumber(featureState.paymentDraft.amountPaid));
+    const remainingBalance = roundCurrency(Math.max(balanceDue - draftAmount, 0));
+    const canRecordPayment = balanceDue > 0 && paymentModes.length > 0;
+
+    return `
+        <div id="purchase-payments-panel" class="panel-card purchase-payments-panel">
+            <div class="panel-header panel-header-accent">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                    <div>
+                        <h3>Invoice Payments</h3>
+                        <p class="panel-copy">Record supplier payments against a specific purchase invoice and keep the balance fully visible while you work.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
+                    <span class="status-pill">${featureState.payments.length} payments</span>
+                </div>
+            </div>
+            <div class="panel-body purchase-payments-layout">
+                <div class="payment-workspace-card">
+                    <div class="purchase-payment-meta-grid">
+                        <article class="summary-card">
+                            <p class="summary-label">Supplier</p>
+                            <p class="summary-value payment-summary-copy">${paymentInvoice.supplierName || "-"}</p>
+                        </article>
+                        <article class="summary-card">
+                            <p class="summary-label">Invoice Total</p>
+                            <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                        </article>
+                        <article class="summary-card">
+                            <p class="summary-label">Paid So Far</p>
+                            <p class="summary-value">${formatCurrency(amountPaid)}</p>
+                        </article>
+                        <article class="summary-card">
+                            <p class="summary-label">Outstanding Balance</p>
+                            <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                        </article>
+                    </div>
+
+                    <form id="purchase-payment-form" class="purchase-payment-form">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="purchase-payment-date">Payment Date</label>
+                                <input id="purchase-payment-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
+                            </div>
+                            <div class="field">
+                                <label for="purchase-payment-amount">Amount Paid</label>
+                                <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
+                            </div>
+                            <div class="field">
+                                <label for="purchase-payment-mode">Payment Mode</label>
+                                <select id="purchase-payment-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
+                                    <option value="">Select mode</option>
+                                    ${renderPaymentModeOptions(paymentModes, featureState.paymentDraft.paymentMode)}
+                                </select>
+                            </div>
+                            <div class="field field-wide">
+                                <label for="purchase-payment-reference">Reference</label>
+                                <input id="purchase-payment-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="Cheque number, transfer ref, or receipt ID">
+                            </div>
+                            <div class="field field-full">
+                                <label for="purchase-payment-notes">Notes</label>
+                                <textarea id="purchase-payment-notes" class="textarea" placeholder="Optional internal note about this payment">${featureState.paymentDraft.notes}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="purchase-payment-preview">
+                            <div>
+                                <p class="summary-label">Status</p>
+                                <div class="purchase-payment-inline-pill">${getStatusMarkup(paymentInvoice.paymentStatus)}</div>
+                            </div>
+                            <div>
+                                <p class="summary-label">Balance After Draft</p>
+                                <p id="purchase-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
+                            </div>
+                        </div>
+
+                        ${balanceDue <= 0 ? `
+                            <p class="panel-copy panel-copy-tight">This invoice is already fully paid. You can still review the payment history below.</p>
+                        ` : ""}
+                        ${balanceDue > 0 && paymentModes.length === 0 ? `
+                            <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording supplier payments.</p>
+                        ` : ""}
+
+                        <div class="form-actions">
+                            <button id="purchase-payments-close-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.inactive}</span>
+                                Close
+                            </button>
+                            <button class="button button-primary" type="submit" ${canRecordPayment ? "" : "disabled"}>
+                                <span class="button-icon">${icons.payment}</span>
+                                Record Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="payment-workspace-card">
+                    <div class="purchase-payments-history-header">
+                        <div>
+                            <p class="section-kicker">Payment History</p>
+                            <p class="panel-copy">Every recorded supplier payment for ${paymentInvoice.invoiceName || paymentInvoice.invoiceId || "this invoice"}.</p>
+                        </div>
+                    </div>
+                    ${renderPaymentHistoryList(featureState.payments)}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function renderPurchasesViewShell(snapshot) {
@@ -365,6 +628,8 @@ function renderPurchasesViewShell(snapshot) {
                     </div>
                 </div>
             </div>
+
+            ${renderPaymentWorkspace(snapshot)}
         </div>
     `;
 }
@@ -398,6 +663,35 @@ async function handlePurchaseFormSubmit(event) {
     }
 }
 
+async function handlePurchasePaymentSubmit(event) {
+    event.preventDefault();
+
+    const invoice = getPaymentInvoice();
+    if (!invoice) {
+        showToast("Choose an invoice before recording payment.", "error");
+        return;
+    }
+
+    try {
+        const paymentData = await savePurchasePayment(
+            getPaymentDraftFromDom(),
+            invoice,
+            getState().masterData,
+            getState().currentUser
+        );
+
+        resetPaymentDraft(invoice, { prefillAmount: false });
+        renderPurchasesView();
+        showToast(
+            `${formatCurrency(paymentData.amountPaid)} recorded for ${invoice.supplierName || "the selected supplier"}.`,
+            "success"
+        );
+    } catch (error) {
+        console.error("[Moneta] Purchase payment save failed:", error);
+        showToast(error.message || "Could not record purchase payment.", "error");
+    }
+}
+
 function handleInvoiceSearch(target) {
     featureState.searchTerm = target.value || "";
     updatePurchasesGridSearch(featureState.searchTerm);
@@ -415,6 +709,42 @@ function handleEditInvoice(button) {
     document.getElementById("purchase-invoice-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function handleOpenPaymentWorkspace(button) {
+    const invoiceId = button.dataset.invoiceId || null;
+    if (!invoiceId) return;
+
+    const invoice = featureState.invoices.find(entry => entry.id === invoiceId);
+    featureState.paymentInvoiceId = invoiceId;
+    featureState.editingInvoiceId = null;
+    resetPaymentDraft(invoice);
+    renderPurchasesView();
+    document.getElementById("purchase-payments-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handlePaymentWorkspaceClose() {
+    featureState.paymentInvoiceId = null;
+    resetPaymentDraft(null, { prefillAmount: false });
+    detachPaymentListener();
+    renderPurchasesView();
+}
+
+function updatePaymentDraftField(target) {
+    if (!target?.id) return;
+
+    const fieldById = {
+        "purchase-payment-date": "paymentDate",
+        "purchase-payment-amount": "amountPaid",
+        "purchase-payment-mode": "paymentMode",
+        "purchase-payment-reference": "transactionRef",
+        "purchase-payment-notes": "notes"
+    };
+
+    const field = fieldById[target.id];
+    if (!field) return;
+
+    featureState.paymentDraft[field] = target.value;
+}
+
 function bindPurchasesDomEvents() {
     const root = document.getElementById("purchases-root");
     if (!root || root.dataset.bound === "true") return;
@@ -422,6 +752,11 @@ function bindPurchasesDomEvents() {
     root.addEventListener("submit", event => {
         if (event.target.id === "purchase-invoice-form") {
             handlePurchaseFormSubmit(event);
+            return;
+        }
+
+        if (event.target.id === "purchase-payment-form") {
+            handlePurchasePaymentSubmit(event);
         }
     });
 
@@ -444,7 +779,11 @@ function bindPurchasesDomEvents() {
             target.id === "invoice-tax-percentage"
         ) {
             updatePurchaseDraftPreview();
+            return;
         }
+
+        updatePaymentDraftField(target);
+        updatePaymentDraftPreview();
     });
 
     root.addEventListener("change", event => {
@@ -455,16 +794,27 @@ function bindPurchasesDomEvents() {
             target.id === "invoice-discount-type"
         ) {
             updatePurchaseDraftPreview();
+            return;
         }
+
+        updatePaymentDraftField(target);
+        updatePaymentDraftPreview();
     });
 
     root.addEventListener("click", event => {
         const target = event.target;
         const editButton = target.closest(".purchase-edit-button");
+        const paymentsButton = target.closest(".purchase-payments-button");
         const cancelButton = target.closest("#purchase-cancel-button");
+        const closePaymentsButton = target.closest("#purchase-payments-close-button");
 
         if (editButton) {
             handleEditInvoice(editButton);
+            return;
+        }
+
+        if (paymentsButton) {
+            handleOpenPaymentWorkspace(paymentsButton);
             return;
         }
 
@@ -472,6 +822,11 @@ function bindPurchasesDomEvents() {
             featureState.editingInvoiceId = null;
             featureState.lineItemSearchTerm = "";
             renderPurchasesView();
+            return;
+        }
+
+        if (closePaymentsButton) {
+            handlePaymentWorkspaceClose();
         }
     });
 
@@ -491,6 +846,12 @@ function ensureInvoiceListener(snapshot) {
                     featureState.editingInvoiceId = null;
                 }
 
+                if (featureState.paymentInvoiceId && !invoices.some(invoice => invoice.id === featureState.paymentInvoiceId)) {
+                    featureState.paymentInvoiceId = null;
+                    resetPaymentDraft(null, { prefillAmount: false });
+                    detachPaymentListener();
+                }
+
                 if (getState().currentRoute === "#/purchases") {
                     renderPurchasesView();
                 }
@@ -507,7 +868,45 @@ function ensureInvoiceListener(snapshot) {
         featureState.unsubscribeInvoices = null;
         featureState.invoices = [];
         featureState.editingInvoiceId = null;
+        featureState.paymentInvoiceId = null;
+        resetPaymentDraft(null, { prefillAmount: false });
+        detachPaymentListener();
     }
+}
+
+function ensurePaymentListener(snapshot) {
+    const hasUser = Boolean(snapshot.currentUser);
+    const paymentInvoice = getPaymentInvoice();
+
+    if (!hasUser || !paymentInvoice) {
+        detachPaymentListener();
+        return;
+    }
+
+    if (
+        featureState.unsubscribePayments &&
+        featureState.paymentListenerInvoiceId === paymentInvoice.id
+    ) {
+        return;
+    }
+
+    detachPaymentListener();
+
+    featureState.paymentListenerInvoiceId = paymentInvoice.id;
+    featureState.unsubscribePayments = subscribeToInvoicePayments(
+        paymentInvoice.id,
+        payments => {
+            featureState.payments = payments;
+
+            if (getState().currentRoute === "#/purchases" && featureState.paymentInvoiceId === paymentInvoice.id) {
+                renderPurchasesView();
+            }
+        },
+        error => {
+            console.error("[Moneta] Purchase payment listener failed:", error);
+            showToast("Could not load supplier payment history.", "error");
+        }
+    );
 }
 
 export function renderPurchasesView() {
@@ -515,16 +914,19 @@ export function renderPurchasesView() {
     const root = document.getElementById("purchases-root");
     if (!root) return;
 
+    ensurePaymentListener(snapshot);
     renderPurchasesViewShell(snapshot);
     bindPurchasesDomEvents();
     syncPurchaseLineItemsGrid(snapshot);
     syncPurchasesGrid();
     updatePurchaseDraftPreview();
+    updatePaymentDraftPreview();
 }
 
 export function initializePurchasesFeature() {
     subscribe(snapshot => {
         ensureInvoiceListener(snapshot);
+        ensurePaymentListener(snapshot);
 
         if (snapshot.currentRoute === "#/purchases") {
             renderPurchasesView();
