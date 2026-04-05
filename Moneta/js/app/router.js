@@ -9,10 +9,12 @@ import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
 import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
+import { showLeadsPage } from "../features/leads/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
     "#/dashboard": "dashboard-view",
+    "#/leads": "leads-view",
     "#/suppliers": "suppliers-view",
     "#/products": "products-view",
     "#/sales-catalogues": "sales-catalogues-view",
@@ -46,6 +48,8 @@ function getViewTitle(route) {
     switch (route) {
         case "#/dashboard":
             return "Dashboard";
+        case "#/leads":
+            return "Leads & Enquiries";
         case "#/suppliers":
             return "Supplier Management";
         case "#/products":
@@ -92,6 +96,10 @@ export function resolveRoute() {
 
     if (route === "#/suppliers") {
         showSuppliersPage();
+    }
+
+    if (route === "#/leads") {
+        showLeadsPage();
     }
 
     if (route === "#/products") {

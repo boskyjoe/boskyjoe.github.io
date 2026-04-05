@@ -85,5 +85,13 @@ export const icons = {
             <path d="M18.5 8.5a2.5 2.5 0 0 1 0 5"></path>
             <path d="M19.5 20v-1a3 3 0 0 0-2.4-2.94"></path>
         </svg>
+    `,
+    leads: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H11l-4 4v-4H6.5A2.5 2.5 0 0 1 4 13.5z"></path>
+            <circle cx="9" cy="9.5" r="1"></circle>
+            <circle cx="12" cy="9.5" r="1"></circle>
+            <circle cx="15" cy="9.5" r="1"></circle>
+        </svg>
     `
 };

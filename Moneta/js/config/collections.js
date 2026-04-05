@@ -14,5 +14,6 @@ export const COLLECTIONS = {
     paymentModes: `${BASE_DOC_PATH}/paymentModes`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
     salesCatalogues: `${BASE_DOC_PATH}/salesCatalogues`,
-    teams: `${BASE_DOC_PATH}/churchTeams`
+    teams: `${BASE_DOC_PATH}/churchTeams`,
+    leads: `${BASE_DOC_PATH}/leads`
 };

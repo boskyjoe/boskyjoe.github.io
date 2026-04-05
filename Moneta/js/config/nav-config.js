@@ -12,6 +12,20 @@ export const navConfig = [
     },
     {
         type: "heading",
+        label: "Pre-Sales",
+        roles: ["admin", "sales_staff", "team_lead"]
+    },
+    {
+        type: "link",
+        route: "#/leads",
+        label: "Enquiries",
+        icon: icons.leads,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "sales_staff", "team_lead"],
+        enabled: true
+    },
+    {
+        type: "heading",
         label: "Inventory",
         roles: ["admin", "inventory_manager"]
     },

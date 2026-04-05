@@ -1279,6 +1279,43 @@ select {
     color: #667788;
 }
 
+.lead-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.28rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.lead-status-new {
+    background: #e4f0ff;
+    color: #135ca8;
+}
+
+.lead-status-contacted {
+    background: #f1e7ff;
+    color: #7b35b1;
+}
+
+.lead-status-qualified {
+    background: #e5f0ff;
+    color: #2757be;
+}
+
+.lead-status-converted {
+    background: #e8f8ef;
+    color: #1f7a3b;
+}
+
+.lead-status-lost {
+    background: #ffe8e8;
+    color: #af2d2d;
+}
+
 @media (max-width: 860px) {
     .form-grid {
         grid-template-columns: 1fr;
