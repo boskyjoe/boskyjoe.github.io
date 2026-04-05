@@ -33,8 +33,8 @@ function statusMarkup(value) {
 
 function requestedItemStatusMarkup(quantity) {
     return quantity > 0
-        ? `<span class="purchase-status-pill purchase-status-paid">Requested</span>`
-        : `<span class="purchase-status-pill purchase-status-unpaid">Idle</span>`;
+        ? `<span class="purchase-status-pill purchase-status-paid">Included</span>`
+        : `<span class="purchase-status-pill purchase-status-unpaid">Not Included</span>`;
 }
 
 function buildNumberSetter(field, decimals = 0) {
@@ -150,7 +150,7 @@ function buildRequestedProductsColumnDefs(onRowsChanged) {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
-            headerName: "Status",
+            headerName: "Request State",
             minWidth: 130,
             flex: 0.8,
             sortable: false,

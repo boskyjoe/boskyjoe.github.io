@@ -130,6 +130,28 @@ function updateRequestedSummary() {
     }
 }
 
+function enrichLeadCatalogueItems(snapshot, items = [], savedProducts = []) {
+    const products = snapshot.masterData.products || [];
+    const categories = snapshot.masterData.categories || [];
+
+    return (items || []).map(item => {
+        const product = products.find(entry => entry.id === item.productId) || null;
+        const resolvedCategoryId = item.categoryId || product?.categoryId || "";
+        const resolvedCategoryName = item.categoryName
+            || (savedProducts || []).find(saved => saved.productId === item.productId)?.categoryName
+            || categories.find(category => category.id === resolvedCategoryId)?.categoryName
+            || "-";
+
+        return {
+            productId: item.productId,
+            productName: item.productName || product?.itemName || "Untitled Product",
+            categoryName: resolvedCategoryName,
+            sellingPrice: Number(item.sellingPrice) || 0,
+            requestedQty: Number((savedProducts || []).find(saved => saved.productId === item.productId)?.requestedQty) || 0
+        };
+    });
+}
+
 async function loadCatalogueItemsIntoWorkspace(catalogueId, savedProducts = []) {
     featureState.selectedCatalogueId = catalogueId || "";
 
@@ -142,18 +164,7 @@ async function loadCatalogueItemsIntoWorkspace(catalogueId, savedProducts = []) 
 
     try {
         const catalogueItems = await fetchSalesCatalogueItems(catalogueId);
-
-        featureState.catalogueItemRows = catalogueItems.map(item => {
-            const existingItem = (savedProducts || []).find(saved => saved.productId === item.productId) || null;
-
-            return {
-                productId: item.productId,
-                productName: item.productName || "Untitled Product",
-                categoryName: item.categoryName || "-",
-                sellingPrice: Number(item.sellingPrice) || 0,
-                requestedQty: Number(existingItem?.requestedQty) || 0
-            };
-        });
+        featureState.catalogueItemRows = enrichLeadCatalogueItems(getState(), catalogueItems, savedProducts);
 
         refreshLeadRequestedProductsGrid(featureState.catalogueItemRows);
         updateLeadRequestedProductsGridSearch(featureState.itemSearchTerm);

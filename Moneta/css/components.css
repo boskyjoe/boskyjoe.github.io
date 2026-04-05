@@ -370,9 +370,16 @@ select {
     text-align: right;
 }
 
+.ag-theme-alpine.moneta-grid .ag-right-aligned-cell,
+.ag-theme-alpine.moneta-grid .ag-right-aligned-cell .ag-cell-wrapper,
+.ag-theme-alpine.moneta-grid .ag-right-aligned-cell .ag-cell-value {
+    width: 100%;
+}
+
 .ag-theme-alpine.moneta-grid .ag-right-aligned-cell .ag-cell-wrapper,
 .ag-theme-alpine.moneta-grid .ag-right-aligned-cell .ag-cell-value {
     justify-content: flex-end;
+    margin-left: auto;
     text-align: right;
 }
 
