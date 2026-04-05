@@ -225,6 +225,14 @@ function renderLeadForm(snapshot) {
                             <label for="lead-expected-delivery-date">Expected Delivery</label>
                             <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
                         </div>
+                        <div class="field field-wide">
+                            <label for="lead-customer-address">Customer Address</label>
+                            <textarea id="lead-customer-address" class="textarea" placeholder="Street, area, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
+                        </div>
+                        <div class="field">
+                            <label for="lead-notes">Notes</label>
+                            <textarea id="lead-notes" class="textarea" placeholder="Event details, follow-up points, or pricing notes">${editingLead?.leadNotes || ""}</textarea>
+                        </div>
                         <div class="field">
                             <label for="lead-source">Lead Source</label>
                             <select id="lead-source" class="select" required>
@@ -238,21 +246,43 @@ function renderLeadForm(snapshot) {
                                 ${renderStatusOptions(editingLead?.leadStatus || "New")}
                             </select>
                         </div>
-                        <div class="field field-wide">
+                        <div class="field">
                             <label for="lead-catalogue">Sales Catalogue</label>
                             <select id="lead-catalogue" class="select" required>
                                 <option value="">Select catalogue</option>
                                 ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
                             </select>
                         </div>
-                        <div class="field field-wide">
-                            <label for="lead-customer-address">Customer Address</label>
-                            <textarea id="lead-customer-address" class="textarea" placeholder="Street, area, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
+                    </div>
+                </form>
+                <div style="display:grid; gap:1rem; margin-top:1rem;">
+                    <div class="toolbar">
+                        <div>
+                            <p class="section-kicker" style="margin-bottom: 0.25rem;">Request Summary</p>
+                            <p class="panel-copy">Any product with quantity greater than zero becomes part of this enquiry request.</p>
                         </div>
-                        <div class="field field-wide">
-                            <label for="lead-notes">Notes</label>
-                            <textarea id="lead-notes" class="textarea" placeholder="Event details, follow-up points, or pricing notes">${editingLead?.leadNotes || ""}</textarea>
+                        <div class="toolbar-meta">
+                            <span id="lead-requested-count" class="status-pill">${requestedSummary.requestedItemCount} requested</span>
+                            <span id="lead-requested-value" class="status-pill">${formatCurrency(requestedSummary.requestedValue)}</span>
                         </div>
+                    </div>
+                    <div class="toolbar">
+                        <div>
+                            <p class="section-kicker" style="margin-bottom: 0.25rem;">Requested Products</p>
+                            <p class="panel-copy">Load a sales catalogue, then mark requested quantities directly in the AG Grid worksheet.</p>
+                        </div>
+                        <div class="search-wrap">
+                            <span class="search-icon">${icons.search}</span>
+                            <input
+                                id="lead-products-search"
+                                class="input toolbar-search"
+                                type="search"
+                                placeholder="Search product or category"
+                                value="${featureState.itemSearchTerm}">
+                        </div>
+                    </div>
+                    <div class="ag-shell">
+                        <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                     </div>
                     <div class="form-actions">
                         ${editingLead ? `
@@ -261,57 +291,11 @@ function renderLeadForm(snapshot) {
                                 Cancel
                             </button>
                         ` : ""}
-                        <button class="button button-primary-alt" type="submit">
+                        <button class="button button-primary-alt" type="submit" form="lead-form">
                             <span class="button-icon">${editingLead ? icons.edit : icons.plus}</span>
                             ${editingLead ? "Update Enquiry" : "Save Enquiry"}
                         </button>
                     </div>
-                </form>
-                <div class="toolbar" style="margin-top:1rem;">
-                    <div>
-                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Request Summary</p>
-                        <p class="panel-copy">Any product with quantity greater than zero becomes part of this enquiry request.</p>
-                    </div>
-                    <div class="toolbar-meta">
-                        <span id="lead-requested-count" class="status-pill">${requestedSummary.requestedItemCount} requested</span>
-                        <span id="lead-requested-value" class="status-pill">${formatCurrency(requestedSummary.requestedValue)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderRequestedProductsPanel() {
-    return `
-        <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon">${icons.catalogue}</span>
-                    <div>
-                        <h3>Requested Products</h3>
-                        <p class="panel-copy">Load a sales catalogue, then mark requested quantities directly in the AG Grid worksheet.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="toolbar">
-                    <div>
-                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Worksheet</p>
-                        <p class="panel-copy">Search products in the selected catalogue and capture requested quantities for the enquiry.</p>
-                    </div>
-                    <div class="search-wrap">
-                        <span class="search-icon">${icons.search}</span>
-                        <input
-                            id="lead-products-search"
-                            class="input toolbar-search"
-                            type="search"
-                            placeholder="Search product or category"
-                            value="${featureState.itemSearchTerm}">
-                    </div>
-                </div>
-                <div class="ag-shell">
-                    <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                 </div>
             </div>
         </div>
@@ -361,7 +345,6 @@ function renderLeadsViewShell(snapshot) {
     root.innerHTML = `
         <div style="display:grid; gap:1rem;">
             ${renderLeadForm(snapshot)}
-            ${renderRequestedProductsPanel()}
             ${renderLeadsHistoryPanel()}
         </div>
     `;
