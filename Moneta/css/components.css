@@ -432,6 +432,13 @@ select {
     border-color: rgba(154, 90, 0, 0.16);
 }
 
+.purchase-status-verified,
+.purchase-status-recorded {
+    background: linear-gradient(180deg, #edf7ff 0%, #dfefff 100%);
+    color: #245f96;
+    border-color: rgba(36, 95, 150, 0.16);
+}
+
 .purchase-status-unpaid {
     background: linear-gradient(180deg, #faeeee 0%, #f5e2e2 100%);
     color: var(--danger);
@@ -477,6 +484,10 @@ select {
 
 .purchase-line-items-panel {
     margin-top: 1.5rem;
+}
+
+.purchase-payments-panel {
+    scroll-margin-top: 1rem;
 }
 
 .bulk-product-picker,
@@ -567,6 +578,104 @@ select {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.purchase-payments-layout {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.payment-workspace-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #ffffff 0%, #f9fcfb 100%);
+    padding: 1rem;
+}
+
+.purchase-payment-meta-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
+.payment-summary-copy {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.purchase-payment-form .form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.purchase-payment-preview {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fdfefe 0%, #f5faf9 100%);
+}
+
+.purchase-payment-inline-pill .purchase-status-pill {
+    display: inline-flex;
+}
+
+.panel-copy-tight {
+    margin-top: 1rem;
+}
+
+.purchase-payments-history-header {
+    margin-bottom: 1rem;
+}
+
+.payment-history-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.payment-history-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: #fff;
+    padding: 1rem;
+}
+
+.payment-history-topline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.payment-history-amount {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.payment-history-meta,
+.payment-history-notes {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+}
+
+.payment-history-detail-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 0.85rem;
+    font-size: 0.92rem;
+}
+
+.payment-empty-state {
+    min-height: 220px;
+    display: grid;
+    place-items: center;
 }
 
 .summary-card {
@@ -666,6 +775,10 @@ select {
     .line-item-grid,
     .purchase-summary-grid,
     .purchase-adjustments-grid,
+    .purchase-payments-layout,
+    .purchase-payment-meta-grid,
+    .purchase-payment-preview,
+    .payment-history-detail-grid,
     .bulk-product-list {
         grid-template-columns: 1fr;
     }
