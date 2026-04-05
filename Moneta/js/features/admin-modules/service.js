@@ -2,6 +2,9 @@ import {
     createCategoryRecord,
     createPaymentModeRecord,
     createSeasonRecord,
+    getCategoryUsageStatus,
+    getPaymentModeUsageStatus,
+    getSeasonUsageStatus,
     setCategoryActiveStatus,
     setPaymentModeActiveStatus,
     setSeasonActiveStatus,
@@ -39,6 +42,51 @@ function parseDateInput(value, label) {
     return date;
 }
 
+async function ensureCategoryIsEditable(docId, existingCategories = []) {
+    const currentRecord = (existingCategories || []).find(record => record.id === docId) || null;
+
+    if (!currentRecord) {
+        throw new Error("Category record could not be found.");
+    }
+
+    const usage = await getCategoryUsageStatus(docId);
+    if (usage.isUsed) {
+        throw new Error(usage.message);
+    }
+
+    return currentRecord;
+}
+
+async function ensureSeasonIsEditable(docId, existingSeasons = []) {
+    const currentRecord = (existingSeasons || []).find(record => record.id === docId) || null;
+
+    if (!currentRecord) {
+        throw new Error("Season record could not be found.");
+    }
+
+    const usage = await getSeasonUsageStatus(docId);
+    if (usage.isUsed) {
+        throw new Error(usage.message);
+    }
+
+    return currentRecord;
+}
+
+async function ensurePaymentModeIsEditable(docId, existingPaymentModes = []) {
+    const currentRecord = (existingPaymentModes || []).find(record => record.id === docId) || null;
+
+    if (!currentRecord) {
+        throw new Error("Payment mode record could not be found.");
+    }
+
+    const usage = await getPaymentModeUsageStatus(currentRecord.paymentMode);
+    if (usage.isUsed) {
+        throw new Error(usage.message);
+    }
+
+    return currentRecord;
+}
+
 export function validateCategoryPayload(payload, existingCategories = []) {
     const docId = normalizeText(payload.docId);
     const categoryName = normalizeText(payload.categoryName);
@@ -71,6 +119,7 @@ export async function saveCategory(payload, user, existingCategories = []) {
     const { docId, categoryName } = validateCategoryPayload(payload, existingCategories);
 
     if (docId) {
+        await ensureCategoryIsEditable(docId, existingCategories);
         await updateCategoryRecord(docId, { categoryName }, user);
         return { mode: "update" };
     }
@@ -123,6 +172,7 @@ export async function savePaymentMode(payload, user, existingPaymentModes = []) 
     const { docId, paymentMode } = validatePaymentModePayload(payload, existingPaymentModes);
 
     if (docId) {
+        await ensurePaymentModeIsEditable(docId, existingPaymentModes);
         await updatePaymentModeRecord(docId, { paymentMode }, user);
         return { mode: "update" };
     }
@@ -190,6 +240,7 @@ export async function saveSeason(payload, user, existingSeasons = []) {
     const { docId, ...seasonData } = validateSeasonPayload(payload, existingSeasons);
 
     if (docId) {
+        await ensureSeasonIsEditable(docId, existingSeasons);
         await updateSeasonRecord(docId, seasonData, user);
         return { mode: "update" };
     }
@@ -208,4 +259,42 @@ export async function toggleSeasonStatus(docId, nextValue, user) {
     }
 
     await setSeasonActiveStatus(docId, nextValue, user);
+}
+
+export async function getAdminEditRestriction(entity, record) {
+    if (!record?.id) {
+        return {
+            isLocked: true,
+            message: "Admin record could not be found."
+        };
+    }
+
+    if (entity === "categories") {
+        const usage = await getCategoryUsageStatus(record.id);
+        return {
+            isLocked: usage.isUsed,
+            message: usage.message || ""
+        };
+    }
+
+    if (entity === "seasons") {
+        const usage = await getSeasonUsageStatus(record.id);
+        return {
+            isLocked: usage.isUsed,
+            message: usage.message || ""
+        };
+    }
+
+    if (entity === "paymentModes") {
+        const usage = await getPaymentModeUsageStatus(record.paymentMode);
+        return {
+            isLocked: usage.isUsed,
+            message: usage.message || ""
+        };
+    }
+
+    return {
+        isLocked: false,
+        message: ""
+    };
 }

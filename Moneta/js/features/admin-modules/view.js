@@ -14,6 +14,7 @@ import {
     updateSeasonsGridSearch
 } from "./grid.js";
 import {
+    getAdminEditRestriction,
     saveCategory,
     savePaymentMode,
     saveSeason,
@@ -510,15 +511,34 @@ function handleSearchInput(target) {
     updatePaymentModesGridSearch(featureState.searchTerms.paymentModes);
 }
 
-function handleEditRecord(button) {
+async function handleEditRecord(button) {
     const entity = button.dataset.entity;
     const recordId = button.dataset.recordId || null;
+    const snapshot = getState();
+    const rows = getSectionRows(snapshot, entity);
+    const record = rows.find(row => row.id === recordId) || null;
 
-    if (!recordId || !ADMIN_SECTIONS[entity]) return;
+    if (!recordId || !ADMIN_SECTIONS[entity] || !record) return;
 
-    setActiveSection(entity);
-    featureState.editingIds[entity] = recordId;
-    renderAdminModulesView();
+    button.disabled = true;
+
+    try {
+        const restriction = await getAdminEditRestriction(entity, record);
+
+        if (restriction.isLocked) {
+            showToast(restriction.message || "This record can only be activated or deactivated.", "error");
+            return;
+        }
+
+        setActiveSection(entity);
+        featureState.editingIds[entity] = recordId;
+        renderAdminModulesView();
+    } catch (error) {
+        console.error("[Moneta] Admin edit check failed:", error);
+        showToast(error.message || "Could not open this record for editing.", "error");
+    } finally {
+        button.disabled = false;
+    }
 }
 
 async function handleStatusToggle(button) {
