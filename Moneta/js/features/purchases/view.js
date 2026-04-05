@@ -14,8 +14,10 @@ import {
 import {
     getPurchaseLineItemsGridRows,
     initializePurchaseLineItemsGrid,
+    initializePurchasePaymentHistoryGrid,
     initializePurchasesGrid,
     refreshPurchaseLineItemsGrid,
+    refreshPurchasePaymentHistoryGrid,
     refreshPurchasesGrid,
     updatePurchaseLineItemsGridSearch,
     updatePurchasesGridSearch
@@ -72,19 +74,6 @@ function toDateInputValue(value) {
     const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
-}
-
-function formatDisplayDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
 }
 
 function normalizeStoredDiscountType(value) {
@@ -254,6 +243,16 @@ function syncPurchaseLineItemsGrid(snapshot) {
     updatePurchaseLineItemsGridSearch(featureState.lineItemSearchTerm);
 }
 
+function syncPurchasePaymentHistoryGrid() {
+    const paymentInvoice = getPaymentInvoice();
+    const gridElement = document.getElementById("purchase-payment-history-grid");
+
+    if (!paymentInvoice || !gridElement) return;
+
+    initializePurchasePaymentHistoryGrid(gridElement);
+    refreshPurchasePaymentHistoryGrid(featureState.payments);
+}
+
 function updatePurchaseDraftPreview() {
     const products = getState().masterData.products || [];
     const lineItems = getActiveLineItemsFromGrid();
@@ -297,40 +296,7 @@ function updatePaymentDraftPreview() {
     }
 }
 
-function renderPaymentHistoryList(payments) {
-    if (payments.length === 0) {
-        return `
-            <div class="empty-state payment-empty-state">
-                <p>No supplier payments recorded yet for this invoice.</p>
-            </div>
-        `;
-    }
-
-    return `
-        <div class="payment-history-list">
-            ${payments.map(payment => `
-                <article class="payment-history-item">
-                    <div class="payment-history-topline">
-                        <div>
-                            <p class="payment-history-amount">${formatCurrency(payment.amountPaid || 0)}</p>
-                            <p class="payment-history-meta">
-                                ${formatDisplayDate(payment.paymentDate)}${payment.paymentMode ? ` | ${payment.paymentMode}` : ""}
-                            </p>
-                        </div>
-                        ${getStatusMarkup(payment.paymentStatus || payment.status, "Verified")}
-                    </div>
-                    <div class="payment-history-detail-grid">
-                        <span><strong>Reference:</strong> ${payment.transactionRef || "Not provided"}</span>
-                        <span><strong>Recorded By:</strong> ${payment.recordedBy || payment.audit?.createdBy || "-"}</span>
-                    </div>
-                    ${payment.notes ? `<p class="payment-history-notes">${payment.notes}</p>` : ""}
-                </article>
-            `).join("")}
-        </div>
-    `;
-}
-
-function renderPaymentWorkspace(snapshot) {
+function renderPaymentModal(snapshot) {
     const paymentInvoice = getPaymentInvoice();
     if (!paymentInvoice) return "";
 
@@ -343,107 +309,113 @@ function renderPaymentWorkspace(snapshot) {
     const canRecordPayment = balanceDue > 0 && paymentModes.length > 0;
 
     return `
-        <div id="purchase-payments-panel" class="panel-card purchase-payments-panel">
-            <div class="panel-header panel-header-accent">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.payment}</span>
-                    <div>
-                        <h3>Invoice Payments</h3>
-                        <p class="panel-copy">Record supplier payments against a specific purchase invoice and keep the balance fully visible while you work.</p>
-                    </div>
-                </div>
-                <div class="toolbar-meta">
-                    <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
-                    <span class="status-pill">${featureState.payments.length} payments</span>
-                </div>
-            </div>
-            <div class="panel-body purchase-payments-layout">
-                <div class="payment-workspace-card">
-                    <div class="purchase-payment-meta-grid">
-                        <article class="summary-card">
-                            <p class="summary-label">Supplier</p>
-                            <p class="summary-value payment-summary-copy">${paymentInvoice.supplierName || "-"}</p>
-                        </article>
-                        <article class="summary-card">
-                            <p class="summary-label">Invoice Total</p>
-                            <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
-                        </article>
-                        <article class="summary-card">
-                            <p class="summary-label">Paid So Far</p>
-                            <p class="summary-value">${formatCurrency(amountPaid)}</p>
-                        </article>
-                        <article class="summary-card">
-                            <p class="summary-label">Outstanding Balance</p>
-                            <p class="summary-value">${formatCurrency(balanceDue)}</p>
-                        </article>
-                    </div>
-
-                    <form id="purchase-payment-form" class="purchase-payment-form">
-                        <div class="form-grid">
-                            <div class="field">
-                                <label for="purchase-payment-date">Payment Date</label>
-                                <input id="purchase-payment-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
-                            </div>
-                            <div class="field">
-                                <label for="purchase-payment-amount">Amount Paid</label>
-                                <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
-                            </div>
-                            <div class="field">
-                                <label for="purchase-payment-mode">Payment Mode</label>
-                                <select id="purchase-payment-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
-                                    <option value="">Select mode</option>
-                                    ${renderPaymentModeOptions(paymentModes, featureState.paymentDraft.paymentMode)}
-                                </select>
-                            </div>
-                            <div class="field field-wide">
-                                <label for="purchase-payment-reference">Reference</label>
-                                <input id="purchase-payment-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="Cheque number, transfer ref, or receipt ID">
-                            </div>
-                            <div class="field field-full">
-                                <label for="purchase-payment-notes">Notes</label>
-                                <textarea id="purchase-payment-notes" class="textarea" placeholder="Optional internal note about this payment">${featureState.paymentDraft.notes}</textarea>
-                            </div>
-                        </div>
-
-                        <div class="purchase-payment-preview">
-                            <div>
-                                <p class="summary-label">Status</p>
-                                <div class="purchase-payment-inline-pill">${getStatusMarkup(paymentInvoice.paymentStatus)}</div>
-                            </div>
-                            <div>
-                                <p class="summary-label">Balance After Draft</p>
-                                <p id="purchase-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
-                            </div>
-                        </div>
-
-                        ${balanceDue <= 0 ? `
-                            <p class="panel-copy panel-copy-tight">This invoice is already fully paid. You can still review the payment history below.</p>
-                        ` : ""}
-                        ${balanceDue > 0 && paymentModes.length === 0 ? `
-                            <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording supplier payments.</p>
-                        ` : ""}
-
-                        <div class="form-actions">
-                            <button id="purchase-payments-close-button" class="button button-secondary" type="button">
-                                <span class="button-icon">${icons.inactive}</span>
-                                Close
-                            </button>
-                            <button class="button button-primary" type="submit" ${canRecordPayment ? "" : "disabled"}>
-                                <span class="button-icon">${icons.payment}</span>
-                                Record Payment
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="payment-workspace-card">
-                    <div class="purchase-payments-history-header">
+        <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
+            <div class="purchase-payment-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon panel-icon-alt">${icons.payment}</span>
                         <div>
-                            <p class="section-kicker">Payment History</p>
-                            <p class="panel-copy">Every recorded supplier payment for ${paymentInvoice.invoiceName || paymentInvoice.invoiceId || "this invoice"}.</p>
+                            <h3 id="purchase-payment-modal-title">Record Supplier Payment</h3>
+                            <p class="panel-copy">Use a focused payment modal for the transaction, with live invoice context and AG Grid history beside it.</p>
                         </div>
                     </div>
-                    ${renderPaymentHistoryList(featureState.payments)}
+                    <div class="toolbar-meta">
+                        <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
+                        <span class="status-pill">${featureState.payments.length} payments</span>
+                        <button id="purchase-payments-close-button" class="button button-secondary purchase-payment-modal-close" type="button" aria-label="Close payment modal">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Close
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Supplier</p>
+                                    <p class="summary-value payment-summary-copy">${paymentInvoice.supplierName || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Invoice Total</p>
+                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Paid So Far</p>
+                                    <p class="summary-value">${formatCurrency(amountPaid)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Outstanding Balance</p>
+                                    <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                                </article>
+                            </div>
+
+                            <form id="purchase-payment-form" class="purchase-payment-form">
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="purchase-payment-date">Payment Date</label>
+                                        <input id="purchase-payment-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="purchase-payment-amount">Amount Paid</label>
+                                        <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="purchase-payment-mode">Payment Mode</label>
+                                        <select id="purchase-payment-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
+                                            <option value="">Select mode</option>
+                                            ${renderPaymentModeOptions(paymentModes, featureState.paymentDraft.paymentMode)}
+                                        </select>
+                                    </div>
+                                    <div class="field field-wide">
+                                        <label for="purchase-payment-reference">Reference</label>
+                                        <input id="purchase-payment-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="Cheque number, transfer ref, or receipt ID">
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="purchase-payment-notes">Notes</label>
+                                        <textarea id="purchase-payment-notes" class="textarea" placeholder="Optional internal note about this payment">${featureState.paymentDraft.notes}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="purchase-payment-preview">
+                                    <div>
+                                        <p class="summary-label">Status</p>
+                                        <div class="purchase-payment-inline-pill">${getStatusMarkup(paymentInvoice.paymentStatus)}</div>
+                                    </div>
+                                    <div>
+                                        <p class="summary-label">Balance After Draft</p>
+                                        <p id="purchase-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
+                                    </div>
+                                </div>
+
+                                ${balanceDue <= 0 ? `
+                                    <p class="panel-copy panel-copy-tight">This invoice is already fully paid. You can still review the payment history below.</p>
+                                ` : ""}
+                                ${balanceDue > 0 && paymentModes.length === 0 ? `
+                                    <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording supplier payments.</p>
+                                ` : ""}
+
+                                <div class="form-actions">
+                                    <button class="button button-primary" type="submit" ${canRecordPayment ? "" : "disabled"}>
+                                        <span class="button-icon">${icons.payment}</span>
+                                        Record Payment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <div>
+                                    <p class="section-kicker">Payment History</p>
+                                    <p class="panel-copy">Every recorded supplier payment for ${paymentInvoice.invoiceName || paymentInvoice.invoiceId || "this invoice"}.</p>
+                                </div>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="purchase-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 420px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -629,7 +601,7 @@ function renderPurchasesViewShell(snapshot) {
                 </div>
             </div>
 
-            ${renderPaymentWorkspace(snapshot)}
+            ${renderPaymentModal(snapshot)}
         </div>
     `;
 }
@@ -718,7 +690,7 @@ function handleOpenPaymentWorkspace(button) {
     featureState.editingInvoiceId = null;
     resetPaymentDraft(invoice);
     renderPurchasesView();
-    document.getElementById("purchase-payments-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("purchase-payment-amount")?.focus();
 }
 
 function handlePaymentWorkspaceClose() {
@@ -807,6 +779,7 @@ function bindPurchasesDomEvents() {
         const paymentsButton = target.closest(".purchase-payments-button");
         const cancelButton = target.closest("#purchase-cancel-button");
         const closePaymentsButton = target.closest("#purchase-payments-close-button");
+        const paymentModal = target.closest("#purchase-payment-modal");
 
         if (editButton) {
             handleEditInvoice(editButton);
@@ -826,6 +799,11 @@ function bindPurchasesDomEvents() {
         }
 
         if (closePaymentsButton) {
+            handlePaymentWorkspaceClose();
+            return;
+        }
+
+        if (target.id === "purchase-payment-modal" && paymentModal) {
             handlePaymentWorkspaceClose();
         }
     });
@@ -919,6 +897,7 @@ export function renderPurchasesView() {
     bindPurchasesDomEvents();
     syncPurchaseLineItemsGrid(snapshot);
     syncPurchasesGrid();
+    syncPurchasePaymentHistoryGrid();
     updatePurchaseDraftPreview();
     updatePaymentDraftPreview();
 }

@@ -6,6 +6,8 @@ let purchasesGridApi = null;
 let currentPurchasesGridElement = null;
 let purchaseLineItemsGridApi = null;
 let currentPurchaseLineItemsGridElement = null;
+let purchasePaymentHistoryGridApi = null;
+let currentPurchasePaymentHistoryGridElement = null;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -76,6 +78,14 @@ function buildInvoiceColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "amountPaid",
+            headerName: "Paid",
+            minWidth: 140,
+            flex: 0.9,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             field: "balanceDue",
             headerName: "Balance",
             minWidth: 140,
@@ -97,6 +107,53 @@ function buildInvoiceColumnDefs() {
             sortable: false,
             filter: false,
             cellRenderer: params => invoiceActionMarkup(params.data)
+        }
+    ];
+}
+
+function buildPaymentHistoryColumnDefs() {
+    return [
+        {
+            field: "paymentDate",
+            headerName: "Date",
+            minWidth: 130,
+            flex: 0.85,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount",
+            minWidth: 130,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "paymentMode",
+            headerName: "Mode",
+            minWidth: 140,
+            flex: 0.9
+        },
+        {
+            field: "transactionRef",
+            headerName: "Reference",
+            minWidth: 170,
+            flex: 1.05,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "paymentStatus",
+            headerName: "Status",
+            minWidth: 140,
+            flex: 0.85,
+            cellRenderer: params => paymentStatusMarkup(params.value || params.data?.status || "Verified")
+        },
+        {
+            field: "recordedBy",
+            headerName: "Recorded By",
+            minWidth: 190,
+            flex: 1.05,
+            valueGetter: params => params.data?.recordedBy || params.data?.audit?.createdBy || "-"
         }
     ];
 }
@@ -341,4 +398,41 @@ export function getPurchaseLineItemsGridRows() {
     });
 
     return rows;
+}
+
+export function initializePurchasePaymentHistoryGrid(gridElement) {
+    if (!gridElement) return purchasePaymentHistoryGridApi;
+
+    if (purchasePaymentHistoryGridApi && currentPurchasePaymentHistoryGridElement !== gridElement) {
+        purchasePaymentHistoryGridApi.destroy();
+        purchasePaymentHistoryGridApi = null;
+        currentPurchasePaymentHistoryGridElement = null;
+    }
+
+    if (purchasePaymentHistoryGridApi) return purchasePaymentHistoryGridApi;
+
+    purchasePaymentHistoryGridApi = createGrid(gridElement, {
+        columnDefs: buildPaymentHistoryColumnDefs(),
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 25, 50],
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            wrapText: true,
+            autoHeight: true
+        }
+    });
+
+    currentPurchasePaymentHistoryGridElement = gridElement;
+    return purchasePaymentHistoryGridApi;
+}
+
+export function refreshPurchasePaymentHistoryGrid(rows) {
+    if (!purchasePaymentHistoryGridApi) return;
+    purchasePaymentHistoryGridApi.setGridOption("rowData", rows);
 }
