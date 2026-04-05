@@ -156,7 +156,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.1rem 1rem;
 }
 
 .header-left {
@@ -223,8 +223,8 @@
 
 .app-content {
     flex: 1 0 auto;
-    width: min(calc(100% - 2rem), var(--content-max));
-    margin: 0 auto 2rem;
+    width: min(calc(100% - 1rem), var(--content-max));
+    margin: 0 auto 1.35rem;
 }
 
 .app-footer {
@@ -241,7 +241,7 @@
 }
 
 .app-footer-inner {
-    width: min(calc(100% - 2rem), var(--content-max));
+    width: min(calc(100% - 1rem), var(--content-max));
     margin: 0 auto;
     padding: 1.45rem 0 1.2rem;
 }
@@ -364,7 +364,7 @@
     }
 
     .app-content {
-        width: min(calc(100% - 1.5rem), var(--content-max));
+        width: min(calc(100% - 0.75rem), var(--content-max));
     }
 
     .app-footer-main {

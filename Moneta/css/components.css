@@ -498,6 +498,7 @@ select {
 }
 
 .purchase-payment-modal-card {
+    position: relative;
     width: min(1180px, 100%);
     max-height: calc(100vh - 2.5rem);
     overflow: hidden;
@@ -516,7 +517,6 @@ select {
 .purchase-payment-modal-title-row {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
     gap: 1rem;
     width: 100%;
 }
@@ -529,7 +529,10 @@ select {
     overflow: auto;
 }
 
-.purchase-payment-modal-icon-button {
+.purchase-payment-modal-corner-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
     width: 2.5rem;
     height: 2.5rem;
     display: inline-flex;
@@ -542,9 +545,10 @@ select {
     color: var(--text-main);
     cursor: pointer;
     transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    z-index: 2;
 }
 
-.purchase-payment-modal-icon-button:hover {
+.purchase-payment-modal-corner-close:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-soft);
 }

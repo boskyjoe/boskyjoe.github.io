@@ -311,6 +311,9 @@ function renderPaymentModal(snapshot) {
     return `
         <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
             <div class="purchase-payment-modal-card">
+                <button id="purchase-payments-close-button" class="purchase-payment-modal-corner-close" type="button" aria-label="Close payment modal">
+                    <span class="button-icon">${icons.close}</span>
+                </button>
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
                         <div class="panel-title-wrap">
@@ -320,9 +323,6 @@ function renderPaymentModal(snapshot) {
                                 <p class="panel-copy">Use a focused payment modal for the transaction, with live invoice context and AG Grid history below the entry form.</p>
                             </div>
                         </div>
-                        <button id="purchase-payments-close-button" class="purchase-payment-modal-icon-button" type="button" aria-label="Close payment modal">
-                            <span class="button-icon">${icons.close}</span>
-                        </button>
                     </div>
                     <div class="toolbar-meta purchase-payment-modal-meta">
                         <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
