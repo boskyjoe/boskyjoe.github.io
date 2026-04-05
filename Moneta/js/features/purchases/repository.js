@@ -12,6 +12,10 @@ function buildSupplierPaymentId() {
     return `SPAY-SUP-${Date.now()}`;
 }
 
+function buildVoidReversalPaymentId(originalPaymentId = "") {
+    return `VOID-${originalPaymentId || Date.now()}`;
+}
+
 function normalizeTimestampValue(value) {
     if (!value) return 0;
 
@@ -212,6 +216,111 @@ export async function recordPurchaseInvoicePayment(invoiceDocId, paymentData, us
                 createdOn: now,
                 context: "Supplier payment with immediate processing (Moneta)"
             }
+        });
+    });
+}
+
+export async function voidPurchaseInvoicePayment(paymentId, voidReason, user) {
+    const db = getDb();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const paymentRef = db.collection(COLLECTIONS.supplierPaymentsLedger).doc(paymentId);
+    const reversalPaymentRef = db.collection(COLLECTIONS.supplierPaymentsLedger).doc();
+
+    return db.runTransaction(async transaction => {
+        const paymentDoc = await transaction.get(paymentRef);
+
+        if (!paymentDoc.exists) {
+            throw new Error("The selected payment could not be found.");
+        }
+
+        const originalPayment = paymentDoc.data();
+        const currentStatus = originalPayment.paymentStatus || originalPayment.status || "Verified";
+        const voidedAmount = roundCurrency(originalPayment.amountPaid);
+
+        if (originalPayment.isReversalEntry) {
+            throw new Error("Reversal entries cannot be voided.");
+        }
+
+        if (currentStatus === "Voided") {
+            throw new Error("This payment has already been voided.");
+        }
+
+        if (voidedAmount <= 0) {
+            throw new Error("Only posted supplier payments can be voided.");
+        }
+
+        const invoiceRef = db.collection(COLLECTIONS.purchaseInvoices).doc(originalPayment.relatedInvoiceId);
+        const invoiceDoc = await transaction.get(invoiceRef);
+
+        if (!invoiceDoc.exists) {
+            throw new Error("The related purchase invoice could not be found.");
+        }
+
+        const invoice = invoiceDoc.data();
+        const invoiceTotal = roundCurrency(invoice.invoiceTotal);
+        const currentAmountPaid = roundCurrency(invoice.amountPaid);
+        const amountPaid = roundCurrency(Math.max(currentAmountPaid - voidedAmount, 0));
+        const balanceDue = roundCurrency(Math.max(invoiceTotal - amountPaid, 0));
+        let paymentStatus = "Unpaid";
+
+        if (balanceDue <= 0) {
+            paymentStatus = "Paid";
+        } else if (amountPaid > 0) {
+            paymentStatus = "Partially Paid";
+        }
+
+        transaction.update(paymentRef, {
+            paymentStatus: "Voided",
+            status: "Voided",
+            voidedBy: user.email,
+            voidedOn: now,
+            voidReason,
+            originalStatus: currentStatus,
+            "audit.updatedBy": user.email,
+            "audit.updatedOn": now
+        });
+
+        transaction.set(reversalPaymentRef, {
+            paymentId: buildVoidReversalPaymentId(originalPayment.paymentId || paymentId),
+            relatedInvoiceId: originalPayment.relatedInvoiceId,
+            relatedInvoiceNumber: invoice.invoiceId || originalPayment.relatedInvoiceNumber || "",
+            invoiceName: invoice.invoiceName || originalPayment.invoiceName || "",
+            supplierId: originalPayment.supplierId || invoice.supplierId || "",
+            supplierName: originalPayment.supplierName || invoice.supplierName || "",
+            amountPaid: -voidedAmount,
+            paymentDate: now,
+            paymentMode: "VOID_REVERSAL",
+            transactionRef: `Reversal of ${originalPayment.transactionRef || originalPayment.paymentId || paymentId}`,
+            notes: `Reversed payment ${originalPayment.paymentId || paymentId}. Reason: ${voidReason}`,
+            paymentStatus: "Void Reversal",
+            status: "Void Reversal",
+            originalPaymentId: paymentId,
+            isReversalEntry: true,
+            recordedBy: user.email,
+            recordedOn: now,
+            voidedBy: user.email,
+            voidReason,
+            audit: {
+                createdBy: user.email,
+                createdOn: now,
+                context: "Supplier payment void reversal"
+            }
+        });
+
+        transaction.update(invoiceRef, {
+            amountPaid,
+            balanceDue,
+            paymentStatus,
+            lastPaymentVoided: {
+                paymentId,
+                reversalPaymentId: reversalPaymentRef.id,
+                voidedAmount,
+                voidReason,
+                voidedBy: user.email,
+                voidedOn: now
+            },
+            "audit.updatedBy": user.email,
+            "audit.updatedOn": now
         });
     });
 }

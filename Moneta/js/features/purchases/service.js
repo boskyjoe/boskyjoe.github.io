@@ -1,6 +1,7 @@
 import {
     createPurchaseInvoiceRecord,
     recordPurchaseInvoicePayment,
+    voidPurchaseInvoicePayment,
     updatePurchaseInvoiceRecord
 } from "./repository.js";
 
@@ -291,4 +292,47 @@ export async function savePurchasePayment(payload, invoice, masterData, user) {
     await recordPurchaseInvoicePayment(invoice.id, paymentData, user);
 
     return paymentData;
+}
+
+export function validatePurchasePaymentVoidPayload(payment, reason) {
+    if (!payment) {
+        throw new Error("Choose a payment before trying to void it.");
+    }
+
+    const trimmedReason = normalizeText(reason);
+    const paymentStatus = normalizeText(payment.paymentStatus || payment.status || "Verified");
+    const amountPaid = roundCurrency(normalizeNumber(payment.amountPaid));
+
+    if (payment.isReversalEntry) {
+        throw new Error("Reversal entries cannot be voided.");
+    }
+
+    if (paymentStatus === "Voided") {
+        throw new Error("This payment has already been voided.");
+    }
+
+    if (amountPaid <= 0) {
+        throw new Error("Only posted supplier payments can be voided.");
+    }
+
+    if (!trimmedReason) {
+        throw new Error("A void reason is required.");
+    }
+
+    if (trimmedReason.length < 8) {
+        throw new Error("Please enter a more descriptive void reason.");
+    }
+
+    return trimmedReason;
+}
+
+export async function voidPurchasePayment(payment, reason, user) {
+    if (!user) {
+        throw new Error("You must be logged in to void a supplier payment.");
+    }
+
+    const validatedReason = validatePurchasePaymentVoidPayload(payment, reason);
+    await voidPurchaseInvoicePayment(payment.id, validatedReason, user);
+
+    return { reason: validatedReason };
 }

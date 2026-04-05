@@ -49,6 +49,21 @@ function invoiceActionMarkup(data) {
     `;
 }
 
+function paymentHistoryActionMarkup(data) {
+    const paymentStatus = data?.paymentStatus || data?.status || "Verified";
+    const isVoidable = !data?.isReversalEntry && paymentStatus !== "Voided" && (Number(data?.amountPaid) || 0) > 0;
+
+    if (!isVoidable) {
+        return `<span class="grid-action-muted">-</span>`;
+    }
+
+    return `
+        <button class="button grid-action-button grid-action-button-danger purchase-payment-void-button" type="button" data-payment-id="${data.id}">
+            Void
+        </button>
+    `;
+}
+
 function buildInvoiceColumnDefs() {
     return [
         { field: "invoiceId", headerName: "Invoice ID", minWidth: 150, flex: 0.9 },
@@ -154,6 +169,14 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 190,
             flex: 1.05,
             valueGetter: params => params.data?.recordedBy || params.data?.audit?.createdBy || "-"
+        },
+        {
+            headerName: "Actions",
+            minWidth: 120,
+            flex: 0.75,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => paymentHistoryActionMarkup(params.data)
         }
     ];
 }

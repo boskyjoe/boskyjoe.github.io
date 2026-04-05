@@ -9,7 +9,8 @@ import {
 import {
     calculatePurchaseDraftSummary,
     savePurchaseInvoice,
-    savePurchasePayment
+    savePurchasePayment,
+    voidPurchasePayment
 } from "./service.js";
 import {
     getPurchaseLineItemsGridRows,
@@ -29,6 +30,8 @@ const featureState = {
     editingInvoiceId: null,
     paymentInvoiceId: null,
     paymentDraft: createDefaultPaymentDraft(),
+    voidingPaymentId: null,
+    paymentVoidReason: "",
     paymentListenerInvoiceId: null,
     searchTerm: "",
     lineItemSearchTerm: "",
@@ -108,8 +111,18 @@ function getPaymentInvoice() {
     return featureState.invoices.find(invoice => invoice.id === featureState.paymentInvoiceId) || null;
 }
 
+function getVoidingPayment() {
+    if (!featureState.voidingPaymentId) return null;
+    return featureState.payments.find(payment => payment.id === featureState.voidingPaymentId) || null;
+}
+
 function resetPaymentDraft(invoice = getPaymentInvoice(), options = {}) {
     featureState.paymentDraft = createDefaultPaymentDraft(invoice, options);
+}
+
+function resetPaymentVoidState() {
+    featureState.voidingPaymentId = null;
+    featureState.paymentVoidReason = "";
 }
 
 function detachPaymentListener(options = {}) {
@@ -296,6 +309,61 @@ function updatePaymentDraftPreview() {
     }
 }
 
+function renderVoidPaymentPanel() {
+    const payment = getVoidingPayment();
+    if (!payment) return "";
+
+    return `
+        <div class="purchase-payment-void-panel">
+            <div class="purchase-payment-void-header">
+                <div>
+                    <p class="section-kicker">Void Payment</p>
+                    <p class="panel-copy">Void the selected payment and create a reversing entry while keeping a full audit trail.</p>
+                </div>
+                <div class="toolbar-meta">
+                    ${getStatusMarkup(payment.paymentStatus || payment.status || "Verified", "Verified")}
+                </div>
+            </div>
+
+            <div class="purchase-payment-void-summary">
+                <article class="summary-card">
+                    <p class="summary-label">Amount</p>
+                    <p class="summary-value">${formatCurrency(payment.amountPaid || 0)}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Mode</p>
+                    <p class="summary-value payment-summary-copy">${payment.paymentMode || "-"}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Reference</p>
+                    <p class="summary-value payment-summary-copy">${payment.transactionRef || "-"}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Recorded By</p>
+                    <p class="summary-value payment-summary-copy">${payment.recordedBy || payment.audit?.createdBy || "-"}</p>
+                </article>
+            </div>
+
+            <form id="purchase-payment-void-form" class="purchase-payment-void-form">
+                <div class="field field-full">
+                    <label for="purchase-payment-void-reason">Void Reason</label>
+                    <textarea id="purchase-payment-void-reason" class="textarea" placeholder="Explain why this payment is being voided" required>${featureState.paymentVoidReason}</textarea>
+                </div>
+                <p class="panel-copy panel-copy-tight">This action will mark the payment as voided, add a reversal entry, and reopen the invoice balance if needed.</p>
+                <div class="form-actions">
+                    <button id="purchase-payment-void-cancel-button" class="button button-secondary" type="button">
+                        <span class="button-icon">${icons.inactive}</span>
+                        Cancel
+                    </button>
+                    <button class="button grid-action-button grid-action-button-danger" type="submit">
+                        Void Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
 function renderPaymentModal(snapshot) {
     const paymentInvoice = getPaymentInvoice();
     if (!paymentInvoice) return "";
@@ -415,6 +483,7 @@ function renderPaymentModal(snapshot) {
                             <div class="ag-shell purchase-payment-history-shell">
                                 <div id="purchase-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 420px; width: 100%;"></div>
                             </div>
+                            ${renderVoidPaymentPanel()}
                         </div>
                     </div>
                 </div>
@@ -665,6 +734,31 @@ async function handlePurchasePaymentSubmit(event) {
     }
 }
 
+async function handlePurchasePaymentVoidSubmit(event) {
+    event.preventDefault();
+
+    const payment = getVoidingPayment();
+    if (!payment) {
+        showToast("Choose a payment before trying to void it.", "error");
+        return;
+    }
+
+    try {
+        await voidPurchasePayment(
+            payment,
+            document.getElementById("purchase-payment-void-reason")?.value || featureState.paymentVoidReason,
+            getState().currentUser
+        );
+
+        resetPaymentVoidState();
+        renderPurchasesView();
+        showToast(`Payment ${payment.paymentId || payment.id} was voided and reversed.`, "success");
+    } catch (error) {
+        console.error("[Moneta] Purchase payment void failed:", error);
+        showToast(error.message || "Could not void the supplier payment.", "error");
+    }
+}
+
 function handleInvoiceSearch(target) {
     featureState.searchTerm = target.value || "";
     updatePurchasesGridSearch(featureState.searchTerm);
@@ -690,6 +784,7 @@ function handleOpenPaymentWorkspace(button) {
     featureState.paymentInvoiceId = invoiceId;
     featureState.editingInvoiceId = null;
     resetPaymentDraft(invoice);
+    resetPaymentVoidState();
     renderPurchasesView();
     document.getElementById("purchase-payment-amount")?.focus();
 }
@@ -697,8 +792,16 @@ function handleOpenPaymentWorkspace(button) {
 function handlePaymentWorkspaceClose() {
     featureState.paymentInvoiceId = null;
     resetPaymentDraft(null, { prefillAmount: false });
+    resetPaymentVoidState();
     detachPaymentListener();
     renderPurchasesView();
+}
+
+function handleOpenVoidPayment(button) {
+    featureState.voidingPaymentId = button.dataset.paymentId || null;
+    featureState.paymentVoidReason = "";
+    renderPurchasesView();
+    document.getElementById("purchase-payment-void-reason")?.focus();
 }
 
 function updatePaymentDraftField(target) {
@@ -718,6 +821,11 @@ function updatePaymentDraftField(target) {
     featureState.paymentDraft[field] = target.value;
 }
 
+function updatePaymentVoidField(target) {
+    if (target?.id !== "purchase-payment-void-reason") return;
+    featureState.paymentVoidReason = target.value;
+}
+
 function bindPurchasesDomEvents() {
     const root = document.getElementById("purchases-root");
     if (!root || root.dataset.bound === "true") return;
@@ -730,6 +838,11 @@ function bindPurchasesDomEvents() {
 
         if (event.target.id === "purchase-payment-form") {
             handlePurchasePaymentSubmit(event);
+            return;
+        }
+
+        if (event.target.id === "purchase-payment-void-form") {
+            handlePurchasePaymentVoidSubmit(event);
         }
     });
 
@@ -757,6 +870,7 @@ function bindPurchasesDomEvents() {
 
         updatePaymentDraftField(target);
         updatePaymentDraftPreview();
+        updatePaymentVoidField(target);
     });
 
     root.addEventListener("change", event => {
@@ -772,14 +886,17 @@ function bindPurchasesDomEvents() {
 
         updatePaymentDraftField(target);
         updatePaymentDraftPreview();
+        updatePaymentVoidField(target);
     });
 
     root.addEventListener("click", event => {
         const target = event.target;
         const editButton = target.closest(".purchase-edit-button");
         const paymentsButton = target.closest(".purchase-payments-button");
+        const voidPaymentButton = target.closest(".purchase-payment-void-button");
         const cancelButton = target.closest("#purchase-cancel-button");
         const closePaymentsButton = target.closest("#purchase-payments-close-button");
+        const cancelVoidButton = target.closest("#purchase-payment-void-cancel-button");
         const paymentModal = target.closest("#purchase-payment-modal");
 
         if (editButton) {
@@ -792,6 +909,11 @@ function bindPurchasesDomEvents() {
             return;
         }
 
+        if (voidPaymentButton) {
+            handleOpenVoidPayment(voidPaymentButton);
+            return;
+        }
+
         if (cancelButton) {
             featureState.editingInvoiceId = null;
             featureState.lineItemSearchTerm = "";
@@ -801,6 +923,12 @@ function bindPurchasesDomEvents() {
 
         if (closePaymentsButton) {
             handlePaymentWorkspaceClose();
+            return;
+        }
+
+        if (cancelVoidButton) {
+            resetPaymentVoidState();
+            renderPurchasesView();
             return;
         }
 
@@ -828,6 +956,7 @@ function ensureInvoiceListener(snapshot) {
                 if (featureState.paymentInvoiceId && !invoices.some(invoice => invoice.id === featureState.paymentInvoiceId)) {
                     featureState.paymentInvoiceId = null;
                     resetPaymentDraft(null, { prefillAmount: false });
+                    resetPaymentVoidState();
                     detachPaymentListener();
                 }
 
@@ -849,6 +978,7 @@ function ensureInvoiceListener(snapshot) {
         featureState.editingInvoiceId = null;
         featureState.paymentInvoiceId = null;
         resetPaymentDraft(null, { prefillAmount: false });
+        resetPaymentVoidState();
         detachPaymentListener();
     }
 }
@@ -876,6 +1006,11 @@ function ensurePaymentListener(snapshot) {
         paymentInvoice.id,
         payments => {
             featureState.payments = payments;
+
+            const voidingPayment = getVoidingPayment();
+            if (featureState.voidingPaymentId && (!voidingPayment || (voidingPayment.paymentStatus || voidingPayment.status) === "Voided")) {
+                resetPaymentVoidState();
+            }
 
             if (getState().currentRoute === "#/purchases" && featureState.paymentInvoiceId === paymentInvoice.id) {
                 renderPurchasesView();

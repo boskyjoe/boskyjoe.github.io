@@ -439,6 +439,13 @@ select {
     border-color: rgba(36, 95, 150, 0.16);
 }
 
+.purchase-status-voided,
+.purchase-status-void-reversal {
+    background: linear-gradient(180deg, #f4f6f8 0%, #e8eef4 100%);
+    color: #4d5a68;
+    border-color: rgba(77, 90, 104, 0.16);
+}
+
 .purchase-status-unpaid {
     background: linear-gradient(180deg, #faeeee 0%, #f5e2e2 100%);
     color: var(--danger);
@@ -475,6 +482,11 @@ select {
     background: linear-gradient(180deg, #fff1f1 0%, #f8dddd 100%);
     color: var(--danger);
     border-color: rgba(177, 44, 44, 0.18);
+}
+
+.grid-action-muted {
+    color: var(--text-muted);
+    font-weight: 700;
 }
 
 .line-items-list {
@@ -700,6 +712,29 @@ select {
     min-height: 420px;
 }
 
+.purchase-payment-void-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(177, 64, 64, 0.18);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fffaf9 0%, #fff3f1 100%);
+}
+
+.purchase-payment-void-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.purchase-payment-void-summary {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
 .summary-card {
     padding: 1rem 1.1rem;
     border: 1px solid var(--border);
@@ -808,6 +843,7 @@ select {
     .purchase-payments-layout,
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
+    .purchase-payment-void-summary,
     .bulk-product-list {
         grid-template-columns: 1fr;
     }
@@ -815,6 +851,7 @@ select {
     .bulk-product-picker-header,
     .purchase-adjustments-header,
     .purchase-payment-modal-header,
+    .purchase-payment-void-header,
     .purchase-payment-modal-title-row {
         flex-direction: column;
         align-items: stretch;
