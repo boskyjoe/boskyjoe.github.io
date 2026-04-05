@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showModal } from "../../shared/modal.js";
-import { runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import {
     initializeCategoriesGrid,
@@ -441,6 +441,7 @@ async function handleCategorySubmit(event) {
 
     try {
         const docId = document.getElementById("admin-category-doc-id")?.value;
+        const categoryName = document.getElementById("admin-category-name")?.value || "-";
         const result = await runProgressToastFlow({
             title: docId ? "Updating Product Category" : "Adding Product Category",
             initialMessage: "Reading the current category records...",
@@ -468,6 +469,16 @@ async function handleCategorySubmit(event) {
         showToast(result.mode === "create" ? "Category created." : "Category updated.", "success", {
             title: "Admin Modules"
         });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Product Category Added" : "Product Category Updated",
+            message: "The category record has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Category", value: categoryName },
+                { label: "Module", value: "Product Categories" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Category save failed:", error);
     }
@@ -478,6 +489,8 @@ async function handleSeasonSubmit(event) {
 
     try {
         const docId = document.getElementById("admin-season-doc-id")?.value;
+        const seasonName = document.getElementById("admin-season-name")?.value || "-";
+        const seasonStatus = document.getElementById("admin-season-status")?.value || "-";
         const result = await runProgressToastFlow({
             title: docId ? "Updating Sales Season" : "Adding Sales Season",
             initialMessage: "Reading season records and date inputs...",
@@ -508,6 +521,16 @@ async function handleSeasonSubmit(event) {
         showToast(result.mode === "create" ? "Season created." : "Season updated.", "success", {
             title: "Admin Modules"
         });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Sales Season Added" : "Sales Season Updated",
+            message: "The sales season has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Season", value: seasonName },
+                { label: "Status", value: seasonStatus }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Season save failed:", error);
     }
@@ -518,6 +541,7 @@ async function handlePaymentModeSubmit(event) {
 
     try {
         const docId = document.getElementById("admin-payment-mode-doc-id")?.value;
+        const paymentModeName = document.getElementById("admin-payment-mode-name")?.value || "-";
         const result = await runProgressToastFlow({
             title: docId ? "Updating Payment Mode" : "Adding Payment Mode",
             initialMessage: "Reading payment mode records...",
@@ -544,6 +568,16 @@ async function handlePaymentModeSubmit(event) {
 
         showToast(result.mode === "create" ? "Payment mode created." : "Payment mode updated.", "success", {
             title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Payment Mode Added" : "Payment Mode Updated",
+            message: "The payment mode record has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Payment Mode", value: paymentModeName },
+                { label: "Module", value: "Payment Modes" }
+            ]
         });
     } catch (error) {
         console.error("[Moneta] Payment mode save failed:", error);
@@ -611,12 +645,19 @@ async function handleStatusToggle(button) {
         return;
     }
 
-    const confirmed = await showModal({
+    const confirmed = await showConfirmationModal({
         title: `${nextValue ? "Activate" : "Deactivate"} ${ADMIN_SECTIONS[entity].entityLabel}`,
         message: `${nextValue ? "Activate" : "Deactivate"} ${record.categoryName || record.seasonName || record.paymentMode}?`,
+        details: [
+            { label: "Record", value: record.categoryName || record.seasonName || record.paymentMode || "-" },
+            { label: "Requested Action", value: nextValue ? "Activate" : "Deactivate" }
+        ],
+        note: nextValue
+            ? "Please confirm this status change before Moneta updates the record."
+            : "This will immediately hide the record from active operational pickers until it is activated again.",
         confirmText: nextValue ? "Activate" : "Deactivate",
         cancelText: "Cancel",
-        showCancel: true
+        tone: nextValue ? "warning" : "danger"
     });
 
     if (!confirmed) return;
@@ -631,6 +672,14 @@ async function handleStatusToggle(button) {
         }
 
         showToast(`${ADMIN_SECTIONS[entity].entityLabel} ${nextValue ? "activated" : "deactivated"}.`, "success");
+        await showSummaryModal({
+            title: `${ADMIN_SECTIONS[entity].entityLabel} ${nextValue ? "Activated" : "Deactivated"}`,
+            message: "The record status was updated successfully.",
+            details: [
+                { label: "Record", value: record.categoryName || record.seasonName || record.paymentMode || "-" },
+                { label: "New Status", value: nextValue ? "Active" : "Inactive" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Admin status update failed:", error);
         showToast(error.message || "Could not update status.", "error");

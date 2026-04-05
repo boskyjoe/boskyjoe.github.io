@@ -1,5 +1,5 @@
-import { showModal } from "../../shared/modal.js";
-import { runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { getState, subscribe } from "../../app/store.js";
 import { saveSupplier, toggleSupplierStatus } from "./service.js";
 import { icons } from "../../shared/icons.js";
@@ -155,6 +155,8 @@ async function handleSupplierFormSubmit(event) {
 
     try {
         const docId = document.getElementById("supplier-doc-id")?.value;
+        const supplierName = document.getElementById("supplier-name")?.value || "-";
+        const creditTerm = document.getElementById("supplier-credit-term")?.value || "-";
         const result = await runProgressToastFlow({
             title: docId ? "Updating Supplier" : "Adding Supplier",
             initialMessage: "Reading supplier form data...",
@@ -186,6 +188,16 @@ async function handleSupplierFormSubmit(event) {
         showToast(result.mode === "create" ? "Supplier created." : "Supplier updated.", "success", {
             title: "Supplier Management"
         });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Supplier Added" : "Supplier Updated",
+            message: "The supplier record has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Supplier", value: supplierName },
+                { label: "Credit Term", value: creditTerm }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Supplier save failed:", error);
     }
@@ -211,12 +223,19 @@ async function handleStatusToggle(target) {
         return;
     }
 
-    const confirmed = await showModal({
+    const confirmed = await showConfirmationModal({
         title: `${nextStatus ? "Activate" : "Deactivate"} Supplier`,
         message: `${nextStatus ? "Activate" : "Deactivate"} ${supplier.supplierName}?`,
+        details: [
+            { label: "Supplier", value: supplier.supplierName || "-" },
+            { label: "Requested Action", value: nextStatus ? "Activate" : "Deactivate" }
+        ],
+        note: nextStatus
+            ? "Please confirm this supplier status change before Moneta updates availability."
+            : "This will remove the supplier from active purchase entry until it is activated again.",
         confirmText: nextStatus ? "Activate" : "Deactivate",
         cancelText: "Cancel",
-        showCancel: true
+        tone: nextStatus ? "warning" : "danger"
     });
 
     if (!confirmed) return;
@@ -224,6 +243,14 @@ async function handleStatusToggle(target) {
     try {
         await toggleSupplierStatus(supplierId, nextStatus, getState().currentUser);
         showToast(`Supplier ${nextStatus ? "activated" : "deactivated"}.`, "success");
+        await showSummaryModal({
+            title: `Supplier ${nextStatus ? "Activated" : "Deactivated"}`,
+            message: "The supplier status was updated successfully.",
+            details: [
+                { label: "Supplier", value: supplier.supplierName || "-" },
+                { label: "New Status", value: nextStatus ? "Active" : "Inactive" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Supplier status update failed:", error);
         showToast(error.message || "Could not update supplier status.", "error");

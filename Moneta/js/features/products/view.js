@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showModal } from "../../shared/modal.js";
-import { runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { initializeProductsGrid, refreshProductsGrid, updateProductsGridSearch } from "./grid.js";
 import { calculateSellingPrice, saveProduct, toggleProductStatus } from "./service.js";
@@ -164,6 +164,8 @@ async function handleProductFormSubmit(event) {
 
     try {
         const docId = document.getElementById("product-doc-id")?.value;
+        const productName = document.getElementById("product-name")?.value || "-";
+        const categoryLabel = document.getElementById("product-category")?.selectedOptions?.[0]?.textContent || "-";
         const result = await runProgressToastFlow({
             title: docId ? "Updating Product" : "Adding New Product",
             initialMessage: "Reading product form inputs...",
@@ -197,6 +199,16 @@ async function handleProductFormSubmit(event) {
         showToast(result.mode === "create" ? "Product created." : "Product updated.", "success", {
             title: "Product Catalogue"
         });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Product Added" : "Product Updated",
+            message: "The product record has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Product", value: productName },
+                { label: "Category", value: categoryLabel }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Product save failed:", error);
     }
@@ -218,12 +230,19 @@ async function handleProductStatusToggle(target) {
         return;
     }
 
-    const confirmed = await showModal({
+    const confirmed = await showConfirmationModal({
         title: `${nextValue ? "Activate" : "Deactivate"} Product`,
         message: `${nextValue ? "Activate" : "Deactivate"} ${product.itemName}?`,
+        details: [
+            { label: "Product", value: product.itemName || "-" },
+            { label: "Requested Action", value: nextValue ? "Activate" : "Deactivate" }
+        ],
+        note: nextValue
+            ? "Please confirm this status change before Moneta updates product availability."
+            : "This will remove the product from active product pickers until it is activated again.",
         confirmText: nextValue ? "Activate" : "Deactivate",
         cancelText: "Cancel",
-        showCancel: true
+        tone: nextValue ? "warning" : "danger"
     });
 
     if (!confirmed) return;
@@ -231,6 +250,14 @@ async function handleProductStatusToggle(target) {
     try {
         await toggleProductStatus(productId, field, nextValue, getState().currentUser);
         showToast(`Product ${nextValue ? "activated" : "deactivated"}.`, "success");
+        await showSummaryModal({
+            title: `Product ${nextValue ? "Activated" : "Deactivated"}`,
+            message: "The product status was updated successfully.",
+            details: [
+                { label: "Product", value: product.itemName || "-" },
+                { label: "New Status", value: nextValue ? "Active" : "Inactive" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Product status update failed:", error);
         showToast(error.message || "Could not update product status.", "error");

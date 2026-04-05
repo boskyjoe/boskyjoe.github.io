@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showModal } from "../../shared/modal.js";
-import { runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import {
     initializeAvailableProductsGrid,
@@ -363,6 +363,8 @@ async function handleSalesCatalogueSubmit(event) {
         const seasonSelect = document.getElementById("sales-catalogue-season");
         const selectedSeasonName = seasonSelect?.selectedOptions?.[0]?.textContent || "";
         const docId = document.getElementById("sales-catalogue-doc-id")?.value;
+        const catalogueName = document.getElementById("sales-catalogue-name")?.value || "-";
+        const itemCount = featureState.draftItems.length;
         const result = await runProgressToastFlow({
             title: docId ? "Updating Sales Catalogue" : "Building Sales Catalogue",
             initialMessage: "Reading catalogue header and worksheet data...",
@@ -392,6 +394,17 @@ async function handleSalesCatalogueSubmit(event) {
 
         showToast(result.mode === "create" ? "Sales catalogue created." : "Sales catalogue updated.", "success", {
             title: "Sales Catalogue"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Sales Catalogue Created" : "Sales Catalogue Updated",
+            message: "The sales catalogue has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Catalogue", value: catalogueName },
+                { label: "Season", value: selectedSeasonName || "-" },
+                { label: "Items", value: String(itemCount || 0) }
+            ]
         });
     } catch (error) {
         console.error("[Moneta] Sales catalogue save failed:", error);
@@ -440,12 +453,17 @@ async function handleCatalogueItemRemoval(button) {
     }
 
     if (featureState.editingCatalogueId) {
-        const confirmed = await showModal({
+        const confirmed = await showConfirmationModal({
             title: "Remove Catalogue Item",
             message: "Remove this product from the live sales catalogue?",
+            details: [
+                { label: "Item", value: featureState.liveItems.find(item => item.id === itemId)?.productName || itemId },
+                { label: "Action", value: "Remove Item" }
+            ],
+            note: "This removal affects the live catalogue immediately and should be confirmed carefully.",
             confirmText: "Remove",
             cancelText: "Cancel",
-            showCancel: true
+            tone: "danger"
         });
 
         if (!confirmed) return;
@@ -453,6 +471,14 @@ async function handleCatalogueItemRemoval(button) {
         try {
             await removeSalesCatalogueItemRecord(featureState.editingCatalogueId, itemId);
             showToast("Catalogue item removed.", "success");
+            await showSummaryModal({
+                title: "Catalogue Item Removed",
+                message: "The product has been removed from the live sales catalogue.",
+                details: [
+                    { label: "Catalogue", value: getEditingCatalogue(getState())?.catalogueName || "-" },
+                    { label: "Item", value: featureState.liveItems.find(item => item.id === itemId)?.productName || itemId }
+                ]
+            });
         } catch (error) {
             console.error("[Moneta] Remove catalogue item failed:", error);
             showToast(error.message || "Could not remove catalogue item.", "error");
@@ -525,12 +551,19 @@ async function handleCatalogueStatusToggle(button) {
         return;
     }
 
-    const confirmed = await showModal({
+    const confirmed = await showConfirmationModal({
         title: `${nextStatus ? "Activate" : "Deactivate"} Sales Catalogue`,
         message: `${nextStatus ? "Activate" : "Deactivate"} ${catalogue.catalogueName}?`,
+        details: [
+            { label: "Catalogue", value: catalogue.catalogueName || "-" },
+            { label: "Requested Action", value: nextStatus ? "Activate" : "Deactivate" }
+        ],
+        note: nextStatus
+            ? "Please confirm this catalogue status change before Moneta updates availability."
+            : "This will remove the catalogue from active selling workflows until it is activated again.",
         confirmText: nextStatus ? "Activate" : "Deactivate",
         cancelText: "Cancel",
-        showCancel: true
+        tone: nextStatus ? "warning" : "danger"
     });
 
     if (!confirmed) return;
@@ -538,6 +571,14 @@ async function handleCatalogueStatusToggle(button) {
     try {
         await toggleSalesCatalogueStatus(catalogueId, nextStatus, getState().currentUser);
         showToast(`Sales catalogue ${nextStatus ? "activated" : "deactivated"}.`, "success");
+        await showSummaryModal({
+            title: `Sales Catalogue ${nextStatus ? "Activated" : "Deactivated"}`,
+            message: "The catalogue status was updated successfully.",
+            details: [
+                { label: "Catalogue", value: catalogue.catalogueName || "-" },
+                { label: "New Status", value: nextStatus ? "Active" : "Inactive" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Sales catalogue status update failed:", error);
         showToast(error.message || "Could not update sales catalogue status.", "error");

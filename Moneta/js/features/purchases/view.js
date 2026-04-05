@@ -1,5 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
-import { runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
@@ -688,6 +689,9 @@ async function handlePurchaseFormSubmit(event) {
 
     try {
         const docId = document.getElementById("purchase-invoice-doc-id")?.value;
+        const supplierName = document.getElementById("purchase-supplier")?.selectedOptions?.[0]?.textContent || "-";
+        const invoiceName = document.getElementById("purchase-invoice-name")?.value || "-";
+        const activeItemCount = getActiveLineItemsFromGrid().length;
         const result = await runProgressToastFlow({
             title: docId ? "Updating Purchase Invoice" : "Creating Purchase Invoice",
             initialMessage: "Reading supplier, invoice, and worksheet data...",
@@ -725,6 +729,17 @@ async function handlePurchaseFormSubmit(event) {
             ? "Purchase invoice saved and inventory updated."
             : "Purchase invoice updated and inventory reconciled.", "success", {
             title: "Stock Purchase"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Purchase Invoice Saved" : "Purchase Invoice Updated",
+            message: "The supplier invoice has been processed successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Supplier", value: supplierName },
+                { label: "Invoice Name", value: invoiceName },
+                { label: "Active Items", value: String(activeItemCount) }
+            ]
         });
     } catch (error) {
         console.error("[Moneta] Purchase invoice save failed:", error);
@@ -773,6 +788,17 @@ async function handlePurchasePaymentSubmit(event) {
             "success",
             { title: "Stock Purchase" }
         );
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Supplier Payment Recorded",
+            message: "The payment was applied to the supplier invoice successfully.",
+            details: [
+                { label: "Supplier", value: invoice.supplierName || "-" },
+                { label: "Invoice", value: invoice.invoiceId || invoice.invoiceName || "-" },
+                { label: "Amount", value: formatCurrency(paymentData.amountPaid) },
+                { label: "Mode", value: paymentData.paymentMode || "-" }
+            ]
+        });
     } catch (error) {
         console.error("[Moneta] Purchase payment save failed:", error);
     }
@@ -786,6 +812,21 @@ async function handlePurchasePaymentVoidSubmit(event) {
         showToast("Choose a payment before trying to void it.", "error");
         return;
     }
+
+    const confirmed = await showConfirmationModal({
+        title: "Void Supplier Payment",
+        message: `Void payment ${payment.paymentId || payment.id}?`,
+        details: [
+            { label: "Supplier", value: payment.supplierName || "-" },
+            { label: "Amount", value: formatCurrency(payment.amountPaid) },
+            { label: "Payment ID", value: payment.paymentId || payment.id || "-" }
+        ],
+        note: "This action cannot be undone. Moneta will mark the payment as voided, create a reversal entry, and reopen the invoice balance if required.",
+        confirmText: "Void Payment",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
         await runProgressToastFlow({
@@ -815,6 +856,17 @@ async function handlePurchasePaymentVoidSubmit(event) {
 
         showToast(`Payment ${payment.paymentId || payment.id} was voided and reversed.`, "success", {
             title: "Stock Purchase"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Supplier Payment Voided",
+            message: "The payment was voided and a reversal entry was created successfully.",
+            details: [
+                { label: "Supplier", value: payment.supplierName || "-" },
+                { label: "Payment ID", value: payment.paymentId || payment.id || "-" },
+                { label: "Amount Reversed", value: formatCurrency(payment.amountPaid) }
+            ],
+            note: "The related invoice balance has been recalculated and the audit trail has been preserved."
         });
     } catch (error) {
         console.error("[Moneta] Purchase payment void failed:", error);
