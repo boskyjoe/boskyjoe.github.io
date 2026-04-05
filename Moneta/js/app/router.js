@@ -8,6 +8,7 @@ import { showProductsPage } from "../features/products/index.js";
 import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
 import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
+import { showUserManagementPage } from "../features/user-management/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
@@ -16,7 +17,8 @@ const ROUTE_TO_VIEW = {
     "#/products": "products-view",
     "#/sales-catalogues": "sales-catalogues-view",
     "#/admin-modules": "admin-modules-view",
-    "#/purchases": "purchases-view"
+    "#/purchases": "purchases-view",
+    "#/user-management": "user-management-view"
 };
 
 function normalizeRoute(route) {
@@ -54,6 +56,8 @@ function getViewTitle(route) {
             return "Admin Modules";
         case "#/purchases":
             return "Stock Purchase";
+        case "#/user-management":
+            return "User Management";
         default:
             return "Login";
     }
@@ -104,6 +108,10 @@ export function resolveRoute() {
 
     if (route === "#/purchases") {
         showPurchasesPage();
+    }
+
+    if (route === "#/user-management") {
+        showUserManagementPage();
     }
 }
 

@@ -69,5 +69,14 @@ export const navConfig = [
         iconClass: "nav-icon-cyan",
         roles: ["admin"],
         enabled: true
+    },
+    {
+        type: "link",
+        route: "#/user-management",
+        label: "User Management",
+        icon: icons.users,
+        iconClass: "nav-icon-amber",
+        roles: ["admin"],
+        enabled: true
     }
 ];
