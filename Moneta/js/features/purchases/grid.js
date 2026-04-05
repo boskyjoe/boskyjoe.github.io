@@ -73,7 +73,7 @@ function buildInvoiceColumnDefs() {
             headerName: "Date",
             minWidth: 140,
             flex: 0.9,
-            valueFormatter: params => formatDate(params.value)
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatDate(params.value))
         },
         { field: "supplierName", headerName: "Supplier", minWidth: 220, flex: 1.2 },
         { field: "supplierInvoiceNo", headerName: "Supplier Ref", minWidth: 160, flex: 1 },
@@ -82,7 +82,13 @@ function buildInvoiceColumnDefs() {
             minWidth: 100,
             flex: 0.6,
             ...rightAlignedNumberColumn,
-            valueGetter: params => params.data?.lineItems?.length || 0
+            valueGetter: params => {
+                if (params.node?.rowPinned) {
+                    return params.data?.lineItemCount || 0;
+                }
+
+                return params.data?.lineItems?.length || 0;
+            }
         },
         {
             field: "invoiceTotal",
@@ -113,7 +119,7 @@ function buildInvoiceColumnDefs() {
             headerName: "Status",
             minWidth: 150,
             flex: 0.95,
-            cellRenderer: params => paymentStatusMarkup(params.value)
+            cellRenderer: params => (params.node?.rowPinned ? "" : paymentStatusMarkup(params.value))
         },
         {
             headerName: "Actions",
@@ -121,7 +127,7 @@ function buildInvoiceColumnDefs() {
             flex: 1,
             sortable: false,
             filter: false,
-            cellRenderer: params => invoiceActionMarkup(params.data)
+            cellRenderer: params => (params.node?.rowPinned ? "" : invoiceActionMarkup(params.data))
         }
     ];
 }
@@ -224,6 +230,74 @@ function getLineItemTotal(row) {
     return Number((netPrice + taxAmount).toFixed(2));
 }
 
+function getVisibleRows(api) {
+    const rows = [];
+
+    api?.forEachNodeAfterFilterAndSort(node => {
+        if (!node.rowPinned) {
+            rows.push(node.data);
+        }
+    });
+
+    return rows;
+}
+
+function buildPurchasesPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        summary.lineItemCount += row?.lineItems?.length || 0;
+        summary.invoiceTotal += Number(row?.invoiceTotal) || 0;
+        summary.amountPaid += Number(row?.amountPaid) || 0;
+        summary.balanceDue += Number(row?.balanceDue ?? row?.invoiceTotal) || 0;
+        return summary;
+    }, {
+        lineItemCount: 0,
+        invoiceTotal: 0,
+        amountPaid: 0,
+        balanceDue: 0
+    });
+
+    return [{
+        invoiceName: "Totals",
+        lineItemCount: totals.lineItemCount,
+        invoiceTotal: Number(totals.invoiceTotal.toFixed(2)),
+        amountPaid: Number(totals.amountPaid.toFixed(2)),
+        balanceDue: Number(totals.balanceDue.toFixed(2))
+    }];
+}
+
+function buildPurchaseLineItemsPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        summary.quantity += Number(row?.quantity) || 0;
+        summary.lineTotal += getLineItemTotal(row || {});
+        return summary;
+    }, {
+        quantity: 0,
+        lineTotal: 0
+    });
+
+    return [{
+        productName: "Totals",
+        quantity: totals.quantity,
+        lineTotal: Number(totals.lineTotal.toFixed(2))
+    }];
+}
+
+function refreshPurchasesPinnedBottomRow(api) {
+    if (!api) return;
+
+    api.setGridOption("pinnedBottomRowData", buildPurchasesPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshPurchaseLineItemsPinnedBottomRow(api) {
+    if (!api) return;
+
+    api.setGridOption("pinnedBottomRowData", buildPurchaseLineItemsPinnedBottomRow(getVisibleRows(api)));
+}
+
 function lineItemStatusMarkup(quantity) {
     return quantity > 0
         ? `<span class="purchase-status-pill purchase-status-paid">Active</span>`
@@ -238,7 +312,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 95,
             maxWidth: 110,
             ...rightAlignedNumberColumn,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quantity", 0)
         },
@@ -254,7 +328,8 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 100,
             maxWidth: 120,
             flex: 0.7,
-            ...rightAlignedNumberColumn
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => (params.node?.rowPinned ? "" : params.value ?? "")
         },
         {
             field: "unitPurchasePrice",
@@ -262,20 +337,21 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 135,
             flex: 0.9,
             ...rightAlignedNumberColumn,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPurchasePrice", 2),
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
         },
         {
             field: "discountType",
             headerName: "Discount Type",
             minWidth: 150,
             flex: 0.95,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agSelectCellEditor",
             cellEditorParams: { values: ["Percentage", "Fixed"] },
-            valueSetter: discountTypeSetter
+            valueSetter: discountTypeSetter,
+            valueFormatter: params => (params.node?.rowPinned ? "" : params.value || "")
         },
         {
             field: "discountValue",
@@ -283,9 +359,10 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 120,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
-            valueSetter: buildNumberSetter("discountValue", 2)
+            valueSetter: buildNumberSetter("discountValue", 2),
+            valueFormatter: params => (params.node?.rowPinned ? "" : params.value || 0)
         },
         {
             field: "taxPercentage",
@@ -293,16 +370,23 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 110,
             flex: 0.75,
             ...rightAlignedNumberColumn,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
-            valueSetter: buildNumberSetter("taxPercentage", 2)
+            valueSetter: buildNumberSetter("taxPercentage", 2),
+            valueFormatter: params => (params.node?.rowPinned ? "" : params.value || 0)
         },
         {
             headerName: "Line Total",
             minWidth: 150,
             flex: 0.95,
             ...rightAlignedNumberColumn,
-            valueGetter: params => getLineItemTotal(params.data || {}),
+            valueGetter: params => {
+                if (params.node?.rowPinned) {
+                    return params.data?.lineTotal || 0;
+                }
+
+                return getLineItemTotal(params.data || {});
+            },
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
@@ -312,7 +396,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             sortable: false,
             filter: false,
             valueGetter: params => Number(params.data?.quantity) || 0,
-            cellRenderer: params => lineItemStatusMarkup(Number(params.value) || 0)
+            cellRenderer: params => (params.node?.rowPinned ? "" : lineItemStatusMarkup(Number(params.value) || 0))
         }
     ];
 }
@@ -331,6 +415,7 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
     purchasesGridApi = createGrid(gridElement, {
         columnDefs: buildInvoiceColumnDefs(),
         rowData: [],
+        pinnedBottomRowData: [],
         pagination: true,
         paginationPageSize: 25,
         paginationPageSizeSelector: [10, 25, 50, 100],
@@ -342,6 +427,9 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
             autoHeaderHeight: true,
             wrapText: true,
             autoHeight: true
+        },
+        onFilterChanged: event => {
+            refreshPurchasesPinnedBottomRow(event.api);
         },
         onModelUpdated: event => {
             onFilteredCountChange?.(event.api.getDisplayedRowCount());
@@ -355,6 +443,7 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
 export function refreshPurchasesGrid(rows) {
     if (!purchasesGridApi) return;
     purchasesGridApi.setGridOption("rowData", rows);
+    refreshPurchasesPinnedBottomRow(purchasesGridApi);
 }
 
 export function updatePurchasesGridSearch(searchTerm) {
@@ -375,6 +464,7 @@ export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
     purchaseLineItemsGridApi = createGrid(gridElement, {
         columnDefs: buildLineItemColumnDefs(onRowsChanged),
         rowData: [],
+        pinnedBottomRowData: [],
         pagination: true,
         paginationPageSize: 25,
         paginationPageSizeSelector: [10, 25, 50, 100],
@@ -395,7 +485,11 @@ export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
         },
         onCellValueChanged: params => {
             params.api.refreshCells({ rowNodes: [params.node], force: true });
+            refreshPurchaseLineItemsPinnedBottomRow(params.api);
             onRowsChanged?.();
+        },
+        onFilterChanged: event => {
+            refreshPurchaseLineItemsPinnedBottomRow(event.api);
         }
     });
 
@@ -406,6 +500,7 @@ export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
 export function refreshPurchaseLineItemsGrid(rows) {
     if (!purchaseLineItemsGridApi) return;
     purchaseLineItemsGridApi.setGridOption("rowData", rows);
+    refreshPurchaseLineItemsPinnedBottomRow(purchaseLineItemsGridApi);
 }
 
 export function updatePurchaseLineItemsGridSearch(searchTerm) {

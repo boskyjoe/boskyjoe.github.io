@@ -126,12 +126,17 @@ function buildRequestedProductsColumnDefs(onRowsChanged) {
             headerName: "Qty",
             minWidth: 95,
             maxWidth: 110,
-            editable: true,
+            editable: params => !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("requestedQty", 0),
             ...rightAlignedNumberColumn
         },
-        { field: "productName", headerName: "Product", minWidth: 240, flex: 1.35 },
+        {
+            field: "productName",
+            headerName: "Product",
+            minWidth: 240,
+            flex: 1.35
+        },
         { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
         {
             field: "sellingPrice",
@@ -139,14 +144,20 @@ function buildRequestedProductsColumnDefs(onRowsChanged) {
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
         },
         {
             headerName: "Est. Value",
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueGetter: params => (Number(params.data?.requestedQty) || 0) * (Number(params.data?.sellingPrice) || 0),
+            valueGetter: params => {
+                if (params.node?.rowPinned) {
+                    return params.data?.estimatedValue || 0;
+                }
+
+                return (Number(params.data?.requestedQty) || 0) * (Number(params.data?.sellingPrice) || 0);
+            },
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
@@ -156,9 +167,49 @@ function buildRequestedProductsColumnDefs(onRowsChanged) {
             sortable: false,
             filter: false,
             valueGetter: params => Number(params.data?.requestedQty) || 0,
-            cellRenderer: params => requestedItemStatusMarkup(Number(params.value) || 0)
+            cellRenderer: params => (params.node?.rowPinned ? "" : requestedItemStatusMarkup(Number(params.value) || 0))
         }
     ];
+}
+
+function getVisibleRows(api) {
+    const rows = [];
+
+    api?.forEachNodeAfterFilterAndSort(node => {
+        if (!node.rowPinned) {
+            rows.push(node.data);
+        }
+    });
+
+    return rows;
+}
+
+function buildRequestedProductsPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        const requestedQty = Number(row?.requestedQty) || 0;
+        const estimatedValue = requestedQty * (Number(row?.sellingPrice) || 0);
+
+        summary.requestedQty += requestedQty;
+        summary.estimatedValue += estimatedValue;
+        return summary;
+    }, {
+        requestedQty: 0,
+        estimatedValue: 0
+    });
+
+    return [{
+        productName: "Totals",
+        requestedQty: totals.requestedQty,
+        estimatedValue: Number(totals.estimatedValue.toFixed(2))
+    }];
+}
+
+function refreshLeadRequestedProductsPinnedBottomRow(api) {
+    if (!api) return;
+
+    api.setGridOption("pinnedBottomRowData", buildRequestedProductsPinnedBottomRow(getVisibleRows(api)));
 }
 
 function buildDefaultColDef() {
@@ -219,6 +270,7 @@ export function initializeLeadRequestedProductsGrid(gridElement, onRowsChanged) 
     leadRequestedProductsGridApi = createGrid(gridElement, {
         columnDefs: buildRequestedProductsColumnDefs(onRowsChanged),
         rowData: [],
+        pinnedBottomRowData: [],
         pagination: true,
         paginationPageSize: 25,
         paginationPageSizeSelector: [10, 25, 50, 100],
@@ -231,7 +283,11 @@ export function initializeLeadRequestedProductsGrid(gridElement, onRowsChanged) 
         },
         onCellValueChanged: params => {
             params.api.refreshCells({ rowNodes: [params.node], force: true });
+            refreshLeadRequestedProductsPinnedBottomRow(params.api);
             onRowsChanged?.();
+        },
+        onFilterChanged: event => {
+            refreshLeadRequestedProductsPinnedBottomRow(event.api);
         }
     });
 
@@ -240,7 +296,10 @@ export function initializeLeadRequestedProductsGrid(gridElement, onRowsChanged) 
 }
 
 export function refreshLeadRequestedProductsGrid(rows) {
-    leadRequestedProductsGridApi?.setGridOption("rowData", rows);
+    if (!leadRequestedProductsGridApi) return;
+
+    leadRequestedProductsGridApi.setGridOption("rowData", rows);
+    refreshLeadRequestedProductsPinnedBottomRow(leadRequestedProductsGridApi);
 }
 
 export function updateLeadRequestedProductsGridSearch(searchTerm) {

@@ -412,6 +412,16 @@ select {
     margin-bottom: auto;
 }
 
+.ag-theme-alpine.moneta-grid .ag-row-pinned {
+    background: #f6f9fb;
+    border-top: 1px solid #d9e5ec;
+    font-weight: 700;
+}
+
+.ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell {
+    background: #f6f9fb;
+}
+
 .ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
     background: #f4fbf8;
 }
