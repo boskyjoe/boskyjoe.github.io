@@ -397,6 +397,12 @@ select {
     gap: 1rem;
 }
 
+.sales-catalogue-workspace {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+
 .grid-status-cell {
     display: inline-flex;
     align-items: center;
@@ -840,6 +846,7 @@ select {
     .line-item-grid,
     .purchase-summary-grid,
     .purchase-adjustments-grid,
+    .sales-catalogue-workspace,
     .purchase-payments-layout,
     .purchase-payment-meta-grid,
     .purchase-payment-preview,

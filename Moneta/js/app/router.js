@@ -5,6 +5,7 @@ import { renderDashboardView } from "../features/dashboard/view.js";
 import { navConfig } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
+import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 
 const ROUTE_TO_VIEW = {
@@ -12,6 +13,7 @@ const ROUTE_TO_VIEW = {
     "#/dashboard": "dashboard-view",
     "#/suppliers": "suppliers-view",
     "#/products": "products-view",
+    "#/sales-catalogues": "sales-catalogues-view",
     "#/purchases": "purchases-view"
 };
 
@@ -44,6 +46,8 @@ function getViewTitle(route) {
             return "Supplier Management";
         case "#/products":
             return "Product Catalogue";
+        case "#/sales-catalogues":
+            return "Sales Catalogue";
         case "#/purchases":
             return "Stock Purchase";
         default:
@@ -84,6 +88,10 @@ export function resolveRoute() {
 
     if (route === "#/products") {
         showProductsPage();
+    }
+
+    if (route === "#/sales-catalogues") {
+        showSalesCataloguesPage();
     }
 
     if (route === "#/purchases") {

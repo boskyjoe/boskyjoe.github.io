@@ -3,79 +3,12 @@ import { showToast } from "../../shared/toast.js";
 import { getState, subscribe } from "../../app/store.js";
 import { saveSupplier, toggleSupplierStatus } from "./service.js";
 import { icons } from "../../shared/icons.js";
+import { initializeSuppliersGrid, refreshSuppliersGrid, updateSuppliersGridSearch } from "./grid.js";
 
 const featureState = {
     searchTerm: "",
     editingSupplierId: null
 };
-
-function getVisibleSuppliers(snapshot) {
-    const searchTerm = featureState.searchTerm.toLowerCase();
-    const suppliers = snapshot.masterData.suppliers || [];
-
-    return suppliers
-        .filter(supplier => {
-            if (!searchTerm) return true;
-            const haystack = [
-                supplier.supplierId,
-                supplier.supplierName,
-                supplier.contactNo,
-                supplier.contactEmail,
-                supplier.address
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-
-            return haystack.includes(searchTerm);
-        })
-        .sort((left, right) => (left.supplierName || "").localeCompare(right.supplierName || ""));
-}
-
-function renderSupplierRows(suppliers) {
-    if (suppliers.length === 0) {
-        return `
-            <tr>
-                <td colspan="6">
-                    <div class="empty-state">No suppliers match the current search.</div>
-                </td>
-            </tr>
-        `;
-    }
-
-    return suppliers.map(supplier => `
-        <tr>
-            <td>
-                <strong>${supplier.supplierName || "Untitled Supplier"}</strong><br>
-                <span class="panel-copy">${supplier.supplierId || "Pending ID"}</span>
-            </td>
-            <td>${supplier.contactNo || "-"}</td>
-            <td>${supplier.contactEmail || "-"}</td>
-            <td>${supplier.creditTerm || "-"}</td>
-            <td>
-                <span class="${supplier.isActive ? "status-active" : "status-inactive"}">
-                    ${supplier.isActive ? "Active" : "Inactive"}
-                </span>
-            </td>
-            <td>
-                <div class="table-actions">
-                    <button class="button button-secondary supplier-edit-button" type="button" data-supplier-id="${supplier.id}">
-                        <span class="button-icon">${icons.edit}</span>
-                        Edit
-                    </button>
-                    <button
-                        class="button ${supplier.isActive ? "button-danger-soft" : "button-primary"} supplier-status-button"
-                        type="button"
-                        data-supplier-id="${supplier.id}"
-                        data-next-status="${supplier.isActive ? "inactive" : "active"}">
-                        <span class="button-icon">${supplier.isActive ? icons.inactive : icons.active}</span>
-                        ${supplier.isActive ? "Deactivate" : "Activate"}
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join("");
-}
 
 function getEditingSupplier(snapshot) {
     if (!featureState.editingSupplierId) return null;
@@ -146,9 +79,9 @@ function renderForm(snapshot) {
     `;
 }
 
-function renderTable(snapshot) {
-    const suppliers = getVisibleSuppliers(snapshot);
+function renderGridCard(snapshot) {
     const totalSuppliers = snapshot.masterData.suppliers?.length || 0;
+    const activeSuppliers = snapshot.masterData.suppliers?.filter(supplier => supplier.isActive).length || 0;
 
     return `
         <div class="panel-card">
@@ -157,19 +90,19 @@ function renderTable(snapshot) {
                     <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
                     <div>
                         <h3>Supplier Directory</h3>
-                        <p class="panel-copy">Live Firestore-backed supplier records from the new Moneta store.</p>
+                        <p class="panel-copy">Supplier Management now uses AG Grid for faster search, scanning, and action handling.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
-                    <span class="status-pill">${suppliers.length} visible</span>
                     <span class="status-pill">${totalSuppliers} total</span>
+                    <span class="status-pill">${activeSuppliers} active</span>
                 </div>
             </div>
             <div class="panel-body">
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">Suppliers</p>
-                        <p class="panel-copy">Search, edit, and manage active supplier records.</p>
+                        <p class="panel-copy">Search, edit, and manage both active and inactive supplier records.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -181,26 +114,22 @@ function renderTable(snapshot) {
                             value="${featureState.searchTerm}">
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Supplier</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Credit Term</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${renderSupplierRows(suppliers)}
-                        </tbody>
-                    </table>
+                <div class="ag-shell">
+                    <div id="suppliers-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
                 </div>
             </div>
         </div>
     `;
+}
+
+function syncSuppliersGrid(snapshot) {
+    const rows = (snapshot.masterData.suppliers || [])
+        .slice()
+        .sort((left, right) => (left.supplierName || "").localeCompare(right.supplierName || ""));
+
+    initializeSuppliersGrid(document.getElementById("suppliers-grid"));
+    refreshSuppliersGrid(rows);
+    updateSuppliersGridSearch(featureState.searchTerm);
 }
 
 export function renderSuppliersView() {
@@ -211,9 +140,11 @@ export function renderSuppliersView() {
     root.innerHTML = `
         <div style="display: grid; gap: 1rem;">
             ${renderForm(snapshot)}
-            ${renderTable(snapshot)}
+            ${renderGridCard(snapshot)}
         </div>
     `;
+
+    syncSuppliersGrid(snapshot);
 }
 
 async function handleSupplierFormSubmit(event) {
@@ -243,14 +174,7 @@ async function handleSupplierFormSubmit(event) {
 
 function handleSearchInput(target) {
     featureState.searchTerm = target.value || "";
-    renderSuppliersView();
-
-    const searchInput = document.getElementById("supplier-search");
-    if (searchInput) {
-        const cursorIndex = featureState.searchTerm.length;
-        searchInput.focus();
-        searchInput.setSelectionRange(cursorIndex, cursorIndex);
-    }
+    updateSuppliersGridSearch(featureState.searchTerm);
 }
 
 function handleEditSupplier(target) {

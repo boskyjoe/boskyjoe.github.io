@@ -138,7 +138,9 @@ function detachPaymentListener(options = {}) {
 }
 
 function renderSupplierOptions(suppliers, currentValue) {
-    return suppliers.map(supplier => `
+    return suppliers
+        .filter(supplier => supplier.isActive || supplier.id === currentValue)
+        .map(supplier => `
         <option value="${supplier.id}" ${supplier.id === currentValue ? "selected" : ""}>
             ${supplier.supplierName}
         </option>
@@ -499,6 +501,7 @@ function renderPurchasesViewShell(snapshot) {
     const editingInvoice = getEditingInvoice();
     const invoiceDiscountFields = getInvoiceDiscountFieldValues(editingInvoice);
     const suppliers = snapshot.masterData.suppliers || [];
+    const activeSuppliers = suppliers.filter(supplier => supplier.isActive || supplier.id === editingInvoice?.supplierId);
     const products = snapshot.masterData.products || [];
     const draftSummary = calculatePurchaseDraftSummary({
         lineItems: editingInvoice?.lineItems || [],
@@ -508,7 +511,7 @@ function renderPurchasesViewShell(snapshot) {
             : invoiceDiscountFields.discountFixedValue,
         invoiceTaxPercentage: editingInvoice?.invoiceTaxPercentage || 0
     }, products);
-    const canSaveInvoice = suppliers.length > 0 && products.length > 0;
+    const canSaveInvoice = activeSuppliers.length > 0 && products.length > 0;
     const initialActiveCount = editingInvoice?.lineItems?.length || 0;
 
     root.innerHTML = `

@@ -28,9 +28,9 @@ export function initializeMasterData() {
     listenToCollection(db, "categories", COLLECTIONS.categories, rows => rows.filter(row => row.isActive));
     listenToCollection(db, "seasons", COLLECTIONS.seasons, rows => rows.filter(row => row.isActive));
     listenToCollection(db, "products", COLLECTIONS.products, rows => rows.filter(row => row.isActive));
-    listenToCollection(db, "suppliers", COLLECTIONS.suppliers, rows => rows.filter(row => row.isActive));
+    listenToCollection(db, "suppliers", COLLECTIONS.suppliers);
     listenToCollection(db, "paymentModes", COLLECTIONS.paymentModes, rows => rows.filter(row => row.isActive));
-    listenToCollection(db, "salesCatalogues", COLLECTIONS.salesCatalogues, rows => rows.filter(row => row.isActive));
+    listenToCollection(db, "salesCatalogues", COLLECTIONS.salesCatalogues);
     listenToCollection(db, "teams", COLLECTIONS.teams);
 
     setState({ isMasterDataReady: true });

@@ -40,6 +40,15 @@ export const navConfig = [
     },
     {
         type: "link",
+        route: "#/sales-catalogues",
+        label: "Sales Catalogue",
+        icon: icons.catalogue,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager", "sales_staff", "team_lead"],
+        enabled: true
+    },
+    {
+        type: "link",
         route: "#/suppliers",
         label: "Supplier Management",
         icon: icons.suppliers,
