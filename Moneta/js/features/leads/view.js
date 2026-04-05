@@ -200,68 +200,91 @@ function renderLeadForm(snapshot) {
             <div class="panel-body">
                 <form id="lead-form">
                     <input id="lead-doc-id" type="hidden" value="${editingLead?.id || ""}">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label for="lead-customer-name">Customer Name</label>
-                            <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
-                        </div>
-                        <div class="field">
-                            <label for="lead-customer-phone">Phone Number</label>
-                            <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567">
-                        </div>
-                        <div class="field">
-                            <label for="lead-customer-email">Email</label>
-                            <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com">
-                        </div>
-                        <div class="field">
-                            <label for="lead-assigned-to">Assigned To</label>
-                            <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Sales desk / team member">
-                        </div>
-                        <div class="field">
-                            <label for="lead-enquiry-date">Enquiry Date</label>
-                            <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
-                        </div>
-                        <div class="field">
-                            <label for="lead-expected-delivery-date">Expected Delivery</label>
-                            <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
-                        </div>
-                        <div class="field field-wide">
-                            <label for="lead-customer-address">Customer Address</label>
-                            <textarea id="lead-customer-address" class="textarea" placeholder="Street, area, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
-                        </div>
-                        <div class="field">
-                            <label for="lead-notes">Notes</label>
-                            <textarea id="lead-notes" class="textarea" placeholder="Event details, follow-up points, or pricing notes">${editingLead?.leadNotes || ""}</textarea>
-                        </div>
-                        <div class="field">
-                            <label for="lead-source">Lead Source</label>
-                            <select id="lead-source" class="select" required>
-                                <option value="">Select source</option>
-                                ${renderSourceOptions(editingLead?.leadSource || "")}
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="lead-status">Lead Status</label>
-                            <select id="lead-status" class="select" required>
-                                ${renderStatusOptions(editingLead?.leadStatus || "New")}
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="lead-catalogue">Sales Catalogue</label>
-                            <select id="lead-catalogue" class="select" required>
-                                <option value="">Select catalogue</option>
-                                ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
-                            </select>
-                        </div>
+                    <div class="lead-form-sections">
+                        <section class="lead-form-section">
+                            <div class="lead-form-section-head">
+                                <p class="lead-form-section-kicker">Customer Info</p>
+                            </div>
+                            <div class="lead-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="lead-customer-name">Full Name</label>
+                                    <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
+                                </div>
+                                <div class="field">
+                                    <label for="lead-customer-phone">Phone</label>
+                                    <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567">
+                                </div>
+                                <div class="field">
+                                    <label for="lead-customer-email">Email</label>
+                                    <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com">
+                                </div>
+                                <div class="field field-full">
+                                    <label for="lead-customer-address">Customer Address</label>
+                                    <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="lead-form-section">
+                            <div class="lead-form-section-head">
+                                <p class="lead-form-section-kicker">Lead Context</p>
+                            </div>
+                            <div class="lead-form-section-grid">
+                                <div class="field">
+                                    <label for="lead-enquiry-date">Enquiry Date</label>
+                                    <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
+                                </div>
+                                <div class="field">
+                                    <label for="lead-expected-delivery-date">Expected Delivery</label>
+                                    <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
+                                </div>
+                                <div class="field field-full">
+                                    <label for="lead-assigned-to">Assigned To</label>
+                                    <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk">
+                                </div>
+                                <div class="field">
+                                    <label for="lead-source">Source</label>
+                                    <select id="lead-source" class="select" required>
+                                        <option value="">Select source</option>
+                                        ${renderSourceOptions(editingLead?.leadSource || "")}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="lead-status">Status</label>
+                                    <select id="lead-status" class="select" required>
+                                        ${renderStatusOptions(editingLead?.leadStatus || "New")}
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="lead-form-section">
+                            <div class="lead-form-section-head">
+                                <p class="lead-form-section-kicker">Requirements</p>
+                            </div>
+                            <div class="lead-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="lead-catalogue">Select Sales Catalogue</label>
+                                    <select id="lead-catalogue" class="select" required>
+                                        <option value="">Select a catalogue...</option>
+                                        ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
+                                    </select>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="lead-notes">General Notes</label>
+                                    <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details">${editingLead?.leadNotes || ""}</textarea>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </form>
-                <div style="display:grid; gap:1rem; margin-top:1rem;">
-                    <div class="toolbar">
+                <div class="lead-product-list-shell">
+                    <div class="lead-product-list-header">
                         <div>
-                            <p class="section-kicker" style="margin-bottom: 0.25rem;">Request Summary</p>
-                            <p class="panel-copy">Any product with quantity greater than zero becomes part of this enquiry request.</p>
+                            <p class="lead-form-section-kicker lead-product-list-kicker">Product Inquiry List</p>
+                            <p class="panel-copy">Only items with quantity greater than zero will be saved with this enquiry.</p>
                         </div>
-                        <div class="toolbar-meta">
+                        <div class="lead-product-list-meta">
                             <span id="lead-requested-count" class="status-pill">${requestedSummary.requestedItemCount} requested</span>
                             <span id="lead-requested-value" class="status-pill">${formatCurrency(requestedSummary.requestedValue)}</span>
                         </div>
@@ -269,7 +292,7 @@ function renderLeadForm(snapshot) {
                     <div class="toolbar">
                         <div>
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Requested Products</p>
-                            <p class="panel-copy">Load a sales catalogue, then mark requested quantities directly in the AG Grid worksheet.</p>
+                            <p class="panel-copy">Search within the selected catalogue and capture the requested quantities directly in the worksheet.</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
