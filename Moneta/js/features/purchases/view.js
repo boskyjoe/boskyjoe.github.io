@@ -312,20 +312,21 @@ function renderPaymentModal(snapshot) {
         <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
             <div class="purchase-payment-modal-card">
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
-                    <div class="panel-title-wrap">
-                        <span class="panel-icon panel-icon-alt">${icons.payment}</span>
-                        <div>
-                            <h3 id="purchase-payment-modal-title">Record Supplier Payment</h3>
-                            <p class="panel-copy">Use a focused payment modal for the transaction, with live invoice context and AG Grid history beside it.</p>
+                    <div class="purchase-payment-modal-title-row">
+                        <div class="panel-title-wrap">
+                            <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                            <div>
+                                <h3 id="purchase-payment-modal-title">Record Supplier Payment</h3>
+                                <p class="panel-copy">Use a focused payment modal for the transaction, with live invoice context and AG Grid history below the entry form.</p>
+                            </div>
                         </div>
+                        <button id="purchase-payments-close-button" class="purchase-payment-modal-icon-button" type="button" aria-label="Close payment modal">
+                            <span class="button-icon">${icons.close}</span>
+                        </button>
                     </div>
-                    <div class="toolbar-meta">
+                    <div class="toolbar-meta purchase-payment-modal-meta">
                         <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
                         <span class="status-pill">${featureState.payments.length} payments</span>
-                        <button id="purchase-payments-close-button" class="button button-secondary purchase-payment-modal-close" type="button" aria-label="Close payment modal">
-                            <span class="button-icon">${icons.inactive}</span>
-                            Close
-                        </button>
                     </div>
                 </div>
                 <div class="panel-body purchase-payment-modal-body">

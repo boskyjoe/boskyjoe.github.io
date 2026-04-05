@@ -60,6 +60,12 @@ export const icons = {
             <path d="M5 12h14"></path>
         </svg>
     `,
+    close: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12"></path>
+            <path d="M18 6 6 18"></path>
+        </svg>
+    `,
     catalogue: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3z"></path>

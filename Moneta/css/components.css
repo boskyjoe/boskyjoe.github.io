@@ -513,12 +513,40 @@ select {
     border-bottom: 1px solid var(--border);
 }
 
+.purchase-payment-modal-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+}
+
+.purchase-payment-modal-meta {
+    margin-top: 1rem;
+}
+
 .purchase-payment-modal-body {
     overflow: auto;
 }
 
-.purchase-payment-modal-close {
-    min-width: 0;
+.purchase-payment-modal-icon-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid rgba(59, 86, 107, 0.12);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f8 100%);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.purchase-payment-modal-icon-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
 }
 
 .bulk-product-picker,
@@ -614,7 +642,7 @@ select {
 .purchase-payments-layout {
     display: grid;
     gap: 1rem;
-    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    grid-template-columns: 1fr;
 }
 
 .payment-workspace-card {
@@ -782,7 +810,8 @@ select {
 
     .bulk-product-picker-header,
     .purchase-adjustments-header,
-    .purchase-payment-modal-header {
+    .purchase-payment-modal-header,
+    .purchase-payment-modal-title-row {
         flex-direction: column;
         align-items: stretch;
     }

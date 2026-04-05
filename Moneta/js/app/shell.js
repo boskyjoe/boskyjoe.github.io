@@ -68,6 +68,44 @@ function renderAuthSlot(user) {
     authSlot.appendChild(wrapper);
 }
 
+function renderFooter() {
+    const footer = document.getElementById("app-footer");
+    if (!footer) return;
+
+    const currentYear = new Date().getFullYear();
+
+    footer.innerHTML = `
+        <div class="app-footer-accent"></div>
+        <div class="app-footer-inner">
+            <div class="app-footer-main">
+                <div class="app-footer-brand">
+                    <span class="app-footer-brand-mark">${icons.monetaBrand}</span>
+                    <div>
+                        <p class="app-footer-brand-title">MONETA</p>
+                        <p class="app-footer-brand-copy">Smart POS Solutions</p>
+                    </div>
+                </div>
+
+                <div class="app-footer-center">
+                    <p class="app-footer-copy">Copyright &copy; ${currentYear} strategiccattva.com</p>
+                    <p class="app-footer-subcopy">All Rights Reserved</p>
+                </div>
+
+                <div class="app-footer-powered">
+                    <span class="app-footer-powered-label">Powered by</span>
+                    <strong>DataWings Solution</strong>
+                </div>
+            </div>
+
+            <div class="app-footer-meta">
+                <span>Version 1.0.0</span>
+                <span>Built with care for business excellence</span>
+                <span>Last updated: ${currentYear}</span>
+            </div>
+        </div>
+    `;
+}
+
 export function renderShell({ title }) {
     const sidebar = document.getElementById("app-sidebar");
     const titleNode = document.getElementById("view-title");
@@ -92,6 +130,7 @@ export function renderShell({ title }) {
     }
 
     renderAuthSlot(currentUser);
+    renderFooter();
 }
 
 export function initializeShell() {
