@@ -239,7 +239,7 @@ export function validatePurchasePaymentPayload(payload, invoice, masterData) {
     const notes = normalizeText(payload.notes);
     const amountPaid = roundCurrency(normalizeNumber(payload.amountPaid));
     const balanceDue = roundCurrency(normalizeNumber(invoice.balanceDue, normalizeNumber(invoice.invoiceTotal)));
-    const paymentModes = masterData.paymentModes || [];
+    const paymentModes = (masterData.paymentModes || []).filter(mode => mode.isActive);
 
     if (!paymentDateInput) {
         throw new Error("Payment date is required.");

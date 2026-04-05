@@ -6,6 +6,7 @@ import { navConfig } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
 import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
+import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 
 const ROUTE_TO_VIEW = {
@@ -14,6 +15,7 @@ const ROUTE_TO_VIEW = {
     "#/suppliers": "suppliers-view",
     "#/products": "products-view",
     "#/sales-catalogues": "sales-catalogues-view",
+    "#/admin-modules": "admin-modules-view",
     "#/purchases": "purchases-view"
 };
 
@@ -48,6 +50,8 @@ function getViewTitle(route) {
             return "Product Catalogue";
         case "#/sales-catalogues":
             return "Sales Catalogue";
+        case "#/admin-modules":
+            return "Admin Modules";
         case "#/purchases":
             return "Stock Purchase";
         default:
@@ -92,6 +96,10 @@ export function resolveRoute() {
 
     if (route === "#/sales-catalogues") {
         showSalesCataloguesPage();
+    }
+
+    if (route === "#/admin-modules") {
+        showAdminModulesPage();
     }
 
     if (route === "#/purchases") {

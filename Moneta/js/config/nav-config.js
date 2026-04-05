@@ -55,5 +55,19 @@ export const navConfig = [
         iconClass: "nav-icon-amber",
         roles: ["admin", "finance"],
         enabled: true
+    },
+    {
+        type: "heading",
+        label: "System Settings",
+        roles: ["admin"]
+    },
+    {
+        type: "link",
+        route: "#/admin-modules",
+        label: "Admin Modules",
+        icon: icons.settings,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin"],
+        enabled: true
     }
 ];

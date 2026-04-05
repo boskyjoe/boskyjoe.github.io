@@ -16,7 +16,9 @@ function getEditingProduct(snapshot) {
 }
 
 function renderCategoryOptions(categories, currentValue) {
-    return categories.map(category => `
+    return categories
+        .filter(category => category.isActive || category.id === currentValue)
+        .map(category => `
         <option value="${category.id}" ${category.id === currentValue ? "selected" : ""}>
             ${category.categoryName}
         </option>
@@ -29,6 +31,7 @@ function renderProductsViewShell(snapshot) {
 
     const editingProduct = getEditingProduct(snapshot);
     const categories = snapshot.masterData.categories || [];
+    const activeCategories = categories.filter(category => category.isActive || category.id === editingProduct?.categoryId);
     const productsCount = snapshot.masterData.products?.length || 0;
 
     root.innerHTML = `
@@ -44,7 +47,7 @@ function renderProductsViewShell(snapshot) {
                     </div>
                     <div class="toolbar-meta">
                         <span class="status-pill">${productsCount} products</span>
-                        <span class="status-pill">${categories.length} categories</span>
+                        <span class="status-pill">${activeCategories.length} categories</span>
                     </div>
                 </div>
                 <div class="panel-body">

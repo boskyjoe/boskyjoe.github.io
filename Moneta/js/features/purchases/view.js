@@ -148,7 +148,9 @@ function renderSupplierOptions(suppliers, currentValue) {
 }
 
 function renderPaymentModeOptions(paymentModes, currentValue) {
-    return paymentModes.map(mode => {
+    return paymentModes
+        .filter(mode => mode.isActive || normalizeText(mode.paymentMode) === currentValue)
+        .map(mode => {
         const value = normalizeText(mode.paymentMode);
         return `
             <option value="${value}" ${value === currentValue ? "selected" : ""}>
@@ -370,7 +372,7 @@ function renderPaymentModal(snapshot) {
     const paymentInvoice = getPaymentInvoice();
     if (!paymentInvoice) return "";
 
-    const paymentModes = snapshot.masterData.paymentModes || [];
+    const paymentModes = (snapshot.masterData.paymentModes || []).filter(mode => mode.isActive);
     const balanceDue = roundCurrency(paymentInvoice.balanceDue ?? paymentInvoice.invoiceTotal);
     const amountPaid = roundCurrency(paymentInvoice.amountPaid);
     const invoiceTotal = roundCurrency(paymentInvoice.invoiceTotal);

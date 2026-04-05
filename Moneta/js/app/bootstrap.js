@@ -7,6 +7,7 @@ import { subscribe } from "./store.js";
 import { initializeSuppliersModule } from "../features/suppliers/index.js";
 import { initializeProductsModule } from "../features/products/index.js";
 import { initializeSalesCataloguesModule } from "../features/sales-catalogues/index.js";
+import { initializeAdminModulesModule } from "../features/admin-modules/index.js";
 import { initializePurchasesModule } from "../features/purchases/index.js";
 
 function initializeFirebase() {
@@ -74,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeSuppliersModule();
     initializeProductsModule();
     initializeSalesCataloguesModule();
+    initializeAdminModulesModule();
     initializePurchasesModule();
     initializeRouter();
     initializeAuth();

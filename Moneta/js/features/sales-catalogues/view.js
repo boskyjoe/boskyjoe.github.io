@@ -80,7 +80,9 @@ function enrichCatalogueItems(snapshot, items) {
 }
 
 function renderSeasonOptions(seasons, currentValue) {
-    return seasons.map(season => `
+    return seasons
+        .filter(season => season.isActive || season.id === currentValue)
+        .map(season => `
         <option value="${season.id}" ${season.id === currentValue ? "selected" : ""}>
             ${season.seasonName}
         </option>

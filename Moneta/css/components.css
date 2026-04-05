@@ -414,6 +414,59 @@ select {
     gap: 1rem;
 }
 
+.admin-module-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.admin-module-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.admin-module-tab {
+    border: 1px solid rgba(59, 86, 107, 0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
+    color: #415467;
+    border-radius: 999px;
+    min-height: 2.55rem;
+    padding: 0.48rem 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    font-weight: 700;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.admin-module-tab:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
+}
+
+.admin-module-tab.active {
+    background: linear-gradient(180deg, #167968 0%, #117a65 100%);
+    color: var(--text-inverse);
+    border-color: rgba(17, 122, 101, 0.2);
+}
+
+.admin-module-tab-count {
+    min-width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 86, 107, 0.08);
+    color: inherit;
+    font-size: 0.76rem;
+}
+
+.admin-module-tab.active .admin-module-tab-count {
+    background: rgba(255, 255, 255, 0.18);
+}
+
 .sales-catalogue-workspace {
     display: grid;
     gap: 1rem;
@@ -475,6 +528,37 @@ select {
     background: linear-gradient(180deg, #faeeee 0%, #f5e2e2 100%);
     color: var(--danger);
     border-color: rgba(177, 44, 44, 0.15);
+}
+
+.admin-lifecycle-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    border-radius: 999px;
+    padding: 0.22rem 0.68rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.01em;
+    font-weight: 700;
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.admin-lifecycle-upcoming {
+    background: linear-gradient(180deg, #fff7e8 0%, #fff1d9 100%);
+    color: #9a5a00;
+    border-color: rgba(154, 90, 0, 0.16);
+}
+
+.admin-lifecycle-active {
+    background: linear-gradient(180deg, #ebfaf3 0%, #dff5ef 100%);
+    color: var(--accent-strong);
+    border-color: rgba(17, 122, 101, 0.16);
+}
+
+.admin-lifecycle-archived {
+    background: linear-gradient(180deg, #f4f6f8 0%, #e8eef4 100%);
+    color: #4d5a68;
+    border-color: rgba(77, 90, 104, 0.16);
 }
 
 .grid-action-button {
@@ -882,6 +966,10 @@ select {
     .purchase-payment-modal-title-row {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .admin-module-switcher {
+        flex-direction: column;
     }
 
     .field-wide {

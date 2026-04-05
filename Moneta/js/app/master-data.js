@@ -25,11 +25,11 @@ export function initializeMasterData() {
 
     const db = firebase.firestore();
 
-    listenToCollection(db, "categories", COLLECTIONS.categories, rows => rows.filter(row => row.isActive));
-    listenToCollection(db, "seasons", COLLECTIONS.seasons, rows => rows.filter(row => row.isActive));
+    listenToCollection(db, "categories", COLLECTIONS.categories);
+    listenToCollection(db, "seasons", COLLECTIONS.seasons);
     listenToCollection(db, "products", COLLECTIONS.products, rows => rows.filter(row => row.isActive));
     listenToCollection(db, "suppliers", COLLECTIONS.suppliers);
-    listenToCollection(db, "paymentModes", COLLECTIONS.paymentModes, rows => rows.filter(row => row.isActive));
+    listenToCollection(db, "paymentModes", COLLECTIONS.paymentModes);
     listenToCollection(db, "salesCatalogues", COLLECTIONS.salesCatalogues);
     listenToCollection(db, "teams", COLLECTIONS.teams);
 
