@@ -131,6 +131,11 @@ select {
     background: linear-gradient(135deg, #edf5fd 0%, #f8fbfe 100%);
 }
 
+.panel-header-danger-soft {
+    background: linear-gradient(135deg, #fff1ef 0%, #fff8f7 100%);
+    border-bottom-color: rgba(192, 72, 72, 0.18);
+}
+
 .panel-title-wrap {
     display: flex;
     align-items: center;
@@ -628,6 +633,41 @@ select {
 
 .purchase-line-items-panel {
     margin-top: 1.5rem;
+}
+
+.purchase-void-mode-card {
+    border-color: rgba(192, 72, 72, 0.18);
+    box-shadow: 0 16px 36px rgba(128, 44, 44, 0.08);
+}
+
+.purchase-void-mode-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(192, 72, 72, 0.18);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fff8f7 0%, #fff3f1 100%);
+}
+
+.purchase-void-mode-block {
+    border-color: rgba(192, 72, 72, 0.14);
+    background: linear-gradient(180deg, #fffdfd 0%, #fff8f7 100%);
+}
+
+.purchase-void-mode-reason {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(192, 72, 72, 0.18);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fffaf9 0%, #fff3f1 100%);
+}
+
+.purchase-void-reason-textarea {
+    border-color: rgba(192, 72, 72, 0.28);
+    background: #fffefe;
 }
 
 .purchase-payment-modal-overlay {
@@ -1429,7 +1469,8 @@ select {
     .purchase-adjustments-header,
     .purchase-payment-modal-header,
     .purchase-payment-void-header,
-    .purchase-payment-modal-title-row {
+    .purchase-payment-modal-title-row,
+    .purchase-void-mode-banner {
         flex-direction: column;
         align-items: stretch;
     }
