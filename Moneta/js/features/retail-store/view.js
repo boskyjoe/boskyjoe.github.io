@@ -717,10 +717,6 @@ function handleRetailInput(target) {
     if (!field) return;
 
     updateDraftField(field, target.value || "");
-
-    if (["retail-amount-received", "retail-order-discount-percentage", "retail-order-discount-amount", "retail-order-tax-percentage"].includes(target.id)) {
-        renderRetailStoreView();
-    }
 }
 
 function handleRetailChange(target) {
@@ -754,6 +750,10 @@ function handleRetailChange(target) {
         case "retail-payment-mode":
             updateDraftField("paymentMode", target.value || "");
             return;
+        case "retail-amount-received":
+            updateDraftField("amountReceived", target.value || "");
+            renderRetailStoreView();
+            return;
         case "retail-order-discount-type":
             updateDraftField("orderDiscountType", target.value || "Percentage");
             if (featureState.saleDraft.orderDiscountType === "Fixed") {
@@ -761,6 +761,18 @@ function handleRetailChange(target) {
             } else {
                 featureState.saleDraft.orderDiscountAmount = "";
             }
+            renderRetailStoreView();
+            return;
+        case "retail-order-discount-percentage":
+            updateDraftField("orderDiscountPercentage", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-order-discount-amount":
+            updateDraftField("orderDiscountAmount", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-order-tax-percentage":
+            updateDraftField("orderTaxPercentage", target.value || "");
             renderRetailStoreView();
             return;
         default:
