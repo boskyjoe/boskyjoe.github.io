@@ -18,6 +18,7 @@ import {
     RETAIL_PAYMENT_TYPES,
     RETAIL_SALE_TYPES,
     RETAIL_STORES,
+    getRetailStoreTaxDefaults,
     saveRetailSale
 } from "./service.js";
 
@@ -91,6 +92,7 @@ function clearCatalogueItemsSubscription() {
 function buildRetailWorksheetRows(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const products = snapshot.masterData.products || [];
+    const storeTaxDefaults = getRetailStoreTaxDefaults(featureState.saleDraft.store);
 
     return (featureState.selectedCatalogueItems || []).map(item => {
         const product = products.find(entry => entry.id === item.productId) || null;
@@ -108,9 +110,23 @@ function buildRetailWorksheetRows(snapshot) {
             inventoryCount: Number(product?.inventoryCount) || 0,
             unitPrice: Number(item.sellingPrice) || 0,
             quantity: Number(draft.quantity) || 0,
-            lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0
+            lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0,
+            cgstPercentage: draft.cgstPercentage ?? storeTaxDefaults.cgstPercentage,
+            sgstPercentage: draft.sgstPercentage ?? storeTaxDefaults.sgstPercentage
         };
     });
+}
+
+function applyStoreTaxDefaultsToLineItemDrafts(storeName) {
+    const storeTaxDefaults = getRetailStoreTaxDefaults(storeName);
+
+    featureState.lineItemDrafts = Object.fromEntries(Object.entries(featureState.lineItemDrafts).map(([productId, draft]) => {
+        return [productId, {
+            ...draft,
+            cgstPercentage: storeTaxDefaults.cgstPercentage,
+            sgstPercentage: storeTaxDefaults.sgstPercentage
+        }];
+    }));
 }
 
 function getRetailSummary(snapshot = getState()) {
@@ -334,7 +350,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <div>
                                         <h3>Product List</h3>
                                         <p class="panel-copy">
-                                            Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue.
+                                            Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue, and each line carries CGST and SGST.
                                         </p>
                                     </div>
                                 </div>
@@ -347,7 +363,7 @@ function renderRetailStoreViewShell(snapshot) {
                                 <div class="toolbar">
                                     <div>
                                         <p class="section-kicker" style="margin-bottom: 0.25rem;">Worksheet</p>
-                                        <p class="panel-copy">Use the line discount field for product-specific promos, then finish with invoice-level discount and tax below.</p>
+                                        <p class="panel-copy">Use line discount, CGST, and SGST at product level, then finish with invoice-level discount and any order tax below.</p>
                                     </div>
                                     <div class="search-wrap">
                                         <span class="search-icon">${icons.search}</span>
@@ -432,14 +448,22 @@ function renderRetailStoreViewShell(snapshot) {
                                         <p class="summary-value">${formatCurrency(summary.orderDiscountAmount)}</p>
                                     </article>
                                     <article class="summary-card">
-                                        <p class="summary-label">Tax</p>
-                                        <p class="summary-value">${formatCurrency(summary.totalTax)}</p>
+                                        <p class="summary-label">Item Tax</p>
+                                        <p class="summary-value">${formatCurrency(summary.totalItemLevelTax)}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Order Tax</p>
+                                        <p class="summary-value">${formatCurrency(summary.orderLevelTaxAmount)}</p>
                                     </article>
                                 </div>
                                 <div class="retail-summary-grid">
                                     <article class="summary-card retail-summary-card-strong">
                                         <p class="summary-label">Grand Total</p>
                                         <p class="summary-value">${formatCurrency(summary.grandTotal)}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Total Tax</p>
+                                        <p class="summary-value">${formatCurrency(summary.totalTax)}</p>
                                     </article>
                                     <article class="summary-card">
                                         <p class="summary-label">Applied Payment</p>
@@ -515,7 +539,9 @@ function syncRetailWorksheetGrid() {
     initializeRetailWorksheetGrid(gridElement, rows => {
         featureState.lineItemDrafts = Object.fromEntries(rows.map(row => [row.productId, {
             quantity: Number(row.quantity) || 0,
-            lineDiscountPercentage: Number(row.lineDiscountPercentage) || 0
+            lineDiscountPercentage: Number(row.lineDiscountPercentage) || 0,
+            cgstPercentage: Number(row.cgstPercentage) || 0,
+            sgstPercentage: Number(row.sgstPercentage) || 0
         }]));
         renderRetailStoreView();
     });
@@ -664,6 +690,7 @@ function handleRetailChange(target) {
     switch (target.id) {
         case "retail-store":
             updateDraftField("store", target.value || "");
+            applyStoreTaxDefaultsToLineItemDrafts(target.value || "");
             renderRetailStoreView();
             return;
         case "retail-sale-type":

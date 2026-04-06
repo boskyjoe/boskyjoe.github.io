@@ -1,9 +1,19 @@
+import { storeConfig } from "../../../../js/config.js";
 import { createRetailSaleRecord } from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
 export const RETAIL_PAYMENT_TYPES = ["Pay Later", "Pay Now"];
 export const RETAIL_DISCOUNT_TYPES = ["Percentage", "Fixed"];
+
+export function getRetailStoreTaxDefaults(storeName = "") {
+    const taxInfo = storeConfig?.[storeName]?.taxInfo || null;
+
+    return {
+        cgstPercentage: Math.max(0, Number(taxInfo?.cgstRate) || 0),
+        sgstPercentage: Math.max(0, Number(taxInfo?.sgstRate) || 0)
+    };
+}
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -52,9 +62,15 @@ function normalizeLineItems(rows = [], catalogueItems = []) {
             const quantity = Math.max(0, Math.floor(normalizeNumber(row.quantity)));
             const unitPrice = roundCurrency(normalizeNumber(catalogueItem.sellingPrice, row.unitPrice));
             const lineDiscountPercentage = Math.max(0, normalizeNumber(row.lineDiscountPercentage));
-            const grossTotal = roundCurrency(quantity * unitPrice);
-            const lineDiscountAmount = roundCurrency(grossTotal * (lineDiscountPercentage / 100));
-            const lineTotal = roundCurrency(grossTotal - lineDiscountAmount);
+            const cgstPercentage = Math.max(0, normalizeNumber(row.cgstPercentage));
+            const sgstPercentage = Math.max(0, normalizeNumber(row.sgstPercentage));
+            const lineSubtotal = roundCurrency(quantity * unitPrice);
+            const lineDiscountAmount = roundCurrency(lineSubtotal * (lineDiscountPercentage / 100));
+            const taxableAmount = roundCurrency(lineSubtotal - lineDiscountAmount);
+            const cgstAmount = roundCurrency(taxableAmount * (cgstPercentage / 100));
+            const sgstAmount = roundCurrency(taxableAmount * (sgstPercentage / 100));
+            const taxAmount = roundCurrency(cgstAmount + sgstAmount);
+            const lineTotal = roundCurrency(taxableAmount + taxAmount);
 
             return {
                 productId: row.productId,
@@ -63,8 +79,15 @@ function normalizeLineItems(rows = [], catalogueItems = []) {
                 categoryName: row.categoryName || catalogueItem.categoryName || "-",
                 quantity,
                 unitPrice,
+                lineSubtotal,
                 lineDiscountPercentage,
                 lineDiscountAmount,
+                taxableAmount,
+                cgstPercentage,
+                sgstPercentage,
+                cgstAmount,
+                sgstAmount,
+                taxAmount,
                 lineTotal
             };
         })
@@ -95,6 +118,19 @@ export function calculateRetailDraftSummary(rows = [], adjustments = {}, payment
     }, 0));
 
     const subtotalAfterLineDiscounts = roundCurrency(itemsSubtotal - totalLineDiscount);
+    const totalCGST = roundCurrency(lineItems.reduce((sum, row) => {
+        const gross = (Number(row.quantity) || 0) * (Number(row.unitPrice) || 0);
+        const discount = gross * ((Number(row.lineDiscountPercentage) || 0) / 100);
+        const taxableAmount = gross - discount;
+        return sum + (taxableAmount * ((Number(row.cgstPercentage) || 0) / 100));
+    }, 0));
+    const totalSGST = roundCurrency(lineItems.reduce((sum, row) => {
+        const gross = (Number(row.quantity) || 0) * (Number(row.unitPrice) || 0);
+        const discount = gross * ((Number(row.lineDiscountPercentage) || 0) / 100);
+        const taxableAmount = gross - discount;
+        return sum + (taxableAmount * ((Number(row.sgstPercentage) || 0) / 100));
+    }, 0));
+    const totalItemLevelTax = roundCurrency(totalCGST + totalSGST);
     const orderDiscountType = RETAIL_DISCOUNT_TYPES.includes(adjustments.orderDiscountType)
         ? adjustments.orderDiscountType
         : "Percentage";
@@ -105,9 +141,10 @@ export function calculateRetailDraftSummary(rows = [], adjustments = {}, payment
         adjustments.orderDiscountAmount
     );
     const orderTaxPercentage = Math.max(0, normalizeNumber(adjustments.orderTaxPercentage));
-    const taxableAmount = roundCurrency(Math.max(0, subtotalAfterLineDiscounts - orderDiscountAmount));
-    const totalTax = roundCurrency(taxableAmount * (orderTaxPercentage / 100));
-    const grandTotal = roundCurrency(taxableAmount + totalTax);
+    const finalTaxableAmount = roundCurrency(Math.max(0, subtotalAfterLineDiscounts - orderDiscountAmount));
+    const orderLevelTaxAmount = roundCurrency(finalTaxableAmount * (orderTaxPercentage / 100));
+    const totalTax = roundCurrency(totalItemLevelTax + orderLevelTaxAmount);
+    const grandTotal = roundCurrency(finalTaxableAmount + totalTax);
 
     const amountReceived = Math.max(0, roundCurrency(normalizeNumber(paymentDraft.amountReceived)));
     const appliedPayment = roundCurrency(Math.min(amountReceived, grandTotal));
@@ -120,9 +157,14 @@ export function calculateRetailDraftSummary(rows = [], adjustments = {}, payment
         itemsSubtotal,
         totalLineDiscount,
         subtotalAfterLineDiscounts,
+        totalCGST,
+        totalSGST,
+        totalItemLevelTax,
         orderDiscountType,
         orderDiscountAmount,
         orderTaxPercentage,
+        finalTaxableAmount,
+        orderLevelTaxAmount,
         totalTax,
         grandTotal,
         appliedPayment,
@@ -280,12 +322,17 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
                 itemsSubtotal: summary.itemsSubtotal,
                 totalLineDiscount: summary.totalLineDiscount,
                 subtotalAfterLineDiscounts: summary.subtotalAfterLineDiscounts,
+                totalCGST: summary.totalCGST,
+                totalSGST: summary.totalSGST,
+                totalItemLevelTax: summary.totalItemLevelTax,
                 orderDiscountType: summary.orderDiscountType,
                 orderDiscountValue: summary.orderDiscountType === "Fixed"
                     ? normalizeNumber(payload.orderDiscountAmount)
                     : normalizeNumber(payload.orderDiscountPercentage),
                 orderDiscountAmount: summary.orderDiscountAmount,
+                finalTaxableAmount: summary.finalTaxableAmount,
                 orderTaxPercentage: summary.orderTaxPercentage,
+                orderLevelTaxAmount: summary.orderLevelTaxAmount,
                 totalTax: summary.totalTax,
                 grandTotal: summary.grandTotal
             },

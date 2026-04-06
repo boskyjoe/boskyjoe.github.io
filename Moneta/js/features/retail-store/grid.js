@@ -102,6 +102,52 @@ function buildWorksheetColumnDefs() {
             valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
         },
         {
+            field: "cgstPercentage",
+            headerName: "CGST %",
+            minWidth: 120,
+            flex: 0.75,
+            editable: params => !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("cgstPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            field: "sgstPercentage",
+            headerName: "SGST %",
+            minWidth: 120,
+            flex: 0.75,
+            editable: params => !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("sgstPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            headerName: "Tax",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) {
+                    return params.data?.taxAmount || 0;
+                }
+
+                const quantity = Number(params.data?.quantity) || 0;
+                const unitPrice = Number(params.data?.unitPrice) || 0;
+                const lineDiscountPercentage = Number(params.data?.lineDiscountPercentage) || 0;
+                const cgstPercentage = Number(params.data?.cgstPercentage) || 0;
+                const sgstPercentage = Number(params.data?.sgstPercentage) || 0;
+                const gross = quantity * unitPrice;
+                const discount = gross * (lineDiscountPercentage / 100);
+                const taxableAmount = gross - discount;
+                const cgstAmount = taxableAmount * (cgstPercentage / 100);
+                const sgstAmount = taxableAmount * (sgstPercentage / 100);
+                return Number((cgstAmount + sgstAmount).toFixed(2));
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             headerName: "Line Total",
             minWidth: 140,
             flex: 0.85,
@@ -114,9 +160,14 @@ function buildWorksheetColumnDefs() {
                 const quantity = Number(params.data?.quantity) || 0;
                 const unitPrice = Number(params.data?.unitPrice) || 0;
                 const lineDiscountPercentage = Number(params.data?.lineDiscountPercentage) || 0;
+                const cgstPercentage = Number(params.data?.cgstPercentage) || 0;
+                const sgstPercentage = Number(params.data?.sgstPercentage) || 0;
                 const gross = quantity * unitPrice;
                 const discount = gross * (lineDiscountPercentage / 100);
-                return Number((gross - discount).toFixed(2));
+                const taxableAmount = gross - discount;
+                const cgstAmount = taxableAmount * (cgstPercentage / 100);
+                const sgstAmount = taxableAmount * (sgstPercentage / 100);
+                return Number((taxableAmount + cgstAmount + sgstAmount).toFixed(2));
             },
             valueFormatter: params => formatCurrency(params.value || 0)
         },
@@ -226,20 +277,28 @@ function buildWorksheetPinnedBottomRow(rows) {
         const quantity = Number(row?.quantity) || 0;
         const unitPrice = Number(row?.unitPrice) || 0;
         const lineDiscountPercentage = Number(row?.lineDiscountPercentage) || 0;
+        const cgstPercentage = Number(row?.cgstPercentage) || 0;
+        const sgstPercentage = Number(row?.sgstPercentage) || 0;
         const gross = quantity * unitPrice;
         const discount = gross * (lineDiscountPercentage / 100);
+        const taxableAmount = gross - discount;
+        const cgstAmount = taxableAmount * (cgstPercentage / 100);
+        const sgstAmount = taxableAmount * (sgstPercentage / 100);
 
         summary.quantity += quantity;
-        summary.lineTotal += gross - discount;
+        summary.taxAmount += cgstAmount + sgstAmount;
+        summary.lineTotal += taxableAmount + cgstAmount + sgstAmount;
         return summary;
     }, {
         quantity: 0,
+        taxAmount: 0,
         lineTotal: 0
     });
 
     return [{
         productName: "Totals",
         quantity: totals.quantity,
+        taxAmount: Number(totals.taxAmount.toFixed(2)),
         lineTotal: Number(totals.lineTotal.toFixed(2))
     }];
 }
