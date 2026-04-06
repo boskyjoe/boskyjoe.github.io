@@ -706,6 +706,23 @@ select {
     background: #fffefe;
 }
 
+.retail-view-mode-card {
+    border-color: rgba(67, 99, 136, 0.16);
+    box-shadow: 0 16px 36px rgba(45, 70, 103, 0.08);
+}
+
+.retail-view-mode-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(67, 99, 136, 0.16);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #f7faff 0%, #eff5fd 100%);
+}
+
 .purchase-payment-modal-overlay {
     position: fixed;
     inset: 0;
@@ -1643,7 +1660,8 @@ select {
     .purchase-payment-modal-header,
     .purchase-payment-void-header,
     .purchase-payment-modal-title-row,
-    .purchase-void-mode-banner {
+    .purchase-void-mode-banner,
+    .retail-view-mode-banner {
         flex-direction: column;
         align-items: stretch;
     }
