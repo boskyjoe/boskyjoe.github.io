@@ -11,7 +11,8 @@ import {
     updateRetailSalesGridSearch,
     updateRetailWorksheetGridSearch
 } from "./grid.js";
-import { subscribeToRetailCatalogueItems, subscribeToRetailSales } from "./repository.js";
+import { getRetailSalePayments, subscribeToRetailCatalogueItems, subscribeToRetailSales } from "./repository.js";
+import { downloadRetailSalePdf } from "./pdf.js";
 import {
     calculateRetailDraftSummary,
     RETAIL_DISCOUNT_TYPES,
@@ -573,7 +574,12 @@ function renderRetailStoreViewShell(snapshot) {
                             <span class="button-icon">${icons.inactive}</span>
                             ${isViewMode ? "Close View" : "Reset"}
                         </button>
-                        ${isViewMode ? "" : `
+                        ${isViewMode ? `
+                            <button id="retail-download-pdf-button" class="button button-primary-alt" type="button">
+                                <span class="button-icon">${icons.download}</span>
+                                Download PDF
+                            </button>
+                        ` : `
                             <button class="button button-primary-alt" type="submit">
                                 <span class="button-icon">${icons.plus}</span>
                                 Save Retail Sale
@@ -951,6 +957,42 @@ async function handleRetailSaleView(button) {
     document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+async function handleRetailSalePdf(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    try {
+        await runProgressToastFlow({
+            title: "Preparing PDF Invoice",
+            initialMessage: "Reading the sale record...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "PDF Ready",
+            successMessage: "The invoice PDF was generated successfully."
+        }, async ({ update }) => {
+            update("Loading linked payment details...", 42, "Step 2 of 4");
+            const payments = await getRetailSalePayments(sale.id);
+
+            update("Rendering the invoice layout...", 74, "Step 3 of 4");
+            await downloadRetailSalePdf(sale, payments[0] || null);
+
+            update("Download started successfully.", 96, "Step 4 of 4");
+        });
+
+        showToast("Invoice PDF download started.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+    } catch (error) {
+        console.error("[Moneta] Retail sale PDF generation failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not generate the invoice PDF.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
 function bindRetailStoreDomEvents() {
     const root = document.getElementById("retail-store-root");
     if (!root || root.dataset.bound === "true") return;
@@ -972,6 +1014,8 @@ function bindRetailStoreDomEvents() {
     root.addEventListener("click", event => {
         const resetButton = event.target.closest("#retail-reset-button");
         const viewButton = event.target.closest(".retail-sale-view-button");
+        const pdfButton = event.target.closest(".retail-sale-pdf-button");
+        const workspacePdfButton = event.target.closest("#retail-download-pdf-button");
 
         if (resetButton) {
             handleRetailReset();
@@ -980,6 +1024,16 @@ function bindRetailStoreDomEvents() {
 
         if (viewButton) {
             handleRetailSaleView(viewButton);
+            return;
+        }
+
+        if (pdfButton) {
+            handleRetailSalePdf(pdfButton);
+            return;
+        }
+
+        if (workspacePdfButton && featureState.viewingSaleId) {
+            handleRetailSalePdf({ dataset: { saleId: featureState.viewingSaleId } });
         }
     });
 

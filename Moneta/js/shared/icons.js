@@ -50,6 +50,13 @@ export const icons = {
             <path d="m20 20-3.5-3.5"></path>
         </svg>
     `,
+    download: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 4v10"></path>
+            <path d="m8 10 4 4 4-4"></path>
+            <path d="M5 18h14"></path>
+        </svg>
+    `,
     active: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m5 13 4 4L19 7"></path>

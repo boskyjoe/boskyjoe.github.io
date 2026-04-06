@@ -80,6 +80,23 @@ export function subscribeToRetailCatalogueItems(catalogueId, onData, onError) {
         );
 }
 
+export async function getRetailSalePayments(invoiceId) {
+    if (!invoiceId) return [];
+
+    const snapshot = await getDb()
+        .collection(COLLECTIONS.salesPaymentsLedger)
+        .where("invoiceId", "==", invoiceId)
+        .get();
+
+    return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((left, right) => {
+            const leftDate = left.paymentDate?.toDate ? left.paymentDate.toDate() : new Date(left.paymentDate || 0);
+            const rightDate = right.paymentDate?.toDate ? right.paymentDate.toDate() : new Date(right.paymentDate || 0);
+            return rightDate.getTime() - leftDate.getTime();
+        });
+}
+
 export async function createRetailSaleRecord(payload, user) {
     const db = getDb();
     const now = getNow();

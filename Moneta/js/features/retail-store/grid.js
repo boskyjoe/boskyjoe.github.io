@@ -58,6 +58,10 @@ function retailSalesActionMarkup(data) {
                 <span class="button-icon">${icons.search}</span>
                 View
             </button>
+            <button class="button grid-action-button retail-sale-pdf-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.download}</span>
+                PDF
+            </button>
         </div>
     `;
 }
