@@ -100,29 +100,29 @@ function getTemplateStyles() {
     return `
         .retail-pdf-root {
             width: 210mm;
-            padding: 8mm;
+            padding: 5mm;
             background: #ffffff;
             color: #1f2933;
             font-family: "Segoe UI", Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.35;
+            font-size: 10px;
+            line-height: 1.24;
         }
         .retail-pdf-shell {
             border: 1px solid #dbe4ea;
-            border-radius: 14px;
+            border-radius: 10px;
             overflow: hidden;
         }
         .retail-pdf-header {
             display: grid;
             grid-template-columns: 1.3fr 0.8fr;
-            gap: 16px;
-            padding: 18px 20px;
+            gap: 10px;
+            padding: 12px 14px;
             background: linear-gradient(135deg, #f7fafc 0%, #edf4fb 100%);
             border-bottom: 1px solid #dbe4ea;
         }
         .retail-pdf-brand h1 {
-            margin: 0 0 6px;
-            font-size: 22px;
+            margin: 0 0 4px;
+            font-size: 18px;
             letter-spacing: 0.04em;
         }
         .retail-pdf-brand p,
@@ -133,20 +133,20 @@ function getTemplateStyles() {
         }
         .retail-pdf-kicker {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 999px;
             background: #143f66;
             color: #ffffff;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .retail-pdf-title-panel {
-            padding: 14px 16px;
+            padding: 10px 12px;
             border: 1px solid #cfdbe6;
-            border-radius: 12px;
+            border-radius: 10px;
             background: rgba(255, 255, 255, 0.86);
             display: flex;
             flex-direction: column;
@@ -156,47 +156,47 @@ function getTemplateStyles() {
         }
         .retail-pdf-title-panel h2 {
             margin: 0;
-            font-size: 24px;
+            font-size: 20px;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color: #143f66;
         }
         .retail-pdf-title-panel .retail-pdf-kicker {
-            margin: 10px 0 0;
+            margin: 6px 0 0;
         }
         .retail-pdf-grid-four {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
-            padding: 16px 20px;
+            gap: 8px;
+            padding: 10px 14px;
         }
         .retail-pdf-grid-three {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
-            gap: 16px;
-            padding: 0 20px 18px;
+            gap: 10px;
+            padding: 0 14px 10px;
         }
         .retail-pdf-block,
         .retail-pdf-note,
         .retail-pdf-summary,
         .retail-pdf-tax-box {
             border: 1px solid #dbe4ea;
-            border-radius: 12px;
+            border-radius: 10px;
             background: #ffffff;
-            padding: 14px 16px;
+            padding: 10px 12px;
         }
         .retail-pdf-block h3,
         .retail-pdf-summary h3,
         .retail-pdf-tax-box h3,
         .retail-pdf-note h3 {
-            margin: 0 0 8px;
-            font-size: 12px;
+            margin: 0 0 5px;
+            font-size: 10px;
             color: #35546f;
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
         .retail-pdf-table-wrap {
-            padding: 0 20px 16px;
+            padding: 0 14px 10px;
         }
         .retail-pdf-table,
         .retail-pdf-tax-table,
@@ -210,14 +210,14 @@ function getTemplateStyles() {
         .retail-pdf-tax-table td,
         .retail-pdf-summary-table td {
             border: 1px solid #dbe4ea;
-            padding: 8px 9px;
+            padding: 5px 6px;
             vertical-align: top;
         }
         .retail-pdf-table th,
         .retail-pdf-tax-table th {
             background: #f5f8fb;
             color: #48657f;
-            font-size: 10px;
+            font-size: 9px;
             letter-spacing: 0.06em;
             text-transform: uppercase;
         }
@@ -248,49 +248,49 @@ function getTemplateStyles() {
         .retail-pdf-summary-table tr.total-row td {
             background: #edf6f2;
             color: #0f5132;
-            font-size: 13px;
+            font-size: 11px;
         }
         .retail-pdf-detail-footer {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
-            gap: 16px;
-            padding: 0 20px 16px;
+            gap: 10px;
+            padding: 0 14px 10px;
         }
         .retail-pdf-payment-box {
             display: grid;
-            gap: 12px;
+            gap: 8px;
         }
         .retail-pdf-footer {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr 0.7fr;
-            gap: 16px;
-            padding: 0 20px 20px;
+            gap: 10px;
+            padding: 0 14px 12px;
         }
         .retail-pdf-qr {
             display: grid;
-            grid-template-columns: 86px 1fr;
-            gap: 12px;
+            grid-template-columns: 68px 1fr;
+            gap: 8px;
             align-items: start;
         }
         .retail-pdf-qr img {
-            width: 82px;
-            height: 82px;
+            width: 64px;
+            height: 64px;
             object-fit: contain;
             border: 1px solid #dbe4ea;
-            border-radius: 10px;
+            border-radius: 8px;
             background: #fff;
-            padding: 4px;
+            padding: 3px;
         }
         .retail-pdf-signature {
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            min-height: 140px;
+            min-height: 108px;
         }
         .retail-pdf-sign-line {
-            margin-top: 42px;
+            margin-top: 28px;
             border-top: 1px solid #7b8da0;
-            padding-top: 8px;
+            padding-top: 6px;
             text-align: center;
             color: #52687d;
             font-weight: 700;
