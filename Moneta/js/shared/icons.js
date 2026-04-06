@@ -93,5 +93,13 @@ export const icons = {
             <circle cx="12" cy="9.5" r="1"></circle>
             <circle cx="15" cy="9.5" r="1"></circle>
         </svg>
+    `,
+    retail: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 8.5 5.6 4h12.8L20 8.5v2a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 10.5z"></path>
+            <path d="M6 13h12v7H6z"></path>
+            <path d="M9 16h2.5"></path>
+            <path d="M14.5 13v7"></path>
+        </svg>
     `
 };

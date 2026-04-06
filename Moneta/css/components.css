@@ -500,6 +500,42 @@ select {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
 }
 
+.workspace-form-sections {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workspace-form-section {
+    display: grid;
+    gap: 1rem;
+    padding: 1.15rem 1rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 1.15rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.workspace-form-section-head {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e6edf5;
+}
+
+.workspace-form-section-kicker {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #2f63da;
+}
+
+.workspace-form-section-grid {
+    display: grid;
+    gap: 0.95rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .grid-status-cell {
     display: inline-flex;
     align-items: center;
@@ -850,6 +886,28 @@ select {
 .payment-summary-copy {
     font-size: 1rem;
     line-height: 1.4;
+}
+
+.retail-product-list-shell {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.retail-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 1rem;
+}
+
+.retail-summary-card-strong {
+    background: linear-gradient(180deg, #f5faf9 0%, #edf8f4 100%);
+    border-color: rgba(24, 117, 94, 0.18);
+}
+
+.retail-summary-status {
+    font-size: 1rem;
 }
 
 .purchase-payment-form .form-grid {
@@ -1449,10 +1507,14 @@ select {
     .purchase-summary-grid,
     .purchase-adjustments-grid,
     .sales-catalogue-workspace,
+    .workspace-form-sections,
+    .workspace-form-section-grid,
     .purchase-payments-layout,
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
     .purchase-payment-void-summary,
+    .retail-summary-grid,
+    .retail-product-list-shell,
     .bulk-product-list,
     .lead-form-sections,
     .lead-form-section-grid {

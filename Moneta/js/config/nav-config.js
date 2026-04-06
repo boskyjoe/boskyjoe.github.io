@@ -26,6 +26,20 @@ export const navConfig = [
     },
     {
         type: "heading",
+        label: "Direct Sales",
+        roles: ["admin", "sales_staff", "finance"]
+    },
+    {
+        type: "link",
+        route: "#/retail-store",
+        label: "Retail Store",
+        icon: icons.retail,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "sales_staff", "finance"],
+        enabled: true
+    },
+    {
+        type: "heading",
         label: "Inventory",
         roles: ["admin", "inventory_manager"]
     },

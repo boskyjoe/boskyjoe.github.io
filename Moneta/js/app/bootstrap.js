@@ -11,6 +11,7 @@ import { initializeAdminModulesModule } from "../features/admin-modules/index.js
 import { initializePurchasesModule } from "../features/purchases/index.js";
 import { initializeUserManagementModule } from "../features/user-management/index.js";
 import { initializeLeadsModule } from "../features/leads/index.js";
+import { initializeRetailStoreModule } from "../features/retail-store/index.js";
 
 function initializeFirebase() {
     if (!firebase.apps.length) {
@@ -81,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializePurchasesModule();
     initializeUserManagementModule();
     initializeLeadsModule();
+    initializeRetailStoreModule();
     initializeRouter();
     initializeAuth();
     bindGlobalUiEvents();

@@ -1,0 +1,373 @@
+import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
+import { icons } from "../../shared/icons.js";
+import { formatCurrency } from "../../shared/utils/currency.js";
+
+let retailWorksheetGridApi = null;
+let retailWorksheetGridElement = null;
+let retailSalesGridApi = null;
+let retailSalesGridElement = null;
+
+const rightAlignedNumberColumn = {
+    cellClass: "ag-right-aligned-cell",
+    headerClass: "ag-right-aligned-header"
+};
+
+function formatDate(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
+function statusMarkup(value) {
+    const status = value || "Unpaid";
+    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
+}
+
+function requestStateMarkup(quantity) {
+    return quantity > 0
+        ? `<span class="purchase-status-pill purchase-status-paid">Included</span>`
+        : `<span class="purchase-status-pill purchase-status-unpaid">Not Included</span>`;
+}
+
+function buildNumberSetter(field, decimals = 0) {
+    return params => {
+        const parsed = Number(params.newValue);
+        const normalized = Number.isFinite(parsed) && parsed > 0
+            ? Number(parsed.toFixed(decimals))
+            : 0;
+        const changed = params.data[field] !== normalized;
+
+        params.data[field] = normalized;
+        return changed;
+    };
+}
+
+function retailSalesActionMarkup(data) {
+    return `
+        <div class="table-actions">
+            <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.search}</span>
+                View
+            </button>
+        </div>
+    `;
+}
+
+function buildWorksheetColumnDefs() {
+    return [
+        {
+            field: "quantity",
+            headerName: "Qty",
+            minWidth: 95,
+            maxWidth: 110,
+            editable: params => !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("quantity", 0),
+            ...rightAlignedNumberColumn
+        },
+        { field: "productName", headerName: "Product", minWidth: 240, flex: 1.35 },
+        { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.85 },
+        {
+            field: "inventoryCount",
+            headerName: "Stock",
+            minWidth: 110,
+            flex: 0.65,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "unitPrice",
+            headerName: "Unit Price",
+            minWidth: 135,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+        },
+        {
+            field: "lineDiscountPercentage",
+            headerName: "Line Disc. %",
+            minWidth: 130,
+            flex: 0.8,
+            editable: params => !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            headerName: "Line Total",
+            minWidth: 140,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) {
+                    return params.data?.lineTotal || 0;
+                }
+
+                const quantity = Number(params.data?.quantity) || 0;
+                const unitPrice = Number(params.data?.unitPrice) || 0;
+                const lineDiscountPercentage = Number(params.data?.lineDiscountPercentage) || 0;
+                const gross = quantity * unitPrice;
+                const discount = gross * (lineDiscountPercentage / 100);
+                return Number((gross - discount).toFixed(2));
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Request State",
+            minWidth: 130,
+            flex: 0.8,
+            sortable: false,
+            filter: false,
+            valueGetter: params => Number(params.data?.quantity) || 0,
+            cellRenderer: params => (params.node?.rowPinned ? "" : requestStateMarkup(Number(params.value) || 0))
+        }
+    ];
+}
+
+function buildSalesColumnDefs() {
+    return [
+        { field: "manualVoucherNumber", headerName: "Voucher #", minWidth: 170, flex: 0.95 },
+        { field: "saleId", headerName: "Sale ID", minWidth: 165, flex: 0.95 },
+        {
+            field: "saleDate",
+            headerName: "Sale Date",
+            minWidth: 135,
+            flex: 0.8,
+            valueFormatter: params => formatDate(params.value)
+        },
+        { field: "customerName", headerName: "Customer", minWidth: 210, flex: 1.2 },
+        { field: "store", headerName: "Store", minWidth: 150, flex: 0.85 },
+        { field: "saleType", headerName: "Sale Type", minWidth: 130, flex: 0.75 },
+        {
+            field: "lineItemCount",
+            headerName: "No. Of Products",
+            minWidth: 145,
+            flex: 0.85,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "invoiceTotal",
+            headerName: "Invoice Total",
+            minWidth: 140,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount Paid",
+            minWidth: 140,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "balanceDue",
+            headerName: "Balance Due",
+            minWidth: 140,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "paymentStatus",
+            headerName: "Status",
+            minWidth: 145,
+            flex: 0.8,
+            cellRenderer: params => statusMarkup(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 170,
+            flex: 0.95,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => retailSalesActionMarkup(params.data)
+        }
+    ];
+}
+
+function buildDefaultColDef() {
+    return {
+        sortable: true,
+        filter: true,
+        resizable: true,
+        wrapHeaderText: true,
+        autoHeaderHeight: true,
+        wrapText: true,
+        autoHeight: true
+    };
+}
+
+function getVisibleRows(api) {
+    const rows = [];
+
+    api?.forEachNodeAfterFilterAndSort(node => {
+        if (!node.rowPinned) {
+            rows.push(node.data);
+        }
+    });
+
+    return rows;
+}
+
+function buildWorksheetPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        const quantity = Number(row?.quantity) || 0;
+        const unitPrice = Number(row?.unitPrice) || 0;
+        const lineDiscountPercentage = Number(row?.lineDiscountPercentage) || 0;
+        const gross = quantity * unitPrice;
+        const discount = gross * (lineDiscountPercentage / 100);
+
+        summary.quantity += quantity;
+        summary.lineTotal += gross - discount;
+        return summary;
+    }, {
+        quantity: 0,
+        lineTotal: 0
+    });
+
+    return [{
+        productName: "Totals",
+        quantity: totals.quantity,
+        lineTotal: Number(totals.lineTotal.toFixed(2))
+    }];
+}
+
+function buildSalesPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        summary.lineItemCount += Number(row?.lineItemCount) || 0;
+        summary.invoiceTotal += Number(row?.invoiceTotal) || 0;
+        summary.amountPaid += Number(row?.amountPaid) || 0;
+        summary.balanceDue += Number(row?.balanceDue) || 0;
+        return summary;
+    }, {
+        lineItemCount: 0,
+        invoiceTotal: 0,
+        amountPaid: 0,
+        balanceDue: 0
+    });
+
+    return [{
+        manualVoucherNumber: "Totals",
+        lineItemCount: totals.lineItemCount,
+        invoiceTotal: Number(totals.invoiceTotal.toFixed(2)),
+        amountPaid: Number(totals.amountPaid.toFixed(2)),
+        balanceDue: Number(totals.balanceDue.toFixed(2))
+    }];
+}
+
+function refreshWorksheetPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildWorksheetPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshSalesPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildSalesPinnedBottomRow(getVisibleRows(api)));
+}
+
+export function initializeRetailWorksheetGrid(gridElement, onRowsChanged) {
+    if (!gridElement) return retailWorksheetGridApi;
+
+    if (retailWorksheetGridApi && retailWorksheetGridElement !== gridElement) {
+        retailWorksheetGridApi.destroy();
+        retailWorksheetGridApi = null;
+        retailWorksheetGridElement = null;
+    }
+
+    if (retailWorksheetGridApi) return retailWorksheetGridApi;
+
+    retailWorksheetGridApi = createGrid(gridElement, {
+        columnDefs: buildWorksheetColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        onCellValueChanged: () => {
+            refreshWorksheetPinnedBottomRow(retailWorksheetGridApi);
+            onRowsChanged?.(getRetailWorksheetGridRows());
+        },
+        onFilterChanged: () => refreshWorksheetPinnedBottomRow(retailWorksheetGridApi)
+    });
+
+    retailWorksheetGridElement = gridElement;
+    return retailWorksheetGridApi;
+}
+
+export function refreshRetailWorksheetGrid(rows) {
+    if (!retailWorksheetGridApi) return;
+    retailWorksheetGridApi.setGridOption("rowData", rows);
+    refreshWorksheetPinnedBottomRow(retailWorksheetGridApi);
+}
+
+export function updateRetailWorksheetGridSearch(searchTerm) {
+    retailWorksheetGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function getRetailWorksheetGridRows() {
+    if (!retailWorksheetGridApi) return [];
+
+    const rows = [];
+    retailWorksheetGridApi.forEachNode(node => {
+        if (!node.rowPinned) {
+            rows.push(node.data);
+        }
+    });
+
+    return rows;
+}
+
+export function initializeRetailSalesGrid(gridElement, onFilteredCountChange) {
+    if (!gridElement) return retailSalesGridApi;
+
+    if (retailSalesGridApi && retailSalesGridElement !== gridElement) {
+        retailSalesGridApi.destroy();
+        retailSalesGridApi = null;
+        retailSalesGridElement = null;
+    }
+
+    if (retailSalesGridApi) return retailSalesGridApi;
+
+    retailSalesGridApi = createGrid(gridElement, {
+        columnDefs: buildSalesColumnDefs(),
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 25,
+        paginationPageSizeSelector: [10, 25, 50, 100],
+        defaultColDef: buildDefaultColDef(),
+        onFilterChanged: () => {
+            refreshSalesPinnedBottomRow(retailSalesGridApi);
+
+            let count = 0;
+            retailSalesGridApi.forEachNodeAfterFilter(node => {
+                if (!node.rowPinned) {
+                    count += 1;
+                }
+            });
+
+            onFilteredCountChange?.(count);
+        }
+    });
+
+    retailSalesGridElement = gridElement;
+    return retailSalesGridApi;
+}
+
+export function refreshRetailSalesGrid(rows) {
+    if (!retailSalesGridApi) return;
+    retailSalesGridApi.setGridOption("rowData", rows);
+    refreshSalesPinnedBottomRow(retailSalesGridApi);
+}
+
+export function updateRetailSalesGridSearch(searchTerm) {
+    retailSalesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
