@@ -40,23 +40,23 @@ function renderForm(snapshot) {
             <div class="panel-body">
                 <form id="supplier-form">
                     <input type="hidden" id="supplier-doc-id" value="${editingSupplier?.id || ""}">
-                    <div class="form-grid">
-                        <div class="field">
-                            <label for="supplier-name">Supplier Name</label>
-                            <input id="supplier-name" class="input" type="text" value="${editingSupplier?.supplierName || ""}" required>
-                        </div>
-                        <div class="field">
-                            <label for="supplier-contact-number">Contact Number</label>
-                            <input id="supplier-contact-number" class="input" type="tel" value="${editingSupplier?.contactNo || ""}" required>
-                        </div>
-                        <div class="field">
-                            <label for="supplier-contact-email">Contact Email</label>
-                            <input id="supplier-contact-email" class="input" type="email" value="${editingSupplier?.contactEmail || ""}" required>
-                        </div>
-                        <div class="field field-wide">
-                            <label for="supplier-address">Address</label>
-                            <textarea id="supplier-address" class="textarea" required>${editingSupplier?.address || ""}</textarea>
-                        </div>
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="supplier-name">Supplier Name <span class="required-mark" aria-hidden="true">*</span></label>
+                                <input id="supplier-name" class="input" type="text" value="${editingSupplier?.supplierName || ""}" required>
+                            </div>
+                            <div class="field">
+                                <label for="supplier-contact-number">Contact Number <span class="required-mark" aria-hidden="true">*</span></label>
+                                <input id="supplier-contact-number" class="input" type="tel" value="${editingSupplier?.contactNo || ""}" required>
+                            </div>
+                            <div class="field">
+                                <label for="supplier-contact-email">Contact Email <span class="required-mark" aria-hidden="true">*</span></label>
+                                <input id="supplier-contact-email" class="input" type="email" value="${editingSupplier?.contactEmail || ""}" required>
+                            </div>
+                            <div class="field field-wide">
+                                <label for="supplier-address">Address <span class="required-mark" aria-hidden="true">*</span></label>
+                                <textarea id="supplier-address" class="textarea" required>${editingSupplier?.address || ""}</textarea>
+                            </div>
                         <div class="field">
                             <label for="supplier-credit-term">Credit Term</label>
                             <input id="supplier-credit-term" class="input" type="text" value="${editingSupplier?.creditTerm || ""}" placeholder="Net 30">

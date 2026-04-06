@@ -101,13 +101,13 @@ function renderAccessForm(snapshot) {
                             <input id="user-access-uid" class="input" type="text" value="${editingUser?.id || ""}" placeholder="User id" readonly>
                         </div>
                         <div class="field">
-                            <label for="user-access-role">Role</label>
+                            <label for="user-access-role">Role <span class="required-mark" aria-hidden="true">*</span></label>
                             <select id="user-access-role" class="select" ${isEditing ? "" : "disabled"}>
                                 ${renderRoleOptions(editingUser?.role || "guest")}
                             </select>
                         </div>
                         <div class="field">
-                            <label for="user-access-status">Account Status</label>
+                            <label for="user-access-status">Account Status <span class="required-mark" aria-hidden="true">*</span></label>
                             <select id="user-access-status" class="select" ${isEditing ? "" : "disabled"}>
                                 <option value="active" ${(editingUser?.isActive !== false) ? "selected" : ""}>Active</option>
                                 <option value="inactive" ${editingUser?.isActive === false ? "selected" : ""}>Inactive</option>

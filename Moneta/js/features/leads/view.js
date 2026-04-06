@@ -105,13 +105,12 @@ function buildLeadGridRows() {
 function getRequestedSummary() {
     const rows = getLeadRequestedProductsGridRows();
     const requestedProducts = rows.filter(row => (Number(row.requestedQty) || 0) > 0);
-    const requestedItemCount = requestedProducts.reduce((sum, row) => sum + (Number(row.requestedQty) || 0), 0);
     const requestedValue = requestedProducts.reduce((sum, row) => {
         return sum + ((Number(row.requestedQty) || 0) * (Number(row.sellingPrice) || 0));
     }, 0);
 
     return {
-        requestedItemCount,
+        requestedProductCount: requestedProducts.length,
         requestedValue: Number(requestedValue.toFixed(2))
     };
 }
@@ -122,11 +121,11 @@ function updateRequestedSummary() {
     const valueNode = document.getElementById("lead-requested-value");
 
     if (countNode) {
-        countNode.textContent = `${summary.requestedItemCount} requested`;
+        countNode.textContent = `Total Products: ${summary.requestedProductCount}`;
     }
 
     if (valueNode) {
-        valueNode.textContent = formatCurrency(summary.requestedValue);
+        valueNode.textContent = `Total Value: ${formatCurrency(summary.requestedValue)}`;
     }
 }
 
@@ -185,12 +184,12 @@ function renderLeadForm(snapshot) {
     const convertedCount = featureState.leads.filter(lead => lead.leadStatus === "Converted").length;
     const requestedSummary = editingLead
         ? {
-            requestedItemCount: Number(editingLead.requestedItemCount) || (editingLead.requestedProducts || []).reduce((sum, item) => sum + (Number(item.requestedQty) || 0), 0),
+            requestedProductCount: (editingLead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
             requestedValue: Number(editingLead.requestedValue) || Number((editingLead.requestedProducts || []).reduce((sum, item) => {
                 return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
             }, 0).toFixed(2))
         }
-        : { requestedItemCount: 0, requestedValue: 0 };
+        : { requestedProductCount: 0, requestedValue: 0 };
 
     return `
         <div class="panel-card">
@@ -218,7 +217,7 @@ function renderLeadForm(snapshot) {
                             </div>
                             <div class="lead-form-section-grid">
                                 <div class="field field-full">
-                                    <label for="lead-customer-name">Full Name</label>
+                                    <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
                                     <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
                                 </div>
                                 <div class="field">
@@ -242,7 +241,7 @@ function renderLeadForm(snapshot) {
                             </div>
                             <div class="lead-form-section-grid">
                                 <div class="field">
-                                    <label for="lead-enquiry-date">Enquiry Date</label>
+                                    <label for="lead-enquiry-date">Enquiry Date <span class="required-mark" aria-hidden="true">*</span></label>
                                     <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
                                 </div>
                                 <div class="field">
@@ -254,14 +253,14 @@ function renderLeadForm(snapshot) {
                                     <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk">
                                 </div>
                                 <div class="field">
-                                    <label for="lead-source">Source</label>
+                                    <label for="lead-source">Source <span class="required-mark" aria-hidden="true">*</span></label>
                                     <select id="lead-source" class="select" required>
                                         <option value="">Select source</option>
                                         ${renderSourceOptions(editingLead?.leadSource || "")}
                                     </select>
                                 </div>
                                 <div class="field">
-                                    <label for="lead-status">Status</label>
+                                    <label for="lead-status">Status <span class="required-mark" aria-hidden="true">*</span></label>
                                     <select id="lead-status" class="select" required>
                                         ${renderStatusOptions(editingLead?.leadStatus || "New")}
                                     </select>
@@ -275,7 +274,7 @@ function renderLeadForm(snapshot) {
                             </div>
                             <div class="lead-form-section-grid">
                                 <div class="field field-full">
-                                    <label for="lead-catalogue">Select Sales Catalogue</label>
+                                    <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
                                     <select id="lead-catalogue" class="select" required>
                                         <option value="">Select a catalogue...</option>
                                         ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
@@ -296,8 +295,8 @@ function renderLeadForm(snapshot) {
                             <p class="panel-copy">Only items with quantity greater than zero will be saved with this enquiry.</p>
                         </div>
                         <div class="lead-product-list-meta">
-                            <span id="lead-requested-count" class="status-pill">${requestedSummary.requestedItemCount} requested</span>
-                            <span id="lead-requested-value" class="status-pill">${formatCurrency(requestedSummary.requestedValue)}</span>
+                            <span id="lead-requested-count" class="status-pill">Total Products: ${requestedSummary.requestedProductCount}</span>
+                            <span id="lead-requested-value" class="status-pill">Total Value: ${formatCurrency(requestedSummary.requestedValue)}</span>
                         </div>
                     </div>
                     <div class="toolbar">

@@ -125,5 +125,4 @@ export function resolveRoute() {
 
 export function initializeRouter() {
     window.addEventListener("hashchange", resolveRoute);
-    resolveRoute();
 }

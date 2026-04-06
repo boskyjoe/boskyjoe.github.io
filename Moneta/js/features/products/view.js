@@ -56,11 +56,11 @@ function renderProductsViewShell(snapshot) {
                         <input type="hidden" id="product-doc-id" value="${editingProduct?.id || ""}">
                         <div class="form-grid">
                             <div class="field">
-                                <label for="product-name">Product Name</label>
+                                <label for="product-name">Product Name <span class="required-mark" aria-hidden="true">*</span></label>
                                 <input id="product-name" class="input" type="text" value="${editingProduct?.itemName || ""}" required>
                             </div>
                             <div class="field">
-                                <label for="product-category">Category</label>
+                                <label for="product-category">Category <span class="required-mark" aria-hidden="true">*</span></label>
                                 <select id="product-category" class="select" required>
                                     <option value="">Select category</option>
                                     ${renderCategoryOptions(categories, editingProduct?.categoryId)}

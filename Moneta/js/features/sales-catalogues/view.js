@@ -117,9 +117,9 @@ function renderSalesCatalogueForm(snapshot) {
             <div class="panel-body">
                 <form id="sales-catalogue-form">
                     <input id="sales-catalogue-doc-id" type="hidden" value="${editingCatalogue?.id || ""}">
-                    <div class="form-grid">
+                        <div class="form-grid">
                         <div class="field field-wide">
-                            <label for="sales-catalogue-name">Catalogue Name</label>
+                            <label for="sales-catalogue-name">Catalogue Name <span class="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="sales-catalogue-name"
                                 class="input"
@@ -129,7 +129,7 @@ function renderSalesCatalogueForm(snapshot) {
                                 required>
                         </div>
                         <div class="field">
-                            <label for="sales-catalogue-season">Sales Season</label>
+                            <label for="sales-catalogue-season">Sales Season <span class="required-mark" aria-hidden="true">*</span></label>
                             <select id="sales-catalogue-season" class="select" required>
                                 <option value="">Select season</option>
                                 ${renderSeasonOptions(snapshot.masterData.seasons || [], editingCatalogue?.seasonId)}

@@ -290,7 +290,7 @@ function updatePurchaseDraftPreview() {
     const totalNode = document.getElementById("purchase-summary-total");
 
     if (activeCountNode) {
-        activeCountNode.textContent = `${lineItems.length} active line items`;
+        activeCountNode.textContent = `${lineItems.length} active products`;
     }
 
     if (subtotalNode) subtotalNode.textContent = formatCurrency(summary.itemsSubtotal);
@@ -352,7 +352,7 @@ function renderVoidPaymentPanel() {
 
             <form id="purchase-payment-void-form" class="purchase-payment-void-form">
                 <div class="field field-full">
-                    <label for="purchase-payment-void-reason">Void Reason</label>
+                    <label for="purchase-payment-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
                     <textarea id="purchase-payment-void-reason" class="textarea" placeholder="Explain why this payment is being voided" required>${featureState.paymentVoidReason}</textarea>
                 </div>
                 <p class="panel-copy panel-copy-tight">This action will mark the payment as voided, add a reversal entry, and reopen the invoice balance if needed.</p>
@@ -428,15 +428,15 @@ function renderPaymentModal(snapshot) {
                             <form id="purchase-payment-form" class="purchase-payment-form">
                                 <div class="form-grid">
                                     <div class="field">
-                                        <label for="purchase-payment-date">Payment Date</label>
+                                        <label for="purchase-payment-date">Payment Date <span class="required-mark" aria-hidden="true">*</span></label>
                                         <input id="purchase-payment-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
                                     </div>
                                     <div class="field">
-                                        <label for="purchase-payment-amount">Amount Paid</label>
+                                        <label for="purchase-payment-amount">Amount Paid <span class="required-mark" aria-hidden="true">*</span></label>
                                         <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
                                     </div>
                                     <div class="field">
-                                        <label for="purchase-payment-mode">Payment Mode</label>
+                                        <label for="purchase-payment-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
                                         <select id="purchase-payment-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
                                             <option value="">Select mode</option>
                                             ${renderPaymentModeOptions(paymentModes, featureState.paymentDraft.paymentMode)}
@@ -526,7 +526,7 @@ function renderPurchasesViewShell(snapshot) {
                         <span class="panel-icon panel-icon-alt">${icons.purchases}</span>
                         <div>
                             <h2>${editingInvoice ? "Edit Purchase Invoice" : "Purchase Invoices"}</h2>
-                            <p class="panel-copy">Capture supplier invoices with an AG Grid line-item worksheet built from the active product catalogue.</p>
+                            <p class="panel-copy">Use this module to capture supplier purchase invoices, update inventory, and track invoice payment progress in one place.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
@@ -539,11 +539,11 @@ function renderPurchasesViewShell(snapshot) {
                         <input type="hidden" id="purchase-invoice-doc-id" value="${editingInvoice?.id || ""}">
                         <div class="form-grid">
                             <div class="field">
-                                <label for="purchase-date">Purchase Date</label>
+                                <label for="purchase-date">Purchase Date <span class="required-mark" aria-hidden="true">*</span></label>
                                 <input id="purchase-date" class="input" type="date" value="${toDateInputValue(editingInvoice?.purchaseDate) || toDateInputValue(new Date())}" required>
                             </div>
                             <div class="field">
-                                <label for="purchase-supplier">Supplier</label>
+                                <label for="purchase-supplier">Supplier <span class="required-mark" aria-hidden="true">*</span></label>
                                 <select id="purchase-supplier" class="select" required>
                                     <option value="">Select supplier</option>
                                     ${renderSupplierOptions(suppliers, editingInvoice?.supplierId)}
@@ -554,7 +554,7 @@ function renderPurchasesViewShell(snapshot) {
                                 <input id="supplier-invoice-no" class="input" type="text" value="${editingInvoice?.supplierInvoiceNo || ""}" placeholder="Optional supplier invoice number">
                             </div>
                             <div class="field field-wide">
-                                <label for="purchase-invoice-name">Invoice Name</label>
+                                <label for="purchase-invoice-name">Invoice Name <span class="required-mark" aria-hidden="true">*</span></label>
                                 <input id="purchase-invoice-name" class="input" type="text" value="${editingInvoice?.invoiceName || ""}" placeholder="Stock Purchase - Apr 2026" required>
                             </div>
                         </div>
@@ -564,12 +564,12 @@ function renderPurchasesViewShell(snapshot) {
                                 <div class="panel-title-wrap">
                                     <span class="panel-icon">${icons.catalogue}</span>
                                     <div>
-                                        <h3>Line Items</h3>
-                                        <p class="panel-copy">Search the full active product list and set Qty above 0 to make a row part of the invoice.</p>
+                                        <h3>Product List</h3>
+                                        <p class="panel-copy">Search the full active product list and set Qty above 0 to make a product part of the invoice.</p>
                                     </div>
                                 </div>
                                 <div class="toolbar-meta">
-                                    <span id="purchase-line-items-active-count" class="status-pill">${initialActiveCount} active line items</span>
+                                    <span id="purchase-line-items-active-count" class="status-pill">${initialActiveCount} active products</span>
                                     <div class="search-wrap">
                                         <span class="search-icon">${icons.search}</span>
                                         <input id="purchase-line-items-search" class="input toolbar-search" type="search" placeholder="Search products, ids, or stock" value="${featureState.lineItemSearchTerm}">
@@ -587,7 +587,7 @@ function renderPurchasesViewShell(snapshot) {
                             <div class="purchase-adjustments-header">
                                 <div>
                                     <p class="section-kicker" style="margin-bottom: 0.25rem;">Invoice Adjustments</p>
-                                    <p class="panel-copy">Invoice-level discount and tax are applied after the active AG Grid line items are calculated.</p>
+                                    <p class="panel-copy">Invoice-level discount and tax are applied after the product level items are calculated.</p>
                                 </div>
                             </div>
                             <div class="purchase-adjustments-grid">

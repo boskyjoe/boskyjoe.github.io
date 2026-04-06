@@ -191,6 +191,11 @@ select {
     font-weight: 700;
 }
 
+.required-mark {
+    color: #d92d20;
+    font-weight: 800;
+}
+
 .input,
 .textarea,
 .select {

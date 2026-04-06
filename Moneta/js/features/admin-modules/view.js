@@ -206,9 +206,9 @@ function renderCategoryForm(snapshot) {
             <div class="panel-body">
                 <form id="admin-category-form">
                     <input id="admin-category-doc-id" type="hidden" value="${editingRecord?.id || ""}">
-                    <div class="form-grid">
+                        <div class="form-grid">
                         <div class="field field-wide">
-                            <label for="admin-category-name">Category Name</label>
+                            <label for="admin-category-name">Category Name <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="admin-category-name" class="input" type="text" value="${editingRecord?.categoryName || ""}" placeholder="Breads, Cakes, Seasonal Packs" required>
                         </div>
                     </div>
@@ -248,17 +248,17 @@ function renderSeasonForm(snapshot) {
             <div class="panel-body">
                 <form id="admin-season-form">
                     <input id="admin-season-doc-id" type="hidden" value="${editingRecord?.id || ""}">
-                    <div class="form-grid">
+                        <div class="form-grid">
                         <div class="field field-wide">
-                            <label for="admin-season-name">Season Name</label>
+                            <label for="admin-season-name">Season Name <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="admin-season-name" class="input" type="text" value="${editingRecord?.seasonName || ""}" placeholder="Easter 2026, Christmas 2026" required>
                         </div>
                         <div class="field">
-                            <label for="admin-season-start-date">Start Date</label>
+                            <label for="admin-season-start-date">Start Date <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="admin-season-start-date" class="input" type="date" value="${toDateInputValue(editingRecord?.startDate)}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-season-end-date">End Date</label>
+                            <label for="admin-season-end-date">End Date <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="admin-season-end-date" class="input" type="date" value="${toDateInputValue(editingRecord?.endDate)}" required>
                         </div>
                         <div class="field">
@@ -306,9 +306,9 @@ function renderPaymentModeForm(snapshot) {
             <div class="panel-body">
                 <form id="admin-payment-mode-form">
                     <input id="admin-payment-mode-doc-id" type="hidden" value="${editingRecord?.id || ""}">
-                    <div class="form-grid">
+                        <div class="form-grid">
                         <div class="field field-wide">
-                            <label for="admin-payment-mode-name">Payment Mode</label>
+                            <label for="admin-payment-mode-name">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="admin-payment-mode-name" class="input" type="text" value="${editingRecord?.paymentMode || ""}" placeholder="Cash, UPI, Bank Transfer" required>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import { icons } from "../shared/icons.js";
 function renderSidebarLinks(user) {
     const nav = document.createElement("nav");
     nav.className = "sidebar-nav";
+    const { currentRoute } = getState();
 
     navConfig
         .filter(item => !item.roles || !user || item.roles.includes(user.role))
@@ -20,7 +21,7 @@ function renderSidebarLinks(user) {
 
             const link = document.createElement("a");
             link.href = item.route;
-            link.className = `sidebar-link${window.location.hash === item.route ? " active" : ""}`;
+            link.className = `sidebar-link${currentRoute === item.route ? " active" : ""}`;
             link.innerHTML = `
                 <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.dashboard}</span>
                 <span class="nav-label">${item.label}</span>
