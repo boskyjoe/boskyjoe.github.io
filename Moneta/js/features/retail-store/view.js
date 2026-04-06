@@ -387,96 +387,133 @@ function renderRetailStoreViewShell(snapshot) {
                                     <span class="panel-icon panel-icon-alt">${icons.payment}</span>
                                     <div>
                                         <h3>Invoice Adjustments</h3>
-                                        <p class="panel-copy">Invoice-level discount and tax are applied after the product level items are calculated.</p>
+                                        <p class="panel-copy">Shape the final invoice in a compact finance bar: discount first, then tax, then settlement totals.</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="panel-body">
-                                <div class="purchase-adjustments-grid">
-                                    <div class="field">
-                                        <label for="retail-order-discount-type">Discount Type</label>
-                                        <select id="retail-order-discount-type" class="select">
-                                            ${renderDiscountTypeOptions(featureState.saleDraft.orderDiscountType)}
-                                        </select>
-                                    </div>
-                                    <div class="field">
-                                        <label for="retail-order-discount-percentage">Invoice Discount %</label>
-                                        <input
-                                            id="retail-order-discount-percentage"
-                                            class="input"
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.01"
-                                            value="${featureState.saleDraft.orderDiscountPercentage}"
-                                            ${featureState.saleDraft.orderDiscountType === "Percentage" ? "" : "disabled"}>
-                                    </div>
-                                    <div class="field">
-                                        <label for="retail-order-discount-amount">Invoice Discount Amount</label>
-                                        <input
-                                            id="retail-order-discount-amount"
-                                            class="input"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value="${featureState.saleDraft.orderDiscountAmount}"
-                                            ${featureState.saleDraft.orderDiscountType === "Fixed" ? "" : "disabled"}>
-                                    </div>
-                                    <div class="field">
-                                        <label for="retail-order-tax-percentage">Invoice Tax %</label>
-                                        <input
-                                            id="retail-order-tax-percentage"
-                                            class="input"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value="${featureState.saleDraft.orderTaxPercentage}">
-                                    </div>
-                                </div>
+                                <div class="retail-finance-bar">
+                                    <section class="retail-finance-section">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Discounting</p>
+                                            <p class="panel-copy">Choose the discount method and apply either a percentage or a fixed invoice amount.</p>
+                                        </div>
+                                        <div class="retail-finance-fields retail-finance-fields-discount">
+                                            <div class="field">
+                                                <label for="retail-order-discount-type">Discount Type</label>
+                                                <select id="retail-order-discount-type" class="select">
+                                                    ${renderDiscountTypeOptions(featureState.saleDraft.orderDiscountType)}
+                                                </select>
+                                            </div>
+                                            <div class="field">
+                                                <label for="retail-order-discount-percentage">Invoice Discount %</label>
+                                                <input
+                                                    id="retail-order-discount-percentage"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderDiscountPercentage}"
+                                                    ${featureState.saleDraft.orderDiscountType === "Percentage" ? "" : "disabled"}>
+                                            </div>
+                                            <div class="field">
+                                                <label for="retail-order-discount-amount">Invoice Discount Amount</label>
+                                                <input
+                                                    id="retail-order-discount-amount"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderDiscountAmount}"
+                                                    ${featureState.saleDraft.orderDiscountType === "Fixed" ? "" : "disabled"}>
+                                            </div>
+                                        </div>
+                                        <div class="retail-finance-chip-row">
+                                            <article class="retail-finance-chip">
+                                                <span>Line Discount</span>
+                                                <strong>${formatCurrency(summary.totalLineDiscount)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Invoice Discount</span>
+                                                <strong>${formatCurrency(summary.orderDiscountAmount)}</strong>
+                                            </article>
+                                        </div>
+                                    </section>
 
-                                <div class="purchase-summary-grid">
-                                    <article class="summary-card">
-                                        <p class="summary-label">Subtotal</p>
-                                        <p class="summary-value">${formatCurrency(summary.itemsSubtotal)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Line Discount</p>
-                                        <p class="summary-value">${formatCurrency(summary.totalLineDiscount)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Invoice Discount</p>
-                                        <p class="summary-value">${formatCurrency(summary.orderDiscountAmount)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Item Tax</p>
-                                        <p class="summary-value">${formatCurrency(summary.totalItemLevelTax)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Order Tax</p>
-                                        <p class="summary-value">${formatCurrency(summary.orderLevelTaxAmount)}</p>
-                                    </article>
-                                </div>
-                                <div class="retail-summary-grid">
-                                    <article class="summary-card retail-summary-card-strong">
-                                        <p class="summary-label">Grand Total</p>
-                                        <p class="summary-value">${formatCurrency(summary.grandTotal)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Total Tax</p>
-                                        <p class="summary-value">${formatCurrency(summary.totalTax)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Applied Payment</p>
-                                        <p class="summary-value">${formatCurrency(summary.appliedPayment)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Balance Due</p>
-                                        <p class="summary-value">${formatCurrency(summary.balanceDue)}</p>
-                                    </article>
-                                    <article class="summary-card">
-                                        <p class="summary-label">Payment Status</p>
-                                        <p class="summary-value retail-summary-status">${paymentStatus}</p>
-                                    </article>
+                                    <section class="retail-finance-section">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Tax</p>
+                                            <p class="panel-copy">Product-level CGST and SGST flow in from the worksheet. Use invoice tax for any order-level adjustment.</p>
+                                        </div>
+                                        <div class="retail-finance-fields retail-finance-fields-tax">
+                                            <div class="field">
+                                                <label for="retail-order-tax-percentage">Invoice Tax %</label>
+                                                <input
+                                                    id="retail-order-tax-percentage"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderTaxPercentage}">
+                                            </div>
+                                        </div>
+                                        <div class="retail-finance-chip-row">
+                                            <article class="retail-finance-chip">
+                                                <span>CGST</span>
+                                                <strong>${formatCurrency(summary.totalCGST)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>SGST</span>
+                                                <strong>${formatCurrency(summary.totalSGST)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Item Tax</span>
+                                                <strong>${formatCurrency(summary.totalItemLevelTax)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Order Tax</span>
+                                                <strong>${formatCurrency(summary.orderLevelTaxAmount)}</strong>
+                                            </article>
+                                        </div>
+                                    </section>
+
+                                    <aside class="retail-finance-totals">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Totals</p>
+                                            <p class="panel-copy">Review the final invoice picture before saving the sale.</p>
+                                        </div>
+                                        <div class="retail-finance-total-list">
+                                            <div class="retail-finance-total-row">
+                                                <span>Subtotal</span>
+                                                <strong>${formatCurrency(summary.itemsSubtotal)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>After Discounts</span>
+                                                <strong>${formatCurrency(summary.finalTaxableAmount)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Total Tax</span>
+                                                <strong>${formatCurrency(summary.totalTax)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Applied Payment</span>
+                                                <strong>${formatCurrency(summary.appliedPayment)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row retail-finance-total-row-strong">
+                                                <span>Grand Total</span>
+                                                <strong>${formatCurrency(summary.grandTotal)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Balance Due</span>
+                                                <strong>${formatCurrency(summary.balanceDue)}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="retail-finance-status-row">
+                                            <span class="summary-label">Payment Status</span>
+                                            <span class="summary-value retail-summary-status">${paymentStatus}</span>
+                                        </div>
+                                    </aside>
                                 </div>
                             </div>
                         </div>
