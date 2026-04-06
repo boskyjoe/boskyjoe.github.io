@@ -827,6 +827,10 @@ async function handlePurchaseFormSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Purchase invoice save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error.message || "Could not save the purchase invoice.", "error", {
+            title: "Stock Purchase"
+        });
     }
 }
 
@@ -885,6 +889,10 @@ async function handlePurchasePaymentSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Purchase payment save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error.message || "Could not record the supplier payment.", "error", {
+            title: "Stock Purchase"
+        });
     }
 }
 
@@ -954,6 +962,10 @@ async function handlePurchasePaymentVoidSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Purchase payment void failed:", error);
+        ProgressToast.hide(0);
+        showToast(error.message || "Could not void the supplier payment.", "error", {
+            title: "Stock Purchase"
+        });
     }
 }
 
@@ -1031,6 +1043,10 @@ async function handlePurchaseInvoiceVoidSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Purchase invoice void failed:", error);
+        ProgressToast.hide(0);
+        showToast(error.message || "Could not void the purchase invoice.", "error", {
+            title: "Stock Purchase"
+        });
     }
 }
 
