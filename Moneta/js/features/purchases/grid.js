@@ -35,16 +35,27 @@ function paymentStatusMarkup(value) {
 }
 
 function invoiceActionMarkup(data) {
+    const invoiceStatus = data?.invoiceStatus || data?.paymentStatus || "Unpaid";
+    const isVoided = invoiceStatus === "Voided";
+
     return `
         <div class="table-actions">
-            <button class="button grid-action-button grid-action-button-primary purchase-payments-button" type="button" data-invoice-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-primary purchase-payments-button" type="button" data-invoice-id="${data.id}" ${isVoided ? "disabled" : ""}>
                 <span class="button-icon">${icons.payment}</span>
                 Payments
             </button>
-            <button class="button grid-action-button grid-action-button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}" ${isVoided ? "disabled" : ""}>
                 <span class="button-icon">${icons.edit}</span>
                 Edit
             </button>
+            ${isVoided ? `
+                <span class="grid-action-muted">Voided</span>
+            ` : `
+                <button class="button grid-action-button grid-action-button-danger purchase-void-button" type="button" data-invoice-id="${data.id}">
+                    <span class="button-icon">${icons.inactive}</span>
+                    Void
+                </button>
+            `}
         </div>
     `;
 }

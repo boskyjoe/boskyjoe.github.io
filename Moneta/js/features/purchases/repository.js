@@ -104,6 +104,12 @@ export async function updatePurchaseInvoiceRecord(docId, invoiceData, user) {
         }
 
         const existingInvoice = existingInvoiceDoc.data();
+        const existingStatus = existingInvoice.invoiceStatus || existingInvoice.paymentStatus || "Unpaid";
+
+        if (existingStatus === "Voided") {
+            throw new Error("Voided purchase invoices cannot be edited.");
+        }
+
         const inventoryDelta = new Map();
 
         (existingInvoice.lineItems || []).forEach(item => {
@@ -322,5 +328,128 @@ export async function voidPurchaseInvoicePayment(paymentId, voidReason, user) {
             "audit.updatedBy": user.email,
             "audit.updatedOn": now
         });
+    });
+}
+
+export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) {
+    const db = getDb();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const invoiceRef = db.collection(COLLECTIONS.purchaseInvoices).doc(invoiceDocId);
+
+    return db.runTransaction(async transaction => {
+        const invoiceDoc = await transaction.get(invoiceRef);
+
+        if (!invoiceDoc.exists) {
+            throw new Error("The purchase invoice could not be found.");
+        }
+
+        const invoice = invoiceDoc.data();
+        const currentStatus = invoice.invoiceStatus || invoice.paymentStatus || "Unpaid";
+
+        if (currentStatus === "Voided" || invoice.paymentStatus === "Voided") {
+            throw new Error("This purchase invoice has already been voided.");
+        }
+
+        const paymentQuery = db
+            .collection(COLLECTIONS.supplierPaymentsLedger)
+            .where("relatedInvoiceId", "==", invoiceDocId);
+        const paymentSnapshot = await transaction.get(paymentQuery);
+        const activePayments = paymentSnapshot.docs.filter(doc => {
+            const data = doc.data();
+            const status = data.paymentStatus || data.status || "Verified";
+            return !data.isReversalEntry && status !== "Voided" && roundCurrency(data.amountPaid) > 0;
+        });
+
+        let voidedPaymentCount = 0;
+        let voidedPaymentAmount = 0;
+
+        activePayments.forEach(paymentDoc => {
+            const originalPayment = paymentDoc.data();
+            const paymentStatus = originalPayment.paymentStatus || originalPayment.status || "Verified";
+            const voidedAmount = roundCurrency(originalPayment.amountPaid);
+            const reversalPaymentRef = db.collection(COLLECTIONS.supplierPaymentsLedger).doc();
+
+            transaction.update(paymentDoc.ref, {
+                paymentStatus: "Voided",
+                status: "Voided",
+                voidedBy: user.email,
+                voidedOn: now,
+                voidReason,
+                voidContext: "Invoice Void",
+                originalStatus: paymentStatus,
+                "audit.updatedBy": user.email,
+                "audit.updatedOn": now
+            });
+
+            transaction.set(reversalPaymentRef, {
+                paymentId: buildVoidReversalPaymentId(originalPayment.paymentId || paymentDoc.id),
+                relatedInvoiceId: invoiceDocId,
+                relatedInvoiceNumber: invoice.invoiceId || originalPayment.relatedInvoiceNumber || "",
+                invoiceName: invoice.invoiceName || originalPayment.invoiceName || "",
+                supplierId: invoice.supplierId || originalPayment.supplierId || "",
+                supplierName: invoice.supplierName || originalPayment.supplierName || "",
+                amountPaid: -voidedAmount,
+                paymentDate: now,
+                paymentMode: "VOID_REVERSAL",
+                transactionRef: `Invoice void reversal of ${originalPayment.transactionRef || originalPayment.paymentId || paymentDoc.id}`,
+                notes: `Reversed during invoice void ${invoice.invoiceId || invoiceDocId}. Reason: ${voidReason}`,
+                paymentStatus: "Void Reversal",
+                status: "Void Reversal",
+                originalPaymentId: paymentDoc.id,
+                isReversalEntry: true,
+                recordedBy: user.email,
+                recordedOn: now,
+                voidedBy: user.email,
+                voidReason,
+                audit: {
+                    createdBy: user.email,
+                    createdOn: now,
+                    context: "Supplier payment reversal during invoice void"
+                }
+            });
+
+            voidedPaymentCount += 1;
+            voidedPaymentAmount += voidedAmount;
+        });
+
+        const lineItems = invoice.lineItems || [];
+        let reversedQuantity = 0;
+
+        lineItems.forEach(item => {
+            const quantity = Number(item.quantity) || 0;
+            reversedQuantity += quantity;
+
+            if (!item.masterProductId || quantity === 0) return;
+
+            const productRef = db.collection(COLLECTIONS.products).doc(item.masterProductId);
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-quantity)
+            });
+        });
+
+        transaction.update(invoiceRef, {
+            invoiceStatus: "Voided",
+            paymentStatus: "Voided",
+            amountPaid: 0,
+            balanceDue: 0,
+            voidReason,
+            voidedBy: user.email,
+            voidedOn: now,
+            voidedPaymentCount,
+            voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            inventoryReversalSummary: {
+                reversedProductCount: lineItems.length,
+                reversedQuantity
+            },
+            "audit.updatedBy": user.email,
+            "audit.updatedOn": now
+        });
+
+        return {
+            voidedPaymentCount,
+            voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            reversedProductCount: lineItems.length,
+            reversedQuantity
+        };
     });
 }

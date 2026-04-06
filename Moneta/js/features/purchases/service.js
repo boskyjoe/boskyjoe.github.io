@@ -1,6 +1,7 @@
 import {
     createPurchaseInvoiceRecord,
     recordPurchaseInvoicePayment,
+    voidPurchaseInvoiceRecord,
     voidPurchaseInvoicePayment,
     updatePurchaseInvoiceRecord
 } from "./repository.js";
@@ -240,9 +241,14 @@ export function validatePurchasePaymentPayload(payload, invoice, masterData) {
     const amountPaid = roundCurrency(normalizeNumber(payload.amountPaid));
     const balanceDue = roundCurrency(normalizeNumber(invoice.balanceDue, normalizeNumber(invoice.invoiceTotal)));
     const paymentModes = (masterData.paymentModes || []).filter(mode => mode.isActive);
+    const invoiceStatus = normalizeText(invoice.invoiceStatus || invoice.paymentStatus);
 
     if (!paymentDateInput) {
         throw new Error("Payment date is required.");
+    }
+
+    if (invoiceStatus === "Voided") {
+        throw new Error("Voided purchase invoices cannot accept payments.");
     }
 
     if (Number.isNaN(new Date(`${paymentDateInput}T00:00:00`).getTime())) {
@@ -335,4 +341,41 @@ export async function voidPurchasePayment(payment, reason, user) {
     await voidPurchaseInvoicePayment(payment.id, validatedReason, user);
 
     return { reason: validatedReason };
+}
+
+export function validatePurchaseInvoiceVoidPayload(invoice, reason) {
+    if (!invoice) {
+        throw new Error("Choose a purchase invoice before trying to void it.");
+    }
+
+    const trimmedReason = normalizeText(reason);
+    const invoiceStatus = normalizeText(invoice.invoiceStatus || invoice.paymentStatus || "Unpaid");
+
+    if (invoiceStatus === "Voided") {
+        throw new Error("This purchase invoice has already been voided.");
+    }
+
+    if (!trimmedReason) {
+        throw new Error("A void reason is required.");
+    }
+
+    if (trimmedReason.length < 8) {
+        throw new Error("Please enter a more descriptive void reason.");
+    }
+
+    return trimmedReason;
+}
+
+export async function voidPurchaseInvoice(invoice, reason, user) {
+    if (!user) {
+        throw new Error("You must be logged in to void a purchase invoice.");
+    }
+
+    const validatedReason = validatePurchaseInvoiceVoidPayload(invoice, reason);
+    const result = await voidPurchaseInvoiceRecord(invoice.id, validatedReason, user);
+
+    return {
+        reason: validatedReason,
+        ...result
+    };
 }

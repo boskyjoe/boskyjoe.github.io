@@ -12,6 +12,7 @@ import {
     calculatePurchaseDraftSummary,
     savePurchaseInvoice,
     savePurchasePayment,
+    voidPurchaseInvoice,
     voidPurchasePayment
 } from "./service.js";
 import {
@@ -34,6 +35,8 @@ const featureState = {
     paymentDraft: createDefaultPaymentDraft(),
     voidingPaymentId: null,
     paymentVoidReason: "",
+    voidingInvoiceId: null,
+    invoiceVoidReason: "",
     paymentListenerInvoiceId: null,
     searchTerm: "",
     lineItemSearchTerm: "",
@@ -118,6 +121,11 @@ function getVoidingPayment() {
     return featureState.payments.find(payment => payment.id === featureState.voidingPaymentId) || null;
 }
 
+function getVoidingInvoice() {
+    if (!featureState.voidingInvoiceId) return null;
+    return featureState.invoices.find(invoice => invoice.id === featureState.voidingInvoiceId) || null;
+}
+
 function resetPaymentDraft(invoice = getPaymentInvoice(), options = {}) {
     featureState.paymentDraft = createDefaultPaymentDraft(invoice, options);
 }
@@ -125,6 +133,11 @@ function resetPaymentDraft(invoice = getPaymentInvoice(), options = {}) {
 function resetPaymentVoidState() {
     featureState.voidingPaymentId = null;
     featureState.paymentVoidReason = "";
+}
+
+function resetInvoiceVoidState() {
+    featureState.voidingInvoiceId = null;
+    featureState.invoiceVoidReason = "";
 }
 
 function detachPaymentListener(options = {}) {
@@ -363,6 +376,61 @@ function renderVoidPaymentPanel() {
                     </button>
                     <button class="button grid-action-button grid-action-button-danger" type="submit">
                         Void Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+function renderVoidInvoicePanel() {
+    const invoice = getVoidingInvoice();
+    if (!invoice) return "";
+
+    return `
+        <div class="purchase-payment-void-panel purchase-invoice-void-panel">
+            <div class="purchase-payment-void-header">
+                <div>
+                    <p class="section-kicker">Void Purchase Invoice</p>
+                    <p class="panel-copy">Void this supplier invoice, reverse any active linked payments, and roll stock back out of inventory while keeping the audit trail.</p>
+                </div>
+                <div class="toolbar-meta">
+                    ${getStatusMarkup(invoice.invoiceStatus || invoice.paymentStatus || "Unpaid", "Unpaid")}
+                </div>
+            </div>
+
+            <div class="purchase-payment-void-summary">
+                <article class="summary-card">
+                    <p class="summary-label">Invoice</p>
+                    <p class="summary-value payment-summary-copy">${invoice.invoiceId || invoice.invoiceName || "-"}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Supplier</p>
+                    <p class="summary-value payment-summary-copy">${invoice.supplierName || "-"}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Invoice Total</p>
+                    <p class="summary-value">${formatCurrency(invoice.invoiceTotal || 0)}</p>
+                </article>
+                <article class="summary-card">
+                    <p class="summary-label">Paid So Far</p>
+                    <p class="summary-value">${formatCurrency(invoice.amountPaid || 0)}</p>
+                </article>
+            </div>
+
+            <form id="purchase-invoice-void-form" class="purchase-payment-void-form">
+                <div class="field field-full">
+                    <label for="purchase-invoice-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                    <textarea id="purchase-invoice-void-reason" class="textarea" placeholder="Explain why this invoice is being voided" required>${featureState.invoiceVoidReason}</textarea>
+                </div>
+                <p class="panel-copy panel-copy-tight">This action cannot be undone. Moneta will void any active linked payments, reverse the stock quantities from inventory, and keep the invoice in history as voided.</p>
+                <div class="form-actions">
+                    <button id="purchase-invoice-void-cancel-button" class="button button-secondary" type="button">
+                        <span class="button-icon">${icons.inactive}</span>
+                        Cancel
+                    </button>
+                    <button class="button grid-action-button grid-action-button-danger" type="submit">
+                        Void Invoice
                     </button>
                 </div>
             </form>
@@ -675,6 +743,7 @@ function renderPurchasesViewShell(snapshot) {
                     <div class="ag-shell">
                         <div id="purchases-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
                     </div>
+                    ${renderVoidInvoicePanel()}
                 </div>
             </div>
 
@@ -874,6 +943,83 @@ async function handlePurchasePaymentVoidSubmit(event) {
     }
 }
 
+async function handlePurchaseInvoiceVoidSubmit(event) {
+    event.preventDefault();
+
+    const invoice = getVoidingInvoice();
+    if (!invoice) {
+        showToast("Choose an invoice before trying to void it.", "error");
+        return;
+    }
+
+    const confirmed = await showConfirmationModal({
+        title: "Void Purchase Invoice",
+        message: `Void invoice ${invoice.invoiceId || invoice.invoiceName || invoice.id}?`,
+        details: [
+            { label: "Supplier", value: invoice.supplierName || "-" },
+            { label: "Invoice Total", value: formatCurrency(invoice.invoiceTotal || 0) },
+            { label: "Paid So Far", value: formatCurrency(invoice.amountPaid || 0) }
+        ],
+        note: "This action cannot be undone. Moneta will void all active linked payments, reverse the stock quantities from inventory, and retain the invoice in history as voided.",
+        confirmText: "Void Invoice",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const result = await runProgressToastFlow({
+            title: "Voiding Purchase Invoice",
+            theme: "warning",
+            initialMessage: "Reading the invoice, linked payments, and stock impact...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Purchase Invoice Voided",
+            successMessage: `Invoice ${invoice.invoiceId || invoice.invoiceName || invoice.id} was voided successfully.`
+        }, async ({ update }) => {
+            update("Validating the void reason and reversal eligibility...", 36, "Step 2 of 5");
+
+            update("Voiding linked payments and reversing inventory impact...", 72, "Step 3 of 5");
+
+            const result = await voidPurchaseInvoice(
+                invoice,
+                document.getElementById("purchase-invoice-void-reason")?.value || featureState.invoiceVoidReason,
+                getState().currentUser
+            );
+
+            update("Refreshing invoice history, balances, and product stock...", 88, "Step 4 of 5");
+            resetInvoiceVoidState();
+
+            if (featureState.paymentInvoiceId === invoice.id) {
+                handlePaymentWorkspaceClose();
+            } else {
+                renderPurchasesView();
+            }
+
+            update("Invoice reversal audit trail is now in place.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(`Invoice ${invoice.invoiceId || invoice.invoiceName || invoice.id} was voided successfully.`, "success", {
+            title: "Stock Purchase"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Purchase Invoice Voided",
+            message: "The invoice was voided, linked payments were reversed, and stock quantities were rolled back successfully.",
+            details: [
+                { label: "Invoice", value: invoice.invoiceId || invoice.invoiceName || "-" },
+                { label: "Supplier", value: invoice.supplierName || "-" },
+                { label: "Payments Voided", value: String(result.voidedPaymentCount || 0) },
+                { label: "Stock Quantity Reversed", value: String(result.reversedQuantity || 0) }
+            ],
+            note: `Total payment reversal: ${formatCurrency(result.voidedPaymentAmount || 0)}`
+        });
+    } catch (error) {
+        console.error("[Moneta] Purchase invoice void failed:", error);
+    }
+}
+
 function handleInvoiceSearch(target) {
     featureState.searchTerm = target.value || "";
     updatePurchasesGridSearch(featureState.searchTerm);
@@ -885,7 +1031,18 @@ function handleLineItemsSearch(target) {
 }
 
 function handleEditInvoice(button) {
-    featureState.editingInvoiceId = button.dataset.invoiceId || null;
+    const invoiceId = button.dataset.invoiceId || null;
+    const invoice = featureState.invoices.find(entry => entry.id === invoiceId);
+
+    if (!invoiceId || !invoice) return;
+
+    if ((invoice.invoiceStatus || invoice.paymentStatus) === "Voided") {
+        showToast("Voided purchase invoices cannot be edited.", "error");
+        return;
+    }
+
+    featureState.editingInvoiceId = invoiceId;
+    resetInvoiceVoidState();
     featureState.lineItemSearchTerm = "";
     renderPurchasesView();
     focusFormField({
@@ -899,10 +1056,16 @@ function handleOpenPaymentWorkspace(button) {
     if (!invoiceId) return;
 
     const invoice = featureState.invoices.find(entry => entry.id === invoiceId);
+    if (!invoice || (invoice.invoiceStatus || invoice.paymentStatus) === "Voided") {
+        showToast("Voided purchase invoices cannot accept payments.", "error");
+        return;
+    }
+
     featureState.paymentInvoiceId = invoiceId;
     featureState.editingInvoiceId = null;
     resetPaymentDraft(invoice);
     resetPaymentVoidState();
+    resetInvoiceVoidState();
     renderPurchasesView();
     document.getElementById("purchase-payment-amount")?.focus();
 }
@@ -915,9 +1078,19 @@ function handlePaymentWorkspaceClose() {
     renderPurchasesView();
 }
 
+function handleOpenVoidInvoice(button) {
+    featureState.voidingInvoiceId = button.dataset.invoiceId || null;
+    featureState.invoiceVoidReason = "";
+    featureState.editingInvoiceId = null;
+    resetPaymentVoidState();
+    renderPurchasesView();
+    document.getElementById("purchase-invoice-void-reason")?.focus();
+}
+
 function handleOpenVoidPayment(button) {
     featureState.voidingPaymentId = button.dataset.paymentId || null;
     featureState.paymentVoidReason = "";
+    resetInvoiceVoidState();
     renderPurchasesView();
     document.getElementById("purchase-payment-void-reason")?.focus();
 }
@@ -944,6 +1117,11 @@ function updatePaymentVoidField(target) {
     featureState.paymentVoidReason = target.value;
 }
 
+function updateInvoiceVoidField(target) {
+    if (target?.id !== "purchase-invoice-void-reason") return;
+    featureState.invoiceVoidReason = target.value;
+}
+
 function bindPurchasesDomEvents() {
     const root = document.getElementById("purchases-root");
     if (!root || root.dataset.bound === "true") return;
@@ -961,6 +1139,11 @@ function bindPurchasesDomEvents() {
 
         if (event.target.id === "purchase-payment-void-form") {
             handlePurchasePaymentVoidSubmit(event);
+            return;
+        }
+
+        if (event.target.id === "purchase-invoice-void-form") {
+            handlePurchaseInvoiceVoidSubmit(event);
         }
     });
 
@@ -989,6 +1172,7 @@ function bindPurchasesDomEvents() {
         updatePaymentDraftField(target);
         updatePaymentDraftPreview();
         updatePaymentVoidField(target);
+        updateInvoiceVoidField(target);
     });
 
     root.addEventListener("change", event => {
@@ -1005,16 +1189,19 @@ function bindPurchasesDomEvents() {
         updatePaymentDraftField(target);
         updatePaymentDraftPreview();
         updatePaymentVoidField(target);
+        updateInvoiceVoidField(target);
     });
 
     root.addEventListener("click", event => {
         const target = event.target;
         const editButton = target.closest(".purchase-edit-button");
         const paymentsButton = target.closest(".purchase-payments-button");
+        const voidInvoiceButton = target.closest(".purchase-void-button");
         const voidPaymentButton = target.closest(".purchase-payment-void-button");
         const cancelButton = target.closest("#purchase-cancel-button");
         const closePaymentsButton = target.closest("#purchase-payments-close-button");
         const cancelVoidButton = target.closest("#purchase-payment-void-cancel-button");
+        const cancelInvoiceVoidButton = target.closest("#purchase-invoice-void-cancel-button");
         const paymentModal = target.closest("#purchase-payment-modal");
 
         if (editButton) {
@@ -1024,6 +1211,11 @@ function bindPurchasesDomEvents() {
 
         if (paymentsButton) {
             handleOpenPaymentWorkspace(paymentsButton);
+            return;
+        }
+
+        if (voidInvoiceButton) {
+            handleOpenVoidInvoice(voidInvoiceButton);
             return;
         }
 
@@ -1050,6 +1242,12 @@ function bindPurchasesDomEvents() {
             return;
         }
 
+        if (cancelInvoiceVoidButton) {
+            resetInvoiceVoidState();
+            renderPurchasesView();
+            return;
+        }
+
         if (target.id === "purchase-payment-modal" && paymentModal) {
             handlePaymentWorkspaceClose();
         }
@@ -1066,16 +1264,28 @@ function ensureInvoiceListener(snapshot) {
             invoices => {
                 featureState.invoices = invoices;
                 featureState.filteredInvoiceCount = invoices.length;
+                const voidingInvoice = getVoidingInvoice();
+                const editingInvoice = getEditingInvoice();
 
-                if (featureState.editingInvoiceId && !invoices.some(invoice => invoice.id === featureState.editingInvoiceId)) {
+                if (
+                    featureState.editingInvoiceId &&
+                    (!editingInvoice || (editingInvoice.invoiceStatus || editingInvoice.paymentStatus) === "Voided")
+                ) {
                     featureState.editingInvoiceId = null;
                 }
 
-                if (featureState.paymentInvoiceId && !invoices.some(invoice => invoice.id === featureState.paymentInvoiceId)) {
+                if (
+                    featureState.paymentInvoiceId &&
+                    !invoices.some(invoice => invoice.id === featureState.paymentInvoiceId && (invoice.invoiceStatus || invoice.paymentStatus) !== "Voided")
+                ) {
                     featureState.paymentInvoiceId = null;
                     resetPaymentDraft(null, { prefillAmount: false });
                     resetPaymentVoidState();
                     detachPaymentListener();
+                }
+
+                if (featureState.voidingInvoiceId && (!voidingInvoice || (voidingInvoice.invoiceStatus || voidingInvoice.paymentStatus) === "Voided")) {
+                    resetInvoiceVoidState();
                 }
 
                 if (getState().currentRoute === "#/purchases") {
@@ -1097,6 +1307,7 @@ function ensureInvoiceListener(snapshot) {
         featureState.paymentInvoiceId = null;
         resetPaymentDraft(null, { prefillAmount: false });
         resetPaymentVoidState();
+        resetInvoiceVoidState();
         detachPaymentListener();
     }
 }
