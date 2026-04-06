@@ -1184,32 +1184,26 @@ select {
     background: var(--bg-panel);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    padding: 1.4rem 1.4rem 1.25rem;
+    overflow: hidden;
     border: 1px solid rgba(30, 41, 59, 0.08);
-    position: relative;
 }
 
-.modal-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    border-radius: inherit inherit 0 0;
-    background: #2f6fec;
+.modal-header {
+    padding: 1rem 1.4rem;
+    color: var(--text-inverse);
+    background: linear-gradient(135deg, #356ee8 0%, #285bc2 100%);
 }
 
-.modal-card-success::before {
-    background: #22c55e;
+.modal-card-success .modal-header {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
-.modal-card-danger::before {
-    background: #ef4444;
+.modal-card-danger .modal-header {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
-.modal-card-warning::before {
-    background: #f59e0b;
+.modal-card-warning .modal-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
 
 .modal-header h2 {
@@ -1219,7 +1213,7 @@ select {
 }
 
 .modal-body {
-    margin-top: 0.8rem;
+    padding: 1.2rem 1.4rem 0;
     display: grid;
     gap: 0.85rem;
 }
@@ -1276,7 +1270,7 @@ select {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    margin-top: 1.5rem;
+    padding: 1.5rem 1.4rem 1.25rem;
 }
 
 .button-danger-soft {
