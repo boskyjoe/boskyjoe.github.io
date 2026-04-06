@@ -1,4 +1,4 @@
-import { storeConfig } from "../../../../js/config.js";
+import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
 import { createRetailSaleRecord } from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
@@ -7,7 +7,7 @@ export const RETAIL_PAYMENT_TYPES = ["Pay Later", "Pay Now"];
 export const RETAIL_DISCOUNT_TYPES = ["Percentage", "Fixed"];
 
 export function getRetailStoreTaxDefaults(storeName = "") {
-    const taxInfo = storeConfig?.[storeName]?.taxInfo || null;
+    const taxInfo = MONETA_STORE_CONFIG?.[storeName]?.taxInfo || null;
 
     return {
         cgstPercentage: Math.max(0, Number(taxInfo?.cgstRate) || 0),
