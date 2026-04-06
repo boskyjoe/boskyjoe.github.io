@@ -894,6 +894,119 @@ select {
     margin-top: 1rem;
 }
 
+.retail-finance-bar {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    align-items: start;
+}
+
+.retail-finance-section,
+.retail-finance-totals {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fdfefe 0%, #f6faf9 100%);
+    padding: 1rem;
+}
+
+.retail-finance-totals {
+    background: linear-gradient(180deg, #f6fbfa 0%, #ecf7f3 100%);
+    border-color: rgba(24, 117, 94, 0.16);
+}
+
+.retail-finance-section-head {
+    margin-bottom: 0.85rem;
+}
+
+.retail-finance-fields {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.retail-finance-fields-discount {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.retail-finance-fields-tax {
+    grid-template-columns: minmax(0, 180px);
+}
+
+.retail-finance-chip-row {
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 0.85rem;
+}
+
+.retail-finance-chip {
+    padding: 0.8rem 0.9rem;
+    border: 1px solid rgba(15, 61, 50, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.retail-finance-chip span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    margin-bottom: 0.3rem;
+}
+
+.retail-finance-chip strong {
+    display: block;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.retail-finance-total-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.retail-finance-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(15, 61, 50, 0.08);
+    font-size: 0.94rem;
+}
+
+.retail-finance-total-row:last-child {
+    border-bottom: 0;
+}
+
+.retail-finance-total-row span {
+    color: var(--text-muted);
+}
+
+.retail-finance-total-row strong {
+    color: var(--text-main);
+}
+
+.retail-finance-total-row-strong {
+    margin-top: 0.2rem;
+    padding-top: 0.8rem;
+}
+
+.retail-finance-total-row-strong span,
+.retail-finance-total-row-strong strong {
+    color: var(--accent-strong);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.retail-finance-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(15, 61, 50, 0.08);
+}
+
 .retail-summary-grid {
     display: grid;
     gap: 1rem;
@@ -1509,6 +1622,10 @@ select {
     .sales-catalogue-workspace,
     .workspace-form-sections,
     .workspace-form-section-grid,
+    .retail-finance-bar,
+    .retail-finance-fields-discount,
+    .retail-finance-fields-tax,
+    .retail-finance-chip-row,
     .purchase-payments-layout,
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
