@@ -6,6 +6,7 @@ let retailWorksheetGridApi = null;
 let retailWorksheetGridElement = null;
 let retailSalesGridApi = null;
 let retailSalesGridElement = null;
+let retailWorksheetReadOnly = false;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -68,7 +69,7 @@ function buildWorksheetColumnDefs() {
             headerName: "Qty",
             minWidth: 95,
             maxWidth: 110,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quantity", 0),
             ...rightAlignedNumberColumn
@@ -95,7 +96,7 @@ function buildWorksheetColumnDefs() {
             headerName: "Line Disc. %",
             minWidth: 130,
             flex: 0.8,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -106,7 +107,7 @@ function buildWorksheetColumnDefs() {
             headerName: "CGST %",
             minWidth: 120,
             flex: 0.75,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("cgstPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -117,7 +118,7 @@ function buildWorksheetColumnDefs() {
             headerName: "SGST %",
             minWidth: 120,
             flex: 0.75,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("sgstPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -360,6 +361,15 @@ export function initializeRetailWorksheetGrid(gridElement, onRowsChanged) {
 
     retailWorksheetGridElement = gridElement;
     return retailWorksheetGridApi;
+}
+
+export function setRetailWorksheetReadOnly(isReadOnly) {
+    retailWorksheetReadOnly = Boolean(isReadOnly);
+
+    if (retailWorksheetGridApi) {
+        retailWorksheetGridApi.refreshCells({ force: true });
+        retailWorksheetGridApi.setGridOption("suppressCellFocus", retailWorksheetReadOnly);
+    }
 }
 
 export function refreshRetailWorksheetGrid(rows) {
