@@ -95,7 +95,7 @@ function renderStatusOptions(currentValue) {
 function buildLeadGridRows() {
     return sortLeads(featureState.leads).map(lead => ({
         ...lead,
-        requestedItemCount: Number(lead.requestedItemCount) || (lead.requestedProducts || []).reduce((sum, item) => sum + (Number(item.requestedQty) || 0), 0),
+        requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
         requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
             return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
         }, 0).toFixed(2))

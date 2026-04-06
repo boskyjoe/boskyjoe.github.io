@@ -94,9 +94,9 @@ function buildLeadColumnDefs() {
         },
         {
             field: "requestedItemCount",
-            headerName: "Items",
-            minWidth: 100,
-            flex: 0.7,
+            headerName: "No. Of Products",
+            minWidth: 150,
+            flex: 0.9,
             ...rightAlignedNumberColumn
         },
         {
