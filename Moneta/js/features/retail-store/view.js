@@ -243,8 +243,8 @@ function renderRetailStoreViewShell(snapshot) {
                                     <input id="retail-customer-name" class="input" type="text" value="${featureState.saleDraft.customerName}" placeholder="Customer name" required>
                                 </div>
                                 <div class="field">
-                                    <label for="retail-customer-phone">Phone</label>
-                                    <input id="retail-customer-phone" class="input" type="tel" value="${featureState.saleDraft.customerPhone}" placeholder="Customer phone">
+                                    <label for="retail-customer-phone">Customer Phone <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-customer-phone" class="input" type="tel" value="${featureState.saleDraft.customerPhone}" placeholder="Customer phone" required>
                                 </div>
                                 <div class="field">
                                     <label for="retail-customer-email">Email</label>
@@ -610,6 +610,8 @@ function syncSaleTypeBehavior() {
 export function renderRetailStoreView() {
     const snapshot = getState();
     syncSaleTypeBehavior();
+    ensureRetailSalesListener(snapshot);
+    ensureCatalogueItemsListener(snapshot);
     renderRetailStoreViewShell(snapshot);
     syncRetailWorksheetGrid();
     syncRetailSalesGrid();
@@ -672,6 +674,7 @@ function handleRetailChange(target) {
         case "retail-sales-catalogue":
             updateDraftField("salesCatalogueId", target.value || "");
             featureState.lineItemDrafts = {};
+            clearCatalogueItemsSubscription();
             renderRetailStoreView();
             return;
         case "retail-payment-type":

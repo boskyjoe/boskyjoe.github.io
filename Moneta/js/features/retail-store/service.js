@@ -181,8 +181,8 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
         throw new Error("Customer name is required.");
     }
 
-    if (!customerPhone && !customerEmail) {
-        throw new Error("Provide at least a customer phone number or email.");
+    if (!customerPhone) {
+        throw new Error("Customer phone is required.");
     }
 
     if (store === "Tasty Treats" && !customerAddress) {
