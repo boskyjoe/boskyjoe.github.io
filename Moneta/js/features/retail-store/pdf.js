@@ -250,6 +250,16 @@ function getTemplateStyles() {
             color: #0f5132;
             font-size: 13px;
         }
+        .retail-pdf-detail-footer {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 16px;
+            padding: 0 20px 16px;
+        }
+        .retail-pdf-payment-box {
+            display: grid;
+            gap: 12px;
+        }
         .retail-pdf-footer {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr 0.7fr;
@@ -385,9 +395,9 @@ function buildInvoiceHtml(data) {
                         <h3>Invoice Totals</h3>
                         <table class="retail-pdf-summary-table">
                             <tr><td>Items Subtotal</td><td>${escapeHtml(formatCurrency(data.subTotal || 0))}</td></tr>
-                            <tr><td>Line Discount</td><td>${escapeHtml(formatCurrency(data.totalLineDiscount || 0))}</td></tr>
-                            <tr><td>Invoice Discount</td><td>${escapeHtml(formatCurrency(data.invoiceDiscount || 0))}</td></tr>
+                            <tr><td>Item Discount</td><td>${escapeHtml(formatCurrency(data.totalLineDiscount || 0))}</td></tr>
                             <tr><td>Item Tax</td><td>${escapeHtml(formatCurrency(data.itemTax || 0))}</td></tr>
+                            <tr><td>Order Discount</td><td>${escapeHtml(formatCurrency(data.invoiceDiscount || 0))}</td></tr>
                             <tr><td>Order Tax</td><td>${escapeHtml(formatCurrency(data.orderTax || 0))}</td></tr>
                             <tr><td>Received</td><td>${escapeHtml(formatCurrency(data.receivedAmount || 0))}</td></tr>
                             <tr><td>Balance</td><td>${escapeHtml(formatCurrency(data.balanceAmount || 0))}</td></tr>
@@ -396,13 +406,24 @@ function buildInvoiceHtml(data) {
                     </div>
                 </section>
 
-                <section class="retail-pdf-footer">
+                <section class="retail-pdf-detail-footer">
                     <div class="retail-pdf-note">
                         <h3>Amount In Words</h3>
                         <p>${escapeHtml(data.amountInWords)}</p>
-                        <h3 style="margin-top: 12px;">Sale Notes</h3>
-                        <p>${escapeHtml(data.description)}</p>
                     </div>
+                    <div class="retail-pdf-payment-box">
+                        <div class="retail-pdf-note">
+                            <h3>Payment Mode</h3>
+                            <p>${escapeHtml(data.paymentMode)}</p>
+                        </div>
+                        <div class="retail-pdf-note">
+                            <h3>Description</h3>
+                            <p>${escapeHtml(data.description)}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="retail-pdf-footer">
                     <div class="retail-pdf-note">
                         <h3>Bank Details</h3>
                         <div class="retail-pdf-qr">
@@ -415,7 +436,6 @@ function buildInvoiceHtml(data) {
                                 <p><strong>Account Holder:</strong> ${escapeHtml(data.accountHolderName)}</p>
                             </div>
                         </div>
-                        <p style="margin-top: 12px;"><strong>Payment Mode:</strong> ${escapeHtml(data.paymentMode)}</p>
                     </div>
                     <div class="retail-pdf-signature">
                         <div class="retail-pdf-note">
