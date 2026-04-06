@@ -8,6 +8,7 @@ let purchaseLineItemsGridApi = null;
 let currentPurchaseLineItemsGridElement = null;
 let purchasePaymentHistoryGridApi = null;
 let currentPurchasePaymentHistoryGridElement = null;
+let purchaseLineItemsReadOnly = false;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -323,7 +324,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 95,
             maxWidth: 110,
             ...rightAlignedNumberColumn,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quantity", 0)
         },
@@ -348,7 +349,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 135,
             flex: 0.9,
             ...rightAlignedNumberColumn,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPurchasePrice", 2),
             valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
@@ -358,7 +359,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             headerName: "Discount Type",
             minWidth: 150,
             flex: 0.95,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agSelectCellEditor",
             cellEditorParams: { values: ["Percentage", "Fixed"] },
             valueSetter: discountTypeSetter,
@@ -370,7 +371,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 120,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("discountValue", 2),
             valueFormatter: params => (params.node?.rowPinned ? "" : params.value || 0)
@@ -381,7 +382,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             minWidth: 110,
             flex: 0.75,
             ...rightAlignedNumberColumn,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("taxPercentage", 2),
             valueFormatter: params => (params.node?.rowPinned ? "" : params.value || 0)
@@ -512,6 +513,11 @@ export function refreshPurchaseLineItemsGrid(rows) {
     if (!purchaseLineItemsGridApi) return;
     purchaseLineItemsGridApi.setGridOption("rowData", rows);
     refreshPurchaseLineItemsPinnedBottomRow(purchaseLineItemsGridApi);
+}
+
+export function setPurchaseLineItemsGridReadOnly(isReadOnly) {
+    purchaseLineItemsReadOnly = Boolean(isReadOnly);
+    purchaseLineItemsGridApi?.refreshCells({ force: true });
 }
 
 export function updatePurchaseLineItemsGridSearch(searchTerm) {

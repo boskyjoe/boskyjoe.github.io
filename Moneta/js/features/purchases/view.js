@@ -23,6 +23,7 @@ import {
     refreshPurchaseLineItemsGrid,
     refreshPurchasePaymentHistoryGrid,
     refreshPurchasesGrid,
+    setPurchaseLineItemsGridReadOnly,
     updatePurchaseLineItemsGridSearch,
     updatePurchasesGridSearch
 } from "./grid.js";
@@ -109,6 +110,14 @@ function getInvoiceDiscountFieldValues(invoice) {
 function getEditingInvoice() {
     if (!featureState.editingInvoiceId) return null;
     return featureState.invoices.find(invoice => invoice.id === featureState.editingInvoiceId) || null;
+}
+
+function isInvoiceVoidMode() {
+    return Boolean(featureState.voidingInvoiceId);
+}
+
+function getWorkspaceInvoice() {
+    return getVoidingInvoice() || getEditingInvoice();
 }
 
 function getPaymentInvoice() {
@@ -198,6 +207,14 @@ function getPaymentDraftFromDom() {
 }
 
 function syncInvoiceAdjustmentInputs() {
+    if (isInvoiceVoidMode()) {
+        document.getElementById("invoice-discount-type")?.setAttribute("disabled", "disabled");
+        document.getElementById("invoice-discount-percentage")?.setAttribute("disabled", "disabled");
+        document.getElementById("invoice-discount-fixed")?.setAttribute("disabled", "disabled");
+        document.getElementById("invoice-tax-percentage")?.setAttribute("disabled", "disabled");
+        return;
+    }
+
     const discountType = normalizeStoredDiscountType(document.getElementById("invoice-discount-type")?.value);
     const percentageInput = document.getElementById("invoice-discount-percentage");
     const fixedInput = document.getElementById("invoice-discount-fixed");
@@ -210,9 +227,9 @@ function syncInvoiceAdjustmentInputs() {
 }
 
 function getPurchaseLineItemRows(snapshot) {
-    const editingInvoice = getEditingInvoice();
+    const workspaceInvoice = getWorkspaceInvoice();
     const existingLineItems = new Map(
-        (editingInvoice?.lineItems || []).map(item => [item.masterProductId, item])
+        (workspaceInvoice?.lineItems || []).map(item => [item.masterProductId, item])
     );
 
     return (snapshot.masterData.products || []).map(product => {
@@ -268,6 +285,7 @@ function syncPurchaseLineItemsGrid(snapshot) {
     const rows = getPurchaseLineItemRows(snapshot);
     const gridElement = document.getElementById("purchase-line-items-grid");
 
+    setPurchaseLineItemsGridReadOnly(isInvoiceVoidMode());
     initializePurchaseLineItemsGrid(gridElement, () => {
         updatePurchaseDraftPreview();
     });
@@ -376,61 +394,6 @@ function renderVoidPaymentPanel() {
                     </button>
                     <button class="button grid-action-button grid-action-button-danger" type="submit">
                         Void Payment
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-}
-
-function renderVoidInvoicePanel() {
-    const invoice = getVoidingInvoice();
-    if (!invoice) return "";
-
-    return `
-        <div class="purchase-payment-void-panel purchase-invoice-void-panel">
-            <div class="purchase-payment-void-header">
-                <div>
-                    <p class="section-kicker">Void Purchase Invoice</p>
-                    <p class="panel-copy">Void this supplier invoice, reverse any active linked payments, and roll stock back out of inventory while keeping the audit trail.</p>
-                </div>
-                <div class="toolbar-meta">
-                    ${getStatusMarkup(invoice.invoiceStatus || invoice.paymentStatus || "Unpaid", "Unpaid")}
-                </div>
-            </div>
-
-            <div class="purchase-payment-void-summary">
-                <article class="summary-card">
-                    <p class="summary-label">Invoice</p>
-                    <p class="summary-value payment-summary-copy">${invoice.invoiceId || invoice.invoiceName || "-"}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Supplier</p>
-                    <p class="summary-value payment-summary-copy">${invoice.supplierName || "-"}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Invoice Total</p>
-                    <p class="summary-value">${formatCurrency(invoice.invoiceTotal || 0)}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Paid So Far</p>
-                    <p class="summary-value">${formatCurrency(invoice.amountPaid || 0)}</p>
-                </article>
-            </div>
-
-            <form id="purchase-invoice-void-form" class="purchase-payment-void-form">
-                <div class="field field-full">
-                    <label for="purchase-invoice-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
-                    <textarea id="purchase-invoice-void-reason" class="textarea" placeholder="Explain why this invoice is being voided" required>${featureState.invoiceVoidReason}</textarea>
-                </div>
-                <p class="panel-copy panel-copy-tight">This action cannot be undone. Moneta will void any active linked payments, reverse the stock quantities from inventory, and keep the invoice in history as voided.</p>
-                <div class="form-actions">
-                    <button id="purchase-invoice-void-cancel-button" class="button button-secondary" type="button">
-                        <span class="button-icon">${icons.inactive}</span>
-                        Cancel
-                    </button>
-                    <button class="button grid-action-button grid-action-button-danger" type="submit">
-                        Void Invoice
                     </button>
                 </div>
             </form>
@@ -571,30 +534,66 @@ function renderPurchasesViewShell(snapshot) {
     if (!root) return;
 
     const editingInvoice = getEditingInvoice();
-    const invoiceDiscountFields = getInvoiceDiscountFieldValues(editingInvoice);
+    const workspaceInvoice = getWorkspaceInvoice();
+    const isVoidMode = isInvoiceVoidMode();
+    const invoiceDiscountFields = getInvoiceDiscountFieldValues(workspaceInvoice);
     const suppliers = snapshot.masterData.suppliers || [];
-    const activeSuppliers = suppliers.filter(supplier => supplier.isActive || supplier.id === editingInvoice?.supplierId);
+    const activeSuppliers = suppliers.filter(supplier => supplier.isActive || supplier.id === workspaceInvoice?.supplierId);
     const products = snapshot.masterData.products || [];
     const draftSummary = calculatePurchaseDraftSummary({
-        lineItems: editingInvoice?.lineItems || [],
+        lineItems: workspaceInvoice?.lineItems || [],
         invoiceDiscountType: invoiceDiscountFields.discountType,
         invoiceDiscountValue: invoiceDiscountFields.discountType === "Percentage"
             ? invoiceDiscountFields.discountPercentageValue
             : invoiceDiscountFields.discountFixedValue,
-        invoiceTaxPercentage: editingInvoice?.invoiceTaxPercentage || 0
+        invoiceTaxPercentage: workspaceInvoice?.invoiceTaxPercentage || 0
     }, products);
     const canSaveInvoice = activeSuppliers.length > 0 && products.length > 0;
-    const initialActiveCount = editingInvoice?.lineItems?.length || 0;
+    const initialActiveCount = workspaceInvoice?.lineItems?.length || 0;
+    const panelClassName = isVoidMode ? "panel-card purchase-void-mode-card" : "panel-card";
+    const panelHeaderClassName = isVoidMode ? "panel-header panel-header-danger-soft" : "panel-header panel-header-accent";
+    const formModeTitle = isVoidMode
+        ? "Void Purchase Invoice"
+        : editingInvoice
+            ? "Edit Purchase Invoice"
+            : "Purchase Invoices";
+    const formModeCopy = isVoidMode
+        ? "Review the full invoice below before voiding it. All invoice details are locked, and only the void reason can be entered."
+        : "Use this module to capture supplier purchase invoices, update inventory, and track invoice payment progress in one place.";
+    const disableInvoiceFields = isVoidMode ? "disabled" : "";
+    const disableSearch = isVoidMode ? "disabled" : "";
+    const voidPreview = isVoidMode ? `
+        <div class="purchase-void-mode-banner">
+            <div>
+                <p class="section-kicker">Void Mode</p>
+                <p class="panel-copy">This action will void the invoice, reverse any active linked payments, and roll the product quantities back out of inventory.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${workspaceInvoice?.invoiceId || workspaceInvoice?.invoiceName || "-"}</span>
+                <span class="status-pill">${formatCurrency(workspaceInvoice?.invoiceTotal || 0)} total</span>
+                <span class="status-pill">${formatCurrency(workspaceInvoice?.amountPaid || 0)} paid</span>
+            </div>
+        </div>
+    ` : "";
+    const voidReasonSection = isVoidMode ? `
+        <div class="purchase-void-mode-reason">
+            <div class="field field-full">
+                <label for="purchase-invoice-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                <textarea id="purchase-invoice-void-reason" class="textarea purchase-void-reason-textarea" placeholder="Explain why this invoice is being voided" required>${featureState.invoiceVoidReason}</textarea>
+            </div>
+            <p class="panel-copy panel-copy-tight">This action cannot be undone. Moneta will keep the invoice in history as voided and preserve the full reversal trail.</p>
+        </div>
+    ` : "";
 
     root.innerHTML = `
         <div class="section-stack">
-            <div class="panel-card">
-                <div class="panel-header panel-header-accent">
+            <div class="${panelClassName}">
+                <div class="${panelHeaderClassName}">
                     <div class="panel-title-wrap">
                         <span class="panel-icon panel-icon-alt">${icons.purchases}</span>
                         <div>
-                            <h2>${editingInvoice ? "Edit Purchase Invoice" : "Purchase Invoices"}</h2>
-                            <p class="panel-copy">Use this module to capture supplier purchase invoices, update inventory, and track invoice payment progress in one place.</p>
+                            <h2>${formModeTitle}</h2>
+                            <p class="panel-copy">${formModeCopy}</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
@@ -603,44 +602,47 @@ function renderPurchasesViewShell(snapshot) {
                     </div>
                 </div>
                 <div class="panel-body">
+                    ${voidPreview}
                     <form id="purchase-invoice-form">
                         <input type="hidden" id="purchase-invoice-doc-id" value="${editingInvoice?.id || ""}">
                         <div class="form-grid">
                             <div class="field">
                                 <label for="purchase-date">Purchase Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                <input id="purchase-date" class="input" type="date" value="${toDateInputValue(editingInvoice?.purchaseDate) || toDateInputValue(new Date())}" required>
+                                <input id="purchase-date" class="input" type="date" value="${toDateInputValue(workspaceInvoice?.purchaseDate) || toDateInputValue(new Date())}" ${disableInvoiceFields} required>
                             </div>
                             <div class="field">
                                 <label for="purchase-supplier">Supplier <span class="required-mark" aria-hidden="true">*</span></label>
-                                <select id="purchase-supplier" class="select" required>
+                                <select id="purchase-supplier" class="select" ${disableInvoiceFields} required>
                                     <option value="">Select supplier</option>
-                                    ${renderSupplierOptions(suppliers, editingInvoice?.supplierId)}
+                                    ${renderSupplierOptions(suppliers, workspaceInvoice?.supplierId)}
                                 </select>
                             </div>
                             <div class="field">
                                 <label for="supplier-invoice-no">Supplier Invoice Ref</label>
-                                <input id="supplier-invoice-no" class="input" type="text" value="${editingInvoice?.supplierInvoiceNo || ""}" placeholder="Optional supplier invoice number">
+                                <input id="supplier-invoice-no" class="input" type="text" value="${workspaceInvoice?.supplierInvoiceNo || ""}" placeholder="Optional supplier invoice number" ${disableInvoiceFields}>
                             </div>
                             <div class="field field-wide">
                                 <label for="purchase-invoice-name">Invoice Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                <input id="purchase-invoice-name" class="input" type="text" value="${editingInvoice?.invoiceName || ""}" placeholder="Stock Purchase - Apr 2026" required>
+                                <input id="purchase-invoice-name" class="input" type="text" value="${workspaceInvoice?.invoiceName || ""}" placeholder="Stock Purchase - Apr 2026" ${disableInvoiceFields} required>
                             </div>
                         </div>
 
-                        <div class="panel-card purchase-line-items-panel">
+                        <div class="panel-card purchase-line-items-panel ${isVoidMode ? "purchase-void-mode-block" : ""}">
                             <div class="panel-header">
                                 <div class="panel-title-wrap">
                                     <span class="panel-icon">${icons.catalogue}</span>
                                     <div>
                                         <h3>Product List</h3>
-                                        <p class="panel-copy">Search the full active product list and set Qty above 0 to make a product part of the invoice.</p>
+                                        <p class="panel-copy">${isVoidMode
+                                            ? "Review the locked product list exactly as it was posted on this invoice."
+                                            : "Search the full active product list and set Qty above 0 to make a product part of the invoice."}</p>
                                     </div>
                                 </div>
                                 <div class="toolbar-meta">
                                     <span id="purchase-line-items-active-count" class="status-pill">${initialActiveCount} active products</span>
                                     <div class="search-wrap">
                                         <span class="search-icon">${icons.search}</span>
-                                        <input id="purchase-line-items-search" class="input toolbar-search" type="search" placeholder="Search products, ids, or stock" value="${featureState.lineItemSearchTerm}">
+                                        <input id="purchase-line-items-search" class="input toolbar-search" type="search" placeholder="Search products, ids, or stock" value="${featureState.lineItemSearchTerm}" ${disableSearch}>
                                     </div>
                                 </div>
                             </div>
@@ -651,7 +653,7 @@ function renderPurchasesViewShell(snapshot) {
                             </div>
                         </div>
 
-                        <div class="purchase-adjustments">
+                        <div class="purchase-adjustments ${isVoidMode ? "purchase-void-mode-block" : ""}">
                             <div class="purchase-adjustments-header">
                                 <div>
                                     <p class="section-kicker" style="margin-bottom: 0.25rem;">Invoice Adjustments</p>
@@ -661,22 +663,22 @@ function renderPurchasesViewShell(snapshot) {
                             <div class="purchase-adjustments-grid">
                                 <div class="field">
                                     <label for="invoice-discount-type">Invoice Discount Type</label>
-                                    <select id="invoice-discount-type" class="select">
+                                    <select id="invoice-discount-type" class="select" ${disableInvoiceFields}>
                                         <option value="Percentage" ${invoiceDiscountFields.discountType === "Percentage" ? "selected" : ""}>Percentage</option>
                                         <option value="Fixed" ${invoiceDiscountFields.discountType === "Fixed" ? "selected" : ""}>Fixed</option>
                                     </select>
                                 </div>
                                 <div class="field">
                                     <label for="invoice-discount-percentage">Invoice Discount %</label>
-                                    <input id="invoice-discount-percentage" class="input" type="number" min="0" step="0.01" value="${invoiceDiscountFields.discountPercentageValue}">
+                                    <input id="invoice-discount-percentage" class="input" type="number" min="0" step="0.01" value="${invoiceDiscountFields.discountPercentageValue}" ${disableInvoiceFields}>
                                 </div>
                                 <div class="field">
                                     <label for="invoice-discount-fixed">Invoice Discount Amount</label>
-                                    <input id="invoice-discount-fixed" class="input" type="number" min="0" step="0.01" value="${invoiceDiscountFields.discountFixedValue}">
+                                    <input id="invoice-discount-fixed" class="input" type="number" min="0" step="0.01" value="${invoiceDiscountFields.discountFixedValue}" ${disableInvoiceFields}>
                                 </div>
                                 <div class="field">
                                     <label for="invoice-tax-percentage">Invoice Tax %</label>
-                                    <input id="invoice-tax-percentage" class="input" type="number" min="0" step="0.01" value="${editingInvoice?.invoiceTaxPercentage || ""}">
+                                    <input id="invoice-tax-percentage" class="input" type="number" min="0" step="0.01" value="${workspaceInvoice?.invoiceTaxPercentage || ""}" ${disableInvoiceFields}>
                                 </div>
                             </div>
                         </div>
@@ -700,23 +702,31 @@ function renderPurchasesViewShell(snapshot) {
                             </article>
                         </div>
 
-                        ${canSaveInvoice ? "" : `
+                        ${isVoidMode ? voidReasonSection : ""}
+                        ${canSaveInvoice || isVoidMode ? "" : `
                             <p class="panel-copy" style="margin-top: 1rem;">
                                 You need at least one active supplier and one active product before creating purchase invoices.
                             </p>
                         `}
 
                         <div class="form-actions">
-                            ${editingInvoice ? `
+                            ${editingInvoice || isVoidMode ? `
                                 <button id="purchase-cancel-button" class="button button-secondary" type="button">
                                     <span class="button-icon">${icons.inactive}</span>
                                     Cancel
                                 </button>
                             ` : ""}
-                            <button class="button button-primary-alt" type="submit" ${canSaveInvoice ? "" : "disabled"}>
-                                <span class="button-icon">${editingInvoice ? icons.edit : icons.plus}</span>
-                                ${editingInvoice ? "Update Invoice" : "Save Invoice"}
-                            </button>
+                            ${isVoidMode ? `
+                                <button id="purchase-invoice-void-button" class="button grid-action-button grid-action-button-danger" type="button">
+                                    <span class="button-icon">${icons.inactive}</span>
+                                    Void Invoice
+                                </button>
+                            ` : `
+                                <button class="button button-primary-alt" type="submit" ${canSaveInvoice ? "" : "disabled"}>
+                                    <span class="button-icon">${editingInvoice ? icons.edit : icons.plus}</span>
+                                    ${editingInvoice ? "Update Invoice" : "Save Invoice"}
+                                </button>
+                            `}
                         </div>
                     </form>
                 </div>
@@ -743,7 +753,6 @@ function renderPurchasesViewShell(snapshot) {
                     <div class="ag-shell">
                         <div id="purchases-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
                     </div>
-                    ${renderVoidInvoicePanel()}
                 </div>
             </div>
 
@@ -754,6 +763,11 @@ function renderPurchasesViewShell(snapshot) {
 
 async function handlePurchaseFormSubmit(event) {
     event.preventDefault();
+
+    if (isInvoiceVoidMode()) {
+        showToast("Use the Void Invoice action to complete this reversal.", "error");
+        return;
+    }
 
     const adjustments = getInvoiceAdjustmentDraftFromDom();
 
@@ -944,7 +958,7 @@ async function handlePurchasePaymentVoidSubmit(event) {
 }
 
 async function handlePurchaseInvoiceVoidSubmit(event) {
-    event.preventDefault();
+    event?.preventDefault?.();
 
     const invoice = getVoidingInvoice();
     if (!invoice) {
@@ -1082,6 +1096,7 @@ function handleOpenVoidInvoice(button) {
     featureState.voidingInvoiceId = button.dataset.invoiceId || null;
     featureState.invoiceVoidReason = "";
     featureState.editingInvoiceId = null;
+    featureState.lineItemSearchTerm = "";
     resetPaymentVoidState();
     renderPurchasesView();
     document.getElementById("purchase-invoice-void-reason")?.focus();
@@ -1142,9 +1157,6 @@ function bindPurchasesDomEvents() {
             return;
         }
 
-        if (event.target.id === "purchase-invoice-void-form") {
-            handlePurchaseInvoiceVoidSubmit(event);
-        }
     });
 
     root.addEventListener("input", event => {
@@ -1199,9 +1211,9 @@ function bindPurchasesDomEvents() {
         const voidInvoiceButton = target.closest(".purchase-void-button");
         const voidPaymentButton = target.closest(".purchase-payment-void-button");
         const cancelButton = target.closest("#purchase-cancel-button");
+        const confirmInvoiceVoidButton = target.closest("#purchase-invoice-void-button");
         const closePaymentsButton = target.closest("#purchase-payments-close-button");
         const cancelVoidButton = target.closest("#purchase-payment-void-cancel-button");
-        const cancelInvoiceVoidButton = target.closest("#purchase-invoice-void-cancel-button");
         const paymentModal = target.closest("#purchase-payment-modal");
 
         if (editButton) {
@@ -1224,8 +1236,14 @@ function bindPurchasesDomEvents() {
             return;
         }
 
+        if (confirmInvoiceVoidButton) {
+            handlePurchaseInvoiceVoidSubmit();
+            return;
+        }
+
         if (cancelButton) {
             featureState.editingInvoiceId = null;
+            resetInvoiceVoidState();
             featureState.lineItemSearchTerm = "";
             renderPurchasesView();
             return;
@@ -1238,12 +1256,6 @@ function bindPurchasesDomEvents() {
 
         if (cancelVoidButton) {
             resetPaymentVoidState();
-            renderPurchasesView();
-            return;
-        }
-
-        if (cancelInvoiceVoidButton) {
-            resetInvoiceVoidState();
             renderPurchasesView();
             return;
         }
