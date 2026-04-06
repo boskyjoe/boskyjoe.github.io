@@ -143,15 +143,30 @@ function getTemplateStyles() {
             text-transform: uppercase;
             margin-bottom: 8px;
         }
-        .retail-pdf-meta {
+        .retail-pdf-title-panel {
             padding: 14px 16px;
             border: 1px solid #cfdbe6;
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.86);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            text-align: right;
         }
-        .retail-pdf-grid-two {
+        .retail-pdf-title-panel h2 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #143f66;
+        }
+        .retail-pdf-title-panel .retail-pdf-kicker {
+            margin: 10px 0 0;
+        }
+        .retail-pdf-grid-four {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 12px;
             padding: 16px 20px;
         }
@@ -280,25 +295,19 @@ function buildInvoiceHtml(data) {
             <div class="retail-pdf-shell">
                 <section class="retail-pdf-header">
                     <div class="retail-pdf-brand">
-                        <span class="retail-pdf-kicker">${escapeHtml(data.copyType)}</span>
                         <h1>${escapeHtml(data.companyName)}</h1>
                         <p>${escapeHtml(data.addressLine1)}</p>
                         <p>${escapeHtml(data.addressLine2)}</p>
                         <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
                         <p><strong>GSTIN:</strong> ${escapeHtml(data.taxId)}</p>
                     </div>
-                    <div class="retail-pdf-meta">
-                        <p><strong>Invoice No:</strong> ${escapeHtml(data.invoiceNumber)}</p>
-                        <p><strong>Voucher No:</strong> ${escapeHtml(data.voucherNumber)}</p>
-                        <p><strong>Date:</strong> ${escapeHtml(data.invoiceDate)}</p>
-                        <p><strong>Time:</strong> ${escapeHtml(data.invoiceTime)}</p>
-                        <p><strong>Store:</strong> ${escapeHtml(data.storeName)}</p>
-                        <p><strong>Sale Type:</strong> ${escapeHtml(data.saleType)}</p>
-                        <p><strong>Payment Status:</strong> ${escapeHtml(data.paymentStatus)}</p>
+                    <div class="retail-pdf-title-panel">
+                        <h2>Tax Invoice</h2>
+                        <span class="retail-pdf-kicker">${escapeHtml(data.copyType)}</span>
                     </div>
                 </section>
 
-                <section class="retail-pdf-grid-two">
+                <section class="retail-pdf-grid-four">
                     <div class="retail-pdf-block">
                         <h3>Bill To</h3>
                         <p><strong>${escapeHtml(data.customerName)}</strong></p>
@@ -307,11 +316,23 @@ function buildInvoiceHtml(data) {
                         <p>${escapeHtml(data.customerAddress)}</p>
                     </div>
                     <div class="retail-pdf-block">
-                        <h3>Sale Context</h3>
-                        <p><strong>Catalogue:</strong> ${escapeHtml(data.salesCatalogueName)}</p>
-                        <p><strong>Season:</strong> ${escapeHtml(data.salesSeasonName)}</p>
-                        <p><strong>Received:</strong> ${escapeHtml(formatCurrency(data.receivedAmount || 0))}</p>
-                        <p><strong>Balance:</strong> ${escapeHtml(formatCurrency(data.balanceAmount || 0))}</p>
+                        <h3>Ship To</h3>
+                        <p><strong>${escapeHtml(data.customerName)}</strong></p>
+                        <p>${escapeHtml(data.customerPhone)}</p>
+                        <p>${escapeHtml(data.customerEmail)}</p>
+                        <p>${escapeHtml(data.customerAddress)}</p>
+                    </div>
+                    <div class="retail-pdf-block">
+                        <h3>Transportation</h3>
+                        <p><strong>Mode:</strong> ${escapeHtml(data.transportMode)}</p>
+                        <p><strong>Vehicle #:</strong> ${escapeHtml(data.vehicleNumber)}</p>
+                        <p><strong>Date:</strong> ${escapeHtml(data.transportDate)}</p>
+                    </div>
+                    <div class="retail-pdf-block">
+                        <h3>Invoice Details</h3>
+                        <p><strong>No.:</strong> ${escapeHtml(data.invoiceNumber)}</p>
+                        <p><strong>Date:</strong> ${escapeHtml(data.invoiceDate)}</p>
+                        <p><strong>Time:</strong> ${escapeHtml(data.invoiceTime)}</p>
                     </div>
                 </section>
 
@@ -444,7 +465,7 @@ function buildPdfData(sale, paymentRecord = null) {
     const taxSummary = buildTaxSummary(items);
 
     return {
-        copyType: "ORIGINAL FOR RECIPIENT",
+        copyType: "ORIGINAL FOR RECEIPT",
         companyName: storeDetails.companyName,
         addressLine1: storeDetails.addressLine1,
         addressLine2: storeDetails.addressLine2,
@@ -463,6 +484,9 @@ function buildPdfData(sale, paymentRecord = null) {
         salesCatalogueName: sale.salesCatalogueName || "-",
         salesSeasonName: sale.salesSeasonName || "-",
         paymentStatus: sale.paymentStatus || "Unpaid",
+        transportMode: "-",
+        vehicleNumber: "-",
+        transportDate: formatDate(saleDate),
         paymentMode: paymentRecord?.paymentMode || "Not captured",
         description: sale.saleNotes || paymentRecord?.notes || "-",
         items,
