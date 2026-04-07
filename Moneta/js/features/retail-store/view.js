@@ -5,9 +5,11 @@ import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
     initializeRetailExpenseHistoryGrid,
+    initializeRetailPaymentHistoryGrid,
     initializeRetailSalesGrid,
     initializeRetailWorksheetGrid,
     refreshRetailExpenseHistoryGrid,
+    refreshRetailPaymentHistoryGrid,
     refreshRetailSalesGrid,
     refreshRetailWorksheetGrid,
     setRetailWorksheetReadOnly,
@@ -18,6 +20,7 @@ import {
     getRetailSalePayments,
     subscribeToRetailCatalogueItems,
     subscribeToRetailSaleExpenses,
+    subscribeToRetailSalePayments,
     subscribeToRetailSales
 } from "./repository.js";
 import { downloadRetailSalePdf } from "./pdf.js";
@@ -29,6 +32,7 @@ import {
     RETAIL_SALE_TYPES,
     RETAIL_STORES,
     getRetailStoreTaxDefaults,
+    saveRetailSalePayment,
     saveRetailSale
 } from "./service.js";
 
@@ -43,6 +47,11 @@ const featureState = {
     catalogueItemsListenerId: null,
     workspaceMode: "create",
     viewingSaleId: null,
+    paymentModalOpen: false,
+    paymentSaleId: null,
+    payments: [],
+    unsubscribePayments: null,
+    paymentDraft: createDefaultRetailPaymentDraft(),
     expenseModalOpen: false,
     expenseSaleId: null,
     expenseHistory: [],
@@ -84,6 +93,16 @@ function createDefaultExpenseDraft(defaultDate = new Date()) {
     };
 }
 
+function createDefaultRetailPaymentDraft(defaultDate = new Date()) {
+    return {
+        paymentDate: toDateInputValue(defaultDate),
+        amountPaid: "",
+        paymentMode: "",
+        transactionRef: "",
+        notes: ""
+    };
+}
+
 function normalizeText(value) {
     return (value || "").trim();
 }
@@ -107,6 +126,7 @@ function resetRetailWorkspace() {
     featureState.saleDraft = createDefaultSaleDraft();
     featureState.lineItemDrafts = {};
     clearCatalogueItemsSubscription();
+    closeRetailPaymentModalState();
     closeRetailExpenseModalState();
 }
 
@@ -126,9 +146,56 @@ function closeRetailExpenseModalState() {
     featureState.expenseDraft = createDefaultExpenseDraft();
 }
 
+function closeRetailPaymentModalState() {
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.paymentModalOpen = false;
+    featureState.paymentSaleId = null;
+    featureState.payments = [];
+    featureState.paymentDraft = createDefaultRetailPaymentDraft();
+}
+
+function openRetailPaymentModal(sale) {
+    if (!sale?.id) return;
+
+    closeRetailExpenseModalState();
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.paymentModalOpen = true;
+    featureState.paymentSaleId = sale.id;
+    featureState.payments = [];
+    featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+
+    featureState.unsubscribePayments = subscribeToRetailSalePayments(
+        sale.id,
+        rows => {
+            featureState.payments = rows;
+
+            if (getState().currentRoute === "#/retail-store" && featureState.paymentModalOpen) {
+                syncRetailPaymentHistoryGrid();
+                syncRetailPaymentDraftPreview();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail payments:", error);
+            showToast("Could not load retail payment history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailPaymentModal() {
+    closeRetailPaymentModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
 function openRetailExpenseModal(sale) {
     if (!sale?.id) return;
 
+    closeRetailPaymentModalState();
     featureState.unsubscribeExpenseHistory?.();
     featureState.unsubscribeExpenseHistory = null;
     featureState.expenseModalOpen = true;
@@ -297,6 +364,163 @@ function renderPaymentModeOptions(snapshot, currentValue) {
                 ${mode.paymentMode}
             </option>
         `).join("");
+}
+
+function getPaymentModalSale() {
+    if (!featureState.paymentSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.paymentSaleId) || null;
+}
+
+function getPaymentDraftAmount() {
+    const amountInput = document.getElementById("retail-payment-entry-amount");
+    const value = amountInput?.value ?? featureState.paymentDraft.amountPaid;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+}
+
+function syncRetailPaymentDraftPreview() {
+    if (!featureState.paymentModalOpen) return;
+
+    const sale = getPaymentModalSale();
+    if (!sale) return;
+
+    const balanceDue = Number(sale.balanceDue) || 0;
+    const draftAmount = getPaymentDraftAmount();
+    const appliedDraft = Math.min(draftAmount, balanceDue);
+    const remaining = Math.max(balanceDue - appliedDraft, 0);
+    const remainingNode = document.getElementById("retail-payment-balance-after-draft");
+
+    if (remainingNode) {
+        remainingNode.textContent = formatCurrency(remaining);
+    }
+}
+
+function renderRetailPaymentModal(snapshot) {
+    if (!featureState.paymentModalOpen) return "";
+
+    const sale = getPaymentModalSale();
+    if (!sale) return "";
+
+    const paymentModes = (snapshot.masterData.paymentModes || []).filter(mode => mode.isActive);
+    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const amountPaid = Number(sale.totalAmountPaid) || 0;
+    const balanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - amountPaid, 0)) || 0;
+    const draftAmount = Number(featureState.paymentDraft.amountPaid) || 0;
+    const remainingBalance = Math.max(balanceDue - Math.min(draftAmount, balanceDue), 0);
+    const canRecordPayment = sale.saleStatus !== "Voided" && balanceDue > 0 && paymentModes.length > 0;
+    const paymentStatus = sale.paymentStatus || "Unpaid";
+
+    return `
+        <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
+            <div class="purchase-payment-modal-card">
+                <button id="retail-payment-close-button" class="purchase-payment-modal-corner-close retail-payment-close-trigger" type="button" aria-label="Close payment modal">
+                    <span class="button-icon">${icons.close}</span>
+                </button>
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                        <div>
+                            <h3 id="retail-payment-modal-title">Record Retail Payment</h3>
+                            <p class="panel-copy">Capture customer payments for the selected retail sale and keep the payment history visible below.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${featureState.payments.length} payments</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer</p>
+                                    <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Invoice Total</p>
+                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Amount Paid</p>
+                                    <p class="summary-value">${formatCurrency(amountPaid)}</p>
+                                </article>
+                                <article class="summary-card retail-summary-card-strong">
+                                    <p class="summary-label">Balance Due</p>
+                                    <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                                </article>
+                            </div>
+
+                            <form id="retail-payment-form" class="purchase-payment-form">
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="retail-payment-entry-date">Payment Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-payment-entry-amount">Amount Paid <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-payment-entry-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="retail-payment-entry-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
+                                            <option value="">Select payment mode</option>
+                                            ${renderPaymentModeOptions(snapshot, featureState.paymentDraft.paymentMode)}
+                                        </select>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-payment-entry-reference">Payment Reference <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="UPI / cash reference / card slip">
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-payment-entry-notes">Payment Notes</label>
+                                        <textarea id="retail-payment-entry-notes" class="textarea" placeholder="Optional notes for this payment">${featureState.paymentDraft.notes}</textarea>
+                                    </div>
+                                </div>
+                                <div class="purchase-payment-preview">
+                                    <article class="summary-card">
+                                        <p class="summary-label">Current Status</p>
+                                        <p class="summary-value">${paymentStatus}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Balance After Draft</p>
+                                        <p id="retail-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
+                                    </article>
+                                </div>
+                                ${balanceDue <= 0 ? `
+                                    <p class="panel-copy panel-copy-tight">This sale is already fully paid. You can still review the payment history below.</p>
+                                ` : ""}
+                                ${balanceDue > 0 && paymentModes.length === 0 ? `
+                                    <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording retail payments.</p>
+                                ` : ""}
+                                <div class="form-actions">
+                                    <button id="retail-payment-cancel-button" class="button button-secondary retail-payment-close-trigger" type="button">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Close
+                                    </button>
+                                    <button class="button button-primary-alt" type="submit" ${canRecordPayment ? "" : "disabled"}>
+                                        <span class="button-icon">${icons.payment}</span>
+                                        Record Payment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Payment History</p>
+                                <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} payment record(s) linked to this sale.</p>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="retail-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function getExpenseModalSale() {
@@ -780,6 +1004,10 @@ function renderRetailStoreViewShell(snapshot) {
                             ${isViewMode ? "Close View" : "Reset"}
                         </button>
                         ${isViewMode ? `
+                            <button id="retail-open-payments-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.payment}</span>
+                                Payments
+                            </button>
                             <button id="retail-download-pdf-button" class="button button-primary-alt" type="button">
                                 <span class="button-icon">${icons.download}</span>
                                 Download PDF
@@ -812,7 +1040,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Payment management and void sale actions will build on top of this history grid next.</p>
+                        <p class="panel-copy">Use the Payments action to record and review customer payments for each retail sale.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -829,6 +1057,7 @@ function renderRetailStoreViewShell(snapshot) {
                 </div>
             </div>
         </div>
+        ${renderRetailPaymentModal(snapshot)}
         ${renderRetailExpenseModal(expenseModalSale)}
     `;
 }
@@ -878,11 +1107,27 @@ function syncRetailExpenseHistoryGrid() {
     }
 }
 
+function syncRetailPaymentHistoryGrid() {
+    if (!featureState.paymentModalOpen) return;
+
+    const gridElement = document.getElementById("retail-payment-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailPaymentHistoryGrid(gridElement);
+    refreshRetailPaymentHistoryGrid(featureState.payments);
+
+    const historyCount = document.getElementById("retail-payment-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.payments.length} payment record(s) linked to this sale.`;
+    }
+}
+
 function ensureRetailSalesListener(snapshot) {
     if (!snapshot.currentUser || snapshot.currentRoute !== "#/retail-store") {
         featureState.unsubscribeSales?.();
         featureState.unsubscribeSales = null;
         featureState.sales = [];
+        closeRetailPaymentModalState();
         closeRetailExpenseModalState();
         return;
     }
@@ -963,7 +1208,9 @@ export function renderRetailStoreView() {
     renderRetailStoreViewShell(snapshot);
     syncRetailWorksheetGrid();
     syncRetailSalesGrid();
+    syncRetailPaymentHistoryGrid();
     syncRetailExpenseHistoryGrid();
+    syncRetailPaymentDraftPreview();
 }
 
 function updateDraftField(field, value) {
@@ -1027,6 +1274,11 @@ function handleRetailInput(target) {
         "retail-order-discount-percentage": "orderDiscountPercentage",
         "retail-order-discount-amount": "orderDiscountAmount",
         "retail-order-tax-percentage": "orderTaxPercentage",
+        "retail-payment-entry-date": "paymentDate",
+        "retail-payment-entry-amount": "amountPaid",
+        "retail-payment-entry-mode": "paymentMode",
+        "retail-payment-entry-reference": "transactionRef",
+        "retail-payment-entry-notes": "notes",
         "retail-expense-date": "expenseDate",
         "retail-expense-justification": "justification",
         "retail-expense-amount": "amount"
@@ -1046,6 +1298,14 @@ function handleRetailInput(target) {
 
     const field = fieldMap[target.id];
     if (!field) return;
+
+    if (target.id.startsWith("retail-payment-entry-")) {
+        featureState.paymentDraft[field] = target.value || "";
+        if (target.id === "retail-payment-entry-amount") {
+            syncRetailPaymentDraftPreview();
+        }
+        return;
+    }
 
     if (target.id.startsWith("retail-expense-")) {
         featureState.expenseDraft[field] = target.value || "";
@@ -1110,6 +1370,22 @@ function handleRetailChange(target) {
         case "retail-order-tax-percentage":
             updateDraftField("orderTaxPercentage", target.value || "");
             renderRetailStoreView();
+            return;
+        case "retail-payment-entry-date":
+            featureState.paymentDraft.paymentDate = target.value || "";
+            return;
+        case "retail-payment-entry-mode":
+            featureState.paymentDraft.paymentMode = target.value || "";
+            return;
+        case "retail-payment-entry-reference":
+            featureState.paymentDraft.transactionRef = target.value || "";
+            return;
+        case "retail-payment-entry-notes":
+            featureState.paymentDraft.notes = target.value || "";
+            return;
+        case "retail-payment-entry-amount":
+            featureState.paymentDraft.amountPaid = target.value || "";
+            syncRetailPaymentDraftPreview();
             return;
         case "retail-expense-date":
             featureState.expenseDraft.expenseDate = target.value || "";
@@ -1195,6 +1471,72 @@ async function handleRetailSaleView(button) {
     loadSaleIntoViewWorkspace(sale);
     renderRetailStoreView();
     document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleRetailSalePayments(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    openRetailPaymentModal(sale);
+    renderRetailStoreView();
+    document.getElementById("retail-payment-entry-amount")?.focus();
+}
+
+async function handleRetailPaymentSubmit(event) {
+    event.preventDefault();
+
+    const snapshot = getState();
+    const sale = getPaymentModalSale();
+
+    if (!sale) {
+        showToast("The selected sale could not be found. Reopen the payment modal and try again.", "error", {
+            title: "Retail Store"
+        });
+        closeRetailPaymentModal();
+        return;
+    }
+
+    try {
+        const result = await runProgressToastFlow({
+            title: "Recording Retail Payment",
+            initialMessage: "Reading sale and payment draft details...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Payment Recorded",
+            successMessage: "The retail payment was recorded successfully."
+        }, async ({ update }) => {
+            update("Validating payment date, mode, reference, and outstanding balance...", 42, "Step 2 of 4");
+            update("Writing payment entry and updating sale balance...", 76, "Step 3 of 4");
+            const result = await saveRetailSalePayment(featureState.paymentDraft, sale, snapshot.masterData, snapshot.currentUser);
+            update("Refreshing sales history and payment ledger view...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        closeRetailPaymentModalState();
+        renderRetailStoreView();
+
+        showToast("Retail payment recorded.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Retail Payment Recorded",
+            message: "The payment was linked to the sale and the customer balance was updated.",
+            details: [
+                { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+                { label: "Amount", value: formatCurrency(result.summary.paymentAmount) },
+                { label: "Payment Status", value: result.summary.nextPaymentStatus || "-" },
+                { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail payment save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not record the retail payment.", "error", {
+            title: "Retail Store"
+        });
+    }
 }
 
 async function handleRetailSalePdf(button) {
@@ -1319,6 +1661,11 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (event.target.closest("#retail-payment-form")) {
+            handleRetailPaymentSubmit(event);
+            return;
+        }
+
         if (event.target.closest("#retail-expense-form")) {
             handleRetailExpenseSubmit(event);
         }
@@ -1326,10 +1673,15 @@ function bindRetailStoreDomEvents() {
 
     root.addEventListener("click", event => {
         const resetButton = event.target.closest("#retail-reset-button");
+        const paymentsButton = event.target.closest(".retail-sale-payments-button");
         const viewButton = event.target.closest(".retail-sale-view-button");
         const expenseButton = event.target.closest(".retail-sale-expense-button");
         const pdfButton = event.target.closest(".retail-sale-pdf-button");
+        const viewModePaymentsButton = event.target.closest("#retail-open-payments-button");
         const workspacePdfButton = event.target.closest("#retail-download-pdf-button");
+        const paymentCloseButton = event.target.closest("#retail-payment-close-button, .retail-payment-close-trigger");
+        const paymentCancelButton = event.target.closest("#retail-payment-cancel-button, .retail-payment-close-trigger");
+        const paymentModalBackdrop = event.target.closest("#retail-payment-modal");
         const expenseCloseButton = event.target.closest("#retail-expense-close-button, .retail-expense-close-trigger");
         const expenseCancelButton = event.target.closest("#retail-expense-cancel-button, .retail-expense-close-trigger");
         const expenseModalBackdrop = event.target.closest("#retail-expense-modal");
@@ -1344,6 +1696,11 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (paymentsButton) {
+            handleRetailSalePayments(paymentsButton);
+            return;
+        }
+
         if (expenseButton) {
             handleRetailSaleExpense(expenseButton);
             return;
@@ -1354,8 +1711,23 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (viewModePaymentsButton && featureState.viewingSaleId) {
+            handleRetailSalePayments({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
         if (workspacePdfButton && featureState.viewingSaleId) {
             handleRetailSalePdf({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (paymentCloseButton || paymentCancelButton) {
+            closeRetailPaymentModal();
+            return;
+        }
+
+        if (event.target.id === "retail-payment-modal" && paymentModalBackdrop) {
+            closeRetailPaymentModal();
             return;
         }
 

@@ -105,6 +105,31 @@ export function subscribeToRetailSaleExpenses(saleId, onData, onError) {
         );
 }
 
+export function subscribeToRetailSalePayments(saleId, onData, onError) {
+    if (!saleId) {
+        onData([]);
+        return () => {};
+    }
+
+    return getDb()
+        .collection(COLLECTIONS.salesPaymentsLedger)
+        .where("invoiceId", "==", saleId)
+        .onSnapshot(
+            snapshot => {
+                const rows = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((left, right) => {
+                        const leftDate = left.paymentDate?.toDate ? left.paymentDate.toDate() : new Date(left.paymentDate || 0);
+                        const rightDate = right.paymentDate?.toDate ? right.paymentDate.toDate() : new Date(right.paymentDate || 0);
+                        return rightDate.getTime() - leftDate.getTime();
+                    });
+
+                onData(rows);
+            },
+            error => onError?.(error)
+        );
+}
+
 export async function getRetailSalePayments(invoiceId) {
     if (!invoiceId) return [];
 
@@ -190,6 +215,7 @@ export async function createRetailSaleRecord(payload, user) {
             totalAmountPaid,
             balanceDue,
             paymentStatus,
+            latestPaymentMode: payload.initialPayment?.paymentMode || "",
             createdBy: user.email,
             createdOn: now,
             updatedBy: user.email,
@@ -289,6 +315,99 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
                 expenseAmount,
                 nextBalanceDue,
                 nextTotalExpenses
+            }
+        };
+    });
+}
+
+export async function recordRetailSalePayment(saleId, paymentPayload, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before recording payment.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+    const paymentRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        if (sale.saleStatus === "Voided") {
+            throw new Error("Voided sales cannot accept payments.");
+        }
+
+        const invoiceTotal = Number(sale.financials?.grandTotal) || 0;
+        const currentAmountPaid = Number(sale.totalAmountPaid) || 0;
+        const currentBalanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - currentAmountPaid, 0)) || 0;
+        const paymentAmount = Number(paymentPayload.amountPaid) || 0;
+
+        if (currentBalanceDue <= 0) {
+            throw new Error("This sale has already been fully paid.");
+        }
+
+        if (paymentAmount <= 0) {
+            throw new Error("Payment amount must be greater than zero.");
+        }
+
+        if (paymentAmount > currentBalanceDue) {
+            throw new Error(`Payment cannot exceed the current balance due of ${currentBalanceDue.toFixed(2)}.`);
+        }
+
+        const nextTotalAmountPaid = Number((currentAmountPaid + paymentAmount).toFixed(2));
+        const nextBalanceDue = Number(Math.max((invoiceTotal - nextTotalAmountPaid), 0).toFixed(2));
+        const nextPaymentCount = (Number(sale.financials?.paymentCount) || 0) + 1;
+        const nextAmountTendered = Number(((Number(sale.financials?.amountTendered) || 0) + paymentAmount).toFixed(2));
+        const nextPaymentStatus = nextBalanceDue <= 0
+            ? "Paid"
+            : nextTotalAmountPaid > 0
+                ? "Partially Paid"
+                : "Unpaid";
+
+        transaction.update(saleRef, {
+            totalAmountPaid: nextTotalAmountPaid,
+            balanceDue: nextBalanceDue,
+            paymentStatus: nextPaymentStatus,
+            latestPaymentMode: paymentPayload.paymentMode,
+            "financials.amountTendered": nextAmountTendered,
+            "financials.paymentCount": nextPaymentCount,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        transaction.set(paymentRef, {
+            paymentId: buildSalesPaymentId(),
+            invoiceId: saleId,
+            relatedSaleId: saleId,
+            relatedSaleNumber: sale.manualVoucherNumber || paymentPayload.relatedSaleNumber || "",
+            paymentDate: paymentPayload.paymentDate,
+            amountPaid: paymentAmount,
+            totalCollected: paymentAmount,
+            paymentMode: paymentPayload.paymentMode,
+            transactionRef: paymentPayload.transactionRef || "",
+            notes: paymentPayload.notes || "",
+            status: "Verified",
+            paymentStatus: "Verified",
+            customerName: sale.customerInfo?.name || "",
+            store: sale.store || "",
+            recordedBy: user.email,
+            recordedOn: now,
+            createdBy: user.email,
+            createdOn: now
+        });
+
+        return {
+            paymentRef,
+            summary: {
+                paymentAmount,
+                nextTotalAmountPaid,
+                nextBalanceDue,
+                nextPaymentStatus
             }
         };
     });

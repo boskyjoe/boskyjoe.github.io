@@ -1,5 +1,5 @@
 import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
-import { addRetailSaleExpenseRecord, createRetailSaleRecord } from "./repository.js";
+import { addRetailSaleExpenseRecord, createRetailSaleRecord, recordRetailSalePayment } from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
@@ -406,4 +406,59 @@ export function validateRetailSaleExpensePayload(sale, payload, user) {
 export async function addRetailSaleExpense(sale, payload, user) {
     const normalizedExpense = validateRetailSaleExpensePayload(sale, payload, user);
     return addRetailSaleExpenseRecord(sale.id, normalizedExpense, user);
+}
+
+export function validateRetailSalePaymentPayload(payload, sale, masterData = {}) {
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before recording payment.");
+    }
+
+    if (sale.saleStatus === "Voided") {
+        throw new Error("Voided sales cannot accept payments.");
+    }
+
+    const paymentDate = parseRequiredDate(payload.paymentDate, "Payment date");
+    const paymentMode = normalizeText(payload.paymentMode);
+    const transactionRef = normalizeText(payload.transactionRef);
+    const notes = normalizeText(payload.notes);
+    const amountPaid = parsePositiveAmount(payload.amountPaid, "Payment amount");
+    const balanceDue = roundCurrency(Number(sale.balanceDue) || 0);
+    const activePaymentModes = (masterData.paymentModes || []).filter(mode => mode.isActive);
+
+    if (balanceDue <= 0) {
+        throw new Error("This sale has already been fully paid.");
+    }
+
+    if (amountPaid > balanceDue) {
+        throw new Error("Payment amount cannot exceed the current balance due.");
+    }
+
+    if (!paymentMode) {
+        throw new Error("Payment mode is required.");
+    }
+
+    if (activePaymentModes.length > 0 && !activePaymentModes.some(mode => normalizeText(mode.paymentMode) === paymentMode)) {
+        throw new Error("The selected payment mode could not be found.");
+    }
+
+    if (!transactionRef) {
+        throw new Error("Payment reference is required.");
+    }
+
+    return {
+        paymentDate,
+        amountPaid,
+        paymentMode,
+        transactionRef,
+        notes
+    };
+}
+
+export async function saveRetailSalePayment(payload, sale, masterData, user) {
+    if (!user) {
+        throw new Error("You must be logged in to record a retail payment.");
+    }
+
+    const validatedPayment = validateRetailSalePaymentPayload(payload, sale, masterData);
+    return recordRetailSalePayment(sale.id, validatedPayment, user);
 }

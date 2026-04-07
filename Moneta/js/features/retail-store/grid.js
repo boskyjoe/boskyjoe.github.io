@@ -8,6 +8,8 @@ let retailSalesGridApi = null;
 let retailSalesGridElement = null;
 let retailExpenseHistoryGridApi = null;
 let retailExpenseHistoryGridElement = null;
+let retailPaymentHistoryGridApi = null;
+let retailPaymentHistoryGridElement = null;
 let retailWorksheetReadOnly = false;
 
 const rightAlignedNumberColumn = {
@@ -56,6 +58,10 @@ function buildNumberSetter(field, decimals = 0) {
 function retailSalesActionMarkup(data) {
     return `
         <div class="table-actions grid-actions-inline">
+            <button class="button grid-action-button grid-action-button-primary retail-sale-payments-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.payment}</span>
+                Payments
+            </button>
             <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.search}</span>
                 View
@@ -256,11 +262,59 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 300,
-            flex: 1.35,
+            minWidth: 360,
+            flex: 1.5,
             sortable: false,
             filter: false,
             cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesActionMarkup(params.data))
+        }
+    ];
+}
+
+function buildPaymentHistoryColumnDefs() {
+    return [
+        {
+            field: "paymentDate",
+            headerName: "Date",
+            minWidth: 130,
+            flex: 0.8,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            field: "amountPaid",
+            headerName: "Amount",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "paymentMode",
+            headerName: "Mode",
+            minWidth: 140,
+            flex: 0.85,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "transactionRef",
+            headerName: "Reference",
+            minWidth: 170,
+            flex: 1.05,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "status",
+            headerName: "Status",
+            minWidth: 140,
+            flex: 0.85,
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || params.data?.paymentStatus || "Verified"))
+        },
+        {
+            field: "recordedBy",
+            headerName: "Recorded By",
+            minWidth: 190,
+            flex: 1.05,
+            valueFormatter: params => params.value || params.data?.createdBy || "-"
         }
     ];
 }
@@ -392,6 +446,16 @@ function buildExpenseHistoryPinnedBottomRow(rows) {
     }];
 }
 
+function buildPaymentHistoryPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totalAmount = rows.reduce((sum, row) => sum + (Number(row?.amountPaid) || 0), 0);
+    return [{
+        paymentMode: "Totals",
+        amountPaid: Number(totalAmount.toFixed(2))
+    }];
+}
+
 function refreshWorksheetPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildWorksheetPinnedBottomRow(getVisibleRows(api)));
 }
@@ -402,6 +466,10 @@ function refreshSalesPinnedBottomRow(api) {
 
 function refreshExpenseHistoryPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildExpenseHistoryPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshPaymentHistoryPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildPaymentHistoryPinnedBottomRow(getVisibleRows(api)));
 }
 
 export function initializeRetailWorksheetGrid(gridElement, onRowsChanged) {
@@ -534,4 +602,32 @@ export function refreshRetailExpenseHistoryGrid(rows) {
     if (!retailExpenseHistoryGridApi) return;
     retailExpenseHistoryGridApi.setGridOption("rowData", rows || []);
     refreshExpenseHistoryPinnedBottomRow(retailExpenseHistoryGridApi);
+}
+
+export function initializeRetailPaymentHistoryGrid(gridElement) {
+    if (!gridElement) return retailPaymentHistoryGridApi;
+
+    if (retailPaymentHistoryGridApi && retailPaymentHistoryGridElement !== gridElement) {
+        retailPaymentHistoryGridApi.destroy();
+        retailPaymentHistoryGridApi = null;
+        retailPaymentHistoryGridElement = null;
+    }
+
+    if (retailPaymentHistoryGridApi) return retailPaymentHistoryGridApi;
+
+    retailPaymentHistoryGridApi = createGrid(gridElement, {
+        columnDefs: buildPaymentHistoryColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        onFilterChanged: () => refreshPaymentHistoryPinnedBottomRow(retailPaymentHistoryGridApi)
+    });
+
+    retailPaymentHistoryGridElement = gridElement;
+    return retailPaymentHistoryGridApi;
+}
+
+export function refreshRetailPaymentHistoryGrid(rows) {
+    if (!retailPaymentHistoryGridApi) return;
+    retailPaymentHistoryGridApi.setGridOption("rowData", rows || []);
+    refreshPaymentHistoryPinnedBottomRow(retailPaymentHistoryGridApi);
 }
