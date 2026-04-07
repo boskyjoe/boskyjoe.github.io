@@ -40,7 +40,7 @@ function invoiceActionMarkup(data) {
     const isVoided = invoiceStatus === "Voided";
 
     return `
-        <div class="table-actions">
+        <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-primary purchase-payments-button" type="button" data-invoice-id="${data.id}" ${isVoided ? "disabled" : ""}>
                 <span class="button-icon">${icons.payment}</span>
                 Payments
@@ -179,7 +179,7 @@ function buildPaymentHistoryColumnDefs() {
             headerName: "Status",
             minWidth: 140,
             flex: 0.85,
-            cellRenderer: params => paymentStatusMarkup(params.value || params.data?.status || "Verified")
+            cellRenderer: params => (params.node?.rowPinned ? "" : paymentStatusMarkup(params.value || params.data?.status || "Verified"))
         },
         {
             field: "recordedBy",
@@ -194,7 +194,7 @@ function buildPaymentHistoryColumnDefs() {
             flex: 0.75,
             sortable: false,
             filter: false,
-            cellRenderer: params => paymentHistoryActionMarkup(params.data)
+            cellRenderer: params => (params.node?.rowPinned ? "" : paymentHistoryActionMarkup(params.data))
         }
     ];
 }

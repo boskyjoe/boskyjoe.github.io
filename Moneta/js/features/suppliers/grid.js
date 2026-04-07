@@ -15,7 +15,7 @@ function statusMarkup(isActive) {
 
 function actionMarkup(data) {
     return `
-        <div class="table-actions">
+        <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-secondary supplier-edit-button" type="button" data-supplier-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit

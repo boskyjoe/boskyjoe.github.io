@@ -53,7 +53,7 @@ function buildNumberSetter(field, decimals = 0) {
 
 function retailSalesActionMarkup(data) {
     return `
-        <div class="table-actions">
+        <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.search}</span>
                 View
@@ -238,15 +238,15 @@ function buildSalesColumnDefs() {
             headerName: "Status",
             minWidth: 145,
             flex: 0.8,
-            cellRenderer: params => statusMarkup(params.value)
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value))
         },
         {
             headerName: "Actions",
-            minWidth: 170,
-            flex: 0.95,
+            minWidth: 220,
+            flex: 1.15,
             sortable: false,
             filter: false,
-            cellRenderer: params => retailSalesActionMarkup(params.data)
+            cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesActionMarkup(params.data))
         }
     ];
 }

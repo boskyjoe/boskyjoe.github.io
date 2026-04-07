@@ -44,7 +44,7 @@ function actionMarkup(data) {
     }
 
     return `
-        <div class="table-actions">
+        <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-secondary user-edit-button" type="button" data-user-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit

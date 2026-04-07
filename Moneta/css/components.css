@@ -267,11 +267,16 @@ select {
 
 .table-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.5rem;
     align-items: center;
     align-content: center;
     min-height: 100%;
+}
+
+.grid-actions-inline {
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .button-ghost {
