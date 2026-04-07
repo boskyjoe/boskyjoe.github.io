@@ -830,6 +830,11 @@ select {
     pointer-events: auto;
 }
 
+.purchase-payment-modal-corner-close .button-icon,
+.purchase-payment-modal-corner-close .button-icon * {
+    pointer-events: none;
+}
+
 .purchase-payment-modal-corner-close:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-soft);
