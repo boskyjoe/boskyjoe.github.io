@@ -826,7 +826,8 @@ select {
     color: var(--text-main);
     cursor: pointer;
     transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
-    z-index: 2;
+    z-index: 25;
+    pointer-events: auto;
 }
 
 .purchase-payment-modal-corner-close:hover {
