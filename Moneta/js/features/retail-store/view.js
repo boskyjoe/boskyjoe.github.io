@@ -227,6 +227,26 @@ function closeRetailExpenseModal() {
     }
 }
 
+function bindRetailModalCloseButtons() {
+    const paymentCloseButton = document.getElementById("retail-payment-close-button");
+    if (paymentCloseButton) {
+        paymentCloseButton.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeRetailPaymentModal();
+        };
+    }
+
+    const expenseCloseButton = document.getElementById("retail-expense-close-button");
+    if (expenseCloseButton) {
+        expenseCloseButton.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeRetailExpenseModal();
+        };
+    }
+}
+
 function buildRetailWorksheetRows(snapshot) {
     if (featureState.workspaceMode === "view") {
         const products = snapshot.masterData.products || [];
@@ -1206,6 +1226,7 @@ export function renderRetailStoreView() {
     ensureRetailSalesListener(snapshot);
     ensureCatalogueItemsListener(snapshot);
     renderRetailStoreViewShell(snapshot);
+    bindRetailModalCloseButtons();
     syncRetailWorksheetGrid();
     syncRetailSalesGrid();
     syncRetailPaymentHistoryGrid();
