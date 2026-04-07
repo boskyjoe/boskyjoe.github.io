@@ -227,26 +227,6 @@ function closeRetailExpenseModal() {
     }
 }
 
-function bindRetailModalCloseButtons() {
-    const paymentCloseButton = document.getElementById("retail-payment-close-button");
-    if (paymentCloseButton) {
-        paymentCloseButton.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            closeRetailPaymentModal();
-        };
-    }
-
-    const expenseCloseButton = document.getElementById("retail-expense-close-button");
-    if (expenseCloseButton) {
-        expenseCloseButton.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            closeRetailExpenseModal();
-        };
-    }
-}
-
 function buildRetailWorksheetRows(snapshot) {
     if (featureState.workspaceMode === "view") {
         const products = snapshot.masterData.products || [];
@@ -433,9 +413,6 @@ function renderRetailPaymentModal(snapshot) {
     return `
         <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
             <div class="purchase-payment-modal-card">
-                <button id="retail-payment-close-button" class="purchase-payment-modal-corner-close retail-payment-close-trigger" type="button" aria-label="Close payment modal">
-                    <span class="button-icon">${icons.close}</span>
-                </button>
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
                         <span class="panel-icon panel-icon-alt">${icons.payment}</span>
@@ -586,9 +563,6 @@ function renderRetailExpenseModal(sale) {
     return `
         <div id="retail-expense-modal" class="retail-expense-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-expense-modal-title">
             <div class="retail-expense-modal-card">
-                <button id="retail-expense-close-button" class="purchase-payment-modal-corner-close retail-expense-close-trigger" type="button" aria-label="Close expense modal">
-                    <span class="button-icon">${icons.close}</span>
-                </button>
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
                         <span class="panel-icon">${icons.payment}</span>
@@ -1226,7 +1200,6 @@ export function renderRetailStoreView() {
     ensureRetailSalesListener(snapshot);
     ensureCatalogueItemsListener(snapshot);
     renderRetailStoreViewShell(snapshot);
-    bindRetailModalCloseButtons();
     syncRetailWorksheetGrid();
     syncRetailSalesGrid();
     syncRetailPaymentHistoryGrid();
@@ -1705,10 +1678,8 @@ function bindRetailStoreDomEvents() {
         const pdfButton = targetElement.closest(".retail-sale-pdf-button");
         const viewModePaymentsButton = targetElement.closest("#retail-open-payments-button");
         const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
-        const paymentCloseButton = targetElement.closest("#retail-payment-close-button") || targetElement.closest(".retail-payment-close-trigger");
         const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
-        const expenseCloseButton = targetElement.closest("#retail-expense-close-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
 
@@ -1747,7 +1718,7 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
-        if (paymentCloseButton || paymentCancelButton) {
+        if (paymentCancelButton) {
             closeRetailPaymentModal();
             return;
         }
@@ -1757,7 +1728,7 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
-        if (expenseCloseButton || expenseCancelButton) {
+        if (expenseCancelButton) {
             closeRetailExpenseModal();
             return;
         }
