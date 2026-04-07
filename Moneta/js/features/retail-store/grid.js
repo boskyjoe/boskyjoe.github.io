@@ -6,6 +6,8 @@ let retailWorksheetGridApi = null;
 let retailWorksheetGridElement = null;
 let retailSalesGridApi = null;
 let retailSalesGridElement = null;
+let retailExpenseHistoryGridApi = null;
+let retailExpenseHistoryGridElement = null;
 let retailWorksheetReadOnly = false;
 
 const rightAlignedNumberColumn = {
@@ -57,6 +59,10 @@ function retailSalesActionMarkup(data) {
             <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.search}</span>
                 View
+            </button>
+            <button class="button grid-action-button grid-action-button-primary retail-sale-expense-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.plus}</span>
+                Expense
             </button>
             <button class="button grid-action-button retail-sale-pdf-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.download}</span>
@@ -242,11 +248,43 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 220,
-            flex: 1.15,
+            minWidth: 300,
+            flex: 1.35,
             sortable: false,
             filter: false,
             cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesActionMarkup(params.data))
+        }
+    ];
+}
+
+function buildExpenseHistoryColumnDefs() {
+    return [
+        {
+            field: "expenseDate",
+            headerName: "Date",
+            minWidth: 130,
+            flex: 0.8,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            field: "justification",
+            headerName: "Justification",
+            minWidth: 280,
+            flex: 1.8
+        },
+        {
+            field: "amount",
+            headerName: "Amount",
+            minWidth: 140,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => (params.node?.rowPinned ? formatCurrency(params.value || 0) : formatCurrency(params.value || 0))
+        },
+        {
+            field: "addedBy",
+            headerName: "Added By",
+            minWidth: 180,
+            flex: 1
         }
     ];
 }
@@ -333,12 +371,26 @@ function buildSalesPinnedBottomRow(rows) {
     }];
 }
 
+function buildExpenseHistoryPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totalAmount = rows.reduce((sum, row) => sum + (Number(row?.amount) || 0), 0);
+    return [{
+        justification: "Totals",
+        amount: Number(totalAmount.toFixed(2))
+    }];
+}
+
 function refreshWorksheetPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildWorksheetPinnedBottomRow(getVisibleRows(api)));
 }
 
 function refreshSalesPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildSalesPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshExpenseHistoryPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildExpenseHistoryPinnedBottomRow(getVisibleRows(api)));
 }
 
 export function initializeRetailWorksheetGrid(gridElement, onRowsChanged) {
@@ -443,4 +495,32 @@ export function refreshRetailSalesGrid(rows) {
 
 export function updateRetailSalesGridSearch(searchTerm) {
     retailSalesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeRetailExpenseHistoryGrid(gridElement) {
+    if (!gridElement) return retailExpenseHistoryGridApi;
+
+    if (retailExpenseHistoryGridApi && retailExpenseHistoryGridElement !== gridElement) {
+        retailExpenseHistoryGridApi.destroy();
+        retailExpenseHistoryGridApi = null;
+        retailExpenseHistoryGridElement = null;
+    }
+
+    if (retailExpenseHistoryGridApi) return retailExpenseHistoryGridApi;
+
+    retailExpenseHistoryGridApi = createGrid(gridElement, {
+        columnDefs: buildExpenseHistoryColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        onFilterChanged: () => refreshExpenseHistoryPinnedBottomRow(retailExpenseHistoryGridApi)
+    });
+
+    retailExpenseHistoryGridElement = gridElement;
+    return retailExpenseHistoryGridApi;
+}
+
+export function refreshRetailExpenseHistoryGrid(rows) {
+    if (!retailExpenseHistoryGridApi) return;
+    retailExpenseHistoryGridApi.setGridOption("rowData", rows || []);
+    refreshExpenseHistoryPinnedBottomRow(retailExpenseHistoryGridApi);
 }

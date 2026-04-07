@@ -1,6 +1,7 @@
 import { COLLECTIONS } from "../../config/collections.js";
 
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
+const RETAIL_SALE_EXPENSES_SUBCOLLECTION = "expenses";
 
 function getDb() {
     return firebase.firestore();
@@ -26,6 +27,10 @@ function buildSaleBusinessId(storeName = "") {
 
 function buildSalesPaymentId() {
     return `SPAY-${Date.now()}`;
+}
+
+function buildSalesExpenseId() {
+    return `RSEXP-${Date.now()}`;
 }
 
 function sortByDateDesc(rows = []) {
@@ -74,6 +79,26 @@ export function subscribeToRetailCatalogueItems(catalogueId, onData, onError) {
                     .map(doc => ({ id: doc.id, ...doc.data() }))
                     .sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
 
+                onData(rows);
+            },
+            error => onError?.(error)
+        );
+}
+
+export function subscribeToRetailSaleExpenses(saleId, onData, onError) {
+    if (!saleId) {
+        onData([]);
+        return () => {};
+    }
+
+    return getDb()
+        .collection(COLLECTIONS.salesInvoices)
+        .doc(saleId)
+        .collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION)
+        .orderBy("expenseDate", "desc")
+        .onSnapshot(
+            snapshot => {
+                const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 onData(rows);
             },
             error => onError?.(error)
@@ -156,6 +181,7 @@ export async function createRetailSaleRecord(payload, user) {
                 orderLevelTaxAmount: payload.financials.orderLevelTaxAmount,
                 totalTax: payload.financials.totalTax,
                 grandTotal: payload.financials.grandTotal,
+                totalExpenses: 0,
                 amountTendered: totalAmountPaid,
                 paymentCount: payload.initialPayment ? 1 : 0
             },
@@ -202,5 +228,68 @@ export async function createRetailSaleRecord(payload, user) {
         });
 
         return saleRef;
+    });
+}
+
+export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before logging an expense.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+    const expenseRef = saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).doc();
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const saleData = saleDoc.data() || {};
+        if (saleData.saleStatus === "Voided") {
+            throw new Error("Voided sales cannot accept expenses.");
+        }
+
+        const currentBalanceDue = Number(saleData.balanceDue) || 0;
+        if (currentBalanceDue <= 0) {
+            throw new Error("This sale has no balance due left for expense adjustment.");
+        }
+
+        const expenseAmount = Number(expensePayload.amount) || 0;
+        if (expenseAmount > currentBalanceDue) {
+            throw new Error(`Expense cannot exceed the current balance due of ${currentBalanceDue.toFixed(2)}.`);
+        }
+
+        const currentTotalExpenses = Number(saleData.financials?.totalExpenses) || 0;
+        const nextBalanceDue = Number((currentBalanceDue - expenseAmount).toFixed(2));
+        const nextTotalExpenses = Number((currentTotalExpenses + expenseAmount).toFixed(2));
+
+        transaction.set(expenseRef, {
+            expenseId: buildSalesExpenseId(),
+            expenseDate: expensePayload.expenseDate,
+            justification: expensePayload.justification,
+            amount: expenseAmount,
+            addedBy: user.email,
+            addedOn: now
+        });
+
+        transaction.update(saleRef, {
+            "financials.totalExpenses": nextTotalExpenses,
+            balanceDue: nextBalanceDue,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        return {
+            expenseRef,
+            summary: {
+                expenseAmount,
+                nextBalanceDue,
+                nextTotalExpenses
+            }
+        };
     });
 }

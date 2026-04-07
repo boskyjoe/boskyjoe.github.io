@@ -1,5 +1,5 @@
 import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
-import { createRetailSaleRecord } from "./repository.js";
+import { addRetailSaleExpenseRecord, createRetailSaleRecord } from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
@@ -41,6 +41,16 @@ function parseRequiredDate(value, label) {
     }
 
     return date;
+}
+
+function parsePositiveAmount(value, label) {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new Error(`${label} must be greater than zero.`);
+    }
+
+    return roundCurrency(parsed);
 }
 
 function buildProductLookup(catalogueItems = []) {
@@ -354,4 +364,46 @@ export async function saveRetailSale(payload, user, catalogueHeaders = [], catal
         salePayload,
         summary
     };
+}
+
+export function validateRetailSaleExpensePayload(sale, payload, user) {
+    if (!user) {
+        throw new Error("You must be logged in to add a retail expense.");
+    }
+
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before adding an expense.");
+    }
+
+    if (sale.saleStatus === "Voided") {
+        throw new Error("Expenses cannot be added to a voided sale.");
+    }
+
+    const expenseDate = parseRequiredDate(payload.expenseDate, "Expense date");
+    const justification = normalizeText(payload.justification);
+    const amount = parsePositiveAmount(payload.amount, "Expense amount");
+
+    if (!justification) {
+        throw new Error("Expense justification is required.");
+    }
+
+    const currentBalanceDue = roundCurrency(Number(sale.balanceDue) || 0);
+    if (currentBalanceDue <= 0) {
+        throw new Error("This sale has no balance due left for expense adjustment.");
+    }
+
+    if (amount > currentBalanceDue) {
+        throw new Error("Expense amount cannot exceed the current balance due.");
+    }
+
+    return {
+        expenseDate,
+        justification,
+        amount
+    };
+}
+
+export async function addRetailSaleExpense(sale, payload, user) {
+    const normalizedExpense = validateRetailSaleExpensePayload(sale, payload, user);
+    return addRetailSaleExpenseRecord(sale.id, normalizedExpense, user);
 }

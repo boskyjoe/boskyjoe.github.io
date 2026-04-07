@@ -771,6 +771,45 @@ select {
     overflow: auto;
 }
 
+.retail-expense-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    background: rgba(10, 18, 25, 0.58);
+    backdrop-filter: blur(6px);
+}
+
+.retail-expense-modal-card {
+    position: relative;
+    width: min(1080px, 100%);
+    max-height: calc(100vh - 2.5rem);
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: var(--bg-panel);
+    border: 1px solid rgba(59, 86, 107, 0.16);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 80px rgba(10, 18, 25, 0.28);
+}
+
+.retail-expense-layout {
+    display: grid;
+    gap: 1rem;
+}
+
+.retail-expense-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.retail-expense-entry-card .form-grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.8fr) minmax(0, 0.8fr);
+}
+
 .purchase-payment-modal-corner-close {
     position: absolute;
     top: 1rem;
@@ -1630,11 +1669,13 @@ select {
         grid-template-columns: 1fr;
     }
 
-    .purchase-payment-modal-overlay {
+    .purchase-payment-modal-overlay,
+    .retail-expense-modal-overlay {
         padding: 0.75rem;
     }
 
-    .purchase-payment-modal-card {
+    .purchase-payment-modal-card,
+    .retail-expense-modal-card {
         max-height: calc(100vh - 1.5rem);
     }
 
@@ -1652,6 +1693,7 @@ select {
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
     .purchase-payment-void-summary,
+    .retail-expense-summary-grid,
     .retail-summary-grid,
     .retail-product-list-shell,
     .bulk-product-list,
