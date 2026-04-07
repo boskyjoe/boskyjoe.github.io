@@ -1058,6 +1058,12 @@ select {
     font-weight: 800;
 }
 
+.retail-finance-total-row-danger span,
+.retail-finance-total-row-danger strong {
+    color: var(--danger);
+    font-weight: 800;
+}
+
 .retail-finance-status-row {
     display: flex;
     align-items: center;
