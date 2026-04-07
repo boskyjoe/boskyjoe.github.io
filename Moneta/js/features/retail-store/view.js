@@ -32,7 +32,9 @@ import {
     RETAIL_SALE_TYPES,
     RETAIL_STORES,
     getRetailStoreTaxDefaults,
+    resolveRetailSaleEditScope,
     saveRetailSalePayment,
+    saveRetailSaleUpdate,
     saveRetailSale
 } from "./service.js";
 
@@ -47,6 +49,8 @@ const featureState = {
     catalogueItemsListenerId: null,
     workspaceMode: "create",
     viewingSaleId: null,
+    editingSaleId: null,
+    editModeScope: null,
     paymentModalOpen: false,
     paymentSaleId: null,
     payments: [],
@@ -78,6 +82,7 @@ function createDefaultSaleDraft() {
         transactionRef: "",
         paymentNotes: "",
         saleNotes: "",
+        editReason: "",
         orderDiscountType: "Percentage",
         orderDiscountPercentage: "",
         orderDiscountAmount: "",
@@ -123,6 +128,8 @@ function toDateInputValue(value) {
 function resetRetailWorkspace() {
     featureState.workspaceMode = "create";
     featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.editModeScope = null;
     featureState.saleDraft = createDefaultSaleDraft();
     featureState.lineItemDrafts = {};
     clearCatalogueItemsSubscription();
@@ -228,7 +235,10 @@ function closeRetailExpenseModal() {
 }
 
 function buildRetailWorksheetRows(snapshot) {
-    if (featureState.workspaceMode === "view") {
+    const isStaticWorksheetMode = featureState.workspaceMode === "view"
+        || (isRetailEditMode() && featureState.editModeScope !== "full");
+
+    if (isStaticWorksheetMode) {
         const products = snapshot.masterData.products || [];
         const categories = snapshot.masterData.categories || [];
 
@@ -257,8 +267,7 @@ function buildRetailWorksheetRows(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const products = snapshot.masterData.products || [];
     const storeTaxDefaults = getRetailStoreTaxDefaults(featureState.saleDraft.store);
-
-    return (featureState.selectedCatalogueItems || []).map(item => {
+    const selectedRows = (featureState.selectedCatalogueItems || []).map(item => {
         const product = products.find(entry => entry.id === item.productId) || null;
         const draft = featureState.lineItemDrafts[item.productId] || {};
         const categoryId = item.categoryId || product?.categoryId || "";
@@ -279,6 +288,31 @@ function buildRetailWorksheetRows(snapshot) {
             sgstPercentage: draft.sgstPercentage ?? storeTaxDefaults.sgstPercentage
         };
     });
+    const selectedIds = new Set(selectedRows.map(row => row.productId));
+    const draftOnlyRows = Object.entries(featureState.lineItemDrafts || {})
+        .filter(([productId]) => !selectedIds.has(productId))
+        .map(([productId, draft]) => {
+            const product = products.find(entry => entry.id === productId) || null;
+            const categoryId = draft.categoryId || product?.categoryId || "";
+            const categoryName = draft.categoryName
+                || categories.find(category => category.id === categoryId)?.categoryName
+                || "-";
+
+            return {
+                productId,
+                productName: draft.productName || product?.itemName || "Untitled Product",
+                categoryId,
+                categoryName,
+                inventoryCount: Number(product?.inventoryCount) || 0,
+                unitPrice: Number(draft.unitPrice) || 0,
+                quantity: Number(draft.quantity) || 0,
+                lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0,
+                cgstPercentage: draft.cgstPercentage ?? storeTaxDefaults.cgstPercentage,
+                sgstPercentage: draft.sgstPercentage ?? storeTaxDefaults.sgstPercentage
+            };
+        });
+
+    return [...selectedRows, ...draftOnlyRows];
 }
 
 function applyStoreTaxDefaultsToLineItemDrafts(storeName) {
@@ -369,6 +403,16 @@ function renderPaymentModeOptions(snapshot, currentValue) {
 function getPaymentModalSale() {
     if (!featureState.paymentSaleId) return null;
     return featureState.sales.find(entry => entry.id === featureState.paymentSaleId) || null;
+}
+
+function isRetailEditMode() {
+    return featureState.workspaceMode === "edit";
+}
+
+function isRetailWorksheetLockedMode() {
+    if (featureState.workspaceMode === "view") return true;
+    if (isRetailEditMode() && featureState.editModeScope !== "full") return true;
+    return false;
 }
 
 function getPaymentDraftAmount() {
@@ -655,20 +699,39 @@ function renderRetailStoreViewShell(snapshot) {
     const isSampleSale = featureState.saleDraft.saleType === "Sample";
     const isTastyTreats = featureState.saleDraft.store === "Tasty Treats";
     const isViewMode = featureState.workspaceMode === "view";
+    const isEditMode = featureState.workspaceMode === "edit";
+    const isEditModeFull = isEditMode && featureState.editModeScope === "full";
+    const isEditModeLimited = isEditMode && featureState.editModeScope === "limited";
     const viewingSale = isViewMode
         ? featureState.sales.find(entry => entry.id === featureState.viewingSaleId) || null
         : null;
-    const viewModeTotalExpenses = Number(viewingSale?.financials?.totalExpenses) || 0;
-    const viewModeBalanceDue = Number(viewingSale?.balanceDue) || 0;
+    const editingSale = isEditMode
+        ? featureState.sales.find(entry => entry.id === featureState.editingSaleId) || null
+        : null;
+    const workspaceSale = viewingSale || editingSale;
+    const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
+    const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
     const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
-    const paymentStatus = summary.grandTotal <= 0
+    const draftPaymentStatus = summary.grandTotal <= 0
         ? "Paid"
         : featureState.saleDraft.paymentType === "Pay Now"
             ? (summary.balanceDue <= 0 ? "Paid" : summary.appliedPayment > 0 ? "Partially Paid" : "Unpaid")
             : "Unpaid";
+    const paymentStatus = (isViewMode || isEditModeLimited)
+        ? workspaceSale?.paymentStatus || draftPaymentStatus
+        : draftPaymentStatus;
     const expenseModalSale = getExpenseModalSale();
+    const canEditSaleIdentity = !isViewMode && (!isEditMode || isEditModeFull);
+    const canEditCustomerInfo = !isViewMode;
+    const canEditSaleContext = !isViewMode && !isEditMode;
+    const canEditSettlement = !isViewMode && !isEditMode;
+    const canEditFinancials = !isViewMode && (!isEditMode || isEditModeFull);
 
-    const disabledFieldAttr = isViewMode ? "disabled" : "";
+    const saleIdentityDisabledAttr = canEditSaleIdentity ? "" : "disabled";
+    const customerDisabledAttr = canEditCustomerInfo ? "" : "disabled";
+    const saleContextDisabledAttr = canEditSaleContext ? "" : "disabled";
+    const financialDisabledAttr = canEditFinancials ? "" : "disabled";
+
     const viewModeBanner = isViewMode ? `
         <div class="retail-view-mode-banner">
             <div>
@@ -682,18 +745,37 @@ function renderRetailStoreViewShell(snapshot) {
             </div>
         </div>
     ` : "";
+    const editModeBanner = isEditMode ? `
+        <div class="retail-edit-mode-banner ${isEditModeLimited ? "retail-edit-mode-banner-limited" : "retail-edit-mode-banner-full"}">
+            <div>
+                <p class="section-kicker">${isEditModeLimited ? "Limited Edit Mode" : "Full Edit Mode"}</p>
+                <p class="panel-copy">
+                    ${isEditModeLimited
+                        ? "Payments or expenses are already linked. You can update customer details and notes only. Product list, discounts, tax, and settlement are locked."
+                        : "No linked payments or expenses were found. Full retail edit is enabled, including product list and invoice adjustments."}
+                </p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${formatCurrency(summary.grandTotal)} total</span>
+                <span class="status-pill">${paymentStatus}</span>
+            </div>
+        </div>
+    ` : "";
 
     root.innerHTML = `
-        <div class="panel-card ${isViewMode ? "retail-view-mode-card" : ""}">
+        <div class="panel-card ${(isViewMode || isEditMode) ? "retail-view-mode-card" : ""}">
             <div class="panel-header panel-header-accent">
                 <div class="panel-title-wrap">
                     <span class="panel-icon panel-icon-alt">${icons.retail}</span>
                     <div>
-                        <h2>${isViewMode ? "View Retail Sale" : "Retail Store"}</h2>
+                        <h2>${isViewMode ? "View Retail Sale" : isEditMode ? "Edit Retail Sale" : "Retail Store"}</h2>
                         <p class="panel-copy">
                             ${isViewMode
                                 ? "Review the full retail sale exactly as it was posted, including customer, settlement, product tax, and totals."
-                                : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
+                                : isEditMode
+                                    ? "Edit the selected retail sale with strict safeguards based on linked payments and expenses."
+                                    : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
                         </p>
                     </div>
                 </div>
@@ -705,6 +787,7 @@ function renderRetailStoreViewShell(snapshot) {
             </div>
             <div class="panel-body">
                 ${viewModeBanner}
+                ${editModeBanner}
                 <form id="retail-store-form">
                     <div class="workspace-form-sections">
                         <section class="workspace-form-section">
@@ -715,27 +798,27 @@ function renderRetailStoreViewShell(snapshot) {
                             <div class="workspace-form-section-grid">
                                 <div class="field">
                                     <label for="retail-sale-date">Sale Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="retail-sale-date" class="input" type="date" value="${featureState.saleDraft.saleDate}" ${disabledFieldAttr} required>
+                                    <input id="retail-sale-date" class="input" type="date" value="${featureState.saleDraft.saleDate}" ${saleIdentityDisabledAttr} required>
                                 </div>
                                 <div class="field">
                                     <label for="retail-voucher-number">Manual Voucher # <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="retail-voucher-number" class="input" type="text" value="${featureState.saleDraft.manualVoucherNumber}" placeholder="TT-APR-001" ${disabledFieldAttr} required>
+                                    <input id="retail-voucher-number" class="input" type="text" value="${featureState.saleDraft.manualVoucherNumber}" placeholder="TT-APR-001" ${saleIdentityDisabledAttr} required>
                                 </div>
                                 <div class="field field-wide">
                                     <label for="retail-customer-name">Customer Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="retail-customer-name" class="input" type="text" value="${featureState.saleDraft.customerName}" placeholder="Customer name" ${disabledFieldAttr} required>
+                                    <input id="retail-customer-name" class="input" type="text" value="${featureState.saleDraft.customerName}" placeholder="Customer name" ${customerDisabledAttr} required>
                                 </div>
                                 <div class="field">
                                     <label for="retail-customer-phone">Customer Phone <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="retail-customer-phone" class="input" type="tel" value="${featureState.saleDraft.customerPhone}" placeholder="Customer phone" ${disabledFieldAttr} required>
+                                    <input id="retail-customer-phone" class="input" type="tel" value="${featureState.saleDraft.customerPhone}" placeholder="Customer phone" ${customerDisabledAttr} required>
                                 </div>
                                 <div class="field">
                                     <label for="retail-customer-email">Email</label>
-                                    <input id="retail-customer-email" class="input" type="email" value="${featureState.saleDraft.customerEmail}" placeholder="Customer email" ${disabledFieldAttr}>
+                                    <input id="retail-customer-email" class="input" type="email" value="${featureState.saleDraft.customerEmail}" placeholder="Customer email" ${customerDisabledAttr}>
                                 </div>
                                 <div class="field field-full" ${isTastyTreats ? "" : "hidden"}>
                                     <label for="retail-customer-address">Customer Address <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <textarea id="retail-customer-address" class="textarea" ${disabledFieldAttr} placeholder="Delivery address for Tasty Treats orders">${featureState.saleDraft.customerAddress}</textarea>
+                                    <textarea id="retail-customer-address" class="textarea" ${customerDisabledAttr} placeholder="Delivery address for Tasty Treats orders">${featureState.saleDraft.customerAddress}</textarea>
                                 </div>
                             </div>
                         </section>
@@ -748,28 +831,28 @@ function renderRetailStoreViewShell(snapshot) {
                             <div class="workspace-form-section-grid">
                                 <div class="field">
                                     <label for="retail-store">Store <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="retail-store" class="select" ${disabledFieldAttr} required>
+                                    <select id="retail-store" class="select" ${saleContextDisabledAttr} required>
                                         <option value="">Select store</option>
                                         ${renderStoreOptions(featureState.saleDraft.store)}
                                     </select>
                                 </div>
                                 <div class="field">
                                     <label for="retail-sale-type">Sale Type <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="retail-sale-type" class="select" ${disabledFieldAttr} required>
+                                    <select id="retail-sale-type" class="select" ${saleContextDisabledAttr} required>
                                         <option value="">Select sale type</option>
                                         ${renderSaleTypeOptions(featureState.saleDraft.saleType)}
                                     </select>
                                 </div>
                                 <div class="field field-full">
                                     <label for="retail-sales-catalogue">Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="retail-sales-catalogue" class="select" ${disabledFieldAttr} required>
+                                    <select id="retail-sales-catalogue" class="select" ${saleContextDisabledAttr} required>
                                         <option value="">Select catalogue</option>
                                         ${renderSalesCatalogueOptions(snapshot, featureState.saleDraft.salesCatalogueId)}
                                     </select>
                                 </div>
                                 <div class="field field-full">
                                     <label for="retail-sale-notes">Sale Notes</label>
-                                    <textarea id="retail-sale-notes" class="textarea" ${disabledFieldAttr} placeholder="Optional notes for this retail sale">${featureState.saleDraft.saleNotes}</textarea>
+                                    <textarea id="retail-sale-notes" class="textarea" ${customerDisabledAttr} placeholder="Optional notes for this retail sale">${featureState.saleDraft.saleNotes}</textarea>
                                 </div>
                             </div>
                         </section>
@@ -782,32 +865,49 @@ function renderRetailStoreViewShell(snapshot) {
                             <div class="workspace-form-section-grid">
                                 <div class="field">
                                     <label for="retail-payment-type">Payment Type <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="retail-payment-type" class="select" ${(isSampleSale || isViewMode) ? "disabled" : ""} required>
+                                    <select id="retail-payment-type" class="select" ${(isSampleSale || !canEditSettlement) ? "disabled" : ""} required>
                                         ${renderPaymentTypeOptions(featureState.saleDraft.paymentType)}
                                     </select>
                                 </div>
                                 <div class="field">
                                     <label for="retail-payment-mode">Payment Mode ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
-                                    <select id="retail-payment-mode" class="select" ${(isPayNow && !isViewMode) ? "" : "disabled"}>
+                                    <select id="retail-payment-mode" class="select" ${(isPayNow && canEditSettlement) ? "" : "disabled"}>
                                         <option value="">Select payment mode</option>
                                         ${renderPaymentModeOptions(snapshot, featureState.saleDraft.paymentMode)}
                                     </select>
                                 </div>
                                 <div class="field">
                                     <label for="retail-amount-received">Amount Received ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
-                                    <input id="retail-amount-received" class="input" type="number" min="0" step="0.01" value="${featureState.saleDraft.amountReceived}" ${(isPayNow && !isViewMode) ? "" : "disabled"} placeholder="0.00">
+                                    <input id="retail-amount-received" class="input" type="number" min="0" step="0.01" value="${featureState.saleDraft.amountReceived}" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="0.00">
                                 </div>
                                 <div class="field field-full">
                                     <label for="retail-transaction-ref">Payment Reference ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
-                                    <input id="retail-transaction-ref" class="input" type="text" value="${featureState.saleDraft.transactionRef}" ${(isPayNow && !isViewMode) ? "" : "disabled"} placeholder="UPI / Cash Ref / Card Slip">
+                                    <input id="retail-transaction-ref" class="input" type="text" value="${featureState.saleDraft.transactionRef}" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="UPI / Cash Ref / Card Slip">
                                 </div>
                                 <div class="field field-full">
                                     <label for="retail-payment-notes">Payment Notes</label>
-                                    <textarea id="retail-payment-notes" class="textarea" ${(isPayNow && !isViewMode) ? "" : "disabled"} placeholder="Optional notes about the payment">${featureState.saleDraft.paymentNotes}</textarea>
+                                    <textarea id="retail-payment-notes" class="textarea" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="Optional notes about the payment">${featureState.saleDraft.paymentNotes}</textarea>
+                                </div>
+                            </div>
+                            ${isEditMode ? `
+                                <p class="panel-copy panel-copy-tight">Settlement fields are locked during edit. Use the <strong>Payments</strong> action in Sales History to record customer payments.</p>
+                            ` : ""}
+                        </section>
+                    </div>
+                    ${isEditMode ? `
+                        <section class="workspace-form-section retail-edit-reason-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Edit Audit</p>
+                                <p class="panel-copy">Capture why this sale is being edited. The reason is stored on the sale for audit history.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="retail-edit-reason">Edit Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-edit-reason" class="textarea" placeholder="Explain why this retail sale is being edited" ${customerDisabledAttr} required>${featureState.saleDraft.editReason || ""}</textarea>
                                 </div>
                             </div>
                         </section>
-                    </div>
+                    ` : ""}
 
                     <div class="retail-product-list-shell">
                         <div class="panel-card">
@@ -868,7 +968,7 @@ function renderRetailStoreViewShell(snapshot) {
                                         <div class="retail-finance-fields retail-finance-fields-discount">
                                             <div class="field">
                                                 <label for="retail-order-discount-type">Discount Type</label>
-                                                <select id="retail-order-discount-type" class="select" ${disabledFieldAttr}>
+                                                <select id="retail-order-discount-type" class="select" ${financialDisabledAttr}>
                                                     ${renderDiscountTypeOptions(featureState.saleDraft.orderDiscountType)}
                                                 </select>
                                             </div>
@@ -882,7 +982,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                     max="100"
                                                     step="0.01"
                                                     value="${featureState.saleDraft.orderDiscountPercentage}"
-                                                    ${(featureState.saleDraft.orderDiscountType === "Percentage" && !isViewMode) ? "" : "disabled"}>
+                                                    ${(featureState.saleDraft.orderDiscountType === "Percentage" && canEditFinancials) ? "" : "disabled"}>
                                             </div>
                                             <div class="field">
                                                 <label for="retail-order-discount-amount">Invoice Discount Amount</label>
@@ -893,7 +993,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                     min="0"
                                                     step="0.01"
                                                     value="${featureState.saleDraft.orderDiscountAmount}"
-                                                    ${(featureState.saleDraft.orderDiscountType === "Fixed" && !isViewMode) ? "" : "disabled"}>
+                                                    ${(featureState.saleDraft.orderDiscountType === "Fixed" && canEditFinancials) ? "" : "disabled"}>
                                             </div>
                                         </div>
                                         <div class="retail-finance-chip-row">
@@ -922,7 +1022,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                     type="number"
                                                     min="0"
                                                     step="0.01"
-                                                    value="${featureState.saleDraft.orderTaxPercentage}" ${disabledFieldAttr}>
+                                                    value="${featureState.saleDraft.orderTaxPercentage}" ${financialDisabledAttr}>
                                             </div>
                                         </div>
                                         <div class="retail-finance-chip-row">
@@ -971,15 +1071,15 @@ function renderRetailStoreViewShell(snapshot) {
                                                 <span>Grand Total</span>
                                                 <strong>${formatCurrency(summary.grandTotal)}</strong>
                                             </div>
-                                            ${isViewMode ? `
+                                            ${(isViewMode || isEditMode) ? `
                                                 <div class="retail-finance-total-row retail-finance-total-row-danger">
                                                     <span>Total Expense</span>
-                                                    <strong>-${formatCurrency(viewModeTotalExpenses)}</strong>
+                                                    <strong>-${formatCurrency(workspaceTotalExpenses)}</strong>
                                                 </div>
                                             ` : ""}
                                             <div class="retail-finance-total-row">
                                                 <span>Balance Due</span>
-                                                <strong>${formatCurrency(isViewMode ? viewModeBalanceDue : summary.balanceDue)}</strong>
+                                                <strong>${formatCurrency((isViewMode || isEditModeLimited) ? workspaceBalanceDue : summary.balanceDue)}</strong>
                                             </div>
                                         </div>
                                         <div class="retail-finance-status-row">
@@ -995,7 +1095,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <div class="form-actions">
                         <button id="retail-reset-button" class="button button-secondary" type="button">
                             <span class="button-icon">${icons.inactive}</span>
-                            ${isViewMode ? "Close View" : "Reset"}
+                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : "Reset"}
                         </button>
                         ${isViewMode ? `
                             <button id="retail-open-payments-button" class="button button-secondary" type="button">
@@ -1008,8 +1108,8 @@ function renderRetailStoreViewShell(snapshot) {
                             </button>
                         ` : `
                             <button class="button button-primary-alt" type="submit">
-                                <span class="button-icon">${icons.plus}</span>
-                                Save Retail Sale
+                                <span class="button-icon">${isEditMode ? icons.edit : icons.plus}</span>
+                                ${isEditMode ? (isEditModeLimited ? "Save Limited Changes" : "Update Retail Sale") : "Save Retail Sale"}
                             </button>
                         `}
                     </div>
@@ -1034,7 +1134,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Use the Payments action to record and review customer payments for each retail sale.</p>
+                        <p class="panel-copy">Use Edit for controlled sale updates, Payments for collections, and Expense for sale-linked cost adjustments.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -1059,7 +1159,7 @@ function renderRetailStoreViewShell(snapshot) {
 function syncRetailWorksheetGrid() {
     const snapshot = getState();
     const gridElement = document.getElementById("retail-worksheet-grid");
-    setRetailWorksheetReadOnly(featureState.workspaceMode === "view");
+    setRetailWorksheetReadOnly(isRetailWorksheetLockedMode());
     initializeRetailWorksheetGrid(gridElement, rows => {
         featureState.lineItemDrafts = Object.fromEntries(rows.map(row => [row.productId, {
             quantity: Number(row.quantity) || 0,
@@ -1133,6 +1233,43 @@ function ensureRetailSalesListener(snapshot) {
         rows => {
             featureState.sales = rows;
 
+            if (featureState.workspaceMode === "view" && featureState.viewingSaleId) {
+                const viewingSale = rows.find(entry => entry.id === featureState.viewingSaleId) || null;
+                if (!viewingSale) {
+                    resetRetailWorkspace();
+                    showToast("The sale you were viewing is no longer available.", "warning", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (featureState.workspaceMode === "edit" && featureState.editingSaleId) {
+                const editingSale = rows.find(entry => entry.id === featureState.editingSaleId) || null;
+                if (!editingSale) {
+                    resetRetailWorkspace();
+                    showToast("The sale you were editing is no longer available.", "warning", {
+                        title: "Retail Store"
+                    });
+                } else {
+                    const latestScope = resolveRetailSaleEditScope(editingSale);
+                    if (latestScope === "none") {
+                        resetRetailWorkspace();
+                        showToast("This sale was voided and can no longer be edited.", "warning", {
+                            title: "Retail Store"
+                        });
+                    } else if (latestScope !== featureState.editModeScope) {
+                        loadSaleIntoEditWorkspace(editingSale);
+                        showToast(
+                            latestScope === "limited"
+                                ? "Edit scope changed to Limited because linked payment/expense data was added."
+                                : "Edit scope changed to Full.",
+                            "info",
+                            { title: "Retail Store" }
+                        );
+                    }
+                }
+            }
+
             if (getState().currentRoute === "#/retail-store") {
                 renderRetailStoreView();
             }
@@ -1148,8 +1285,10 @@ function ensureRetailSalesListener(snapshot) {
 
 function ensureCatalogueItemsListener(snapshot) {
     const catalogueId = featureState.saleDraft.salesCatalogueId;
+    const shouldListenToCatalogue = featureState.workspaceMode === "create"
+        || (isRetailEditMode() && featureState.editModeScope === "full");
 
-    if (featureState.workspaceMode === "view") {
+    if (!shouldListenToCatalogue) {
         clearCatalogueItemsSubscription();
         return;
     }
@@ -1182,6 +1321,7 @@ function ensureCatalogueItemsListener(snapshot) {
 }
 
 function syncSaleTypeBehavior() {
+    if (featureState.workspaceMode !== "create") return;
     if (featureState.saleDraft.saleType !== "Sample") return;
 
     featureState.saleDraft.paymentType = "Pay Later";
@@ -1211,10 +1351,8 @@ function updateDraftField(field, value) {
     featureState.saleDraft[field] = value;
 }
 
-function loadSaleIntoViewWorkspace(sale) {
-    featureState.workspaceMode = "view";
-    featureState.viewingSaleId = sale.id;
-    featureState.saleDraft = {
+function buildSaleDraftFromSale(sale) {
+    return {
         saleDate: toDateInputValue(sale.saleDate),
         customerName: sale.customerInfo?.name || "",
         customerPhone: sale.customerInfo?.phone || "",
@@ -1237,9 +1375,13 @@ function loadSaleIntoViewWorkspace(sale) {
         orderDiscountAmount: sale.financials?.orderDiscountType === "Fixed"
             ? String(Number(sale.financials?.orderDiscountValue) || 0)
             : "",
-        orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0)
+        orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
+        editReason: ""
     };
-    featureState.lineItemDrafts = Object.fromEntries((sale.lineItems || []).map(item => [item.productId, {
+}
+
+function buildLineItemDraftsFromSale(sale) {
+    return Object.fromEntries((sale.lineItems || []).map(item => [item.productId, {
         productName: item.productName || "",
         categoryId: item.categoryId || "",
         categoryName: item.categoryName || "",
@@ -1249,8 +1391,42 @@ function loadSaleIntoViewWorkspace(sale) {
         cgstPercentage: Number(item.cgstPercentage) || 0,
         sgstPercentage: Number(item.sgstPercentage) || 0
     }]));
+}
+
+function loadSaleIntoViewWorkspace(sale) {
+    closeRetailPaymentModalState();
+    closeRetailExpenseModalState();
+    featureState.workspaceMode = "view";
+    featureState.viewingSaleId = sale.id;
+    featureState.editingSaleId = null;
+    featureState.editModeScope = null;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
     featureState.selectedCatalogueItems = [];
     clearCatalogueItemsSubscription();
+}
+
+function loadSaleIntoEditWorkspace(sale) {
+    const editScope = resolveRetailSaleEditScope(sale);
+
+    if (editScope === "none") {
+        showToast("Voided retail sales cannot be edited.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    closeRetailPaymentModalState();
+    closeRetailExpenseModalState();
+    featureState.workspaceMode = "edit";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = sale.id;
+    featureState.editModeScope = editScope;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+    return true;
 }
 
 function handleRetailInput(target) {
@@ -1265,6 +1441,7 @@ function handleRetailInput(target) {
         "retail-transaction-ref": "transactionRef",
         "retail-payment-notes": "paymentNotes",
         "retail-sale-notes": "saleNotes",
+        "retail-edit-reason": "editReason",
         "retail-order-discount-percentage": "orderDiscountPercentage",
         "retail-order-discount-amount": "orderDiscountAmount",
         "retail-order-tax-percentage": "orderTaxPercentage",
@@ -1400,26 +1577,65 @@ async function handleRetailSaleSubmit(event) {
 
     try {
         const snapshot = getState();
+        const isEditMode = featureState.workspaceMode === "edit";
         const customerName = normalizeText(featureState.saleDraft.customerName) || "-";
         const selectedStore = normalizeText(featureState.saleDraft.store) || "-";
         const selectedCatalogueLabel = snapshot.masterData.salesCatalogues
             ?.find(catalogue => catalogue.id === featureState.saleDraft.salesCatalogueId)?.catalogueName || "-";
+        const editingSale = isEditMode
+            ? featureState.sales.find(entry => entry.id === featureState.editingSaleId) || null
+            : null;
+
+        if (isEditMode && !editingSale) {
+            throw new Error("The retail sale being edited could not be found. Refresh and try again.");
+        }
 
         const result = await runProgressToastFlow({
-            title: "Saving Retail Sale",
-            initialMessage: "Reading the retail workspace...",
+            title: isEditMode ? "Updating Retail Sale" : "Saving Retail Sale",
+            initialMessage: isEditMode ? "Reading the selected sale and edit workspace..." : "Reading the retail workspace...",
             initialProgress: 14,
             initialStep: "Step 1 of 5",
-            successTitle: "Retail Sale Saved",
-            successMessage: "The retail sale was saved successfully."
+            successTitle: isEditMode ? "Retail Sale Updated" : "Retail Sale Saved",
+            successMessage: isEditMode
+                ? "The retail sale update was saved successfully."
+                : "The retail sale was saved successfully."
         }, async ({ update }) => {
-            update("Validating the customer, catalogue, product worksheet, and settlement details...", 34, "Step 2 of 5");
+            update(
+                isEditMode
+                    ? "Validating allowed edit scope, customer details, and update payload..."
+                    : "Validating the customer, catalogue, product worksheet, and settlement details...",
+                34,
+                "Step 2 of 5"
+            );
 
-            update("Writing the sale and payment data to the database...", 74, "Step 3 of 5");
-            const result = await saveRetailSale({
-                ...featureState.saleDraft,
-                lineItems: buildRetailWorksheetRows(snapshot)
-            }, snapshot.currentUser, snapshot.masterData.salesCatalogues, featureState.selectedCatalogueItems);
+            update(
+                isEditMode
+                    ? "Writing sale updates and applying any inventory deltas..."
+                    : "Writing the sale and payment data to the database...",
+                74,
+                "Step 3 of 5"
+            );
+
+            const result = isEditMode
+                ? await saveRetailSaleUpdate(
+                    editingSale,
+                    {
+                        ...featureState.saleDraft,
+                        editScope: featureState.editModeScope || "limited",
+                        lineItems: buildRetailWorksheetRows(snapshot)
+                    },
+                    snapshot.currentUser,
+                    featureState.selectedCatalogueItems
+                )
+                : await saveRetailSale(
+                    {
+                        ...featureState.saleDraft,
+                        lineItems: buildRetailWorksheetRows(snapshot)
+                    },
+                    snapshot.currentUser,
+                    snapshot.masterData.salesCatalogues,
+                    featureState.selectedCatalogueItems
+                );
 
             update("Refreshing retail history and inventory-aware worksheet context...", 90, "Step 4 of 5");
             resetRetailWorkspace();
@@ -1428,23 +1644,26 @@ async function handleRetailSaleSubmit(event) {
             return result;
         });
 
-        showToast("Retail sale saved.", "success", {
+        showToast(isEditMode ? "Retail sale updated." : "Retail sale saved.", "success", {
             title: "Retail Store"
         });
         ProgressToast.hide(0);
         await showSummaryModal({
-            title: "Retail Sale Saved",
-            message: "The direct sale has been recorded successfully.",
+            title: isEditMode ? "Retail Sale Updated" : "Retail Sale Saved",
+            message: isEditMode
+                ? "The sale update was completed successfully with the configured edit safeguards."
+                : "The direct sale has been recorded successfully.",
             details: [
                 { label: "Customer", value: customerName },
                 { label: "Store", value: selectedStore },
                 { label: "Catalogue", value: selectedCatalogueLabel },
                 { label: "Payment Status", value: result.summary.paymentStatus },
-                { label: "Grand Total", value: formatCurrency(result.summary.grandTotal) }
+                { label: "Grand Total", value: formatCurrency(result.summary.grandTotal) },
+                { label: "Edit Scope", value: isEditMode ? (result.summary.editScope || featureState.editModeScope || "limited") : "New Sale" }
             ]
         });
     } catch (error) {
-        console.error("[Moneta] Retail sale save failed:", error);
+        console.error("[Moneta] Retail sale save/update failed:", error);
         ProgressToast.hide(0);
         showToast(error?.message || "Could not save the retail sale.", "error", {
             title: "Retail Store"
@@ -1465,6 +1684,27 @@ async function handleRetailSaleView(button) {
     loadSaleIntoViewWorkspace(sale);
     renderRetailStoreView();
     document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleRetailSaleEdit(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    if (!loadSaleIntoEditWorkspace(sale)) return;
+
+    renderRetailStoreView();
+    if (featureState.editModeScope === "limited") {
+        showToast("Limited edit mode enabled. Only customer details and sale notes can be changed.", "info", {
+            title: "Retail Store"
+        });
+    }
+
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const focusTarget = featureState.editModeScope === "full"
+        ? document.getElementById("retail-voucher-number")
+        : document.getElementById("retail-customer-phone");
+    focusTarget?.focus();
 }
 
 function handleRetailSalePayments(button) {
@@ -1672,6 +1912,7 @@ function bindRetailStoreDomEvents() {
         if (!targetElement) return;
 
         const resetButton = targetElement.closest("#retail-reset-button");
+        const editButton = targetElement.closest(".retail-sale-edit-button");
         const paymentsButton = targetElement.closest(".retail-sale-payments-button");
         const viewButton = targetElement.closest(".retail-sale-view-button");
         const expenseButton = targetElement.closest(".retail-sale-expense-button");
@@ -1690,6 +1931,11 @@ function bindRetailStoreDomEvents() {
 
         if (viewButton) {
             handleRetailSaleView(viewButton);
+            return;
+        }
+
+        if (editButton) {
+            handleRetailSaleEdit(editButton);
             return;
         }
 

@@ -33,6 +33,43 @@ function buildSalesExpenseId() {
     return `RSEXP-${Date.now()}`;
 }
 
+function normalizeText(value) {
+    return (value || "").trim();
+}
+
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
+function resolveRetailSaleEditScope(sale = {}) {
+    const saleStatus = normalizeText(sale.saleStatus || "Active");
+    if (saleStatus === "Voided") {
+        return "none";
+    }
+
+    const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+    const paymentCount = Number(sale.financials?.paymentCount) || 0;
+    const paymentStatus = normalizeText(sale.paymentStatus || "Unpaid");
+    const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+    const hasPayments = totalAmountPaid > 0 || paymentCount > 0 || ["Paid", "Partially Paid"].includes(paymentStatus);
+    const hasExpenses = totalExpenses > 0;
+
+    return hasPayments || hasExpenses ? "limited" : "full";
+}
+
+function buildLineItemQuantityMap(lineItems = []) {
+    const map = new Map();
+
+    (lineItems || []).forEach(item => {
+        const productId = normalizeText(item.productId);
+        if (!productId) return;
+
+        map.set(productId, (map.get(productId) || 0) + (Number(item.quantity) || 0));
+    });
+
+    return map;
+}
+
 function sortByDateDesc(rows = []) {
     return [...rows].sort((left, right) => {
         const leftDate = left.saleDate?.toDate ? left.saleDate.toDate() : new Date(left.saleDate || 0);
@@ -408,6 +445,138 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
                 nextTotalAmountPaid,
                 nextBalanceDue,
                 nextPaymentStatus
+            }
+        };
+    });
+}
+
+export async function updateRetailSaleRecord(saleId, updatePayload, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before saving changes.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        const editScope = resolveRetailSaleEditScope(sale);
+
+        if (editScope === "none") {
+            throw new Error("Voided sales cannot be edited.");
+        }
+
+        const requestedScope = normalizeText(updatePayload.editScope || "limited");
+        if (requestedScope === "full" && editScope !== "full") {
+            throw new Error("This sale has linked payments or expenses and only supports limited edits.");
+        }
+
+        const baseUpdate = {
+            customerInfo: {
+                ...(sale.customerInfo || {}),
+                ...(updatePayload.customerInfo || {})
+            },
+            saleNotes: updatePayload.saleNotes ?? sale.saleNotes ?? "",
+            updatedBy: user.email,
+            updatedOn: now,
+            lastEditReason: normalizeText(updatePayload.editReason || ""),
+            lastEditScope: requestedScope,
+            lastEditedBy: user.email,
+            lastEditedOn: now
+        };
+
+        if (requestedScope !== "full") {
+            transaction.update(saleRef, baseUpdate);
+            return {
+                summary: {
+                    editScope: "limited",
+                    paymentStatus: sale.paymentStatus || "Unpaid",
+                    balanceDue: roundCurrency(sale.balanceDue)
+                }
+            };
+        }
+
+        const oldLineItems = sale.lineItems || [];
+        const newLineItems = updatePayload.lineItems || [];
+        const oldQuantityMap = buildLineItemQuantityMap(oldLineItems);
+        const newQuantityMap = buildLineItemQuantityMap(newLineItems);
+        const productIds = new Set([...oldQuantityMap.keys(), ...newQuantityMap.keys()]);
+
+        const stockAdjustments = [...productIds].map(productId => {
+            const oldQty = Number(oldQuantityMap.get(productId) || 0);
+            const newQty = Number(newQuantityMap.get(productId) || 0);
+            return {
+                productId,
+                delta: newQty - oldQty
+            };
+        }).filter(item => item.delta !== 0);
+
+        const productRefs = stockAdjustments.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
+        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+
+        stockAdjustments.forEach((adjustment, index) => {
+            const productDoc = productDocs[index];
+            if (!productDoc.exists) {
+                throw new Error("One or more products in this sale are no longer available.");
+            }
+
+            const currentStock = Number(productDoc.data().inventoryCount) || 0;
+            if (adjustment.delta > 0 && currentStock < adjustment.delta) {
+                const productName = newLineItems.find(item => item.productId === adjustment.productId)?.productName
+                    || oldLineItems.find(item => item.productId === adjustment.productId)?.productName
+                    || adjustment.productId;
+                throw new Error(`"${productName}" only has ${currentStock} units available for this edit.`);
+            }
+        });
+
+        stockAdjustments.forEach((adjustment, index) => {
+            const productRef = productRefs[index];
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(-adjustment.delta),
+                updatedBy: user.email,
+                updateDate: now
+            });
+        });
+
+        const financials = updatePayload.financials || {};
+        const grandTotal = roundCurrency(financials.grandTotal);
+        const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+        const balanceDue = roundCurrency(Math.max(grandTotal - totalAmountPaid - totalExpenses, 0));
+        const paymentStatus = balanceDue <= 0
+            ? "Paid"
+            : totalAmountPaid > 0
+                ? "Partially Paid"
+                : "Unpaid";
+
+        transaction.update(saleRef, {
+            ...baseUpdate,
+            saleDate: updatePayload.saleDate ?? sale.saleDate,
+            manualVoucherNumber: updatePayload.manualVoucherNumber ?? sale.manualVoucherNumber ?? "",
+            lineItems: newLineItems,
+            lineItemCount: newLineItems.length,
+            totalQuantity: newLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+            financials: {
+                ...(sale.financials || {}),
+                ...financials
+            },
+            balanceDue,
+            paymentStatus
+        });
+
+        return {
+            summary: {
+                editScope: "full",
+                paymentStatus,
+                balanceDue,
+                grandTotal
             }
         };
     });

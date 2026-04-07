@@ -728,6 +728,31 @@ select {
     background: linear-gradient(180deg, #f7faff 0%, #eff5fd 100%);
 }
 
+.retail-edit-mode-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(61, 109, 89, 0.2);
+    border-radius: var(--radius-md);
+}
+
+.retail-edit-mode-banner-full {
+    border-color: rgba(44, 121, 97, 0.18);
+    background: linear-gradient(180deg, #f6fcfa 0%, #edf8f4 100%);
+}
+
+.retail-edit-mode-banner-limited {
+    border-color: rgba(183, 122, 46, 0.2);
+    background: linear-gradient(180deg, #fffaf2 0%, #fff4e4 100%);
+}
+
+.retail-edit-reason-section {
+    margin-top: 1rem;
+}
+
 .purchase-payment-modal-overlay {
     position: fixed;
     inset: 0;
@@ -1720,7 +1745,8 @@ select {
     .purchase-payment-void-header,
     .purchase-payment-modal-title-row,
     .purchase-void-mode-banner,
-    .retail-view-mode-banner {
+    .retail-view-mode-banner,
+    .retail-edit-mode-banner {
         flex-direction: column;
         align-items: stretch;
     }

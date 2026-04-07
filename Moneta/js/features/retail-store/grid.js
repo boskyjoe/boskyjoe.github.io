@@ -58,6 +58,10 @@ function buildNumberSetter(field, decimals = 0) {
 function retailSalesActionMarkup(data) {
     return `
         <div class="table-actions grid-actions-inline">
+            <button class="button grid-action-button retail-sale-edit-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.edit}</span>
+                Edit
+            </button>
             <button class="button grid-action-button grid-action-button-primary retail-sale-payments-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.payment}</span>
                 Payments
@@ -262,7 +266,7 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 360,
+            minWidth: 440,
             flex: 1.5,
             sortable: false,
             filter: false,

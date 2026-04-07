@@ -1,5 +1,10 @@
 import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
-import { addRetailSaleExpenseRecord, createRetailSaleRecord, recordRetailSalePayment } from "./repository.js";
+import {
+    addRetailSaleExpenseRecord,
+    createRetailSaleRecord,
+    recordRetailSalePayment,
+    updateRetailSaleRecord
+} from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
@@ -26,6 +31,22 @@ function normalizeNumber(value, fallback = 0) {
 
 function roundCurrency(value) {
     return Number((Number(value) || 0).toFixed(2));
+}
+
+export function resolveRetailSaleEditScope(sale = {}) {
+    const saleStatus = normalizeText(sale.saleStatus || "Active");
+    if (saleStatus === "Voided") {
+        return "none";
+    }
+
+    const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+    const paymentCount = Number(sale.financials?.paymentCount) || 0;
+    const paymentStatus = normalizeText(sale.paymentStatus || "Unpaid");
+    const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+    const hasPayments = totalAmountPaid > 0 || paymentCount > 0 || ["Paid", "Partially Paid"].includes(paymentStatus);
+    const hasExpenses = totalExpenses > 0;
+
+    return hasPayments || hasExpenses ? "limited" : "full";
 }
 
 function parseRequiredDate(value, label) {
@@ -363,6 +384,176 @@ export async function saveRetailSale(payload, user, catalogueHeaders = [], catal
         docRef,
         salePayload,
         summary
+    };
+}
+
+function buildEditCatalogueItems(catalogueItems = [], lineItems = []) {
+    const lookup = new Map();
+
+    (catalogueItems || []).forEach(item => {
+        const productId = normalizeText(item.productId);
+        if (!productId) return;
+        lookup.set(productId, item);
+    });
+
+    (lineItems || []).forEach(item => {
+        const productId = normalizeText(item.productId);
+        if (!productId || lookup.has(productId)) return;
+
+        lookup.set(productId, {
+            productId,
+            productName: item.productName || "",
+            categoryId: item.categoryId || "",
+            categoryName: item.categoryName || "",
+            sellingPrice: Number(item.unitPrice) || 0
+        });
+    });
+
+    return [...lookup.values()];
+}
+
+function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = []) {
+    if (!user) {
+        throw new Error("You must be logged in to update a retail sale.");
+    }
+
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before saving changes.");
+    }
+
+    const allowedScope = resolveRetailSaleEditScope(sale);
+    if (allowedScope === "none") {
+        throw new Error("Voided sales cannot be edited.");
+    }
+
+    const requestedScope = normalizeText(payload.editScope || allowedScope);
+    const effectiveScope = requestedScope === "full" ? "full" : "limited";
+    if (effectiveScope === "full" && allowedScope !== "full") {
+        throw new Error("This sale has linked payments or expenses and only supports limited edits.");
+    }
+
+    const editReason = normalizeText(payload.editReason);
+    if (!editReason) {
+        throw new Error("Edit reason is required.");
+    }
+
+    const customerName = normalizeText(payload.customerName);
+    const customerPhone = normalizeText(payload.customerPhone);
+    const customerEmail = normalizeText(payload.customerEmail);
+    const customerAddress = normalizeText(payload.customerAddress);
+    const saleNotes = normalizeText(payload.saleNotes);
+
+    if (!customerName) {
+        throw new Error("Customer name is required.");
+    }
+
+    if (!customerPhone) {
+        throw new Error("Customer phone is required.");
+    }
+
+    if (sale.store === "Tasty Treats" && !customerAddress) {
+        throw new Error("Customer address is required for Tasty Treats orders.");
+    }
+
+    const baseUpdate = {
+        editScope: effectiveScope,
+        editReason,
+        customerInfo: {
+            name: customerName,
+            phone: customerPhone,
+            email: customerEmail,
+            address: sale.store === "Tasty Treats" ? customerAddress : ""
+        },
+        saleNotes
+    };
+
+    if (effectiveScope !== "full") {
+        return {
+            updatePayload: baseUpdate,
+            summary: {
+                grandTotal: roundCurrency(sale.financials?.grandTotal),
+                paymentStatus: sale.paymentStatus || "Unpaid",
+                balanceDue: roundCurrency(sale.balanceDue)
+            }
+        };
+    }
+
+    const saleDate = parseRequiredDate(payload.saleDate, "Sale date");
+    const manualVoucherNumber = normalizeText(payload.manualVoucherNumber);
+    if (!manualVoucherNumber) {
+        throw new Error("Manual voucher number is required.");
+    }
+
+    const draftSummary = calculateRetailDraftSummary(payload.lineItems, {
+        orderDiscountType: payload.orderDiscountType,
+        orderDiscountPercentage: payload.orderDiscountPercentage,
+        orderDiscountAmount: payload.orderDiscountAmount,
+        orderTaxPercentage: payload.orderTaxPercentage
+    }, {
+        amountReceived: 0
+    });
+
+    const normalizedLineItems = normalizeLineItems(
+        draftSummary.lineItems,
+        buildEditCatalogueItems(catalogueItems, payload.lineItems)
+    );
+
+    if (normalizedLineItems.length === 0) {
+        throw new Error("Add at least one product with quantity greater than zero.");
+    }
+
+    const summary = calculateRetailDraftSummary(normalizedLineItems, {
+        orderDiscountType: payload.orderDiscountType,
+        orderDiscountPercentage: payload.orderDiscountPercentage,
+        orderDiscountAmount: payload.orderDiscountAmount,
+        orderTaxPercentage: payload.orderTaxPercentage
+    }, {
+        amountReceived: 0
+    });
+
+    if (sale.saleType === "Sample" && summary.grandTotal > 0) {
+        throw new Error("Sample sales must net to zero after discounts.");
+    }
+
+    return {
+        updatePayload: {
+            ...baseUpdate,
+            saleDate,
+            manualVoucherNumber,
+            lineItems: normalizedLineItems,
+            financials: {
+                itemsSubtotal: summary.itemsSubtotal,
+                totalLineDiscount: summary.totalLineDiscount,
+                subtotalAfterLineDiscounts: summary.subtotalAfterLineDiscounts,
+                totalCGST: summary.totalCGST,
+                totalSGST: summary.totalSGST,
+                totalItemLevelTax: summary.totalItemLevelTax,
+                orderDiscountType: summary.orderDiscountType,
+                orderDiscountValue: summary.orderDiscountType === "Fixed"
+                    ? normalizeNumber(payload.orderDiscountAmount)
+                    : normalizeNumber(payload.orderDiscountPercentage),
+                orderDiscountAmount: summary.orderDiscountAmount,
+                finalTaxableAmount: summary.finalTaxableAmount,
+                orderTaxPercentage: summary.orderTaxPercentage,
+                orderLevelTaxAmount: summary.orderLevelTaxAmount,
+                totalTax: summary.totalTax,
+                grandTotal: summary.grandTotal
+            }
+        },
+        summary
+    };
+}
+
+export async function saveRetailSaleUpdate(sale, payload, user, catalogueItems = []) {
+    const { updatePayload, summary } = validateRetailSaleEditPayload(sale, payload, user, catalogueItems);
+    const result = await updateRetailSaleRecord(sale.id, updatePayload, user);
+
+    return {
+        updatePayload,
+        summary: {
+            ...(summary || {}),
+            ...(result?.summary || {})
+        }
     };
 }
 
