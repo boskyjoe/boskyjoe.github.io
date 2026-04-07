@@ -1672,19 +1672,24 @@ function bindRetailStoreDomEvents() {
     });
 
     root.addEventListener("click", event => {
-        const resetButton = event.target.closest("#retail-reset-button");
-        const paymentsButton = event.target.closest(".retail-sale-payments-button");
-        const viewButton = event.target.closest(".retail-sale-view-button");
-        const expenseButton = event.target.closest(".retail-sale-expense-button");
-        const pdfButton = event.target.closest(".retail-sale-pdf-button");
-        const viewModePaymentsButton = event.target.closest("#retail-open-payments-button");
-        const workspacePdfButton = event.target.closest("#retail-download-pdf-button");
-        const paymentCloseButton = event.target.closest("#retail-payment-close-button") || event.target.closest(".retail-payment-close-trigger");
-        const paymentCancelButton = event.target.closest("#retail-payment-cancel-button") || event.target.closest(".retail-payment-close-trigger");
-        const paymentModalBackdrop = event.target.closest("#retail-payment-modal");
-        const expenseCloseButton = event.target.closest("#retail-expense-close-button") || event.target.closest(".retail-expense-close-trigger");
-        const expenseCancelButton = event.target.closest("#retail-expense-cancel-button") || event.target.closest(".retail-expense-close-trigger");
-        const expenseModalBackdrop = event.target.closest("#retail-expense-modal");
+        const targetElement = event.target instanceof Element
+            ? event.target
+            : event.target?.parentElement;
+        if (!targetElement) return;
+
+        const resetButton = targetElement.closest("#retail-reset-button");
+        const paymentsButton = targetElement.closest(".retail-sale-payments-button");
+        const viewButton = targetElement.closest(".retail-sale-view-button");
+        const expenseButton = targetElement.closest(".retail-sale-expense-button");
+        const pdfButton = targetElement.closest(".retail-sale-pdf-button");
+        const viewModePaymentsButton = targetElement.closest("#retail-open-payments-button");
+        const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
+        const paymentCloseButton = targetElement.closest("#retail-payment-close-button") || targetElement.closest(".retail-payment-close-trigger");
+        const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
+        const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
+        const expenseCloseButton = targetElement.closest("#retail-expense-close-button") || targetElement.closest(".retail-expense-close-trigger");
+        const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
+        const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
 
         if (resetButton) {
             handleRetailReset();
@@ -1726,7 +1731,7 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
-        if (event.target.id === "retail-payment-modal" && paymentModalBackdrop) {
+        if (targetElement.id === "retail-payment-modal" && paymentModalBackdrop) {
             closeRetailPaymentModal();
             return;
         }
@@ -1736,7 +1741,7 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
-        if (event.target.id === "retail-expense-modal" && expenseModalBackdrop) {
+        if (targetElement.id === "retail-expense-modal" && expenseModalBackdrop) {
             closeRetailExpenseModal();
         }
     });
