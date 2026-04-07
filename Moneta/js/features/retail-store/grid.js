@@ -232,6 +232,14 @@ function buildSalesColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "totalExpenses",
+            headerName: "Expenses",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             field: "balanceDue",
             headerName: "Balance Due",
             minWidth: 140,
@@ -353,12 +361,14 @@ function buildSalesPinnedBottomRow(rows) {
         summary.lineItemCount += Number(row?.lineItemCount) || 0;
         summary.invoiceTotal += Number(row?.invoiceTotal) || 0;
         summary.amountPaid += Number(row?.amountPaid) || 0;
+        summary.totalExpenses += Number(row?.totalExpenses) || 0;
         summary.balanceDue += Number(row?.balanceDue) || 0;
         return summary;
     }, {
         lineItemCount: 0,
         invoiceTotal: 0,
         amountPaid: 0,
+        totalExpenses: 0,
         balanceDue: 0
     });
 
@@ -367,6 +377,7 @@ function buildSalesPinnedBottomRow(rows) {
         lineItemCount: totals.lineItemCount,
         invoiceTotal: Number(totals.invoiceTotal.toFixed(2)),
         amountPaid: Number(totals.amountPaid.toFixed(2)),
+        totalExpenses: Number(totals.totalExpenses.toFixed(2)),
         balanceDue: Number(totals.balanceDue.toFixed(2))
     }];
 }

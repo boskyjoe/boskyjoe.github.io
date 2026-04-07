@@ -249,6 +249,7 @@ function getSalesHistoryRows() {
         lineItemCount: Number(sale.lineItemCount) || (sale.lineItems || []).length || 0,
         invoiceTotal: Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0,
         amountPaid: Number(sale.totalAmountPaid) || 0,
+        totalExpenses: Number(sale.financials?.totalExpenses) || 0,
         balanceDue: Number(sale.balanceDue) || 0,
         paymentStatus: sale.paymentStatus || "Unpaid"
     }));
@@ -341,7 +342,7 @@ function renderRetailExpenseModal(sale) {
     return `
         <div id="retail-expense-modal" class="retail-expense-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-expense-modal-title">
             <div class="retail-expense-modal-card">
-                <button id="retail-expense-close-button" class="purchase-payment-modal-corner-close" type="button" aria-label="Close expense modal">
+                <button id="retail-expense-close-button" class="purchase-payment-modal-corner-close retail-expense-close-trigger" type="button" aria-label="Close expense modal">
                     <span class="button-icon">${icons.close}</span>
                 </button>
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
@@ -411,7 +412,7 @@ function renderRetailExpenseModal(sale) {
                         <section class="payment-workspace-card">
                             <div class="purchase-payments-history-header">
                                 <p class="section-kicker">Expense History</p>
-                                <p class="panel-copy">${expenseCount} expense record(s) linked to this sale.</p>
+                                <p id="retail-expense-history-count" class="panel-copy">${expenseCount} expense record(s) linked to this sale.</p>
                             </div>
                             <div class="purchase-payment-history-shell">
                                 <div id="retail-expense-history-grid" class="ag-theme-alpine moneta-grid" style="height: 300px; width: 100%;"></div>
@@ -436,6 +437,11 @@ function renderRetailStoreViewShell(snapshot) {
     const isSampleSale = featureState.saleDraft.saleType === "Sample";
     const isTastyTreats = featureState.saleDraft.store === "Tasty Treats";
     const isViewMode = featureState.workspaceMode === "view";
+    const viewingSale = isViewMode
+        ? featureState.sales.find(entry => entry.id === featureState.viewingSaleId) || null
+        : null;
+    const viewModeTotalExpenses = Number(viewingSale?.financials?.totalExpenses) || 0;
+    const viewModeBalanceDue = Number(viewingSale?.balanceDue) || 0;
     const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
     const paymentStatus = summary.grandTotal <= 0
         ? "Paid"
@@ -747,9 +753,15 @@ function renderRetailStoreViewShell(snapshot) {
                                                 <span>Grand Total</span>
                                                 <strong>${formatCurrency(summary.grandTotal)}</strong>
                                             </div>
+                                            ${isViewMode ? `
+                                                <div class="retail-finance-total-row retail-finance-total-row-danger">
+                                                    <span>Total Expense</span>
+                                                    <strong>-${formatCurrency(viewModeTotalExpenses)}</strong>
+                                                </div>
+                                            ` : ""}
                                             <div class="retail-finance-total-row">
                                                 <span>Balance Due</span>
-                                                <strong>${formatCurrency(summary.balanceDue)}</strong>
+                                                <strong>${formatCurrency(isViewMode ? viewModeBalanceDue : summary.balanceDue)}</strong>
                                             </div>
                                         </div>
                                         <div class="retail-finance-status-row">
@@ -859,6 +871,11 @@ function syncRetailExpenseHistoryGrid() {
 
     initializeRetailExpenseHistoryGrid(gridElement);
     refreshRetailExpenseHistoryGrid(featureState.expenseHistory);
+
+    const historyCount = document.getElementById("retail-expense-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.expenseHistory.length} expense record(s) linked to this sale.`;
+    }
 }
 
 function ensureRetailSalesListener(snapshot) {
@@ -1257,6 +1274,7 @@ async function handleRetailExpenseSubmit(event) {
             return result;
         });
 
+        closeRetailExpenseModalState();
         featureState.expenseDraft = createDefaultExpenseDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
         renderRetailStoreView();
 
@@ -1312,8 +1330,8 @@ function bindRetailStoreDomEvents() {
         const expenseButton = event.target.closest(".retail-sale-expense-button");
         const pdfButton = event.target.closest(".retail-sale-pdf-button");
         const workspacePdfButton = event.target.closest("#retail-download-pdf-button");
-        const expenseCloseButton = event.target.closest("#retail-expense-close-button");
-        const expenseCancelButton = event.target.closest("#retail-expense-cancel-button");
+        const expenseCloseButton = event.target.closest("#retail-expense-close-button, .retail-expense-close-trigger");
+        const expenseCancelButton = event.target.closest("#retail-expense-cancel-button, .retail-expense-close-trigger");
         const expenseModalBackdrop = event.target.closest("#retail-expense-modal");
 
         if (resetButton) {
