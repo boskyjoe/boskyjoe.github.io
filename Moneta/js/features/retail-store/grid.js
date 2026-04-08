@@ -72,38 +72,19 @@ function buildReturnQuantitySetter() {
 }
 
 function retailSalesActionMarkup(data) {
-    const isVoided = (data.saleStatus || "").toLowerCase() === "voided";
-    const hasReturnableItems = (Number(data.lineItemCount) || 0) > 0;
-
     return `
         <div class="table-actions grid-actions-inline">
-            <button class="button grid-action-button retail-sale-edit-button" type="button" data-sale-id="${data.id}">
-                <span class="button-icon">${icons.edit}</span>
-                Edit
-            </button>
-            <button class="button grid-action-button grid-action-button-secondary retail-sale-return-button" type="button" data-sale-id="${data.id}" ${(isVoided || !hasReturnableItems) ? "disabled" : ""}>
-                <span class="button-icon">${icons.warning}</span>
-                Return
-            </button>
-            <button class="button grid-action-button grid-action-button-secondary retail-sale-return-history-button" type="button" data-sale-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.search}</span>
-                Return History
+                View
             </button>
             <button class="button grid-action-button grid-action-button-primary retail-sale-payments-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.payment}</span>
                 Payments
             </button>
-            <button class="button grid-action-button grid-action-button-secondary retail-sale-view-button" type="button" data-sale-id="${data.id}">
-                <span class="button-icon">${icons.search}</span>
-                View
-            </button>
-            <button class="button grid-action-button grid-action-button-primary retail-sale-expense-button" type="button" data-sale-id="${data.id}">
-                <span class="button-icon">${icons.plus}</span>
-                Expense
-            </button>
-            <button class="button grid-action-button retail-sale-pdf-button" type="button" data-sale-id="${data.id}">
-                <span class="button-icon">${icons.download}</span>
-                PDF
+            <button class="button grid-action-button grid-action-button-secondary retail-sale-more-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.settings}</span>
+                More
             </button>
         </div>
     `;
@@ -311,8 +292,8 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 640,
-            flex: 1.8,
+            minWidth: 360,
+            flex: 1.05,
             sortable: false,
             filter: false,
             cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesActionMarkup(params.data))
@@ -470,6 +451,21 @@ function buildReturnHistoryColumnDefs() {
             minWidth: 180,
             flex: 1,
             valueFormatter: params => params.value || "-"
+        },
+        {
+            headerName: "Actions",
+            minWidth: 120,
+            flex: 0.72,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => (
+                params.node?.rowPinned
+                    ? ""
+                    : `<button class="button grid-action-button grid-action-button-secondary retail-return-note-pdf-button" type="button" data-return-row-id="${params.data?.id || ""}">
+                        <span class="button-icon">${icons.download}</span>
+                        PDF
+                    </button>`
+            )
         }
     ];
 }

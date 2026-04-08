@@ -292,6 +292,24 @@ export async function getRetailSalePayments(invoiceId) {
         });
 }
 
+export async function getRetailSaleReturns(saleId) {
+    if (!saleId) return [];
+
+    const snapshot = await getDb()
+        .collection(COLLECTIONS.salesInvoices)
+        .doc(saleId)
+        .collection(RETAIL_SALE_RETURNS_SUBCOLLECTION)
+        .get();
+
+    return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((left, right) => {
+            const leftDate = left.returnDate?.toDate ? left.returnDate.toDate() : new Date(left.returnDate || 0);
+            const rightDate = right.returnDate?.toDate ? right.returnDate.toDate() : new Date(right.returnDate || 0);
+            return rightDate.getTime() - leftDate.getTime();
+        });
+}
+
 export async function createRetailSaleRecord(payload, user) {
     const db = getDb();
     const now = getNow();

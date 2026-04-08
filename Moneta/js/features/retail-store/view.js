@@ -20,6 +20,7 @@ import {
     updateRetailWorksheetGridSearch
 } from "./grid.js";
 import {
+    getRetailSaleReturns,
     getRetailSalePayments,
     subscribeToRetailCatalogueItems,
     subscribeToRetailSaleExpenses,
@@ -27,7 +28,7 @@ import {
     subscribeToRetailSaleReturns,
     subscribeToRetailSales
 } from "./repository.js";
-import { downloadRetailSalePdf } from "./pdf.js";
+import { downloadRetailReturnCreditNotePdf, downloadRetailSalePdf } from "./pdf.js";
 import {
     addRetailSaleReturn,
     addRetailSaleExpense,
@@ -49,6 +50,8 @@ const featureState = {
     searchTerm: "",
     worksheetSearchTerm: "",
     filteredSalesCount: null,
+    saleActionsModalOpen: false,
+    saleActionsSaleId: null,
     unsubscribeSales: null,
     unsubscribeCatalogueItems: null,
     catalogueItemsListenerId: null,
@@ -152,6 +155,7 @@ function resetRetailWorkspace() {
     featureState.saleDraft = createDefaultSaleDraft();
     featureState.lineItemDrafts = {};
     clearCatalogueItemsSubscription();
+    closeRetailSaleActionsModalState();
     closeRetailPaymentModalState();
     closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
@@ -172,6 +176,11 @@ function closeRetailExpenseModalState() {
     featureState.expenseSaleId = null;
     featureState.expenseHistory = [];
     featureState.expenseDraft = createDefaultExpenseDraft();
+}
+
+function closeRetailSaleActionsModalState() {
+    featureState.saleActionsModalOpen = false;
+    featureState.saleActionsSaleId = null;
 }
 
 function closeRetailReturnHistoryModalState() {
@@ -289,6 +298,24 @@ function closeRetailReturnModal() {
 
 function closeRetailExpenseModal() {
     closeRetailExpenseModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function getRetailSaleActionsModalSale() {
+    if (!featureState.saleActionsSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.saleActionsSaleId) || null;
+}
+
+function openRetailSaleActionsModal(sale) {
+    if (!sale?.id) return;
+    featureState.saleActionsModalOpen = true;
+    featureState.saleActionsSaleId = sale.id;
+}
+
+function closeRetailSaleActionsModal() {
+    closeRetailSaleActionsModalState();
     if (getState().currentRoute === "#/retail-store") {
         renderRetailStoreView();
     }
@@ -954,6 +981,72 @@ function renderRetailReturnHistoryModal() {
     `;
 }
 
+function renderRetailSaleActionsModal() {
+    if (!featureState.saleActionsModalOpen) return "";
+
+    const sale = getRetailSaleActionsModalSale();
+    if (!sale) return "";
+
+    const isVoided = (sale.saleStatus || "").toLowerCase() === "voided";
+    const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
+    const hasReturns = (Number(sale.returnCount) || 0) > 0;
+
+    return `
+        <div id="retail-sale-actions-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-sale-actions-modal-title">
+            <div class="purchase-payment-modal-card" style="max-width: 560px;">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.settings}</span>
+                        <div>
+                            <h3 id="retail-sale-actions-modal-title">More Actions</h3>
+                            <p class="panel-copy">Choose an operation for this sale. High-impact actions remain guarded with business validations.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${sale.paymentStatus || "Unpaid"}</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="workspace-form-sections" style="gap: 0.75rem;">
+                        <button class="button button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${isVoided ? "disabled" : ""}>
+                            <span class="button-icon">${icons.edit}</span>
+                            Edit Sale
+                        </button>
+                        <button class="button button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${(isVoided || !hasReturnableItems) ? "disabled" : ""}>
+                            <span class="button-icon">${icons.warning}</span>
+                            Return Products
+                        </button>
+                        <button class="button button-secondary retail-sale-action-return-history" type="button" data-sale-id="${sale.id}">
+                            <span class="button-icon">${icons.search}</span>
+                            Return History
+                        </button>
+                        <button class="button button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${isVoided ? "disabled" : ""}>
+                            <span class="button-icon">${icons.plus}</span>
+                            Add Expense
+                        </button>
+                        <button class="button button-secondary retail-sale-action-pdf" type="button" data-sale-id="${sale.id}">
+                            <span class="button-icon">${icons.download}</span>
+                            Download Invoice PDF
+                        </button>
+                        <button class="button button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${hasReturns ? "" : "disabled"}>
+                            <span class="button-icon">${icons.download}</span>
+                            Download Credit Note
+                        </button>
+                    </div>
+                    <div class="form-actions">
+                        <button id="retail-sale-actions-close-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderRetailStoreViewShell(snapshot) {
     const root = document.getElementById("retail-store-root");
     if (!root) return;
@@ -1510,6 +1603,7 @@ function renderRetailStoreViewShell(snapshot) {
                 </div>
             </div>
         </div>
+        ${renderRetailSaleActionsModal()}
         ${renderRetailReturnHistoryModal()}
         ${renderRetailPaymentModal(snapshot)}
         ${renderRetailExpenseModal(expenseModalSale)}
@@ -1603,6 +1697,7 @@ function ensureRetailSalesListener(snapshot) {
         featureState.unsubscribeSales?.();
         featureState.unsubscribeSales = null;
         featureState.sales = [];
+        closeRetailSaleActionsModalState();
         closeRetailPaymentModalState();
         closeRetailReturnHistoryModalState();
         closeRetailReturnModalState();
@@ -2224,6 +2319,7 @@ async function handleRetailSaleView(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     loadSaleIntoViewWorkspace(sale);
     renderRetailStoreView();
     document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2234,6 +2330,7 @@ function handleRetailSaleEdit(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     if (!loadSaleIntoEditWorkspace(sale)) return;
 
     renderRetailStoreView();
@@ -2255,6 +2352,7 @@ function handleRetailSalePayments(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     openRetailPaymentModal(sale);
     renderRetailStoreView();
     document.getElementById("retail-payment-entry-amount")?.focus();
@@ -2265,6 +2363,7 @@ function handleRetailSaleReturn(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     if (!loadSaleIntoReturnWorkspace(sale)) return;
 
     renderRetailStoreView();
@@ -2277,8 +2376,68 @@ function handleRetailSaleReturnHistory(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     openRetailReturnHistoryModal(sale);
     renderRetailStoreView();
+}
+
+function handleRetailSaleMore(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    openRetailSaleActionsModal(sale);
+    renderRetailStoreView();
+}
+
+async function handleRetailSaleCreditNotePdf(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    const rowId = button.dataset.returnRowId || "";
+    let targetReturn = null;
+
+    if (rowId) {
+        targetReturn = featureState.returnHistoryRows.find(entry => entry.id === rowId) || null;
+    }
+
+    try {
+        await runProgressToastFlow({
+            title: "Preparing Credit Note PDF",
+            initialMessage: "Reading return records...",
+            initialProgress: 20,
+            initialStep: "Step 1 of 4",
+            successTitle: "Credit Note Ready",
+            successMessage: "The credit note PDF was generated successfully."
+        }, async ({ update }) => {
+            update("Resolving return entry and audit context...", 46, "Step 2 of 4");
+            if (!targetReturn) {
+                const returns = await getRetailSaleReturns(sale.id);
+                targetReturn = returns[0] || null;
+            }
+
+            if (!targetReturn) {
+                throw new Error("No returns are available for this sale yet.");
+            }
+
+            update("Rendering credit note layout...", 76, "Step 3 of 4");
+            await downloadRetailReturnCreditNotePdf(sale, targetReturn);
+
+            update("Download started successfully.", 96, "Step 4 of 4");
+        });
+
+        showToast("Credit note PDF download started.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+    } catch (error) {
+        console.error("[Moneta] Credit note PDF generation failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not generate the credit note PDF.", "error", {
+            title: "Retail Store"
+        });
+    }
 }
 
 async function handleRetailPaymentSubmit(event) {
@@ -2342,6 +2501,7 @@ async function handleRetailSalePdf(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     try {
         await runProgressToastFlow({
             title: "Preparing PDF Invoice",
@@ -2378,6 +2538,7 @@ function handleRetailSaleExpense(button) {
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
     if (!sale) return;
 
+    closeRetailSaleActionsModalState();
     openRetailExpenseModal(sale);
     renderRetailStoreView();
     document.getElementById("retail-expense-justification")?.focus();
@@ -2476,13 +2637,23 @@ function bindRetailStoreDomEvents() {
         if (!targetElement) return;
 
         const resetButton = targetElement.closest("#retail-reset-button");
+        const moreButton = targetElement.closest(".retail-sale-more-button");
         const editButton = targetElement.closest(".retail-sale-edit-button");
         const returnButton = targetElement.closest(".retail-sale-return-button");
         const returnHistoryButton = targetElement.closest(".retail-sale-return-history-button");
+        const returnNotePdfButton = targetElement.closest(".retail-return-note-pdf-button");
         const paymentsButton = targetElement.closest(".retail-sale-payments-button");
         const viewButton = targetElement.closest(".retail-sale-view-button");
         const expenseButton = targetElement.closest(".retail-sale-expense-button");
         const pdfButton = targetElement.closest(".retail-sale-pdf-button");
+        const saleActionEditButton = targetElement.closest(".retail-sale-action-edit");
+        const saleActionReturnButton = targetElement.closest(".retail-sale-action-return");
+        const saleActionReturnHistoryButton = targetElement.closest(".retail-sale-action-return-history");
+        const saleActionExpenseButton = targetElement.closest(".retail-sale-action-expense");
+        const saleActionPdfButton = targetElement.closest(".retail-sale-action-pdf");
+        const saleActionCreditNoteButton = targetElement.closest(".retail-sale-action-credit-note");
+        const saleActionsCloseButton = targetElement.closest("#retail-sale-actions-close-button");
+        const saleActionsBackdrop = targetElement.closest("#retail-sale-actions-modal");
         const viewModeReturnsButton = targetElement.closest("#retail-open-returns-button");
         const viewModePaymentsButton = targetElement.closest("#retail-open-payments-button");
         const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
@@ -2495,6 +2666,11 @@ function bindRetailStoreDomEvents() {
 
         if (resetButton) {
             handleRetailReset();
+            return;
+        }
+
+        if (moreButton) {
+            handleRetailSaleMore(moreButton);
             return;
         }
 
@@ -2533,6 +2709,52 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (returnNotePdfButton && featureState.returnHistorySaleId) {
+            handleRetailSaleCreditNotePdf({
+                dataset: {
+                    saleId: featureState.returnHistorySaleId,
+                    returnRowId: returnNotePdfButton.dataset.returnRowId || ""
+                }
+            });
+            return;
+        }
+
+        if (saleActionEditButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleEdit(saleActionEditButton);
+            return;
+        }
+
+        if (saleActionReturnButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleReturn(saleActionReturnButton);
+            return;
+        }
+
+        if (saleActionReturnHistoryButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleReturnHistory(saleActionReturnHistoryButton);
+            return;
+        }
+
+        if (saleActionExpenseButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleExpense(saleActionExpenseButton);
+            return;
+        }
+
+        if (saleActionPdfButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSalePdf(saleActionPdfButton);
+            return;
+        }
+
+        if (saleActionCreditNoteButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSaleCreditNotePdf(saleActionCreditNoteButton);
+            return;
+        }
+
         if (viewModeReturnsButton && featureState.viewingSaleId) {
             handleRetailSaleReturn({ dataset: { saleId: featureState.viewingSaleId } });
             return;
@@ -2545,6 +2767,16 @@ function bindRetailStoreDomEvents() {
 
         if (workspacePdfButton && featureState.viewingSaleId) {
             handleRetailSalePdf({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (saleActionsCloseButton) {
+            closeRetailSaleActionsModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-sale-actions-modal" && saleActionsBackdrop) {
+            closeRetailSaleActionsModal();
             return;
         }
 

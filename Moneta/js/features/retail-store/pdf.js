@@ -535,6 +535,183 @@ function buildPdfData(sale, paymentRecord = null) {
     };
 }
 
+function buildCreditNoteData(sale, returnRecord) {
+    const storeDetails = getStoreDetails(sale.store);
+    const returnDate = toDate(returnRecord.returnDate || returnRecord.createdOn);
+    const items = (returnRecord.items || []).map(item => {
+        const quantity = Number(item.quantity) || 0;
+        const unitPrice = Number(item.unitPrice) || 0;
+        const lineDiscountPercentage = Number(item.lineDiscountPercentage) || 0;
+        const gross = quantity * unitPrice;
+        const lineDiscountAmount = Number(item.lineDiscountAmount) || (gross * (lineDiscountPercentage / 100));
+        const taxableAmount = Number(item.taxableAmount) || (gross - lineDiscountAmount);
+        const cgstAmount = Number(item.cgstAmount) || (taxableAmount * ((Number(item.cgstPercentage) || 0) / 100));
+        const sgstAmount = Number(item.sgstAmount) || (taxableAmount * ((Number(item.sgstPercentage) || 0) / 100));
+        const lineTotal = Number(item.lineTotal) || (taxableAmount + cgstAmount + sgstAmount);
+
+        return {
+            ...item,
+            quantity,
+            unitPrice,
+            taxableAmount,
+            cgstAmount,
+            sgstAmount,
+            lineTotal
+        };
+    });
+    const taxSummary = buildTaxSummary(items);
+    const returnedAmount = Number(returnRecord.totalReturnedAmount) || items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
+
+    return {
+        copyType: "CUSTOMER COPY",
+        companyName: storeDetails.companyName,
+        addressLine1: storeDetails.addressLine1,
+        addressLine2: storeDetails.addressLine2,
+        email: storeDetails.email,
+        taxId: storeDetails.taxId,
+        customerName: sale.customerInfo?.name || "Walk-in Customer",
+        customerPhone: sale.customerInfo?.phone || "-",
+        customerEmail: sale.customerInfo?.email || "-",
+        customerAddress: sale.customerInfo?.address || "-",
+        originalInvoiceNumber: sale.saleId || sale.manualVoucherNumber || "-",
+        creditNoteNumber: returnRecord.returnId || returnRecord.id || `CRN-${Date.now()}`,
+        creditNoteDate: formatDate(returnDate),
+        creditNoteTime: formatTime(returnDate),
+        returnReason: returnRecord.reason || "-",
+        items,
+        totalQty: Number(returnRecord.totalReturnedQuantity) || items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+        totalTaxableAmount: items.reduce((sum, item) => sum + (Number(item.taxableAmount) || 0), 0),
+        totalCGST: items.reduce((sum, item) => sum + (Number(item.cgstAmount) || 0), 0),
+        totalSGST: items.reduce((sum, item) => sum + (Number(item.sgstAmount) || 0), 0),
+        totalAmount: returnedAmount,
+        taxSummary,
+        amountInWords: amountToWords(returnedAmount, "INR"),
+        currentInvoiceGrandTotal: Number(sale.financials?.grandTotal) || 0,
+        currentBalanceDue: Number(sale.balanceDue) || 0,
+        currentCreditBalance: Number(sale.creditBalance) || 0,
+        payableToCustomer: Number(sale.creditBalance) || 0
+    };
+}
+
+function buildCreditNoteHtml(data) {
+    return `
+        <div class="retail-pdf-root">
+            <style>${getTemplateStyles()}</style>
+            <div class="retail-pdf-shell">
+                <section class="retail-pdf-header">
+                    <div class="retail-pdf-brand">
+                        <h1>${escapeHtml(data.companyName)}</h1>
+                        <p>${escapeHtml(data.addressLine1)}</p>
+                        <p>${escapeHtml(data.addressLine2)}</p>
+                        <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
+                        <p><strong>GSTIN:</strong> ${escapeHtml(data.taxId)}</p>
+                    </div>
+                    <div class="retail-pdf-title-panel">
+                        <h2>Credit Note</h2>
+                        <span class="retail-pdf-kicker">${escapeHtml(data.copyType)}</span>
+                    </div>
+                </section>
+
+                <section class="retail-pdf-grid-four">
+                    <div class="retail-pdf-block">
+                        <h3>Customer</h3>
+                        <p><strong>${escapeHtml(data.customerName)}</strong></p>
+                        <p>${escapeHtml(data.customerPhone)}</p>
+                        <p>${escapeHtml(data.customerEmail)}</p>
+                        <p>${escapeHtml(data.customerAddress)}</p>
+                    </div>
+                    <div class="retail-pdf-block">
+                        <h3>Reference</h3>
+                        <p><strong>Original Invoice:</strong> ${escapeHtml(data.originalInvoiceNumber)}</p>
+                        <p><strong>Credit Note No:</strong> ${escapeHtml(data.creditNoteNumber)}</p>
+                        <p><strong>Date:</strong> ${escapeHtml(data.creditNoteDate)}</p>
+                        <p><strong>Time:</strong> ${escapeHtml(data.creditNoteTime)}</p>
+                    </div>
+                    <div class="retail-pdf-block">
+                        <h3>Return Summary</h3>
+                        <p><strong>Returned Qty:</strong> ${escapeHtml(String(data.totalQty || 0))}</p>
+                        <p><strong>Returned Amount:</strong> ${escapeHtml(formatCurrency(data.totalAmount || 0))}</p>
+                        <p><strong>Current Balance Due:</strong> ${escapeHtml(formatCurrency(data.currentBalanceDue || 0))}</p>
+                        <p><strong>Current Credit Balance:</strong> ${escapeHtml(formatCurrency(data.currentCreditBalance || 0))}</p>
+                    </div>
+                    <div class="retail-pdf-block">
+                        <h3>Return Reason</h3>
+                        <p>${escapeHtml(data.returnReason)}</p>
+                    </div>
+                </section>
+
+                <section class="retail-pdf-table-wrap">
+                    <table class="retail-pdf-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item Name</th>
+                                <th>HSN / SAC</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Taxable Amount</th>
+                                <th>CGST</th>
+                                <th>SGST</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${renderLineItems(data.items)}</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="align-right">Total</td>
+                                <td class="align-right">${escapeHtml(String(data.totalQty || 0))}</td>
+                                <td></td>
+                                <td class="align-right">${escapeHtml(formatCurrency(data.totalTaxableAmount || 0))}</td>
+                                <td class="align-right">${escapeHtml(formatCurrency(data.totalCGST || 0))}</td>
+                                <td class="align-right">${escapeHtml(formatCurrency(data.totalSGST || 0))}</td>
+                                <td class="align-right">${escapeHtml(formatCurrency(data.totalAmount || 0))}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </section>
+
+                <section class="retail-pdf-grid-three">
+                    <div class="retail-pdf-tax-box">
+                        <h3>Tax Summary</h3>
+                        <table class="retail-pdf-tax-table">
+                            <thead>
+                                <tr>
+                                    <th>Tax Type</th>
+                                    <th>Taxable Amount</th>
+                                    <th>Rate</th>
+                                    <th>Tax Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>${renderTaxRows(data.taxSummary)}</tbody>
+                        </table>
+                    </div>
+                    <div class="retail-pdf-summary">
+                        <h3>Credit Note Totals</h3>
+                        <table class="retail-pdf-summary-table">
+                            <tr><td>Credit Note Amount</td><td>${escapeHtml(formatCurrency(data.totalAmount || 0))}</td></tr>
+                            <tr><td>Current Invoice Total</td><td>${escapeHtml(formatCurrency(data.currentInvoiceGrandTotal || 0))}</td></tr>
+                            <tr><td>Current Balance Due</td><td>${escapeHtml(formatCurrency(data.currentBalanceDue || 0))}</td></tr>
+                            <tr><td>Current Credit Balance</td><td>${escapeHtml(formatCurrency(data.currentCreditBalance || 0))}</td></tr>
+                            <tr class="total-row"><td>Amount Payable To Customer</td><td>${escapeHtml(formatCurrency(data.payableToCustomer || 0))}</td></tr>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="retail-pdf-detail-footer">
+                    <div class="retail-pdf-note">
+                        <h3>Amount In Words</h3>
+                        <p>${escapeHtml(data.amountInWords)}</p>
+                    </div>
+                    <div class="retail-pdf-note">
+                        <h3>Note</h3>
+                        <p>This credit note documents returned items against the referenced invoice. Original invoice remains unchanged for audit integrity.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    `;
+}
+
 export async function downloadRetailSalePdf(sale, paymentRecord = null) {
     if (!window.html2pdf) {
         throw new Error("PDF library is not available in this Moneta build.");
@@ -558,6 +735,55 @@ export async function downloadRetailSalePdf(sale, paymentRecord = null) {
         await window.html2pdf().set({
             margin: 0,
             filename: `${data.invoiceNumber}.pdf`,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                letterRendering: true
+            },
+            jsPDF: {
+                unit: "mm",
+                format: "a4",
+                orientation: "portrait"
+            },
+            pagebreak: {
+                mode: ["avoid-all", "css", "legacy"]
+            }
+        }).from(target).save();
+    } finally {
+        host.remove();
+    }
+}
+
+export async function downloadRetailReturnCreditNotePdf(sale, returnRecord) {
+    if (!window.html2pdf) {
+        throw new Error("PDF library is not available in this Moneta build.");
+    }
+
+    if (!sale) {
+        throw new Error("Retail sale data is missing.");
+    }
+
+    if (!returnRecord) {
+        throw new Error("Return record is missing.");
+    }
+
+    const data = buildCreditNoteData(sale, returnRecord);
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.left = "-10000px";
+    host.style.top = "0";
+    host.style.zIndex = "-1";
+    host.innerHTML = buildCreditNoteHtml(data);
+    document.body.appendChild(host);
+
+    try {
+        const target = host.firstElementChild;
+        const safeInvoiceNo = String(data.originalInvoiceNumber || "invoice").replaceAll("/", "-");
+        const safeNoteNo = String(data.creditNoteNumber || "credit-note").replaceAll("/", "-");
+        await window.html2pdf().set({
+            margin: 0,
+            filename: `${safeInvoiceNo}-${safeNoteNo}.pdf`,
             image: { type: "jpeg", quality: 0.98 },
             html2canvas: {
                 scale: 2,
