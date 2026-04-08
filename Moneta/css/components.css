@@ -753,6 +753,31 @@ select {
     margin-top: 1rem;
 }
 
+.retail-edit-warning-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    font-weight: 700;
+    color: #8e5a1b;
+}
+
+.retail-edit-warning-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    color: #b8741c;
+}
+
+.retail-edit-warning-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .purchase-payment-modal-overlay {
     position: fixed;
     inset: 0;

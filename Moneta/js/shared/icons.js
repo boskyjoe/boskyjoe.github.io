@@ -67,6 +67,13 @@ export const icons = {
             <path d="M5 12h14"></path>
         </svg>
     `,
+    warning: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 4 20 19H4z"></path>
+            <path d="M12 9v5"></path>
+            <circle cx="12" cy="16.8" r="1"></circle>
+        </svg>
+    `,
     close: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 6l12 12"></path>

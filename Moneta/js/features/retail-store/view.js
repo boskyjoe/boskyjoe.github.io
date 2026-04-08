@@ -751,7 +751,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <p class="section-kicker">${isEditModeLimited ? "Limited Edit Mode" : "Full Edit Mode"}</p>
                 <p class="panel-copy">
                     ${isEditModeLimited
-                        ? "Payments or expenses are already linked. You can update customer details and notes only. Product list, discounts, tax, and settlement are locked."
+                        ? `<span class="retail-edit-warning-prefix"><span class="retail-edit-warning-icon" aria-hidden="true">${icons.warning}</span>Payments or expenses are already linked.</span> You can update customer details and notes only. Product list, discounts, tax, and settlement are locked.`
                         : "No linked payments or expenses were found. Full retail edit is enabled, including product list and invoice adjustments."}
                 </p>
             </div>
