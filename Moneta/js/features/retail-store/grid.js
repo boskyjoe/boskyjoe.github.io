@@ -56,11 +56,18 @@ function buildNumberSetter(field, decimals = 0) {
 }
 
 function retailSalesActionMarkup(data) {
+    const isVoided = (data.saleStatus || "").toLowerCase() === "voided";
+    const hasReturnableItems = (Number(data.lineItemCount) || 0) > 0;
+
     return `
         <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button retail-sale-edit-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
+            </button>
+            <button class="button grid-action-button grid-action-button-secondary retail-sale-return-button" type="button" data-sale-id="${data.id}" ${(isVoided || !hasReturnableItems) ? "disabled" : ""}>
+                <span class="button-icon">${icons.warning}</span>
+                Return
             </button>
             <button class="button grid-action-button grid-action-button-primary retail-sale-payments-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.payment}</span>
@@ -226,6 +233,13 @@ function buildSalesColumnDefs() {
             ...rightAlignedNumberColumn
         },
         {
+            field: "returnCount",
+            headerName: "Returns",
+            minWidth: 110,
+            flex: 0.7,
+            ...rightAlignedNumberColumn
+        },
+        {
             field: "invoiceTotal",
             headerName: "Invoice Total",
             minWidth: 140,
@@ -266,8 +280,8 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 440,
-            flex: 1.5,
+            minWidth: 520,
+            flex: 1.8,
             sortable: false,
             filter: false,
             cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesActionMarkup(params.data))
@@ -417,6 +431,7 @@ function buildSalesPinnedBottomRow(rows) {
 
     const totals = rows.reduce((summary, row) => {
         summary.lineItemCount += Number(row?.lineItemCount) || 0;
+        summary.returnCount += Number(row?.returnCount) || 0;
         summary.invoiceTotal += Number(row?.invoiceTotal) || 0;
         summary.amountPaid += Number(row?.amountPaid) || 0;
         summary.totalExpenses += Number(row?.totalExpenses) || 0;
@@ -424,6 +439,7 @@ function buildSalesPinnedBottomRow(rows) {
         return summary;
     }, {
         lineItemCount: 0,
+        returnCount: 0,
         invoiceTotal: 0,
         amountPaid: 0,
         totalExpenses: 0,
@@ -433,6 +449,7 @@ function buildSalesPinnedBottomRow(rows) {
     return [{
         manualVoucherNumber: "Totals",
         lineItemCount: totals.lineItemCount,
+        returnCount: totals.returnCount,
         invoiceTotal: Number(totals.invoiceTotal.toFixed(2)),
         amountPaid: Number(totals.amountPaid.toFixed(2)),
         totalExpenses: Number(totals.totalExpenses.toFixed(2)),

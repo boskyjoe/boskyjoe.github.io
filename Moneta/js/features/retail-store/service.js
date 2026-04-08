@@ -1,5 +1,6 @@
 import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
 import {
+    addRetailSaleReturnRecord,
     addRetailSaleExpenseRecord,
     createRetailSaleRecord,
     recordRetailSalePayment,
@@ -43,10 +44,13 @@ export function resolveRetailSaleEditScope(sale = {}) {
     const paymentCount = Number(sale.financials?.paymentCount) || 0;
     const paymentStatus = normalizeText(sale.paymentStatus || "Unpaid");
     const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+    const returnCount = Number(sale.returnCount) || 0;
+    const returnStatus = normalizeText(sale.returnStatus || "Not Returned");
     const hasPayments = totalAmountPaid > 0 || paymentCount > 0 || ["Paid", "Partially Paid"].includes(paymentStatus);
     const hasExpenses = totalExpenses > 0;
+    const hasReturns = returnCount > 0 || ["Partially Returned", "Fully Returned"].includes(returnStatus);
 
-    return hasPayments || hasExpenses ? "limited" : "full";
+    return hasPayments || hasExpenses || hasReturns ? "limited" : "full";
 }
 
 function parseRequiredDate(value, label) {
@@ -429,7 +433,7 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
     const requestedScope = normalizeText(payload.editScope || allowedScope);
     const effectiveScope = requestedScope === "full" ? "full" : "limited";
     if (effectiveScope === "full" && allowedScope !== "full") {
-        throw new Error("This sale has linked payments or expenses and only supports limited edits.");
+        throw new Error("This sale has linked payments, expenses, or returns and only supports limited edits.");
     }
 
     const editReason = normalizeText(payload.editReason);
@@ -597,6 +601,53 @@ export function validateRetailSaleExpensePayload(sale, payload, user) {
 export async function addRetailSaleExpense(sale, payload, user) {
     const normalizedExpense = validateRetailSaleExpensePayload(sale, payload, user);
     return addRetailSaleExpenseRecord(sale.id, normalizedExpense, user);
+}
+
+export function validateRetailSaleReturnPayload(sale, payload, user) {
+    if (!user) {
+        throw new Error("You must be logged in to process a retail return.");
+    }
+
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before processing a return.");
+    }
+
+    if (sale.saleStatus === "Voided") {
+        throw new Error("Voided sales cannot accept returns.");
+    }
+
+    const returnDate = parseRequiredDate(payload.returnDate, "Return date");
+    const reason = normalizeText(payload.reason);
+    if (!reason) {
+        throw new Error("Return reason is required.");
+    }
+
+    if (reason.length < 5) {
+        throw new Error("Please enter a more descriptive return reason.");
+    }
+
+    const items = (payload.items || [])
+        .map(item => ({
+            productId: normalizeText(item.productId),
+            productName: normalizeText(item.productName),
+            quantity: Math.max(0, Math.floor(Number(item.quantity) || 0))
+        }))
+        .filter(item => item.productId && item.quantity > 0);
+
+    if (!items.length) {
+        throw new Error("Select at least one product quantity to return.");
+    }
+
+    return {
+        returnDate,
+        reason,
+        items
+    };
+}
+
+export async function addRetailSaleReturn(sale, payload, user) {
+    const normalizedReturn = validateRetailSaleReturnPayload(sale, payload, user);
+    return addRetailSaleReturnRecord(sale.id, normalizedReturn, user);
 }
 
 export function validateRetailSalePaymentPayload(payload, sale, masterData = {}) {

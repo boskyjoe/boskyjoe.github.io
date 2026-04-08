@@ -2,6 +2,7 @@ import { COLLECTIONS } from "../../config/collections.js";
 
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
 const RETAIL_SALE_EXPENSES_SUBCOLLECTION = "expenses";
+const RETAIL_SALE_RETURNS_SUBCOLLECTION = "returns";
 
 function getDb() {
     return firebase.firestore();
@@ -33,12 +34,90 @@ function buildSalesExpenseId() {
     return `RSEXP-${Date.now()}`;
 }
 
+function buildSalesReturnId() {
+    return `RSRET-${Date.now()}`;
+}
+
 function normalizeText(value) {
     return (value || "").trim();
 }
 
 function roundCurrency(value) {
     return Number((Number(value) || 0).toFixed(2));
+}
+
+function clampPercentage(value) {
+    return Math.min(Math.max(Number(value) || 0, 0), 100);
+}
+
+function calculateLineItemFromQuantity(item = {}, quantity = 0) {
+    const normalizedQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
+    const unitPrice = roundCurrency(item.unitPrice);
+    const lineDiscountPercentage = clampPercentage(item.lineDiscountPercentage);
+    const cgstPercentage = Math.max(0, Number(item.cgstPercentage) || 0);
+    const sgstPercentage = Math.max(0, Number(item.sgstPercentage) || 0);
+    const lineSubtotal = roundCurrency(normalizedQuantity * unitPrice);
+    const lineDiscountAmount = roundCurrency(lineSubtotal * (lineDiscountPercentage / 100));
+    const taxableAmount = roundCurrency(Math.max(lineSubtotal - lineDiscountAmount, 0));
+    const cgstAmount = roundCurrency(taxableAmount * (cgstPercentage / 100));
+    const sgstAmount = roundCurrency(taxableAmount * (sgstPercentage / 100));
+    const taxAmount = roundCurrency(cgstAmount + sgstAmount);
+    const lineTotal = roundCurrency(taxableAmount + taxAmount);
+
+    return {
+        productId: item.productId || "",
+        productName: item.productName || "",
+        categoryId: item.categoryId || "",
+        categoryName: item.categoryName || "-",
+        quantity: normalizedQuantity,
+        unitPrice,
+        lineSubtotal,
+        lineDiscountPercentage,
+        lineDiscountAmount,
+        taxableAmount,
+        cgstPercentage,
+        sgstPercentage,
+        cgstAmount,
+        sgstAmount,
+        taxAmount,
+        lineTotal
+    };
+}
+
+function calculateRetailFinancialsFromLineItems(lineItems = [], previousFinancials = {}) {
+    const itemsSubtotal = roundCurrency(lineItems.reduce((sum, item) => sum + (Number(item.lineSubtotal) || 0), 0));
+    const totalLineDiscount = roundCurrency(lineItems.reduce((sum, item) => sum + (Number(item.lineDiscountAmount) || 0), 0));
+    const subtotalAfterLineDiscounts = roundCurrency(Math.max(itemsSubtotal - totalLineDiscount, 0));
+    const totalCGST = roundCurrency(lineItems.reduce((sum, item) => sum + (Number(item.cgstAmount) || 0), 0));
+    const totalSGST = roundCurrency(lineItems.reduce((sum, item) => sum + (Number(item.sgstAmount) || 0), 0));
+    const totalItemLevelTax = roundCurrency(totalCGST + totalSGST);
+    const orderDiscountType = normalizeText(previousFinancials.orderDiscountType) === "Fixed" ? "Fixed" : "Percentage";
+    const orderDiscountValue = roundCurrency(previousFinancials.orderDiscountValue);
+    const orderDiscountAmount = orderDiscountType === "Fixed"
+        ? roundCurrency(Math.min(Math.max(orderDiscountValue, 0), subtotalAfterLineDiscounts))
+        : roundCurrency(subtotalAfterLineDiscounts * (clampPercentage(orderDiscountValue) / 100));
+    const finalTaxableAmount = roundCurrency(Math.max(subtotalAfterLineDiscounts - orderDiscountAmount, 0));
+    const orderTaxPercentage = Math.max(0, Number(previousFinancials.orderTaxPercentage) || 0);
+    const orderLevelTaxAmount = roundCurrency(finalTaxableAmount * (orderTaxPercentage / 100));
+    const totalTax = roundCurrency(totalItemLevelTax + orderLevelTaxAmount);
+    const grandTotal = roundCurrency(finalTaxableAmount + totalTax);
+
+    return {
+        itemsSubtotal,
+        totalLineDiscount,
+        subtotalAfterLineDiscounts,
+        totalCGST,
+        totalSGST,
+        totalItemLevelTax,
+        orderDiscountType,
+        orderDiscountValue,
+        orderDiscountAmount,
+        finalTaxableAmount,
+        orderTaxPercentage,
+        orderLevelTaxAmount,
+        totalTax,
+        grandTotal
+    };
 }
 
 function resolveRetailSaleEditScope(sale = {}) {
@@ -51,10 +130,13 @@ function resolveRetailSaleEditScope(sale = {}) {
     const paymentCount = Number(sale.financials?.paymentCount) || 0;
     const paymentStatus = normalizeText(sale.paymentStatus || "Unpaid");
     const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+    const returnCount = Number(sale.returnCount) || 0;
+    const returnStatus = normalizeText(sale.returnStatus || "Not Returned");
     const hasPayments = totalAmountPaid > 0 || paymentCount > 0 || ["Paid", "Partially Paid"].includes(paymentStatus);
     const hasExpenses = totalExpenses > 0;
+    const hasReturns = returnCount > 0 || ["Partially Returned", "Fully Returned"].includes(returnStatus);
 
-    return hasPayments || hasExpenses ? "limited" : "full";
+    return hasPayments || hasExpenses || hasReturns ? "limited" : "full";
 }
 
 function buildLineItemQuantityMap(lineItems = []) {
@@ -217,6 +299,7 @@ export async function createRetailSaleRecord(payload, user) {
         transaction.set(saleRef, {
             saleId: buildSaleBusinessId(payload.store),
             saleStatus: "Active",
+            returnStatus: "Not Returned",
             saleDate: payload.saleDate,
             store: payload.store,
             saleType: payload.saleType,
@@ -251,6 +334,10 @@ export async function createRetailSaleRecord(payload, user) {
             totalQuantity: payload.lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
             totalAmountPaid,
             balanceDue,
+            creditBalance: 0,
+            returnCount: 0,
+            totalReturnedQuantity: 0,
+            totalReturnedAmount: 0,
             paymentStatus,
             latestPaymentMode: payload.initialPayment?.paymentMode || "",
             createdBy: user.email,
@@ -291,6 +378,176 @@ export async function createRetailSaleRecord(payload, user) {
         });
 
         return saleRef;
+    });
+}
+
+export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before recording a return.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+    const returnRef = saleRef.collection(RETAIL_SALE_RETURNS_SUBCOLLECTION).doc();
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        if (normalizeText(sale.saleStatus) === "Voided") {
+            throw new Error("Voided sales cannot accept returns.");
+        }
+
+        const requestedQuantityMap = new Map();
+        (returnPayload.items || []).forEach(item => {
+            const productId = normalizeText(item.productId);
+            const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+            if (!productId || quantity <= 0) return;
+            requestedQuantityMap.set(productId, (requestedQuantityMap.get(productId) || 0) + quantity);
+        });
+
+        if (requestedQuantityMap.size === 0) {
+            throw new Error("Select at least one product quantity to return.");
+        }
+
+        const currentLineItems = Array.isArray(sale.lineItems) ? sale.lineItems : [];
+        const currentItemMap = new Map(
+            currentLineItems.map(item => [normalizeText(item.productId), item]).filter(([productId]) => Boolean(productId))
+        );
+
+        const requestedProductIds = [...requestedQuantityMap.keys()];
+        requestedProductIds.forEach(productId => {
+            const saleItem = currentItemMap.get(productId);
+            if (!saleItem) {
+                throw new Error("One or more selected return products are no longer available on this sale.");
+            }
+
+            const availableQuantity = Math.max(0, Math.floor(Number(saleItem.quantity) || 0));
+            const requestedQuantity = requestedQuantityMap.get(productId) || 0;
+            if (requestedQuantity > availableQuantity) {
+                throw new Error(`Return quantity for "${saleItem.productName || productId}" exceeds the remaining sold quantity.`);
+            }
+        });
+
+        const productRefs = requestedProductIds.map(productId => db.collection(COLLECTIONS.products).doc(productId));
+        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        productDocs.forEach(doc => {
+            if (!doc.exists) {
+                throw new Error("One or more returned products are no longer available in inventory.");
+            }
+        });
+
+        const remainingLineItems = [];
+        const returnedLineItems = [];
+
+        currentLineItems.forEach(item => {
+            const productId = normalizeText(item.productId);
+            const soldQuantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+            if (!productId || soldQuantity <= 0) return;
+
+            const returnQuantity = requestedQuantityMap.get(productId) || 0;
+            if (returnQuantity > 0) {
+                const returnedLine = calculateLineItemFromQuantity(item, returnQuantity);
+                returnedLineItems.push({
+                    ...returnedLine,
+                    quantityBeforeReturn: soldQuantity,
+                    quantityAfterReturn: Math.max(soldQuantity - returnQuantity, 0)
+                });
+            }
+
+            const remainingQuantity = soldQuantity - returnQuantity;
+            if (remainingQuantity > 0) {
+                remainingLineItems.push(calculateLineItemFromQuantity(item, remainingQuantity));
+            }
+        });
+
+        if (returnedLineItems.length === 0) {
+            throw new Error("No valid return quantities were found.");
+        }
+
+        const returnedQuantity = returnedLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const returnedAmount = roundCurrency(returnedLineItems.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0));
+        const nextFinancials = calculateRetailFinancialsFromLineItems(remainingLineItems, sale.financials || {});
+        const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+        const nextBalanceDue = roundCurrency(Math.max(nextFinancials.grandTotal - totalAmountPaid - totalExpenses, 0));
+        const creditBalance = roundCurrency(Math.max(totalAmountPaid + totalExpenses - nextFinancials.grandTotal, 0));
+        const nextPaymentStatus = nextBalanceDue <= 0
+            ? "Paid"
+            : totalAmountPaid > 0
+                ? "Partially Paid"
+                : "Unpaid";
+        const previousReturnCount = Number(sale.returnCount) || 0;
+        const previousReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
+        const previousReturnedAmount = roundCurrency(sale.totalReturnedAmount);
+        const nextReturnStatus = remainingLineItems.length === 0 ? "Fully Returned" : "Partially Returned";
+
+        transaction.set(returnRef, {
+            returnId: buildSalesReturnId(),
+            saleDocId: saleId,
+            saleId: sale.saleId || "",
+            manualVoucherNumber: sale.manualVoucherNumber || "",
+            customerName: sale.customerInfo?.name || "",
+            returnDate: returnPayload.returnDate,
+            reason: returnPayload.reason,
+            items: returnedLineItems,
+            totalReturnedQuantity: returnedQuantity,
+            totalReturnedAmount: returnedAmount,
+            returnStatus: nextReturnStatus,
+            createdBy: user.email,
+            createdOn: now
+        });
+
+        transaction.update(saleRef, {
+            lineItems: remainingLineItems,
+            lineItemCount: remainingLineItems.length,
+            totalQuantity: remainingLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+            financials: {
+                ...(sale.financials || {}),
+                ...nextFinancials,
+                totalExpenses,
+                amountTendered: roundCurrency(sale.financials?.amountTendered),
+                paymentCount: Number(sale.financials?.paymentCount) || 0
+            },
+            balanceDue: nextBalanceDue,
+            paymentStatus: nextPaymentStatus,
+            creditBalance,
+            returnStatus: nextReturnStatus,
+            returnCount: previousReturnCount + 1,
+            totalReturnedQuantity: previousReturnedQuantity + returnedQuantity,
+            totalReturnedAmount: roundCurrency(previousReturnedAmount + returnedAmount),
+            latestReturnReason: returnPayload.reason,
+            latestReturnOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        requestedProductIds.forEach((productId, index) => {
+            const returnQuantity = requestedQuantityMap.get(productId) || 0;
+            transaction.update(productRefs[index], {
+                inventoryCount: firebase.firestore.FieldValue.increment(returnQuantity),
+                updatedBy: user.email,
+                updateDate: now
+            });
+        });
+
+        return {
+            returnRef,
+            summary: {
+                returnedQuantity,
+                returnedAmount,
+                nextReturnStatus,
+                nextBalanceDue,
+                nextPaymentStatus,
+                nextGrandTotal: nextFinancials.grandTotal,
+                creditBalance
+            }
+        };
     });
 }
 
@@ -475,7 +732,7 @@ export async function updateRetailSaleRecord(saleId, updatePayload, user) {
 
         const requestedScope = normalizeText(updatePayload.editScope || "limited");
         if (requestedScope === "full" && editScope !== "full") {
-            throw new Error("This sale has linked payments or expenses and only supports limited edits.");
+            throw new Error("This sale has linked payments, expenses, or returns and only supports limited edits.");
         }
 
         const baseUpdate = {

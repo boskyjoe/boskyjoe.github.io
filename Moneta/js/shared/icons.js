@@ -69,9 +69,9 @@ export const icons = {
     `,
     warning: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 4 20 19H4z"></path>
-            <path d="M12 9v5"></path>
-            <circle cx="12" cy="16.8" r="1"></circle>
+            <path d="M12 4 20 19H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M12 9v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <circle cx="12" cy="16.8" r="1" fill="currentColor"></circle>
         </svg>
     `,
     close: `
