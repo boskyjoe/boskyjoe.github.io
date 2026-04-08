@@ -749,8 +749,31 @@ select {
     background: linear-gradient(180deg, #fffaf2 0%, #fff4e4 100%);
 }
 
+.retail-return-mode-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(160, 96, 33, 0.2);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fffaf2 0%, #fff3e2 100%);
+}
+
 .retail-edit-reason-section {
     margin-top: 1rem;
+}
+
+.retail-return-reason-section {
+    margin-top: 1rem;
+}
+
+.retail-return-preview-row {
+    margin-top: 0.95rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(160px, 220px));
+    gap: 0.7rem;
 }
 
 .retail-edit-warning-prefix {
@@ -1756,6 +1779,7 @@ select {
     .purchase-payment-preview,
     .purchase-payment-void-summary,
     .retail-expense-summary-grid,
+    .retail-return-preview-row,
     .retail-summary-grid,
     .retail-product-list-shell,
     .bulk-product-list,
@@ -1771,7 +1795,8 @@ select {
     .purchase-payment-modal-title-row,
     .purchase-void-mode-banner,
     .retail-view-mode-banner,
-    .retail-edit-mode-banner {
+    .retail-edit-mode-banner,
+    .retail-return-mode-banner {
         flex-direction: column;
         align-items: stretch;
     }

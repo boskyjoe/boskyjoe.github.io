@@ -11,6 +11,7 @@ let retailExpenseHistoryGridElement = null;
 let retailPaymentHistoryGridApi = null;
 let retailPaymentHistoryGridElement = null;
 let retailWorksheetReadOnly = false;
+let retailWorksheetMode = "standard";
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -55,6 +56,19 @@ function buildNumberSetter(field, decimals = 0) {
     };
 }
 
+function buildReturnQuantitySetter() {
+    return params => {
+        const parsed = Number(params.newValue);
+        const normalized = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+        const maxAllowed = Math.max(0, Math.floor(Number(params.data?.quantity) || 0));
+        const nextValue = Math.min(normalized, maxAllowed);
+        const changed = Number(params.data?.returnQuantity || 0) !== nextValue;
+
+        params.data.returnQuantity = nextValue;
+        return changed;
+    };
+}
+
 function retailSalesActionMarkup(data) {
     const isVoided = (data.saleStatus || "").toLowerCase() === "voided";
     const hasReturnableItems = (Number(data.lineItemCount) || 0) > 0;
@@ -92,11 +106,22 @@ function retailSalesActionMarkup(data) {
 function buildWorksheetColumnDefs() {
     return [
         {
+            field: "returnQuantity",
+            headerName: "Return Qty",
+            minWidth: 120,
+            maxWidth: 130,
+            hide: retailWorksheetMode !== "return",
+            editable: params => !retailWorksheetReadOnly && retailWorksheetMode === "return" && !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildReturnQuantitySetter(),
+            ...rightAlignedNumberColumn
+        },
+        {
             field: "quantity",
-            headerName: "Qty",
+            headerName: retailWorksheetMode === "return" ? "Sold Qty" : "Qty",
             minWidth: 95,
             maxWidth: 110,
-            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && retailWorksheetMode !== "return" && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quantity", 0),
             ...rightAlignedNumberColumn
@@ -123,7 +148,7 @@ function buildWorksheetColumnDefs() {
             headerName: "Line Disc. %",
             minWidth: 130,
             flex: 0.8,
-            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && retailWorksheetMode !== "return" && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -134,7 +159,7 @@ function buildWorksheetColumnDefs() {
             headerName: "CGST %",
             minWidth: 120,
             flex: 0.75,
-            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && retailWorksheetMode !== "return" && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("cgstPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -145,7 +170,7 @@ function buildWorksheetColumnDefs() {
             headerName: "SGST %",
             minWidth: 120,
             flex: 0.75,
-            editable: params => !retailWorksheetReadOnly && !params.node?.rowPinned,
+            editable: params => !retailWorksheetReadOnly && retailWorksheetMode !== "return" && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("sgstPercentage", 2),
             ...rightAlignedNumberColumn,
@@ -398,6 +423,7 @@ function buildWorksheetPinnedBottomRow(rows) {
 
     const totals = rows.reduce((summary, row) => {
         const quantity = Number(row?.quantity) || 0;
+        const returnQuantity = Number(row?.returnQuantity) || 0;
         const unitPrice = Number(row?.unitPrice) || 0;
         const lineDiscountPercentage = Number(row?.lineDiscountPercentage) || 0;
         const cgstPercentage = Number(row?.cgstPercentage) || 0;
@@ -409,11 +435,13 @@ function buildWorksheetPinnedBottomRow(rows) {
         const sgstAmount = taxableAmount * (sgstPercentage / 100);
 
         summary.quantity += quantity;
+        summary.returnQuantity += returnQuantity;
         summary.taxAmount += cgstAmount + sgstAmount;
         summary.lineTotal += taxableAmount + cgstAmount + sgstAmount;
         return summary;
     }, {
         quantity: 0,
+        returnQuantity: 0,
         taxAmount: 0,
         lineTotal: 0
     });
@@ -421,6 +449,7 @@ function buildWorksheetPinnedBottomRow(rows) {
     return [{
         productName: "Totals",
         quantity: totals.quantity,
+        returnQuantity: totals.returnQuantity,
         taxAmount: Number(totals.taxAmount.toFixed(2)),
         lineTotal: Number(totals.lineTotal.toFixed(2))
     }];
@@ -525,6 +554,18 @@ export function setRetailWorksheetReadOnly(isReadOnly) {
     if (retailWorksheetGridApi) {
         retailWorksheetGridApi.refreshCells({ force: true });
         retailWorksheetGridApi.setGridOption("suppressCellFocus", retailWorksheetReadOnly);
+    }
+}
+
+export function setRetailWorksheetMode(mode = "standard") {
+    const normalizedMode = mode === "return" ? "return" : "standard";
+    if (retailWorksheetMode === normalizedMode) return;
+
+    retailWorksheetMode = normalizedMode;
+    if (retailWorksheetGridApi) {
+        retailWorksheetGridApi.setGridOption("columnDefs", buildWorksheetColumnDefs());
+        retailWorksheetGridApi.refreshHeader();
+        retailWorksheetGridApi.refreshCells({ force: true });
     }
 }
 
