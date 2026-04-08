@@ -1317,10 +1317,6 @@ function renderRetailStoreViewShell(snapshot) {
                                 Download PDF
                             </button>
                         ` : isReturnMode ? `
-                            <button id="retail-return-cancel-button" class="button button-secondary" type="button">
-                                <span class="button-icon">${icons.inactive}</span>
-                                Cancel Return
-                            </button>
                             <button class="button button-primary-alt" type="submit">
                                 <span class="button-icon">${icons.warning}</span>
                                 Process Return
@@ -2307,7 +2303,6 @@ function bindRetailStoreDomEvents() {
         const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
         const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
-        const returnCancelButton = targetElement.closest("#retail-return-cancel-button");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
 
@@ -2368,11 +2363,6 @@ function bindRetailStoreDomEvents() {
 
         if (targetElement.id === "retail-payment-modal" && paymentModalBackdrop) {
             closeRetailPaymentModal();
-            return;
-        }
-
-        if (returnCancelButton) {
-            closeRetailReturnModal();
             return;
         }
 
