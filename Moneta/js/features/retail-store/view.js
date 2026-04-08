@@ -1096,7 +1096,8 @@ function renderRetailStoreViewShell(snapshot) {
         : featureState.saleDraft.paymentType === "Pay Now"
             ? (summary.balanceDue <= 0 ? "Paid" : summary.appliedPayment > 0 ? "Partially Paid" : "Unpaid")
             : "Unpaid";
-    const paymentStatus = (isViewMode || isEditMode || isReturnMode)
+    const hasPersistedSaleStatus = isViewMode || isEditMode || isReturnMode;
+    const paymentStatus = hasPersistedSaleStatus
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
     const expenseModalSale = getExpenseModalSale();
@@ -1525,10 +1526,12 @@ function renderRetailStoreViewShell(snapshot) {
                                                 <strong>${formatCurrency(displayedCreditBalance)}</strong>
                                             </div>
                                         </div>
-                                        <div class="retail-finance-status-row">
-                                            <span class="summary-label">Payment Status</span>
-                                            <span class="summary-value retail-summary-status">${paymentStatus}</span>
-                                        </div>
+                                        ${hasPersistedSaleStatus ? `
+                                            <div class="retail-finance-status-row">
+                                                <span class="summary-label">Payment Status</span>
+                                                <span class="summary-value retail-summary-status">${paymentStatus}</span>
+                                            </div>
+                                        ` : ""}
                                     </aside>
                                 </div>
                             </div>
