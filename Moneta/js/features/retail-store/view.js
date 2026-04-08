@@ -982,11 +982,21 @@ function renderRetailStoreViewShell(snapshot) {
     const workspaceSale = viewingSale || editingSale || returningSale;
     const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
     const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
+    const workspaceCreditBalance = Number(workspaceSale?.creditBalance) || 0;
     const returnDraftSummary = isReturnMode && returningSale
         ? calculateRetailReturnDraftSummary(returningSale)
         : { totalQuantity: 0, totalAmount: 0 };
     const projectedGrandTotal = Math.max(summary.grandTotal - returnDraftSummary.totalAmount, 0);
     const projectedBalanceDue = Math.max(workspaceBalanceDue - returnDraftSummary.totalAmount, 0);
+    const projectedCreditBalance = Number((workspaceCreditBalance + Math.max(returnDraftSummary.totalAmount - workspaceBalanceDue, 0)).toFixed(2));
+    const draftCreditBalance = featureState.saleDraft.paymentType === "Pay Now"
+        ? Math.max((Number(featureState.saleDraft.amountReceived) || 0) - summary.grandTotal, 0)
+        : 0;
+    const displayedCreditBalance = isReturnMode
+        ? projectedCreditBalance
+        : (isViewMode || isEditMode)
+            ? workspaceCreditBalance
+            : draftCreditBalance;
     const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
     const draftPaymentStatus = summary.grandTotal <= 0
         ? "Paid"
@@ -1416,6 +1426,10 @@ function renderRetailStoreViewShell(snapshot) {
                                             <div class="retail-finance-total-row">
                                                 <span>Balance Due</span>
                                                 <strong>${formatCurrency(isReturnMode ? projectedBalanceDue : (isViewMode || isEditModeLimited) ? workspaceBalanceDue : summary.balanceDue)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Credit Balance</span>
+                                                <strong>${formatCurrency(displayedCreditBalance)}</strong>
                                             </div>
                                         </div>
                                         <div class="retail-finance-status-row">
