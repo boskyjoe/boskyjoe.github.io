@@ -249,6 +249,32 @@ export function subscribeToRetailSalePayments(saleId, onData, onError) {
         );
 }
 
+export function subscribeToRetailSaleReturns(saleId, onData, onError) {
+    if (!saleId) {
+        onData([]);
+        return () => {};
+    }
+
+    return getDb()
+        .collection(COLLECTIONS.salesInvoices)
+        .doc(saleId)
+        .collection(RETAIL_SALE_RETURNS_SUBCOLLECTION)
+        .onSnapshot(
+            snapshot => {
+                const rows = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((left, right) => {
+                        const leftDate = left.returnDate?.toDate ? left.returnDate.toDate() : new Date(left.returnDate || 0);
+                        const rightDate = right.returnDate?.toDate ? right.returnDate.toDate() : new Date(right.returnDate || 0);
+                        return rightDate.getTime() - leftDate.getTime();
+                    });
+
+                onData(rows);
+            },
+            error => onError?.(error)
+        );
+}
+
 export async function getRetailSalePayments(invoiceId) {
     if (!invoiceId) return [];
 

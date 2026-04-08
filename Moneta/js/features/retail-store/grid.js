@@ -10,6 +10,8 @@ let retailExpenseHistoryGridApi = null;
 let retailExpenseHistoryGridElement = null;
 let retailPaymentHistoryGridApi = null;
 let retailPaymentHistoryGridElement = null;
+let retailReturnHistoryGridApi = null;
+let retailReturnHistoryGridElement = null;
 let retailWorksheetReadOnly = false;
 let retailWorksheetMode = "standard";
 
@@ -82,6 +84,10 @@ function retailSalesActionMarkup(data) {
             <button class="button grid-action-button grid-action-button-secondary retail-sale-return-button" type="button" data-sale-id="${data.id}" ${(isVoided || !hasReturnableItems) ? "disabled" : ""}>
                 <span class="button-icon">${icons.warning}</span>
                 Return
+            </button>
+            <button class="button grid-action-button grid-action-button-secondary retail-sale-return-history-button" type="button" data-sale-id="${data.id}">
+                <span class="button-icon">${icons.search}</span>
+                Return History
             </button>
             <button class="button grid-action-button grid-action-button-primary retail-sale-payments-button" type="button" data-sale-id="${data.id}">
                 <span class="button-icon">${icons.payment}</span>
@@ -305,7 +311,7 @@ function buildSalesColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 520,
+            minWidth: 640,
             flex: 1.8,
             sortable: false,
             filter: false,
@@ -390,6 +396,80 @@ function buildExpenseHistoryColumnDefs() {
             headerName: "Added By",
             minWidth: 180,
             flex: 1
+        }
+    ];
+}
+
+function buildReturnHistoryColumnDefs() {
+    return [
+        {
+            field: "returnDate",
+            headerName: "Return Date",
+            minWidth: 130,
+            flex: 0.8,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            field: "returnId",
+            headerName: "Return ID",
+            minWidth: 150,
+            flex: 0.9,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "returnStatus",
+            headerName: "Status",
+            minWidth: 140,
+            flex: 0.8,
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || "Returned"))
+        },
+        {
+            field: "totalReturnedQuantity",
+            headerName: "Qty",
+            minWidth: 110,
+            flex: 0.65,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "totalReturnedAmount",
+            headerName: "Amount",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "reason",
+            headerName: "Reason",
+            minWidth: 260,
+            flex: 1.45,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            headerName: "Items",
+            minWidth: 260,
+            flex: 1.4,
+            sortable: false,
+            filter: false,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return "";
+                const items = Array.isArray(params.data?.items) ? params.data.items : [];
+                if (!items.length) return "-";
+
+                const preview = items
+                    .slice(0, 3)
+                    .map(item => `${item.productName || item.productId || "Item"} x${Number(item.quantity) || 0}`)
+                    .join(", ");
+                const moreCount = Math.max(items.length - 3, 0);
+                return moreCount > 0 ? `${preview} +${moreCount} more` : preview;
+            }
+        },
+        {
+            field: "createdBy",
+            headerName: "Recorded By",
+            minWidth: 180,
+            flex: 1,
+            valueFormatter: params => params.value || "-"
         }
     ];
 }
@@ -506,6 +586,25 @@ function buildPaymentHistoryPinnedBottomRow(rows) {
     }];
 }
 
+function buildReturnHistoryPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        summary.totalReturnedQuantity += Number(row?.totalReturnedQuantity) || 0;
+        summary.totalReturnedAmount += Number(row?.totalReturnedAmount) || 0;
+        return summary;
+    }, {
+        totalReturnedQuantity: 0,
+        totalReturnedAmount: 0
+    });
+
+    return [{
+        returnId: "Totals",
+        totalReturnedQuantity: totals.totalReturnedQuantity,
+        totalReturnedAmount: Number(totals.totalReturnedAmount.toFixed(2))
+    }];
+}
+
 function refreshWorksheetPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildWorksheetPinnedBottomRow(getVisibleRows(api)));
 }
@@ -520,6 +619,10 @@ function refreshExpenseHistoryPinnedBottomRow(api) {
 
 function refreshPaymentHistoryPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildPaymentHistoryPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshReturnHistoryPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildReturnHistoryPinnedBottomRow(getVisibleRows(api)));
 }
 
 export function initializeRetailWorksheetGrid(gridElement, onRowsChanged) {
@@ -692,4 +795,32 @@ export function refreshRetailPaymentHistoryGrid(rows) {
     if (!retailPaymentHistoryGridApi) return;
     retailPaymentHistoryGridApi.setGridOption("rowData", rows || []);
     refreshPaymentHistoryPinnedBottomRow(retailPaymentHistoryGridApi);
+}
+
+export function initializeRetailReturnHistoryGrid(gridElement) {
+    if (!gridElement) return retailReturnHistoryGridApi;
+
+    if (retailReturnHistoryGridApi && retailReturnHistoryGridElement !== gridElement) {
+        retailReturnHistoryGridApi.destroy();
+        retailReturnHistoryGridApi = null;
+        retailReturnHistoryGridElement = null;
+    }
+
+    if (retailReturnHistoryGridApi) return retailReturnHistoryGridApi;
+
+    retailReturnHistoryGridApi = createGrid(gridElement, {
+        columnDefs: buildReturnHistoryColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        onFilterChanged: () => refreshReturnHistoryPinnedBottomRow(retailReturnHistoryGridApi)
+    });
+
+    retailReturnHistoryGridElement = gridElement;
+    return retailReturnHistoryGridApi;
+}
+
+export function refreshRetailReturnHistoryGrid(rows) {
+    if (!retailReturnHistoryGridApi) return;
+    retailReturnHistoryGridApi.setGridOption("rowData", rows || []);
+    refreshReturnHistoryPinnedBottomRow(retailReturnHistoryGridApi);
 }

@@ -6,10 +6,12 @@ import { formatCurrency } from "../../shared/utils/currency.js";
 import {
     initializeRetailExpenseHistoryGrid,
     initializeRetailPaymentHistoryGrid,
+    initializeRetailReturnHistoryGrid,
     initializeRetailSalesGrid,
     initializeRetailWorksheetGrid,
     refreshRetailExpenseHistoryGrid,
     refreshRetailPaymentHistoryGrid,
+    refreshRetailReturnHistoryGrid,
     refreshRetailSalesGrid,
     refreshRetailWorksheetGrid,
     setRetailWorksheetMode,
@@ -22,6 +24,7 @@ import {
     subscribeToRetailCatalogueItems,
     subscribeToRetailSaleExpenses,
     subscribeToRetailSalePayments,
+    subscribeToRetailSaleReturns,
     subscribeToRetailSales
 } from "./repository.js";
 import { downloadRetailSalePdf } from "./pdf.js";
@@ -58,6 +61,10 @@ const featureState = {
     payments: [],
     unsubscribePayments: null,
     paymentDraft: createDefaultRetailPaymentDraft(),
+    returnHistoryModalOpen: false,
+    returnHistorySaleId: null,
+    returnHistoryRows: [],
+    unsubscribeReturnHistory: null,
     returningSaleId: null,
     returnDraft: createDefaultRetailReturnDraft(),
     expenseModalOpen: false,
@@ -146,6 +153,7 @@ function resetRetailWorkspace() {
     featureState.lineItemDrafts = {};
     clearCatalogueItemsSubscription();
     closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
     closeRetailExpenseModalState();
 }
@@ -164,6 +172,14 @@ function closeRetailExpenseModalState() {
     featureState.expenseSaleId = null;
     featureState.expenseHistory = [];
     featureState.expenseDraft = createDefaultExpenseDraft();
+}
+
+function closeRetailReturnHistoryModalState() {
+    featureState.unsubscribeReturnHistory?.();
+    featureState.unsubscribeReturnHistory = null;
+    featureState.returnHistoryModalOpen = false;
+    featureState.returnHistorySaleId = null;
+    featureState.returnHistoryRows = [];
 }
 
 function closeRetailReturnModalState() {
@@ -198,6 +214,7 @@ function openRetailPaymentModal(sale) {
 
     exitRetailReturnWorkspaceIfActive();
     closeRetailReturnModalState();
+    closeRetailReturnHistoryModalState();
     closeRetailExpenseModalState();
     featureState.unsubscribePayments?.();
     featureState.unsubscribePayments = null;
@@ -238,6 +255,7 @@ function openRetailExpenseModal(sale) {
     exitRetailReturnWorkspaceIfActive();
     closeRetailPaymentModalState();
     closeRetailReturnModalState();
+    closeRetailReturnHistoryModalState();
     featureState.unsubscribeExpenseHistory?.();
     featureState.unsubscribeExpenseHistory = null;
     featureState.expenseModalOpen = true;
@@ -271,6 +289,46 @@ function closeRetailReturnModal() {
 
 function closeRetailExpenseModal() {
     closeRetailExpenseModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function getReturnHistoryModalSale() {
+    if (!featureState.returnHistorySaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.returnHistorySaleId) || null;
+}
+
+function openRetailReturnHistoryModal(sale) {
+    if (!sale?.id) return;
+
+    closeRetailPaymentModalState();
+    closeRetailExpenseModalState();
+    featureState.unsubscribeReturnHistory?.();
+    featureState.unsubscribeReturnHistory = null;
+    featureState.returnHistoryModalOpen = true;
+    featureState.returnHistorySaleId = sale.id;
+    featureState.returnHistoryRows = [];
+
+    featureState.unsubscribeReturnHistory = subscribeToRetailSaleReturns(
+        sale.id,
+        rows => {
+            featureState.returnHistoryRows = rows;
+            if (getState().currentRoute === "#/retail-store" && featureState.returnHistoryModalOpen) {
+                syncRetailReturnHistoryGrid();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail return history:", error);
+            showToast("Could not load retail return history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailReturnHistoryModal() {
+    closeRetailReturnHistoryModalState();
     if (getState().currentRoute === "#/retail-store") {
         renderRetailStoreView();
     }
@@ -824,6 +882,78 @@ function renderRetailExpenseModal(sale) {
     `;
 }
 
+function renderRetailReturnHistoryModal() {
+    if (!featureState.returnHistoryModalOpen) return "";
+
+    const sale = getReturnHistoryModalSale();
+    if (!sale) return "";
+
+    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const totalReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
+    const totalReturnedAmount = Number(sale.totalReturnedAmount) || 0;
+    const returnCount = Number(sale.returnCount) || 0;
+
+    return `
+        <div id="retail-return-history-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-return-history-modal-title">
+            <div class="purchase-payment-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.warning}</span>
+                        <div>
+                            <h3 id="retail-return-history-modal-title">Return History</h3>
+                            <p class="panel-copy">Review all return records posted against this sale, including quantities, amounts, reasons, and who processed them.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${returnCount} return(s)</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer</p>
+                                    <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Invoice Total</p>
+                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Returned Qty</p>
+                                    <p class="summary-value">${totalReturnedQuantity}</p>
+                                </article>
+                                <article class="summary-card retail-summary-card-strong">
+                                    <p class="summary-label">Returned Amount</p>
+                                    <p class="summary-value">${formatCurrency(totalReturnedAmount)}</p>
+                                </article>
+                            </div>
+                            <div class="form-actions">
+                                <button id="retail-return-history-close-button" class="button button-secondary" type="button">
+                                    <span class="button-icon">${icons.inactive}</span>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Return Entries</p>
+                                <p id="retail-return-history-count" class="panel-copy">${featureState.returnHistoryRows.length} return record(s) linked to this sale.</p>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="retail-return-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderRetailStoreViewShell(snapshot) {
     const root = document.getElementById("retail-store-root");
     if (!root) return;
@@ -1349,7 +1479,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Payments for collections, and Expense for sale-linked cost adjustments.</p>
+                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Return History for audit review, Payments for collections, and Expense for sale-linked cost adjustments.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -1366,6 +1496,7 @@ function renderRetailStoreViewShell(snapshot) {
                 </div>
             </div>
         </div>
+        ${renderRetailReturnHistoryModal()}
         ${renderRetailPaymentModal(snapshot)}
         ${renderRetailExpenseModal(expenseModalSale)}
     `;
@@ -1438,12 +1569,28 @@ function syncRetailPaymentHistoryGrid() {
     }
 }
 
+function syncRetailReturnHistoryGrid() {
+    if (!featureState.returnHistoryModalOpen) return;
+
+    const gridElement = document.getElementById("retail-return-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailReturnHistoryGrid(gridElement);
+    refreshRetailReturnHistoryGrid(featureState.returnHistoryRows);
+
+    const historyCount = document.getElementById("retail-return-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.returnHistoryRows.length} return record(s) linked to this sale.`;
+    }
+}
+
 function ensureRetailSalesListener(snapshot) {
     if (!snapshot.currentUser || snapshot.currentRoute !== "#/retail-store") {
         featureState.unsubscribeSales?.();
         featureState.unsubscribeSales = null;
         featureState.sales = [];
         closeRetailPaymentModalState();
+        closeRetailReturnHistoryModalState();
         closeRetailReturnModalState();
         closeRetailExpenseModalState();
         return;
@@ -1503,6 +1650,16 @@ function ensureRetailSalesListener(snapshot) {
                 } else if ((Number(returnSale.lineItemCount) || (returnSale.lineItems || []).length || 0) <= 0) {
                     resetRetailWorkspace();
                     showToast("All products on this sale were already returned.", "info", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (featureState.returnHistoryModalOpen && featureState.returnHistorySaleId) {
+                const returnHistorySale = rows.find(entry => entry.id === featureState.returnHistorySaleId) || null;
+                if (!returnHistorySale) {
+                    closeRetailReturnHistoryModalState();
+                    showToast("The selected sale is no longer available for return history review.", "warning", {
                         title: "Retail Store"
                     });
                 }
@@ -1580,6 +1737,7 @@ export function renderRetailStoreView() {
     renderRetailStoreViewShell(snapshot);
     syncRetailWorksheetGrid();
     syncRetailSalesGrid();
+    syncRetailReturnHistoryGrid();
     syncRetailPaymentHistoryGrid();
     syncRetailExpenseHistoryGrid();
     syncRetailPaymentDraftPreview();
@@ -1636,6 +1794,7 @@ function buildLineItemDraftsFromSale(sale) {
 
 function loadSaleIntoViewWorkspace(sale) {
     closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
     closeRetailExpenseModalState();
     featureState.workspaceMode = "view";
@@ -1660,6 +1819,7 @@ function loadSaleIntoEditWorkspace(sale) {
     }
 
     closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
     closeRetailExpenseModalState();
     featureState.workspaceMode = "edit";
@@ -1692,6 +1852,7 @@ function loadSaleIntoReturnWorkspace(sale) {
     }
 
     closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
     closeRetailExpenseModalState();
 
@@ -2097,6 +2258,15 @@ function handleRetailSaleReturn(button) {
     document.getElementById("retail-return-reason")?.focus();
 }
 
+function handleRetailSaleReturnHistory(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    openRetailReturnHistoryModal(sale);
+    renderRetailStoreView();
+}
+
 async function handleRetailPaymentSubmit(event) {
     event.preventDefault();
 
@@ -2294,6 +2464,7 @@ function bindRetailStoreDomEvents() {
         const resetButton = targetElement.closest("#retail-reset-button");
         const editButton = targetElement.closest(".retail-sale-edit-button");
         const returnButton = targetElement.closest(".retail-sale-return-button");
+        const returnHistoryButton = targetElement.closest(".retail-sale-return-history-button");
         const paymentsButton = targetElement.closest(".retail-sale-payments-button");
         const viewButton = targetElement.closest(".retail-sale-view-button");
         const expenseButton = targetElement.closest(".retail-sale-expense-button");
@@ -2301,6 +2472,8 @@ function bindRetailStoreDomEvents() {
         const viewModeReturnsButton = targetElement.closest("#retail-open-returns-button");
         const viewModePaymentsButton = targetElement.closest("#retail-open-payments-button");
         const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
+        const returnHistoryCloseButton = targetElement.closest("#retail-return-history-close-button");
+        const returnHistoryModalBackdrop = targetElement.closest("#retail-return-history-modal");
         const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
@@ -2323,6 +2496,11 @@ function bindRetailStoreDomEvents() {
 
         if (returnButton) {
             handleRetailSaleReturn(returnButton);
+            return;
+        }
+
+        if (returnHistoryButton) {
+            handleRetailSaleReturnHistory(returnHistoryButton);
             return;
         }
 
@@ -2353,6 +2531,16 @@ function bindRetailStoreDomEvents() {
 
         if (workspacePdfButton && featureState.viewingSaleId) {
             handleRetailSalePdf({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (returnHistoryCloseButton) {
+            closeRetailReturnHistoryModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-return-history-modal" && returnHistoryModalBackdrop) {
+            closeRetailReturnHistoryModal();
             return;
         }
 
