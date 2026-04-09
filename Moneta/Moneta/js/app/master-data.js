@@ -1,0 +1,48 @@
+import { COLLECTIONS } from "../config/collections.js";
+import { setState, updateMasterData } from "./store.js";
+import { showToast } from "../shared/toast.js";
+
+const unsubscribeFns = [];
+let isInitialized = false;
+
+function listenToCollection(db, key, path, transform = docs => docs) {
+    const unsubscribe = db.collection(path).onSnapshot(
+        snapshot => {
+            const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            updateMasterData(key, transform(rows));
+        },
+        error => {
+            console.error(`[Moneta] Failed to load ${key}:`, error);
+            showToast(`Could not load ${key}.`, "error");
+        }
+    );
+
+    unsubscribeFns.push(unsubscribe);
+}
+
+export function initializeMasterData() {
+    if (isInitialized) return;
+
+    const db = firebase.firestore();
+
+    listenToCollection(db, "categories", COLLECTIONS.categories);
+    listenToCollection(db, "seasons", COLLECTIONS.seasons);
+    listenToCollection(db, "products", COLLECTIONS.products, rows => rows.filter(row => row.isActive));
+    listenToCollection(db, "suppliers", COLLECTIONS.suppliers);
+    listenToCollection(db, "paymentModes", COLLECTIONS.paymentModes);
+    listenToCollection(db, "salesCatalogues", COLLECTIONS.salesCatalogues);
+    listenToCollection(db, "teams", COLLECTIONS.teams);
+
+    setState({ isMasterDataReady: true });
+    isInitialized = true;
+}
+
+export function detachMasterData() {
+    while (unsubscribeFns.length > 0) {
+        const unsubscribe = unsubscribeFns.pop();
+        unsubscribe?.();
+    }
+
+    isInitialized = false;
+    setState({ isMasterDataReady: false });
+}
