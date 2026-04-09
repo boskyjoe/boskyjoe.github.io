@@ -751,6 +751,207 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
     });
 }
 
+export async function voidRetailSaleRecord(saleId, voidReason, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before voiding.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+    const paymentSnapshot = await db
+        .collection(COLLECTIONS.salesPaymentsLedger)
+        .where("invoiceId", "==", saleId)
+        .get();
+    const expenseSnapshot = await saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).get();
+    const relatedPaymentRefs = paymentSnapshot.docs.map(doc => doc.ref);
+    const relatedExpenseRefs = expenseSnapshot.docs.map(doc => doc.ref);
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        const saleStatus = normalizeText(sale.saleStatus || "Active").toLowerCase();
+        if (saleStatus === "voided") {
+            throw new Error("This sale has already been voided.");
+        }
+
+        const returnCount = Number(sale.returnCount) || 0;
+        const returnStatus = normalizeText(sale.returnStatus || "Not Returned").toLowerCase();
+        if (returnCount > 0 || returnStatus !== "not returned") {
+            throw new Error("Sales with posted returns cannot be voided. Use return and credit-note history for reversal tracking.");
+        }
+
+        const paymentDocs = await Promise.all(
+            relatedPaymentRefs.map(paymentRef => transaction.get(paymentRef))
+        );
+        const activePayments = paymentDocs.filter(doc => {
+            if (!doc.exists) return false;
+
+            const data = doc.data() || {};
+            const status = normalizeText(data.paymentStatus || data.status || "Verified").toLowerCase();
+            return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amountPaid) > 0;
+        });
+
+        let voidedPaymentCount = 0;
+        let voidedPaymentAmount = 0;
+
+        activePayments.forEach(paymentDoc => {
+            const paymentData = paymentDoc.data() || {};
+            const paymentAmount = roundCurrency(paymentData.amountPaid);
+            const paymentStatus = normalizeText(paymentData.paymentStatus || paymentData.status || "Verified");
+            const reversalRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+
+            transaction.update(paymentDoc.ref, {
+                paymentStatus: "Voided",
+                status: "Voided",
+                voidedBy: user.email,
+                voidedOn: now,
+                voidReason,
+                voidContext: "Sale Void",
+                originalStatus: paymentStatus,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+
+            transaction.set(reversalRef, {
+                paymentId: buildSalesPaymentId(),
+                invoiceId: saleId,
+                relatedSaleId: saleId,
+                relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+                paymentDate: now,
+                amountPaid: -paymentAmount,
+                totalCollected: -paymentAmount,
+                paymentMode: "VOID_REVERSAL",
+                transactionRef: `Sale void reversal of ${paymentData.transactionRef || paymentData.paymentId || paymentDoc.id}`,
+                notes: `Reversed during sale void ${sale.saleId || sale.manualVoucherNumber || saleId}. Reason: ${voidReason}`,
+                status: "Void Reversal",
+                paymentStatus: "Void Reversal",
+                originalPaymentId: paymentDoc.id,
+                isReversalEntry: true,
+                customerName: sale.customerInfo?.name || paymentData.customerName || "",
+                store: sale.store || paymentData.store || "",
+                recordedBy: user.email,
+                recordedOn: now,
+                createdBy: user.email,
+                createdOn: now,
+                voidedBy: user.email,
+                voidReason
+            });
+
+            voidedPaymentCount += 1;
+            voidedPaymentAmount += paymentAmount;
+        });
+
+        const expenseDocs = await Promise.all(
+            relatedExpenseRefs.map(expenseRef => transaction.get(expenseRef))
+        );
+        const activeExpenses = expenseDocs.filter(doc => {
+            if (!doc.exists) return false;
+
+            const data = doc.data() || {};
+            const status = normalizeText(data.status || "Active").toLowerCase();
+            return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
+        });
+
+        let voidedExpenseCount = 0;
+        let voidedExpenseAmount = 0;
+
+        activeExpenses.forEach(expenseDoc => {
+            const expenseData = expenseDoc.data() || {};
+            const expenseAmount = roundCurrency(expenseData.amount);
+            const reversalExpenseRef = saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).doc();
+
+            transaction.update(expenseDoc.ref, {
+                status: "Voided",
+                voidedBy: user.email,
+                voidedOn: now,
+                voidReason,
+                voidContext: "Sale Void",
+                updatedBy: user.email,
+                updatedOn: now
+            });
+
+            transaction.set(reversalExpenseRef, {
+                expenseId: `${buildSalesExpenseId()}-VOID`,
+                expenseDate: now,
+                justification: `Void reversal of ${expenseData.expenseId || expenseDoc.id}. Reason: ${voidReason}`,
+                amount: -expenseAmount,
+                status: "Void Reversal",
+                isReversalEntry: true,
+                originalExpenseId: expenseDoc.id,
+                addedBy: user.email,
+                addedOn: now,
+                voidReason
+            });
+
+            voidedExpenseCount += 1;
+            voidedExpenseAmount += expenseAmount;
+        });
+
+        const lineItems = Array.isArray(sale.lineItems) ? sale.lineItems : [];
+        let reversedProductCount = 0;
+        let reversedQuantity = 0;
+
+        lineItems.forEach(item => {
+            const productId = normalizeText(item.productId);
+            const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+            if (!productId || quantity <= 0) return;
+
+            const productRef = db.collection(COLLECTIONS.products).doc(productId);
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(quantity),
+                updatedBy: user.email,
+                updateDate: now
+            });
+
+            reversedProductCount += 1;
+            reversedQuantity += quantity;
+        });
+
+        transaction.update(saleRef, {
+            saleStatus: "Voided",
+            paymentStatus: "Voided",
+            totalAmountPaid: 0,
+            balanceDue: 0,
+            creditBalance: 0,
+            latestPaymentMode: "",
+            financials: {
+                ...(sale.financials || {}),
+                totalExpenses: 0,
+                amountTendered: 0,
+                paymentCount: 0
+            },
+            voidReason,
+            voidedBy: user.email,
+            voidedOn: now,
+            voidedPaymentCount,
+            voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            voidedExpenseCount,
+            voidedExpenseAmount: roundCurrency(voidedExpenseAmount),
+            inventoryReversalSummary: {
+                reversedProductCount,
+                reversedQuantity
+            },
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        return {
+            voidedPaymentCount,
+            voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            voidedExpenseCount,
+            voidedExpenseAmount: roundCurrency(voidedExpenseAmount),
+            reversedProductCount,
+            reversedQuantity
+        };
+    });
+}
+
 export async function updateRetailSaleRecord(saleId, updatePayload, user) {
     if (!saleId) {
         throw new Error("Select a retail sale before saving changes.");

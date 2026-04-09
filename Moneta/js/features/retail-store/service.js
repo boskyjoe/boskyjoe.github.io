@@ -4,7 +4,8 @@ import {
     addRetailSaleExpenseRecord,
     createRetailSaleRecord,
     recordRetailSalePayment,
-    updateRetailSaleRecord
+    updateRetailSaleRecord,
+    voidRetailSaleRecord
 } from "./repository.js";
 
 export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
@@ -703,4 +704,48 @@ export async function saveRetailSalePayment(payload, sale, masterData, user) {
 
     const validatedPayment = validateRetailSalePaymentPayload(payload, sale, masterData);
     return recordRetailSalePayment(sale.id, validatedPayment, user);
+}
+
+export function validateRetailSaleVoidPayload(sale, payload = {}, user) {
+    if (!user) {
+        throw new Error("You must be logged in to void a retail sale.");
+    }
+
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before voiding.");
+    }
+
+    const saleStatus = normalizeText(sale.saleStatus || "Active").toLowerCase();
+    if (saleStatus === "voided") {
+        throw new Error("This retail sale has already been voided.");
+    }
+
+    const returnCount = Number(sale.returnCount) || 0;
+    const returnStatus = normalizeText(sale.returnStatus || "Not Returned").toLowerCase();
+    if (returnCount > 0 || returnStatus !== "not returned") {
+        throw new Error("Sales with posted returns cannot be voided.");
+    }
+
+    const voidReason = normalizeText(payload.voidReason || payload.reason);
+    if (!voidReason) {
+        throw new Error("A void reason is required.");
+    }
+
+    if (voidReason.length < 8) {
+        throw new Error("Please enter a more descriptive void reason.");
+    }
+
+    return {
+        voidReason
+    };
+}
+
+export async function voidRetailSale(sale, payload, user) {
+    const validatedVoidPayload = validateRetailSaleVoidPayload(sale, payload, user);
+    const result = await voidRetailSaleRecord(sale.id, validatedVoidPayload.voidReason, user);
+
+    return {
+        ...result,
+        reason: validatedVoidPayload.voidReason
+    };
 }

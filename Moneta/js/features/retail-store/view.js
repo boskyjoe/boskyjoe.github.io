@@ -1,6 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
-import { showSummaryModal } from "../../shared/modal.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
@@ -41,7 +41,8 @@ import {
     resolveRetailSaleEditScope,
     saveRetailSalePayment,
     saveRetailSaleUpdate,
-    saveRetailSale
+    saveRetailSale,
+    voidRetailSale
 } from "./service.js";
 
 const featureState = {
@@ -58,6 +59,7 @@ const featureState = {
     workspaceMode: "create",
     viewingSaleId: null,
     editingSaleId: null,
+    voidingSaleId: null,
     editModeScope: null,
     paymentModalOpen: false,
     paymentSaleId: null,
@@ -97,6 +99,7 @@ function createDefaultSaleDraft() {
         paymentNotes: "",
         saleNotes: "",
         editReason: "",
+        voidReason: "",
         orderDiscountType: "Percentage",
         orderDiscountPercentage: "",
         orderDiscountAmount: "",
@@ -150,6 +153,7 @@ function resetRetailWorkspace() {
     featureState.workspaceMode = "create";
     featureState.viewingSaleId = null;
     featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
     featureState.returningSaleId = null;
     featureState.editModeScope = null;
     featureState.saleDraft = createDefaultSaleDraft();
@@ -202,6 +206,7 @@ function exitRetailReturnWorkspaceIfActive() {
     featureState.workspaceMode = "create";
     featureState.viewingSaleId = null;
     featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
     featureState.returningSaleId = null;
     featureState.editModeScope = null;
     featureState.saleDraft = createDefaultSaleDraft();
@@ -364,6 +369,7 @@ function closeRetailReturnHistoryModal() {
 function buildRetailWorksheetRows(snapshot) {
     const isStaticWorksheetMode = featureState.workspaceMode === "view"
         || featureState.workspaceMode === "return"
+        || featureState.workspaceMode === "void"
         || (isRetailEditMode() && featureState.editModeScope !== "full");
 
     if (isStaticWorksheetMode) {
@@ -546,6 +552,11 @@ function getReturnWorkspaceSale() {
     return featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null;
 }
 
+function getVoidWorkspaceSale() {
+    if (!featureState.voidingSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.voidingSaleId) || null;
+}
+
 function getReturnDraftQuantity(productId, fallback = 0) {
     const draft = featureState.lineItemDrafts?.[productId] || {};
     const value = draft.returnQuantity ?? fallback;
@@ -613,8 +624,13 @@ function isRetailReturnMode() {
     return featureState.workspaceMode === "return";
 }
 
+function isRetailVoidMode() {
+    return featureState.workspaceMode === "void";
+}
+
 function isRetailWorksheetLockedMode() {
     if (featureState.workspaceMode === "view") return true;
+    if (isRetailVoidMode()) return true;
     if (isRetailEditMode() && featureState.editModeScope !== "full") return true;
     return false;
 }
@@ -990,6 +1006,7 @@ function renderRetailSaleActionsModal() {
     const isVoided = (sale.saleStatus || "").toLowerCase() === "voided";
     const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
     const hasReturns = (Number(sale.returnCount) || 0) > 0;
+    const canVoidSale = !isVoided && !hasReturns;
 
     return `
         <div id="retail-sale-actions-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-sale-actions-modal-title">
@@ -1034,6 +1051,10 @@ function renderRetailSaleActionsModal() {
                             <span class="button-icon">${icons.download}</span>
                             Download Credit Note
                         </button>
+                        <button class="button button-danger-soft retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${canVoidSale ? "" : "disabled"}>
+                            <span class="button-icon">${icons.warning}</span>
+                            Void Sale
+                        </button>
                     </div>
                     <div class="form-actions">
                         <button id="retail-sale-actions-close-button" class="button button-secondary" type="button">
@@ -1061,6 +1082,7 @@ function renderRetailStoreViewShell(snapshot) {
     const isViewMode = featureState.workspaceMode === "view";
     const isEditMode = featureState.workspaceMode === "edit";
     const isReturnMode = featureState.workspaceMode === "return";
+    const isVoidMode = featureState.workspaceMode === "void";
     const isEditModeFull = isEditMode && featureState.editModeScope === "full";
     const isEditModeLimited = isEditMode && featureState.editModeScope === "limited";
     const viewingSale = isViewMode
@@ -1072,7 +1094,10 @@ function renderRetailStoreViewShell(snapshot) {
     const returningSale = isReturnMode
         ? featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null
         : null;
-    const workspaceSale = viewingSale || editingSale || returningSale;
+    const voidingSale = isVoidMode
+        ? getVoidWorkspaceSale()
+        : null;
+    const workspaceSale = viewingSale || editingSale || returningSale || voidingSale;
     const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
     const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
     const workspaceCreditBalance = Number(workspaceSale?.creditBalance) || 0;
@@ -1087,7 +1112,7 @@ function renderRetailStoreViewShell(snapshot) {
         : 0;
     const displayedCreditBalance = isReturnMode
         ? projectedCreditBalance
-        : (isViewMode || isEditMode)
+        : (isViewMode || isEditMode || isVoidMode)
             ? workspaceCreditBalance
             : draftCreditBalance;
     const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
@@ -1096,16 +1121,16 @@ function renderRetailStoreViewShell(snapshot) {
         : featureState.saleDraft.paymentType === "Pay Now"
             ? (summary.balanceDue <= 0 ? "Paid" : summary.appliedPayment > 0 ? "Partially Paid" : "Unpaid")
             : "Unpaid";
-    const hasPersistedSaleStatus = isViewMode || isEditMode || isReturnMode;
+    const hasPersistedSaleStatus = isViewMode || isEditMode || isReturnMode || isVoidMode;
     const paymentStatus = hasPersistedSaleStatus
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
     const expenseModalSale = getExpenseModalSale();
-    const canEditSaleIdentity = !isViewMode && !isReturnMode && (!isEditMode || isEditModeFull);
-    const canEditCustomerInfo = !isViewMode && !isReturnMode;
-    const canEditSaleContext = !isViewMode && !isEditMode && !isReturnMode;
-    const canEditSettlement = !isViewMode && !isEditMode && !isReturnMode;
-    const canEditFinancials = !isViewMode && !isReturnMode && (!isEditMode || isEditModeFull);
+    const canEditSaleIdentity = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
+    const canEditCustomerInfo = !isViewMode && !isReturnMode && !isVoidMode;
+    const canEditSaleContext = !isViewMode && !isEditMode && !isReturnMode && !isVoidMode;
+    const canEditSettlement = !isViewMode && !isEditMode && !isReturnMode && !isVoidMode;
+    const canEditFinancials = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
 
     const saleIdentityDisabledAttr = canEditSaleIdentity ? "" : "disabled";
     const customerDisabledAttr = canEditCustomerInfo ? "" : "disabled";
@@ -1155,14 +1180,27 @@ function renderRetailStoreViewShell(snapshot) {
             </div>
         </div>
     ` : "";
+    const voidModeBanner = isVoidMode ? `
+        <div class="purchase-void-mode-banner">
+            <div>
+                <p class="section-kicker">Void Mode</p>
+                <p class="panel-copy"><span class="retail-edit-warning-prefix"><span class="retail-edit-warning-icon" aria-hidden="true">${icons.warning}</span>High-impact operation.</span> This sale will be marked void, active payments and expenses will be reversed, and remaining product quantities will be restored to inventory.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${formatCurrency(summary.grandTotal)} total</span>
+                <span class="status-pill">Cannot be undone</span>
+            </div>
+        </div>
+    ` : "";
 
     root.innerHTML = `
-        <div class="panel-card ${(isViewMode || isEditMode || isReturnMode) ? "retail-view-mode-card" : ""}">
+        <div class="panel-card ${(isViewMode || isEditMode || isReturnMode) ? "retail-view-mode-card" : ""} ${isVoidMode ? "purchase-void-mode-card" : ""}">
             <div class="panel-header panel-header-accent">
                 <div class="panel-title-wrap">
                     <span class="panel-icon panel-icon-alt">${icons.retail}</span>
                     <div>
-                        <h2>${isViewMode ? "View Retail Sale" : isEditMode ? "Edit Retail Sale" : isReturnMode ? "Return Retail Sale" : "Retail Store"}</h2>
+                        <h2>${isViewMode ? "View Retail Sale" : isEditMode ? "Edit Retail Sale" : isReturnMode ? "Return Retail Sale" : isVoidMode ? "Void Retail Sale" : "Retail Store"}</h2>
                         <p class="panel-copy">
                             ${isViewMode
                                 ? "Review the full retail sale exactly as it was posted, including customer, settlement, product tax, and totals."
@@ -1170,7 +1208,9 @@ function renderRetailStoreViewShell(snapshot) {
                                     ? "Edit the selected retail sale with strict safeguards based on linked payments and expenses."
                                     : isReturnMode
                                         ? "Process a product return from this posted sale using a controlled, read-only workspace with explicit return quantities."
-                                    : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
+                                        : isVoidMode
+                                            ? "Review the posted sale in read-only mode, enter a mandatory void reason, and complete a controlled reversal flow."
+                                            : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
                         </p>
                     </div>
                 </div>
@@ -1184,6 +1224,7 @@ function renderRetailStoreViewShell(snapshot) {
                 ${viewModeBanner}
                 ${editModeBanner}
                 ${returnModeBanner}
+                ${voidModeBanner}
                 <form id="retail-store-form">
                     <div class="workspace-form-sections">
                         <section class="workspace-form-section">
@@ -1332,6 +1373,20 @@ function renderRetailStoreViewShell(snapshot) {
                             </div>
                         </section>
                     ` : ""}
+                    ${isVoidMode ? `
+                        <section class="workspace-form-section purchase-void-mode-reason">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Void Details</p>
+                                <p class="panel-copy">Enter a clear reason for voiding this sale. This reason is stored in the audit trail.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="retail-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-void-reason" class="textarea purchase-void-reason-textarea" placeholder="Explain why this retail sale is being voided" required>${featureState.saleDraft.voidReason || ""}</textarea>
+                                </div>
+                            </div>
+                        </section>
+                    ` : ""}
 
                     <div class="retail-product-list-shell">
                         <div class="panel-card">
@@ -1343,7 +1398,9 @@ function renderRetailStoreViewShell(snapshot) {
                                         <p class="panel-copy">
                                             ${isReturnMode
                                                 ? "Review sold products and set Return Qty for each line item you need to bring back into stock."
-                                                : "Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue, and each line carries CGST and SGST."}
+                                                : isVoidMode
+                                                    ? "Review the posted product list that will be reversed from this sale. Product data is locked in void mode for audit safety."
+                                                    : "Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue, and each line carries CGST and SGST."}
                                         </p>
                                     </div>
                                 </div>
@@ -1359,7 +1416,9 @@ function renderRetailStoreViewShell(snapshot) {
                                         <p class="panel-copy">
                                             ${isReturnMode
                                                 ? "Only Return Qty is editable in return mode. All sale pricing, discounts, and tax fields stay read-only."
-                                                : "Use line discount, CGST, and SGST at product level, then finish with invoice-level discount and any order tax below."}
+                                                : isVoidMode
+                                                    ? "All worksheet values are read-only in void mode so the posted sale can be reviewed before reversal."
+                                                    : "Use line discount, CGST, and SGST at product level, then finish with invoice-level discount and any order tax below."}
                                         </p>
                                     </div>
                                     <div class="search-wrap">
@@ -1501,7 +1560,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                 <span>Grand Total</span>
                                                 <strong>${formatCurrency(summary.grandTotal)}</strong>
                                             </div>
-                                            ${(isViewMode || isEditMode || isReturnMode) ? `
+                                            ${(isViewMode || isEditMode || isReturnMode || isVoidMode) ? `
                                                 <div class="retail-finance-total-row retail-finance-total-row-danger">
                                                     <span>Total Expense</span>
                                                     <strong>-${formatCurrency(workspaceTotalExpenses)}</strong>
@@ -1541,7 +1600,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <div class="form-actions">
                         <button id="retail-reset-button" class="button button-secondary" type="button">
                             <span class="button-icon">${icons.inactive}</span>
-                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : isReturnMode ? "Cancel Return" : "Reset"}
+                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : isReturnMode ? "Cancel Return" : isVoidMode ? "Cancel Void" : "Reset"}
                         </button>
                         ${isViewMode ? `
                             <button id="retail-open-returns-button" class="button button-secondary" type="button">
@@ -1560,6 +1619,11 @@ function renderRetailStoreViewShell(snapshot) {
                             <button class="button button-primary-alt" type="submit">
                                 <span class="button-icon">${icons.warning}</span>
                                 Process Return
+                            </button>
+                        ` : isVoidMode ? `
+                            <button class="button button-danger-soft" type="submit">
+                                <span class="button-icon">${icons.warning}</span>
+                                Void Sale
                             </button>
                         ` : `
                             <button class="button button-primary-alt" type="submit">
@@ -1589,7 +1653,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Return History for audit review, Payments for collections, and Expense for sale-linked cost adjustments.</p>
+                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Return History for audit review, Payments for collections, Expense for sale-linked cost adjustments, and More Actions for safeguarded operations like voiding.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -1767,6 +1831,26 @@ function ensureRetailSalesListener(snapshot) {
                 }
             }
 
+            if (featureState.workspaceMode === "void" && featureState.voidingSaleId) {
+                const voidingSale = rows.find(entry => entry.id === featureState.voidingSaleId) || null;
+                if (!voidingSale) {
+                    resetRetailWorkspace();
+                    showToast("The selected sale is no longer available for void.", "warning", {
+                        title: "Retail Store"
+                    });
+                } else if (normalizeText(voidingSale.saleStatus || "").toLowerCase() === "voided") {
+                    resetRetailWorkspace();
+                    showToast("This sale was already voided.", "info", {
+                        title: "Retail Store"
+                    });
+                } else if ((Number(voidingSale.returnCount) || 0) > 0 || normalizeText(voidingSale.returnStatus || "Not Returned").toLowerCase() !== "not returned") {
+                    resetRetailWorkspace();
+                    showToast("This sale can no longer be voided because return records were added.", "warning", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
             if (featureState.returnHistoryModalOpen && featureState.returnHistorySaleId) {
                 const returnHistorySale = rows.find(entry => entry.id === featureState.returnHistorySaleId) || null;
                 if (!returnHistorySale) {
@@ -1885,7 +1969,8 @@ function buildSaleDraftFromSale(sale) {
             ? String(Number(sale.financials?.orderDiscountValue) || 0)
             : "",
         orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
-        editReason: ""
+        editReason: "",
+        voidReason: ""
     };
 }
 
@@ -1912,6 +1997,7 @@ function loadSaleIntoViewWorkspace(sale) {
     featureState.workspaceMode = "view";
     featureState.viewingSaleId = sale.id;
     featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
     featureState.returningSaleId = null;
     featureState.editModeScope = null;
     featureState.saleDraft = buildSaleDraftFromSale(sale);
@@ -1937,6 +2023,7 @@ function loadSaleIntoEditWorkspace(sale) {
     featureState.workspaceMode = "edit";
     featureState.viewingSaleId = null;
     featureState.editingSaleId = sale.id;
+    featureState.voidingSaleId = null;
     featureState.returningSaleId = null;
     featureState.editModeScope = editScope;
     featureState.saleDraft = buildSaleDraftFromSale(sale);
@@ -1971,11 +2058,48 @@ function loadSaleIntoReturnWorkspace(sale) {
     featureState.workspaceMode = "return";
     featureState.viewingSaleId = null;
     featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
     featureState.returningSaleId = sale.id;
     featureState.editModeScope = null;
     featureState.saleDraft = buildSaleDraftFromSale(sale);
     featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
     featureState.returnDraft = createDefaultRetailReturnDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+    return true;
+}
+
+function loadSaleIntoVoidWorkspace(sale) {
+    if (!sale?.id) return false;
+
+    if (normalizeText(sale.saleStatus || "").toLowerCase() === "voided") {
+        showToast("This retail sale has already been voided.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    if ((Number(sale.returnCount) || 0) > 0 || normalizeText(sale.returnStatus || "Not Returned").toLowerCase() !== "not returned") {
+        showToast("Sales with posted returns cannot be voided.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+
+    featureState.workspaceMode = "void";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = sale.id;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = null;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.saleDraft.voidReason = "";
     featureState.selectedCatalogueItems = [];
     clearCatalogueItemsSubscription();
     return true;
@@ -1994,6 +2118,7 @@ function handleRetailInput(target) {
         "retail-payment-notes": "paymentNotes",
         "retail-sale-notes": "saleNotes",
         "retail-edit-reason": "editReason",
+        "retail-void-reason": "voidReason",
         "retail-order-discount-percentage": "orderDiscountPercentage",
         "retail-order-discount-amount": "orderDiscountAmount",
         "retail-order-tax-percentage": "orderTaxPercentage",
@@ -2143,6 +2268,9 @@ function handleRetailChange(target) {
         case "retail-return-reason":
             featureState.returnDraft.reason = target.value || "";
             return;
+        case "retail-void-reason":
+            featureState.saleDraft.voidReason = target.value || "";
+            return;
         default:
             if (target.id?.startsWith("retail-return-qty-")) {
                 const productId = target.dataset.productId || target.id.replace("retail-return-qty-", "");
@@ -2164,8 +2292,12 @@ async function handleRetailSaleSubmit(event) {
         const snapshot = getState();
         const isEditMode = featureState.workspaceMode === "edit";
         const isReturnMode = featureState.workspaceMode === "return";
+        const isVoidMode = featureState.workspaceMode === "void";
         const returningSale = isReturnMode
             ? featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null
+            : null;
+        const voidingSale = isVoidMode
+            ? getVoidWorkspaceSale()
             : null;
         const customerName = normalizeText(featureState.saleDraft.customerName) || "-";
         const selectedStore = normalizeText(featureState.saleDraft.store) || "-";
@@ -2181,6 +2313,10 @@ async function handleRetailSaleSubmit(event) {
 
         if (isEditMode && !editingSale) {
             throw new Error("The retail sale being edited could not be found. Refresh and try again.");
+        }
+
+        if (isVoidMode && !voidingSale) {
+            throw new Error("The retail sale selected for void could not be found. Refresh and try again.");
         }
 
         if (isReturnMode) {
@@ -2227,6 +2363,63 @@ async function handleRetailSaleSubmit(event) {
                     { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue || 0) },
                     { label: "Credit Balance", value: formatCurrency(result.summary.creditBalance || 0) }
                 ]
+            });
+            return;
+        }
+
+        if (isVoidMode) {
+            const confirmed = await showConfirmationModal({
+                title: "Void Retail Sale",
+                message: `Void sale ${voidingSale.saleId || voidingSale.manualVoucherNumber || voidingSale.id}?`,
+                details: [
+                    { label: "Customer", value: voidingSale.customerInfo?.name || "-" },
+                    { label: "Grand Total", value: formatCurrency(voidingSale.financials?.grandTotal || 0) },
+                    { label: "Amount Paid", value: formatCurrency(voidingSale.totalAmountPaid || 0) },
+                    { label: "Expenses", value: formatCurrency(voidingSale.financials?.totalExpenses || 0) }
+                ],
+                note: "This action cannot be undone. Moneta will reverse active payments and expenses, restore remaining product quantities to inventory, and mark this sale as voided.",
+                confirmText: "Void Sale",
+                tone: "danger"
+            });
+
+            if (!confirmed) return;
+
+            const result = await runProgressToastFlow({
+                title: "Voiding Retail Sale",
+                initialMessage: "Reading sale, linked payments, expenses, and inventory impact...",
+                initialProgress: 18,
+                initialStep: "Step 1 of 5",
+                successTitle: "Retail Sale Voided",
+                successMessage: "The retail sale was voided and reversal entries were posted successfully."
+            }, async ({ update }) => {
+                update("Validating void reason and reversal constraints...", 38, "Step 2 of 5");
+                update("Writing payment and expense reversals, and restoring inventory...", 74, "Step 3 of 5");
+                const result = await voidRetailSale(
+                    voidingSale,
+                    { voidReason: featureState.saleDraft.voidReason },
+                    snapshot.currentUser
+                );
+                update("Refreshing retail history and workspace context...", 90, "Step 4 of 5");
+                resetRetailWorkspace();
+                renderRetailStoreView();
+                update("Void audit trail is now in place.", 96, "Step 5 of 5");
+                return result;
+            });
+
+            showToast("Retail sale voided successfully.", "success", {
+                title: "Retail Store"
+            });
+            ProgressToast.hide(0);
+            await showSummaryModal({
+                title: "Retail Sale Voided",
+                message: "The sale was voided, linked financial entries were reversed, and inventory was restored.",
+                details: [
+                    { label: "Sale", value: voidingSale.saleId || voidingSale.manualVoucherNumber || "-" },
+                    { label: "Payments Voided", value: String(result.voidedPaymentCount || 0) },
+                    { label: "Expenses Voided", value: String(result.voidedExpenseCount || 0) },
+                    { label: "Stock Qty Restored", value: String(result.reversedQuantity || 0) }
+                ],
+                note: `Payment reversal total: ${formatCurrency(result.voidedPaymentAmount || 0)} | Expense reversal total: ${formatCurrency(result.voidedExpenseAmount || 0)}`
             });
             return;
         }
@@ -2304,11 +2497,16 @@ async function handleRetailSaleSubmit(event) {
             ]
         });
     } catch (error) {
-        console.error("[Moneta] Retail sale save/update failed:", error);
+        const isVoidMode = featureState.workspaceMode === "void";
+        console.error(isVoidMode ? "[Moneta] Retail sale void failed:" : "[Moneta] Retail sale save/update failed:", error);
         ProgressToast.hide(0);
-        showToast(error?.message || "Could not save the retail sale.", "error", {
+        showToast(
+            error?.message || (isVoidMode ? "Could not void the retail sale." : "Could not save the retail sale."),
+            "error",
+            {
             title: "Retail Store"
-        });
+            }
+        );
     }
 }
 
@@ -2372,6 +2570,19 @@ function handleRetailSaleReturn(button) {
     renderRetailStoreView();
     document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     document.getElementById("retail-return-reason")?.focus();
+}
+
+function handleRetailSaleVoid(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    if (!loadSaleIntoVoidWorkspace(sale)) return;
+
+    renderRetailStoreView();
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("retail-void-reason")?.focus();
 }
 
 function handleRetailSaleReturnHistory(button) {
@@ -2655,6 +2866,7 @@ function bindRetailStoreDomEvents() {
         const saleActionExpenseButton = targetElement.closest(".retail-sale-action-expense");
         const saleActionPdfButton = targetElement.closest(".retail-sale-action-pdf");
         const saleActionCreditNoteButton = targetElement.closest(".retail-sale-action-credit-note");
+        const saleActionVoidButton = targetElement.closest(".retail-sale-action-void");
         const saleActionsCloseButton = targetElement.closest("#retail-sale-actions-close-button");
         const saleActionsBackdrop = targetElement.closest("#retail-sale-actions-modal");
         const viewModeReturnsButton = targetElement.closest("#retail-open-returns-button");
@@ -2755,6 +2967,12 @@ function bindRetailStoreDomEvents() {
         if (saleActionCreditNoteButton) {
             closeRetailSaleActionsModal();
             handleRetailSaleCreditNotePdf(saleActionCreditNoteButton);
+            return;
+        }
+
+        if (saleActionVoidButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSaleVoid(saleActionVoidButton);
             return;
         }
 
