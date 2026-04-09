@@ -145,7 +145,7 @@ function buildDisabledActionAttrs(disabled, reason) {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
 
-    return `disabled data-disabled-reason="${safeReason}" title="${safeReason}"`;
+    return `disabled data-disabled-reason="${safeReason}"`;
 }
 
 function toDateInputValue(value) {
