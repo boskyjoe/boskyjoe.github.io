@@ -52,34 +52,84 @@ export function renderHomeView(user) {
                 </div>
                 <div class="home-modules-grid">
                     <article class="home-module-card">
-                        <p class="home-module-label">Pre-Sales</p>
-                        <h4>Enquiries</h4>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-cyan">${icons.leads}</span>
+                            <div>
+                                <p class="home-module-label">Pre-Sales</p>
+                                <h4>Enquiries</h4>
+                            </div>
+                        </div>
                         <p>Capture prospects, track context, and build qualified opportunities.</p>
                     </article>
                     <article class="home-module-card">
-                        <p class="home-module-label">Direct Sales</p>
-                        <h4>Retail Store</h4>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-cyan">${icons.retail}</span>
+                            <div>
+                                <p class="home-module-label">Direct Sales</p>
+                                <h4>Retail Store</h4>
+                            </div>
+                        </div>
                         <p>Execute store transactions, returns, expenses, and payments in one flow.</p>
                     </article>
                     <article class="home-module-card">
-                        <p class="home-module-label">Inventory</p>
-                        <h4>Stock Purchase</h4>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-orange">${icons.purchases}</span>
+                            <div>
+                                <p class="home-module-label">Inventory</p>
+                                <h4>Stock Purchase</h4>
+                            </div>
+                        </div>
                         <p>Post supplier invoices and keep stock movement and valuation synchronized.</p>
                     </article>
                     <article class="home-module-card">
-                        <p class="home-module-label">Store Admin</p>
-                        <h4>Product Catalogue</h4>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-violet">${icons.products}</span>
+                            <div>
+                                <p class="home-module-label">Store Admin</p>
+                                <h4>Product Catalogue</h4>
+                            </div>
+                        </div>
                         <p>Manage product definitions, activation lifecycle, and pricing anchors.</p>
                     </article>
                     <article class="home-module-card">
-                        <p class="home-module-label">Store Admin</p>
-                        <h4>Sales Catalogue</h4>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-cyan">${icons.catalogue}</span>
+                            <div>
+                                <p class="home-module-label">Store Admin</p>
+                                <h4>Sales Catalogue</h4>
+                            </div>
+                        </div>
                         <p>Publish season-driven assortments for sales and operations teams.</p>
                     </article>
                     <article class="home-module-card">
-                        <p class="home-module-label">System</p>
-                        <h4>Admin & Users</h4>
-                        <p>Control master data, enforce role-based access, and manage user permissions.</p>
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-amber">${icons.suppliers}</span>
+                            <div>
+                                <p class="home-module-label">Store Admin</p>
+                                <h4>Supplier Management</h4>
+                            </div>
+                        </div>
+                        <p>Maintain supplier records, lifecycle status, and business contact integrity.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-cyan">${icons.settings}</span>
+                            <div>
+                                <p class="home-module-label">System</p>
+                                <h4>Admin Modules</h4>
+                            </div>
+                        </div>
+                        <p>Configure controlled master data and settings that drive downstream workflows.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-amber">${icons.users}</span>
+                            <div>
+                                <p class="home-module-label">System</p>
+                                <h4>User Management</h4>
+                            </div>
+                        </div>
+                        <p>Assign access roles and keep multi-user permissions aligned with governance.</p>
                     </article>
                 </div>
             </div>
