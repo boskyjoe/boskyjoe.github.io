@@ -381,7 +381,7 @@ function buildSummaryModel(snapshot) {
             { id: "simple-consignment-summary-on-hand", label: "On Hand", value: String(metrics.totalOnHandQuantity) }
         ],
         guard,
-        transactionsTitle: `Order Transactions (${featureState.transactions.length})`,
+        transactionsTitle: `Order Payments (${featureState.transactions.length})`,
         transactionsCountCopy: `${featureState.transactions.length} record(s) linked to this order.`
     };
 }
@@ -603,7 +603,7 @@ function renderSettlementWorkspace(snapshot) {
                 <div class="purchase-payments-layout">
                     <div class="payment-workspace-card">
                         <div class="purchase-payments-history-header">
-                            <p class="section-kicker">${summaryModel.transactionsTitle || "Order Transactions"}</p>
+                            <p class="section-kicker">${summaryModel.transactionsTitle || "Order Payments"}</p>
                             <p id="simple-consignment-transactions-count" class="panel-copy">${summaryModel.transactionsCountCopy}</p>
                             ${isView ? "" : `<p class="panel-copy">Payments and expenses are optional during quantity updates and can be posted any time before close.</p>`}
                         </div>
@@ -648,7 +648,7 @@ function renderSettlementWorkspace(snapshot) {
                                 <div class="form-actions">
                                     <button class="button button-primary-alt" type="submit">
                                         <span class="button-icon">${icons.payment}</span>
-                                        Record Transaction
+                                        Record Payments
                                     </button>
                                 </div>
                             </form>
@@ -656,7 +656,7 @@ function renderSettlementWorkspace(snapshot) {
                         <div class="toolbar">
                             <div class="search-wrap">
                                 <span class="search-icon">${icons.search}</span>
-                                <input id="simple-consignment-transactions-search" class="input toolbar-search" type="search" placeholder="Search transactions" value="${featureState.transactionsSearchTerm}">
+                                <input id="simple-consignment-transactions-search" class="input toolbar-search" type="search" placeholder="Search payments" value="${featureState.transactionsSearchTerm}">
                             </div>
                         </div>
                         <div class="ag-shell purchase-payment-history-shell">
