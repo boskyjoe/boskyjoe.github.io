@@ -11,9 +11,11 @@ import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
 import { showLeadsPage } from "../features/leads/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
+import { showHomePage } from "../features/home/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
+    "#/home": "home-view",
     "#/dashboard": "dashboard-view",
     "#/leads": "leads-view",
     "#/retail-store": "retail-store-view",
@@ -48,6 +50,8 @@ function setActiveView(viewId) {
 
 function getViewTitle(route) {
     switch (route) {
+        case "#/home":
+            return "Home";
         case "#/dashboard":
             return "Dashboard";
         case "#/leads":
@@ -93,6 +97,10 @@ export function resolveRoute() {
     setState({ currentRoute: route });
     setActiveView(ROUTE_TO_VIEW[route]);
     renderShell({ title: getViewTitle(route) });
+
+    if (route === "#/home") {
+        showHomePage(snapshot.currentUser);
+    }
 
     if (route === "#/dashboard") {
         renderDashboardView(snapshot.currentUser);

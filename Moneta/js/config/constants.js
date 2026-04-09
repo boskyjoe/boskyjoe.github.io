@@ -1,5 +1,5 @@
 export const APP_NAME = "MONETA";
-export const DEFAULT_AUTH_ROUTE = "#/dashboard";
+export const DEFAULT_AUTH_ROUTE = "#/home";
 export const LOGIN_ROUTE = "#/login";
 
 export const ROLES = [

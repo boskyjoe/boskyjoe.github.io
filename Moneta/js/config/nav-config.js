@@ -3,6 +3,15 @@ import { icons } from "../shared/icons.js";
 export const navConfig = [
     {
         type: "link",
+        route: "#/home",
+        label: "Home",
+        icon: icons.dashboard,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead", "guest"],
+        enabled: true
+    },
+    {
+        type: "link",
         route: "#/dashboard",
         label: "Dashboard",
         icon: icons.dashboard,

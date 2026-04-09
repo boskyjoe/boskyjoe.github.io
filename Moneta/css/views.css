@@ -60,3 +60,30 @@
     color: var(--text-muted);
     font-size: 0.9rem;
 }
+
+.home-hero .hero-copy {
+    max-width: 64rem;
+}
+
+.home-workflow-grid,
+.home-modules-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.home-workflow-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #f9fcfe 0%, #f3f8fb 100%);
+}
+
+.home-step-title {
+    font-size: 1.15rem;
+    margin-top: 0.45rem;
+}
+
+.home-module-title {
+    font-size: 1.05rem;
+    margin-top: 0.35rem;
+}
