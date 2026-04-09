@@ -96,6 +96,18 @@ function getStatusMarkup(value, fallback = "Unpaid") {
     return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
 }
 
+function buildDisabledActionAttrs(disabled, reason) {
+    if (!disabled) return "";
+
+    const safeReason = String(reason || "This action is not available right now.")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+    return `disabled data-disabled-reason="${safeReason}" title="${safeReason}"`;
+}
+
 function getInvoiceDiscountFieldValues(invoice) {
     const discountType = normalizeStoredDiscountType(invoice?.invoiceDiscountType);
     const storedValue = Number(invoice?.invoiceDiscountValue) || 0;
@@ -412,6 +424,12 @@ function renderPaymentModal(snapshot) {
     const draftAmount = roundCurrency(normalizeNumber(featureState.paymentDraft.amountPaid));
     const remainingBalance = roundCurrency(Math.max(balanceDue - draftAmount, 0));
     const canRecordPayment = balanceDue > 0 && paymentModes.length > 0;
+    const recordPaymentDisabledReason = balanceDue <= 0
+        ? "This invoice is already fully paid."
+        : paymentModes.length === 0
+            ? "Add at least one active payment mode before recording payment."
+            : "This action is not available right now.";
+    const recordPaymentDisabledAttrs = buildDisabledActionAttrs(!canRecordPayment, recordPaymentDisabledReason);
 
     return `
         <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
@@ -502,7 +520,7 @@ function renderPaymentModal(snapshot) {
                                 ` : ""}
 
                                 <div class="form-actions">
-                                    <button class="button button-primary" type="submit" ${canRecordPayment ? "" : "disabled"}>
+                                    <button class="button button-primary" type="submit" ${recordPaymentDisabledAttrs}>
                                         <span class="button-icon">${icons.payment}</span>
                                         Record Payment
                                     </button>
@@ -549,6 +567,10 @@ function renderPurchasesViewShell(snapshot) {
         invoiceTaxPercentage: workspaceInvoice?.invoiceTaxPercentage || 0
     }, products);
     const canSaveInvoice = activeSuppliers.length > 0 && products.length > 0;
+    const saveInvoiceDisabledAttrs = buildDisabledActionAttrs(
+        !canSaveInvoice,
+        "Add at least one active supplier and one active product before saving an invoice."
+    );
     const initialActiveCount = workspaceInvoice?.lineItems?.length || 0;
     const panelClassName = isVoidMode ? "panel-card purchase-void-mode-card" : "panel-card";
     const panelHeaderClassName = isVoidMode ? "panel-header panel-header-danger-soft" : "panel-header panel-header-accent";
@@ -722,7 +744,7 @@ function renderPurchasesViewShell(snapshot) {
                                     Void Invoice
                                 </button>
                             ` : `
-                                <button class="button button-primary-alt" type="submit" ${canSaveInvoice ? "" : "disabled"}>
+                                <button class="button button-primary-alt" type="submit" ${saveInvoiceDisabledAttrs}>
                                     <span class="button-icon">${editingInvoice ? icons.edit : icons.plus}</span>
                                     ${editingInvoice ? "Update Invoice" : "Save Invoice"}
                                 </button>

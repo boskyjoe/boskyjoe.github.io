@@ -35,17 +35,31 @@ function paymentStatusMarkup(value) {
     return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
 }
 
+function getDisabledActionAttrs(disabled, reason) {
+    if (!disabled) return "";
+
+    const safeReason = String(reason || "This action is not available right now.")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+    return `disabled data-disabled-reason="${safeReason}" title="${safeReason}"`;
+}
+
 function invoiceActionMarkup(data) {
     const invoiceStatus = data?.invoiceStatus || data?.paymentStatus || "Unpaid";
     const isVoided = invoiceStatus === "Voided";
+    const paymentsDisabledAttrs = getDisabledActionAttrs(isVoided, "Cannot record payments on a voided invoice.");
+    const editDisabledAttrs = getDisabledActionAttrs(isVoided, "Cannot edit a voided invoice.");
 
     return `
         <div class="table-actions grid-actions-inline">
-            <button class="button grid-action-button grid-action-button-primary purchase-payments-button" type="button" data-invoice-id="${data.id}" ${isVoided ? "disabled" : ""}>
+            <button class="button grid-action-button grid-action-button-primary purchase-payments-button" type="button" data-invoice-id="${data.id}" ${paymentsDisabledAttrs}>
                 <span class="button-icon">${icons.payment}</span>
                 Payments
             </button>
-            <button class="button grid-action-button grid-action-button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}" ${isVoided ? "disabled" : ""}>
+            <button class="button grid-action-button grid-action-button-secondary purchase-edit-button" type="button" data-invoice-id="${data.id}" ${editDisabledAttrs}>
                 <span class="button-icon">${icons.edit}</span>
                 Edit
             </button>

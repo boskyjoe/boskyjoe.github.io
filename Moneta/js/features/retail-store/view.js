@@ -136,6 +136,18 @@ function normalizeText(value) {
     return (value || "").trim();
 }
 
+function buildDisabledActionAttrs(disabled, reason) {
+    if (!disabled) return "";
+
+    const safeReason = String(reason || "This action is not available right now.")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+    return `disabled data-disabled-reason="${safeReason}" title="${safeReason}"`;
+}
+
 function toDateInputValue(value) {
     if (!value) return "";
 
@@ -672,6 +684,14 @@ function renderRetailPaymentModal(snapshot) {
     const draftAmount = Number(featureState.paymentDraft.amountPaid) || 0;
     const remainingBalance = Math.max(balanceDue - Math.min(draftAmount, balanceDue), 0);
     const canRecordPayment = sale.saleStatus !== "Voided" && balanceDue > 0 && paymentModes.length > 0;
+    const recordPaymentDisabledReason = sale.saleStatus === "Voided"
+        ? "Cannot record payment on a voided sale."
+        : balanceDue <= 0
+            ? "This sale is already fully paid."
+            : paymentModes.length === 0
+                ? "Add at least one active payment mode before recording payment."
+                : "This action is not available right now.";
+    const recordPaymentDisabledAttrs = buildDisabledActionAttrs(!canRecordPayment, recordPaymentDisabledReason);
     const paymentStatus = sale.paymentStatus || "Unpaid";
 
     return `
@@ -760,7 +780,7 @@ function renderRetailPaymentModal(snapshot) {
                                         <span class="button-icon">${icons.inactive}</span>
                                         Close
                                     </button>
-                                    <button class="button button-primary-alt" type="submit" ${canRecordPayment ? "" : "disabled"}>
+                                    <button class="button button-primary-alt" type="submit" ${recordPaymentDisabledAttrs}>
                                         <span class="button-icon">${icons.payment}</span>
                                         Record Payment
                                     </button>
@@ -1007,6 +1027,17 @@ function renderRetailSaleActionsModal() {
     const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
     const hasReturns = (Number(sale.returnCount) || 0) > 0;
     const canVoidSale = !isVoided && !hasReturns;
+    const editDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot edit a voided sale.");
+    const returnDisabledAttrs = buildDisabledActionAttrs(
+        isVoided || !hasReturnableItems,
+        isVoided ? "Cannot return products on a voided sale." : "No products are available to return on this sale."
+    );
+    const expenseDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot add expense to a voided sale.");
+    const creditNoteDisabledAttrs = buildDisabledActionAttrs(!hasReturns, "No return history found. Process a return first.");
+    const voidDisabledAttrs = buildDisabledActionAttrs(
+        !canVoidSale,
+        isVoided ? "Sale is already voided." : "Sales with posted returns cannot be voided."
+    );
 
     return `
         <div id="retail-sale-actions-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-sale-actions-modal-title">
@@ -1027,11 +1058,11 @@ function renderRetailSaleActionsModal() {
                 </div>
                 <div class="panel-body purchase-payment-modal-body">
                     <div class="workspace-form-sections" style="gap: 0.75rem;">
-                        <button class="button button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${isVoided ? "disabled" : ""}>
+                        <button class="button button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${editDisabledAttrs}>
                             <span class="button-icon">${icons.edit}</span>
                             Edit Sale
                         </button>
-                        <button class="button button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${(isVoided || !hasReturnableItems) ? "disabled" : ""}>
+                        <button class="button button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${returnDisabledAttrs}>
                             <span class="button-icon">${icons.warning}</span>
                             Return Products
                         </button>
@@ -1039,7 +1070,7 @@ function renderRetailSaleActionsModal() {
                             <span class="button-icon">${icons.search}</span>
                             Return History
                         </button>
-                        <button class="button button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${isVoided ? "disabled" : ""}>
+                        <button class="button button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${expenseDisabledAttrs}>
                             <span class="button-icon">${icons.plus}</span>
                             Add Expense
                         </button>
@@ -1047,11 +1078,11 @@ function renderRetailSaleActionsModal() {
                             <span class="button-icon">${icons.download}</span>
                             Download Invoice PDF
                         </button>
-                        <button class="button button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${hasReturns ? "" : "disabled"}>
+                        <button class="button button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
                             <span class="button-icon">${icons.download}</span>
                             Download Credit Note
                         </button>
-                        <button class="button button-danger-soft retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${canVoidSale ? "" : "disabled"}>
+                        <button class="button button-danger-soft retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${voidDisabledAttrs}>
                             <span class="button-icon">${icons.warning}</span>
                             Void Sale
                         </button>

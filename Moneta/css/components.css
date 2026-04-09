@@ -43,6 +43,55 @@ select {
     transform: none;
 }
 
+.button:disabled[data-disabled-reason] {
+    position: relative;
+    pointer-events: auto;
+}
+
+.button:disabled[data-disabled-reason]::before,
+.button:disabled[data-disabled-reason]::after {
+    opacity: 0;
+    transition: opacity 120ms ease;
+    pointer-events: none;
+    position: absolute;
+    z-index: 2100;
+}
+
+.button:disabled[data-disabled-reason]::before {
+    content: "";
+    left: 50%;
+    bottom: calc(100% + 0.15rem);
+    transform: translateX(-50%);
+    border-left: 0.35rem solid transparent;
+    border-right: 0.35rem solid transparent;
+    border-top: 0.35rem solid rgba(21, 31, 41, 0.92);
+}
+
+.button:disabled[data-disabled-reason]::after {
+    content: attr(data-disabled-reason);
+    left: 50%;
+    bottom: calc(100% + 0.5rem);
+    transform: translateX(-50%);
+    width: max-content;
+    min-width: 10rem;
+    max-width: min(17rem, 72vw);
+    padding: 0.45rem 0.58rem;
+    border-radius: 0.55rem;
+    background: rgba(21, 31, 41, 0.92);
+    color: #fff;
+    font-size: 0.74rem;
+    line-height: 1.25;
+    font-weight: 600;
+    text-align: center;
+    white-space: normal;
+    box-shadow: 0 12px 24px rgba(5, 10, 15, 0.28);
+}
+
+.button:disabled[data-disabled-reason]:hover::before,
+.button:disabled[data-disabled-reason]:hover::after {
+    opacity: 1;
+}
+
 .button-primary {
     background: var(--accent);
     color: var(--text-inverse);
