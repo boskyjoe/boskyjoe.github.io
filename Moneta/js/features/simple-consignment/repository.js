@@ -577,6 +577,11 @@ export async function cancelSimpleConsignmentOrder(orderId, cancelReason, user) 
     const db = getDb();
     const now = getNow();
     const orderRef = db.collection(COLLECTIONS.simpleConsignments).doc(orderId);
+    const linkedTransactionSnapshot = await orderRef
+        .collection(CONSIGNMENT_PAYMENTS_SUBCOLLECTION)
+        .limit(1)
+        .get();
+    const hasLinkedTransactions = !linkedTransactionSnapshot.empty;
 
     return db.runTransaction(async transaction => {
         const orderDoc = await transaction.get(orderRef);
@@ -611,10 +616,7 @@ export async function cancelSimpleConsignmentOrder(orderId, cancelReason, user) 
             throw new Error("This order has linked financial activity and cannot be cancelled.");
         }
 
-        const transactionSnapshot = await transaction.get(
-            orderRef.collection(CONSIGNMENT_PAYMENTS_SUBCOLLECTION).limit(1)
-        );
-        if (!transactionSnapshot.empty) {
+        if (hasLinkedTransactions) {
             throw new Error("This order has linked payment or expense entries and cannot be cancelled.");
         }
 
