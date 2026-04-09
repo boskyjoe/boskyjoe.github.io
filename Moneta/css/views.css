@@ -61,29 +61,212 @@
     font-size: 0.9rem;
 }
 
-.home-hero .hero-copy {
-    max-width: 64rem;
+.home-page-shell {
+    overflow: hidden;
 }
 
-.home-workflow-grid,
+.home-page-hero {
+    padding: 3.5rem 2rem 3.25rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+}
+
+.home-page-hero h2 {
+    margin: 0;
+    font-size: clamp(2rem, 4.8vw, 3.5rem);
+    line-height: 1.1;
+    color: #111827;
+    letter-spacing: -0.02em;
+}
+
+.home-page-hero h2 span {
+    background: linear-gradient(90deg, #0c7aa1 0%, #5a2bbf 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.home-page-hero p {
+    margin: 1rem auto 0;
+    max-width: 50rem;
+    color: #4b5563;
+    font-size: 1.45rem;
+}
+
+.home-hero-actions {
+    margin-top: 2rem;
+}
+
+.home-cta-button {
+    min-width: 18rem;
+    padding: 0.85rem 1.35rem;
+    background: linear-gradient(180deg, #1c4ed8 0%, #193cb2 100%);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 10px 28px rgba(28, 78, 216, 0.28);
+}
+
+.home-page-section {
+    padding: 3rem 1.75rem;
+}
+
+.home-page-section + .home-page-section {
+    border-top: 1px solid var(--border);
+}
+
+.home-page-section-head {
+    text-align: center;
+    margin-bottom: 2.15rem;
+}
+
+.home-page-section-head h3 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3.2vw, 2.55rem);
+    line-height: 1.15;
+    color: #111827;
+}
+
+.home-page-section-head p {
+    margin: 0.7rem auto 0;
+    max-width: 46rem;
+    color: #6b7280;
+}
+
+.home-workflow-grid {
+    display: grid;
+    gap: 1.1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.home-workflow-step {
+    text-align: center;
+    padding: 0.65rem 0.5rem;
+}
+
+.home-workflow-icon {
+    width: 4.15rem;
+    height: 4.15rem;
+    margin: 0 auto 0.95rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-workflow-icon svg {
+    width: 1.65rem;
+    height: 1.65rem;
+    stroke-width: 1.8;
+}
+
+.home-workflow-icon-blue {
+    background: #e8f0ff;
+    color: #2f6fdb;
+}
+
+.home-workflow-icon-violet {
+    background: #f1e9ff;
+    color: #6e37c5;
+}
+
+.home-workflow-icon-green {
+    background: #e7f8ef;
+    color: #1d8a53;
+}
+
+.home-workflow-icon-rose {
+    background: #ffe9f1;
+    color: #c03d78;
+}
+
+.home-workflow-step h4 {
+    margin: 0;
+    font-size: 1.28rem;
+    color: #111827;
+}
+
+.home-workflow-step p {
+    margin: 0.75rem auto 0;
+    color: #4b5563;
+    max-width: 17rem;
+}
+
+.home-modules-section {
+    background: #fafcfe;
+}
+
 .home-modules-grid {
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.9rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.home-workflow-card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: linear-gradient(180deg, #f9fcfe 0%, #f3f8fb 100%);
+.home-module-card {
+    background: #fff;
+    border: 1px solid #dce6ee;
+    border-radius: 14px;
+    padding: 1rem 1.05rem;
 }
 
-.home-step-title {
-    font-size: 1.15rem;
-    margin-top: 0.45rem;
+.home-module-label {
+    margin: 0;
+    color: #5a7188;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
-.home-module-title {
-    font-size: 1.05rem;
-    margin-top: 0.35rem;
+.home-module-card h4 {
+    margin: 0.4rem 0 0;
+    font-size: 1.18rem;
+    color: #111827;
+}
+
+.home-module-card p {
+    margin: 0.58rem 0 0;
+    color: #4b5563;
+    line-height: 1.45;
+}
+
+.home-page-footer-note {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.75rem 1.25rem;
+    color: #64748b;
+    text-align: right;
+}
+
+@media (max-width: 1080px) {
+    .home-workflow-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-modules-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .home-page-hero {
+        padding: 2.25rem 1rem 2.1rem;
+    }
+
+    .home-page-section {
+        padding: 2rem 1rem;
+    }
+
+    .home-workflow-grid,
+    .home-modules-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .home-cta-button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .home-page-footer-note {
+        text-align: left;
+        padding: 0.95rem 1rem 1.15rem;
+    }
 }
