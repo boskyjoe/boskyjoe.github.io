@@ -28,12 +28,12 @@ const ROUTE_TO_VIEW = {
 };
 
 function normalizeRoute(route) {
-    if (!route || route === "#") return LOGIN_ROUTE;
-    return ROUTE_TO_VIEW[route] ? route : LOGIN_ROUTE;
+    if (!route || route === "#") return DEFAULT_AUTH_ROUTE;
+    return ROUTE_TO_VIEW[route] ? route : DEFAULT_AUTH_ROUTE;
 }
 
 function hasRouteAccess(route, user) {
-    if (route === LOGIN_ROUTE) return true;
+    if (route === LOGIN_ROUTE || route === DEFAULT_AUTH_ROUTE) return true;
     if (!user) return false;
 
     const navItem = navConfig.find(item => item.type !== "heading" && item.route === route);
@@ -71,7 +71,7 @@ function getViewTitle(route) {
         case "#/user-management":
             return "User Management";
         default:
-            return "Login";
+            return "Home";
     }
 }
 
@@ -84,14 +84,14 @@ export function resolveRoute() {
     const incomingRoute = normalizeRoute(window.location.hash);
     const user = snapshot.currentUser;
 
-    let route = user && user.role !== "guest" && incomingRoute === LOGIN_ROUTE
+    let route = !user
         ? DEFAULT_AUTH_ROUTE
-        : !user
-            ? LOGIN_ROUTE
+        : incomingRoute === LOGIN_ROUTE
+            ? DEFAULT_AUTH_ROUTE
             : incomingRoute;
 
     if (!hasRouteAccess(route, user)) {
-        route = user ? DEFAULT_AUTH_ROUTE : LOGIN_ROUTE;
+        route = DEFAULT_AUTH_ROUTE;
     }
 
     setState({ currentRoute: route });

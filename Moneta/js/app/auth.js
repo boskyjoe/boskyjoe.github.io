@@ -1,5 +1,5 @@
 import { COLLECTIONS } from "../config/collections.js";
-import { DEFAULT_AUTH_ROUTE, LOGIN_ROUTE } from "../config/constants.js";
+import { DEFAULT_AUTH_ROUTE } from "../config/constants.js";
 import { navigateTo, resolveRoute } from "./router.js";
 import { setState } from "./store.js";
 import { showModal } from "../shared/modal.js";
@@ -53,7 +53,7 @@ export function initializeAuth() {
     getAuth().onAuthStateChanged(async user => {
         if (!user) {
             setState({ currentUser: null });
-            navigateTo(LOGIN_ROUTE);
+            navigateTo(DEFAULT_AUTH_ROUTE);
             resolveRoute();
             return;
         }

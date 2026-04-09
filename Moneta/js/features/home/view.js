@@ -4,7 +4,13 @@ export function renderHomeView(user) {
     const root = document.getElementById("home-root");
     if (!root) return;
 
-    const displayName = user?.displayName || "Team";
+    const displayName = user?.displayName || "Guest";
+    const homePrimaryAction = user
+        ? '<a class="button button-primary home-cta-button" href="#/dashboard">Open Dashboard</a>'
+        : '<button id="login-button" class="button button-primary home-cta-button" type="button">Login with Google</button>';
+    const homeFooterNote = user
+        ? `Logged in as <strong>${displayName}</strong>`
+        : "Login to unlock your operational modules and dashboards.";
 
     root.innerHTML = `
         <section class="panel-card home-page-shell">
@@ -12,7 +18,7 @@ export function renderHomeView(user) {
                 <h2>Welcome to <span>MONETA</span></h2>
                 <p>Your all-in-one solution for Point of Sale, Inventory Management, and Financial Reporting.</p>
                 <div class="home-hero-actions">
-                    <a class="button button-primary home-cta-button" href="#/dashboard">Open Dashboard</a>
+                    ${homePrimaryAction}
                 </div>
             </div>
 
@@ -135,7 +141,7 @@ export function renderHomeView(user) {
             </div>
 
             <div class="home-page-footer-note">
-                Logged in as <strong>${displayName}</strong>
+                ${homeFooterNote}
             </div>
         </section>
     `;

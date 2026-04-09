@@ -8,31 +8,39 @@ function renderSidebarLinks(user) {
     nav.className = "sidebar-nav";
     const { currentRoute } = getState();
 
-    navConfig
-        .filter(item => !item.roles || !user || item.roles.includes(user.role))
-        .forEach(item => {
+    const visibleNavItems = user
+        ? navConfig.filter(item => {
             if (item.type === "heading") {
-                const heading = document.createElement("div");
-                heading.className = "sidebar-heading";
-                heading.textContent = item.label;
-                nav.appendChild(heading);
-                return;
+                return !item.roles || item.roles.includes(user.role);
             }
 
-            const link = document.createElement("a");
-            link.href = item.route;
-            link.className = `sidebar-link${currentRoute === item.route ? " active" : ""}`;
-            link.innerHTML = `
-                <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.dashboard}</span>
-                <span class="nav-label">${item.label}</span>
-            `;
-            link.addEventListener("click", event => {
-                event.preventDefault();
-                navigateTo(item.route);
-                document.getElementById("app-sidebar")?.classList.remove("open");
-            });
-            nav.appendChild(link);
+            return item.enabled !== false && (!item.roles || item.roles.includes(user.role));
+        })
+        : navConfig.filter(item => item.type === "link" && item.route === "#/home" && item.enabled !== false);
+
+    visibleNavItems.forEach(item => {
+        if (item.type === "heading") {
+            const heading = document.createElement("div");
+            heading.className = "sidebar-heading";
+            heading.textContent = item.label;
+            nav.appendChild(heading);
+            return;
+        }
+
+        const link = document.createElement("a");
+        link.href = item.route;
+        link.className = `sidebar-link${currentRoute === item.route ? " active" : ""}`;
+        link.innerHTML = `
+            <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.dashboard}</span>
+            <span class="nav-label">${item.label}</span>
+        `;
+        link.addEventListener("click", event => {
+            event.preventDefault();
+            navigateTo(item.route);
+            document.getElementById("app-sidebar")?.classList.remove("open");
         });
+        nav.appendChild(link);
+    });
 
     return nav;
 }

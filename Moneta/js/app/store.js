@@ -1,6 +1,6 @@
 const state = {
     currentUser: null,
-    currentRoute: "#/login",
+    currentRoute: "#/home",
     isMasterDataReady: false,
     masterData: {
         categories: [],

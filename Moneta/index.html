@@ -23,27 +23,16 @@
                     <button id="mobile-nav-toggle" class="header-toggle" type="button" aria-label="Toggle navigation">Menu</button>
                     <div>
                         <p class="header-kicker">MONETA</p>
-                        <h1 id="view-title" class="header-title">Loading</h1>
+                        <h1 id="view-title" class="header-title">Home</h1>
                     </div>
                 </div>
                 <div id="auth-slot" class="auth-slot"></div>
             </header>
 
             <main id="app-content" class="app-content">
-                <section id="login-view" class="view active" data-view="login">
-                    <div class="hero-card">
-                        <p class="hero-kicker">Static GitHub Deployment Ready</p>
-                        <h2 class="hero-title">MONETA is being rebuilt in a clean modular structure.</h2>
-                        <p class="hero-copy">
-                            This Phase 1 shell is designed to run as a static GitHub-hosted Firebase app.
-                        </p>
-                        <div class="hero-actions">
-                            <button id="login-button" class="button button-primary" type="button">Login with Google</button>
-                        </div>
-                    </div>
-                </section>
+                <section id="login-view" class="view" data-view="login" aria-hidden="true"></section>
 
-                <section id="home-view" class="view" data-view="home">
+                <section id="home-view" class="view active" data-view="home">
                     <div id="home-root"></div>
                 </section>
 
