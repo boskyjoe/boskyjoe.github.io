@@ -52,6 +52,10 @@ function statusMarkup(value = "Active") {
         return `<span class="purchase-status-pill purchase-status-paid">Settled</span>`;
     }
 
+    if (normalized === "cancelled") {
+        return `<span class="purchase-status-pill purchase-status-voided">Cancelled</span>`;
+    }
+
     if (normalized === "voided") {
         return `<span class="purchase-status-pill purchase-status-voided">Voided</span>`;
     }
@@ -132,16 +136,42 @@ function buildSettlementQuantitySetter(field) {
 
 function buildOrdersActionMarkup(data) {
     const status = normalizeText(data?.status || "Active");
-    const isSettled = status === "Settled";
-    const label = isSettled ? "View" : "Open";
-    const icon = isSettled ? icons.search : icons.edit;
+    const isActive = status === "Active";
+    const label = isActive ? "Open" : "View";
+    const icon = isActive ? icons.edit : icons.search;
 
-    return `
+    const openButton = `
         <button class="button grid-action-button grid-action-button-secondary simple-consignment-open-button" type="button" data-order-id="${data.id}">
             <span class="button-icon">${icon}</span>
             ${label}
         </button>
     `;
+
+    if (!isActive) {
+        return openButton;
+    }
+
+    const hasLineActivity = (Number(data?.totalQuantitySold) || 0) > 0
+        || (Number(data?.totalQuantityReturned) || 0) > 0
+        || (Number(data?.totalQuantityDamaged) || 0) > 0
+        || (Number(data?.totalQuantityGifted) || 0) > 0;
+    const hasFinancialActivity = (Number(data?.totalAmountPaid) || 0) > 0
+        || (Number(data?.totalExpenses) || 0) > 0
+        || (Number(data?.paymentCount) || 0) > 0;
+    const cancelDisabled = hasLineActivity || hasFinancialActivity;
+    const cancelDisabledReason = hasLineActivity
+        ? "Cancel is disabled because product settlement activity already exists."
+        : hasFinancialActivity
+            ? "Cancel is disabled because payment or expense activity already exists."
+            : "";
+    const cancelDisabledAttrs = buildDisabledActionAttrs(cancelDisabled, cancelDisabledReason);
+    const cancelButton = `
+        <button class="button grid-action-button grid-action-button-danger simple-consignment-cancel-mode-button" type="button" data-order-id="${data.id}" ${cancelDisabledAttrs}>
+            Cancel
+        </button>
+    `;
+
+    return `<div class="retail-sale-actions-list">${openButton}${cancelButton}</div>`;
 }
 
 function buildTransactionActionMarkup(data) {
@@ -239,8 +269,8 @@ function buildOrdersColumnDefs() {
         },
         {
             headerName: "Actions",
-            minWidth: 140,
-            flex: 0.74,
+            minWidth: 220,
+            flex: 1.05,
             sortable: false,
             filter: false,
             cellRenderer: params => (params.node?.rowPinned ? "" : buildOrdersActionMarkup(params.data))

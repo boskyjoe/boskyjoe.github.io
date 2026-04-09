@@ -573,6 +573,119 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
     });
 }
 
+export async function cancelSimpleConsignmentOrder(orderId, cancelReason, user) {
+    const db = getDb();
+    const now = getNow();
+    const orderRef = db.collection(COLLECTIONS.simpleConsignments).doc(orderId);
+
+    return db.runTransaction(async transaction => {
+        const orderDoc = await transaction.get(orderRef);
+        if (!orderDoc.exists) {
+            throw new Error("The selected consignment order could not be found.");
+        }
+
+        const orderData = orderDoc.data() || {};
+        if (normalizeText(orderData.status).toLowerCase() !== "active") {
+            throw new Error("Only active consignment orders can be cancelled.");
+        }
+
+        const existingItems = Array.isArray(orderData.items) ? orderData.items.map(sanitizeLineItem) : [];
+        if (existingItems.length === 0) {
+            throw new Error("No checked-out line items were found for this order.");
+        }
+
+        const hasLineActivity = existingItems.some(item => (
+            item.quantitySold > 0
+            || item.quantityReturned > 0
+            || item.quantityDamaged > 0
+            || item.quantityGifted > 0
+        ));
+        if (hasLineActivity) {
+            throw new Error("This order already has product activity and cannot be cancelled.");
+        }
+
+        const totalAmountPaid = roundCurrency(orderData.totalAmountPaid);
+        const totalExpenses = roundCurrency(orderData.totalExpenses);
+        const paymentCount = Math.max(0, Number(orderData.paymentCount) || 0);
+        if (totalAmountPaid > 0 || totalExpenses > 0 || paymentCount > 0) {
+            throw new Error("This order has linked financial activity and cannot be cancelled.");
+        }
+
+        const transactionSnapshot = await transaction.get(
+            orderRef.collection(CONSIGNMENT_PAYMENTS_SUBCOLLECTION).limit(1)
+        );
+        if (!transactionSnapshot.empty) {
+            throw new Error("This order has linked payment or expense entries and cannot be cancelled.");
+        }
+
+        const inventoryRestores = existingItems
+            .map(item => ({
+                ...item,
+                quantityRestore: Math.max(0, item.quantityCheckedOut)
+            }))
+            .filter(item => item.quantityRestore > 0);
+
+        const productRefs = inventoryRestores.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
+        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+
+        productDocs.forEach((productDoc, index) => {
+            if (!productDoc.exists) {
+                throw new Error(`"${inventoryRestores[index].productName}" is no longer available in inventory.`);
+            }
+        });
+
+        const cancelledItems = existingItems.map(item => ({
+            ...item,
+            quantitySold: 0,
+            quantityReturned: item.quantityCheckedOut,
+            quantityDamaged: 0,
+            quantityGifted: 0
+        }));
+        const totals = computeConsignmentTotals(cancelledItems, {
+            totalAmountPaid: 0,
+            totalExpenses: 0
+        });
+
+        transaction.update(orderRef, {
+            status: "Cancelled",
+            cancelReason: normalizeText(cancelReason),
+            cancelledBy: user.email,
+            cancelledOn: now,
+            items: totals.items,
+            lineItemCount: totals.lineItemCount,
+            totalQuantityCheckedOut: totals.totalQuantityCheckedOut,
+            totalQuantitySold: totals.totalQuantitySold,
+            totalQuantityReturned: totals.totalQuantityReturned,
+            totalQuantityDamaged: totals.totalQuantityDamaged,
+            totalQuantityGifted: totals.totalQuantityGifted,
+            totalOnHandQuantity: totals.totalOnHandQuantity,
+            totalValueCheckedOut: totals.totalValueCheckedOut,
+            totalValueSold: totals.totalValueSold,
+            totalAmountPaid: 0,
+            totalExpenses: 0,
+            balanceDue: 0,
+            paymentCount: 0,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        productRefs.forEach((productRef, index) => {
+            transaction.update(productRef, {
+                inventoryCount: firebase.firestore.FieldValue.increment(inventoryRestores[index].quantityRestore),
+                updatedBy: user.email,
+                updateDate: now
+            });
+        });
+
+        return {
+            summary: {
+                totalQuantityRestored: totals.totalQuantityCheckedOut,
+                totalValueCheckedOut: totals.totalValueCheckedOut
+            }
+        };
+    });
+}
+
 export async function closeSimpleConsignmentOrder(orderId, user) {
     const db = getDb();
     const now = getNow();

@@ -27,6 +27,7 @@ import {
 } from "./repository.js";
 import {
     addSimpleConsignmentTransaction,
+    cancelSimpleConsignmentOrderEntry,
     finalizeSimpleConsignmentOrder,
     saveSimpleConsignmentCheckout,
     saveSimpleConsignmentSettlement,
@@ -47,6 +48,7 @@ const featureState = {
     unsubscribeOrders: null,
     unsubscribeTransactions: null,
     transactionsOrderId: null,
+    cancelReason: "",
     checkoutDraft: createDefaultCheckoutDraft(),
     transactionDraft: createDefaultTransactionDraft()
 };
@@ -241,9 +243,14 @@ function isViewMode() {
     return featureState.workspaceMode === "view";
 }
 
+function isCancelMode() {
+    return featureState.workspaceMode === "cancel";
+}
+
 function resetWorkspaceToCreate() {
     featureState.workspaceMode = "create";
     featureState.activeOrderId = null;
+    featureState.cancelReason = "";
     featureState.checkoutDraft = createDefaultCheckoutDraft();
     featureState.transactionDraft = createDefaultTransactionDraft();
     featureState.selectedCatalogueId = "";
@@ -436,6 +443,48 @@ function getCloseOrderGuard(order, worksheetMetrics) {
     };
 }
 
+function getCancelOrderGuard(order) {
+    if (!order) {
+        return {
+            disabled: true,
+            reason: "Select an active consignment order first."
+        };
+    }
+
+    if (normalizeText(order.status) !== "Active") {
+        return {
+            disabled: true,
+            reason: "Only active consignment orders can be cancelled."
+        };
+    }
+
+    const hasLineActivity = (Number(order.totalQuantitySold) || 0) > 0
+        || (Number(order.totalQuantityReturned) || 0) > 0
+        || (Number(order.totalQuantityDamaged) || 0) > 0
+        || (Number(order.totalQuantityGifted) || 0) > 0;
+    if (hasLineActivity) {
+        return {
+            disabled: true,
+            reason: "Cancellation is blocked because quantity activity already exists."
+        };
+    }
+
+    const hasFinancialTotals = roundCurrency(order.totalAmountPaid) > 0
+        || roundCurrency(order.totalExpenses) > 0
+        || (Number(order.paymentCount) || 0) > 0;
+    if (hasFinancialTotals || featureState.transactions.length > 0) {
+        return {
+            disabled: true,
+            reason: "Cancellation is blocked because payment or expense activity exists."
+        };
+    }
+
+    return {
+        disabled: false,
+        reason: ""
+    };
+}
+
 function buildSummaryModel(snapshot) {
     const activeOrder = getActiveOrder();
     const worksheetRows = getSimpleConsignmentWorksheetRows();
@@ -445,12 +494,14 @@ function buildSummaryModel(snapshot) {
         const orderCount = featureState.orders.length;
         const activeCount = featureState.orders.filter(order => normalizeText(order.status) === "Active").length;
         const settledCount = featureState.orders.filter(order => normalizeText(order.status) === "Settled").length;
+        const cancelledCount = featureState.orders.filter(order => normalizeText(order.status) === "Cancelled").length;
 
         return {
             headerPills: [
                 { label: `${orderCount} orders` },
                 { label: `${activeCount} active` },
-                { label: `${settledCount} settled` }
+                { label: `${settledCount} settled` },
+                { label: `${cancelledCount} cancelled` }
             ],
             cardRows: [
                 { id: "simple-consignment-summary-quantity-out", label: "Qty Checked Out", value: String(metrics.totalQuantityCheckedOut) },
@@ -494,18 +545,28 @@ function buildSummaryModel(snapshot) {
     };
 }
 
-function renderWorkspaceHeader(summaryModel, isCreate) {
+function renderWorkspaceHeader(summaryModel, mode = "create") {
+    const isCreate = mode === "create";
+    const isCancel = mode === "cancel";
+    const title = isCreate
+        ? "Simple Consignment Checkout"
+        : isCancel
+            ? "Cancel Consignment Order"
+            : "Simple Consignment Settlement";
+    const copy = isCreate
+        ? "Check out catalogue products to a team, then settle sales, returns, damages, and financials in one controlled workflow."
+        : isCancel
+            ? "Review the order below before cancellation. All values are locked, and only the cancel reason can be entered."
+            : "Update product-level settlement quantities, post team transactions, and close the order only when quantities and balance are fully reconciled.";
+    const headerClass = isCancel ? "panel-header panel-header-danger-soft" : "panel-header panel-header-accent";
+
     return `
-        <div class="panel-header panel-header-accent">
+        <div class="${headerClass}">
             <div class="panel-title-wrap">
                 <span class="panel-icon panel-icon-alt">${icons.consignment || icons.retail}</span>
                 <div>
-                    <h2>${isCreate ? "Simple Consignment Checkout" : "Simple Consignment Settlement"}</h2>
-                    <p class="panel-copy">
-                        ${isCreate
-            ? "Check out catalogue products to a team, then settle sales, returns, damages, and financials in one controlled workflow."
-            : "Update product-level settlement quantities, post team transactions, and close the order only when quantities and balance are fully reconciled."}
-                    </p>
+                    <h2>${title}</h2>
+                    <p class="panel-copy">${copy}</p>
                 </div>
             </div>
             <div class="toolbar-meta">
@@ -534,7 +595,7 @@ function renderCheckoutForm(snapshot) {
 
     return `
         <div class="panel-card">
-            ${renderWorkspaceHeader(summaryModel, true)}
+            ${renderWorkspaceHeader(summaryModel, "create")}
             <div class="panel-body">
                 <form id="simple-consignment-checkout-form">
                     <div id="simple-consignment-form" class="workspace-form-sections">
@@ -636,17 +697,39 @@ function renderSettlementWorkspace(snapshot) {
     const order = getActiveOrder();
     const draft = featureState.checkoutDraft;
     const isView = isViewMode();
-    const contextFieldDisabledAttr = isView ? "disabled" : "";
+    const isCancel = isCancelMode();
+    const isReadOnlyMode = isView || isCancel;
+    const contextFieldDisabledAttr = isReadOnlyMode ? "disabled" : "";
     const summaryModel = buildSummaryModel(snapshot);
     const closeButtonDisabledAttr = summaryModel.guard.disabled
         ? `disabled title="${summaryModel.guard.reason.replaceAll('"', "&quot;")}"`
         : "";
+    const cancelGuard = getCancelOrderGuard(order);
+    const cancelOrderDisabledAttr = cancelGuard.disabled
+        ? `disabled title="${cancelGuard.reason.replaceAll('"', "&quot;")}"`
+        : "";
     const checkoutDateValue = toDateInputValue(order?.checkoutDate) || "";
+    const viewStateCopy = normalizeText(order?.status) === "Cancelled"
+        ? "This cancelled order is read-only. Values shown below are final."
+        : "This settled order is read-only. Quantities shown below are final.";
 
     return `
-        <div class="panel-card ${isView ? "retail-view-mode-card" : ""}">
-            ${renderWorkspaceHeader(summaryModel, false)}
+        <div class="panel-card ${isReadOnlyMode ? "retail-view-mode-card" : ""} ${isCancel ? "purchase-void-mode-card" : ""}">
+            ${renderWorkspaceHeader(summaryModel, isCancel ? "cancel" : "settlement")}
             <div class="panel-body">
+                ${isCancel ? `
+                    <div class="purchase-void-mode-banner">
+                        <div>
+                            <p class="section-kicker">Cancel Mode</p>
+                            <p class="panel-copy">Cancellation is allowed only when no quantity activity and no payment or expense activity exist for the order.</p>
+                        </div>
+                        <div class="toolbar-meta">
+                            <span class="status-pill">${order?.consignmentId || "-"}</span>
+                            <span class="status-pill">${String(order?.totalQuantityCheckedOut || 0)} qty checked out</span>
+                            <span class="status-pill">${formatCurrency(order?.totalValueCheckedOut || 0)} value out</span>
+                        </div>
+                    </div>
+                ` : ""}
                 <div id="simple-consignment-form" class="form-grid simple-consignment-form-grid">
                     <div class="field">
                         <label>Order ID</label>
@@ -696,9 +779,11 @@ function renderSettlementWorkspace(snapshot) {
                     <div class="toolbar">
                         <div>
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Settlement Worksheet</p>
-                            <p class="panel-copy">${isView
-            ? "This settled order is read-only. Quantities shown below are final."
-            : "Update sold, returned, damaged, and gifted quantities. Save progress to reconcile quantities and values. Payments can be recorded later."}</p>
+                            <p class="panel-copy">${isCancel
+            ? "All worksheet values are locked in cancel mode. Review the order and confirm cancellation if all guard conditions pass."
+            : isView
+                ? viewStateCopy
+                : "Update sold, returned, damaged, and gifted quantities. Save progress to reconcile quantities and values. Payments can be recorded later."}</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
@@ -710,14 +795,24 @@ function renderSettlementWorkspace(snapshot) {
                     </div>
                 </div>
 
+                ${isCancel ? `
+                    <div class="purchase-void-mode-reason">
+                        <div class="field field-full">
+                            <label for="simple-consignment-cancel-reason">Cancel Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="simple-consignment-cancel-reason" class="textarea purchase-void-reason-textarea" placeholder="Explain why this consignment order is being cancelled">${featureState.cancelReason}</textarea>
+                        </div>
+                        <p class="panel-copy panel-copy-tight">This action cannot be undone. The order remains visible in history with cancelled status and a full audit trail.</p>
+                    </div>
+                ` : ""}
+
                 <div class="purchase-payments-layout">
                     <div class="payment-workspace-card">
                         <div class="purchase-payments-history-header">
                             <p class="section-kicker">${summaryModel.transactionsTitle || "Order Payments"}</p>
                             <p id="simple-consignment-transactions-count" class="panel-copy">${summaryModel.transactionsCountCopy}</p>
-                            ${isView ? "" : `<p class="panel-copy">Payments and expenses are optional during quantity updates and can be posted any time before close.</p>`}
+                            ${isView || isCancel ? "" : `<p class="panel-copy">Payments and expenses are optional during quantity updates and can be posted any time before close.</p>`}
                         </div>
-                        ${isView ? "" : `
+                        ${isView || isCancel ? "" : `
                             <form id="simple-consignment-transaction-form" class="purchase-payment-form">
                                 <div class="form-grid">
                                     <div class="field">
@@ -776,11 +871,26 @@ function renderSettlementWorkspace(snapshot) {
                 </div>
 
                 <div class="form-actions">
-                    <button id="simple-consignment-back-button" class="button button-secondary" type="button">
-                        <span class="button-icon">${icons.inactive}</span>
-                        Back To New Checkout
-                    </button>
-                    ${isView ? "" : `
+                    ${isCancel ? `
+                        <button id="simple-consignment-cancel-order-back-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Back To Settlement
+                        </button>
+                        <button id="simple-consignment-cancel-order-confirm-button" class="button button-danger-soft" type="button" ${cancelOrderDisabledAttr}>
+                            <span class="button-icon">${icons.inactive}</span>
+                            Cancel Order
+                        </button>
+                    ` : `
+                        <button id="simple-consignment-back-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Back To New Checkout
+                        </button>
+                    `}
+                    ${isView || isCancel ? "" : `
+                        <button id="simple-consignment-enter-cancel-mode-button" class="button button-danger-soft" type="button" ${cancelOrderDisabledAttr}>
+                            <span class="button-icon">${icons.inactive}</span>
+                            Enter Cancel Mode
+                        </button>
                         <button id="simple-consignment-save-progress-button" class="button button-primary" type="button">
                             <span class="button-icon">${icons.edit}</span>
                             Save Progress
@@ -804,7 +914,7 @@ function renderHistoryPanel() {
                     <span class="panel-icon">${icons.consignment || icons.retail}</span>
                     <div>
                         <h3>Consignment Orders History</h3>
-                        <p class="panel-copy">Open active orders for settlement. Settled orders remain available in read-only mode.</p>
+                        <p class="panel-copy">Open active orders for settlement or cancellation. Settled and cancelled orders remain available in read-only mode.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -899,7 +1009,7 @@ function syncWorksheetGrid(snapshot) {
         updateSummaryCardsInPlace();
     });
     setSimpleConsignmentWorksheetMode(isCreateMode() ? "checkout" : "settlement");
-    setSimpleConsignmentWorksheetReadOnly(isViewMode());
+    setSimpleConsignmentWorksheetReadOnly(isViewMode() || isCancelMode());
     refreshSimpleConsignmentWorksheetGrid(rows);
     updateSimpleConsignmentWorksheetGridSearch(featureState.worksheetSearchTerm);
     updateSummaryCardsInPlace();
@@ -1036,8 +1146,9 @@ function ensureTransactionsListener(snapshot) {
 function openOrderWorkspace(order) {
     if (!order?.id) return;
 
+    const status = normalizeText(order.status);
     featureState.activeOrderId = order.id;
-    featureState.workspaceMode = normalizeText(order.status) === "Settled" ? "view" : "settle";
+    featureState.workspaceMode = status === "Active" ? "settle" : "view";
     featureState.checkoutDraft = {
         checkoutDate: toDateInputValue(order.checkoutDate),
         manualVoucherNumber: order.manualVoucherNumber || "",
@@ -1050,6 +1161,7 @@ function openOrderWorkspace(order) {
     };
     featureState.selectedCatalogueId = order.salesCatalogueId || "";
     featureState.transactionDraft = createDefaultTransactionDraft();
+    featureState.cancelReason = "";
     ensureTransactionsListener(getState());
 
     renderSimpleConsignmentView();
@@ -1059,6 +1171,33 @@ function openOrderWorkspace(order) {
         inputSelector: featureState.workspaceMode === "settle"
             ? "#simple-consignment-transaction-amount"
             : "#simple-consignment-back-button"
+    });
+}
+
+function openOrderCancelWorkspace(order) {
+    if (!order?.id) return;
+
+    featureState.activeOrderId = order.id;
+    featureState.workspaceMode = "cancel";
+    featureState.checkoutDraft = {
+        checkoutDate: toDateInputValue(order.checkoutDate),
+        manualVoucherNumber: order.manualVoucherNumber || "",
+        teamName: order.teamName || "",
+        teamMemberName: order.teamMemberName || "",
+        memberPhone: order.memberPhone || "",
+        memberEmail: order.memberEmail || "",
+        venue: order.venue || "",
+        salesCatalogueId: order.salesCatalogueId || ""
+    };
+    featureState.selectedCatalogueId = order.salesCatalogueId || "";
+    featureState.transactionDraft = createDefaultTransactionDraft();
+    featureState.cancelReason = "";
+    ensureTransactionsListener(getState());
+
+    renderSimpleConsignmentView();
+    focusFormField({
+        formId: "simple-consignment-form",
+        inputSelector: "#simple-consignment-cancel-reason"
     });
 }
 
@@ -1116,6 +1255,15 @@ function getTransactionPayloadFromDom() {
         contact: document.getElementById("simple-consignment-transaction-contact")?.value || featureState.transactionDraft.contact,
         notes: document.getElementById("simple-consignment-transaction-notes")?.value || featureState.transactionDraft.notes
     };
+}
+
+function getCancelReasonFromDom() {
+    const reasonInput = document.getElementById("simple-consignment-cancel-reason");
+    if (reasonInput) {
+        return reasonInput.value || "";
+    }
+
+    return featureState.cancelReason || "";
 }
 
 async function handleCreateCheckoutSubmit() {
@@ -1411,6 +1559,89 @@ async function handleCloseOrder() {
     });
 }
 
+async function handleCancelOrder() {
+    const activeOrder = getActiveOrder();
+    if (!activeOrder) return;
+
+    const cancelGuard = getCancelOrderGuard(activeOrder);
+    if (cancelGuard.disabled) {
+        showToast(cancelGuard.reason, "warning", {
+            title: "Cancel Guard"
+        });
+        return;
+    }
+
+    const cancelReason = normalizeText(getCancelReasonFromDom());
+    if (cancelReason.length < 6) {
+        showToast("Please provide a clear cancellation reason before continuing.", "warning", {
+            title: "Cancel Guard"
+        });
+        focusFormField({
+            formId: "simple-consignment-form",
+            inputSelector: "#simple-consignment-cancel-reason"
+        });
+        return;
+    }
+
+    const confirmed = await showConfirmationModal({
+        title: "Cancel Consignment Order",
+        message: `Cancel order ${activeOrder.consignmentId || activeOrder.id}?`,
+        details: [
+            { label: "Qty Checked Out", value: String(activeOrder.totalQuantityCheckedOut || 0) },
+            { label: "Value Checked Out", value: formatCurrency(activeOrder.totalValueCheckedOut || 0) },
+            { label: "Payments Linked", value: String(featureState.transactions.length) }
+        ],
+        note: "Cancellation returns all checked-out inventory and marks this order as cancelled. This action cannot be undone.",
+        confirmText: "Cancel Order",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
+
+    const snapshot = getState();
+    const user = snapshot.currentUser;
+    if (!user) return;
+
+    const result = await runProgressToastFlow({
+        title: "Cancelling Order",
+        theme: "warning",
+        initialMessage: "Reading order state and cancellation guard checks...",
+        initialProgress: 14,
+        initialStep: "Step 1 of 4",
+        successTitle: "Order Cancelled",
+        successMessage: "The order was cancelled and inventory quantities were restored."
+    }, async ({ update }) => {
+        update("Validating line and financial activity constraints...", 40, "Step 2 of 4");
+        const cancelResult = await cancelSimpleConsignmentOrderEntry(
+            activeOrder,
+            featureState.transactions,
+            { cancelReason },
+            user
+        );
+        update("Reversing inventory and applying cancelled status...", 82, "Step 3 of 4");
+        return cancelResult;
+    });
+
+    showToast("Consignment order cancelled.", "success", {
+        title: "Simple Consignment"
+    });
+
+    await showSummaryModal({
+        title: "Order Cancelled",
+        message: "The order was cancelled successfully and all checked-out items were returned to inventory.",
+        details: [
+            { label: "Order", value: activeOrder.consignmentId || "-" },
+            { label: "Qty Restored", value: String(result.summary?.totalQuantityRestored || 0) },
+            { label: "Value Restored", value: formatCurrency(result.summary?.totalValueCheckedOut || 0) }
+        ],
+        note: "Order context remains in history with cancelled status for audit."
+    });
+
+    featureState.cancelReason = "";
+    resetWorkspaceToCreate();
+    renderSimpleConsignmentView();
+}
+
 function handleOrdersSearchInput(inputElement) {
     featureState.ordersSearchTerm = inputElement.value || "";
     updateSimpleConsignmentOrdersGridSearch(featureState.ordersSearchTerm);
@@ -1494,6 +1725,11 @@ function bindSimpleConsignmentEvents() {
             return;
         }
 
+        if (target.id === "simple-consignment-cancel-reason") {
+            featureState.cancelReason = target.value || "";
+            return;
+        }
+
         if (target.id?.startsWith("simple-consignment-transaction-")) {
             handleTransactionDraftInput(target);
             return;
@@ -1515,6 +1751,11 @@ function bindSimpleConsignmentEvents() {
 
         if (target.id?.startsWith("simple-consignment-transaction-")) {
             handleTransactionDraftInput(target);
+            return;
+        }
+
+        if (target.id === "simple-consignment-cancel-reason") {
+            featureState.cancelReason = target.value || "";
             return;
         }
 
@@ -1554,6 +1795,10 @@ function bindSimpleConsignmentEvents() {
         if (!(target instanceof HTMLElement)) return;
 
         const openOrderButton = target.closest(".simple-consignment-open-button");
+        const cancelModeButton = target.closest(".simple-consignment-cancel-mode-button");
+        const enterCancelModeButton = target.closest("#simple-consignment-enter-cancel-mode-button");
+        const confirmCancelOrderButton = target.closest("#simple-consignment-cancel-order-confirm-button");
+        const cancelOrderBackButton = target.closest("#simple-consignment-cancel-order-back-button");
         const saveProgressButton = target.closest("#simple-consignment-save-progress-button");
         const closeOrderButton = target.closest("#simple-consignment-close-order-button");
         const resetButton = target.closest("#simple-consignment-reset-button");
@@ -1570,6 +1815,41 @@ function bindSimpleConsignmentEvents() {
                 return;
             }
             openOrderWorkspace(order);
+            return;
+        }
+
+        if (cancelModeButton || enterCancelModeButton) {
+            const sourceOrderId = cancelModeButton?.dataset.orderId || featureState.activeOrderId || "";
+            const order = featureState.orders.find(entry => entry.id === sourceOrderId) || null;
+            if (!order) {
+                showToast("The selected order could not be found.", "error", {
+                    title: "Simple Consignment"
+                });
+                return;
+            }
+
+            openOrderCancelWorkspace(order);
+            return;
+        }
+
+        if (cancelOrderBackButton) {
+            const order = getActiveOrder();
+            if (order) {
+                openOrderWorkspace(order);
+            } else {
+                resetWorkspaceToCreate();
+                renderSimpleConsignmentView();
+            }
+            return;
+        }
+
+        if (confirmCancelOrderButton) {
+            try {
+                await handleCancelOrder();
+            } catch (error) {
+                console.error("[Moneta] Simple consignment cancel failed:", error);
+                ProgressToast.showError(error?.message || "Could not cancel the consignment order.");
+            }
             return;
         }
 

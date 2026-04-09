@@ -1,4 +1,5 @@
 import {
+    cancelSimpleConsignmentOrder,
     closeSimpleConsignmentOrder,
     createSimpleConsignmentRecord,
     recordSimpleConsignmentTransaction,
@@ -7,7 +8,7 @@ import {
 } from "./repository.js";
 
 export const CONSIGNMENT_TRANSACTION_TYPES = ["Payment", "Expense"];
-export const CONSIGNMENT_STATUSES = ["Active", "Settled"];
+export const CONSIGNMENT_STATUSES = ["Active", "Settled", "Cancelled"];
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -349,6 +350,52 @@ export async function voidSimpleConsignmentTransactionEntry(order, transaction, 
     return {
         ...result,
         voidReason: validated.voidReason
+    };
+}
+
+export function validateSimpleConsignmentCancelPayload(order, transactions = [], payload, user) {
+    if (!user) {
+        throw new Error("You must be logged in to cancel this consignment order.");
+    }
+
+    if (!order?.id) {
+        throw new Error("Select an active consignment order before cancelling.");
+    }
+
+    if (normalizeText(order.status) !== "Active") {
+        throw new Error("Only active consignment orders can be cancelled.");
+    }
+
+    const totalQuantitySold = Math.max(0, Number(order.totalQuantitySold) || 0);
+    const totalQuantityReturned = Math.max(0, Number(order.totalQuantityReturned) || 0);
+    const totalQuantityDamaged = Math.max(0, Number(order.totalQuantityDamaged) || 0);
+    const totalQuantityGifted = Math.max(0, Number(order.totalQuantityGifted) || 0);
+    if (totalQuantitySold > 0 || totalQuantityReturned > 0 || totalQuantityDamaged > 0 || totalQuantityGifted > 0) {
+        throw new Error("This order already has product activity. Only untouched active orders can be cancelled.");
+    }
+
+    const totalAmountPaid = roundCurrency(order.totalAmountPaid);
+    const totalExpenses = roundCurrency(order.totalExpenses);
+    const paymentCount = Math.max(0, Number(order.paymentCount) || 0);
+    if (totalAmountPaid > 0 || totalExpenses > 0 || paymentCount > 0 || (transactions || []).length > 0) {
+        throw new Error("This order has linked financial activity and cannot be cancelled.");
+    }
+
+    const cancelReason = normalizeText(payload?.cancelReason);
+    if (cancelReason.length < 6) {
+        throw new Error("Please provide a clear cancellation reason.");
+    }
+
+    return { cancelReason };
+}
+
+export async function cancelSimpleConsignmentOrderEntry(order, transactions, payload, user) {
+    const validated = validateSimpleConsignmentCancelPayload(order, transactions, payload, user);
+    const result = await cancelSimpleConsignmentOrder(order.id, validated.cancelReason, user);
+
+    return {
+        ...result,
+        cancelReason: validated.cancelReason
     };
 }
 
