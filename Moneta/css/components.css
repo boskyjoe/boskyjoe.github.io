@@ -1778,6 +1778,10 @@ select {
     margin-top: 1rem;
 }
 
+.simple-consignment-shell .purchase-payments-layout {
+    margin-top: 0.5rem;
+}
+
 @media (max-width: 860px) {
     .form-grid {
         grid-template-columns: 1fr;
