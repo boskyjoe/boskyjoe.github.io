@@ -383,6 +383,56 @@ function buildSettlementWorksheetColumnDefs() {
                 return (Number(params.data?.quantitySold) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
             valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Returned Value",
+            minWidth: 145,
+            flex: 0.78,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return params.data?.valueReturned || 0;
+                return (Number(params.data?.quantityReturned) || 0) * (Number(params.data?.sellingPrice) || 0);
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Damaged Value",
+            minWidth: 140,
+            flex: 0.76,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return params.data?.valueDamaged || 0;
+                return (Number(params.data?.quantityDamaged) || 0) * (Number(params.data?.sellingPrice) || 0);
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Gifted Value",
+            minWidth: 135,
+            flex: 0.75,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return params.data?.valueGifted || 0;
+                return (Number(params.data?.quantityGifted) || 0) * (Number(params.data?.sellingPrice) || 0);
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "On Hand Value",
+            minWidth: 140,
+            flex: 0.78,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return params.data?.valueOnHand || 0;
+                const quantityCheckedOut = Number(params.data?.quantityCheckedOut) || 0;
+                const quantitySold = Number(params.data?.quantitySold) || 0;
+                const quantityReturned = Number(params.data?.quantityReturned) || 0;
+                const quantityDamaged = Number(params.data?.quantityDamaged) || 0;
+                const quantityGifted = Number(params.data?.quantityGifted) || 0;
+                const onHand = quantityCheckedOut - (quantitySold + quantityReturned + quantityDamaged + quantityGifted);
+                return onHand * (Number(params.data?.sellingPrice) || 0);
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
         }
     ];
 }
@@ -539,7 +589,12 @@ function buildSettlementWorksheetPinnedBottomRow(rows) {
         const quantityDamaged = Number(row?.quantityDamaged) || 0;
         const quantityGifted = Number(row?.quantityGifted) || 0;
         const onHand = quantityCheckedOut - (quantitySold + quantityReturned + quantityDamaged + quantityGifted);
+        const price = Number(row?.sellingPrice) || 0;
         const valueSold = quantitySold * (Number(row?.sellingPrice) || 0);
+        const valueReturned = quantityReturned * price;
+        const valueDamaged = quantityDamaged * price;
+        const valueGifted = quantityGifted * price;
+        const valueOnHand = onHand * price;
 
         summary.quantityCheckedOut += quantityCheckedOut;
         summary.quantitySold += quantitySold;
@@ -548,6 +603,10 @@ function buildSettlementWorksheetPinnedBottomRow(rows) {
         summary.quantityGifted += quantityGifted;
         summary.onHand += onHand;
         summary.valueSold += valueSold;
+        summary.valueReturned += valueReturned;
+        summary.valueDamaged += valueDamaged;
+        summary.valueGifted += valueGifted;
+        summary.valueOnHand += valueOnHand;
         return summary;
     }, {
         quantityCheckedOut: 0,
@@ -556,7 +615,11 @@ function buildSettlementWorksheetPinnedBottomRow(rows) {
         quantityDamaged: 0,
         quantityGifted: 0,
         onHand: 0,
-        valueSold: 0
+        valueSold: 0,
+        valueReturned: 0,
+        valueDamaged: 0,
+        valueGifted: 0,
+        valueOnHand: 0
     });
 
     return [{
@@ -567,7 +630,11 @@ function buildSettlementWorksheetPinnedBottomRow(rows) {
         quantityDamaged: totals.quantityDamaged,
         quantityGifted: totals.quantityGifted,
         onHand: totals.onHand,
-        valueSold: Number(totals.valueSold.toFixed(2))
+        valueSold: Number(totals.valueSold.toFixed(2)),
+        valueReturned: Number(totals.valueReturned.toFixed(2)),
+        valueDamaged: Number(totals.valueDamaged.toFixed(2)),
+        valueGifted: Number(totals.valueGifted.toFixed(2)),
+        valueOnHand: Number(totals.valueOnHand.toFixed(2))
     }];
 }
 

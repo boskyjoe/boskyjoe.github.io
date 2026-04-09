@@ -260,6 +260,10 @@ function computeWorksheetMetrics(rows = []) {
         summary.totalOnHandQuantity += quantityCheckedOut - (quantitySold + quantityReturned + quantityDamaged + quantityGifted);
         summary.totalValueCheckedOut += quantityCheckedOut * price;
         summary.totalValueSold += quantitySold * price;
+        summary.totalValueReturned += quantityReturned * price;
+        summary.totalValueDamaged += quantityDamaged * price;
+        summary.totalValueGifted += quantityGifted * price;
+        summary.totalValueOnHand += (quantityCheckedOut - (quantitySold + quantityReturned + quantityDamaged + quantityGifted)) * price;
         return summary;
     }, {
         totalQuantityCheckedOut: 0,
@@ -269,7 +273,11 @@ function computeWorksheetMetrics(rows = []) {
         totalQuantityGifted: 0,
         totalOnHandQuantity: 0,
         totalValueCheckedOut: 0,
-        totalValueSold: 0
+        totalValueSold: 0,
+        totalValueReturned: 0,
+        totalValueDamaged: 0,
+        totalValueGifted: 0,
+        totalValueOnHand: 0
     });
 }
 
@@ -363,6 +371,10 @@ function buildSummaryModel(snapshot) {
             { id: "simple-consignment-summary-quantity-out", label: "Qty Checked Out", value: String(metrics.totalQuantityCheckedOut) },
             { id: "simple-consignment-summary-value-out", label: "Value Checked Out", value: formatCurrency(metrics.totalValueCheckedOut) },
             { id: "simple-consignment-summary-sold", label: "Sold Value", value: formatCurrency(metrics.totalValueSold) },
+            { id: "simple-consignment-summary-returned-value", label: "Returned Value", value: formatCurrency(metrics.totalValueReturned) },
+            { id: "simple-consignment-summary-damaged-value", label: "Damaged Value", value: formatCurrency(metrics.totalValueDamaged) },
+            { id: "simple-consignment-summary-gifted-value", label: "Gifted Value", value: formatCurrency(metrics.totalValueGifted) },
+            { id: "simple-consignment-summary-on-hand-value", label: "On-Hand Value", value: formatCurrency(metrics.totalValueOnHand) },
             { id: "simple-consignment-summary-paid", label: "Amount Paid", value: formatCurrency(paid) },
             { id: "simple-consignment-summary-expenses", label: "Expenses", value: formatCurrency(expenses) },
             { id: "simple-consignment-summary-balance", label: "Balance Due", value: formatCurrency(Math.max(liveBalanceDue, 0)) },
@@ -576,7 +588,7 @@ function renderSettlementWorkspace(snapshot) {
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Settlement Worksheet</p>
                             <p class="panel-copy">${isView
             ? "This settled order is read-only. Quantities shown below are final."
-            : "Update sold, returned, damaged, and gifted quantities. Save progress to commit inventory and totals."}</p>
+            : "Update sold, returned, damaged, and gifted quantities. Save progress to reconcile quantities and values. Payments can be recorded later."}</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
@@ -593,6 +605,7 @@ function renderSettlementWorkspace(snapshot) {
                         <div class="purchase-payments-history-header">
                             <p class="section-kicker">${summaryModel.transactionsTitle || "Order Transactions"}</p>
                             <p id="simple-consignment-transactions-count" class="panel-copy">${summaryModel.transactionsCountCopy}</p>
+                            ${isView ? "" : `<p class="panel-copy">Payments and expenses are optional during quantity updates and can be posted any time before close.</p>`}
                         </div>
                         ${isView ? "" : `
                             <form id="simple-consignment-transaction-form" class="purchase-payment-form">
@@ -1025,7 +1038,7 @@ async function handleSaveSettlementProgress() {
         initialProgress: 14,
         initialStep: "Step 1 of 4",
         successTitle: "Settlement Saved",
-        successMessage: "Settlement progress was saved and inventory returns were synchronized."
+        successMessage: "Settlement progress was saved. Payment collection can be posted separately when available."
     }, async ({ update }) => {
         update("Validating product quantities and financial consistency...", 42, "Step 2 of 4");
         const saveResult = await saveSimpleConsignmentSettlement(activeOrder, rows, user);
@@ -1039,7 +1052,7 @@ async function handleSaveSettlementProgress() {
 
     await showSummaryModal({
         title: "Settlement Updated",
-        message: "Product-level settlement values were saved and order totals were recalculated.",
+        message: "Product-level settlement values were saved and order totals were recalculated. Payment posting remains optional until close.",
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
             { label: "Sold Value", value: formatCurrency(result.summary?.totalValueSold || 0) },
