@@ -1,3 +1,5 @@
+import { icons } from "../../shared/icons.js";
+
 export function renderHomeView(user) {
     const root = document.getElementById("home-root");
     if (!root) return;
@@ -5,70 +7,85 @@ export function renderHomeView(user) {
     const displayName = user?.displayName || "Team";
 
     root.innerHTML = `
-        <section class="hero-card home-hero">
-            <p class="hero-kicker">Welcome</p>
-            <h2 class="hero-title">MONETA Home</h2>
-            <p class="hero-copy">
-                Hi ${displayName}. This is your landing workspace for MONETA with the core business workflow and module map.
-            </p>
-            <div class="hero-actions">
-                <a class="button button-primary" href="#/dashboard">Open Dashboard</a>
-            </div>
-        </section>
-
-        <section class="panel-card home-section" style="margin-top: 1rem;">
-            <div class="panel-header panel-header-accent">
-                <div class="panel-title-wrap">
-                    <div>
-                        <h3>Core Workflow</h3>
-                        <p class="panel-copy">From catalog setup to sales and analytics.</p>
-                    </div>
+        <section class="panel-card home-page-shell">
+            <div class="home-page-hero">
+                <h2>Welcome to <span>MONETA</span></h2>
+                <p>Your all-in-one solution for Point of Sale, Inventory Management, and Financial Reporting.</p>
+                <div class="home-hero-actions">
+                    <a class="button button-primary home-cta-button" href="#/dashboard">Open Dashboard</a>
                 </div>
             </div>
-            <div class="panel-body">
+
+            <div class="home-page-section">
+                <div class="home-page-section-head">
+                    <h3>A Seamless Workflow</h3>
+                    <p>From product creation to final sale, MONETA streamlines every step.</p>
+                </div>
                 <div class="home-workflow-grid">
-                    <article class="dashboard-card home-workflow-card">
-                        <p class="dashboard-label">Step 1</p>
-                        <p class="dashboard-value home-step-title">Create & Organize</p>
-                        <p class="panel-copy">Build master products and curate sales catalogues for different seasons and campaigns.</p>
+                    <article class="home-workflow-step">
+                        <div class="home-workflow-icon home-workflow-icon-blue">${icons.products}</div>
+                        <h4>1. Create & Organize</h4>
+                        <p>Define master products and group them into strategic sales catalogues.</p>
                     </article>
-                    <article class="dashboard-card home-workflow-card">
-                        <p class="dashboard-label">Step 2</p>
-                        <p class="dashboard-value home-step-title">Procure & Stock</p>
-                        <p class="panel-copy">Capture supplier purchases and keep inventory accurate with transaction-safe updates.</p>
+                    <article class="home-workflow-step">
+                        <div class="home-workflow-icon home-workflow-icon-violet">${icons.purchases}</div>
+                        <h4>2. Procure & Stock</h4>
+                        <p>Manage suppliers and record purchase invoices to automatically update inventory levels.</p>
                     </article>
-                    <article class="dashboard-card home-workflow-card">
-                        <p class="dashboard-label">Step 3</p>
-                        <p class="dashboard-value home-step-title">Sell & Distribute</p>
-                        <p class="panel-copy">Run retail sales and operational flows with structured controls and traceable actions.</p>
+                    <article class="home-workflow-step">
+                        <div class="home-workflow-icon home-workflow-icon-green">${icons.retail}</div>
+                        <h4>3. Sell & Distribute</h4>
+                        <p>Handle direct retail sales and distribution flows with controlled operational tracking.</p>
                     </article>
-                    <article class="dashboard-card home-workflow-card">
-                        <p class="dashboard-label">Step 4</p>
-                        <p class="dashboard-value home-step-title">Analyze & Grow</p>
-                        <p class="panel-copy">Use reporting and financial insights to improve turnover, margin, and execution quality.</p>
+                    <article class="home-workflow-step">
+                        <div class="home-workflow-icon home-workflow-icon-rose">${icons.dashboard}</div>
+                        <h4>4. Analyze & Grow</h4>
+                        <p>Track payments, manage finances, and generate reports to guide growth decisions.</p>
                     </article>
                 </div>
             </div>
-        </section>
 
-        <section class="panel-card home-section" style="margin-top: 1rem;">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <div>
-                        <h3>Module Overview</h3>
-                        <p class="panel-copy">The same business areas from TrinityCart, now in Moneta's modular shell.</p>
-                    </div>
+            <div class="home-page-section home-modules-section">
+                <div class="home-page-section-head">
+                    <h3>Explore the Modules</h3>
+                    <p>A complete suite of tools to run your business efficiently.</p>
+                </div>
+                <div class="home-modules-grid">
+                    <article class="home-module-card">
+                        <p class="home-module-label">Pre-Sales</p>
+                        <h4>Enquiries</h4>
+                        <p>Capture prospects, track context, and build qualified opportunities.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <p class="home-module-label">Direct Sales</p>
+                        <h4>Retail Store</h4>
+                        <p>Execute store transactions, returns, expenses, and payments in one flow.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <p class="home-module-label">Inventory</p>
+                        <h4>Stock Purchase</h4>
+                        <p>Post supplier invoices and keep stock movement and valuation synchronized.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <p class="home-module-label">Store Admin</p>
+                        <h4>Product Catalogue</h4>
+                        <p>Manage product definitions, activation lifecycle, and pricing anchors.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <p class="home-module-label">Store Admin</p>
+                        <h4>Sales Catalogue</h4>
+                        <p>Publish season-driven assortments for sales and operations teams.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <p class="home-module-label">System</p>
+                        <h4>Admin & Users</h4>
+                        <p>Control master data, enforce role-based access, and manage user permissions.</p>
+                    </article>
                 </div>
             </div>
-            <div class="panel-body">
-                <div class="home-modules-grid">
-                    <article class="dashboard-card"><p class="dashboard-label">Pre-Sales</p><p class="dashboard-value home-module-title">Enquiries</p></article>
-                    <article class="dashboard-card"><p class="dashboard-label">Direct Sales</p><p class="dashboard-value home-module-title">Retail Store</p></article>
-                    <article class="dashboard-card"><p class="dashboard-label">Inventory</p><p class="dashboard-value home-module-title">Stock Purchase</p></article>
-                    <article class="dashboard-card"><p class="dashboard-label">Store Admin</p><p class="dashboard-value home-module-title">Products, Catalogues, Suppliers</p></article>
-                    <article class="dashboard-card"><p class="dashboard-label">System</p><p class="dashboard-value home-module-title">Admin Modules</p></article>
-                    <article class="dashboard-card"><p class="dashboard-label">Security</p><p class="dashboard-value home-module-title">User Management</p></article>
-                </div>
+
+            <div class="home-page-footer-note">
+                Logged in as <strong>${displayName}</strong>
             </div>
         </section>
     `;
