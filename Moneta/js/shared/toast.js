@@ -1,5 +1,6 @@
 const SIMPLE_TOAST_TIMEOUT_MS = 3200;
 const PROGRESS_HIDE_DELAY_MS = 1400;
+const PROGRESS_ERROR_HIDE_DELAY_MS = 7600;
 
 const TOAST_LABELS = {
     info: "Working",
@@ -228,7 +229,7 @@ export const ProgressToast = {
         setProgressVisibility(true);
     },
 
-    showError(message, title = "Operation Failed") {
+    showError(message, title = "Operation Failed", options = {}) {
         const elements = getProgressElements();
         if (!elements.toast) return;
 
@@ -242,6 +243,11 @@ export const ProgressToast = {
         elements.percentage.textContent = "100%";
         elements.progress.style.width = "100%";
         setProgressVisibility(true);
+
+        const { persist = false, autoHideDelay = PROGRESS_ERROR_HIDE_DELAY_MS } = options;
+        if (!persist) {
+            ProgressToast.hide(autoHideDelay);
+        }
     },
 
     hide(delay = PROGRESS_HIDE_DELAY_MS) {
