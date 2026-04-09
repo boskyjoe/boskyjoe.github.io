@@ -80,6 +80,26 @@ function normalizeText(value) {
     return (value || "").trim();
 }
 
+function resolveCategoryDisplay(snapshot, sourceItem = {}, product = null) {
+    const categories = snapshot?.masterData?.categories || [];
+
+    const rawCategoryId = normalizeText(sourceItem.categoryId)
+        || normalizeText(sourceItem.category)
+        || normalizeText(product?.categoryId)
+        || normalizeText(product?.category);
+    const categoryFromMaster = categories.find(category => category.id === rawCategoryId);
+    const rawCategoryName = normalizeText(sourceItem.categoryName)
+        || normalizeText(product?.categoryName)
+        || normalizeText(categoryFromMaster?.categoryName);
+
+    const categoryName = rawCategoryName || rawCategoryId || "-";
+
+    return {
+        categoryId: rawCategoryId,
+        categoryName
+    };
+}
+
 function toDateInputValue(value) {
     if (!value) return "";
 
@@ -206,11 +226,12 @@ function getOrderWorksheetRows(order, snapshot) {
 
     return (order.items || []).map(item => {
         const product = productMap.get(item.productId);
+        const resolvedCategory = resolveCategoryDisplay(snapshot, item, product);
         return {
             productId: item.productId,
             productName: item.productName || product?.itemName || "Untitled Product",
-            categoryId: item.categoryId || product?.categoryId || "",
-            categoryName: item.categoryName || "-",
+            categoryId: resolvedCategory.categoryId,
+            categoryName: resolvedCategory.categoryName,
             sellingPrice: Number(item.sellingPrice) || 0,
             inventoryCount: Math.max(0, Math.floor(Number(product?.inventoryCount) || 0)),
             quantityCheckedOut: Math.max(0, Math.floor(Number(item.quantityCheckedOut) || 0)),
@@ -793,11 +814,12 @@ async function loadCatalogueItemsIntoWorkspace(catalogueId) {
 
         featureState.catalogueItemRows = (catalogueItems || []).map(item => {
             const product = productMap.get(item.productId);
+            const resolvedCategory = resolveCategoryDisplay(snapshot, item, product);
             return {
                 productId: item.productId,
                 productName: item.productName || product?.itemName || "Untitled Product",
-                categoryId: item.categoryId || product?.categoryId || "",
-                categoryName: item.categoryName || "-",
+                categoryId: resolvedCategory.categoryId,
+                categoryName: resolvedCategory.categoryName,
                 sellingPrice: Number(item.sellingPrice) || 0,
                 inventoryCount: Math.max(0, Math.floor(Number(product?.inventoryCount) || 0)),
                 quantityCheckedOut: quantityMap.get(item.productId) || 0,
