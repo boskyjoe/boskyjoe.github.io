@@ -1,18 +1,14 @@
-function getDefaultDisabledReason(button) {
-    return button?.dataset?.disabledDefaultReason
-        || "This action is currently unavailable.";
-}
-
 export function annotateDisabledActionButtons(root = document) {
     if (!root?.querySelectorAll) return;
 
     root.querySelectorAll("button.button:disabled").forEach(button => {
-        if (!button.dataset.disabledReason) {
-            button.dataset.disabledReason = getDefaultDisabledReason(button);
-        }
+        const reason = button.title
+            || button.dataset?.disabledReason
+            || button.dataset?.disabledDefaultReason
+            || "This action is currently unavailable.";
 
-        if (!button.title) {
-            button.title = button.dataset.disabledReason;
+        if (button.title !== reason) {
+            button.title = reason;
         }
     });
 }

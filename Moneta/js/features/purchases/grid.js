@@ -44,7 +44,7 @@ function getDisabledActionAttrs(disabled, reason) {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
 
-    return `disabled data-disabled-reason="${safeReason}"`;
+    return `disabled title="${safeReason}"`;
 }
 
 function invoiceActionMarkup(data) {

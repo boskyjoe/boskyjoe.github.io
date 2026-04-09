@@ -145,7 +145,7 @@ function buildDisabledActionAttrs(disabled, reason) {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
 
-    return `disabled data-disabled-reason="${safeReason}"`;
+    return `disabled title="${safeReason}"`;
 }
 
 function toDateInputValue(value) {
@@ -1057,38 +1057,38 @@ function renderRetailSaleActionsModal() {
                     </div>
                 </div>
                 <div class="panel-body purchase-payment-modal-body">
-                    <div class="workspace-form-sections" style="gap: 0.75rem;">
-                        <button class="button button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${editDisabledAttrs}>
+                    <div class="retail-sale-actions-list">
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${editDisabledAttrs}>
                             <span class="button-icon">${icons.edit}</span>
                             Edit Sale
                         </button>
-                        <button class="button button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${returnDisabledAttrs}>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${returnDisabledAttrs}>
                             <span class="button-icon">${icons.warning}</span>
                             Return Products
                         </button>
-                        <button class="button button-secondary retail-sale-action-return-history" type="button" data-sale-id="${sale.id}">
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-return-history" type="button" data-sale-id="${sale.id}">
                             <span class="button-icon">${icons.search}</span>
                             Return History
                         </button>
-                        <button class="button button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${expenseDisabledAttrs}>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${expenseDisabledAttrs}>
                             <span class="button-icon">${icons.plus}</span>
                             Add Expense
                         </button>
-                        <button class="button button-secondary retail-sale-action-pdf" type="button" data-sale-id="${sale.id}">
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-pdf" type="button" data-sale-id="${sale.id}">
                             <span class="button-icon">${icons.download}</span>
                             Download Invoice PDF
                         </button>
-                        <button class="button button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
                             <span class="button-icon">${icons.download}</span>
                             Download Credit Note
                         </button>
-                        <button class="button button-danger-soft retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${voidDisabledAttrs}>
+                        <button class="button grid-action-button grid-action-button-danger retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${voidDisabledAttrs}>
                             <span class="button-icon">${icons.warning}</span>
                             Void Sale
                         </button>
                     </div>
                     <div class="form-actions">
-                        <button id="retail-sale-actions-close-button" class="button button-secondary" type="button">
+                        <button id="retail-sale-actions-close-button" class="button grid-action-button grid-action-button-secondary" type="button">
                             <span class="button-icon">${icons.inactive}</span>
                             Close
                         </button>
