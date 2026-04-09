@@ -116,6 +116,114 @@ function roundCurrency(value) {
     return Number((Number(value) || 0).toFixed(2));
 }
 
+const SETTLEMENT_TRACKED_FIELDS = [
+    { key: "quantitySold", label: "Sold" },
+    { key: "quantityReturned", label: "Returned" },
+    { key: "quantityDamaged", label: "Damaged" },
+    { key: "quantityGifted", label: "Gifted" }
+];
+
+const ORDER_CONTEXT_TRACKED_FIELDS = [
+    "manualVoucherNumber",
+    "teamName",
+    "teamMemberName",
+    "memberPhone",
+    "memberEmail",
+    "venue"
+];
+
+function toWholeNumber(value) {
+    return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function formatSignedInteger(value) {
+    const normalized = Math.trunc(Number(value) || 0);
+    if (normalized === 0) return "0";
+    return normalized > 0 ? `+${normalized}` : `${normalized}`;
+}
+
+function formatSignedCurrency(value) {
+    const normalized = roundCurrency(value);
+    if (normalized === 0) {
+        return formatCurrency(0);
+    }
+
+    const prefix = normalized > 0 ? "+" : "-";
+    return `${prefix}${formatCurrency(Math.abs(normalized))}`;
+}
+
+function buildPersistedSettlementRows(order) {
+    return (order?.items || []).map(item => ({
+        productId: item.productId,
+        productName: item.productName || "Untitled Product",
+        sellingPrice: Number(item.sellingPrice) || 0,
+        quantityCheckedOut: toWholeNumber(item.quantityCheckedOut),
+        quantitySold: toWholeNumber(item.quantitySold),
+        quantityReturned: toWholeNumber(item.quantityReturned),
+        quantityDamaged: toWholeNumber(item.quantityDamaged),
+        quantityGifted: toWholeNumber(item.quantityGifted)
+    }));
+}
+
+function buildSettlementDeltaSummary(order, nextRows = []) {
+    const previousRows = buildPersistedSettlementRows(order);
+    const previousMap = new Map(previousRows.map(row => [row.productId, row]));
+    const nextMap = new Map((nextRows || []).map(row => [row.productId, row]));
+    const productIds = Array.from(new Set([...previousMap.keys(), ...nextMap.keys()]));
+    const lineChanges = [];
+
+    productIds.forEach(productId => {
+        const previous = previousMap.get(productId) || {};
+        const next = nextMap.get(productId) || {};
+        const fieldChanges = [];
+
+        SETTLEMENT_TRACKED_FIELDS.forEach(field => {
+            const before = toWholeNumber(previous[field.key]);
+            const after = toWholeNumber(next[field.key]);
+            const delta = after - before;
+            if (delta !== 0) {
+                fieldChanges.push(`${field.label} ${before} -> ${after} (${formatSignedInteger(delta)})`);
+            }
+        });
+
+        if (fieldChanges.length > 0) {
+            lineChanges.push({
+                productName: next.productName || previous.productName || productId || "Product",
+                changeCopy: fieldChanges.join(", ")
+            });
+        }
+    });
+
+    lineChanges.sort((left, right) => left.productName.localeCompare(right.productName));
+
+    const previousMetrics = computeWorksheetMetrics(previousRows);
+    const nextMetrics = computeWorksheetMetrics(nextRows || []);
+    const paid = Number(order?.totalAmountPaid) || 0;
+    const expenses = Number(order?.totalExpenses) || 0;
+    const previousBalanceDue = roundCurrency(previousMetrics.totalValueSold - paid - expenses);
+    const nextBalanceDue = roundCurrency(nextMetrics.totalValueSold - paid - expenses);
+
+    return {
+        lineChanges,
+        lineChangeCount: lineChanges.length,
+        impact: {
+            soldValueDelta: roundCurrency(nextMetrics.totalValueSold - previousMetrics.totalValueSold),
+            returnedValueDelta: roundCurrency(nextMetrics.totalValueReturned - previousMetrics.totalValueReturned),
+            damagedValueDelta: roundCurrency(nextMetrics.totalValueDamaged - previousMetrics.totalValueDamaged),
+            giftedValueDelta: roundCurrency(nextMetrics.totalValueGifted - previousMetrics.totalValueGifted),
+            onHandValueDelta: roundCurrency(nextMetrics.totalValueOnHand - previousMetrics.totalValueOnHand),
+            onHandQuantityDelta: Math.trunc((Number(nextMetrics.totalOnHandQuantity) || 0) - (Number(previousMetrics.totalOnHandQuantity) || 0)),
+            balanceDueDelta: roundCurrency(nextBalanceDue - previousBalanceDue)
+        }
+    };
+}
+
+function hasOrderContextUpdated(order, contextPayload = {}) {
+    return ORDER_CONTEXT_TRACKED_FIELDS.some(field => (
+        normalizeText(order?.[field]) !== normalizeText(contextPayload?.[field])
+    ));
+}
+
 function getActiveOrder() {
     if (!featureState.activeOrderId) return null;
     return featureState.orders.find(order => order.id === featureState.activeOrderId) || null;
@@ -526,7 +634,9 @@ function renderCheckoutForm(snapshot) {
 
 function renderSettlementWorkspace(snapshot) {
     const order = getActiveOrder();
+    const draft = featureState.checkoutDraft;
     const isView = isViewMode();
+    const contextFieldDisabledAttr = isView ? "disabled" : "";
     const summaryModel = buildSummaryModel(snapshot);
     const closeButtonDisabledAttr = summaryModel.guard.disabled
         ? `disabled title="${summaryModel.guard.reason.replaceAll('"', "&quot;")}"`
@@ -552,7 +662,7 @@ function renderSettlementWorkspace(snapshot) {
                     </div>
                     <div class="field">
                         <label>Voucher #</label>
-                        <input class="input" type="text" value="${order?.manualVoucherNumber || ""}" disabled>
+                        <input id="simple-consignment-voucher" class="input" type="text" value="${draft.manualVoucherNumber ?? order?.manualVoucherNumber ?? ""}" ${contextFieldDisabledAttr}>
                     </div>
                     <div class="field">
                         <label>Sales Catalogue</label>
@@ -560,23 +670,23 @@ function renderSettlementWorkspace(snapshot) {
                     </div>
                     <div class="field">
                         <label>Team Name</label>
-                        <input class="input" type="text" value="${order?.teamName || ""}" disabled>
+                        <input id="simple-consignment-team-name" class="input" type="text" value="${draft.teamName ?? order?.teamName ?? ""}" ${contextFieldDisabledAttr}>
                     </div>
                     <div class="field">
                         <label>Team Member</label>
-                        <input class="input" type="text" value="${order?.teamMemberName || ""}" disabled>
+                        <input id="simple-consignment-member-name" class="input" type="text" value="${draft.teamMemberName ?? order?.teamMemberName ?? ""}" ${contextFieldDisabledAttr}>
                     </div>
                     <div class="field">
                         <label>Member Phone</label>
-                        <input class="input" type="text" value="${order?.memberPhone || ""}" disabled>
+                        <input id="simple-consignment-member-phone" class="input" type="text" value="${draft.memberPhone ?? order?.memberPhone ?? ""}" ${contextFieldDisabledAttr}>
                     </div>
                     <div class="field">
                         <label>Member Email</label>
-                        <input class="input" type="text" value="${order?.memberEmail || ""}" disabled>
+                        <input id="simple-consignment-member-email" class="input" type="email" value="${draft.memberEmail ?? order?.memberEmail ?? ""}" ${contextFieldDisabledAttr}>
                     </div>
                     <div class="field field-full">
                         <label>Venue</label>
-                        <textarea class="textarea" disabled>${order?.venue || ""}</textarea>
+                        <textarea id="simple-consignment-venue" class="textarea" ${contextFieldDisabledAttr}>${draft.venue ?? order?.venue ?? ""}</textarea>
                     </div>
                 </div>
 
@@ -966,6 +1076,36 @@ function getCheckoutPayloadFromDom() {
     };
 }
 
+function getSettlementContextPayloadFromDom(order) {
+    const manualVoucherInput = document.getElementById("simple-consignment-voucher");
+    const teamNameInput = document.getElementById("simple-consignment-team-name");
+    const teamMemberInput = document.getElementById("simple-consignment-member-name");
+    const memberPhoneInput = document.getElementById("simple-consignment-member-phone");
+    const memberEmailInput = document.getElementById("simple-consignment-member-email");
+    const venueInput = document.getElementById("simple-consignment-venue");
+
+    return {
+        manualVoucherNumber: manualVoucherInput
+            ? manualVoucherInput.value
+            : (featureState.checkoutDraft.manualVoucherNumber ?? order?.manualVoucherNumber ?? ""),
+        teamName: teamNameInput
+            ? teamNameInput.value
+            : (featureState.checkoutDraft.teamName ?? order?.teamName ?? ""),
+        teamMemberName: teamMemberInput
+            ? teamMemberInput.value
+            : (featureState.checkoutDraft.teamMemberName ?? order?.teamMemberName ?? ""),
+        memberPhone: memberPhoneInput
+            ? memberPhoneInput.value
+            : (featureState.checkoutDraft.memberPhone ?? order?.memberPhone ?? ""),
+        memberEmail: memberEmailInput
+            ? memberEmailInput.value
+            : (featureState.checkoutDraft.memberEmail ?? order?.memberEmail ?? ""),
+        venue: venueInput
+            ? venueInput.value
+            : (featureState.checkoutDraft.venue ?? order?.venue ?? "")
+    };
+}
+
 function getTransactionPayloadFromDom() {
     return {
         transactionDate: document.getElementById("simple-consignment-transaction-date")?.value || featureState.transactionDraft.transactionDate,
@@ -1031,6 +1171,9 @@ async function handleSaveSettlementProgress() {
     if (!activeOrder) return;
 
     const rows = getSimpleConsignmentWorksheetRows();
+    const settlementContextPayload = getSettlementContextPayloadFromDom(activeOrder);
+    const contextUpdated = hasOrderContextUpdated(activeOrder, settlementContextPayload);
+    const deltaSummary = buildSettlementDeltaSummary(activeOrder, rows);
     const result = await runProgressToastFlow({
         title: "Saving Settlement Progress",
         theme: "info",
@@ -1041,8 +1184,8 @@ async function handleSaveSettlementProgress() {
         successMessage: "Settlement progress was saved. Payment collection can be posted separately when available."
     }, async ({ update }) => {
         update("Validating product quantities and financial consistency...", 42, "Step 2 of 4");
-        const saveResult = await saveSimpleConsignmentSettlement(activeOrder, rows, user);
-        update("Committing settlement totals and inventory deltas...", 78, "Step 3 of 4");
+        const saveResult = await saveSimpleConsignmentSettlement(activeOrder, rows, settlementContextPayload, user);
+        update("Committing order context, settlement totals, and inventory deltas...", 78, "Step 3 of 4");
         return saveResult;
     });
 
@@ -1050,16 +1193,39 @@ async function handleSaveSettlementProgress() {
         title: "Simple Consignment"
     });
 
+    const displayedLineChanges = deltaSummary.lineChanges.slice(0, 6);
+    const hiddenLineChangesCount = Math.max(0, deltaSummary.lineChangeCount - displayedLineChanges.length);
+
     await showSummaryModal({
         title: "Settlement Updated",
-        message: "Product-level settlement values were saved and order totals were recalculated. Payment posting remains optional until close.",
+        message: deltaSummary.lineChangeCount > 0
+            ? "Settlement saved with the worksheet updates below. Payment posting remains optional until close."
+            : contextUpdated
+                ? "Order context was updated. Worksheet quantities were unchanged."
+                : "No worksheet quantity updates were detected. Existing values were revalidated and totals were refreshed.",
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
+            { label: "Line Updates", value: String(deltaSummary.lineChangeCount) },
             { label: "Sold Value", value: formatCurrency(result.summary?.totalValueSold || 0) },
             { label: "Returned Qty", value: String(result.summary?.totalQuantityReturned || 0) },
             { label: "On Hand", value: String(result.summary?.totalOnHandQuantity || 0) },
-            { label: "Balance Due", value: formatCurrency(result.summary?.balanceDue || 0) }
-        ]
+            { label: "Balance Due", value: formatCurrency(result.summary?.balanceDue || 0) },
+            { label: "Sold Value Delta", value: formatSignedCurrency(deltaSummary.impact.soldValueDelta) },
+            { label: "Returned Value Delta", value: formatSignedCurrency(deltaSummary.impact.returnedValueDelta) },
+            { label: "Damaged Value Delta", value: formatSignedCurrency(deltaSummary.impact.damagedValueDelta) },
+            { label: "Gifted Value Delta", value: formatSignedCurrency(deltaSummary.impact.giftedValueDelta) },
+            { label: "On Hand Value Delta", value: formatSignedCurrency(deltaSummary.impact.onHandValueDelta) },
+            { label: "On Hand Qty Delta", value: formatSignedInteger(deltaSummary.impact.onHandQuantityDelta) },
+            { label: "Balance Delta", value: formatSignedCurrency(deltaSummary.impact.balanceDueDelta) },
+            ...displayedLineChanges.map((entry, index) => ({
+                label: `Update ${index + 1}`,
+                value: `${entry.productName}: ${entry.changeCopy}`
+            }))
+        ],
+        note: [
+            contextUpdated ? "Order context updated." : "",
+            hiddenLineChangesCount > 0 ? `${hiddenLineChangesCount} additional line update(s) are not shown in this summary.` : ""
+        ].filter(Boolean).join(" ")
     });
 }
 

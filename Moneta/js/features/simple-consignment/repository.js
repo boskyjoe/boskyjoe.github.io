@@ -237,7 +237,7 @@ export async function createSimpleConsignmentRecord(orderPayload, user) {
     });
 }
 
-export async function saveSimpleConsignmentSettlementRecord(orderId, items, user) {
+export async function saveSimpleConsignmentSettlementRecord(orderId, items, contextPayload, user) {
     const db = getDb();
     const now = getNow();
     const orderRef = db.collection(COLLECTIONS.simpleConsignments).doc(orderId);
@@ -302,6 +302,12 @@ export async function saveSimpleConsignmentSettlementRecord(orderId, items, user
         });
 
         transaction.update(orderRef, {
+            manualVoucherNumber: normalizeText(contextPayload?.manualVoucherNumber) || normalizeText(orderData.manualVoucherNumber),
+            teamName: normalizeText(contextPayload?.teamName) || normalizeText(orderData.teamName),
+            teamMemberName: normalizeText(contextPayload?.teamMemberName) || normalizeText(orderData.teamMemberName),
+            memberPhone: normalizeText(contextPayload?.memberPhone) || normalizeText(orderData.memberPhone),
+            memberEmail: normalizeText(contextPayload?.memberEmail),
+            venue: normalizeText(contextPayload?.venue) || normalizeText(orderData.venue),
             items: totals.items,
             lineItemCount: totals.lineItemCount,
             totalQuantityCheckedOut: totals.totalQuantityCheckedOut,

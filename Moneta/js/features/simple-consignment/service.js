@@ -40,6 +40,15 @@ function parseRequiredAmount(value, label) {
     return roundCurrency(amount);
 }
 
+function parseRequiredText(value, label) {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        throw new Error(`${label} is required.`);
+    }
+
+    return normalized;
+}
+
 function normalizeCheckoutItems(rows = []) {
     const duplicateLookup = new Set();
     const items = [];
@@ -121,6 +130,17 @@ function normalizeSettlementItems(rows = []) {
     return normalized;
 }
 
+function normalizeSettlementContextPayload(payload = {}, order = {}) {
+    return {
+        manualVoucherNumber: parseRequiredText(payload.manualVoucherNumber ?? order.manualVoucherNumber, "Manual voucher number"),
+        teamName: parseRequiredText(payload.teamName ?? order.teamName, "Team name"),
+        teamMemberName: parseRequiredText(payload.teamMemberName ?? order.teamMemberName, "Team member name"),
+        memberPhone: parseRequiredText(payload.memberPhone ?? order.memberPhone, "Team member phone"),
+        memberEmail: normalizeText(payload.memberEmail ?? order.memberEmail),
+        venue: parseRequiredText(payload.venue ?? order.venue, "Venue")
+    };
+}
+
 function resolveCatalogue(catalogueId, salesCatalogues = []) {
     return (salesCatalogues || []).find(catalogue => catalogue.id === catalogueId) || null;
 }
@@ -197,7 +217,7 @@ export async function saveSimpleConsignmentCheckout(payload, user, salesCatalogu
     };
 }
 
-export function validateSimpleConsignmentSettlementPayload(order, rows, user) {
+export function validateSimpleConsignmentSettlementPayload(order, rows, contextPayload, user) {
     if (!user) {
         throw new Error("You must be logged in to save settlement progress.");
     }
@@ -210,16 +230,20 @@ export function validateSimpleConsignmentSettlementPayload(order, rows, user) {
         throw new Error("Only active consignment orders can be updated.");
     }
 
-    return normalizeSettlementItems(rows || []);
+    return {
+        items: normalizeSettlementItems(rows || []),
+        context: normalizeSettlementContextPayload(contextPayload, order)
+    };
 }
 
-export async function saveSimpleConsignmentSettlement(order, rows, user) {
-    const normalizedItems = validateSimpleConsignmentSettlementPayload(order, rows, user);
-    const result = await saveSimpleConsignmentSettlementRecord(order.id, normalizedItems, user);
+export async function saveSimpleConsignmentSettlement(order, rows, contextPayload, user) {
+    const validated = validateSimpleConsignmentSettlementPayload(order, rows, contextPayload, user);
+    const result = await saveSimpleConsignmentSettlementRecord(order.id, validated.items, validated.context, user);
 
     return {
         ...result,
-        items: normalizedItems
+        items: validated.items,
+        context: validated.context
     };
 }
 
