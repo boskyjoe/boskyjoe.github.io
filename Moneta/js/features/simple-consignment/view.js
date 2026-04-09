@@ -785,8 +785,7 @@ async function loadCatalogueItemsIntoWorkspace(catalogueId) {
     try {
         const existingRows = getSimpleConsignmentWorksheetRows();
         const quantityMap = new Map(
-            existingRows.map(row => [row.productId, Math.max(0, Math.floor(Number(row.quantityCheckedOut) || 0)])
-            )
+            existingRows.map(row => [row.productId, Math.max(0, Math.floor(Number(row.quantityCheckedOut) || 0))])
         );
         const snapshot = getState();
         const productMap = new Map((snapshot.masterData.products || []).map(product => [product.id, product]));
