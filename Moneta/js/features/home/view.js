@@ -79,6 +79,16 @@ export function renderHomeView(user) {
                     </article>
                     <article class="home-module-card">
                         <div class="home-module-head">
+                            <span class="home-module-icon nav-icon nav-icon-cyan">${icons.consignment}</span>
+                            <div>
+                                <p class="home-module-label">POS</p>
+                                <h4>Simple Consignment</h4>
+                            </div>
+                        </div>
+                        <p>Manage checkout, settlement, transaction posting, and controlled order closure for team consignments.</p>
+                    </article>
+                    <article class="home-module-card">
+                        <div class="home-module-head">
                             <span class="home-module-icon nav-icon nav-icon-orange">${icons.purchases}</span>
                             <div>
                                 <p class="home-module-label">Inventory</p>

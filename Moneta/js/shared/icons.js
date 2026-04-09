@@ -115,5 +115,12 @@ export const icons = {
             <path d="M9 16h2.5"></path>
             <path d="M14.5 13v7"></path>
         </svg>
+    `,
+    consignment: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 7.5 12 3l9 4.5-9 4.5z"></path>
+            <path d="M3 12.5 12 17l9-4.5"></path>
+            <path d="M3 17l9 4 9-4"></path>
+        </svg>
     `
 };

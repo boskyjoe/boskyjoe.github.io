@@ -1756,6 +1756,28 @@ select {
     flex-wrap: wrap;
 }
 
+.simple-consignment-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.simple-consignment-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.simple-consignment-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 1rem;
+}
+
+.simple-consignment-product-list-shell {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
 @media (max-width: 860px) {
     .form-grid {
         grid-template-columns: 1fr;
@@ -1788,6 +1810,9 @@ select {
     .retail-expense-summary-grid,
     .retail-return-preview-row,
     .retail-summary-grid,
+    .simple-consignment-form-grid,
+    .simple-consignment-summary-grid,
+    .simple-consignment-product-list-shell,
     .retail-product-list-shell,
     .bulk-product-list,
     .lead-form-sections,

@@ -11,6 +11,7 @@ import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
 import { showLeadsPage } from "../features/leads/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
+import { showSimpleConsignmentPage } from "../features/simple-consignment/index.js";
 import { showHomePage } from "../features/home/index.js";
 
 const ROUTE_TO_VIEW = {
@@ -19,6 +20,7 @@ const ROUTE_TO_VIEW = {
     "#/dashboard": "dashboard-view",
     "#/leads": "leads-view",
     "#/retail-store": "retail-store-view",
+    "#/simple-consignment": "simple-consignment-view",
     "#/suppliers": "suppliers-view",
     "#/products": "products-view",
     "#/sales-catalogues": "sales-catalogues-view",
@@ -58,6 +60,8 @@ function getViewTitle(route) {
             return "Leads & Enquiries";
         case "#/retail-store":
             return "Retail Store";
+        case "#/simple-consignment":
+            return "Simple Consignment";
         case "#/suppliers":
             return "Supplier Management";
         case "#/products":
@@ -116,6 +120,10 @@ export function resolveRoute() {
 
     if (route === "#/retail-store") {
         showRetailStorePage();
+    }
+
+    if (route === "#/simple-consignment") {
+        showSimpleConsignmentPage();
     }
 
     if (route === "#/products") {

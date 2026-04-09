@@ -48,6 +48,15 @@ export const navConfig = [
         enabled: true
     },
     {
+        type: "link",
+        route: "#/simple-consignment",
+        label: "Simple Consignment",
+        icon: icons.consignment,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager"],
+        enabled: true
+    },
+    {
         type: "heading",
         label: "Inventory",
         roles: ["admin", "inventory_manager"]
