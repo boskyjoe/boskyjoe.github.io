@@ -1809,6 +1809,25 @@ select {
     flex-wrap: wrap;
 }
 
+.lead-worklog-modal-card {
+    width: min(1080px, 100%);
+}
+
+.lead-worklog-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.lead-worklog-entry-grid {
+    display: grid;
+    gap: 0.95rem;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+}
+
+.lead-worklog-entry-card .textarea {
+    min-height: 96px;
+}
+
 .simple-consignment-shell {
     display: grid;
     gap: 1rem;
@@ -1873,7 +1892,8 @@ select {
     .retail-product-list-shell,
     .bulk-product-list,
     .lead-form-sections,
-    .lead-form-section-grid {
+    .lead-form-section-grid,
+    .lead-worklog-entry-grid {
         grid-template-columns: 1fr;
     }
 

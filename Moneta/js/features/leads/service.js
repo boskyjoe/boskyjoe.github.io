@@ -1,4 +1,5 @@
 import {
+    addLeadWorkLogRecord,
     createLeadRecord,
     deleteLeadRecord,
     getLeadDeleteRestriction,
@@ -7,6 +8,7 @@ import {
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
+export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "General Note"];
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -170,4 +172,35 @@ export async function deleteLead(lead) {
     }
 
     await deleteLeadRecord(lead.id);
+}
+
+export function validateLeadWorkLogPayload(payload) {
+    const leadId = normalizeText(payload.leadId);
+    const logType = LEAD_LOG_TYPES.includes(normalizeText(payload.logType))
+        ? normalizeText(payload.logType)
+        : "";
+    const notes = normalizeText(payload.notes);
+
+    if (!leadId) {
+        throw new Error("Select a lead record first.");
+    }
+
+    if (!logType) {
+        throw new Error("Select a valid work log type.");
+    }
+
+    if (!notes) {
+        throw new Error("Work log notes are required.");
+    }
+
+    return { leadId, logData: { logType, notes } };
+}
+
+export async function saveLeadWorkLog(payload, user) {
+    if (!user) {
+        throw new Error("You must be logged in to add work log entries.");
+    }
+
+    const { leadId, logData } = validateLeadWorkLogPayload(payload);
+    await addLeadWorkLogRecord(leadId, logData, user);
 }

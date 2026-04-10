@@ -5,16 +5,19 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
+    initializeLeadWorkLogGrid,
     getLeadRequestedProductsGridRows,
     initializeLeadRequestedProductsGrid,
     initializeLeadsGrid,
     refreshLeadRequestedProductsGrid,
+    refreshLeadWorkLogGrid,
     refreshLeadsGrid,
     updateLeadRequestedProductsGridSearch,
+    updateLeadWorkLogGridSearch,
     updateLeadsGridSearch
 } from "./grid.js";
-import { fetchSalesCatalogueItems, subscribeToLeads } from "./repository.js";
-import { deleteLead, LEAD_SOURCES, LEAD_STATUSES, saveLead } from "./service.js";
+import { fetchSalesCatalogueItems, subscribeToLeadWorkLog, subscribeToLeads } from "./repository.js";
+import { deleteLead, LEAD_LOG_TYPES, LEAD_SOURCES, LEAD_STATUSES, saveLead, saveLeadWorkLog } from "./service.js";
 
 const featureState = {
     leads: [],
@@ -23,7 +26,12 @@ const featureState = {
     itemSearchTerm: "",
     selectedCatalogueId: "",
     catalogueItemRows: [],
-    unsubscribeLeads: null
+    unsubscribeLeads: null,
+    activeWorkLogLeadId: null,
+    unsubscribeWorkLog: null,
+    workLogListenerLeadId: null,
+    workLogEntries: [],
+    workLogSearchTerm: ""
 };
 
 function normalizeText(value) {
@@ -47,11 +55,22 @@ function getEditingLead() {
     return featureState.leads.find(lead => lead.id === featureState.editingLeadId) || null;
 }
 
+function getActiveWorkLogLead() {
+    if (!featureState.activeWorkLogLeadId) return null;
+    return featureState.leads.find(lead => lead.id === featureState.activeWorkLogLeadId) || null;
+}
+
 function resetLeadWorkspace() {
     featureState.editingLeadId = null;
     featureState.selectedCatalogueId = "";
     featureState.catalogueItemRows = [];
     featureState.itemSearchTerm = "";
+}
+
+function resetWorkLogWorkspace() {
+    featureState.activeWorkLogLeadId = null;
+    featureState.workLogEntries = [];
+    featureState.workLogSearchTerm = "";
 }
 
 function sortLeads(rows = []) {
@@ -88,6 +107,16 @@ function renderStatusOptions(currentValue) {
     return LEAD_STATUSES.map(status => `
         <option value="${status}" ${status === currentValue ? "selected" : ""}>
             ${status}
+        </option>
+    `).join("");
+}
+
+function renderLogTypeOptions(currentValue = "General Note") {
+    const selectedValue = normalizeText(currentValue) || "General Note";
+
+    return LEAD_LOG_TYPES.map(type => `
+        <option value="${type}" ${type === selectedValue ? "selected" : ""}>
+            ${type}
         </option>
     `).join("");
 }
@@ -371,6 +400,106 @@ function renderLeadsHistoryPanel() {
     `;
 }
 
+function renderLeadWorkLogModal() {
+    const activeLead = getActiveWorkLogLead();
+    const entryCount = featureState.workLogEntries.length;
+
+    return `
+        <div id="lead-worklog-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-worklog-title" ${activeLead ? "" : "hidden"}>
+            <div class="purchase-payment-modal-card lead-worklog-modal-card" style="max-width: 1080px;">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <div>
+                            <h3 id="lead-worklog-title">Lead Work Log</h3>
+                            <p class="panel-copy">Track every follow-up, call, quote, and action taken for this enquiry.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">Lead: ${activeLead?.customerName || "-"}</span>
+                        <span class="status-pill">${entryCount} entries</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="lead-worklog-shell">
+                        <div class="panel-card lead-worklog-entry-card">
+                            <div class="panel-header">
+                                <div class="panel-title-wrap">
+                                    <span class="panel-icon panel-icon-alt">${icons.plus}</span>
+                                    <div>
+                                        <h4>Add Work Log Entry</h4>
+                                        <p class="panel-copy">Capture customer interaction notes in chronological order.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <form id="lead-worklog-entry-form">
+                                    <input id="lead-worklog-lead-id" type="hidden" value="${activeLead?.id || ""}">
+                                    <div class="lead-worklog-entry-grid">
+                                        <div class="field">
+                                            <label for="lead-worklog-type">Log Type <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <select id="lead-worklog-type" class="select" required>
+                                                ${renderLogTypeOptions()}
+                                            </select>
+                                        </div>
+                                        <div class="field field-full">
+                                            <label for="lead-worklog-notes">Notes <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <textarea id="lead-worklog-notes" class="textarea" rows="3" placeholder="Document the interaction, follow-up outcome, or next action..." required></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button id="lead-worklog-save-button" class="button button-primary-alt" type="submit">
+                                            <span class="button-icon">${icons.plus}</span>
+                                            Save Log Entry
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="panel-card lead-worklog-history-card">
+                            <div class="panel-header">
+                                <div class="panel-title-wrap">
+                                    <span class="panel-icon">${icons.leads}</span>
+                                    <div>
+                                        <h4>History</h4>
+                                        <p class="panel-copy">Search and review all logged activities for this enquiry.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="toolbar">
+                                    <div>
+                                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Activity Timeline</p>
+                                        <p class="panel-copy">Newest entries appear at the top.</p>
+                                    </div>
+                                    <div class="search-wrap">
+                                        <span class="search-icon">${icons.search}</span>
+                                        <input
+                                            id="lead-worklog-search"
+                                            class="input toolbar-search"
+                                            type="search"
+                                            placeholder="Search by type, notes, or user"
+                                            value="${featureState.workLogSearchTerm}">
+                                    </div>
+                                </div>
+                                <div class="ag-shell">
+                                    <div id="lead-worklog-grid" class="ag-theme-alpine moneta-grid" style="height: 380px; width: 100%;"></div>
+                                </div>
+                                <div class="form-actions">
+                                    <button id="lead-worklog-close-button" class="button button-secondary" type="button">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderLeadsViewShell(snapshot) {
     const root = document.getElementById("leads-root");
     if (!root) return;
@@ -380,6 +509,7 @@ function renderLeadsViewShell(snapshot) {
             ${renderLeadForm(snapshot)}
             ${renderLeadsHistoryPanel()}
         </div>
+        ${renderLeadWorkLogModal()}
     `;
 }
 
@@ -398,6 +528,26 @@ function syncLeadsGrid() {
     updateLeadsGridSearch(featureState.searchTerm);
 }
 
+function syncLeadWorkLogGrid() {
+    if (!featureState.activeWorkLogLeadId) return;
+
+    initializeLeadWorkLogGrid(document.getElementById("lead-worklog-grid"));
+    refreshLeadWorkLogGrid(featureState.workLogEntries);
+    updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
+}
+
+function detachWorkLogListener(options = {}) {
+    const { reset = false } = options;
+
+    featureState.unsubscribeWorkLog?.();
+    featureState.unsubscribeWorkLog = null;
+    featureState.workLogListenerLeadId = null;
+
+    if (reset) {
+        featureState.workLogEntries = [];
+    }
+}
+
 function detachLeadsListener(options = {}) {
     const { clearRows = false } = options;
 
@@ -407,7 +557,58 @@ function detachLeadsListener(options = {}) {
     if (clearRows) {
         featureState.leads = [];
         resetLeadWorkspace();
+        detachWorkLogListener({ reset: true });
+        resetWorkLogWorkspace();
     }
+}
+
+function ensureWorkLogListener(snapshot) {
+    const shouldListen = snapshot.currentRoute === "#/leads"
+        && Boolean(snapshot.currentUser)
+        && Boolean(featureState.activeWorkLogLeadId);
+
+    if (!shouldListen) {
+        if (snapshot.currentRoute !== "#/leads" || !snapshot.currentUser) {
+            const modal = document.getElementById("lead-worklog-modal");
+            if (modal) {
+                modal.hidden = true;
+            }
+            resetWorkLogWorkspace();
+        }
+        detachWorkLogListener({ reset: true });
+        return;
+    }
+
+    if (
+        featureState.unsubscribeWorkLog
+        && featureState.workLogListenerLeadId === featureState.activeWorkLogLeadId
+    ) {
+        return;
+    }
+
+    detachWorkLogListener({ reset: true });
+    featureState.workLogListenerLeadId = featureState.activeWorkLogLeadId;
+    featureState.unsubscribeWorkLog = subscribeToLeadWorkLog(
+        featureState.activeWorkLogLeadId,
+        rows => {
+            featureState.workLogEntries = rows || [];
+
+            if (getState().currentRoute === "#/leads" && featureState.activeWorkLogLeadId) {
+                syncLeadWorkLogGrid();
+                const modal = document.getElementById("lead-worklog-modal");
+                const entryCountPill = modal?.querySelector(".purchase-payment-modal-meta .status-pill:last-child");
+                if (entryCountPill) {
+                    entryCountPill.textContent = `${featureState.workLogEntries.length} entries`;
+                }
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load lead work log:", error);
+            showToast("Could not load lead work log entries.", "error", {
+                title: "Leads & Enquiries"
+            });
+        }
+    );
 }
 
 function ensureLeadsListener(snapshot) {
@@ -415,6 +616,7 @@ function ensureLeadsListener(snapshot) {
 
     if (!shouldListen) {
         detachLeadsListener();
+        detachWorkLogListener();
         return;
     }
 
@@ -426,6 +628,10 @@ function ensureLeadsListener(snapshot) {
 
             if (featureState.editingLeadId && !rows.some(lead => lead.id === featureState.editingLeadId)) {
                 resetLeadWorkspace();
+            }
+
+            if (featureState.activeWorkLogLeadId && !rows.some(lead => lead.id === featureState.activeWorkLogLeadId)) {
+                closeLeadWorkLogModal();
             }
 
             if (getState().currentRoute === "#/leads") {
@@ -446,6 +652,7 @@ export function renderLeadsView() {
     renderLeadsViewShell(snapshot);
     syncLeadProductsGrid();
     syncLeadsGrid();
+    syncLeadWorkLogGrid();
 }
 
 function handleLeadSearchInput(target) {
@@ -607,6 +814,130 @@ async function handleLeadDelete(button) {
     }
 }
 
+function openLeadWorkLogModal(lead) {
+    if (!lead?.id) return;
+
+    featureState.activeWorkLogLeadId = lead.id;
+    featureState.workLogSearchTerm = "";
+    featureState.workLogEntries = [];
+
+    const modal = document.getElementById("lead-worklog-modal");
+    if (!modal) return;
+
+    const leadIdInput = document.getElementById("lead-worklog-lead-id");
+    const leadTypeSelect = document.getElementById("lead-worklog-type");
+    const notesInput = document.getElementById("lead-worklog-notes");
+    const searchInput = document.getElementById("lead-worklog-search");
+    const leadPill = modal.querySelector(".purchase-payment-modal-meta .status-pill:first-child");
+    const countPill = modal.querySelector(".purchase-payment-modal-meta .status-pill:last-child");
+
+    if (leadIdInput) {
+        leadIdInput.value = lead.id;
+    }
+
+    if (leadTypeSelect) {
+        leadTypeSelect.value = "General Note";
+    }
+
+    if (notesInput) {
+        notesInput.value = "";
+    }
+
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
+    if (leadPill) {
+        leadPill.textContent = `Lead: ${lead.customerName || "-"}`;
+    }
+
+    if (countPill) {
+        countPill.textContent = "0 entries";
+    }
+
+    modal.hidden = false;
+    syncLeadWorkLogGrid();
+    ensureWorkLogListener(getState());
+
+    focusFormField({
+        formId: "lead-worklog-entry-form",
+        inputSelector: "#lead-worklog-notes"
+    });
+}
+
+function closeLeadWorkLogModal() {
+    const modal = document.getElementById("lead-worklog-modal");
+    const form = document.getElementById("lead-worklog-entry-form");
+
+    if (modal) {
+        modal.hidden = true;
+    }
+
+    form?.reset();
+    detachWorkLogListener({ reset: true });
+    resetWorkLogWorkspace();
+}
+
+function handleLeadWorkLogSearchInput(target) {
+    featureState.workLogSearchTerm = target.value || "";
+    updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
+}
+
+async function handleLeadWorkLogOpen(button) {
+    const leadId = button.dataset.leadId || null;
+    const lead = featureState.leads.find(entry => entry.id === leadId) || null;
+
+    if (!lead) {
+        showToast("Lead record could not be found.", "error", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    openLeadWorkLogModal(lead);
+}
+
+async function handleLeadWorkLogSubmit(event) {
+    event.preventDefault();
+
+    const leadId = document.getElementById("lead-worklog-lead-id")?.value || "";
+    const logType = document.getElementById("lead-worklog-type")?.value || "";
+    const notes = document.getElementById("lead-worklog-notes")?.value || "";
+    try {
+        await runProgressToastFlow({
+            title: "Saving Work Log Entry",
+            initialMessage: "Reading lead activity inputs...",
+            initialProgress: 24,
+            initialStep: "Step 1 of 4",
+            successTitle: "Work Log Saved",
+            successMessage: "The lead work log entry was saved successfully."
+        }, async ({ update }) => {
+            update("Validating work log type and notes...", 48, "Step 2 of 4");
+            update("Writing work log entry to the database...", 74, "Step 3 of 4");
+            await saveLeadWorkLog({
+                leadId,
+                logType,
+                notes
+            }, getState().currentUser);
+            update("Refreshing activity history...", 92, "Step 4 of 4");
+        });
+
+        showToast("Work log entry saved.", "success", {
+            title: "Leads & Enquiries"
+        });
+        ProgressToast.hide(0);
+
+        const form = document.getElementById("lead-worklog-entry-form");
+        form?.reset();
+        const typeSelect = document.getElementById("lead-worklog-type");
+        if (typeSelect) {
+            typeSelect.value = "General Note";
+        }
+    } catch (error) {
+        console.error("[Moneta] Lead work log save failed:", error);
+    }
+}
+
 function handleCancelEdit() {
     resetLeadWorkspace();
     renderLeadsView();
@@ -619,6 +950,7 @@ function bindLeadsDomEvents() {
     root.addEventListener("input", event => {
         const leadsSearchInput = event.target.closest("#leads-grid-search");
         const productsSearchInput = event.target.closest("#lead-products-search");
+        const workLogSearchInput = event.target.closest("#lead-worklog-search");
 
         if (leadsSearchInput) {
             handleLeadSearchInput(leadsSearchInput);
@@ -627,6 +959,11 @@ function bindLeadsDomEvents() {
 
         if (productsSearchInput) {
             handleLeadProductsSearchInput(productsSearchInput);
+            return;
+        }
+
+        if (workLogSearchInput) {
+            handleLeadWorkLogSearchInput(workLogSearchInput);
         }
     });
 
@@ -640,16 +977,29 @@ function bindLeadsDomEvents() {
     root.addEventListener("submit", event => {
         if (event.target.closest("#lead-form")) {
             handleLeadSubmit(event);
+            return;
+        }
+
+        if (event.target.closest("#lead-worklog-entry-form")) {
+            handleLeadWorkLogSubmit(event);
         }
     });
 
     root.addEventListener("click", event => {
         const editButton = event.target.closest(".lead-edit-button");
+        const workLogButton = event.target.closest(".lead-worklog-button");
         const deleteButton = event.target.closest(".lead-delete-button");
         const cancelButton = event.target.closest("#lead-cancel-button");
+        const closeWorkLogButton = event.target.closest("#lead-worklog-close-button");
+        const workLogModalBackdrop = event.target.closest("#lead-worklog-modal");
 
         if (editButton) {
             handleLeadEdit(editButton);
+            return;
+        }
+
+        if (workLogButton) {
+            handleLeadWorkLogOpen(workLogButton);
             return;
         }
 
@@ -660,6 +1010,16 @@ function bindLeadsDomEvents() {
 
         if (cancelButton) {
             handleCancelEdit();
+            return;
+        }
+
+        if (closeWorkLogButton) {
+            closeLeadWorkLogModal();
+            return;
+        }
+
+        if (event.target.id === "lead-worklog-modal" && workLogModalBackdrop) {
+            closeLeadWorkLogModal();
         }
     });
 
@@ -671,6 +1031,7 @@ export function initializeLeadsFeature() {
 
     subscribe(snapshot => {
         ensureLeadsListener(snapshot);
+        ensureWorkLogListener(snapshot);
 
         if (snapshot.currentRoute === "#/leads") {
             renderLeadsView();

@@ -6,6 +6,8 @@ let leadsGridApi = null;
 let currentLeadsGridElement = null;
 let leadRequestedProductsGridApi = null;
 let currentLeadRequestedProductsGridElement = null;
+let leadWorkLogGridApi = null;
+let currentLeadWorkLogGridElement = null;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -22,6 +24,21 @@ function formatDate(value) {
         day: "2-digit",
         month: "short",
         year: "numeric"
+    });
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
     });
 }
 
@@ -56,6 +73,10 @@ function leadActionMarkup(data) {
             <button class="button grid-action-button grid-action-button-secondary lead-edit-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
+            </button>
+            <button class="button grid-action-button grid-action-button-secondary lead-worklog-button" type="button" data-lead-id="${data.id}">
+                <span class="button-icon">${icons.leads}</span>
+                Work Log
             </button>
             <button class="button grid-action-button grid-action-button-danger lead-delete-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.inactive}</span>
@@ -110,11 +131,42 @@ function buildLeadColumnDefs() {
         { field: "assignedTo", headerName: "Assigned To", minWidth: 160, flex: 0.95 },
         {
             headerName: "Actions",
-            minWidth: 240,
-            flex: 1.2,
+            minWidth: 360,
+            flex: 1.4,
             sortable: false,
             filter: false,
             cellRenderer: params => leadActionMarkup(params.data)
+        }
+    ];
+}
+
+function buildLeadWorkLogColumnDefs() {
+    return [
+        {
+            field: "logDate",
+            headerName: "Date",
+            minWidth: 190,
+            flex: 0.85,
+            sort: "desc",
+            valueFormatter: params => formatDateTime(params.value)
+        },
+        {
+            field: "logType",
+            headerName: "Type",
+            minWidth: 180,
+            flex: 0.8
+        },
+        {
+            field: "notes",
+            headerName: "Notes",
+            minWidth: 360,
+            flex: 1.8
+        },
+        {
+            field: "loggedBy",
+            headerName: "Logged By",
+            minWidth: 210,
+            flex: 1
         }
     ];
 }
@@ -314,4 +366,36 @@ export function getLeadRequestedProductsGridRows() {
         rows.push(node.data);
     });
     return rows;
+}
+
+export function initializeLeadWorkLogGrid(gridElement) {
+    if (!gridElement) return leadWorkLogGridApi;
+
+    if (leadWorkLogGridApi && currentLeadWorkLogGridElement !== gridElement) {
+        leadWorkLogGridApi.destroy();
+        leadWorkLogGridApi = null;
+        currentLeadWorkLogGridElement = null;
+    }
+
+    if (leadWorkLogGridApi) return leadWorkLogGridApi;
+
+    leadWorkLogGridApi = createGrid(gridElement, {
+        columnDefs: buildLeadWorkLogColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        pagination: true,
+        paginationPageSize: 20,
+        paginationPageSizeSelector: [10, 20, 50, 100]
+    });
+
+    currentLeadWorkLogGridElement = gridElement;
+    return leadWorkLogGridApi;
+}
+
+export function refreshLeadWorkLogGrid(rows) {
+    leadWorkLogGridApi?.setGridOption("rowData", rows || []);
+}
+
+export function updateLeadWorkLogGridSearch(searchTerm) {
+    leadWorkLogGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }

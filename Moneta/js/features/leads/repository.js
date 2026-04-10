@@ -1,6 +1,7 @@
 import { COLLECTIONS } from "../../config/collections.js";
 
 const LEAD_ITEMS_SUBCOLLECTION = "items";
+const LEAD_WORK_LOG_SUBCOLLECTION = "workLog";
 
 function getDb() {
     return firebase.firestore();
@@ -31,6 +32,25 @@ export function subscribeToLeads(onData, onError) {
     );
 }
 
+export function subscribeToLeadWorkLog(leadId, onData, onError) {
+    if (!leadId) return () => {};
+
+    return getDb()
+        .collection(COLLECTIONS.leads)
+        .doc(leadId)
+        .collection(LEAD_WORK_LOG_SUBCOLLECTION)
+        .orderBy("logDate", "desc")
+        .onSnapshot(
+            snapshot => {
+                const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                onData(rows);
+            },
+            error => {
+                onError?.(error);
+            }
+        );
+}
+
 export async function fetchSalesCatalogueItems(catalogueId) {
     if (!catalogueId) return [];
 
@@ -54,6 +74,26 @@ export async function createLeadRecord(leadData, user) {
         updatedBy: user.email,
         updatedOn: now
     });
+}
+
+export async function addLeadWorkLogRecord(leadId, logData, user) {
+    if (!leadId) {
+        throw new Error("Lead id is required before adding a work log entry.");
+    }
+
+    const now = getNow();
+
+    return getDb()
+        .collection(COLLECTIONS.leads)
+        .doc(leadId)
+        .collection(LEAD_WORK_LOG_SUBCOLLECTION)
+        .add({
+            ...logData,
+            logDate: now,
+            loggedBy: user.email,
+            createdBy: user.email,
+            createdOn: now
+        });
 }
 
 export async function updateLeadRecord(docId, leadData, user) {
