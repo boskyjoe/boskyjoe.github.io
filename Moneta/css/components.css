@@ -1321,6 +1321,15 @@ select {
     pointer-events: none;
 }
 
+.ui-action-lock {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    cursor: progress;
+    background: rgba(15, 23, 42, 0.04);
+    backdrop-filter: blur(1px);
+}
+
 .progress-toast {
     opacity: 0;
     transform: translateX(1.35rem);
