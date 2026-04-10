@@ -52,6 +52,47 @@ const progressState = {
     hideTimer: null
 };
 
+const uiActionLockState = {
+    count: 0
+};
+
+function ensureUiActionLockLayer() {
+    let lockLayer = document.getElementById("ui-action-lock");
+    if (lockLayer) return lockLayer;
+
+    lockLayer = document.createElement("div");
+    lockLayer.id = "ui-action-lock";
+    lockLayer.className = "ui-action-lock";
+    lockLayer.setAttribute("aria-hidden", "true");
+    lockLayer.hidden = true;
+
+    document.body?.appendChild(lockLayer);
+    return lockLayer;
+}
+
+function lockUiActions() {
+    uiActionLockState.count += 1;
+    const lockLayer = ensureUiActionLockLayer();
+    if (!lockLayer) return;
+
+    lockLayer.hidden = false;
+    lockLayer.setAttribute("aria-hidden", "false");
+    document.body?.setAttribute("aria-busy", "true");
+}
+
+function unlockUiActions() {
+    uiActionLockState.count = Math.max(0, uiActionLockState.count - 1);
+    if (uiActionLockState.count > 0) return;
+
+    const lockLayer = document.getElementById("ui-action-lock");
+    if (lockLayer) {
+        lockLayer.hidden = true;
+        lockLayer.setAttribute("aria-hidden", "true");
+    }
+
+    document.body?.removeAttribute("aria-busy");
+}
+
 function ensureToastInfrastructure() {
     const root = document.getElementById("toast-root");
     if (!root) return null;
@@ -288,8 +329,13 @@ export async function runProgressToastFlow(config, worker) {
         successTitle = "Completed",
         successMessage = "Operation completed successfully.",
         errorTitle = "Operation Failed",
-        autoHideDelay = PROGRESS_HIDE_DELAY_MS
+        autoHideDelay = PROGRESS_HIDE_DELAY_MS,
+        lockUi = true
     } = config || {};
+
+    if (lockUi) {
+        lockUiActions();
+    }
 
     ProgressToast.show(title, theme);
     ProgressToast.updateProgress(initialMessage, initialProgress, initialStep);
@@ -307,5 +353,9 @@ export async function runProgressToastFlow(config, worker) {
     } catch (error) {
         ProgressToast.showError(error.message || "Something went wrong.", errorTitle);
         throw error;
+    } finally {
+        if (lockUi) {
+            unlockUiActions();
+        }
     }
 }
