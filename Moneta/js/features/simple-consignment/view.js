@@ -572,7 +572,8 @@ function getOrderWorksheetRows(order, snapshot) {
             quantitySold: Math.max(0, Math.floor(Number(item.quantitySold) || 0)),
             quantityReturned: Math.max(0, Math.floor(Number(item.quantityReturned) || 0)),
             quantityDamaged: Math.max(0, Math.floor(Number(item.quantityDamaged) || 0)),
-            quantityGifted: Math.max(0, Math.floor(Number(item.quantityGifted) || 0))
+            quantityGifted: Math.max(0, Math.floor(Number(item.quantityGifted) || 0)),
+            lineChangeState: ""
         };
     });
 }
@@ -1618,6 +1619,9 @@ function handleApplyAddProductsToWorksheet() {
         if (existing) {
             existing.quantityCheckedOut = Math.max(0, Math.floor(Number(existing.quantityCheckedOut) || 0)) + selected.quantityToAdd;
             existing.inventoryCount = Math.max(0, Number(selected.inventoryCount) || 0);
+            if (normalizeText(existing.lineChangeState).toLowerCase() !== "added") {
+                existing.lineChangeState = "updated";
+            }
             rowMap.set(selected.productId, existing);
             return;
         }
@@ -1633,7 +1637,8 @@ function handleApplyAddProductsToWorksheet() {
             quantitySold: 0,
             quantityReturned: 0,
             quantityDamaged: 0,
-            quantityGifted: 0
+            quantityGifted: 0,
+            lineChangeState: "added"
         };
         mergedRows.push(addedRow);
         rowMap.set(addedRow.productId, addedRow);

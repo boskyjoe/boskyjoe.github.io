@@ -94,6 +94,19 @@ function requestStateMarkup(quantity) {
         : `<span class="purchase-status-pill purchase-status-unpaid">Not Included</span>`;
 }
 
+function lineChangeStateMarkup(value) {
+    const normalized = normalizeText(value).toLowerCase();
+    if (normalized === "added") {
+        return `<span class="consignment-line-change-pill consignment-line-change-pill-added" title="New line added in this settlement session">New</span>`;
+    }
+
+    if (normalized === "updated") {
+        return `<span class="consignment-line-change-pill consignment-line-change-pill-updated" title="Existing line quantity checked out was updated in this settlement session">Upd</span>`;
+    }
+
+    return "";
+}
+
 function buildCheckoutQuantitySetter() {
     return params => {
         const parsed = Number(params.newValue);
@@ -346,6 +359,18 @@ function buildCheckoutWorksheetColumnDefs() {
 
 function buildSettlementWorksheetColumnDefs() {
     return [
+        {
+            field: "lineChangeState",
+            headerName: "Δ",
+            minWidth: 64,
+            maxWidth: 74,
+            flex: 0.36,
+            sortable: false,
+            filter: false,
+            resizable: false,
+            suppressHeaderMenuButton: true,
+            cellRenderer: params => (params.node?.rowPinned ? "" : lineChangeStateMarkup(params.value))
+        },
         { field: "productName", headerName: "Product", minWidth: 230, flex: 1.15 },
         {
             field: "quantityCheckedOut",
@@ -876,7 +901,9 @@ export function initializeSimpleConsignmentWorksheetGrid(gridElement, onRowsChan
         },
         onFilterChanged: () => refreshWorksheetPinnedBottomRow(simpleConsignmentWorksheetGridApi),
         rowClassRules: {
-            "purchase-line-item-active": params => (Number(params.data?.quantityCheckedOut) || 0) > 0
+            "purchase-line-item-active": params => (Number(params.data?.quantityCheckedOut) || 0) > 0,
+            "consignment-line-added": params => normalizeText(params.data?.lineChangeState).toLowerCase() === "added",
+            "consignment-line-updated": params => normalizeText(params.data?.lineChangeState).toLowerCase() === "updated"
         }
     });
 
