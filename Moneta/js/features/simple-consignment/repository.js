@@ -262,8 +262,9 @@ export async function saveSimpleConsignmentSettlementRecord(orderId, items, cont
             throw new Error("At least one checked-out product must remain on the consignment order.");
         }
 
-        if (nextItems.some(item => !existingMap.has(item.productId))) {
-            throw new Error("Adding new products during settlement is not enabled yet.");
+        const removedExistingItems = existingItems.filter(item => !nextMap.has(item.productId));
+        if (removedExistingItems.length > 0) {
+            throw new Error("Removing checked-out products during settlement is not allowed.");
         }
 
         const totals = computeConsignmentTotals(nextItems, {
@@ -271,33 +272,56 @@ export async function saveSimpleConsignmentSettlementRecord(orderId, items, cont
             totalExpenses: orderData.totalExpenses
         });
 
-        const returnDeltas = [];
-        existingItems.forEach(existingItem => {
-            const nextItem = nextMap.get(existingItem.productId);
-            if (!nextItem) return;
+        const inventoryDeltas = [];
+        const touchedProductIds = new Set([...existingMap.keys(), ...nextMap.keys()]);
 
-            const delta = nextItem.quantityReturned - existingItem.quantityReturned;
-            if (delta !== 0) {
-                returnDeltas.push({
-                    productId: existingItem.productId,
-                    productName: existingItem.productName,
-                    delta
+        touchedProductIds.forEach(productId => {
+            const existingItem = existingMap.get(productId) || {
+                productId,
+                productName: "",
+                quantityCheckedOut: 0,
+                quantityReturned: 0
+            };
+            const nextItem = nextMap.get(productId) || {
+                productId,
+                productName: "",
+                quantityCheckedOut: 0,
+                quantityReturned: 0
+            };
+
+            const previousCheckedOut = Math.max(0, Math.floor(Number(existingItem.quantityCheckedOut) || 0));
+            const nextCheckedOut = Math.max(0, Math.floor(Number(nextItem.quantityCheckedOut) || 0));
+            const previousReturned = Math.max(0, Math.floor(Number(existingItem.quantityReturned) || 0));
+            const nextReturned = Math.max(0, Math.floor(Number(nextItem.quantityReturned) || 0));
+
+            const checkoutDelta = nextCheckedOut - previousCheckedOut;
+            if (checkoutDelta < 0) {
+                throw new Error("Reducing checked-out quantity during settlement is not allowed.");
+            }
+
+            const returnedDelta = nextReturned - previousReturned;
+            const netInventoryDelta = returnedDelta - checkoutDelta;
+            if (netInventoryDelta !== 0) {
+                inventoryDeltas.push({
+                    productId,
+                    productName: nextItem.productName || existingItem.productName || productId,
+                    delta: netInventoryDelta
                 });
             }
         });
 
-        const productRefs = returnDeltas.map(entry => db.collection(COLLECTIONS.products).doc(entry.productId));
+        const productRefs = inventoryDeltas.map(entry => db.collection(COLLECTIONS.products).doc(entry.productId));
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
 
         productDocs.forEach((productDoc, index) => {
-            const delta = returnDeltas[index].delta;
+            const delta = inventoryDeltas[index].delta;
             if (!productDoc.exists) {
-                throw new Error(`"${returnDeltas[index].productName}" is no longer available in inventory.`);
+                throw new Error(`"${inventoryDeltas[index].productName}" is no longer available in inventory.`);
             }
 
             const currentStock = Math.floor(Number(productDoc.data().inventoryCount) || 0);
             if (currentStock + delta < 0) {
-                throw new Error(`Cannot reduce returned stock for "${returnDeltas[index].productName}" below zero.`);
+                throw new Error(`"${inventoryDeltas[index].productName}" only has ${currentStock} in stock for additional checkout.`);
             }
         });
 
@@ -325,7 +349,7 @@ export async function saveSimpleConsignmentSettlementRecord(orderId, items, cont
 
         productRefs.forEach((productRef, index) => {
             transaction.update(productRef, {
-                inventoryCount: firebase.firestore.FieldValue.increment(returnDeltas[index].delta),
+                inventoryCount: firebase.firestore.FieldValue.increment(inventoryDeltas[index].delta),
                 updatedBy: user.email,
                 updateDate: now
             });
@@ -333,6 +357,8 @@ export async function saveSimpleConsignmentSettlementRecord(orderId, items, cont
 
         return {
             summary: {
+                totalQuantityCheckedOut: totals.totalQuantityCheckedOut,
+                totalValueCheckedOut: totals.totalValueCheckedOut,
                 totalValueSold: totals.totalValueSold,
                 totalQuantitySold: totals.totalQuantitySold,
                 totalQuantityReturned: totals.totalQuantityReturned,

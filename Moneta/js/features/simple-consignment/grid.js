@@ -6,6 +6,8 @@ let simpleConsignmentOrdersGridApi = null;
 let simpleConsignmentOrdersGridElement = null;
 let simpleConsignmentWorksheetGridApi = null;
 let simpleConsignmentWorksheetGridElement = null;
+let simpleConsignmentAddProductsGridApi = null;
+let simpleConsignmentAddProductsGridElement = null;
 let simpleConsignmentTransactionsGridApi = null;
 let simpleConsignmentTransactionsGridElement = null;
 let worksheetMode = "checkout";
@@ -131,6 +133,18 @@ function buildSettlementQuantitySetter(field) {
         const previous = Number(params.data?.[field] || 0);
         params.data[field] = normalized;
         return previous !== normalized;
+    };
+}
+
+function buildAddProductsQuantitySetter() {
+    return params => {
+        const parsed = Number(params.newValue);
+        const normalized = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+        const available = Math.max(0, Math.floor(Number(params.data?.inventoryCount) || 0));
+        const bounded = Math.min(normalized, available);
+        const previous = Number(params.data?.quantityToAdd || 0);
+        params.data.quantityToAdd = bounded;
+        return previous !== bounded;
     };
 }
 
@@ -467,6 +481,65 @@ function buildSettlementWorksheetColumnDefs() {
     ];
 }
 
+function buildAddProductsColumnDefs() {
+    return [
+        {
+            field: "quantityToAdd",
+            headerName: "Qty To Add",
+            minWidth: 120,
+            flex: 0.7,
+            editable: params => !params.node?.rowPinned,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildAddProductsQuantitySetter(),
+            ...rightAlignedNumberColumn
+        },
+        { field: "productName", headerName: "Product", minWidth: 230, flex: 1.2 },
+        { field: "categoryName", headerName: "Category", minWidth: 145, flex: 0.85 },
+        {
+            field: "inventoryCount",
+            headerName: "Store Stock",
+            minWidth: 120,
+            flex: 0.72,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "alreadyCheckedOut",
+            headerName: "Already Out",
+            minWidth: 120,
+            flex: 0.72,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "sellingPrice",
+            headerName: "Price",
+            minWidth: 120,
+            flex: 0.72,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+        },
+        {
+            headerName: "Added Value",
+            minWidth: 135,
+            flex: 0.75,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return params.data?.valueAdded || 0;
+                return (Number(params.data?.quantityToAdd) || 0) * (Number(params.data?.sellingPrice) || 0);
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Request State",
+            minWidth: 130,
+            flex: 0.75,
+            sortable: false,
+            filter: false,
+            valueGetter: params => Number(params.data?.quantityToAdd) || 0,
+            cellRenderer: params => (params.node?.rowPinned ? "" : requestStateMarkup(Number(params.value) || 0))
+        }
+    ];
+}
+
 function buildTransactionsColumnDefs() {
     return [
         {
@@ -685,6 +758,26 @@ function buildTransactionsPinnedBottomRow(rows) {
     }];
 }
 
+function buildAddProductsPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        const quantityToAdd = Number(row?.quantityToAdd) || 0;
+        summary.quantityToAdd += quantityToAdd;
+        summary.valueAdded += quantityToAdd * (Number(row?.sellingPrice) || 0);
+        return summary;
+    }, {
+        quantityToAdd: 0,
+        valueAdded: 0
+    });
+
+    return [{
+        productName: "Totals",
+        quantityToAdd: totals.quantityToAdd,
+        valueAdded: Number(totals.valueAdded.toFixed(2))
+    }];
+}
+
 function refreshOrdersPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildOrdersPinnedBottomRow(getVisibleRows(api)));
 }
@@ -702,6 +795,10 @@ function refreshWorksheetPinnedBottomRow(api) {
 
 function refreshTransactionsPinnedBottomRow(api) {
     api?.setGridOption("pinnedBottomRowData", buildTransactionsPinnedBottomRow(getVisibleRows(api)));
+}
+
+function refreshAddProductsPinnedBottomRow(api) {
+    api?.setGridOption("pinnedBottomRowData", buildAddProductsPinnedBottomRow(getVisibleRows(api)));
 }
 
 function getWorksheetColumnDefs() {
@@ -830,6 +927,68 @@ export function getSimpleConsignmentWorksheetRows() {
     });
 
     return rows;
+}
+
+export function initializeSimpleConsignmentAddProductsGrid(gridElement, onRowsChanged) {
+    if (!gridElement) return simpleConsignmentAddProductsGridApi;
+
+    if (simpleConsignmentAddProductsGridApi && simpleConsignmentAddProductsGridElement !== gridElement) {
+        simpleConsignmentAddProductsGridApi.destroy();
+        simpleConsignmentAddProductsGridApi = null;
+        simpleConsignmentAddProductsGridElement = null;
+    }
+
+    if (simpleConsignmentAddProductsGridApi) return simpleConsignmentAddProductsGridApi;
+
+    simpleConsignmentAddProductsGridApi = createGrid(gridElement, {
+        columnDefs: buildAddProductsColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        onCellValueChanged: params => {
+            params.api.refreshCells({ rowNodes: [params.node], force: true });
+            refreshAddProductsPinnedBottomRow(simpleConsignmentAddProductsGridApi);
+            onRowsChanged?.(getSimpleConsignmentAddProductsRows());
+        },
+        onFilterChanged: () => refreshAddProductsPinnedBottomRow(simpleConsignmentAddProductsGridApi),
+        rowClassRules: {
+            "purchase-line-item-active": params => (Number(params.data?.quantityToAdd) || 0) > 0
+        }
+    });
+
+    simpleConsignmentAddProductsGridElement = gridElement;
+    return simpleConsignmentAddProductsGridApi;
+}
+
+export function refreshSimpleConsignmentAddProductsGrid(rows) {
+    if (!simpleConsignmentAddProductsGridApi) return;
+
+    simpleConsignmentAddProductsGridApi.setGridOption("rowData", rows || []);
+    refreshAddProductsPinnedBottomRow(simpleConsignmentAddProductsGridApi);
+}
+
+export function updateSimpleConsignmentAddProductsGridSearch(searchTerm) {
+    simpleConsignmentAddProductsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function getSimpleConsignmentAddProductsRows() {
+    if (!simpleConsignmentAddProductsGridApi) return [];
+
+    const rows = [];
+    simpleConsignmentAddProductsGridApi.forEachNode(node => {
+        if (!node.rowPinned) {
+            rows.push(node.data);
+        }
+    });
+
+    return rows;
+}
+
+export function destroySimpleConsignmentAddProductsGrid() {
+    if (!simpleConsignmentAddProductsGridApi) return;
+
+    simpleConsignmentAddProductsGridApi.destroy();
+    simpleConsignmentAddProductsGridApi = null;
+    simpleConsignmentAddProductsGridElement = null;
 }
 
 export function initializeSimpleConsignmentTransactionsGrid(gridElement) {

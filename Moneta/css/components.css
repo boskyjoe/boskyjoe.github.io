@@ -340,6 +340,14 @@ select {
     position: relative;
 }
 
+.simple-consignment-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .search-wrap .input {
     padding-left: 2.75rem;
 }

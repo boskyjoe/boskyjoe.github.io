@@ -5,13 +5,18 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
+    destroySimpleConsignmentAddProductsGrid,
+    getSimpleConsignmentAddProductsRows,
     getSimpleConsignmentWorksheetRows,
+    initializeSimpleConsignmentAddProductsGrid,
+    refreshSimpleConsignmentAddProductsGrid,
     initializeSimpleConsignmentOrdersGrid,
     initializeSimpleConsignmentTransactionsGrid,
     initializeSimpleConsignmentWorksheetGrid,
     refreshSimpleConsignmentOrdersGrid,
     refreshSimpleConsignmentTransactionsGrid,
     refreshSimpleConsignmentWorksheetGrid,
+    updateSimpleConsignmentAddProductsGridSearch,
     setSimpleConsignmentTransactionsVoidEnabled,
     setSimpleConsignmentWorksheetMode,
     setSimpleConsignmentWorksheetReadOnly,
@@ -44,6 +49,10 @@ const featureState = {
     ordersSearchTerm: "",
     worksheetSearchTerm: "",
     transactionsSearchTerm: "",
+    addProductsSearchTerm: "",
+    addProductsRows: [],
+    addProductsModalOpen: false,
+    addProductsModalLoading: false,
     filteredOrderCount: 0,
     unsubscribeOrders: null,
     unsubscribeTransactions: null,
@@ -119,11 +128,14 @@ function roundCurrency(value) {
 }
 
 const SETTLEMENT_TRACKED_FIELDS = [
+    { key: "quantityCheckedOut", label: "Checked Out" },
     { key: "quantitySold", label: "Sold" },
     { key: "quantityReturned", label: "Returned" },
     { key: "quantityDamaged", label: "Damaged" },
     { key: "quantityGifted", label: "Gifted" }
 ];
+
+const ADD_PRODUCTS_MODAL_ROOT_ID = "simple-consignment-add-products-modal-root";
 
 const ORDER_CONTEXT_TRACKED_FIELDS = [
     "manualVoucherNumber",
@@ -209,6 +221,8 @@ function buildSettlementDeltaSummary(order, nextRows = []) {
         lineChanges,
         lineChangeCount: lineChanges.length,
         impact: {
+            checkedOutQuantityDelta: Math.trunc((Number(nextMetrics.totalQuantityCheckedOut) || 0) - (Number(previousMetrics.totalQuantityCheckedOut) || 0)),
+            checkedOutValueDelta: roundCurrency(nextMetrics.totalValueCheckedOut - previousMetrics.totalValueCheckedOut),
             soldValueDelta: roundCurrency(nextMetrics.totalValueSold - previousMetrics.totalValueSold),
             returnedValueDelta: roundCurrency(nextMetrics.totalValueReturned - previousMetrics.totalValueReturned),
             damagedValueDelta: roundCurrency(nextMetrics.totalValueDamaged - previousMetrics.totalValueDamaged),
@@ -218,6 +232,210 @@ function buildSettlementDeltaSummary(order, nextRows = []) {
             balanceDueDelta: roundCurrency(nextBalanceDue - previousBalanceDue)
         }
     };
+}
+
+function buildAddProductsSelectionSummary(rows = []) {
+    return (rows || []).reduce((summary, row) => {
+        const quantityToAdd = Math.max(0, Math.floor(Number(row.quantityToAdd) || 0));
+        if (quantityToAdd <= 0) return summary;
+
+        summary.productCount += 1;
+        summary.quantity += quantityToAdd;
+        summary.value += quantityToAdd * (Number(row.sellingPrice) || 0);
+        return summary;
+    }, {
+        productCount: 0,
+        quantity: 0,
+        value: 0
+    });
+}
+
+function buildSettlementAddProductsRows(snapshot, order, worksheetRows = [], catalogueItems = [], draftRows = []) {
+    const productMap = new Map((snapshot.masterData.products || []).map(product => [product.id, product]));
+    const persistedCheckedOutMap = new Map(
+        (order?.items || []).map(item => [item.productId, Math.max(0, Math.floor(Number(item.quantityCheckedOut) || 0))])
+    );
+    const worksheetCheckedOutMap = new Map(
+        (worksheetRows || []).map(row => [row.productId, Math.max(0, Math.floor(Number(row.quantityCheckedOut) || 0))])
+    );
+    const draftMap = new Map(
+        (draftRows || []).map(row => [row.productId, Math.max(0, Math.floor(Number(row.quantityToAdd) || 0))])
+    );
+
+    return (catalogueItems || [])
+        .filter(item => normalizeText(item.productId))
+        .map(item => {
+            const product = productMap.get(item.productId);
+            const resolvedCategory = resolveCategoryDisplay(snapshot, item, product);
+            const persistedCheckedOut = persistedCheckedOutMap.get(item.productId) || 0;
+            const worksheetCheckedOut = worksheetCheckedOutMap.get(item.productId) || 0;
+            const unsavedAdditionalCheckout = Math.max(0, worksheetCheckedOut - persistedCheckedOut);
+            const liveInventory = Math.max(0, Math.floor(Number(product?.inventoryCount) || 0));
+            const availableToAdd = Math.max(0, liveInventory - unsavedAdditionalCheckout);
+            const quantityToAdd = Math.min(draftMap.get(item.productId) || 0, availableToAdd);
+
+            return {
+                productId: item.productId,
+                productName: item.productName || product?.itemName || "Untitled Product",
+                categoryId: resolvedCategory.categoryId,
+                categoryName: resolvedCategory.categoryName,
+                sellingPrice: Number(item.sellingPrice) || Number(product?.sellingPrice) || 0,
+                inventoryCount: availableToAdd,
+                alreadyCheckedOut: worksheetCheckedOut,
+                quantityToAdd
+            };
+        })
+        .sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
+}
+
+function ensureAddProductsModalRoot() {
+    let root = document.getElementById(ADD_PRODUCTS_MODAL_ROOT_ID);
+    if (root) return root;
+
+    root = document.createElement("div");
+    root.id = ADD_PRODUCTS_MODAL_ROOT_ID;
+    document.body.appendChild(root);
+    return root;
+}
+
+function closeAddProductsModal(options = {}) {
+    const { resetDraft = true } = options;
+    destroySimpleConsignmentAddProductsGrid();
+    document.getElementById(ADD_PRODUCTS_MODAL_ROOT_ID)?.remove();
+    featureState.addProductsModalOpen = false;
+    featureState.addProductsModalLoading = false;
+
+    if (resetDraft) {
+        featureState.addProductsRows = [];
+        featureState.addProductsSearchTerm = "";
+    }
+}
+
+function syncAddProductsSummaryInPlace() {
+    if (!featureState.addProductsModalOpen) return;
+
+    const gridRows = getSimpleConsignmentAddProductsRows();
+    const rows = gridRows.length > 0 ? gridRows : featureState.addProductsRows;
+    if (gridRows.length > 0) {
+        featureState.addProductsRows = gridRows;
+    }
+
+    const summary = buildAddProductsSelectionSummary(rows);
+    const productsNode = document.getElementById("simple-consignment-add-products-selected-count");
+    const quantityNode = document.getElementById("simple-consignment-add-products-selected-qty");
+    const valueNode = document.getElementById("simple-consignment-add-products-selected-value");
+    const applyButton = document.getElementById("simple-consignment-add-products-apply-button");
+
+    if (productsNode) productsNode.textContent = String(summary.productCount);
+    if (quantityNode) quantityNode.textContent = String(summary.quantity);
+    if (valueNode) valueNode.textContent = formatCurrency(summary.value);
+
+    if (applyButton) {
+        const disabled = summary.quantity <= 0 || featureState.addProductsModalLoading;
+        applyButton.disabled = disabled;
+        applyButton.title = disabled
+            ? "Set Qty To Add on at least one product."
+            : "";
+    }
+}
+
+function renderAddProductsModal(order) {
+    if (!featureState.addProductsModalOpen) return;
+
+    const root = ensureAddProductsModalRoot();
+    const summary = buildAddProductsSelectionSummary(featureState.addProductsRows);
+    const applyDisabled = summary.quantity <= 0 || featureState.addProductsModalLoading;
+
+    root.innerHTML = `
+        <div id="simple-consignment-add-products-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="simple-consignment-add-products-title">
+            <div class="purchase-payment-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.plus}</span>
+                        <div>
+                            <h3 id="simple-consignment-add-products-title">Add Products To Settlement</h3>
+                            <p class="panel-copy">Select products from this order's sales catalogue and set Qty To Add. The worksheet updates immediately, and Save Progress commits all changes together.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${order?.consignmentId || "-"}</span>
+                        <span class="status-pill">Selected: <strong id="simple-consignment-add-products-selected-count">${summary.productCount}</strong></span>
+                        <span class="status-pill">Qty: <strong id="simple-consignment-add-products-selected-qty">${summary.quantity}</strong></span>
+                        <span class="status-pill">Value: <strong id="simple-consignment-add-products-selected-value">${formatCurrency(summary.value)}</strong></span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    ${featureState.addProductsModalLoading ? `
+                        <div class="empty-state">
+                            <p>Loading catalogue products for this order...</p>
+                        </div>
+                    ` : `
+                        <div class="toolbar">
+                            <p class="panel-copy">Use search and Qty To Add to stage additional checkout lines.</p>
+                            <div class="search-wrap">
+                                <span class="search-icon">${icons.search}</span>
+                                <input id="simple-consignment-add-products-search" class="input toolbar-search" type="search" placeholder="Search product or category" value="${featureState.addProductsSearchTerm}">
+                            </div>
+                        </div>
+                        <div class="ag-shell">
+                            <div id="simple-consignment-add-products-grid" class="ag-theme-alpine moneta-grid" style="height: 460px; width: 100%;"></div>
+                        </div>
+                    `}
+                    <div class="form-actions">
+                        <button id="simple-consignment-add-products-close-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Close
+                        </button>
+                        <button id="simple-consignment-add-products-apply-button" class="button button-primary-alt" type="button" ${applyDisabled ? "disabled" : ""} ${applyDisabled ? 'title="Set Qty To Add on at least one product."' : ""}>
+                            <span class="button-icon">${icons.plus}</span>
+                            Add To Worksheet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modal = root.querySelector("#simple-consignment-add-products-modal");
+    modal?.addEventListener("input", event => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        if (target.id === "simple-consignment-add-products-search") {
+            featureState.addProductsSearchTerm = target.value || "";
+            updateSimpleConsignmentAddProductsGridSearch(featureState.addProductsSearchTerm);
+        }
+    });
+    modal?.addEventListener("click", event => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const closeButton = target.closest("#simple-consignment-add-products-close-button");
+        const applyButton = target.closest("#simple-consignment-add-products-apply-button");
+        const clickedBackdrop = target.id === "simple-consignment-add-products-modal";
+
+        if (closeButton || clickedBackdrop) {
+            closeAddProductsModal();
+            return;
+        }
+
+        if (applyButton) {
+            handleApplyAddProductsToWorksheet();
+        }
+    });
+
+    if (featureState.addProductsModalLoading) return;
+
+    initializeSimpleConsignmentAddProductsGrid(
+        document.getElementById("simple-consignment-add-products-grid"),
+        rows => {
+            featureState.addProductsRows = rows;
+            syncAddProductsSummaryInPlace();
+        }
+    );
+    refreshSimpleConsignmentAddProductsGrid(featureState.addProductsRows);
+    updateSimpleConsignmentAddProductsGridSearch(featureState.addProductsSearchTerm);
+    syncAddProductsSummaryInPlace();
 }
 
 function hasOrderContextUpdated(order, contextPayload = {}) {
@@ -248,6 +466,7 @@ function isCancelMode() {
 }
 
 function resetWorkspaceToCreate() {
+    closeAddProductsModal();
     featureState.workspaceMode = "create";
     featureState.activeOrderId = null;
     featureState.cancelReason = "";
@@ -785,9 +1004,17 @@ function renderSettlementWorkspace(snapshot) {
                 ? viewStateCopy
                 : "Update sold, returned, damaged, and gifted quantities. Save progress to reconcile quantities and values. Payments can be recorded later."}</p>
                         </div>
-                        <div class="search-wrap">
-                            <span class="search-icon">${icons.search}</span>
-                            <input id="simple-consignment-items-search" class="input toolbar-search" type="search" placeholder="Search product" value="${featureState.worksheetSearchTerm}">
+                        <div class="simple-consignment-toolbar-actions">
+                            ${isView || isCancel ? "" : `
+                                <button id="simple-consignment-open-add-products-button" class="button button-secondary" type="button">
+                                    <span class="button-icon">${icons.plus}</span>
+                                    Add Products
+                                </button>
+                            `}
+                            <div class="search-wrap">
+                                <span class="search-icon">${icons.search}</span>
+                                <input id="simple-consignment-items-search" class="input toolbar-search" type="search" placeholder="Search product" value="${featureState.worksheetSearchTerm}">
+                            </div>
                         </div>
                     </div>
                     <div class="ag-shell">
@@ -1080,6 +1307,7 @@ function ensureOrdersListener(snapshot) {
     const shouldListen = snapshot.currentRoute === "#/simple-consignment" && Boolean(snapshot.currentUser);
 
     if (!shouldListen) {
+        closeAddProductsModal();
         detachOrdersListener();
         return;
     }
@@ -1146,6 +1374,7 @@ function ensureTransactionsListener(snapshot) {
 function openOrderWorkspace(order) {
     if (!order?.id) return;
 
+    closeAddProductsModal();
     const status = normalizeText(order.status);
     featureState.activeOrderId = order.id;
     featureState.workspaceMode = status === "Active" ? "settle" : "view";
@@ -1177,6 +1406,7 @@ function openOrderWorkspace(order) {
 function openOrderCancelWorkspace(order) {
     if (!order?.id) return;
 
+    closeAddProductsModal();
     featureState.activeOrderId = order.id;
     featureState.workspaceMode = "cancel";
     featureState.checkoutDraft = {
@@ -1312,6 +1542,118 @@ async function handleCreateCheckoutSubmit() {
     }
 }
 
+async function handleOpenAddProductsModal() {
+    const snapshot = getState();
+    const order = getActiveOrder();
+    if (!order?.id || !isSettleMode()) return;
+    if (featureState.addProductsModalLoading) return;
+
+    const catalogueId = normalizeText(order.salesCatalogueId);
+    if (!catalogueId) {
+        showToast("This order has no linked sales catalogue. Products cannot be added.", "error", {
+            title: "Simple Consignment"
+        });
+        return;
+    }
+
+    featureState.addProductsRows = [];
+    featureState.addProductsSearchTerm = "";
+    featureState.addProductsModalOpen = true;
+    featureState.addProductsModalLoading = true;
+    renderAddProductsModal(order);
+
+    try {
+        const worksheetRows = getSimpleConsignmentWorksheetRows();
+        const catalogueItems = await fetchSimpleConsignmentCatalogueItems(catalogueId);
+
+        featureState.addProductsRows = buildSettlementAddProductsRows(
+            snapshot,
+            order,
+            worksheetRows,
+            catalogueItems
+        );
+
+        const liveOrder = getActiveOrder();
+        if (!featureState.addProductsModalOpen || !liveOrder || liveOrder.id !== order.id) {
+            closeAddProductsModal();
+            return;
+        }
+
+        featureState.addProductsModalLoading = false;
+        renderAddProductsModal(order);
+    } catch (error) {
+        closeAddProductsModal();
+        console.error("[Moneta] Failed to open add products modal:", error);
+        showToast(error?.message || "Could not load products for add flow.", "error", {
+            title: "Simple Consignment"
+        });
+    }
+}
+
+function handleApplyAddProductsToWorksheet() {
+    const order = getActiveOrder();
+    if (!order?.id || !isSettleMode()) return;
+
+    const addRows = getSimpleConsignmentAddProductsRows();
+    const selectedRows = (addRows || [])
+        .map(row => ({
+            ...row,
+            quantityToAdd: Math.max(0, Math.floor(Number(row.quantityToAdd) || 0))
+        }))
+        .filter(row => row.quantityToAdd > 0);
+
+    if (selectedRows.length === 0) {
+        showToast("Set Qty To Add on at least one product before applying.", "warning", {
+            title: "Simple Consignment"
+        });
+        return;
+    }
+
+    const worksheetRows = getSimpleConsignmentWorksheetRows();
+    const rowMap = new Map(worksheetRows.map(row => [row.productId, { ...row }]));
+    const mergedRows = [...worksheetRows.map(row => ({ ...row }))];
+
+    selectedRows.forEach(selected => {
+        const existing = rowMap.get(selected.productId);
+        if (existing) {
+            existing.quantityCheckedOut = Math.max(0, Math.floor(Number(existing.quantityCheckedOut) || 0)) + selected.quantityToAdd;
+            existing.inventoryCount = Math.max(0, Number(selected.inventoryCount) || 0);
+            rowMap.set(selected.productId, existing);
+            return;
+        }
+
+        const addedRow = {
+            productId: selected.productId,
+            productName: selected.productName || "Untitled Product",
+            categoryId: selected.categoryId || "",
+            categoryName: selected.categoryName || "-",
+            sellingPrice: Number(selected.sellingPrice) || 0,
+            inventoryCount: Math.max(0, Number(selected.inventoryCount) || 0),
+            quantityCheckedOut: selected.quantityToAdd,
+            quantitySold: 0,
+            quantityReturned: 0,
+            quantityDamaged: 0,
+            quantityGifted: 0
+        };
+        mergedRows.push(addedRow);
+        rowMap.set(addedRow.productId, addedRow);
+    });
+
+    const nextRows = mergedRows.map(row => rowMap.get(row.productId) || row);
+    nextRows.sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
+    refreshSimpleConsignmentWorksheetGrid(nextRows);
+    updateSimpleConsignmentWorksheetGridSearch(featureState.worksheetSearchTerm);
+    updateSummaryCardsInPlace();
+
+    const selectionSummary = buildAddProductsSelectionSummary(selectedRows);
+    closeAddProductsModal();
+    showToast(
+        `${selectionSummary.productCount} product(s) and ${selectionSummary.quantity} qty added to worksheet. Save Progress to commit.`,
+        "success",
+        { title: "Simple Consignment" }
+    );
+}
+
 async function handleSaveSettlementProgress() {
     const snapshot = getState();
     const user = snapshot.currentUser;
@@ -1354,10 +1696,14 @@ async function handleSaveSettlementProgress() {
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
             { label: "Line Updates", value: String(deltaSummary.lineChangeCount) },
+            { label: "Qty Checked Out", value: String(result.summary?.totalQuantityCheckedOut || 0) },
+            { label: "Value Checked Out", value: formatCurrency(result.summary?.totalValueCheckedOut || 0) },
             { label: "Sold Value", value: formatCurrency(result.summary?.totalValueSold || 0) },
             { label: "Returned Qty", value: String(result.summary?.totalQuantityReturned || 0) },
             { label: "On Hand", value: String(result.summary?.totalOnHandQuantity || 0) },
             { label: "Balance Due", value: formatCurrency(result.summary?.balanceDue || 0) },
+            { label: "Checked Out Qty Delta", value: formatSignedInteger(deltaSummary.impact.checkedOutQuantityDelta) },
+            { label: "Checked Out Value Delta", value: formatSignedCurrency(deltaSummary.impact.checkedOutValueDelta) },
             { label: "Sold Value Delta", value: formatSignedCurrency(deltaSummary.impact.soldValueDelta) },
             { label: "Returned Value Delta", value: formatSignedCurrency(deltaSummary.impact.returnedValueDelta) },
             { label: "Damaged Value Delta", value: formatSignedCurrency(deltaSummary.impact.damagedValueDelta) },
@@ -1799,6 +2145,7 @@ function bindSimpleConsignmentEvents() {
         const enterCancelModeButton = target.closest("#simple-consignment-enter-cancel-mode-button");
         const confirmCancelOrderButton = target.closest("#simple-consignment-cancel-order-confirm-button");
         const cancelOrderBackButton = target.closest("#simple-consignment-cancel-order-back-button");
+        const openAddProductsButton = target.closest("#simple-consignment-open-add-products-button");
         const saveProgressButton = target.closest("#simple-consignment-save-progress-button");
         const closeOrderButton = target.closest("#simple-consignment-close-order-button");
         const resetButton = target.closest("#simple-consignment-reset-button");
@@ -1850,6 +2197,11 @@ function bindSimpleConsignmentEvents() {
                 console.error("[Moneta] Simple consignment cancel failed:", error);
                 ProgressToast.showError(error?.message || "Could not cancel the consignment order.");
             }
+            return;
+        }
+
+        if (openAddProductsButton) {
+            await handleOpenAddProductsModal();
             return;
         }
 
