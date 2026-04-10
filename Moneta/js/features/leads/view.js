@@ -348,6 +348,10 @@ function renderLeadForm(snapshot) {
                     </div>
                     <div class="form-actions">
                         ${editingLead ? `
+                            <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
+                                <span class="button-icon">${icons.leads}</span>
+                                Work Log
+                            </button>
                             <button id="lead-cancel-button" class="button button-secondary" type="button">
                                 <span class="button-icon">${icons.inactive}</span>
                                 Cancel
