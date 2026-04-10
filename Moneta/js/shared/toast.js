@@ -1,6 +1,8 @@
 const SIMPLE_TOAST_TIMEOUT_MS = 3200;
 const PROGRESS_HIDE_DELAY_MS = 1400;
 const PROGRESS_ERROR_HIDE_DELAY_MS = 7600;
+const UI_ACTION_LOCK_Z_INDEX = 1290;
+const TOAST_ROOT_Z_INDEX = 1305;
 
 const TOAST_LABELS = {
     info: "Working",
@@ -56,17 +58,39 @@ const uiActionLockState = {
     count: 0
 };
 
+function elevateToastRoot() {
+    const root = document.getElementById("toast-root");
+    if (!root) return null;
+
+    if (document.body && root.parentElement !== document.body) {
+        document.body.appendChild(root);
+    }
+
+    if (document.body && document.body.lastElementChild !== root) {
+        document.body.appendChild(root);
+    }
+
+    root.style.zIndex = String(TOAST_ROOT_Z_INDEX);
+    return root;
+}
+
 function ensureUiActionLockLayer() {
     let lockLayer = document.getElementById("ui-action-lock");
-    if (lockLayer) return lockLayer;
+    if (lockLayer) {
+        lockLayer.style.zIndex = String(UI_ACTION_LOCK_Z_INDEX);
+        elevateToastRoot();
+        return lockLayer;
+    }
 
     lockLayer = document.createElement("div");
     lockLayer.id = "ui-action-lock";
     lockLayer.className = "ui-action-lock";
     lockLayer.setAttribute("aria-hidden", "true");
     lockLayer.hidden = true;
+    lockLayer.style.zIndex = String(UI_ACTION_LOCK_Z_INDEX);
 
     document.body?.appendChild(lockLayer);
+    elevateToastRoot();
     return lockLayer;
 }
 
@@ -94,7 +118,7 @@ function unlockUiActions() {
 }
 
 function ensureToastInfrastructure() {
-    const root = document.getElementById("toast-root");
+    const root = elevateToastRoot();
     if (!root) return null;
 
     if (root.dataset.enhancedToast === "true") {
