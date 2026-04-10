@@ -1752,32 +1752,24 @@ async function handleSaveSettlementProgress() {
         title: "Simple Consignment"
     });
 
-    const displayedLineChanges = deltaSummary.lineChanges.slice(0, 6);
+    const displayedLineChanges = deltaSummary.lineChanges.slice(0, 3);
     const hiddenLineChangesCount = Math.max(0, deltaSummary.lineChangeCount - displayedLineChanges.length);
 
     await showSummaryModal({
         title: "Settlement Updated",
         message: deltaSummary.lineChangeCount > 0
-            ? "Settlement saved with the worksheet updates below. Payment posting remains optional until close."
+            ? "Settlement saved. Key worksheet impacts are summarized below."
             : contextUpdated
                 ? "Order context was updated. Worksheet quantities were unchanged."
                 : "No worksheet quantity updates were detected. Existing values were revalidated and totals were refreshed.",
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
-            { label: "Line Updates", value: String(deltaSummary.lineChangeCount) },
-            { label: "Qty Checked Out", value: String(result.summary?.totalQuantityCheckedOut || 0) },
-            { label: "Value Checked Out", value: formatCurrency(result.summary?.totalValueCheckedOut || 0) },
-            { label: "Sold Value", value: formatCurrency(result.summary?.totalValueSold || 0) },
-            { label: "Returned Qty", value: String(result.summary?.totalQuantityReturned || 0) },
-            { label: "On Hand", value: String(result.summary?.totalOnHandQuantity || 0) },
+            { label: "Worksheet Updates", value: String(deltaSummary.lineChangeCount) },
             { label: "Balance Due", value: formatCurrency(result.summary?.balanceDue || 0) },
-            { label: "Checked Out Qty Delta", value: formatSignedInteger(deltaSummary.impact.checkedOutQuantityDelta) },
-            { label: "Checked Out Value Delta", value: formatSignedCurrency(deltaSummary.impact.checkedOutValueDelta) },
+            { label: "Qty Out Delta", value: formatSignedInteger(deltaSummary.impact.checkedOutQuantityDelta) },
+            { label: "Value Out Delta", value: formatSignedCurrency(deltaSummary.impact.checkedOutValueDelta) },
             { label: "Sold Value Delta", value: formatSignedCurrency(deltaSummary.impact.soldValueDelta) },
             { label: "Returned Value Delta", value: formatSignedCurrency(deltaSummary.impact.returnedValueDelta) },
-            { label: "Damaged Value Delta", value: formatSignedCurrency(deltaSummary.impact.damagedValueDelta) },
-            { label: "Gifted Value Delta", value: formatSignedCurrency(deltaSummary.impact.giftedValueDelta) },
-            { label: "On Hand Value Delta", value: formatSignedCurrency(deltaSummary.impact.onHandValueDelta) },
             { label: "On Hand Qty Delta", value: formatSignedInteger(deltaSummary.impact.onHandQuantityDelta) },
             { label: "Balance Delta", value: formatSignedCurrency(deltaSummary.impact.balanceDueDelta) },
             ...displayedLineChanges.map((entry, index) => ({
