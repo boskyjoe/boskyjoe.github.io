@@ -367,6 +367,10 @@ select {
     overflow: hidden;
 }
 
+.ag-shell-compact {
+    min-height: 0;
+}
+
 .ag-theme-alpine.moneta-grid {
     --ag-font-family: var(--font-sans);
     --ag-background-color: #ffffff;
