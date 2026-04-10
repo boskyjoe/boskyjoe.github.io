@@ -486,7 +486,7 @@ function renderLeadWorkLogModal() {
                                             value="${featureState.workLogSearchTerm}">
                                     </div>
                                 </div>
-                                <div class="ag-shell">
+                                <div class="ag-shell ag-shell-compact">
                                     <div id="lead-worklog-grid" class="ag-theme-alpine moneta-grid" style="height: 380px; width: 100%;"></div>
                                 </div>
                                 <div class="form-actions">
