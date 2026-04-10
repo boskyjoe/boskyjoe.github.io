@@ -860,6 +860,11 @@ select {
     backdrop-filter: blur(6px);
 }
 
+.purchase-payment-modal-overlay[hidden],
+.retail-expense-modal-overlay[hidden] {
+    display: none !important;
+}
+
 .purchase-payment-modal-card {
     position: relative;
     width: min(1180px, 100%);
