@@ -107,6 +107,21 @@ function lineChangeStateMarkup(value) {
     return "";
 }
 
+function buildSettlementLineActionMarkup(data) {
+    const changeState = normalizeText(data?.lineChangeState).toLowerCase();
+    if (changeState !== "added" && changeState !== "updated") {
+        return `<span class="grid-action-muted">-</span>`;
+    }
+
+    const label = changeState === "added" ? "Undo" : "Revert";
+    const productId = data?.productId || "";
+    return `
+        <button class="button grid-action-button grid-action-button-secondary simple-consignment-line-undo-button" type="button" data-product-id="${productId}" data-line-change-state="${changeState}">
+            ${label}
+        </button>
+    `;
+}
+
 function buildCheckoutQuantitySetter() {
     return params => {
         const parsed = Number(params.newValue);
@@ -370,6 +385,16 @@ function buildSettlementWorksheetColumnDefs() {
             resizable: false,
             suppressHeaderMenuButton: true,
             cellRenderer: params => (params.node?.rowPinned ? "" : lineChangeStateMarkup(params.value))
+        },
+        {
+            headerName: "Action",
+            minWidth: 110,
+            maxWidth: 130,
+            flex: 0.55,
+            sortable: false,
+            filter: false,
+            suppressHeaderMenuButton: true,
+            cellRenderer: params => (params.node?.rowPinned ? "" : buildSettlementLineActionMarkup(params.data))
         },
         { field: "productName", headerName: "Product", minWidth: 230, flex: 1.15 },
         {

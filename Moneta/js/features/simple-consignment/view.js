@@ -573,7 +573,8 @@ function getOrderWorksheetRows(order, snapshot) {
             quantityReturned: Math.max(0, Math.floor(Number(item.quantityReturned) || 0)),
             quantityDamaged: Math.max(0, Math.floor(Number(item.quantityDamaged) || 0)),
             quantityGifted: Math.max(0, Math.floor(Number(item.quantityGifted) || 0)),
-            lineChangeState: ""
+            lineChangeState: "",
+            lineChangeOriginalQuantityCheckedOut: null
         };
     });
 }
@@ -1617,11 +1618,14 @@ function handleApplyAddProductsToWorksheet() {
     selectedRows.forEach(selected => {
         const existing = rowMap.get(selected.productId);
         if (existing) {
-            existing.quantityCheckedOut = Math.max(0, Math.floor(Number(existing.quantityCheckedOut) || 0)) + selected.quantityToAdd;
-            existing.inventoryCount = Math.max(0, Number(selected.inventoryCount) || 0);
-            if (normalizeText(existing.lineChangeState).toLowerCase() !== "added") {
+            const currentCheckedOut = Math.max(0, Math.floor(Number(existing.quantityCheckedOut) || 0));
+            const existingState = normalizeText(existing.lineChangeState).toLowerCase();
+            if (existingState !== "added" && existingState !== "updated") {
                 existing.lineChangeState = "updated";
+                existing.lineChangeOriginalQuantityCheckedOut = currentCheckedOut;
             }
+            existing.quantityCheckedOut = currentCheckedOut + selected.quantityToAdd;
+            existing.inventoryCount = Math.max(0, Number(selected.inventoryCount) || 0);
             rowMap.set(selected.productId, existing);
             return;
         }
@@ -1638,7 +1642,8 @@ function handleApplyAddProductsToWorksheet() {
             quantityReturned: 0,
             quantityDamaged: 0,
             quantityGifted: 0,
-            lineChangeState: "added"
+            lineChangeState: "added",
+            lineChangeOriginalQuantityCheckedOut: 0
         };
         mergedRows.push(addedRow);
         rowMap.set(addedRow.productId, addedRow);
@@ -1657,6 +1662,65 @@ function handleApplyAddProductsToWorksheet() {
         "success",
         { title: "Simple Consignment" }
     );
+}
+
+function handleUndoWorksheetLineChange(button) {
+    if (!isSettleMode()) return;
+
+    const productId = normalizeText(button.dataset.productId);
+    if (!productId) return;
+
+    const rows = getSimpleConsignmentWorksheetRows().map(row => ({ ...row }));
+    const targetIndex = rows.findIndex(row => row.productId === productId);
+    if (targetIndex < 0) return;
+
+    const targetRow = rows[targetIndex];
+    const changeState = normalizeText(targetRow.lineChangeState).toLowerCase();
+
+    if (changeState === "added") {
+        rows.splice(targetIndex, 1);
+        refreshSimpleConsignmentWorksheetGrid(rows);
+        updateSimpleConsignmentWorksheetGridSearch(featureState.worksheetSearchTerm);
+        updateSummaryCardsInPlace();
+        showToast("Newly added line was removed from this draft.", "success", {
+            title: "Simple Consignment"
+        });
+        return;
+    }
+
+    if (changeState === "updated") {
+        const previousCheckedOut = Math.max(
+            0,
+            Math.floor(Number(targetRow.lineChangeOriginalQuantityCheckedOut) || 0)
+        );
+        const quantitySold = Math.max(0, Math.floor(Number(targetRow.quantitySold) || 0));
+        const quantityReturned = Math.max(0, Math.floor(Number(targetRow.quantityReturned) || 0));
+        const quantityDamaged = Math.max(0, Math.floor(Number(targetRow.quantityDamaged) || 0));
+        const quantityGifted = Math.max(0, Math.floor(Number(targetRow.quantityGifted) || 0));
+        const accounted = quantitySold + quantityReturned + quantityDamaged + quantityGifted;
+
+        if (accounted > previousCheckedOut) {
+            showToast(
+                `Cannot revert this line because accounted quantity (${accounted}) exceeds the original checked-out quantity (${previousCheckedOut}).`,
+                "warning",
+                { title: "Simple Consignment" }
+            );
+            return;
+        }
+
+        rows[targetIndex] = {
+            ...targetRow,
+            quantityCheckedOut: previousCheckedOut,
+            lineChangeState: "",
+            lineChangeOriginalQuantityCheckedOut: null
+        };
+        refreshSimpleConsignmentWorksheetGrid(rows);
+        updateSimpleConsignmentWorksheetGridSearch(featureState.worksheetSearchTerm);
+        updateSummaryCardsInPlace();
+        showToast("Checked-out quantity was reverted for this line.", "success", {
+            title: "Simple Consignment"
+        });
+    }
 }
 
 async function handleSaveSettlementProgress() {
@@ -2155,6 +2219,7 @@ function bindSimpleConsignmentEvents() {
         const closeOrderButton = target.closest("#simple-consignment-close-order-button");
         const resetButton = target.closest("#simple-consignment-reset-button");
         const backButton = target.closest("#simple-consignment-back-button");
+        const undoWorksheetLineButton = target.closest(".simple-consignment-line-undo-button");
         const voidTransactionButton = target.closest(".simple-consignment-void-transaction-button");
 
         if (openOrderButton) {
@@ -2233,6 +2298,11 @@ function bindSimpleConsignmentEvents() {
         if (resetButton || backButton) {
             resetWorkspaceToCreate();
             renderSimpleConsignmentView();
+            return;
+        }
+
+        if (undoWorksheetLineButton) {
+            handleUndoWorksheetLineChange(undoWorksheetLineButton);
             return;
         }
 
