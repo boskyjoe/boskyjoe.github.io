@@ -527,6 +527,7 @@ function resolvePaymentModeOptions(snapshot, currentValue) {
 function buildConsignmentOrderGridRows() {
     return (featureState.orders || []).map(order => ({
         ...order,
+        paymentStatus: resolveConsignmentPaymentStatus(order),
         lineItemCount: Number(order.lineItemCount) || (Array.isArray(order.items) ? order.items.length : 0),
         totalValueCheckedOut: Number(order.totalValueCheckedOut) || 0,
         totalValueSold: Number(order.totalValueSold) || 0,
@@ -536,6 +537,28 @@ function buildConsignmentOrderGridRows() {
         balanceDue: Number(order.balanceDue) || 0,
         totalOnHandQuantity: Number(order.totalOnHandQuantity) || 0
     }));
+}
+
+function resolveConsignmentPaymentStatus(order = {}) {
+    const orderStatus = normalizeText(order.status).toLowerCase();
+    if (orderStatus === "cancelled") return "Cancelled";
+    if (orderStatus === "voided") return "Voided";
+
+    const soldValue = Number(order.totalValueSold) || 0;
+    const amountPaid = Number(order.totalAmountPaid) || 0;
+    const expenses = Number(order.totalExpenses) || 0;
+    const balanceDue = Number(order.balanceDue) || 0;
+    const appliedValue = amountPaid + expenses;
+
+    if (soldValue <= 0 || appliedValue <= 0) {
+        return "Unpaid";
+    }
+
+    if (balanceDue <= 0 || appliedValue >= soldValue) {
+        return "Paid";
+    }
+
+    return "Partially Paid";
 }
 
 function getCreateWorksheetRows() {

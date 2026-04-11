@@ -65,6 +65,28 @@ function statusMarkup(value = "Active") {
     return `<span class="purchase-status-pill purchase-status-recorded">Active</span>`;
 }
 
+function paymentStatusMarkup(value = "Unpaid") {
+    const normalized = normalizeText(value).toLowerCase();
+
+    if (normalized === "paid") {
+        return `<span class="purchase-status-pill purchase-status-paid">Paid</span>`;
+    }
+
+    if (normalized === "partially paid") {
+        return `<span class="purchase-status-pill purchase-status-partially-paid">Partially Paid</span>`;
+    }
+
+    if (normalized === "cancelled") {
+        return `<span class="purchase-status-pill purchase-status-voided">Cancelled</span>`;
+    }
+
+    if (normalized === "voided") {
+        return `<span class="purchase-status-pill purchase-status-voided">Voided</span>`;
+    }
+
+    return `<span class="purchase-status-pill purchase-status-unpaid">Unpaid</span>`;
+}
+
 function transactionStatusMarkup(value = "Verified") {
     const normalized = normalizeText(value).toLowerCase();
 
@@ -250,16 +272,23 @@ function buildOrdersColumnDefs() {
         { field: "teamMemberName", headerName: "Member", minWidth: 170, flex: 1 },
         {
             field: "status",
-            headerName: "Status",
-            minWidth: 130,
-            flex: 0.75,
+            headerName: "Order Status",
+            minWidth: 140,
+            flex: 0.78,
             cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || "Active"))
         },
         {
+            field: "paymentStatus",
+            headerName: "Payment Status",
+            minWidth: 155,
+            flex: 0.86,
+            cellRenderer: params => (params.node?.rowPinned ? "" : paymentStatusMarkup(params.value || "Unpaid"))
+        },
+        {
             field: "lineItemCount",
-            headerName: "Products",
-            minWidth: 110,
-            flex: 0.65,
+            headerName: "No. Of Products",
+            minWidth: 145,
+            flex: 0.76,
             ...rightAlignedNumberColumn
         },
         {
@@ -272,7 +301,7 @@ function buildOrdersColumnDefs() {
         },
         {
             field: "totalValueSold",
-            headerName: "Sold Value",
+            headerName: "Sold",
             minWidth: 145,
             flex: 0.85,
             ...rightAlignedNumberColumn,
@@ -312,9 +341,9 @@ function buildOrdersColumnDefs() {
         },
         {
             field: "totalOnHandQuantity",
-            headerName: "On Hand",
-            minWidth: 110,
-            flex: 0.68,
+            headerName: "OnHand Qty",
+            minWidth: 125,
+            flex: 0.72,
             ...rightAlignedNumberColumn
         },
         {
