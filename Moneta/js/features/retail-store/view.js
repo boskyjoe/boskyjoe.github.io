@@ -68,6 +68,7 @@ const featureState = {
     unsubscribePayments: null,
     paymentDraft: createDefaultRetailPaymentDraft(),
     paymentVoidReason: "",
+    voidingPaymentId: null,
     returnHistoryModalOpen: false,
     returnHistorySaleId: null,
     returnHistoryRows: [],
@@ -243,6 +244,7 @@ function closeRetailPaymentModalState() {
     featureState.payments = [];
     featureState.paymentDraft = createDefaultRetailPaymentDraft();
     featureState.paymentVoidReason = "";
+    featureState.voidingPaymentId = null;
 }
 
 function openRetailPaymentModal(sale) {
@@ -259,11 +261,16 @@ function openRetailPaymentModal(sale) {
     featureState.payments = [];
     featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
     featureState.paymentVoidReason = "";
+    featureState.voidingPaymentId = null;
 
     featureState.unsubscribePayments = subscribeToRetailSalePayments(
         sale.id,
         rows => {
             featureState.payments = rows;
+            if (featureState.voidingPaymentId && !rows.some(entry => entry.id === featureState.voidingPaymentId)) {
+                featureState.voidingPaymentId = null;
+                featureState.paymentVoidReason = "";
+            }
 
             if (getState().currentRoute === "#/retail-store" && featureState.paymentModalOpen) {
                 syncRetailPaymentHistoryGrid();
@@ -572,6 +579,11 @@ function getPaymentModalSale() {
     return featureState.sales.find(entry => entry.id === featureState.paymentSaleId) || null;
 }
 
+function getVoidingRetailPayment() {
+    if (!featureState.voidingPaymentId) return null;
+    return featureState.payments.find(entry => entry.id === featureState.voidingPaymentId) || null;
+}
+
 function getReturnWorkspaceSale() {
     if (!featureState.returningSaleId) return null;
     return featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null;
@@ -718,6 +730,11 @@ function renderRetailPaymentModal(snapshot) {
     const voidedFieldDisabledAttrs = isVoidedSale
         ? 'disabled aria-disabled="true"'
         : "";
+    const voidingPayment = getVoidingRetailPayment();
+    const showPaymentVoidPanel = Boolean(voidingPayment) && !isVoidedSale;
+    const voidingPaymentAppliedAmount = Number(voidingPayment?.amountApplied ?? voidingPayment?.amountPaid) || 0;
+    const voidingPaymentReceivedAmount = Number(voidingPayment?.amountReceived ?? voidingPayment?.totalCollected ?? voidingPayment?.amountPaid) || 0;
+    const voidingPaymentDonationAmount = Number(voidingPayment?.donationAmount) || 0;
 
     return `
         <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
@@ -830,11 +847,42 @@ function renderRetailPaymentModal(snapshot) {
                                 <p class="section-kicker">Payment History</p>
                                 <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} payment record(s) linked to this sale.</p>
                             </div>
-                            <div class="field field-full">
-                                <label for="retail-payment-void-reason">Void Reason (Required For Void Payment)</label>
-                                <textarea id="retail-payment-void-reason" class="textarea" placeholder="Reason for voiding a selected payment">${featureState.paymentVoidReason || ""}</textarea>
-                                <p class="panel-copy panel-copy-tight">Use the same reason for any payment you void from this history view.</p>
-                            </div>
+                            ${showPaymentVoidPanel ? `
+                                <div class="panel-card panel-card-muted">
+                                    <div class="workspace-form-section-head">
+                                        <p class="workspace-form-section-kicker">Void Payment Mode</p>
+                                        <p class="panel-copy">Payment <strong>${voidingPayment?.paymentId || voidingPayment?.id || "-"}</strong> selected for void. Provide a reason and confirm.</p>
+                                    </div>
+                                    <div class="purchase-payment-meta-grid">
+                                        <article class="summary-card">
+                                            <p class="summary-label">Applied</p>
+                                            <p class="summary-value">${formatCurrency(voidingPaymentAppliedAmount)}</p>
+                                        </article>
+                                        <article class="summary-card">
+                                            <p class="summary-label">Received</p>
+                                            <p class="summary-value">${formatCurrency(voidingPaymentReceivedAmount)}</p>
+                                        </article>
+                                        <article class="summary-card">
+                                            <p class="summary-label">Donation</p>
+                                            <p class="summary-value">${formatCurrency(voidingPaymentDonationAmount)}</p>
+                                        </article>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-payment-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <textarea id="retail-payment-void-reason" class="textarea" placeholder="Reason for voiding the selected payment">${featureState.paymentVoidReason || ""}</textarea>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button id="retail-payment-void-cancel-button" class="button button-secondary" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Cancel
+                                        </button>
+                                        <button id="retail-payment-void-confirm-button" class="button button-danger-soft" type="button" data-payment-id="${voidingPayment?.id || ""}" data-void-action="confirm">
+                                            <span class="button-icon">${icons.warning}</span>
+                                            Confirm Void Payment
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : ""}
                             <div class="ag-shell purchase-payment-history-shell">
                                 <div id="retail-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
                             </div>
@@ -2906,11 +2954,36 @@ async function handleRetailPaymentSubmit(event) {
 async function handleRetailPaymentVoid(button) {
     const paymentId = button.dataset.paymentId || "";
     const payment = featureState.payments.find(entry => entry.id === paymentId) || null;
+    const isConfirmAction = normalizeText(button.dataset.voidAction || "").toLowerCase() === "confirm";
 
     if (!payment) {
         showToast("The selected payment could not be found. Refresh payment history and try again.", "error", {
             title: "Retail Store"
         });
+        return;
+    }
+
+    if (!isConfirmAction) {
+        if (featureState.voidingPaymentId !== paymentId) {
+            featureState.voidingPaymentId = paymentId;
+            featureState.paymentVoidReason = "";
+        }
+        renderRetailStoreView();
+        showToast("Void mode opened for this payment. Enter a reason and confirm.", "info", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    if (featureState.voidingPaymentId !== paymentId) {
+        featureState.voidingPaymentId = paymentId;
+        featureState.paymentVoidReason = "";
+        renderRetailStoreView();
+        showToast("Void mode was reset for this payment. Enter a reason and confirm again.", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
         return;
     }
 
@@ -2976,6 +3049,7 @@ async function handleRetailPaymentVoid(button) {
             return result;
         });
 
+        featureState.voidingPaymentId = null;
         featureState.paymentVoidReason = "";
         renderRetailStoreView();
 
@@ -3002,6 +3076,12 @@ async function handleRetailPaymentVoid(button) {
             title: "Retail Store"
         });
     }
+}
+
+function handleRetailPaymentVoidCancel() {
+    featureState.voidingPaymentId = null;
+    featureState.paymentVoidReason = "";
+    renderRetailStoreView();
 }
 
 async function handleRetailSalePdf(button) {
@@ -3170,6 +3250,8 @@ function bindRetailStoreDomEvents() {
         const returnHistoryModalBackdrop = targetElement.closest("#retail-return-history-modal");
         const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
         const paymentVoidButton = targetElement.closest(".retail-payment-void-button");
+        const paymentVoidConfirmButton = targetElement.closest("#retail-payment-void-confirm-button");
+        const paymentVoidCancelButton = targetElement.closest("#retail-payment-void-cancel-button");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
@@ -3211,6 +3293,16 @@ function bindRetailStoreDomEvents() {
 
         if (paymentVoidButton) {
             handleRetailPaymentVoid(paymentVoidButton);
+            return;
+        }
+
+        if (paymentVoidConfirmButton) {
+            handleRetailPaymentVoid(paymentVoidConfirmButton);
+            return;
+        }
+
+        if (paymentVoidCancelButton) {
+            handleRetailPaymentVoidCancel();
             return;
         }
 
