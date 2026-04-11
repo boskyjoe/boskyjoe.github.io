@@ -425,9 +425,6 @@ function renderPaymentModal(snapshot) {
     return `
         <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
             <div class="purchase-payment-modal-card">
-                <button id="purchase-payments-close-button" class="purchase-payment-modal-corner-close" type="button" aria-label="Close payment modal">
-                    <span class="button-icon">${icons.close}</span>
-                </button>
                 <div class="${headerClassName}">
                     <div class="purchase-payment-modal-title-row">
                         <div class="panel-title-wrap">
@@ -527,6 +524,10 @@ function renderPaymentModal(snapshot) {
 
                                 <div class="form-actions">
                                     ${isPaymentVoidMode ? `
+                                        <button id="purchase-payment-close-button" class="button button-secondary purchase-payment-close-trigger" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Close
+                                        </button>
                                         <button id="purchase-payment-void-cancel-button" class="button button-secondary" type="button">
                                             <span class="button-icon">${icons.inactive}</span>
                                             Cancel Void
@@ -536,6 +537,10 @@ function renderPaymentModal(snapshot) {
                                             Confirm Void Payment
                                         </button>
                                     ` : `
+                                        <button id="purchase-payment-close-button" class="button button-secondary purchase-payment-close-trigger" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Close
+                                        </button>
                                         <button class="button button-primary" type="submit" ${recordPaymentDisabledAttrs}>
                                             <span class="button-icon">${icons.payment}</span>
                                             Record Payment
@@ -1279,7 +1284,7 @@ function bindPurchasesDomEvents() {
         const voidPaymentButton = target.closest(".purchase-payment-void-button");
         const cancelButton = target.closest("#purchase-cancel-button");
         const confirmInvoiceVoidButton = target.closest("#purchase-invoice-void-button");
-        const closePaymentsButton = target.closest("#purchase-payments-close-button");
+        const closePaymentsButton = target.closest("#purchase-payment-close-button") || target.closest(".purchase-payment-close-trigger");
         const cancelVoidButton = target.closest("#purchase-payment-void-cancel-button");
         const confirmVoidButton = target.closest("#purchase-payment-void-confirm-button");
         const paymentModal = target.closest("#purchase-payment-modal");
