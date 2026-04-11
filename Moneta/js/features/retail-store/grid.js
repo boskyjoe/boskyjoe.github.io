@@ -72,7 +72,7 @@ function retailPaymentActionMarkup(payment = {}) {
         : "";
 
     return `
-        <button class="button grid-action-button grid-action-button-secondary retail-payment-void-button" type="button" data-payment-id="${payment.id || ""}" ${disabledAttrs}>
+        <button class="button grid-action-button grid-action-button-danger retail-payment-void-button" type="button" data-payment-id="${payment.id || ""}" ${disabledAttrs}>
             <span class="button-icon">${icons.warning}</span>
             Void Payment
         </button>
@@ -173,7 +173,7 @@ function buildWorksheetColumnDefs() {
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => (params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`)
         },
         {
             field: "cgstPercentage",
@@ -184,7 +184,7 @@ function buildWorksheetColumnDefs() {
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("cgstPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => (params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`)
         },
         {
             field: "sgstPercentage",
@@ -195,7 +195,7 @@ function buildWorksheetColumnDefs() {
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("sgstPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => (params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`)
         },
         {
             headerName: "Tax",

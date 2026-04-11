@@ -2923,7 +2923,9 @@ async function handleRetailPaymentSubmit(event) {
             return result;
         });
 
-        closeRetailPaymentModalState();
+        featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+        featureState.paymentVoidReason = "";
+        featureState.voidingPaymentId = null;
         renderRetailStoreView();
 
         showToast("Retail payment recorded.", "success", {
