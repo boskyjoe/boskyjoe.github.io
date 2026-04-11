@@ -223,8 +223,8 @@
 
 .app-content {
     flex: 1 0 auto;
-    width: calc(100% - 0.6rem);
-    margin: 0 0.3rem 1.2rem;
+    width: calc(100% - 0.9rem);
+    margin: 0 0.3rem 1.2rem 0.6rem;
 }
 
 .app-footer {
