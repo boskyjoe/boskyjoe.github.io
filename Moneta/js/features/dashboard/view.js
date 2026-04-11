@@ -1127,6 +1127,7 @@ function renderDashboardMarkup(user) {
                             </div>
                             <div class="dashboard-chart-canvas-wrap">
                                 <canvas id="dashboard-inventory-status-chart"></canvas>
+                                <div id="dashboard-inventory-status-empty" class="dashboard-chart-empty" hidden></div>
                             </div>
                         </article>
                         <article class="dashboard-chart-card">
@@ -1135,6 +1136,7 @@ function renderDashboardMarkup(user) {
                             </div>
                             <div class="dashboard-chart-canvas-wrap">
                                 <canvas id="dashboard-inventory-category-chart"></canvas>
+                                <div id="dashboard-inventory-category-empty" class="dashboard-chart-empty" hidden></div>
                             </div>
                         </article>
                     </div>
@@ -1154,8 +1156,8 @@ function renderDashboardMarkup(user) {
                                     value="${featureState.inventorySearchTerm}">
                             </div>
                         </div>
-                        <div class="ag-shell">
-                            <div id="dashboard-inventory-grid" class="ag-theme-alpine moneta-grid" style="height: 460px; width: 100%;"></div>
+                        <div class="ag-shell ag-shell-compact">
+                            <div id="dashboard-inventory-grid" class="ag-theme-alpine moneta-grid dashboard-inventory-grid" style="width: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -1244,9 +1246,10 @@ function initializeInventoryGrid(inventory = {}) {
             autoHeight: true
         },
         animateRows: true,
+        domLayout: "autoHeight",
         pagination: true,
-        paginationPageSize: 25,
-        paginationPageSizeSelector: [25, 50, 100],
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 25, 50, 100],
         suppressCellFocus: true
     });
 
@@ -1268,13 +1271,50 @@ async function loadChartJs() {
 async function initializeInventoryCharts(inventory = {}) {
     const statusCanvas = document.getElementById("dashboard-inventory-status-chart");
     const categoryCanvas = document.getElementById("dashboard-inventory-category-chart");
+    const statusEmpty = document.getElementById("dashboard-inventory-status-empty");
+    const categoryEmpty = document.getElementById("dashboard-inventory-category-empty");
 
     if (!statusCanvas || !categoryCanvas) {
         destroyInventoryCharts();
         return;
     }
 
+    function setChartVisibility(canvas, emptyNode, { showChart, message = "" }) {
+        canvas.hidden = !showChart;
+        if (emptyNode) {
+            emptyNode.hidden = showChart;
+            if (!showChart) {
+                emptyNode.textContent = message;
+            }
+        }
+    }
+
     const syncToken = ++featureState.chartSyncToken;
+    const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
+    const statusData = [counts.out || 0, counts.low || 0, counts.medium || 0, counts.healthy || 0];
+    const statusTotal = statusData.reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+    const categoryRows = (inventory.topLowCategories || []).slice(0, 8);
+    const categoryLabels = categoryRows.map(row => row.categoryName);
+    const categoryData = categoryRows.map(row => row.count);
+
+    const hasStatusData = statusTotal > 0;
+    const hasCategoryData = categoryRows.length > 0;
+
+    setChartVisibility(statusCanvas, statusEmpty, {
+        showChart: hasStatusData,
+        message: "No inventory data is available yet for this dashboard range."
+    });
+    setChartVisibility(categoryCanvas, categoryEmpty, {
+        showChart: hasCategoryData,
+        message: "No low-stock categories right now. Inventory levels are currently healthy."
+    });
+
+    destroyInventoryCharts();
+
+    if (!hasStatusData && !hasCategoryData) {
+        return;
+    }
 
     try {
         const chartJs = await loadChartJs();
@@ -1292,76 +1332,79 @@ async function initializeInventoryCharts(inventory = {}) {
 
         Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-        const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
-        const statusData = [counts.out || 0, counts.low || 0, counts.medium || 0, counts.healthy || 0];
-
-        const categoryRows = (inventory.topLowCategories || []).slice(0, 8);
-        const categoryLabels = categoryRows.length
-            ? categoryRows.map(row => row.categoryName)
-            : ["No low stock"];
-        const categoryData = categoryRows.length
-            ? categoryRows.map(row => row.count)
-            : [0];
-
-        destroyInventoryCharts();
-
-        featureState.stockStatusChart = new Chart(statusCanvas.getContext("2d"), {
-            type: "doughnut",
-            data: {
-                labels: ["Out of Stock", "Low Stock", "Medium", "Healthy"],
-                datasets: [{
-                    data: statusData,
-                    backgroundColor: ["#dc2626", "#d97706", "#64748b", "#16a34a"],
-                    borderColor: "#ffffff",
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                        labels: {
-                            usePointStyle: true,
-                            boxWidth: 8
-                        }
-                    }
-                }
-            }
-        });
-
-        featureState.lowStockCategoryChart = new Chart(categoryCanvas.getContext("2d"), {
-            type: "bar",
-            data: {
-                labels: categoryLabels,
-                datasets: [{
-                    label: "Low Stock SKUs",
-                    data: categoryData,
-                    backgroundColor: "#2563eb",
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        if (hasStatusData) {
+            featureState.stockStatusChart = new Chart(statusCanvas.getContext("2d"), {
+                type: "doughnut",
+                data: {
+                    labels: ["Out of Stock", "Low Stock", "Medium", "Healthy"],
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ["#dc2626", "#d97706", "#64748b", "#16a34a"],
+                        borderColor: "#ffffff",
+                        borderWidth: 2
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+
+        if (hasCategoryData) {
+            featureState.lowStockCategoryChart = new Chart(categoryCanvas.getContext("2d"), {
+                type: "bar",
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        label: "Low Stock SKUs",
+                        data: categoryData,
+                        backgroundColor: "#2563eb",
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
     } catch (error) {
         console.error("[Moneta] Dashboard inventory charts failed:", error);
+        if (hasStatusData) {
+            setChartVisibility(statusCanvas, statusEmpty, {
+                showChart: false,
+                message: "Chart preview is unavailable right now. Use the summary chips and inventory grid below."
+            });
+        }
+        if (hasCategoryData) {
+            setChartVisibility(categoryCanvas, categoryEmpty, {
+                showChart: false,
+                message: "Category chart is unavailable right now. Low-stock details are still available in the inventory grid."
+            });
+        }
     }
 }
 
