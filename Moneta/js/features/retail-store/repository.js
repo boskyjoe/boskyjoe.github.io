@@ -910,6 +910,18 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             const receivedAmount = roundCurrency(data.amountReceived ?? data.totalCollected ?? data.amountPaid);
             return !data.isReversalEntry && status !== "voided" && (appliedAmount > 0 || receivedAmount > 0);
         });
+        const expenseSnapshot = await saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).get();
+        const relatedExpenseRefs = expenseSnapshot.docs.map(doc => doc.ref);
+        const expenseDocs = await Promise.all(
+            relatedExpenseRefs.map(expenseRef => transaction.get(expenseRef))
+        );
+        const activeExpenses = expenseDocs.filter(doc => {
+            if (!doc.exists) return false;
+
+            const data = doc.data() || {};
+            const status = normalizeText(data.status || "Active").toLowerCase();
+            return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
+        });
 
         let voidedPaymentCount = 0;
         let voidedPaymentAmount = 0;
@@ -1021,19 +1033,6 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
 
             voidedPaymentCount += 1;
             voidedPaymentAmount += paymentAmount;
-        });
-
-        const expenseSnapshot = await saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).get();
-        const relatedExpenseRefs = expenseSnapshot.docs.map(doc => doc.ref);
-        const expenseDocs = await Promise.all(
-            relatedExpenseRefs.map(expenseRef => transaction.get(expenseRef))
-        );
-        const activeExpenses = expenseDocs.filter(doc => {
-            if (!doc.exists) return false;
-
-            const data = doc.data() || {};
-            const status = normalizeText(data.status || "Active").toLowerCase();
-            return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
         });
 
         let voidedExpenseCount = 0;
