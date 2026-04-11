@@ -3,10 +3,13 @@ import { COLLECTIONS } from "../../config/collections.js";
 import { navConfig } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_DOCS_PER_COLLECTION = 240;
 const LOW_STOCK_THRESHOLD = 5;
+const MEDIUM_STOCK_THRESHOLD = 20;
+const INVENTORY_TARGET_STOCK = 24;
 const WINDOW_OPTIONS = [
     { key: "today", label: "Today" },
     { key: "7d", label: "Last 7 Days" },
@@ -19,13 +22,19 @@ const featureState = {
     selectedWindow: "30d",
     customFrom: "",
     customTo: "",
+    inventorySearchTerm: "",
     isLoading: false,
     source: "live",
     loadedAt: 0,
     expiresAt: 0,
     data: null,
     errorMessage: "",
-    requestToken: 0
+    requestToken: 0,
+    inventoryGridApi: null,
+    inventoryGridElement: null,
+    stockStatusChart: null,
+    lowStockCategoryChart: null,
+    chartSyncToken: 0
 };
 
 function normalizeText(value) {
@@ -328,6 +337,85 @@ async function fetchWindowedRows(path, {
     }
 }
 
+function resolveInventoryStatus(inventoryCount) {
+    const quantity = Math.max(0, Math.floor(toNumber(inventoryCount)));
+
+    if (quantity <= 0) {
+        return { key: "out", label: "Out of Stock", tone: "danger", priority: 0 };
+    }
+
+    if (quantity <= LOW_STOCK_THRESHOLD) {
+        return { key: "low", label: "Low Stock", tone: "warning", priority: 1 };
+    }
+
+    if (quantity <= MEDIUM_STOCK_THRESHOLD) {
+        return { key: "medium", label: "Medium", tone: "neutral", priority: 2 };
+    }
+
+    return { key: "healthy", label: "Healthy", tone: "success", priority: 3 };
+}
+
+function buildInventoryInsights(products = []) {
+    const rows = (products || []).map(product => {
+        const inventoryCount = Math.max(0, Math.floor(toNumber(product.inventoryCount)));
+        const status = resolveInventoryStatus(inventoryCount);
+        const productName = normalizeText(product.itemName || product.productName || "Untitled Product");
+        const categoryName = normalizeText(product.productCategoryName || product.categoryName || "Uncategorized");
+        const reorderSuggestion = status.key === "out" || status.key === "low"
+            ? Math.max(INVENTORY_TARGET_STOCK - inventoryCount, 0)
+            : 0;
+
+        return {
+            id: product.id,
+            productName,
+            categoryName,
+            inventoryCount,
+            statusKey: status.key,
+            statusLabel: status.label,
+            statusTone: status.tone,
+            statusPriority: status.priority,
+            reorderSuggestion
+        };
+    });
+
+    rows.sort((left, right) => {
+        if (left.statusPriority !== right.statusPriority) {
+            return left.statusPriority - right.statusPriority;
+        }
+        if (left.inventoryCount !== right.inventoryCount) {
+            return left.inventoryCount - right.inventoryCount;
+        }
+        return left.productName.localeCompare(right.productName);
+    });
+
+    const counts = { out: 0, low: 0, medium: 0, healthy: 0 };
+    const lowByCategory = new Map();
+
+    rows.forEach(row => {
+        counts[row.statusKey] += 1;
+
+        if (row.statusKey === "out" || row.statusKey === "low") {
+            lowByCategory.set(row.categoryName, (lowByCategory.get(row.categoryName) || 0) + 1);
+        }
+    });
+
+    const topLowCategories = [...lowByCategory.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 8)
+        .map(([categoryName, count]) => ({ categoryName, count }));
+
+    return {
+        rows,
+        counts,
+        threshold: LOW_STOCK_THRESHOLD,
+        mediumThreshold: MEDIUM_STOCK_THRESHOLD,
+        targetStock: INVENTORY_TARGET_STOCK,
+        totalSkus: rows.length,
+        alertCount: counts.out + counts.low,
+        topLowCategories
+    };
+}
+
 function computeLeadSummary(leads = []) {
     const now = Date.now();
     const summary = {
@@ -591,91 +679,6 @@ function computeStockSummary(products = [], threshold = LOW_STOCK_THRESHOLD) {
     };
 }
 
-function buildActionQueue(profile, metrics) {
-    const items = [];
-
-    if (profile.canLeads && metrics.leads.readyToConvert > 0) {
-        items.push({
-            tone: "primary",
-            title: "Leads Ready For Conversion",
-            value: `${metrics.leads.readyToConvert}`,
-            description: "Qualified enquiries are ready to convert into Retail draft sales.",
-            route: "#/leads",
-            actionLabel: "Open Enquiries"
-        });
-    }
-
-    if (profile.canRetail && metrics.retail.overdueCount > 0) {
-        items.push({
-            tone: "danger",
-            title: "Overdue Retail Balances",
-            value: `${metrics.retail.overdueCount}`,
-            description: "Active sales older than 7 days still have balance due.",
-            route: "#/retail-store",
-            actionLabel: "Open Retail Store"
-        });
-    }
-
-    if (profile.canPurchases && metrics.purchases.overdueCount > 0) {
-        items.push({
-            tone: "warning",
-            title: "Supplier Dues Pending",
-            value: `${metrics.purchases.overdueCount}`,
-            description: "Purchase invoices older than 10 days still have outstanding balances.",
-            route: "#/purchases",
-            actionLabel: "Open Purchases"
-        });
-    }
-
-    if (!profile.canPurchases && profile.canSuppliers && metrics.purchases.overdueCount > 0) {
-        items.push({
-            tone: "warning",
-            title: "Supplier Dues Pending",
-            value: `${metrics.purchases.overdueCount}`,
-            description: "Outstanding purchase balances are pending follow-up with suppliers.",
-            route: "#/suppliers",
-            actionLabel: "Open Suppliers"
-        });
-    }
-
-    if (profile.canConsignment && metrics.consignment.settlementDueCount > 0) {
-        items.push({
-            tone: "warning",
-            title: "Consignment Settlements Pending",
-            value: `${metrics.consignment.settlementDueCount}`,
-            description: "Active consignment orders need collection or settlement updates.",
-            route: "#/simple-consignment",
-            actionLabel: "Open Consignment"
-        });
-    }
-
-    if (profile.canProducts && metrics.stock.lowStockCount > 0) {
-        items.push({
-            tone: "danger",
-            title: "Low Stock Alert",
-            value: `${metrics.stock.lowStockCount}`,
-            description: `SKUs at or below ${metrics.stock.threshold} units.`,
-            route: "#/products",
-            actionLabel: "Open Products"
-        });
-    }
-
-    return items;
-}
-
-function buildQuickActions(profile) {
-    const actions = [
-        { route: "#/leads", icon: icons.leads, label: "New Enquiry", enabled: profile.canLeads },
-        { route: "#/retail-store", icon: icons.retail, label: "Retail Sale", enabled: profile.canRetail },
-        { route: "#/simple-consignment", icon: icons.consignment, label: "Consignment", enabled: profile.canConsignment },
-        { route: "#/purchases", icon: icons.purchases, label: "Purchase Invoice", enabled: profile.canPurchases },
-        { route: "#/suppliers", icon: icons.suppliers, label: "Suppliers", enabled: profile.canSuppliers },
-        { route: "#/products", icon: icons.products, label: "Products", enabled: profile.canProducts }
-    ];
-
-    return actions.filter(action => action.enabled);
-}
-
 function buildPrimaryMetricCards(profile, metrics) {
     const cards = [];
 
@@ -779,6 +782,7 @@ async function buildDashboardData(user, rangeSpec) {
     ]);
 
     const products = getState().masterData.products || [];
+    const inventory = buildInventoryInsights(products);
     const metrics = {
         leads: computeLeadSummary(leads),
         retail: computeRetailSummary(sales),
@@ -789,7 +793,8 @@ async function buildDashboardData(user, rangeSpec) {
             supplierPayments,
             consignmentPayments
         }),
-        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD)
+        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD),
+        inventory
     };
 
     return {
@@ -801,8 +806,6 @@ async function buildDashboardData(user, rangeSpec) {
         generatedAt: Date.now(),
         durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
         metrics,
-        actionQueue: buildActionQueue(profile, metrics),
-        quickActions: buildQuickActions(profile),
         primaryCards: buildPrimaryMetricCards(profile, metrics)
     };
 }
@@ -862,35 +865,6 @@ function renderPrimaryCards(cards = []) {
     `).join("");
 }
 
-function renderActionQueue(queue = []) {
-    if (!queue.length) {
-        return `
-            <div class="dashboard-list-empty">
-                No immediate action blockers in this window.
-            </div>
-        `;
-    }
-
-    return `
-        <ul class="dashboard-list">
-            ${queue.map(item => `
-                <li class="dashboard-list-item tone-${item.tone || "neutral"}">
-                    <div class="dashboard-list-item-main">
-                        <p class="dashboard-list-item-title">${item.title}</p>
-                        <p class="dashboard-list-item-copy">${item.description}</p>
-                    </div>
-                    <div class="dashboard-list-item-meta">
-                        <span class="status-pill">${item.value}</span>
-                        <a class="button button-secondary dashboard-inline-action" href="${item.route}">
-                            ${item.actionLabel}
-                        </a>
-                    </div>
-                </li>
-            `).join("")}
-        </ul>
-    `;
-}
-
 function renderLowStockList(stock = {}) {
     if (!stock.lowStockRows || stock.lowStockRows.length === 0) {
         return `
@@ -917,23 +891,17 @@ function renderLowStockList(stock = {}) {
     `;
 }
 
-function renderQuickActions(actions = []) {
-    if (!actions.length) {
-        return `
-            <div class="dashboard-list-empty">
-                No quick actions are available for your role.
-            </div>
-        `;
-    }
+function renderInventorySummary(inventory = {}) {
+    const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
 
     return `
-        <div class="dashboard-quick-actions">
-            ${actions.map(action => `
-                <a class="button dashboard-quick-action" href="${action.route}">
-                    <span class="button-icon">${action.icon}</span>
-                    ${action.label}
-                </a>
-            `).join("")}
+        <div class="dashboard-inventory-summary">
+            <span class="status-pill">Total SKUs: ${inventory.totalSkus || 0}</span>
+            <span class="status-pill inventory-pill-danger">Out of Stock: ${counts.out || 0}</span>
+            <span class="status-pill inventory-pill-warning">Low Stock: ${counts.low || 0}</span>
+            <span class="status-pill inventory-pill-neutral">Medium: ${counts.medium || 0}</span>
+            <span class="status-pill inventory-pill-success">Healthy: ${counts.healthy || 0}</span>
+            <span class="status-pill">Target Stock: ${inventory.targetStock || INVENTORY_TARGET_STOCK}</span>
         </div>
     `;
 }
@@ -948,7 +916,8 @@ function renderDashboardMarkup(user) {
         purchases: computePurchaseSummary([]),
         consignment: computeConsignmentSummary([]),
         cash: computeCashSummary({}),
-        stock: computeStockSummary(getState().masterData.products || [], LOW_STOCK_THRESHOLD)
+        stock: computeStockSummary(getState().masterData.products || [], LOW_STOCK_THRESHOLD),
+        inventory: buildInventoryInsights(getState().masterData.products || [])
     };
     const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
     const storeChurch = metrics.retail.byStore?.["Church Store"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
@@ -959,8 +928,7 @@ function renderDashboardMarkup(user) {
     const windowLabel = dashboard?.rangeLabel || (activeRangeSpec.isValid ? activeRangeSpec.rangeLabel : getWindowLabel(featureState.selectedWindow));
     const durationLabel = dashboard ? `${dashboard.durationMs} ms` : "-";
     const primaryCards = dashboard?.primaryCards || buildPrimaryMetricCards(profile, metrics);
-    const actionQueue = dashboard?.actionQueue || buildActionQueue(profile, metrics);
-    const quickActions = dashboard?.quickActions || buildQuickActions(profile);
+    const inventory = metrics.inventory || buildInventoryInsights(getState().masterData.products || []);
 
     return `
         <div class="dashboard-shell">
@@ -1095,48 +1063,285 @@ function renderDashboardMarkup(user) {
                 </section>
             ` : ""}
 
-            <section class="dashboard-secondary-grid">
-                <article class="panel-card dashboard-section-card">
-                    <div class="dashboard-section-head">
-                        <div class="panel-title-wrap">
-                            <span class="panel-icon panel-icon-alt">${icons.warning}</span>
-                            <div>
-                                <h3>Action Queue</h3>
-                                <p class="panel-copy">Priority tasks based on due balances, stock, and conversion readiness.</p>
-                            </div>
+            <section class="panel-card dashboard-section-card">
+                <div class="dashboard-section-head">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon panel-icon-alt">${icons.products}</span>
+                        <div>
+                            <h3>Low Stock Watch</h3>
+                            <p class="panel-copy">Products at or below the low-stock threshold.</p>
                         </div>
                     </div>
-                    ${renderActionQueue(actionQueue)}
-                </article>
-                <article class="panel-card dashboard-section-card">
-                    <div class="dashboard-section-head">
-                        <div class="panel-title-wrap">
-                            <span class="panel-icon panel-icon-alt">${icons.products}</span>
-                            <div>
-                                <h3>Low Stock Watch</h3>
-                                <p class="panel-copy">Products at or below the low-stock threshold.</p>
-                            </div>
-                        </div>
-                        <span class="dashboard-section-badge">${metrics.stock.lowStockCount} alerts</span>
-                    </div>
-                    ${renderLowStockList(metrics.stock)}
-                </article>
+                    <span class="dashboard-section-badge">${metrics.stock.lowStockCount} alerts</span>
+                </div>
+                ${renderLowStockList(metrics.stock)}
             </section>
 
             <section class="panel-card dashboard-section-card">
                 <div class="dashboard-section-head">
                     <div class="panel-title-wrap">
-                        <span class="panel-icon panel-icon-alt">${icons.settings}</span>
+                        <span class="panel-icon panel-icon-alt">${icons.products}</span>
                         <div>
-                            <h3>Quick Actions</h3>
-                            <p class="panel-copy">Jump into the next module without using the side navigation.</p>
+                            <h3>Inventory Health</h3>
+                            <p class="panel-copy">Live stock visibility in chart and grid form for replenishment planning.</p>
+                        </div>
+                    </div>
+                    <span class="dashboard-section-badge">${inventory.alertCount || 0} alerts</span>
+                </div>
+                ${renderInventorySummary(inventory)}
+                <div class="dashboard-inventory-layout">
+                    <div class="dashboard-inventory-charts">
+                        <article class="dashboard-chart-card">
+                            <div class="dashboard-chart-head">
+                                <h4>Stock Status Mix</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap">
+                                <canvas id="dashboard-inventory-status-chart"></canvas>
+                            </div>
+                        </article>
+                        <article class="dashboard-chart-card">
+                            <div class="dashboard-chart-head">
+                                <h4>Low Stock By Category</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap">
+                                <canvas id="dashboard-inventory-category-chart"></canvas>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="dashboard-inventory-grid-card">
+                        <div class="dashboard-inventory-grid-toolbar">
+                            <div>
+                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Inventory Grid</p>
+                                <p class="panel-copy">Review stock by SKU, status, and reorder suggestion.</p>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">${icons.search}</span>
+                                <input
+                                    id="dashboard-inventory-search"
+                                    class="input toolbar-search"
+                                    type="search"
+                                    placeholder="Search product or category"
+                                    value="${featureState.inventorySearchTerm}">
+                            </div>
+                        </div>
+                        <div class="ag-shell">
+                            <div id="dashboard-inventory-grid" class="ag-theme-alpine moneta-grid" style="height: 460px; width: 100%;"></div>
                         </div>
                     </div>
                 </div>
-                ${renderQuickActions(quickActions)}
             </section>
         </div>
     `;
+}
+
+function destroyInventoryGrid() {
+    if (featureState.inventoryGridApi) {
+        featureState.inventoryGridApi.destroy();
+        featureState.inventoryGridApi = null;
+        featureState.inventoryGridElement = null;
+    }
+}
+
+function destroyInventoryCharts() {
+    featureState.stockStatusChart?.destroy();
+    featureState.lowStockCategoryChart?.destroy();
+    featureState.stockStatusChart = null;
+    featureState.lowStockCategoryChart = null;
+}
+
+function cleanupDashboardVisuals() {
+    featureState.chartSyncToken += 1;
+    destroyInventoryGrid();
+    destroyInventoryCharts();
+}
+
+function initializeInventoryGrid(inventory = {}) {
+    const gridElement = document.getElementById("dashboard-inventory-grid");
+    if (!gridElement) {
+        destroyInventoryGrid();
+        return;
+    }
+
+    const rowData = inventory.rows || [];
+    destroyInventoryGrid();
+
+    featureState.inventoryGridElement = gridElement;
+    featureState.inventoryGridApi = createGrid(gridElement, {
+        rowData,
+        columnDefs: [
+            { field: "productName", headerName: "Product", minWidth: 220, flex: 1.2 },
+            { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
+            {
+                field: "inventoryCount",
+                headerName: "Stock",
+                minWidth: 105,
+                maxWidth: 125,
+                cellClass: "ag-right-aligned-cell",
+                headerClass: "ag-right-aligned-header"
+            },
+            {
+                field: "statusLabel",
+                headerName: "Status",
+                minWidth: 130,
+                flex: 0.8,
+                cellRenderer: params => {
+                    if (params.node?.rowPinned) return "";
+                    const tone = params.data?.statusTone || "neutral";
+                    const label = params.value || "Unknown";
+                    return `<span class="dashboard-inventory-status-pill tone-${tone}">${label}</span>`;
+                }
+            },
+            {
+                field: "reorderSuggestion",
+                headerName: "Reorder Qty",
+                minWidth: 130,
+                flex: 0.8,
+                cellClass: "ag-right-aligned-cell",
+                headerClass: "ag-right-aligned-header",
+                valueFormatter: params => {
+                    const value = Math.max(0, Math.floor(toNumber(params.value)));
+                    return value > 0 ? String(value) : "-";
+                }
+            }
+        ],
+        defaultColDef: {
+            resizable: true,
+            sortable: true,
+            filter: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            wrapText: true,
+            autoHeight: true
+        },
+        animateRows: true,
+        pagination: true,
+        paginationPageSize: 25,
+        paginationPageSizeSelector: [25, 50, 100],
+        suppressCellFocus: true
+    });
+
+    if (featureState.inventorySearchTerm) {
+        featureState.inventoryGridApi.setGridOption("quickFilterText", featureState.inventorySearchTerm);
+    }
+}
+
+let chartJsModulePromise = null;
+
+async function loadChartJs() {
+    if (!chartJsModulePromise) {
+        chartJsModulePromise = import("https://cdn.jsdelivr.net/npm/chart.js@4.4.3/+esm");
+    }
+
+    return chartJsModulePromise;
+}
+
+async function initializeInventoryCharts(inventory = {}) {
+    const statusCanvas = document.getElementById("dashboard-inventory-status-chart");
+    const categoryCanvas = document.getElementById("dashboard-inventory-category-chart");
+
+    if (!statusCanvas || !categoryCanvas) {
+        destroyInventoryCharts();
+        return;
+    }
+
+    const syncToken = ++featureState.chartSyncToken;
+
+    try {
+        const chartJs = await loadChartJs();
+        if (syncToken !== featureState.chartSyncToken) return;
+
+        const {
+            Chart,
+            ArcElement,
+            Tooltip,
+            Legend,
+            CategoryScale,
+            LinearScale,
+            BarElement
+        } = chartJs;
+
+        Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+        const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
+        const statusData = [counts.out || 0, counts.low || 0, counts.medium || 0, counts.healthy || 0];
+
+        const categoryRows = (inventory.topLowCategories || []).slice(0, 8);
+        const categoryLabels = categoryRows.length
+            ? categoryRows.map(row => row.categoryName)
+            : ["No low stock"];
+        const categoryData = categoryRows.length
+            ? categoryRows.map(row => row.count)
+            : [0];
+
+        destroyInventoryCharts();
+
+        featureState.stockStatusChart = new Chart(statusCanvas.getContext("2d"), {
+            type: "doughnut",
+            data: {
+                labels: ["Out of Stock", "Low Stock", "Medium", "Healthy"],
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: ["#dc2626", "#d97706", "#64748b", "#16a34a"],
+                    borderColor: "#ffffff",
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    }
+                }
+            }
+        });
+
+        featureState.lowStockCategoryChart = new Chart(categoryCanvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    label: "Low Stock SKUs",
+                    data: categoryData,
+                    backgroundColor: "#2563eb",
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("[Moneta] Dashboard inventory charts failed:", error);
+    }
+}
+
+function syncDashboardInventoryVisuals() {
+    const metrics = featureState.data?.metrics || {
+        inventory: buildInventoryInsights(getState().masterData.products || [])
+    };
+    const inventory = metrics.inventory || buildInventoryInsights(getState().masterData.products || []);
+    initializeInventoryGrid(inventory);
+    void initializeInventoryCharts(inventory);
 }
 
 function bindDashboardEvents(user) {
@@ -1178,6 +1383,11 @@ function bindDashboardEvents(user) {
         void loadDashboardData(user, { forceRefresh: false });
     });
 
+    root.querySelector("#dashboard-inventory-search")?.addEventListener("input", event => {
+        featureState.inventorySearchTerm = event.target.value || "";
+        featureState.inventoryGridApi?.setGridOption("quickFilterText", featureState.inventorySearchTerm);
+    });
+
     root.querySelector("#dashboard-refresh-button")?.addEventListener("click", () => {
         void loadDashboardData(user, { forceRefresh: true });
     });
@@ -1187,11 +1397,13 @@ function resetDashboardStateForUser(user) {
     const nextUserKey = normalizeText(user?.uid || user?.email || "");
     if (featureState.userKey === nextUserKey) return;
     const defaults = getDefaultCustomRange();
+    cleanupDashboardVisuals();
 
     featureState.userKey = nextUserKey;
     featureState.selectedWindow = "30d";
     featureState.customFrom = defaults.from;
     featureState.customTo = defaults.to;
+    featureState.inventorySearchTerm = "";
     featureState.isLoading = false;
     featureState.source = "live";
     featureState.loadedAt = 0;
@@ -1273,6 +1485,7 @@ export function renderDashboardView(user) {
     if (!root) return;
 
     if (!user) {
+        cleanupDashboardVisuals();
         root.innerHTML = `
             <div class="panel-card">
                 <h2 class="hero-title">Dashboard</h2>
@@ -1283,8 +1496,10 @@ export function renderDashboardView(user) {
     }
 
     resetDashboardStateForUser(user);
+    cleanupDashboardVisuals();
     root.innerHTML = renderDashboardMarkup(user);
     bindDashboardEvents(user);
+    syncDashboardInventoryVisuals();
 
     const rangeSpec = resolveActiveRangeSpec();
     if (rangeSpec.isValid && !featureState.isLoading && (!featureState.data || Date.now() > featureState.expiresAt)) {
