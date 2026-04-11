@@ -38,6 +38,10 @@ function buildConsignmentLedgerPaymentId() {
     return `CPAY-${Date.now()}`;
 }
 
+function buildDonationBusinessId() {
+    return `DON-${Date.now()}`;
+}
+
 function sanitizeLineItem(item = {}) {
     const quantityCheckedOut = Math.max(0, Math.floor(Number(item.quantityCheckedOut) || 0));
     const quantitySold = Math.max(0, Math.floor(Number(item.quantitySold) || 0));
@@ -216,6 +220,7 @@ export async function createSimpleConsignmentRecord(orderPayload, user) {
             totalValueCheckedOut: totals.totalValueCheckedOut,
             totalValueSold: totals.totalValueSold,
             totalAmountPaid: 0,
+            totalDonation: 0,
             totalExpenses: 0,
             balanceDue: 0,
             paymentCount: 0,
@@ -387,20 +392,28 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
             throw new Error("Only active consignment orders can accept transactions.");
         }
 
-        const amountApplied = roundCurrency(transactionPayload.amountApplied);
+        const amountReceived = roundCurrency(transactionPayload.amountReceived ?? transactionPayload.amountApplied);
         const currentBalanceDue = roundCurrency(orderData.balanceDue);
-        if (amountApplied <= 0) {
+        if (amountReceived <= 0) {
             throw new Error("Transaction amount must be greater than zero.");
         }
 
-        if (amountApplied > currentBalanceDue) {
-            throw new Error(`Amount cannot exceed the balance due of ${currentBalanceDue.toFixed(2)}.`);
-        }
-
         const paymentType = transactionPayload.paymentType;
+        const amountApplied = paymentType === "Expense"
+            ? amountReceived
+            : roundCurrency(Math.min(amountReceived, currentBalanceDue));
+        const donationAmount = paymentType === "Payment"
+            ? roundCurrency(Math.max(amountReceived - amountApplied, 0))
+            : 0;
+        const donationRef = donationAmount > 0
+            ? db.collection(COLLECTIONS.donations).doc()
+            : null;
         const nextTotalAmountPaid = paymentType === "Payment"
             ? roundCurrency(orderData.totalAmountPaid + amountApplied)
             : roundCurrency(orderData.totalAmountPaid);
+        const nextTotalDonation = paymentType === "Payment"
+            ? roundCurrency((Number(orderData.totalDonation) || 0) + donationAmount)
+            : roundCurrency(orderData.totalDonation);
         const nextTotalExpenses = paymentType === "Expense"
             ? roundCurrency(orderData.totalExpenses + amountApplied)
             : roundCurrency(orderData.totalExpenses);
@@ -408,6 +421,10 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
         const nextPaymentCount = paymentType === "Payment"
             ? (Math.max(0, Number(orderData.paymentCount) || 0) + 1)
             : Math.max(0, Number(orderData.paymentCount) || 0);
+
+        if (paymentType === "Expense" && amountApplied > currentBalanceDue) {
+            throw new Error(`Amount cannot exceed the balance due of ${currentBalanceDue.toFixed(2)}.`);
+        }
 
         let ledgerEntryId = "";
         if (paymentType === "Payment") {
@@ -425,6 +442,9 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
             reference: transactionPayload.reference,
             contact: transactionPayload.contact || "",
             notes: transactionPayload.notes || "",
+            amountReceived,
+            donationAmount,
+            donationEntryId: donationRef?.id || "",
             status: "Verified",
             isReversalEntry: false,
             ledgerEntryId,
@@ -442,7 +462,11 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
                 teamMemberName: orderData.teamMemberName || "",
                 paymentDate: transactionPayload.transactionDate,
                 amountPaid: amountApplied,
-                totalCollected: amountApplied,
+                amountApplied,
+                amountReceived,
+                donationAmount,
+                donationEntryId: donationRef?.id || "",
+                totalCollected: amountReceived,
                 paymentMode: transactionPayload.paymentMode,
                 transactionRef: transactionPayload.reference,
                 notes: transactionPayload.notes || "",
@@ -453,8 +477,31 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
             });
         }
 
+        if (donationRef) {
+            transaction.set(donationRef, {
+                donationId: buildDonationBusinessId(),
+                donationDate: transactionPayload.transactionDate,
+                amount: donationAmount,
+                status: "Active",
+                moduleType: "Simple Consignment",
+                sourceCollection: `${COLLECTIONS.simpleConsignments}/${orderId}/${CONSIGNMENT_PAYMENTS_SUBCOLLECTION}`,
+                sourcePaymentDocId: transactionRef.id,
+                sourceOrderId: orderId,
+                sourceOrderNumber: orderData.consignmentId || "",
+                teamName: orderData.teamName || "",
+                paymentMode: transactionPayload.paymentMode || "",
+                paymentReference: transactionPayload.reference || "",
+                notes: transactionPayload.notes || "Auto-captured overpayment donation.",
+                createdBy: user.email,
+                createdOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
         transaction.update(orderRef, {
             totalAmountPaid: nextTotalAmountPaid,
+            totalDonation: nextTotalDonation,
             totalExpenses: nextTotalExpenses,
             balanceDue: nextBalanceDue,
             paymentCount: nextPaymentCount,
@@ -465,8 +512,11 @@ export async function recordSimpleConsignmentTransaction(orderId, transactionPay
         return {
             summary: {
                 paymentType,
+                amountReceived,
                 amountApplied,
+                donationAmount,
                 nextTotalAmountPaid,
+                nextTotalDonation,
                 nextTotalExpenses,
                 nextBalanceDue
             }
@@ -510,7 +560,9 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
         }
 
         const amountApplied = roundCurrency(txn.amountApplied);
-        if (amountApplied <= 0) {
+        const amountReceived = roundCurrency(txn.amountReceived ?? txn.totalCollected ?? amountApplied);
+        const donationAmount = roundCurrency(txn.donationAmount);
+        if (amountApplied <= 0 && amountReceived <= 0 && donationAmount <= 0) {
             throw new Error("Only posted transactions can be voided.");
         }
 
@@ -521,15 +573,28 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
         const nextTotalExpenses = paymentType === "Expense"
             ? roundCurrency(Math.max(0, Number(orderData.totalExpenses) - amountApplied))
             : roundCurrency(orderData.totalExpenses);
+        const nextTotalDonation = paymentType === "Payment"
+            ? roundCurrency(Math.max(0, Number(orderData.totalDonation) - donationAmount))
+            : roundCurrency(orderData.totalDonation);
         const nextBalanceDue = roundCurrency(Number(orderData.balanceDue) + amountApplied);
         const nextPaymentCount = paymentType === "Payment"
             ? Math.max(0, (Number(orderData.paymentCount) || 0) - 1)
             : Math.max(0, Number(orderData.paymentCount) || 0);
+        const donationEntryRef = donationAmount > 0
+            ? (txn.donationEntryId
+                ? db.collection(COLLECTIONS.donations).doc(txn.donationEntryId)
+                : db.collection(COLLECTIONS.donations).doc())
+            : null;
+        const donationReversalRef = donationAmount > 0
+            ? db.collection(COLLECTIONS.donations).doc()
+            : null;
 
         tx.set(reversalRef, {
             ...txn,
             transactionId: buildSimpleConsignmentTransactionId(),
             amountApplied: -amountApplied,
+            amountReceived: -amountReceived,
+            donationAmount: -donationAmount,
             status: "Reversal",
             isReversalEntry: true,
             reversedTransactionId: transactionId,
@@ -550,6 +615,7 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
 
         tx.update(orderRef, {
             totalAmountPaid: nextTotalAmountPaid,
+            totalDonation: nextTotalDonation,
             totalExpenses: nextTotalExpenses,
             balanceDue: nextBalanceDue,
             paymentCount: nextPaymentCount,
@@ -576,7 +642,11 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
                 teamMemberName: orderData.teamMemberName || "",
                 paymentDate: txn.transactionDate || now,
                 amountPaid: -amountApplied,
-                totalCollected: -amountApplied,
+                amountApplied: -amountApplied,
+                amountReceived: -amountReceived,
+                donationAmount: -donationAmount,
+                donationEntryId: donationReversalRef?.id || "",
+                totalCollected: -amountReceived,
                 paymentMode: txn.paymentMode || "",
                 transactionRef: `REV-${txn.reference || transactionId}`,
                 notes: `Reversal for ${txn.reference || transactionId}: ${voidReason}`,
@@ -587,11 +657,57 @@ export async function voidSimpleConsignmentTransaction(orderId, transactionId, v
             });
         }
 
+        if (donationEntryRef && donationReversalRef) {
+            tx.set(donationEntryRef, {
+                donationId: txn.donationId || buildDonationBusinessId(),
+                donationDate: txn.transactionDate || now,
+                amount: donationAmount,
+                status: "Voided",
+                moduleType: "Simple Consignment",
+                sourceCollection: `${COLLECTIONS.simpleConsignments}/${orderId}/${CONSIGNMENT_PAYMENTS_SUBCOLLECTION}`,
+                sourcePaymentDocId: transactionId,
+                sourceOrderId: orderId,
+                sourceOrderNumber: orderData.consignmentId || "",
+                teamName: orderData.teamName || "",
+                paymentMode: txn.paymentMode || "",
+                paymentReference: txn.reference || "",
+                notes: txn.notes || "",
+                voidReason,
+                voidedBy: user.email,
+                voidedOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            }, { merge: true });
+
+            tx.set(donationReversalRef, {
+                donationId: buildDonationBusinessId(),
+                donationDate: now,
+                amount: -donationAmount,
+                status: "Void Reversal",
+                moduleType: "Simple Consignment",
+                sourceCollection: `${COLLECTIONS.simpleConsignments}/${orderId}/${CONSIGNMENT_PAYMENTS_SUBCOLLECTION}`,
+                sourcePaymentDocId: reversalRef.id,
+                sourceOrderId: orderId,
+                sourceOrderNumber: orderData.consignmentId || "",
+                originalDonationEntryId: donationEntryRef.id,
+                originalPaymentDocId: transactionId,
+                isReversalEntry: true,
+                notes: `Donation reversal for consignment transaction ${txn.reference || transactionId}. Reason: ${voidReason}`,
+                createdBy: user.email,
+                createdOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
         return {
             summary: {
                 paymentType,
+                amountReceived,
                 amountApplied,
+                donationAmount,
                 nextTotalAmountPaid,
+                nextTotalDonation,
                 nextTotalExpenses,
                 nextBalanceDue
             }
@@ -636,9 +752,10 @@ export async function cancelSimpleConsignmentOrder(orderId, cancelReason, user) 
         }
 
         const totalAmountPaid = roundCurrency(orderData.totalAmountPaid);
+        const totalDonation = roundCurrency(orderData.totalDonation);
         const totalExpenses = roundCurrency(orderData.totalExpenses);
         const paymentCount = Math.max(0, Number(orderData.paymentCount) || 0);
-        if (totalAmountPaid > 0 || totalExpenses > 0 || paymentCount > 0) {
+        if (totalAmountPaid > 0 || totalDonation > 0 || totalExpenses > 0 || paymentCount > 0) {
             throw new Error("This order has linked financial activity and cannot be cancelled.");
         }
 
@@ -690,6 +807,7 @@ export async function cancelSimpleConsignmentOrder(orderId, cancelReason, user) 
             totalValueCheckedOut: totals.totalValueCheckedOut,
             totalValueSold: totals.totalValueSold,
             totalAmountPaid: 0,
+            totalDonation: 0,
             totalExpenses: 0,
             balanceDue: 0,
             paymentCount: 0,

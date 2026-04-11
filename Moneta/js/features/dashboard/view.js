@@ -494,14 +494,15 @@ function computeRetailSummary(sales = []) {
     const summary = {
         totalSales: 0,
         paymentReceived: 0,
+        donations: 0,
         balanceDue: 0,
         expenses: 0,
         returnCount: 0,
         activeCount: 0,
         overdueCount: 0,
         byStore: {
-            "Tasty Treats": { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 },
-            "Church Store": { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 }
+            "Tasty Treats": { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 },
+            "Church Store": { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 }
         }
     };
     const now = Date.now();
@@ -512,6 +513,7 @@ function computeRetailSummary(sales = []) {
 
         const totalSales = toNumber(sale.financials?.grandTotal);
         const paymentReceived = toNumber(sale.totalAmountPaid);
+        const donations = toNumber(sale.totalDonation);
         const balanceDue = toNumber(sale.balanceDue);
         const expenses = toNumber(sale.financials?.totalExpenses);
         const returnCount = Math.max(0, Math.floor(toNumber(sale.returnCount)));
@@ -520,6 +522,7 @@ function computeRetailSummary(sales = []) {
 
         summary.totalSales += totalSales;
         summary.paymentReceived += paymentReceived;
+        summary.donations += donations;
         summary.balanceDue += balanceDue;
         summary.expenses += expenses;
         summary.returnCount += returnCount;
@@ -533,6 +536,7 @@ function computeRetailSummary(sales = []) {
         if (summary.byStore[storeName]) {
             summary.byStore[storeName].totalSales += totalSales;
             summary.byStore[storeName].paymentReceived += paymentReceived;
+            summary.byStore[storeName].donations += donations;
             summary.byStore[storeName].balanceDue += balanceDue;
             summary.byStore[storeName].expenses += expenses;
             summary.byStore[storeName].count += 1;
@@ -541,6 +545,7 @@ function computeRetailSummary(sales = []) {
 
     summary.totalSales = roundCurrency(summary.totalSales);
     summary.paymentReceived = roundCurrency(summary.paymentReceived);
+    summary.donations = roundCurrency(summary.donations);
     summary.balanceDue = roundCurrency(summary.balanceDue);
     summary.expenses = roundCurrency(summary.expenses);
 
@@ -549,6 +554,7 @@ function computeRetailSummary(sales = []) {
             ...summary.byStore[storeName],
             totalSales: roundCurrency(summary.byStore[storeName].totalSales),
             paymentReceived: roundCurrency(summary.byStore[storeName].paymentReceived),
+            donations: roundCurrency(summary.byStore[storeName].donations),
             balanceDue: roundCurrency(summary.byStore[storeName].balanceDue),
             expenses: roundCurrency(summary.byStore[storeName].expenses)
         };
@@ -599,6 +605,7 @@ function computeConsignmentSummary(orders = []) {
         checkedOutValue: 0,
         soldValue: 0,
         paymentReceived: 0,
+        donations: 0,
         balanceDue: 0,
         expenses: 0,
         activeOrders: 0,
@@ -613,6 +620,7 @@ function computeConsignmentSummary(orders = []) {
         const checkedOutValue = toNumber(order.totalValueCheckedOut);
         const soldValue = toNumber(order.totalValueSold);
         const paymentReceived = toNumber(order.totalAmountPaid);
+        const donations = toNumber(order.totalDonation);
         const balanceDue = toNumber(order.balanceDue);
         const expenses = toNumber(order.totalExpenses);
         const checkoutDate = toDateValue(order.checkoutDate).getTime();
@@ -621,6 +629,7 @@ function computeConsignmentSummary(orders = []) {
         summary.checkedOutValue += checkedOutValue;
         summary.soldValue += soldValue;
         summary.paymentReceived += paymentReceived;
+        summary.donations += donations;
         summary.balanceDue += balanceDue;
         summary.expenses += expenses;
 
@@ -636,6 +645,7 @@ function computeConsignmentSummary(orders = []) {
     summary.checkedOutValue = roundCurrency(summary.checkedOutValue);
     summary.soldValue = roundCurrency(summary.soldValue);
     summary.paymentReceived = roundCurrency(summary.paymentReceived);
+    summary.donations = roundCurrency(summary.donations);
     summary.balanceDue = roundCurrency(summary.balanceDue);
     summary.expenses = roundCurrency(summary.expenses);
 
@@ -645,11 +655,13 @@ function computeConsignmentSummary(orders = []) {
 function computeCashSummary({
     salesPayments = [],
     supplierPayments = [],
-    consignmentPayments = []
+    consignmentPayments = [],
+    donations = []
 }) {
     const totals = {
         retailInflow: 0,
         consignmentInflow: 0,
+        donationInflow: 0,
         supplierOutflow: 0
     };
 
@@ -674,13 +686,21 @@ function computeCashSummary({
         totals.supplierOutflow += toNumber(payment.amountPaid);
     });
 
+    (donations || []).forEach(entry => {
+        const status = normalizeText(entry.status || "Active").toLowerCase();
+        if (status === "voided" || status === "void reversal" || status === "reversal") return;
+        if (entry.isReversalEntry) return;
+        totals.donationInflow += toNumber(entry.amount);
+    });
+
     totals.retailInflow = roundCurrency(totals.retailInflow);
     totals.consignmentInflow = roundCurrency(totals.consignmentInflow);
+    totals.donationInflow = roundCurrency(totals.donationInflow);
     totals.supplierOutflow = roundCurrency(totals.supplierOutflow);
 
     return {
         ...totals,
-        netCash: roundCurrency((totals.retailInflow + totals.consignmentInflow) - totals.supplierOutflow)
+        netCash: roundCurrency((totals.retailInflow + totals.consignmentInflow + totals.donationInflow) - totals.supplierOutflow)
     };
 }
 
@@ -783,7 +803,8 @@ async function buildDashboardData(user, rangeSpec) {
         consignments,
         salesPayments,
         supplierPayments,
-        consignmentPayments
+        consignmentPayments,
+        donations
     ] = await Promise.all([
         profile.canLeads
             ? fetchWindowedRows(COLLECTIONS.leads, { dateField: "enquiryDate", startDate, endDate, createdBy: scopedEmail })
@@ -805,6 +826,9 @@ async function buildDashboardData(user, rangeSpec) {
             : Promise.resolve([]),
         profile.canCashFlow || profile.canConsignment
             ? fetchWindowedRows(COLLECTIONS.consignmentPaymentsLedger, { dateField: "paymentDate", startDate, endDate })
+            : Promise.resolve([]),
+        profile.canCashFlow || profile.canFinance
+            ? fetchWindowedRows(COLLECTIONS.donations, { dateField: "donationDate", startDate, endDate })
             : Promise.resolve([])
     ]);
 
@@ -819,7 +843,8 @@ async function buildDashboardData(user, rangeSpec) {
         cash: computeCashSummary({
             salesPayments,
             supplierPayments,
-            consignmentPayments
+            consignmentPayments,
+            donations
         }),
         stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
         inventory
@@ -949,8 +974,8 @@ function renderDashboardMarkup(user) {
         stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
         inventory: buildInventoryInsights(products, categories)
     };
-    const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
-    const storeChurch = metrics.retail.byStore?.["Church Store"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
+    const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 };
+    const storeChurch = metrics.retail.byStore?.["Church Store"] || { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 };
     const sourceLabel = featureState.source === "cache" ? "Cached Snapshot" : "Live Data";
     const expiryLabel = featureState.expiresAt ? formatDateTime(featureState.expiresAt) : "-";
     const loadedLabel = featureState.loadedAt ? formatDateTime(featureState.loadedAt) : "-";
@@ -1015,6 +1040,7 @@ function renderDashboardMarkup(user) {
                         <p class="dashboard-financial-value">${formatCurrency(metrics.retail.totalSales)}</p>
                         <div class="dashboard-financial-lines">
                             <p><span>Payment Received</span><strong>${formatCurrency(metrics.retail.paymentReceived)}</strong></p>
+                            <p><span>Donations</span><strong>${formatCurrency(metrics.retail.donations)}</strong></p>
                             <p><span>Balance Due</span><strong class="${metrics.retail.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.retail.balanceDue)}</strong></p>
                             <p><span>Total Expenses</span><strong>${formatCurrency(metrics.retail.expenses)}</strong></p>
                             <p><span>Returns</span><strong>${metrics.retail.returnCount}</strong></p>
@@ -1026,6 +1052,7 @@ function renderDashboardMarkup(user) {
                             <p><span>Checked Out</span><strong>${formatCurrency(metrics.consignment.checkedOutValue)}</strong></p>
                             <p><span>Total Sold</span><strong>${formatCurrency(metrics.consignment.soldValue)}</strong></p>
                             <p><span>Payment Received</span><strong>${formatCurrency(metrics.consignment.paymentReceived)}</strong></p>
+                            <p><span>Donations</span><strong>${formatCurrency(metrics.consignment.donations)}</strong></p>
                             <p><span>Balance Due</span><strong class="${metrics.consignment.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.consignment.balanceDue)}</strong></p>
                             <p><span>Expenses</span><strong>${formatCurrency(metrics.consignment.expenses)}</strong></p>
                         </div>
@@ -1035,6 +1062,7 @@ function renderDashboardMarkup(user) {
                         <div class="dashboard-financial-lines">
                             <p><span>Total Sold</span><strong>${formatCurrency(storeTasty.totalSales)}</strong></p>
                             <p><span>Payment Received</span><strong>${formatCurrency(storeTasty.paymentReceived)}</strong></p>
+                            <p><span>Donations</span><strong>${formatCurrency(storeTasty.donations)}</strong></p>
                             <p><span>Balance Due</span><strong class="${storeTasty.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeTasty.balanceDue)}</strong></p>
                             <p><span>Expenses</span><strong>${formatCurrency(storeTasty.expenses)}</strong></p>
                         </div>
@@ -1044,6 +1072,7 @@ function renderDashboardMarkup(user) {
                         <div class="dashboard-financial-lines">
                             <p><span>Total Sold</span><strong>${formatCurrency(storeChurch.totalSales)}</strong></p>
                             <p><span>Payment Received</span><strong>${formatCurrency(storeChurch.paymentReceived)}</strong></p>
+                            <p><span>Donations</span><strong>${formatCurrency(storeChurch.donations)}</strong></p>
                             <p><span>Balance Due</span><strong class="${storeChurch.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeChurch.balanceDue)}</strong></p>
                             <p><span>Expenses</span><strong>${formatCurrency(storeChurch.expenses)}</strong></p>
                         </div>
@@ -1070,6 +1099,7 @@ function renderDashboardMarkup(user) {
                             <div class="dashboard-financial-lines">
                                 <p><span>Retail Inflow</span><strong>${formatCurrency(metrics.cash.retailInflow)}</strong></p>
                                 <p><span>Consignment Inflow</span><strong>${formatCurrency(metrics.cash.consignmentInflow)}</strong></p>
+                                <p><span>Donation Inflow</span><strong>${formatCurrency(metrics.cash.donationInflow)}</strong></p>
                                 <p><span>Supplier Outflow</span><strong>${formatCurrency(metrics.cash.supplierOutflow)}</strong></p>
                             </div>
                         </article>

@@ -511,6 +511,7 @@ function getSalesHistoryRows() {
         saleStatus: sale.saleStatus || "Active",
         invoiceTotal: Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0,
         amountPaid: Number(sale.totalAmountPaid) || 0,
+        totalDonation: Number(sale.totalDonation) || 0,
         totalExpenses: Number(sale.financials?.totalExpenses) || 0,
         balanceDue: Number(sale.balanceDue) || 0,
         paymentStatus: sale.paymentStatus || "Unpaid"
@@ -670,11 +671,17 @@ function syncRetailPaymentDraftPreview() {
     const balanceDue = Number(sale.balanceDue) || 0;
     const draftAmount = getPaymentDraftAmount();
     const appliedDraft = Math.min(draftAmount, balanceDue);
+    const donationDraft = Math.max(draftAmount - appliedDraft, 0);
     const remaining = Math.max(balanceDue - appliedDraft, 0);
     const remainingNode = document.getElementById("retail-payment-balance-after-draft");
+    const donationNode = document.getElementById("retail-payment-donation-after-draft");
 
     if (remainingNode) {
         remainingNode.textContent = formatCurrency(remaining);
+    }
+
+    if (donationNode) {
+        donationNode.textContent = formatCurrency(donationDraft);
     }
 }
 
@@ -687,8 +694,10 @@ function renderRetailPaymentModal(snapshot) {
     const paymentModes = (snapshot.masterData.paymentModes || []).filter(mode => mode.isActive);
     const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
     const amountPaid = Number(sale.totalAmountPaid) || 0;
+    const totalDonation = Number(sale.totalDonation) || 0;
     const balanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - amountPaid, 0)) || 0;
     const draftAmount = Number(featureState.paymentDraft.amountPaid) || 0;
+    const draftDonation = Math.max(draftAmount - Math.min(draftAmount, balanceDue), 0);
     const remainingBalance = Math.max(balanceDue - Math.min(draftAmount, balanceDue), 0);
     const canRecordPayment = sale.saleStatus !== "Voided" && balanceDue > 0 && paymentModes.length > 0;
     const recordPaymentDisabledReason = sale.saleStatus === "Voided"
@@ -731,12 +740,16 @@ function renderRetailPaymentModal(snapshot) {
                                     <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
                                 </article>
                                 <article class="summary-card">
-                                    <p class="summary-label">Amount Paid</p>
+                                    <p class="summary-label">Applied Payment</p>
                                     <p class="summary-value">${formatCurrency(amountPaid)}</p>
                                 </article>
                                 <article class="summary-card retail-summary-card-strong">
                                     <p class="summary-label">Balance Due</p>
                                     <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Donation Total</p>
+                                    <p class="summary-value">${formatCurrency(totalDonation)}</p>
                                 </article>
                             </div>
 
@@ -747,7 +760,7 @@ function renderRetailPaymentModal(snapshot) {
                                         <input id="retail-payment-entry-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
                                     </div>
                                     <div class="field">
-                                        <label for="retail-payment-entry-amount">Amount Paid <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <label for="retail-payment-entry-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
                                         <input id="retail-payment-entry-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
                                     </div>
                                     <div class="field">
@@ -774,6 +787,10 @@ function renderRetailPaymentModal(snapshot) {
                                     <article class="summary-card">
                                         <p class="summary-label">Balance After Draft</p>
                                         <p id="retail-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Donation From Draft</p>
+                                        <p id="retail-payment-donation-after-draft" class="summary-value">${formatCurrency(draftDonation)}</p>
                                     </article>
                                 </div>
                                 ${balanceDue <= 0 ? `
@@ -1137,6 +1154,7 @@ function renderRetailStoreViewShell(snapshot) {
         : null;
     const workspaceSale = viewingSale || editingSale || returningSale || voidingSale;
     const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
+    const workspaceTotalDonation = Number(workspaceSale?.totalDonation) || 0;
     const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
     const workspaceCreditBalance = Number(workspaceSale?.creditBalance) || 0;
     const returnDraftSummary = isReturnMode && returningSale
@@ -1153,6 +1171,9 @@ function renderRetailStoreViewShell(snapshot) {
         : (isViewMode || isEditMode || isVoidMode)
             ? workspaceCreditBalance
             : draftCreditBalance;
+    const displayedDonation = (isViewMode || isEditMode || isReturnMode || isVoidMode)
+        ? workspaceTotalDonation
+        : summary.donationAmount;
     const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
     const draftPaymentStatus = summary.grandTotal <= 0
         ? "Paid"
@@ -1609,6 +1630,10 @@ function renderRetailStoreViewShell(snapshot) {
                                             <div class="retail-finance-total-row">
                                                 <span>Applied Payment</span>
                                                 <strong>${formatCurrency(summary.appliedPayment)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Donations</span>
+                                                <strong>${formatCurrency(displayedDonation)}</strong>
                                             </div>
                                             <div class="retail-finance-total-row retail-finance-total-row-strong">
                                                 <span>Grand Total</span>
@@ -2082,9 +2107,11 @@ function buildSaleDraftFromSale(sale) {
         store: sale.store || "",
         saleType: sale.saleType || "Revenue",
         salesCatalogueId: sale.salesCatalogueId || "",
-        paymentType: Number(sale.totalAmountPaid) > 0 ? "Pay Now" : "Pay Later",
+        paymentType: Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) > 0 ? "Pay Now" : "Pay Later",
         paymentMode: sale.latestPaymentMode || "",
-        amountReceived: Number(sale.totalAmountPaid) > 0 ? String(Number(sale.totalAmountPaid) || 0) : "",
+        amountReceived: Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) > 0
+            ? String(Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) || 0)
+            : "",
         transactionRef: "",
         paymentNotes: "",
         saleNotes: sale.saleNotes || "",
@@ -2546,10 +2573,11 @@ async function handleRetailSaleSubmit(event) {
                 details: [
                     { label: "Sale", value: voidingSale.saleId || voidingSale.manualVoucherNumber || "-" },
                     { label: "Payments Voided", value: String(result.voidedPaymentCount || 0) },
+                    { label: "Donations Voided", value: String(result.voidedDonationCount || 0) },
                     { label: "Expenses Voided", value: String(result.voidedExpenseCount || 0) },
                     { label: "Stock Qty Restored", value: String(result.reversedQuantity || 0) }
                 ],
-                note: `Payment reversal total: ${formatCurrency(result.voidedPaymentAmount || 0)} | Expense reversal total: ${formatCurrency(result.voidedExpenseAmount || 0)}`
+                note: `Payment reversal total: ${formatCurrency(result.voidedPaymentAmount || 0)} | Donation reversal total: ${formatCurrency(result.voidedDonationAmount || 0)} | Expense reversal total: ${formatCurrency(result.voidedExpenseAmount || 0)}`
             });
             return;
         }
@@ -2629,6 +2657,7 @@ async function handleRetailSaleSubmit(event) {
                     : []),
                 { label: "Payment Status", value: result.summary.paymentStatus },
                 { label: "Grand Total", value: formatCurrency(result.summary.grandTotal) },
+                { label: "Donation", value: formatCurrency(result.summary.donationAmount || 0) },
                 { label: "Edit Scope", value: isEditMode ? (result.summary.editScope || featureState.editModeScope || "limited") : "New Sale" }
             ]
         });
@@ -2832,7 +2861,9 @@ async function handleRetailPaymentSubmit(event) {
             message: "The payment was linked to the sale and the customer balance was updated.",
             details: [
                 { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
-                { label: "Amount", value: formatCurrency(result.summary.paymentAmount) },
+                { label: "Amount Received", value: formatCurrency(result.summary.paymentAmount) },
+                { label: "Applied To Balance", value: formatCurrency(result.summary.appliedAmount || 0) },
+                { label: "Donation", value: formatCurrency(result.summary.donationAmount || 0) },
                 { label: "Payment Status", value: result.summary.nextPaymentStatus || "-" },
                 { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue) }
             ]

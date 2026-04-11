@@ -184,6 +184,7 @@ export function calculateRetailDraftSummary(rows = [], adjustments = {}, payment
 
     const amountReceived = Math.max(0, roundCurrency(normalizeNumber(paymentDraft.amountReceived)));
     const appliedPayment = roundCurrency(Math.min(amountReceived, grandTotal));
+    const donationAmount = roundCurrency(Math.max(amountReceived - appliedPayment, 0));
     const balanceDue = roundCurrency(Math.max(0, grandTotal - appliedPayment));
 
     return {
@@ -203,7 +204,9 @@ export function calculateRetailDraftSummary(rows = [], adjustments = {}, payment
         orderLevelTaxAmount,
         totalTax,
         grandTotal,
+        amountReceived,
         appliedPayment,
+        donationAmount,
         balanceDue
     };
 }
@@ -324,13 +327,12 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             throw new Error("Enter a payment amount greater than zero.");
         }
 
-        if (normalizeNumber(payload.amountReceived) > summary.grandTotal) {
-            throw new Error("Overpayments are not enabled yet in Moneta Retail.");
-        }
-
         initialPayment = {
             paymentDate: saleDate,
             amountPaid: summary.appliedPayment,
+            amountApplied: summary.appliedPayment,
+            amountReceived: summary.amountReceived,
+            donationAmount: summary.donationAmount,
             paymentMode,
             transactionRef,
             notes
@@ -670,16 +672,12 @@ export function validateRetailSalePaymentPayload(payload, sale, masterData = {})
     const paymentMode = normalizeText(payload.paymentMode);
     const transactionRef = normalizeText(payload.transactionRef);
     const notes = normalizeText(payload.notes);
-    const amountPaid = parsePositiveAmount(payload.amountPaid, "Payment amount");
+    const amountReceived = parsePositiveAmount(payload.amountPaid, "Payment amount");
     const balanceDue = roundCurrency(Number(sale.balanceDue) || 0);
     const activePaymentModes = (masterData.paymentModes || []).filter(mode => mode.isActive);
 
     if (balanceDue <= 0) {
         throw new Error("This sale has already been fully paid.");
-    }
-
-    if (amountPaid > balanceDue) {
-        throw new Error("Payment amount cannot exceed the current balance due.");
     }
 
     if (!paymentMode) {
@@ -694,9 +692,15 @@ export function validateRetailSalePaymentPayload(payload, sale, masterData = {})
         throw new Error("Payment reference is required.");
     }
 
+    const amountApplied = roundCurrency(Math.min(amountReceived, balanceDue));
+    const donationAmount = roundCurrency(Math.max(amountReceived - amountApplied, 0));
+
     return {
         paymentDate,
-        amountPaid,
+        amountPaid: amountApplied,
+        amountApplied,
+        amountReceived,
+        donationAmount,
         paymentMode,
         transactionRef,
         notes

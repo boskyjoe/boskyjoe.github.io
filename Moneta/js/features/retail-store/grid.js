@@ -268,6 +268,14 @@ function buildSalesColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "totalDonation",
+            headerName: "Donations",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             field: "totalExpenses",
             headerName: "Expenses",
             minWidth: 130,
@@ -312,11 +320,27 @@ function buildPaymentHistoryColumnDefs() {
         },
         {
             field: "amountPaid",
-            headerName: "Amount",
+            headerName: "Applied",
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "donationAmount",
+            headerName: "Donation",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "amountReceived",
+            headerName: "Received",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || params.data?.totalCollected || params.data?.amountPaid || 0)
         },
         {
             field: "paymentMode",
@@ -539,6 +563,7 @@ function buildSalesPinnedBottomRow(rows) {
         summary.returnCount += Number(row?.returnCount) || 0;
         summary.invoiceTotal += Number(row?.invoiceTotal) || 0;
         summary.amountPaid += Number(row?.amountPaid) || 0;
+        summary.totalDonation += Number(row?.totalDonation) || 0;
         summary.totalExpenses += Number(row?.totalExpenses) || 0;
         summary.balanceDue += Number(row?.balanceDue) || 0;
         return summary;
@@ -547,6 +572,7 @@ function buildSalesPinnedBottomRow(rows) {
         returnCount: 0,
         invoiceTotal: 0,
         amountPaid: 0,
+        totalDonation: 0,
         totalExpenses: 0,
         balanceDue: 0
     });
@@ -557,6 +583,7 @@ function buildSalesPinnedBottomRow(rows) {
         returnCount: totals.returnCount,
         invoiceTotal: Number(totals.invoiceTotal.toFixed(2)),
         amountPaid: Number(totals.amountPaid.toFixed(2)),
+        totalDonation: Number(totals.totalDonation.toFixed(2)),
         totalExpenses: Number(totals.totalExpenses.toFixed(2)),
         balanceDue: Number(totals.balanceDue.toFixed(2))
     }];
@@ -575,10 +602,22 @@ function buildExpenseHistoryPinnedBottomRow(rows) {
 function buildPaymentHistoryPinnedBottomRow(rows) {
     if (!rows?.length) return [];
 
-    const totalAmount = rows.reduce((sum, row) => sum + (Number(row?.amountPaid) || 0), 0);
+    const totals = rows.reduce((summary, row) => {
+        summary.amountPaid += Number(row?.amountPaid) || 0;
+        summary.donationAmount += Number(row?.donationAmount) || 0;
+        summary.amountReceived += Number(row?.amountReceived ?? row?.totalCollected ?? row?.amountPaid) || 0;
+        return summary;
+    }, {
+        amountPaid: 0,
+        donationAmount: 0,
+        amountReceived: 0
+    });
+
     return [{
         paymentMode: "Totals",
-        amountPaid: Number(totalAmount.toFixed(2))
+        amountPaid: Number(totals.amountPaid.toFixed(2)),
+        donationAmount: Number(totals.donationAmount.toFixed(2)),
+        amountReceived: Number(totals.amountReceived.toFixed(2))
     }];
 }
 

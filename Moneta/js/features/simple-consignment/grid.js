@@ -287,6 +287,14 @@ function buildOrdersColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "totalDonation",
+            headerName: "Donation",
+            minWidth: 130,
+            flex: 0.78,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             field: "totalExpenses",
             headerName: "Expenses",
             minWidth: 125,
@@ -608,11 +616,27 @@ function buildTransactionsColumnDefs() {
         },
         {
             field: "amountApplied",
-            headerName: "Amount",
+            headerName: "Applied",
             minWidth: 130,
             flex: 0.74,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "donationAmount",
+            headerName: "Donation",
+            minWidth: 130,
+            flex: 0.74,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "amountReceived",
+            headerName: "Received",
+            minWidth: 130,
+            flex: 0.74,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || params.data?.totalCollected || params.data?.amountApplied || 0)
         },
         {
             field: "paymentMode",
@@ -685,6 +709,7 @@ function buildOrdersPinnedBottomRow(rows) {
         summary.totalValueCheckedOut += Number(row?.totalValueCheckedOut) || 0;
         summary.totalValueSold += Number(row?.totalValueSold) || 0;
         summary.totalAmountPaid += Number(row?.totalAmountPaid) || 0;
+        summary.totalDonation += Number(row?.totalDonation) || 0;
         summary.totalExpenses += Number(row?.totalExpenses) || 0;
         summary.balanceDue += Number(row?.balanceDue) || 0;
         summary.totalOnHandQuantity += Number(row?.totalOnHandQuantity) || 0;
@@ -694,6 +719,7 @@ function buildOrdersPinnedBottomRow(rows) {
         totalValueCheckedOut: 0,
         totalValueSold: 0,
         totalAmountPaid: 0,
+        totalDonation: 0,
         totalExpenses: 0,
         balanceDue: 0,
         totalOnHandQuantity: 0
@@ -705,6 +731,7 @@ function buildOrdersPinnedBottomRow(rows) {
         totalValueCheckedOut: Number(totals.totalValueCheckedOut.toFixed(2)),
         totalValueSold: Number(totals.totalValueSold.toFixed(2)),
         totalAmountPaid: Number(totals.totalAmountPaid.toFixed(2)),
+        totalDonation: Number(totals.totalDonation.toFixed(2)),
         totalExpenses: Number(totals.totalExpenses.toFixed(2)),
         balanceDue: Number(totals.balanceDue.toFixed(2)),
         totalOnHandQuantity: totals.totalOnHandQuantity
@@ -795,16 +822,21 @@ function buildTransactionsPinnedBottomRow(rows) {
     if (!rows?.length) return [];
 
     const totals = rows.reduce((summary, row) => {
-        const amount = Number(row?.amountApplied) || 0;
-        summary.amountApplied += amount;
+        summary.amountApplied += Number(row?.amountApplied) || 0;
+        summary.donationAmount += Number(row?.donationAmount) || 0;
+        summary.amountReceived += Number(row?.amountReceived ?? row?.totalCollected ?? row?.amountApplied) || 0;
         return summary;
     }, {
-        amountApplied: 0
+        amountApplied: 0,
+        donationAmount: 0,
+        amountReceived: 0
     });
 
     return [{
         paymentMode: "Totals",
-        amountApplied: Number(totals.amountApplied.toFixed(2))
+        amountApplied: Number(totals.amountApplied.toFixed(2)),
+        donationAmount: Number(totals.donationAmount.toFixed(2)),
+        amountReceived: Number(totals.amountReceived.toFixed(2))
     }];
 }
 

@@ -265,7 +265,7 @@ export function validateSimpleConsignmentTransactionPayload(order, payload, paym
         ? normalizeText(payload.paymentType)
         : "";
     const transactionDate = parseRequiredDate(payload.transactionDate, "Transaction date");
-    const amountApplied = parseRequiredAmount(payload.amountApplied, "Transaction amount");
+    const amountReceived = parseRequiredAmount(payload.amountApplied, "Transaction amount");
     const paymentMode = normalizeText(payload.paymentMode);
     const reference = normalizeText(payload.reference);
     const contact = normalizeText(payload.contact);
@@ -293,14 +293,23 @@ export function validateSimpleConsignmentTransactionPayload(order, payload, paym
         throw new Error("This order already has zero balance due.");
     }
 
-    if (amountApplied > balanceDue) {
+    if (paymentType === "Expense" && amountReceived > balanceDue) {
         throw new Error(`Amount cannot exceed the current balance due of ${balanceDue.toFixed(2)}.`);
     }
+
+    const amountApplied = paymentType === "Payment"
+        ? roundCurrency(Math.min(amountReceived, balanceDue))
+        : amountReceived;
+    const donationAmount = paymentType === "Payment"
+        ? roundCurrency(Math.max(amountReceived - amountApplied, 0))
+        : 0;
 
     return {
         paymentType,
         transactionDate,
+        amountReceived,
         amountApplied,
+        donationAmount,
         paymentMode,
         reference,
         contact,

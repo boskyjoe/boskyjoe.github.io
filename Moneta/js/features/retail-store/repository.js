@@ -38,6 +38,10 @@ function buildSalesReturnId() {
     return `RSRET-${Date.now()}`;
 }
 
+function buildDonationBusinessId() {
+    return `DON-${Date.now()}`;
+}
+
 function normalizeText(value) {
     return (value || "").trim();
 }
@@ -353,7 +357,15 @@ export async function createRetailSaleRecord(payload, user) {
             }
         });
 
-        const totalAmountPaid = Number(payload.initialPayment?.amountPaid) || 0;
+        const totalAmountPaid = roundCurrency(
+            payload.initialPayment?.amountApplied ?? payload.initialPayment?.amountPaid
+        );
+        const totalCollected = roundCurrency(
+            payload.initialPayment?.amountReceived ?? payload.initialPayment?.amountApplied ?? payload.initialPayment?.amountPaid
+        );
+        const totalDonation = roundCurrency(
+            payload.initialPayment?.donationAmount ?? Math.max(totalCollected - totalAmountPaid, 0)
+        );
         const balanceDue = Number((payload.financials.grandTotal - totalAmountPaid).toFixed(2));
         const paymentStatus = balanceDue <= 0
             ? "Paid"
@@ -395,12 +407,13 @@ export async function createRetailSaleRecord(payload, user) {
                 totalTax: payload.financials.totalTax,
                 grandTotal: payload.financials.grandTotal,
                 totalExpenses: 0,
-                amountTendered: totalAmountPaid,
+                amountTendered: totalCollected,
                 paymentCount: payload.initialPayment ? 1 : 0
             },
             lineItemCount: payload.lineItems.length,
             totalQuantity: payload.lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
             totalAmountPaid,
+            totalDonation,
             balanceDue,
             creditBalance: 0,
             returnCount: 0,
@@ -416,6 +429,9 @@ export async function createRetailSaleRecord(payload, user) {
 
         if (payload.initialPayment) {
             const paymentRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+            const donationRef = totalDonation > 0
+                ? db.collection(COLLECTIONS.donations).doc()
+                : null;
 
             transaction.set(paymentRef, {
                 paymentId: buildSalesPaymentId(),
@@ -424,17 +440,45 @@ export async function createRetailSaleRecord(payload, user) {
                 relatedSaleNumber: payload.manualVoucherNumber,
                 paymentDate: payload.initialPayment.paymentDate,
                 amountPaid: totalAmountPaid,
-                totalCollected: totalAmountPaid,
+                amountApplied: totalAmountPaid,
+                amountReceived: totalCollected,
+                donationAmount: totalDonation,
+                totalCollected: totalCollected,
                 paymentMode: payload.initialPayment.paymentMode,
                 transactionRef: payload.initialPayment.transactionRef,
                 notes: payload.initialPayment.notes || "",
                 status: "Verified",
+                paymentStatus: "Verified",
+                donationEntryId: donationRef?.id || "",
                 customerName: payload.customerInfo.name,
                 store: payload.store,
                 recordedBy: user.email,
+                recordedOn: now,
                 createdBy: user.email,
                 createdOn: now
             });
+
+            if (donationRef) {
+                transaction.set(donationRef, {
+                    donationId: buildDonationBusinessId(),
+                    donationDate: payload.initialPayment.paymentDate,
+                    amount: totalDonation,
+                    status: "Active",
+                    moduleType: "Retail Store",
+                    sourceCollection: COLLECTIONS.salesPaymentsLedger,
+                    sourcePaymentDocId: paymentRef.id,
+                    sourceSaleId: saleRef.id,
+                    sourceSaleNumber: payload.manualVoucherNumber || "",
+                    customerName: payload.customerInfo.name || "",
+                    paymentMode: payload.initialPayment.paymentMode || "",
+                    paymentReference: payload.initialPayment.transactionRef || "",
+                    notes: payload.initialPayment.notes || "Auto-captured overpayment donation.",
+                    createdBy: user.email,
+                    createdOn: now,
+                    updatedBy: user.email,
+                    updatedOn: now
+                });
+            }
         }
 
         productRefs.forEach((productRef, index) => {
@@ -720,24 +764,27 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
         const invoiceTotal = Number(sale.financials?.grandTotal) || 0;
         const currentAmountPaid = Number(sale.totalAmountPaid) || 0;
         const currentBalanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - currentAmountPaid, 0)) || 0;
-        const paymentAmount = Number(paymentPayload.amountPaid) || 0;
+        const amountReceived = roundCurrency(paymentPayload.amountReceived ?? paymentPayload.amountPaid);
+        const amountApplied = roundCurrency(Math.min(amountReceived, currentBalanceDue));
+        const donationAmount = roundCurrency(Math.max(amountReceived - amountApplied, 0));
+        const currentTotalDonation = roundCurrency(sale.totalDonation);
+        const donationRef = donationAmount > 0
+            ? db.collection(COLLECTIONS.donations).doc()
+            : null;
 
         if (currentBalanceDue <= 0) {
             throw new Error("This sale has already been fully paid.");
         }
 
-        if (paymentAmount <= 0) {
+        if (amountReceived <= 0) {
             throw new Error("Payment amount must be greater than zero.");
         }
 
-        if (paymentAmount > currentBalanceDue) {
-            throw new Error(`Payment cannot exceed the current balance due of ${currentBalanceDue.toFixed(2)}.`);
-        }
-
-        const nextTotalAmountPaid = Number((currentAmountPaid + paymentAmount).toFixed(2));
+        const nextTotalAmountPaid = Number((currentAmountPaid + amountApplied).toFixed(2));
+        const nextTotalDonation = Number((currentTotalDonation + donationAmount).toFixed(2));
         const nextBalanceDue = Number(Math.max((invoiceTotal - nextTotalAmountPaid), 0).toFixed(2));
         const nextPaymentCount = (Number(sale.financials?.paymentCount) || 0) + 1;
-        const nextAmountTendered = Number(((Number(sale.financials?.amountTendered) || 0) + paymentAmount).toFixed(2));
+        const nextAmountTendered = Number(((Number(sale.financials?.amountTendered) || 0) + amountReceived).toFixed(2));
         const nextPaymentStatus = nextBalanceDue <= 0
             ? "Paid"
             : nextTotalAmountPaid > 0
@@ -746,6 +793,7 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
 
         transaction.update(saleRef, {
             totalAmountPaid: nextTotalAmountPaid,
+            totalDonation: nextTotalDonation,
             balanceDue: nextBalanceDue,
             paymentStatus: nextPaymentStatus,
             latestPaymentMode: paymentPayload.paymentMode,
@@ -761,13 +809,17 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || paymentPayload.relatedSaleNumber || "",
             paymentDate: paymentPayload.paymentDate,
-            amountPaid: paymentAmount,
-            totalCollected: paymentAmount,
+            amountPaid: amountApplied,
+            amountApplied,
+            amountReceived,
+            donationAmount,
+            totalCollected: amountReceived,
             paymentMode: paymentPayload.paymentMode,
             transactionRef: paymentPayload.transactionRef || "",
             notes: paymentPayload.notes || "",
             status: "Verified",
             paymentStatus: "Verified",
+            donationEntryId: donationRef?.id || "",
             customerName: sale.customerInfo?.name || "",
             store: sale.store || "",
             recordedBy: user.email,
@@ -776,11 +828,36 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
             createdOn: now
         });
 
+        if (donationRef) {
+            transaction.set(donationRef, {
+                donationId: buildDonationBusinessId(),
+                donationDate: paymentPayload.paymentDate,
+                amount: donationAmount,
+                status: "Active",
+                moduleType: "Retail Store",
+                sourceCollection: COLLECTIONS.salesPaymentsLedger,
+                sourcePaymentDocId: paymentRef.id,
+                sourceSaleId: saleId,
+                sourceSaleNumber: sale.manualVoucherNumber || paymentPayload.relatedSaleNumber || "",
+                customerName: sale.customerInfo?.name || "",
+                paymentMode: paymentPayload.paymentMode || "",
+                paymentReference: paymentPayload.transactionRef || "",
+                notes: paymentPayload.notes || "Auto-captured overpayment donation.",
+                createdBy: user.email,
+                createdOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
         return {
             paymentRef,
             summary: {
-                paymentAmount,
+                paymentAmount: amountReceived,
+                appliedAmount: amountApplied,
+                donationAmount,
                 nextTotalAmountPaid,
+                nextTotalDonation,
                 nextBalanceDue,
                 nextPaymentStatus
             }
@@ -831,17 +908,31 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
 
             const data = doc.data() || {};
             const status = normalizeText(data.paymentStatus || data.status || "Verified").toLowerCase();
-            return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amountPaid) > 0;
+            const appliedAmount = roundCurrency(data.amountApplied ?? data.amountPaid);
+            const receivedAmount = roundCurrency(data.amountReceived ?? data.totalCollected ?? data.amountPaid);
+            return !data.isReversalEntry && status !== "voided" && (appliedAmount > 0 || receivedAmount > 0);
         });
 
         let voidedPaymentCount = 0;
         let voidedPaymentAmount = 0;
+        let voidedDonationCount = 0;
+        let voidedDonationAmount = 0;
 
         activePayments.forEach(paymentDoc => {
             const paymentData = paymentDoc.data() || {};
-            const paymentAmount = roundCurrency(paymentData.amountPaid);
+            const paymentAmount = roundCurrency(paymentData.amountApplied ?? paymentData.amountPaid);
+            const receivedAmount = roundCurrency(paymentData.amountReceived ?? paymentData.totalCollected ?? paymentAmount);
+            const donationAmount = roundCurrency(paymentData.donationAmount);
             const paymentStatus = normalizeText(paymentData.paymentStatus || paymentData.status || "Verified");
             const reversalRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+            const donationEntryRef = donationAmount > 0
+                ? (paymentData.donationEntryId
+                    ? db.collection(COLLECTIONS.donations).doc(paymentData.donationEntryId)
+                    : db.collection(COLLECTIONS.donations).doc())
+                : null;
+            const donationReversalRef = donationAmount > 0
+                ? db.collection(COLLECTIONS.donations).doc()
+                : null;
 
             transaction.update(paymentDoc.ref, {
                 paymentStatus: "Voided",
@@ -862,7 +953,10 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
                 paymentDate: now,
                 amountPaid: -paymentAmount,
-                totalCollected: -paymentAmount,
+                amountApplied: -paymentAmount,
+                amountReceived: -receivedAmount,
+                donationAmount: -donationAmount,
+                totalCollected: -receivedAmount,
                 paymentMode: "VOID_REVERSAL",
                 transactionRef: `Sale void reversal of ${paymentData.transactionRef || paymentData.paymentId || paymentDoc.id}`,
                 notes: `Reversed during sale void ${sale.saleId || sale.manualVoucherNumber || saleId}. Reason: ${voidReason}`,
@@ -870,6 +964,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 paymentStatus: "Void Reversal",
                 originalPaymentId: paymentDoc.id,
                 isReversalEntry: true,
+                donationEntryId: donationReversalRef?.id || "",
                 customerName: sale.customerInfo?.name || paymentData.customerName || "",
                 store: sale.store || paymentData.store || "",
                 recordedBy: user.email,
@@ -879,6 +974,52 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 voidedBy: user.email,
                 voidReason
             });
+
+            if (donationEntryRef && donationReversalRef) {
+                transaction.set(donationEntryRef, {
+                    donationId: paymentData.donationId || buildDonationBusinessId(),
+                    donationDate: paymentData.paymentDate || now,
+                    amount: donationAmount,
+                    status: "Voided",
+                    moduleType: "Retail Store",
+                    sourceCollection: COLLECTIONS.salesPaymentsLedger,
+                    sourcePaymentDocId: paymentDoc.id,
+                    sourceSaleId: saleId,
+                    sourceSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+                    customerName: sale.customerInfo?.name || paymentData.customerName || "",
+                    paymentMode: paymentData.paymentMode || "",
+                    paymentReference: paymentData.transactionRef || paymentData.paymentId || paymentDoc.id,
+                    notes: paymentData.notes || "",
+                    voidReason,
+                    voidedBy: user.email,
+                    voidedOn: now,
+                    updatedBy: user.email,
+                    updatedOn: now
+                }, { merge: true });
+
+                transaction.set(donationReversalRef, {
+                    donationId: buildDonationBusinessId(),
+                    donationDate: now,
+                    amount: -donationAmount,
+                    status: "Void Reversal",
+                    moduleType: "Retail Store",
+                    sourceCollection: COLLECTIONS.salesPaymentsLedger,
+                    sourcePaymentDocId: reversalRef.id,
+                    sourceSaleId: saleId,
+                    sourceSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+                    originalDonationEntryId: donationEntryRef.id,
+                    originalPaymentDocId: paymentDoc.id,
+                    isReversalEntry: true,
+                    notes: `Donation reversal for sale void ${sale.saleId || sale.manualVoucherNumber || saleId}. Reason: ${voidReason}`,
+                    createdBy: user.email,
+                    createdOn: now,
+                    updatedBy: user.email,
+                    updatedOn: now
+                });
+
+                voidedDonationCount += 1;
+                voidedDonationAmount += donationAmount;
+            }
 
             voidedPaymentCount += 1;
             voidedPaymentAmount += paymentAmount;
@@ -954,6 +1095,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             saleStatus: "Voided",
             paymentStatus: "Voided",
             totalAmountPaid: 0,
+            totalDonation: 0,
             balanceDue: 0,
             creditBalance: 0,
             latestPaymentMode: "",
@@ -968,6 +1110,8 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             voidedOn: now,
             voidedPaymentCount,
             voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            voidedDonationCount,
+            voidedDonationAmount: roundCurrency(voidedDonationAmount),
             voidedExpenseCount,
             voidedExpenseAmount: roundCurrency(voidedExpenseAmount),
             inventoryReversalSummary: {
@@ -981,6 +1125,8 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
         return {
             voidedPaymentCount,
             voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
+            voidedDonationCount,
+            voidedDonationAmount: roundCurrency(voidedDonationAmount),
             voidedExpenseCount,
             voidedExpenseAmount: roundCurrency(voidedExpenseAmount),
             reversedProductCount,

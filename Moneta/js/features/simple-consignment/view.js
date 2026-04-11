@@ -531,6 +531,7 @@ function buildConsignmentOrderGridRows() {
         totalValueCheckedOut: Number(order.totalValueCheckedOut) || 0,
         totalValueSold: Number(order.totalValueSold) || 0,
         totalAmountPaid: Number(order.totalAmountPaid) || 0,
+        totalDonation: Number(order.totalDonation) || 0,
         totalExpenses: Number(order.totalExpenses) || 0,
         balanceDue: Number(order.balanceDue) || 0,
         totalOnHandQuantity: Number(order.totalOnHandQuantity) || 0
@@ -691,6 +692,7 @@ function getCancelOrderGuard(order) {
     }
 
     const hasFinancialTotals = roundCurrency(order.totalAmountPaid) > 0
+        || roundCurrency(order.totalDonation) > 0
         || roundCurrency(order.totalExpenses) > 0
         || (Number(order.paymentCount) || 0) > 0;
     if (hasFinancialTotals || featureState.transactions.length > 0) {
@@ -737,6 +739,7 @@ function buildSummaryModel(snapshot) {
     }
 
     const paid = Number(activeOrder?.totalAmountPaid) || 0;
+    const donation = Number(activeOrder?.totalDonation) || 0;
     const expenses = Number(activeOrder?.totalExpenses) || 0;
     const liveBalanceDue = roundCurrency(metrics.totalValueSold - paid - expenses);
     const guard = getCloseOrderGuard(activeOrder, metrics);
@@ -756,6 +759,7 @@ function buildSummaryModel(snapshot) {
             { id: "simple-consignment-summary-gifted-value", label: "Gifted Value", value: formatCurrency(metrics.totalValueGifted) },
             { id: "simple-consignment-summary-on-hand-value", label: "On-Hand Value", value: formatCurrency(metrics.totalValueOnHand) },
             { id: "simple-consignment-summary-paid", label: "Amount Paid", value: formatCurrency(paid) },
+            { id: "simple-consignment-summary-donation", label: "Donation", value: formatCurrency(donation) },
             { id: "simple-consignment-summary-expenses", label: "Expenses", value: formatCurrency(expenses) },
             { id: "simple-consignment-summary-balance", label: "Balance Due", value: formatCurrency(Math.max(liveBalanceDue, 0)) },
             { id: "simple-consignment-summary-on-hand", label: "On Hand", value: String(metrics.totalOnHandQuantity) }
@@ -1063,7 +1067,7 @@ function renderSettlementWorkspace(snapshot) {
                                         </select>
                                     </div>
                                     <div class="field">
-                                        <label for="simple-consignment-transaction-amount">Amount <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <label for="simple-consignment-transaction-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
                                         <input id="simple-consignment-transaction-amount" class="input" type="number" min="0" step="0.01" value="${featureState.transactionDraft.amountApplied}" required>
                                     </div>
                                     <div class="field">
@@ -1079,6 +1083,7 @@ function renderSettlementWorkspace(snapshot) {
                                         <textarea id="simple-consignment-transaction-notes" class="textarea">${featureState.transactionDraft.notes}</textarea>
                                     </div>
                                 </div>
+                                <p class="panel-copy panel-copy-tight">For <strong>Payment</strong> entries, any amount above current balance due is automatically tracked as donation.</p>
                                 <div class="form-actions">
                                     <button class="button button-primary-alt" type="submit">
                                         <span class="button-icon">${icons.payment}</span>
@@ -1826,7 +1831,9 @@ async function handleRecordTransaction() {
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
             { label: "Type", value: result.transaction?.paymentType || "-" },
-            { label: "Amount", value: formatCurrency(result.transaction?.amountApplied || 0) },
+            { label: "Amount Received", value: formatCurrency(result.summary?.amountReceived || result.transaction?.amountReceived || 0) },
+            { label: "Applied To Balance", value: formatCurrency(result.summary?.amountApplied || result.transaction?.amountApplied || 0) },
+            { label: "Donation", value: formatCurrency(result.summary?.donationAmount || result.transaction?.donationAmount || 0) },
             { label: "Updated Balance", value: formatCurrency(result.summary?.nextBalanceDue || 0) }
         ]
     });
@@ -1896,7 +1903,8 @@ async function handleVoidTransaction(button) {
         details: [
             { label: "Order", value: activeOrder.consignmentId || "-" },
             { label: "Type", value: result.summary?.paymentType || "-" },
-            { label: "Amount Reversed", value: formatCurrency(result.summary?.amountApplied || 0) },
+            { label: "Applied Reversed", value: formatCurrency(result.summary?.amountApplied || 0) },
+            { label: "Donation Reversed", value: formatCurrency(result.summary?.donationAmount || 0) },
             { label: "Updated Balance", value: formatCurrency(result.summary?.nextBalanceDue || 0) }
         ]
     });
@@ -1923,6 +1931,7 @@ async function handleCloseOrder() {
             { label: "On Hand", value: String(metrics.totalOnHandQuantity) },
             { label: "Sold Value", value: formatCurrency(metrics.totalValueSold) },
             { label: "Amount Paid", value: formatCurrency(activeOrder.totalAmountPaid || 0) },
+            { label: "Donation", value: formatCurrency(activeOrder.totalDonation || 0) },
             { label: "Expenses", value: formatCurrency(activeOrder.totalExpenses || 0) },
             { label: "Balance Due", value: formatCurrency(Math.max(metrics.totalValueSold - (activeOrder.totalAmountPaid || 0) - (activeOrder.totalExpenses || 0), 0)) }
         ],
@@ -1996,6 +2005,7 @@ async function handleCancelOrder() {
         details: [
             { label: "Qty Checked Out", value: String(activeOrder.totalQuantityCheckedOut || 0) },
             { label: "Value Checked Out", value: formatCurrency(activeOrder.totalValueCheckedOut || 0) },
+            { label: "Donation", value: formatCurrency(activeOrder.totalDonation || 0) },
             { label: "Payments Linked", value: String(featureState.transactions.length) }
         ],
         note: "Cancellation returns all checked-out inventory and marks this order as cancelled. This action cannot be undone.",

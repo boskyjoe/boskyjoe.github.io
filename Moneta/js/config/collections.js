@@ -9,6 +9,7 @@ export const COLLECTIONS = {
     salesInvoices: `${BASE_DOC_PATH}/salesInvoices`,
     salesPaymentsLedger: `${BASE_DOC_PATH}/salesPaymentsLedger`,
     consignmentPaymentsLedger: `${BASE_DOC_PATH}/consignmentPaymentsLedger`,
+    donations: `${BASE_DOC_PATH}/donations`,
     simpleConsignments: `${BASE_DOC_PATH}/consignmentOrdersV2`,
     categories: `${BASE_DOC_PATH}/productCategories`,
     paymentModes: `${BASE_DOC_PATH}/paymentModes`,
