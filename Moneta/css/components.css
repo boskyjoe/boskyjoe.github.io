@@ -902,6 +902,10 @@ select {
     border-bottom: 1px solid var(--border);
 }
 
+.purchase-payment-modal-void-header .panel-copy {
+    color: #8f3d3d;
+}
+
 .retail-payment-void-header .panel-copy {
     color: #8f3d3d;
 }
@@ -919,6 +923,21 @@ select {
 
 .purchase-payment-modal-body {
     overflow: auto;
+}
+
+.purchase-payment-void-mode-pill {
+    background: #fde9e6;
+    color: #9d2f2f;
+}
+
+.purchase-payment-void-inline-note {
+    margin-top: 0;
+    margin-bottom: 0.95rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 0.8rem;
+    background: #fff3f1;
+    border: 1px solid rgba(184, 64, 64, 0.2);
+    color: #8f3d3d;
 }
 
 .retail-void-mode-pill {
