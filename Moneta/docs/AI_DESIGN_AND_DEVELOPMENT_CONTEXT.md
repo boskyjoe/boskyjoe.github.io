@@ -1,87 +1,91 @@
-# MONETA Detailed Design and Development Context
+# MONETA Design + Development Context (Current State)
 
-Last updated: 2026-04-10
-Scope: `Moneta/` (the active rebuild project).  
-Legacy reference app: root `TrinityCart/` files are legacy and should be used only for behavior comparison.
+Last updated: 2026-04-11  
+Scope: `Moneta/` only (active rebuild).  
+Legacy reference: repository root `TrinityCart/` files are legacy and should be used only for behavior comparison.
 
 ## Purpose
-This document is a full AI handoff context file for continuity.  
-If a new session starts, load this file first to recover architecture, workflow, and implementation conventions before making changes.
+This is the primary AI handoff file for Moneta.  
+A fresh session should read this first to recover architecture, workflow conventions, module behavior, and current risk areas.
 
-## Quick Start For New AI Sessions
-1. Confirm work target is `Moneta/` and not the legacy root app.
+## Fresh-Start Checklist (For New AI Sessions)
+1. Confirm target is `Moneta/`.
 2. Read this file fully.
 3. Read these files next:
 `Moneta/index.html`
 `Moneta/js/app/bootstrap.js`
 `Moneta/js/app/router.js`
+`Moneta/js/app/auth.js`
+`Moneta/js/app/master-data.js`
 `Moneta/js/config/nav-config.js`
 `Moneta/js/config/collections.js`
 `Moneta/firestoreRule/fireStoreRule.txt`
-4. For feature work, follow pattern:
+4. For module work, follow structure:
 `view.js` -> `service.js` -> `repository.js` -> `grid.js`.
+5. Preserve existing UX patterns:
+progress toasts, summary modals, confirmation modals, disabled action tooltip reasons.
 
-## Technology and Runtime
+## Runtime + Stack
 - Static web app (GitHub Pages compatible).
-- Firebase v8 (auth + firestore) loaded from CDN in `Moneta/index.html`.
-- AG Grid Community for worksheet and history grids.
-- Modular ES modules by feature.
-- HTML-to-PDF generation through `html2pdf` bundle for invoice/credit-note outputs.
+- Firebase v8 CDN (`firebase-app`, `firebase-auth`, `firebase-firestore`).
+- AG Grid Community (`@32.3.3` via CDN ESM).
+- Chart.js (`@4.4.3` via dynamic CDN import) for dashboard inventory charts.
+- html2pdf bundle for retail invoice and credit-note output.
+- ES module architecture by feature folder.
 
-## Repository Boundaries
-- Active app root: `Moneta/`.
-- Legacy app root (for reference only): `/Users/bjoe/Desktop/Bosky/Benju/TrinityCart/` top-level `js/`, `css/`, `index.html`.
-- Shared database between legacy TrinityCart and Moneta rebuild.
-
-## Application Shell Architecture
+## App Shell Architecture
 ### Bootstrap flow
 `Moneta/js/app/bootstrap.js`
-- Initializes Firebase.
-- Initializes shell, all feature modules, router, auth, tooltips.
-- Binds login/logout global click handlers.
-- Starts master-data subscriptions after login.
+- Initializes Firebase app.
+- Initializes shell + all feature modules + router + auth + disabled-action tooltips.
+- Binds global login/logout click handlers.
+- Starts/tears down master-data listeners based on auth session state.
 
-### Router and views
+### Router + views
 `Moneta/js/app/router.js`
 - Hash-based routing.
-- Default authenticated route: `#/home`.
-- Role-based access enforced using `nav-config.js` roles.
-- Route-to-view map:
+- Unauthenticated users are always forced to `#/home`.
+- Authenticated users default to `#/home`.
+- Role access enforced using `nav-config.js`.
+- Active routes:
 `#/home`, `#/dashboard`, `#/leads`, `#/retail-store`, `#/simple-consignment`, `#/suppliers`, `#/products`, `#/sales-catalogues`, `#/admin-modules`, `#/purchases`, `#/user-management`.
 
-### State store
+### Global state
 `Moneta/js/app/store.js`
-- Global state keys:
+- Root keys:
 `currentUser`, `currentRoute`, `isMasterDataReady`, `masterData`.
-- Master data keys:
+- `masterData` keys:
 `categories`, `seasons`, `products`, `suppliers`, `paymentModes`, `salesCatalogues`, `teams`.
-
-### Auth and user bootstrap
-`Moneta/js/app/auth.js`
-- Google sign-in popup.
-- New authenticated users auto-create as `guest` in users collection.
-- Inactive users are signed out and blocked.
-- On successful auth, route navigates to `#/home`.
 
 ### Master data listeners
 `Moneta/js/app/master-data.js`
-- Real-time `onSnapshot` listeners for master collections.
-- Products are filtered to active rows before entering state.
-- Subscriptions detach on logout.
+- Real-time listeners for:
+categories, seasons, products, suppliers, payment modes, sales catalogues, teams.
+- Product master data is filtered to active products before being put in state.
+- Listeners detach on logout.
 
-## Navigation and Role Model
+## Auth + Identity Model
+`Moneta/js/app/auth.js`
+- Google popup sign-in.
+- Missing user profile auto-bootstraps as active `guest`.
+- Inactive users are signed out immediately and blocked.
+- Session user shape includes:
+`uid`, `displayName`, `email`, `photoURL`, `role`, `teamId`.
+
+## Navigation + Role Model
 `Moneta/js/config/nav-config.js`
-- Roles used:
+- Roles:
 `admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`, `guest`.
-- Unauthenticated shell behavior: only Home link visible.
-- Admin-only area:
+- Home + Dashboard visible to all authenticated roles.
+- Admin-only routes:
 `#/admin-modules`, `#/user-management`.
+- Unauthenticated shell shows Home link only.
 
-## Firestore Data Model (Collection Paths)
-Defined in `Moneta/js/config/collections.js` under base:
+## Firestore Data Model
+Base path:
 `artifacts/TrinityCart-default-app-id`
 
-Collections actively used by Moneta:
+### Top-level collections in active use
 - `users`
 - `suppliers`
 - `productCatalogue`
@@ -97,188 +101,200 @@ Collections actively used by Moneta:
 - `salesCatalogues`
 - `churchTeams`
 - `leads`
+- `donations`
 
-## Security Rules Baseline
+### Subcollections in active use
+- `salesCatalogues/{catalogueId}/items`
+- `leads/{leadId}/workLog`
+- `salesInvoices/{saleId}/expenses`
+- `salesInvoices/{saleId}/returns`
+- `consignmentOrdersV2/{orderId}/payments`
+
+## Security Rules Snapshot
 `Moneta/firestoreRule/fireStoreRule.txt`
-- Designed for compatibility-first behavior so TrinityCart legacy does not break.
-- Active authenticated users generally have broad read/write on operational collections.
-- Admin-only writes on core admin master collections.
-- Users collection protections:
-self-read, admin list/manage, guest self-bootstrap create.
+- `users` has stronger controls (self-read, admin list/manage, guest bootstrap create).
+- Admin master collections (`productCategories`, `paymentModes`, `salesSeasons`, `saleTypes`, `salesEvents`) are read for active users but write-restricted to admin.
+- Operational collections are currently broad read/write for any active authenticated user (compatibility-first with legacy TrinityCart).
 
 ## Shared UX Infrastructure
-### Modal framework
+### Modals
 `Moneta/js/shared/modal.js`
+- Escaped content rendering.
 - `showModal`, `showSummaryModal`, `showConfirmationModal`.
-- Tone-based headers and confirm button variants (`primary`, `danger`, `secondary`).
-- Used consistently for confirmations, summaries, and irreversible actions.
+- Tone-based visuals with confirm variants (`primary`, `danger`, `secondary`).
 
-### Toast and progress flow
+### Toasts + progress orchestration
 `Moneta/js/shared/toast.js`
-- `runProgressToastFlow()` standardizes step-based progress messages.
-- Supports UI action locking during writes (`ui-action-lock` overlay).
-- Recent hardening ensures toast root stays above lock overlay.
+- `showToast` for quick stack toasts.
+- `ProgressToast` + `runProgressToastFlow` for step workflows.
+- UI action lock overlay with z-index protection so toasts remain visible over lock layer.
 
-### Disabled action tooltip helper
+### Disabled action reason tooltips
 `Moneta/js/shared/disabled-actions.js`
-- Auto-annotates disabled `.button` controls with reason tooltips.
-- MutationObserver keeps tooltips updated for dynamic content.
+- Auto-applies tooltip reasons to disabled `.button` elements.
+- MutationObserver keeps dynamic content annotated.
 
-### Focus helpers
+### Focus helper
 `Moneta/js/shared/focus.js`
-- Used to shift focus/scroll to forms when grid actions enter edit/view modes.
+- Form focus/scroll utility for edit flows and modal workflows.
 
-## Feature Modules and Current Behavior
+## Feature Status (Implemented Behavior)
 ## 1) Home
 `Moneta/js/features/home/`
-- Default landing view.
-- Marketing-style overview and module cards.
-- Used as pre-login and post-login landing.
+- Fully rebuilt marketing-style landing.
+- Logged-out CTA routes to Google login.
+- Logged-in CTA routes to dashboard.
 
 ## 2) Dashboard
-`Moneta/js/features/dashboard/`
-- Placeholder/summary dashboard section.
-- Reporting depth still pending compared to target end state.
+`Moneta/js/features/dashboard/view.js`
+- Implemented (not placeholder).
+- Role-aware metric cards and sections.
+- Time windows: `today`, `7d`, `30d`, `custom`.
+- Session cache per user + range (`10 min` TTL).
+- Aggregates:
+retail, consignment, purchases, leads, cash flow, low-stock watch, inventory health.
+- Inventory health includes:
+status chips, status doughnut chart, low-stock-by-category bar chart, searchable AG Grid.
 
 ## 3) Suppliers
 `Moneta/js/features/suppliers/`
-- CRUD supplier master records.
-- AG Grid history with status/actions conventions.
+- Supplier CRUD with active/inactive lifecycle.
+- AG Grid history + search + status actions.
+- Uses standard confirmation/summary/progress UX.
 
 ## 4) Product Catalogue
 `Moneta/js/features/products/`
-- CRUD products with category/season integration.
-- AG Grid patterns include wrapping text and numeric alignment.
+- Product CRUD with pricing and category binding.
+- Active/inactive control via field status toggle.
+- AG Grid history + search + status actions.
 
 ## 5) Sales Catalogue
 `Moneta/js/features/sales-catalogues/`
-- Catalogue header + worksheet lines linked to product catalogue.
-- Workspace mode supports controlled line selection/quantity and pricing context.
-- Known risk noted during audit: `handleCatalogueItemRemoval` references `featureState.liveItems`; verify against current state keys before touching removal flow.
+- Catalogue header create/edit/activate.
+- Item workspace bound to selected catalogue.
+- Product add/remove and inline price override update.
+- `salesCatalogues/{id}/items` subscription drives workspace.
 
 ## 6) Stock Purchase
 `Moneta/js/features/purchases/`
-- Purchase invoice create/edit/view/void flows.
-- AG Grid product list (line items) from active catalogue.
-- Invoice-level adjustments and totals.
-- Payment recording/voiding, payment history in module workflow.
-- Invoice void logic includes inventory/payment reversals with audit entries.
+- Purchase invoice create/edit/view.
+- Inventory increments on create; delta adjustments on edit.
+- Payment recording with strict overpayment guard.
+- Payment void creates reversal ledger entries.
+- Invoice void:
+voids active linked payments, writes reversal payments, reverses inventory.
 
 ## 7) Leads / Enquiries
 `Moneta/js/features/leads/`
-- Enquiry CRUD with structured form sections (customer/context/requirements).
-- Requested products worksheet from selected sales catalogue.
-- Product inquiry summary cards:
-`Total Products` (unique included lines), `Total Value`.
-- Work Log module implemented as modal with AG Grid history + add entry form.
-- Lead delete restrictions enforce safety for converted/linked leads.
-- Lead-to-sales conversion is still pending as a dedicated workflow.
+- Lead CRUD with structured customer/context/request fields.
+- Requested products worksheet from sales catalogue items.
+- Lead work log modal with subcollection history + entry form.
+- Lead delete guardrails:
+converted leads or leads linked to sales cannot be deleted.
+- Lead-to-retail conversion implemented:
+builds validated conversion package, stores in session storage, routes to retail.
 
 ## 8) Retail Store
 `Moneta/js/features/retail-store/`
-- Most complex direct-sales module.
-- Supports create, view (read-only form mode), edit (full/limited), return, void.
-- Linked functions:
-payments, expenses, returns, return history, PDF invoice, credit-note PDF.
-- Edit scope policy:
-full edits allowed only before downstream financial/return activities; otherwise limited-safe edits.
-- Sales void logic:
-marks sale voided, creates reversal entries, restores inventory, and enforces guardrails.
-- Grid action UX uses split action patterns and more-actions modal for action density control.
+- Direct-sales lifecycle implemented:
+create, view, edit (full/limited), payment, expense, return, void.
+- Lead conversion intake implemented (session package consumed on route entry).
+- Inventory and financial writes are transactional.
+- Return flow:
+partial/full return with inventory restoration and return history.
+- Void flow:
+void sale + void/reverse payments and expenses + donation reversals + inventory restoration.
+- PDF outputs:
+invoice and return credit-note generation.
 
 ## 9) Simple Consignment
 `Moneta/js/features/simple-consignment/`
-- Checkout order creation from active products.
-- Settlement worksheet tracks sold/returned/damaged/gifted quantities.
-- Save Progress updates header + line changes together.
-- Separate order payments/expenses tracking with void transaction support.
-- Close order strictness:
-requires no on-hand qty and no outstanding balance.
-- Cancel order constraints:
-allowed only when no activity; inventory restored; order marked cancelled.
-- Settlement supports staged addition of new products and undo/revert line edits.
+- Checkout order creation from sales catalogue.
+- Settlement updates with item-level sold/returned/damaged/gifted accounting.
+- Supports controlled addition of new products during settlement.
+- Payment/expense transaction posting and void reversals.
+- Cancel guardrails:
+allowed only if no product/financial/transaction activity.
+- Close guardrails:
+requires all quantities accounted and balance due = 0.
 
 ## 10) Admin Modules
 `Moneta/js/features/admin-modules/`
-- Manages Product Categories, Sales Seasons, Payment Modes.
-- Critical rule: editing blocked when entity is already used downstream.
-- In-use entities can still be activated/deactivated.
-- Usage checks query relevant dependent collections to enforce safe governance.
+- Manages Product Categories, Payment Modes, Sales Seasons.
+- Edit restrictions enforce downstream usage protection.
+- In-use records can still be activated/deactivated.
 
 ## 11) User Management
 `Moneta/js/features/user-management/`
-- Admin-only user role and active/inactive management.
+- Admin-only user access management.
 - Safety rules:
-cannot edit own access from this screen,
+cannot edit self from this screen,
 cannot remove last active admin.
 
-## Core UI/UX Standards Implemented
-- AG Grid headers and data text wrapping enabled.
-- Numeric columns right-aligned.
-- Cell content vertically centered.
-- Pinned total rows used for financial/quantity-heavy grids.
-- Action/status renderers avoid showing action controls on pinned total rows.
-- Professional confirmation pattern:
-summary modal after CRUD success,
-double-confirmation modal for destructive operations.
-- Sidebar remains fixed while content scrolls.
+## Known Gaps (Current)
+- No dedicated reports/export route is wired in router/nav yet.
+- No automated test suite is present in `Moneta/`; regression confidence is currently manual QA-based.
+- Final responsive QA sweep is still recommended, especially on dense dashboard and modal-heavy flows.
 
-## Data Integrity and Multi-User Considerations
-- Prefer transactional repository operations for inventory and financial side effects.
+## Cross-Module Integrity Rules
 - Use server timestamps for audit fields.
-- Preserve immutable historical records; use `isActive`, `status`, `voided` semantics instead of hard deletes where needed.
-- Maintain compatibility with legacy TrinityCart collection conventions.
+- Void and reversal flows are modeled as immutable financial history (not hard delete).
+- Inventory-affecting operations are transaction-based in purchase/retail/consignment repositories.
+- Historical records are preserved via status semantics (`Voided`, `Reversal`, `Cancelled`, `Settled`, etc.).
 
-## Firebase Free Plan Optimization Notes
-- Reuse master-data listeners across modules.
-- Restrict expensive scans with targeted equality queries and `limit(1)` existence checks when possible.
-- Perform usage checks only at edit-time decision points.
-- Avoid unnecessary duplicate writes on untouched fields.
+## Current Architecture Notes
+- Most modules follow intended layer split:
+`view` orchestration, `service` validation/business logic, `repository` Firebase IO, `grid` AG Grid setup.
+- Dashboard currently mixes UI + data access + aggregation in a single `view.js` file (intentional for speed, but now large).
 
-## Known Completed Enhancements from Current Build Cycle
-- Home-first routing and menu behavior cleanup.
-- Shared progress toasts with step sequencing and UI lock.
-- Improved modal visual language and confirmation summaries.
-- Payment/expense modal close behavior stabilized by using explicit close actions.
-- Retail PDF and return-credit-note generation.
-- Consignment save summary and settlement workflow refinements.
+## Code Review Findings (2026-04-11)
+These are current risk items from code + architecture review.
 
-## Known Gaps / Next Logical Build Areas
-- Leads: lead-to-sales conversion flow.
-- Dashboard: full KPI and reporting implementation.
-- Reports module and export suite (if not yet built separately).
-- Final mobile/tablet QA pass and fit-and-finish sweep across all modules.
+### High
+1. Stored XSS risk from unsanitized HTML interpolation in multiple views/toasts.
+   - Example refs:
+   `Moneta/js/shared/toast.js` (toast message/title interpolated into `innerHTML`)
+   `Moneta/js/features/home/view.js` (user `displayName` injected into `innerHTML`)
+   `Moneta/js/features/products/view.js` (editable DB fields inserted into input `value` attributes)
+2. Authorization model is role-light at Firestore rule layer for operational collections.
+   - Any active authenticated user can read/write many business collections directly.
+   - This is currently compatibility-first, but still a production risk if strict role isolation is required.
 
-## Development Conventions
-- Keep feature boundaries strict (`view/service/repository/grid`).
-- Put business validation in `service.js`.
-- Put Firebase reads/writes and transaction mechanics in `repository.js`.
-- Keep UI state and event orchestration in `view.js`.
-- Keep AG Grid column definitions and renderers in `grid.js`.
-- Reuse shared modal/toast helpers; avoid ad-hoc alerts.
+### Medium
+1. Dashboard module size/complexity now warrants extraction into `service/repository` style slices for maintainability.
+
+### Resolved In This Cycle (2026-04-11)
+1. Transaction race windows in selected destructive flows were removed by moving linked-record lookups into the transaction body.
+   - Updated:
+   `purchases/repository.js` invoice void,
+   `retail-store/repository.js` sale void,
+   `simple-consignment/repository.js` cancel order.
+2. Dashboard scoped-user query logic was corrected to apply `createdBy` + date constraints in-query first, with safer scoped fallback behavior.
+3. Master-data readiness now flips to true only after first snapshot has arrived for all configured master collections.
+
+## Recommended Next Hardening Pass
+1. Add reusable HTML escaping utilities for all `innerHTML` template insertions (or migrate to DOM APIs for user data).
+2. Split dashboard into:
+`dashboard-data.repository.js`, `dashboard-metrics.service.js`, `dashboard-view.js`.
+3. Refine Firestore rules for role-aware write scopes once legacy compatibility window allows it.
 
 ## QA Regression Checklist (Minimum)
 1. Login/logout and role route gating.
-2. Create/edit/view flows for each major module.
-3. Destructive flows with confirmations: void, cancel, inactivate, delete.
-4. Inventory movement consistency after purchase/sale/return/consignment operations.
-5. Payment and expense ledger propagation.
-6. Grid pinned total rows, numeric alignment, wrapped headers/data.
-7. Toast visibility with UI lock active.
-8. PDF generation for sale invoice and credit note.
+2. Master-data listener attach/detach on auth transitions.
+3. CRUD/edit lifecycles across all major modules.
+4. Destructive flows:
+purchase payment void, purchase invoice void, retail void, retail returns, consignment cancel/close/void transaction.
+5. Inventory consistency after purchase/sale/return/consignment operations.
+6. Payment/donation/expense ledger propagation and reversal entries.
+7. Dashboard refresh and cache behavior across window switches.
+8. Mobile/tablet responsive checks for dashboard and Home.
+9. PDF generation for retail invoice and credit note.
 
-## Handoff Instructions For Future Incremental Enhancements
-1. Read this file.
-2. Identify target feature folder and open `view.js`, `service.js`, `repository.js`, `grid.js`.
-3. Preserve existing UX patterns:
-progress toast sequence, confirmation modals, disabled action tooltips.
-4. For destructive operations, enforce rule checks first, then confirm, then execute transactionally.
-5. Update this document after major workflow or architecture changes.
-
-## Recommended Update Protocol For This File
-After each major feature addition:
-- Add/change module behavior summary.
-- Add new collection fields or new collections.
-- Add new constraints and irreversible-action rules.
-- Add migration or compatibility notes if TrinityCart behavior is impacted.
-
+## Implementation Protocol For Future AI Work
+1. Keep feature boundaries strict:
+`view` UI state + events, `service` validation + policy, `repository` data IO/transactions, `grid` definitions.
+2. Reuse shared modal/toast/disabled-actions helpers; avoid ad-hoc alerts.
+3. For destructive operations:
+guard checks -> explicit confirmation -> transactional write -> summary modal.
+4. Preserve compatibility with existing Firestore schema fields used by legacy TrinityCart.
+5. Update this file after each major feature or architecture change.

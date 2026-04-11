@@ -335,11 +335,6 @@ export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) 
     const db = getDb();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const invoiceRef = db.collection(COLLECTIONS.purchaseInvoices).doc(invoiceDocId);
-    const paymentSnapshot = await db
-        .collection(COLLECTIONS.supplierPaymentsLedger)
-        .where("relatedInvoiceId", "==", invoiceDocId)
-        .get();
-    const relatedPaymentRefs = paymentSnapshot.docs.map(doc => doc.ref);
 
     return db.runTransaction(async transaction => {
         const invoiceDoc = await transaction.get(invoiceRef);
@@ -355,13 +350,12 @@ export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) 
             throw new Error("This purchase invoice has already been voided.");
         }
 
-        const relatedPaymentDocs = await Promise.all(
-            relatedPaymentRefs.map(paymentRef => transaction.get(paymentRef))
+        const relatedPaymentSnapshot = await transaction.get(
+            db.collection(COLLECTIONS.supplierPaymentsLedger)
+                .where("relatedInvoiceId", "==", invoiceDocId)
         );
-        const activePayments = relatedPaymentDocs.filter(doc => {
-            if (!doc.exists) return false;
-
-            const data = doc.data();
+        const activePayments = relatedPaymentSnapshot.docs.filter(doc => {
+            const data = doc.data() || {};
             const status = data.paymentStatus || data.status || "Verified";
             return !data.isReversalEntry && status !== "Voided" && roundCurrency(data.amountPaid) > 0;
         });

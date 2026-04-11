@@ -921,6 +921,7 @@ function renderCheckoutForm(snapshot) {
 function renderSettlementWorkspace(snapshot) {
     const order = getActiveOrder();
     const draft = featureState.checkoutDraft;
+    const transactionBalanceDue = Math.max(0, Number(order?.balanceDue) || 0);
     const isView = isViewMode();
     const isCancel = isCancelMode();
     const isReadOnlyMode = isView || isCancel;
@@ -1067,7 +1068,13 @@ function renderSettlementWorkspace(snapshot) {
                                         </select>
                                     </div>
                                     <div class="field">
-                                        <label for="simple-consignment-transaction-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <div class="simple-consignment-amount-label-row">
+                                            <label for="simple-consignment-transaction-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <span class="simple-consignment-balance-pill" title="Current balance due before this transaction is posted.">
+                                                <span>Balance Due</span>
+                                                <strong>${formatCurrency(transactionBalanceDue)}</strong>
+                                            </span>
+                                        </div>
                                         <input id="simple-consignment-transaction-amount" class="input" type="number" min="0" step="0.01" value="${featureState.transactionDraft.amountApplied}" required>
                                     </div>
                                     <div class="field">

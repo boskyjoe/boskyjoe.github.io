@@ -873,13 +873,6 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
     const db = getDb();
     const now = getNow();
     const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
-    const paymentSnapshot = await db
-        .collection(COLLECTIONS.salesPaymentsLedger)
-        .where("invoiceId", "==", saleId)
-        .get();
-    const expenseSnapshot = await saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).get();
-    const relatedPaymentRefs = paymentSnapshot.docs.map(doc => doc.ref);
-    const relatedExpenseRefs = expenseSnapshot.docs.map(doc => doc.ref);
 
     return db.runTransaction(async transaction => {
         const saleDoc = await transaction.get(saleRef);
@@ -900,12 +893,10 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             throw new Error("Sales with posted returns cannot be voided. Use return and credit-note history for reversal tracking.");
         }
 
-        const paymentDocs = await Promise.all(
-            relatedPaymentRefs.map(paymentRef => transaction.get(paymentRef))
+        const paymentSnapshot = await transaction.get(
+            db.collection(COLLECTIONS.salesPaymentsLedger).where("invoiceId", "==", saleId)
         );
-        const activePayments = paymentDocs.filter(doc => {
-            if (!doc.exists) return false;
-
+        const activePayments = paymentSnapshot.docs.filter(doc => {
             const data = doc.data() || {};
             const status = normalizeText(data.paymentStatus || data.status || "Verified").toLowerCase();
             const appliedAmount = roundCurrency(data.amountApplied ?? data.amountPaid);
@@ -1025,12 +1016,10 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             voidedPaymentAmount += paymentAmount;
         });
 
-        const expenseDocs = await Promise.all(
-            relatedExpenseRefs.map(expenseRef => transaction.get(expenseRef))
+        const expenseSnapshot = await transaction.get(
+            saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION)
         );
-        const activeExpenses = expenseDocs.filter(doc => {
-            if (!doc.exists) return false;
-
+        const activeExpenses = expenseSnapshot.docs.filter(doc => {
             const data = doc.data() || {};
             const status = normalizeText(data.status || "Active").toLowerCase();
             return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;

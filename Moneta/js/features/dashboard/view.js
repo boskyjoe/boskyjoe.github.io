@@ -315,6 +315,38 @@ function filterRowsByWindow(rows = [], dateField, startDate, endDate = null) {
     });
 }
 
+async function fetchScopedRowsFallbackByCreator(db, path, {
+    createdBy,
+    dateField,
+    startDate,
+    endDate,
+    maxDocs
+}) {
+    const pageSize = Math.max(50, Math.min(200, maxDocs));
+    const maxPages = 8;
+    let lastDoc = null;
+    const rows = [];
+
+    for (let page = 0; page < maxPages; page += 1) {
+        let query = db.collection(path).where("createdBy", "==", createdBy).limit(pageSize);
+        if (lastDoc) {
+            query = query.startAfter(lastDoc);
+        }
+
+        const snapshot = await query.get();
+        if (snapshot.empty) break;
+
+        rows.push(...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        if (snapshot.size < pageSize) break;
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    }
+
+    const windowedRows = filterRowsByWindow(rows, dateField, startDate, endDate);
+    if (!dateField) return windowedRows.slice(0, maxDocs);
+    return sortRowsByDateDesc(windowedRows, dateField).slice(0, maxDocs);
+}
+
 async function fetchWindowedRows(path, {
     dateField = "",
     startDate = null,
@@ -328,10 +360,7 @@ async function fetchWindowedRows(path, {
         let query = db.collection(path);
 
         if (createdBy) {
-            query = query.where("createdBy", "==", createdBy).limit(maxDocs);
-            const scopedSnapshot = await query.get();
-            const scopedRows = scopedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return sortRowsByDateDesc(filterRowsByWindow(scopedRows, dateField, startDate, endDate), dateField).slice(0, maxDocs);
+            query = query.where("createdBy", "==", createdBy);
         }
 
         if (dateField && startDate) {
@@ -349,12 +378,34 @@ async function fetchWindowedRows(path, {
         query = query.limit(maxDocs);
 
         const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (!dateField) return rows;
+        return sortRowsByDateDesc(rows, dateField);
     } catch (error) {
         console.warn(`[Moneta] Dashboard query fallback for ${path}:`, error);
+
+        if (createdBy) {
+            try {
+                return await fetchScopedRowsFallbackByCreator(db, path, {
+                    createdBy,
+                    dateField,
+                    startDate,
+                    endDate,
+                    maxDocs
+                });
+            } catch (scopedFallbackError) {
+                console.warn(`[Moneta] Dashboard scoped fallback failed for ${path}:`, scopedFallbackError);
+            }
+        }
+
         const fallbackSnapshot = await db.collection(path).limit(maxDocs).get();
         const fallbackRows = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        return sortRowsByDateDesc(filterRowsByWindow(fallbackRows, dateField, startDate, endDate), dateField).slice(0, maxDocs);
+        const scopedRows = createdBy
+            ? fallbackRows.filter(row => normalizeText(row.createdBy) === createdBy)
+            : fallbackRows;
+        const windowedRows = filterRowsByWindow(scopedRows, dateField, startDate, endDate);
+        if (!dateField) return windowedRows.slice(0, maxDocs);
+        return sortRowsByDateDesc(windowedRows, dateField).slice(0, maxDocs);
     }
 }
 
