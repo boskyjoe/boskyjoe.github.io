@@ -813,6 +813,18 @@ select {
     background: linear-gradient(180deg, #fffaf2 0%, #fff3e2 100%);
 }
 
+.retail-source-lead-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 0.95rem 1.05rem;
+    border: 1px solid rgba(36, 104, 169, 0.2);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #f4f9ff 0%, #eaf3ff 100%);
+}
+
 .retail-edit-reason-section {
     margin-top: 1rem;
 }
@@ -1923,7 +1935,8 @@ select {
     .purchase-void-mode-banner,
     .retail-view-mode-banner,
     .retail-edit-mode-banner,
-    .retail-return-mode-banner {
+    .retail-return-mode-banner,
+    .retail-source-lead-banner {
         flex-direction: column;
         align-items: stretch;
     }

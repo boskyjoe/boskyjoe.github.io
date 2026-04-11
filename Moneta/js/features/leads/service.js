@@ -2,6 +2,7 @@ import {
     addLeadWorkLogRecord,
     createLeadRecord,
     deleteLeadRecord,
+    fetchSalesCatalogueItems,
     getLeadDeleteRestriction,
     updateLeadRecord
 } from "./repository.js";
@@ -203,4 +204,105 @@ export async function saveLeadWorkLog(payload, user) {
 
     const { leadId, logData } = validateLeadWorkLogPayload(payload);
     await addLeadWorkLogRecord(leadId, logData, user);
+}
+
+export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
+    if (!lead?.id) {
+        throw new Error("Lead record could not be found.");
+    }
+
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    if (leadStatus === "Converted") {
+        throw new Error("This lead is already converted.");
+    }
+
+    if (leadStatus === "Lost") {
+        throw new Error("Lost leads cannot be converted to retail sales.");
+    }
+
+    const catalogueId = normalizeText(lead.catalogueId);
+    if (!catalogueId) {
+        throw new Error("This lead does not have a sales catalogue selected.");
+    }
+
+    const requestedProducts = normalizeRequestedProducts(lead.requestedProducts || []);
+    if (!requestedProducts.length) {
+        throw new Error("No requested products are available to convert.");
+    }
+
+    const catalogueItems = await fetchSalesCatalogueItems(catalogueId);
+    const catalogueItemMap = new Map((catalogueItems || []).map(item => [item.productId, item]));
+    const productMap = new Map((masterData.products || []).map(product => [product.id, product]));
+    const catalogueHeaders = masterData.salesCatalogues || [];
+    const selectedCatalogue = catalogueHeaders.find(catalogue => catalogue.id === catalogueId) || null;
+
+    const warnings = [];
+    const items = [];
+
+    requestedProducts.forEach(requestedItem => {
+        const productId = normalizeText(requestedItem.productId);
+        if (!productId) return;
+
+        const catalogueItem = catalogueItemMap.get(productId);
+        if (!catalogueItem) {
+            warnings.push(`${requestedItem.productName || productId}: not found in the selected sales catalogue.`);
+            return;
+        }
+
+        const quantity = Math.max(0, Math.floor(Number(requestedItem.requestedQty) || 0));
+        if (quantity <= 0) return;
+
+        const product = productMap.get(productId) || null;
+        const unitPrice = Number(catalogueItem.sellingPrice) || Number(requestedItem.sellingPrice) || 0;
+        const previousPrice = Number(requestedItem.sellingPrice) || 0;
+
+        if (previousPrice > 0 && Number(previousPrice.toFixed(2)) !== Number(unitPrice.toFixed(2))) {
+            warnings.push(`${requestedItem.productName || productId}: price refreshed from ${previousPrice.toFixed(2)} to ${unitPrice.toFixed(2)}.`);
+        }
+
+        if (!product) {
+            warnings.push(`${requestedItem.productName || productId}: product is not currently active in the product catalogue.`);
+        } else {
+            const currentStock = Number(product.inventoryCount) || 0;
+            if (currentStock < quantity) {
+                warnings.push(`${requestedItem.productName || productId}: requested ${quantity}, available stock is ${currentStock}.`);
+            }
+        }
+
+        items.push({
+            productId,
+            productName: catalogueItem.productName || requestedItem.productName || product?.itemName || "Untitled Product",
+            categoryId: catalogueItem.categoryId || product?.categoryId || "",
+            categoryName: catalogueItem.categoryName || requestedItem.categoryName || "-",
+            quantity,
+            unitPrice,
+            lineDiscountPercentage: 0,
+            cgstPercentage: 0,
+            sgstPercentage: 0
+        });
+    });
+
+    if (!items.length) {
+        throw new Error("No valid product lines could be prepared for this conversion.");
+    }
+
+    if (!selectedCatalogue) {
+        warnings.push("The selected sales catalogue header could not be resolved. Review before saving.");
+    } else if (!selectedCatalogue.isActive) {
+        warnings.push("This sales catalogue is inactive. Activate it or choose another catalogue before saving.");
+    }
+
+    return {
+        leadId: lead.id,
+        businessLeadId: lead.businessLeadId || "",
+        customerName: normalizeText(lead.customerName),
+        customerPhone: normalizeText(lead.customerPhone),
+        customerEmail: normalizeText(lead.customerEmail),
+        customerAddress: normalizeText(lead.customerAddress),
+        catalogueId,
+        catalogueName: selectedCatalogue?.catalogueName || lead.catalogueName || "-",
+        leadNotes: normalizeText(lead.leadNotes),
+        items,
+        warnings
+    };
 }

@@ -78,8 +78,11 @@ const featureState = {
     unsubscribeExpenseHistory: null,
     expenseDraft: createDefaultExpenseDraft(),
     saleDraft: createDefaultSaleDraft(),
-    lineItemDrafts: {}
+    lineItemDrafts: {},
+    pendingLeadFocus: false
 };
+
+const LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY = "moneta.pendingLeadRetailConversion";
 
 function createDefaultSaleDraft() {
     return {
@@ -103,7 +106,10 @@ function createDefaultSaleDraft() {
         orderDiscountType: "Percentage",
         orderDiscountPercentage: "",
         orderDiscountAmount: "",
-        orderTaxPercentage: ""
+        orderTaxPercentage: "",
+        sourceLeadId: "",
+        sourceLeadBusinessId: "",
+        sourceLeadCustomerName: ""
     };
 }
 
@@ -168,6 +174,7 @@ function resetRetailWorkspace() {
     featureState.voidingSaleId = null;
     featureState.returningSaleId = null;
     featureState.editModeScope = null;
+    featureState.pendingLeadFocus = false;
     featureState.saleDraft = createDefaultSaleDraft();
     featureState.lineItemDrafts = {};
     clearCatalogueItemsSubscription();
@@ -1156,6 +1163,9 @@ function renderRetailStoreViewShell(snapshot) {
     const paymentStatus = hasPersistedSaleStatus
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
+    const sourceLeadId = normalizeText(featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "");
+    const sourceLeadBusinessId = normalizeText(featureState.saleDraft.sourceLeadBusinessId || workspaceSale?.sourceLeadBusinessId || "");
+    const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId ? `LEAD-${sourceLeadId.slice(-6).toUpperCase()}` : "");
     const expenseModalSale = getExpenseModalSale();
     const canEditSaleIdentity = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
     const canEditCustomerInfo = !isViewMode && !isReturnMode && !isVoidMode;
@@ -1224,6 +1234,17 @@ function renderRetailStoreViewShell(snapshot) {
             </div>
         </div>
     ` : "";
+    const sourceLeadBanner = sourceLeadId ? `
+        <div class="retail-source-lead-banner">
+            <div>
+                <p class="section-kicker">Lead Conversion</p>
+                <p class="panel-copy">This retail sale is linked to enquiry <strong>${sourceLeadDisplayId || sourceLeadId}</strong>.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${sourceLeadDisplayId || sourceLeadId}</span>
+            </div>
+        </div>
+    ` : "";
 
     root.innerHTML = `
         <div class="panel-card ${(isViewMode || isEditMode || isReturnMode) ? "retail-view-mode-card" : ""} ${isVoidMode ? "purchase-void-mode-card" : ""}">
@@ -1249,6 +1270,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <span class="status-pill">${activeCatalogues} active catalogues</span>
                     <span class="status-pill">${summary.itemCount} active products</span>
                     <span class="status-pill">${featureState.sales.length} sales recorded</span>
+                    ${sourceLeadId ? `<span class="status-pill">Lead: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
                 </div>
             </div>
             <div class="panel-body">
@@ -1256,6 +1278,7 @@ function renderRetailStoreViewShell(snapshot) {
                 ${editModeBanner}
                 ${returnModeBanner}
                 ${voidModeBanner}
+                ${sourceLeadBanner}
                 <form id="retail-store-form">
                     <div class="workspace-form-sections">
                         <section class="workspace-form-section">
@@ -1956,8 +1979,72 @@ function syncSaleTypeBehavior() {
     featureState.saleDraft.orderDiscountAmount = "";
 }
 
+function consumePendingLeadConversionPackage() {
+    const rawPackage = sessionStorage.getItem(LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY);
+    if (!rawPackage) return null;
+
+    sessionStorage.removeItem(LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY);
+
+    try {
+        const parsed = JSON.parse(rawPackage);
+        if (!parsed || !parsed.leadId || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+            return null;
+        }
+
+        return parsed;
+    } catch (error) {
+        console.error("[Moneta] Invalid lead conversion package:", error);
+        return null;
+    }
+}
+
+function applyPendingLeadConversionPackage() {
+    const conversionPackage = consumePendingLeadConversionPackage();
+    if (!conversionPackage) return;
+
+    resetRetailWorkspace();
+    featureState.workspaceMode = "create";
+    featureState.saleDraft = {
+        ...createDefaultSaleDraft(),
+        customerName: conversionPackage.customerName || "",
+        customerPhone: conversionPackage.customerPhone || "",
+        customerEmail: conversionPackage.customerEmail || "",
+        customerAddress: conversionPackage.customerAddress || "",
+        salesCatalogueId: conversionPackage.catalogueId || "",
+        saleNotes: conversionPackage.leadNotes || "",
+        sourceLeadId: conversionPackage.leadId || "",
+        sourceLeadBusinessId: conversionPackage.businessLeadId || "",
+        sourceLeadCustomerName: conversionPackage.customerName || ""
+    };
+    featureState.lineItemDrafts = Object.fromEntries((conversionPackage.items || []).map(item => [item.productId, {
+        productName: item.productName || "",
+        categoryId: item.categoryId || "",
+        categoryName: item.categoryName || "-",
+        quantity: Math.max(0, Math.floor(Number(item.quantity) || 0)),
+        returnQuantity: 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        lineDiscountPercentage: Number(item.lineDiscountPercentage) || 0,
+        cgstPercentage: Number(item.cgstPercentage) || 0,
+        sgstPercentage: Number(item.sgstPercentage) || 0,
+        lineTotal: calculateWorksheetLineTotal(item)
+    }]));
+    featureState.pendingLeadFocus = true;
+
+    const warningCount = Array.isArray(conversionPackage.warnings)
+        ? conversionPackage.warnings.length
+        : 0;
+    showToast(
+        warningCount > 0
+            ? `Lead loaded with ${warningCount} conversion check(s). Review before saving the sale.`
+            : `Lead ${conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
+        warningCount > 0 ? "warning" : "success",
+        { title: "Retail Store" }
+    );
+}
+
 export function renderRetailStoreView() {
     const snapshot = getState();
+    applyPendingLeadConversionPackage();
     syncSaleTypeBehavior();
     ensureRetailSalesListener(snapshot);
     ensureCatalogueItemsListener(snapshot);
@@ -1969,6 +2056,15 @@ export function renderRetailStoreView() {
     syncRetailExpenseHistoryGrid();
     syncRetailPaymentDraftPreview();
     syncRetailReturnDraftPreview();
+
+    if (featureState.pendingLeadFocus) {
+        featureState.pendingLeadFocus = false;
+        window.requestAnimationFrame(() => {
+            const focusTarget = document.getElementById(featureState.saleDraft.store ? "retail-voucher-number" : "retail-store");
+            focusTarget?.focus();
+            document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+    }
 }
 
 function updateDraftField(field, value) {
@@ -2000,6 +2096,9 @@ function buildSaleDraftFromSale(sale) {
             ? String(Number(sale.financials?.orderDiscountValue) || 0)
             : "",
         orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
+        sourceLeadId: sale.sourceLeadId || "",
+        sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
+        sourceLeadCustomerName: sale.sourceLeadCustomerName || "",
         editReason: "",
         voidReason: ""
     };
@@ -2522,6 +2621,12 @@ async function handleRetailSaleSubmit(event) {
                 { label: "Customer", value: customerName },
                 { label: "Store", value: selectedStore },
                 { label: "Catalogue", value: selectedCatalogueLabel },
+                ...(normalizeText(featureState.saleDraft.sourceLeadId)
+                    ? [{
+                        label: "Source Lead",
+                        value: featureState.saleDraft.sourceLeadBusinessId || featureState.saleDraft.sourceLeadId
+                    }]
+                    : []),
                 { label: "Payment Status", value: result.summary.paymentStatus },
                 { label: "Grand Total", value: formatCurrency(result.summary.grandTotal) },
                 { label: "Edit Scope", value: isEditMode ? (result.summary.editScope || featureState.editModeScope || "limited") : "New Sale" }

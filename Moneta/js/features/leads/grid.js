@@ -68,11 +68,26 @@ function buildNumberSetter(field, decimals = 0) {
 }
 
 function leadActionMarkup(data) {
+    const convertDisabled = data?.canConvertToRetail === false;
+    const convertReason = data?.convertDisabledReason || "This enquiry cannot be converted right now.";
+    const safeReason = String(convertReason)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    const convertDisabledAttrs = convertDisabled
+        ? `disabled title="${safeReason}" data-disabled-reason="${safeReason}"`
+        : "";
+
     return `
         <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-secondary lead-edit-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
+            </button>
+            <button class="button grid-action-button grid-action-button-primary lead-convert-button" type="button" data-lead-id="${data.id}" ${convertDisabledAttrs}>
+                <span class="button-icon">${icons.retail}</span>
+                Convert
             </button>
             <button class="button grid-action-button grid-action-button-secondary lead-worklog-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.leads}</span>
@@ -131,8 +146,8 @@ function buildLeadColumnDefs() {
         { field: "assignedTo", headerName: "Assigned To", minWidth: 160, flex: 0.95 },
         {
             headerName: "Actions",
-            minWidth: 360,
-            flex: 1.4,
+            minWidth: 450,
+            flex: 1.6,
             sortable: false,
             filter: false,
             cellRenderer: params => leadActionMarkup(params.data)

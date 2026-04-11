@@ -17,7 +17,15 @@ import {
     updateLeadsGridSearch
 } from "./grid.js";
 import { fetchSalesCatalogueItems, subscribeToLeadWorkLog, subscribeToLeads } from "./repository.js";
-import { deleteLead, LEAD_LOG_TYPES, LEAD_SOURCES, LEAD_STATUSES, saveLead, saveLeadWorkLog } from "./service.js";
+import {
+    buildLeadToRetailConversionDraft,
+    deleteLead,
+    LEAD_LOG_TYPES,
+    LEAD_SOURCES,
+    LEAD_STATUSES,
+    saveLead,
+    saveLeadWorkLog
+} from "./service.js";
 
 const featureState = {
     leads: [],
@@ -34,8 +42,20 @@ const featureState = {
     workLogSearchTerm: ""
 };
 
+const RETAIL_ROUTE = "#/retail-store";
+const LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY = "moneta.pendingLeadRetailConversion";
+const RETAIL_CONVERSION_ALLOWED_ROLES = new Set(["admin", "sales_staff", "finance"]);
+
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function escapeAttribute(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
 }
 
 function formatDateInputValue(value) {
@@ -122,13 +142,84 @@ function renderLogTypeOptions(currentValue = "General Note") {
 }
 
 function buildLeadGridRows() {
+    const currentRole = getState().currentUser?.role || "";
+    const hasRetailAccess = RETAIL_CONVERSION_ALLOWED_ROLES.has(currentRole);
+
     return sortLeads(featureState.leads).map(lead => ({
         ...lead,
         requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
         requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
             return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
-        }, 0).toFixed(2))
+        }, 0).toFixed(2)),
+        canConvertToRetail: hasRetailAccess
+            && normalizeText(lead.leadStatus) !== "Converted"
+            && normalizeText(lead.leadStatus) !== "Lost"
+            && Boolean(normalizeText(lead.catalogueId))
+            && (lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0),
+        convertDisabledReason: !hasRetailAccess
+            ? "Your role does not have access to the Retail Store conversion workspace."
+            : normalizeText(lead.leadStatus) === "Converted"
+                ? "This enquiry is already converted."
+                : normalizeText(lead.leadStatus) === "Lost"
+                    ? "Lost enquiries cannot be converted."
+                    : !normalizeText(lead.catalogueId)
+                        ? "Select a sales catalogue before converting this enquiry."
+                        : !(lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0)
+                            ? "Add at least one requested product before conversion."
+                            : ""
     }));
+}
+
+function getLeadConversionEligibility(lead, snapshot = getState()) {
+    const role = snapshot.currentUser?.role || "";
+    if (!RETAIL_CONVERSION_ALLOWED_ROLES.has(role)) {
+        return {
+            allowed: false,
+            reason: "Your role does not have access to the Retail Store conversion workspace."
+        };
+    }
+
+    if (!lead?.id) {
+        return {
+            allowed: false,
+            reason: "Lead record could not be found."
+        };
+    }
+
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    if (leadStatus === "Converted") {
+        return {
+            allowed: false,
+            reason: "This enquiry is already converted."
+        };
+    }
+
+    if (leadStatus === "Lost") {
+        return {
+            allowed: false,
+            reason: "Lost enquiries cannot be converted."
+        };
+    }
+
+    if (!normalizeText(lead.catalogueId)) {
+        return {
+            allowed: false,
+            reason: "Select a sales catalogue before converting this enquiry."
+        };
+    }
+
+    const hasRequestedProducts = (lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0);
+    if (!hasRequestedProducts) {
+        return {
+            allowed: false,
+            reason: "Add at least one requested product before conversion."
+        };
+    }
+
+    return {
+        allowed: true,
+        reason: ""
+    };
 }
 
 function getRequestedSummary() {
@@ -219,6 +310,12 @@ function renderLeadForm(snapshot) {
             }, 0).toFixed(2))
         }
         : { requestedProductCount: 0, requestedValue: 0 };
+    const conversionEligibility = editingLead
+        ? getLeadConversionEligibility(editingLead, snapshot)
+        : { allowed: false, reason: "Save this enquiry first to enable conversion." };
+    const convertDisabledAttrs = !conversionEligibility.allowed
+        ? `disabled title="${escapeAttribute(conversionEligibility.reason)}" data-disabled-reason="${escapeAttribute(conversionEligibility.reason)}"`
+        : "";
 
     return `
         <div class="panel-card">
@@ -227,7 +324,7 @@ function renderLeadForm(snapshot) {
                     <span class="panel-icon panel-icon-alt">${icons.leads}</span>
                     <div>
                         <h2>${editingLead ? "Edit Enquiry" : "Leads & Enquiries"}</h2>
-                        <p class="panel-copy">Capture enquiries now, then convert the qualified ones into sales once the sales workflow is rebuilt.</p>
+                        <p class="panel-copy">Capture enquiries, track follow-up in work logs, and convert validated enquiries into Retail Store sales.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -348,6 +445,10 @@ function renderLeadForm(snapshot) {
                     </div>
                     <div class="form-actions">
                         ${editingLead ? `
+                            <button class="button button-primary-alt lead-convert-button" type="button" data-lead-id="${editingLead.id}" ${convertDisabledAttrs}>
+                                <span class="button-icon">${icons.retail}</span>
+                                Convert To Retail
+                            </button>
                             <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
                                 <span class="button-icon">${icons.leads}</span>
                                 Work Log
@@ -752,6 +853,100 @@ async function handleLeadEdit(button) {
     await loadCatalogueItemsIntoWorkspace(lead.catalogueId || "", lead.requestedProducts || []);
 }
 
+async function handleLeadConvert(button) {
+    const leadId = button.dataset.leadId || null;
+    const lead = featureState.leads.find(entry => entry.id === leadId) || null;
+
+    if (!lead) {
+        showToast("Enquiry record could not be found.", "error", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    const eligibility = getLeadConversionEligibility(lead, getState());
+    if (!eligibility.allowed) {
+        showToast(eligibility.reason, "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    try {
+        const conversionDraft = await runProgressToastFlow({
+            title: "Preparing Retail Conversion",
+            initialMessage: "Reading enquiry details and requested products...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Conversion Package Ready",
+            successMessage: "The enquiry is ready to open in Retail Store."
+        }, async ({ update }) => {
+            update("Validating lead status, catalogue, and requested products...", 42, "Step 2 of 4");
+            const conversionDraft = await buildLeadToRetailConversionDraft(lead, getState().masterData);
+            update("Preparing retail worksheet line items using current catalogue pricing...", 76, "Step 3 of 4");
+            update("Conversion package prepared.", 96, "Step 4 of 4");
+            return conversionDraft;
+        });
+
+        if ((conversionDraft.warnings || []).length > 0) {
+            const warningDetails = conversionDraft.warnings
+                .slice(0, 5)
+                .map((warning, index) => ({
+                    label: `Check ${index + 1}`,
+                    value: warning
+                }));
+
+            const confirmed = await showConfirmationModal({
+                title: "Conversion Checks Found",
+                message: "Some checks need review before opening Retail Store.",
+                details: warningDetails,
+                note: conversionDraft.warnings.length > 5
+                    ? `${conversionDraft.warnings.length - 5} more check(s) were detected. Proceed to continue with conversion and review in Retail Store.`
+                    : "Proceed to continue with conversion and review in Retail Store before saving the sale.",
+                confirmText: "Proceed",
+                cancelText: "Cancel",
+                tone: "warning"
+            });
+
+            if (!confirmed) {
+                ProgressToast.hide(0);
+                showToast("Retail conversion cancelled.", "info", {
+                    title: "Leads & Enquiries"
+                });
+                return;
+            }
+        }
+
+        const conversionPackage = {
+            leadId: conversionDraft.leadId,
+            businessLeadId: conversionDraft.businessLeadId,
+            customerName: conversionDraft.customerName,
+            customerPhone: conversionDraft.customerPhone,
+            customerEmail: conversionDraft.customerEmail,
+            customerAddress: conversionDraft.customerAddress,
+            catalogueId: conversionDraft.catalogueId,
+            catalogueName: conversionDraft.catalogueName,
+            leadNotes: conversionDraft.leadNotes,
+            items: conversionDraft.items,
+            warnings: conversionDraft.warnings || [],
+            createdAt: Date.now()
+        };
+
+        sessionStorage.setItem(LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY, JSON.stringify(conversionPackage));
+        ProgressToast.hide(0);
+        showToast("Enquiry loaded. Opening Retail Store workspace...", "success", {
+            title: "Leads & Enquiries"
+        });
+        window.location.hash = RETAIL_ROUTE;
+    } catch (error) {
+        console.error("[Moneta] Lead conversion prep failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not prepare this lead for retail conversion.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
+}
+
 async function handleLeadDelete(button) {
     const leadId = button.dataset.leadId || null;
     const lead = featureState.leads.find(entry => entry.id === leadId) || null;
@@ -991,6 +1186,7 @@ function bindLeadsDomEvents() {
 
     root.addEventListener("click", event => {
         const editButton = event.target.closest(".lead-edit-button");
+        const convertButton = event.target.closest(".lead-convert-button");
         const workLogButton = event.target.closest(".lead-worklog-button");
         const deleteButton = event.target.closest(".lead-delete-button");
         const cancelButton = event.target.closest("#lead-cancel-button");
@@ -999,6 +1195,11 @@ function bindLeadsDomEvents() {
 
         if (editButton) {
             handleLeadEdit(editButton);
+            return;
+        }
+
+        if (convertButton) {
+            handleLeadConvert(convertButton);
             return;
         }
 

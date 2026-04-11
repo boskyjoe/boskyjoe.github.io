@@ -315,9 +315,30 @@ export async function createRetailSaleRecord(payload, user) {
     const now = getNow();
     const saleRef = db.collection(COLLECTIONS.salesInvoices).doc();
     const productRefs = payload.lineItems.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
+    const sourceLeadId = normalizeText(payload.sourceLeadId);
+    const sourceLeadRef = sourceLeadId
+        ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
+        : null;
 
     return db.runTransaction(async transaction => {
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        const sourceLeadDoc = sourceLeadRef
+            ? await transaction.get(sourceLeadRef)
+            : null;
+
+        if (sourceLeadRef) {
+            if (!sourceLeadDoc?.exists) {
+                throw new Error("The source lead could not be found. Refresh and try conversion again.");
+            }
+
+            const leadData = sourceLeadDoc.data() || {};
+            const leadStatus = normalizeText(leadData.leadStatus || "New");
+            const linkedSaleId = normalizeText(leadData.convertedToSaleId || leadData.linkedSaleId);
+
+            if (leadStatus === "Converted" && linkedSaleId && linkedSaleId !== saleRef.id) {
+                throw new Error("This lead is already linked to another sale.");
+            }
+        }
 
         payload.lineItems.forEach((item, index) => {
             const productDoc = productDocs[index];
@@ -352,6 +373,9 @@ export async function createRetailSaleRecord(payload, user) {
             salesSeasonId: payload.salesSeasonId,
             salesSeasonName: payload.salesSeasonName,
             manualVoucherNumber: payload.manualVoucherNumber,
+            sourceLeadId: sourceLeadId || "",
+            sourceLeadBusinessId: payload.sourceLeadBusinessId || "",
+            sourceLeadCustomerName: payload.sourceLeadCustomerName || "",
             customerInfo: payload.customerInfo,
             saleNotes: payload.saleNotes || "",
             lineItems: payload.lineItems,
@@ -420,6 +444,19 @@ export async function createRetailSaleRecord(payload, user) {
                 updateDate: now
             });
         });
+
+        if (sourceLeadRef) {
+            transaction.update(sourceLeadRef, {
+                leadStatus: "Converted",
+                convertedToSaleId: saleRef.id,
+                convertedToSaleNumber: payload.manualVoucherNumber || "",
+                convertedStore: payload.store || "",
+                convertedOn: now,
+                convertedBy: user.email,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
 
         return saleRef;
     });

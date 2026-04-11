@@ -233,6 +233,9 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
         : "Pay Later";
     const salesCatalogueId = normalizeText(payload.salesCatalogueId);
     const manualVoucherNumber = normalizeText(payload.manualVoucherNumber);
+    const sourceLeadId = normalizeText(payload.sourceLeadId);
+    const sourceLeadBusinessId = normalizeText(payload.sourceLeadBusinessId);
+    const sourceLeadCustomerName = normalizeText(payload.sourceLeadCustomerName);
     const customerName = normalizeText(payload.customerName);
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
@@ -346,6 +349,9 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             salesSeasonId: catalogueHeader.seasonId || "",
             salesSeasonName: catalogueHeader.seasonName || "-",
             manualVoucherNumber,
+            sourceLeadId,
+            sourceLeadBusinessId,
+            sourceLeadCustomerName: sourceLeadCustomerName || customerName,
             customerInfo: {
                 name: customerName,
                 phone: customerPhone,
