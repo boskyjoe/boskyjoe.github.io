@@ -5,6 +5,7 @@ import {
     createRetailSaleRecord,
     recordRetailSalePayment,
     updateRetailSaleRecord,
+    voidRetailSalePaymentRecord,
     voidRetailSaleRecord
 } from "./repository.js";
 
@@ -714,6 +715,57 @@ export async function saveRetailSalePayment(payload, sale, masterData, user) {
 
     const validatedPayment = validateRetailSalePaymentPayload(payload, sale, masterData);
     return recordRetailSalePayment(sale.id, validatedPayment, user);
+}
+
+export function validateRetailSalePaymentVoidPayload(payment, reason, sale = null) {
+    if (!payment) {
+        throw new Error("Choose a payment before trying to void it.");
+    }
+
+    const trimmedReason = normalizeText(reason);
+    const paymentStatus = normalizeText(payment.paymentStatus || payment.status || "Verified").toLowerCase();
+    const amountApplied = roundCurrency(payment.amountApplied ?? payment.amountPaid);
+    const amountReceived = roundCurrency(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid);
+
+    if (sale && normalizeText(sale.saleStatus || "Active").toLowerCase() === "voided") {
+        throw new Error("Payments linked to a voided sale cannot be voided separately.");
+    }
+
+    if (payment.isReversalEntry) {
+        throw new Error("Reversal payment entries cannot be voided.");
+    }
+
+    if (paymentStatus === "voided" || paymentStatus === "void reversal") {
+        throw new Error("This retail payment has already been voided.");
+    }
+
+    if (amountApplied <= 0 && amountReceived <= 0) {
+        throw new Error("Only posted retail payments can be voided.");
+    }
+
+    if (!trimmedReason) {
+        throw new Error("A void reason is required.");
+    }
+
+    if (trimmedReason.length < 8) {
+        throw new Error("Please enter a more descriptive void reason.");
+    }
+
+    return trimmedReason;
+}
+
+export async function voidRetailSalePayment(payment, reason, sale, user) {
+    if (!user) {
+        throw new Error("You must be logged in to void a retail payment.");
+    }
+
+    const validatedReason = validateRetailSalePaymentVoidPayload(payment, reason, sale);
+    const result = await voidRetailSalePaymentRecord(payment.id, validatedReason, user);
+
+    return {
+        ...result,
+        reason: validatedReason
+    };
 }
 
 export function validateRetailSaleVoidPayload(sale, payload = {}, user) {

@@ -108,9 +108,27 @@ function getTemplateStyles() {
             line-height: 1.24;
         }
         .retail-pdf-shell {
+            position: relative;
             border: 1px solid #dbe4ea;
             border-radius: 10px;
             overflow: hidden;
+        }
+        .retail-pdf-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-28deg);
+            font-size: 86px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(157, 23, 23, 0.16);
+            border: 8px solid rgba(157, 23, 23, 0.16);
+            border-radius: 14px;
+            padding: 18px 30px;
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
         }
         .retail-pdf-header {
             display: grid;
@@ -303,6 +321,7 @@ function buildInvoiceHtml(data) {
         <div class="retail-pdf-root">
             <style>${getTemplateStyles()}</style>
             <div class="retail-pdf-shell">
+                ${data.isVoidedSale ? `<div class="retail-pdf-watermark">VOIDED</div>` : ""}
                 <section class="retail-pdf-header">
                     <div class="retail-pdf-brand">
                         <h1>${escapeHtml(data.companyName)}</h1>
@@ -483,6 +502,7 @@ function buildPdfData(sale, paymentRecord = null) {
         };
     });
     const taxSummary = buildTaxSummary(items);
+    const isVoidedSale = String(sale.saleStatus || "").trim().toLowerCase() === "voided";
 
     return {
         copyType: "ORIGINAL FOR RECEIPT",
@@ -504,6 +524,8 @@ function buildPdfData(sale, paymentRecord = null) {
         salesCatalogueName: sale.salesCatalogueName || "-",
         salesSeasonName: sale.salesSeasonName || "-",
         paymentStatus: sale.paymentStatus || "Unpaid",
+        saleStatus: sale.saleStatus || "Active",
+        isVoidedSale,
         transportMode: "-",
         vehicleNumber: "-",
         transportDate: formatDate(saleDate),

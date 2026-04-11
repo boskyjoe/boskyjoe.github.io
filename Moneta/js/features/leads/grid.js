@@ -112,7 +112,7 @@ function buildLeadColumnDefs() {
             headerName: "Status",
             minWidth: 150,
             flex: 0.85,
-            cellRenderer: params => statusMarkup(params.value)
+            cellRenderer: params => statusMarkup(params.data?.displayLeadStatus || params.value)
         },
         {
             field: "enquiryDate",

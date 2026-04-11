@@ -33,6 +33,17 @@ progress toasts, summary modals, confirmation modals, disabled action tooltip re
 - html2pdf bundle for retail invoice and credit-note output.
 - ES module architecture by feature folder.
 
+## Firebase Free Plan Policy (Mandatory)
+- Treat Firestore read/write usage as a first-class constraint in all feature work.
+- Reuse existing listeners; avoid duplicate subscriptions for the same data path.
+- Prefer targeted queries (`where`, `limit(1)`) over broad scans.
+- Avoid full-collection reads when existence checks or narrow windows are sufficient.
+- Keep writes minimal:
+update only changed fields, avoid redundant writes, preserve transactional batching for coupled updates.
+- For dashboards/reports:
+prefer bounded windows + caching, and keep fallbacks scoped to smallest safe dataset.
+- Any new feature should include an explicit read/write cost review before implementation is finalized.
+
 ## App Shell Architecture
 ### Bootstrap flow
 `Moneta/js/app/bootstrap.js`
@@ -193,6 +204,8 @@ voids active linked payments, writes reversal payments, reverses inventory.
 converted leads or leads linked to sales cannot be deleted.
 - Lead-to-retail conversion implemented:
 builds validated conversion package, stores in session storage, routes to retail.
+- Converted leads with later voided sales now display as
+`Converted (Sale Voided)` in lead status rendering while preserving underlying `leadStatus: Converted`.
 
 ## 8) Retail Store
 `Moneta/js/features/retail-store/`
@@ -200,10 +213,16 @@ builds validated conversion package, stores in session storage, routes to retail
 create, view, edit (full/limited), payment, expense, return, void.
 - Lead conversion intake implemented (session package consumed on route entry).
 - Inventory and financial writes are transactional.
+- Two distinct destructive controls now exist:
+`Void Payment` (payment-only reversal; sale remains active) and `Void Sale` (full sale cancellation).
+- `Void Payment` rules:
+requires mandatory reason, reverses only selected payment (plus donation reversal when applicable), does not touch expenses, does not set sale to void.
 - Return flow:
 partial/full return with inventory restoration and return history.
 - Void flow:
 void sale + void/reverse payments and expenses + donation reversals + inventory restoration.
+- Lead linkage on full sale void:
+lead stays `Converted` but stores conversion outcome metadata (`Sale Voided` + audit fields).
 - PDF outputs:
 invoice and return credit-note generation.
 
@@ -271,6 +290,8 @@ These are current risk items from code + architecture review.
    `simple-consignment/repository.js` cancel order.
 2. Dashboard scoped-user query logic was corrected to apply `createdBy` + date constraints in-query first, with safer scoped fallback behavior.
 3. Master-data readiness now flips to true only after first snapshot has arrived for all configured master collections.
+4. Retail payment and sale void semantics were separated:
+payment void no longer implies sale void.
 
 ## Recommended Next Hardening Pass
 1. Add reusable HTML escaping utilities for all `innerHTML` template insertions (or migrate to DOM APIs for user data).
@@ -283,12 +304,13 @@ These are current risk items from code + architecture review.
 2. Master-data listener attach/detach on auth transitions.
 3. CRUD/edit lifecycles across all major modules.
 4. Destructive flows:
-purchase payment void, purchase invoice void, retail void, retail returns, consignment cancel/close/void transaction.
+purchase payment void, purchase invoice void, retail payment void, retail sale void, retail returns, consignment cancel/close/void transaction.
 5. Inventory consistency after purchase/sale/return/consignment operations.
 6. Payment/donation/expense ledger propagation and reversal entries.
-7. Dashboard refresh and cache behavior across window switches.
-8. Mobile/tablet responsive checks for dashboard and Home.
-9. PDF generation for retail invoice and credit note.
+7. Lead conversion metadata updates when a converted retail sale is later voided.
+8. Dashboard refresh and cache behavior across window switches.
+9. Mobile/tablet responsive checks for dashboard and Home.
+10. PDF generation for retail invoice and credit note.
 
 ## Implementation Protocol For Future AI Work
 1. Keep feature boundaries strict:

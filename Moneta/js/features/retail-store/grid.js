@@ -45,6 +45,40 @@ function requestStateMarkup(quantity) {
         : `<span class="purchase-status-pill purchase-status-unpaid">Not Included</span>`;
 }
 
+function escapeHtmlAttr(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+}
+
+function retailPaymentActionMarkup(payment = {}) {
+    const status = String(payment.paymentStatus || payment.status || "Verified").trim().toLowerCase();
+    const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
+    const amountReceived = Number(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid) || 0;
+
+    let disabledReason = "";
+    if (payment.isReversalEntry) {
+        disabledReason = "Reversal entries cannot be voided.";
+    } else if (status === "voided" || status === "void reversal") {
+        disabledReason = "This payment is already voided.";
+    } else if (amountApplied <= 0 && amountReceived <= 0) {
+        disabledReason = "Only posted payment entries can be voided.";
+    }
+
+    const disabledAttrs = disabledReason
+        ? `disabled title="${escapeHtmlAttr(disabledReason)}"`
+        : "";
+
+    return `
+        <button class="button grid-action-button grid-action-button-secondary retail-payment-void-button" type="button" data-payment-id="${payment.id || ""}" ${disabledAttrs}>
+            <span class="button-icon">${icons.warning}</span>
+            Void Payment
+        </button>
+    `;
+}
+
 function buildNumberSetter(field, decimals = 0) {
     return params => {
         const parsed = Number(params.newValue);
@@ -369,6 +403,14 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 190,
             flex: 1.05,
             valueFormatter: params => params.value || params.data?.createdBy || "-"
+        },
+        {
+            headerName: "Actions",
+            minWidth: 165,
+            flex: 0.9,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => (params.node?.rowPinned ? "" : retailPaymentActionMarkup(params.data || {}))
         }
     ];
 }

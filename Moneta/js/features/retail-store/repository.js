@@ -865,6 +865,196 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
     });
 }
 
+export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
+    if (!paymentId) {
+        throw new Error("Select a retail payment before voiding.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const paymentRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc(paymentId);
+
+    return db.runTransaction(async transaction => {
+        const paymentDoc = await transaction.get(paymentRef);
+        if (!paymentDoc.exists) {
+            throw new Error("This payment could not be found.");
+        }
+
+        const paymentData = paymentDoc.data() || {};
+        const paymentStatus = normalizeText(paymentData.paymentStatus || paymentData.status || "Verified");
+        const normalizedPaymentStatus = paymentStatus.toLowerCase();
+        const amountApplied = roundCurrency(paymentData.amountApplied ?? paymentData.amountPaid);
+        const amountReceived = roundCurrency(paymentData.amountReceived ?? paymentData.totalCollected ?? paymentData.amountPaid);
+        const donationAmount = roundCurrency(paymentData.donationAmount);
+
+        if (paymentData.isReversalEntry) {
+            throw new Error("Reversal payment entries cannot be voided.");
+        }
+
+        if (normalizedPaymentStatus === "voided" || normalizedPaymentStatus === "void reversal") {
+            throw new Error("This retail payment has already been voided.");
+        }
+
+        if (amountApplied <= 0 && amountReceived <= 0) {
+            throw new Error("Only posted retail payments can be voided.");
+        }
+
+        const saleId = normalizeText(paymentData.invoiceId || paymentData.relatedSaleId);
+        if (!saleId) {
+            throw new Error("This payment is not linked to a retail sale.");
+        }
+
+        const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+        const saleDoc = await transaction.get(saleRef);
+        if (!saleDoc.exists) {
+            throw new Error("The linked retail sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        const saleStatus = normalizeText(sale.saleStatus || "Active").toLowerCase();
+        if (saleStatus === "voided") {
+            throw new Error("Payments for a voided sale cannot be voided separately.");
+        }
+
+        const donationEntryId = normalizeText(paymentData.donationEntryId);
+        const donationEntryRef = donationAmount > 0 && donationEntryId
+            ? db.collection(COLLECTIONS.donations).doc(donationEntryId)
+            : null;
+        const donationEntryDoc = donationEntryRef
+            ? await transaction.get(donationEntryRef)
+            : null;
+
+        const currentTotalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const currentTotalDonation = roundCurrency(sale.totalDonation);
+        const currentBalanceDue = roundCurrency(sale.balanceDue);
+        const currentPaymentCount = Math.max(0, Number(sale.financials?.paymentCount) || 0);
+        const currentAmountTendered = roundCurrency(sale.financials?.amountTendered);
+
+        const nextTotalAmountPaid = roundCurrency(Math.max(currentTotalAmountPaid - amountApplied, 0));
+        const nextTotalDonation = roundCurrency(Math.max(currentTotalDonation - donationAmount, 0));
+        const nextBalanceDue = roundCurrency(Math.max(currentBalanceDue + amountApplied, 0));
+        const nextPaymentCount = Math.max(currentPaymentCount - 1, 0);
+        const nextAmountTendered = roundCurrency(Math.max(currentAmountTendered - amountReceived, 0));
+        const nextPaymentStatus = nextBalanceDue <= 0
+            ? "Paid"
+            : nextTotalAmountPaid > 0
+                ? "Partially Paid"
+                : "Unpaid";
+        const reversalRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+        const donationReversalRef = donationAmount > 0
+            ? db.collection(COLLECTIONS.donations).doc()
+            : null;
+
+        transaction.update(paymentRef, {
+            paymentStatus: "Voided",
+            status: "Voided",
+            voidedBy: user.email,
+            voidedOn: now,
+            voidReason,
+            voidContext: "Payment Void",
+            originalStatus: paymentStatus,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        transaction.set(reversalRef, {
+            paymentId: buildSalesPaymentId(),
+            invoiceId: saleId,
+            relatedSaleId: saleId,
+            relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+            paymentDate: now,
+            amountPaid: -amountApplied,
+            amountApplied: -amountApplied,
+            amountReceived: -amountReceived,
+            donationAmount: -donationAmount,
+            totalCollected: -amountReceived,
+            paymentMode: "VOID_REVERSAL",
+            transactionRef: `Payment void reversal of ${paymentData.transactionRef || paymentData.paymentId || paymentDoc.id}`,
+            notes: `Reversed payment ${paymentData.paymentId || paymentDoc.id}. Reason: ${voidReason}`,
+            status: "Void Reversal",
+            paymentStatus: "Void Reversal",
+            originalPaymentId: paymentDoc.id,
+            isReversalEntry: true,
+            donationEntryId: donationReversalRef?.id || "",
+            customerName: sale.customerInfo?.name || paymentData.customerName || "",
+            store: sale.store || paymentData.store || "",
+            recordedBy: user.email,
+            recordedOn: now,
+            createdBy: user.email,
+            createdOn: now,
+            voidedBy: user.email,
+            voidReason
+        });
+
+        if (donationReversalRef) {
+            if (donationEntryRef && donationEntryDoc?.exists) {
+                transaction.set(donationEntryRef, {
+                    status: "Voided",
+                    voidReason,
+                    voidedBy: user.email,
+                    voidedOn: now,
+                    updatedBy: user.email,
+                    updatedOn: now
+                }, { merge: true });
+            }
+
+            transaction.set(donationReversalRef, {
+                donationId: buildDonationBusinessId(),
+                donationDate: now,
+                amount: -donationAmount,
+                status: "Void Reversal",
+                moduleType: "Retail Store",
+                sourceCollection: COLLECTIONS.salesPaymentsLedger,
+                sourcePaymentDocId: reversalRef.id,
+                sourceSaleId: saleId,
+                sourceSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+                originalDonationEntryId: donationEntryRef?.id || "",
+                originalPaymentDocId: paymentDoc.id,
+                isReversalEntry: true,
+                notes: `Donation reversal for payment void ${paymentData.paymentId || paymentDoc.id}. Reason: ${voidReason}`,
+                createdBy: user.email,
+                createdOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
+        transaction.update(saleRef, {
+            totalAmountPaid: nextTotalAmountPaid,
+            totalDonation: nextTotalDonation,
+            balanceDue: nextBalanceDue,
+            paymentStatus: nextPaymentStatus,
+            latestPaymentMode: nextPaymentCount > 0 ? (sale.latestPaymentMode || "") : "",
+            "financials.amountTendered": nextAmountTendered,
+            "financials.paymentCount": nextPaymentCount,
+            lastPaymentVoided: {
+                paymentId: paymentDoc.id,
+                paymentBusinessId: paymentData.paymentId || "",
+                reversalPaymentId: reversalRef.id,
+                voidedAmount: amountApplied,
+                voidedReceivedAmount: amountReceived,
+                donationReversed: donationAmount,
+                voidReason,
+                voidedBy: user.email,
+                voidedOn: now
+            },
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        return {
+            summary: {
+                paymentId: paymentData.paymentId || paymentDoc.id,
+                amountApplied,
+                amountReceived,
+                donationAmount,
+                nextBalanceDue,
+                nextPaymentStatus
+            }
+        };
+    });
+}
+
 export async function voidRetailSaleRecord(saleId, voidReason, user) {
     if (!saleId) {
         throw new Error("Select a retail sale before voiding.");
@@ -922,6 +1112,13 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             const status = normalizeText(data.status || "Active").toLowerCase();
             return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
         });
+        const sourceLeadId = normalizeText(sale.sourceLeadId);
+        const sourceLeadRef = sourceLeadId
+            ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
+            : null;
+        const sourceLeadDoc = sourceLeadRef
+            ? await transaction.get(sourceLeadRef)
+            : null;
 
         let voidedPaymentCount = 0;
         let voidedPaymentAmount = 0;
@@ -1120,6 +1317,23 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             updatedBy: user.email,
             updatedOn: now
         });
+
+        if (sourceLeadRef && sourceLeadDoc?.exists) {
+            transaction.update(sourceLeadRef, {
+                leadStatus: "Converted",
+                convertedToSaleId: saleId,
+                convertedToSaleNumber: sale.manualVoucherNumber || "",
+                convertedStore: sale.store || "",
+                conversionOutcome: "Sale Voided",
+                conversionOutcomeStatus: "Voided",
+                convertedSaleStatus: "Voided",
+                convertedSaleVoidedOn: now,
+                convertedSaleVoidedBy: user.email,
+                convertedSaleVoidReason: voidReason,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
 
         return {
             voidedPaymentCount,

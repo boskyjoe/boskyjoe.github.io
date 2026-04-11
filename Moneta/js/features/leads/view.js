@@ -141,12 +141,26 @@ function renderLogTypeOptions(currentValue = "General Note") {
     `).join("");
 }
 
+function resolveLeadStatusLabel(lead = {}) {
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const conversionOutcomeStatus = normalizeText(
+        lead.conversionOutcomeStatus || lead.conversionOutcome || lead.convertedSaleStatus
+    ).toLowerCase();
+
+    if (leadStatus === "Converted" && conversionOutcomeStatus === "voided") {
+        return "Converted (Sale Voided)";
+    }
+
+    return leadStatus || "New";
+}
+
 function buildLeadGridRows() {
     const currentRole = getState().currentUser?.role || "";
     const hasRetailAccess = RETAIL_CONVERSION_ALLOWED_ROLES.has(currentRole);
 
     return sortLeads(featureState.leads).map(lead => ({
         ...lead,
+        displayLeadStatus: resolveLeadStatusLabel(lead),
         requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
         requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
             return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));

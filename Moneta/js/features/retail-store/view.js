@@ -42,6 +42,7 @@ import {
     saveRetailSalePayment,
     saveRetailSaleUpdate,
     saveRetailSale,
+    voidRetailSalePayment,
     voidRetailSale
 } from "./service.js";
 
@@ -66,6 +67,7 @@ const featureState = {
     payments: [],
     unsubscribePayments: null,
     paymentDraft: createDefaultRetailPaymentDraft(),
+    paymentVoidReason: "",
     returnHistoryModalOpen: false,
     returnHistorySaleId: null,
     returnHistoryRows: [],
@@ -240,6 +242,7 @@ function closeRetailPaymentModalState() {
     featureState.paymentSaleId = null;
     featureState.payments = [];
     featureState.paymentDraft = createDefaultRetailPaymentDraft();
+    featureState.paymentVoidReason = "";
 }
 
 function openRetailPaymentModal(sale) {
@@ -255,6 +258,7 @@ function openRetailPaymentModal(sale) {
     featureState.paymentSaleId = sale.id;
     featureState.payments = [];
     featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+    featureState.paymentVoidReason = "";
 
     featureState.unsubscribePayments = subscribeToRetailSalePayments(
         sale.id,
@@ -699,8 +703,9 @@ function renderRetailPaymentModal(snapshot) {
     const draftAmount = Number(featureState.paymentDraft.amountPaid) || 0;
     const draftDonation = Math.max(draftAmount - Math.min(draftAmount, balanceDue), 0);
     const remainingBalance = Math.max(balanceDue - Math.min(draftAmount, balanceDue), 0);
-    const canRecordPayment = sale.saleStatus !== "Voided" && balanceDue > 0 && paymentModes.length > 0;
-    const recordPaymentDisabledReason = sale.saleStatus === "Voided"
+    const isVoidedSale = normalizeText(sale.saleStatus || "").toLowerCase() === "voided";
+    const canRecordPayment = !isVoidedSale && balanceDue > 0 && paymentModes.length > 0;
+    const recordPaymentDisabledReason = isVoidedSale
         ? "Cannot record payment on a voided sale."
         : balanceDue <= 0
             ? "This sale is already fully paid."
@@ -709,6 +714,9 @@ function renderRetailPaymentModal(snapshot) {
                 : "This action is not available right now.";
     const recordPaymentDisabledAttrs = buildDisabledActionAttrs(!canRecordPayment, recordPaymentDisabledReason);
     const paymentStatus = sale.paymentStatus || "Unpaid";
+    const voidedFieldDisabledAttrs = isVoidedSale
+        ? 'disabled aria-disabled="true"'
+        : "";
 
     return `
         <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
@@ -717,8 +725,12 @@ function renderRetailPaymentModal(snapshot) {
                     <div class="purchase-payment-modal-title-row">
                         <span class="panel-icon panel-icon-alt">${icons.payment}</span>
                         <div>
-                            <h3 id="retail-payment-modal-title">Record Retail Payment</h3>
-                            <p class="panel-copy">Capture customer payments for the selected retail sale and keep the payment history visible below.</p>
+                            <h3 id="retail-payment-modal-title">${isVoidedSale ? "Record Retail Payment (Sale Voided - Read Only)" : "Record Retail Payment"}</h3>
+                            <p class="panel-copy">
+                                ${isVoidedSale
+        ? "This sale is voided. No new payment can be recorded. Payment history is available below for audit only."
+        : "Capture customer payments for the selected retail sale and keep the payment history visible below."}
+                            </p>
                         </div>
                     </div>
                     <div class="toolbar-meta purchase-payment-modal-meta">
@@ -757,11 +769,11 @@ function renderRetailPaymentModal(snapshot) {
                                 <div class="form-grid">
                                     <div class="field">
                                         <label for="retail-payment-entry-date">Payment Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="retail-payment-entry-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
+                                        <input id="retail-payment-entry-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" ${voidedFieldDisabledAttrs} required>
                                     </div>
                                     <div class="field">
                                         <label for="retail-payment-entry-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="retail-payment-entry-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
+                                        <input id="retail-payment-entry-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${isVoidedSale || balanceDue <= 0 ? "disabled" : ""} required>
                                     </div>
                                     <div class="field">
                                         <label for="retail-payment-entry-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
@@ -772,11 +784,11 @@ function renderRetailPaymentModal(snapshot) {
                                     </div>
                                     <div class="field field-full">
                                         <label for="retail-payment-entry-reference">Payment Reference <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="retail-payment-entry-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="UPI / cash reference / card slip">
+                                        <input id="retail-payment-entry-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="UPI / cash reference / card slip" ${voidedFieldDisabledAttrs}>
                                     </div>
                                     <div class="field field-full">
                                         <label for="retail-payment-entry-notes">Payment Notes</label>
-                                        <textarea id="retail-payment-entry-notes" class="textarea" placeholder="Optional notes for this payment">${featureState.paymentDraft.notes}</textarea>
+                                        <textarea id="retail-payment-entry-notes" class="textarea" placeholder="Optional notes for this payment" ${voidedFieldDisabledAttrs}>${featureState.paymentDraft.notes}</textarea>
                                     </div>
                                 </div>
                                 <div class="purchase-payment-preview">
@@ -816,6 +828,11 @@ function renderRetailPaymentModal(snapshot) {
                             <div class="purchase-payments-history-header">
                                 <p class="section-kicker">Payment History</p>
                                 <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} payment record(s) linked to this sale.</p>
+                            </div>
+                            <div class="field field-full">
+                                <label for="retail-payment-void-reason">Void Reason (Required For Void Payment)</label>
+                                <textarea id="retail-payment-void-reason" class="textarea" placeholder="Reason for voiding a selected payment">${featureState.paymentVoidReason || ""}</textarea>
+                                <p class="panel-copy panel-copy-tight">Use the same reason for any payment you void from this history view.</p>
                             </div>
                             <div class="ag-shell purchase-payment-history-shell">
                                 <div id="retail-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
@@ -2303,6 +2320,11 @@ function handleRetailInput(target) {
         return;
     }
 
+    if (target.id === "retail-payment-void-reason") {
+        featureState.paymentVoidReason = target.value || "";
+        return;
+    }
+
     if (target.id.startsWith("retail-return-qty-")) {
         const productId = target.dataset.productId || target.id.replace("retail-return-qty-", "");
         if (!productId) return;
@@ -2409,6 +2431,9 @@ function handleRetailChange(target) {
         case "retail-payment-entry-amount":
             featureState.paymentDraft.amountPaid = target.value || "";
             syncRetailPaymentDraftPreview();
+            return;
+        case "retail-payment-void-reason":
+            featureState.paymentVoidReason = target.value || "";
             return;
         case "retail-expense-date":
             featureState.expenseDraft.expenseDate = target.value || "";
@@ -2877,6 +2902,107 @@ async function handleRetailPaymentSubmit(event) {
     }
 }
 
+async function handleRetailPaymentVoid(button) {
+    const paymentId = button.dataset.paymentId || "";
+    const payment = featureState.payments.find(entry => entry.id === paymentId) || null;
+
+    if (!payment) {
+        showToast("The selected payment could not be found. Refresh payment history and try again.", "error", {
+            title: "Retail Store"
+        });
+        return;
+    }
+
+    const sale = getPaymentModalSale();
+    if (!sale) {
+        showToast("The linked sale could not be found. Reopen payments and try again.", "error", {
+            title: "Retail Store"
+        });
+        return;
+    }
+
+    const reason = normalizeText(featureState.paymentVoidReason);
+    if (!reason) {
+        showToast("Enter a void reason before voiding a payment.", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    if (reason.length < 8) {
+        showToast("Please enter a more descriptive void reason (minimum 8 characters).", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    const appliedAmount = Number(payment.amountApplied ?? payment.amountPaid) || 0;
+    const receivedAmount = Number(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid) || 0;
+    const donationAmount = Number(payment.donationAmount) || 0;
+
+    const confirmed = await showConfirmationModal({
+        title: "Void Retail Payment",
+        message: `Void payment ${payment.paymentId || payment.id}?`,
+        details: [
+            { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+            { label: "Amount Applied", value: formatCurrency(appliedAmount) },
+            { label: "Amount Received", value: formatCurrency(receivedAmount) },
+            { label: "Donation", value: formatCurrency(donationAmount) }
+        ],
+        note: "This action cannot be undone. Moneta will void this payment, create a reversal entry, and reopen the sale balance by the applied amount.",
+        confirmText: "Void Payment",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const snapshot = getState();
+        const result = await runProgressToastFlow({
+            title: "Voiding Retail Payment",
+            initialMessage: "Reading payment and linked sale state...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Retail Payment Voided",
+            successMessage: "The payment was voided and reversed successfully."
+        }, async ({ update }) => {
+            update("Validating void reason, eligibility, and sale linkage...", 42, "Step 2 of 4");
+            update("Writing payment void updates and reversal entries...", 76, "Step 3 of 4");
+            const result = await voidRetailSalePayment(payment, reason, sale, snapshot.currentUser);
+            update("Refreshing payment history and sale totals...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        featureState.paymentVoidReason = "";
+        renderRetailStoreView();
+
+        showToast("Retail payment voided successfully.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Retail Payment Voided",
+            message: "The payment was voided, reversal entries were posted, and sale totals were recalculated.",
+            details: [
+                { label: "Payment", value: result.summary.paymentId || payment.paymentId || payment.id || "-" },
+                { label: "Applied Reversed", value: formatCurrency(result.summary.amountApplied || 0) },
+                { label: "Received Reversed", value: formatCurrency(result.summary.amountReceived || 0) },
+                { label: "Donation Reversed", value: formatCurrency(result.summary.donationAmount || 0) },
+                { label: "Next Status", value: result.summary.nextPaymentStatus || "-" },
+                { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue || 0) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail payment void failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not void this retail payment.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
 async function handleRetailSalePdf(button) {
     const saleId = button.dataset.saleId || "";
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
@@ -3042,6 +3168,7 @@ function bindRetailStoreDomEvents() {
         const returnHistoryCloseButton = targetElement.closest("#retail-return-history-close-button");
         const returnHistoryModalBackdrop = targetElement.closest("#retail-return-history-modal");
         const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
+        const paymentVoidButton = targetElement.closest(".retail-payment-void-button");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
@@ -3078,6 +3205,11 @@ function bindRetailStoreDomEvents() {
 
         if (paymentsButton) {
             handleRetailSalePayments(paymentsButton);
+            return;
+        }
+
+        if (paymentVoidButton) {
+            handleRetailPaymentVoid(paymentVoidButton);
             return;
         }
 
