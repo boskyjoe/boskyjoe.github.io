@@ -1391,6 +1391,24 @@ async function initializeInventoryCharts(inventory = {}) {
                 }
             });
         }
+
+        requestAnimationFrame(() => {
+            featureState.stockStatusChart?.resize();
+            featureState.lowStockCategoryChart?.resize();
+        });
+
+        if (hasStatusData && !featureState.stockStatusChart) {
+            setChartVisibility(statusCanvas, statusEmpty, {
+                showChart: false,
+                message: "Stock mix chart is unavailable right now. Use the summary chips above."
+            });
+        }
+        if (hasCategoryData && !featureState.lowStockCategoryChart) {
+            setChartVisibility(categoryCanvas, categoryEmpty, {
+                showChart: false,
+                message: "Category chart is unavailable right now. Low-stock details are still available in the inventory grid."
+            });
+        }
     } catch (error) {
         console.error("[Moneta] Dashboard inventory charts failed:", error);
         if (hasStatusData) {
