@@ -137,6 +137,13 @@ export async function toggleCategoryStatus(docId, nextValue, user) {
         throw new Error("Category record could not be found.");
     }
 
+    if (!nextValue) {
+        const usage = await getCategoryUsageStatus(docId);
+        if (usage.isUsed) {
+            throw new Error(usage.message);
+        }
+    }
+
     await setCategoryActiveStatus(docId, nextValue, user);
 }
 
@@ -181,13 +188,24 @@ export async function savePaymentMode(payload, user, existingPaymentModes = []) 
     return { mode: "create" };
 }
 
-export async function togglePaymentModeStatus(docId, nextValue, user) {
+export async function togglePaymentModeStatus(docId, nextValue, user, paymentModeName = "") {
     if (!user) {
         throw new Error("You must be logged in to update payment mode status.");
     }
 
     if (!docId) {
         throw new Error("Payment mode record could not be found.");
+    }
+
+    if (!nextValue) {
+        if (!normalizeText(paymentModeName)) {
+            throw new Error("Payment mode name is required to validate deactivation.");
+        }
+
+        const usage = await getPaymentModeUsageStatus(paymentModeName);
+        if (usage.isUsed) {
+            throw new Error(usage.message);
+        }
     }
 
     await setPaymentModeActiveStatus(docId, nextValue, user);
@@ -256,6 +274,13 @@ export async function toggleSeasonStatus(docId, nextValue, user) {
 
     if (!docId) {
         throw new Error("Season record could not be found.");
+    }
+
+    if (!nextValue) {
+        const usage = await getSeasonUsageStatus(docId);
+        if (usage.isUsed) {
+            throw new Error(usage.message);
+        }
     }
 
     await setSeasonActiveStatus(docId, nextValue, user);

@@ -685,7 +685,7 @@ async function handleStatusToggle(button) {
         } else if (entity === "seasons") {
             await toggleSeasonStatus(recordId, nextValue, snapshot.currentUser);
         } else {
-            await togglePaymentModeStatus(recordId, nextValue, snapshot.currentUser);
+            await togglePaymentModeStatus(recordId, nextValue, snapshot.currentUser, record.paymentMode || "");
         }
 
         showToast(`${ADMIN_SECTIONS[entity].entityLabel} ${nextValue ? "activated" : "deactivated"}.`, "success");
