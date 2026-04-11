@@ -1535,34 +1535,6 @@ function renderRetailStoreViewShell(snapshot) {
                             </div>
                         </section>
                     ` : ""}
-                    ${isReturnMode ? `
-                        <section class="workspace-form-section retail-return-reason-section">
-                            <div class="workspace-form-section-head">
-                                <p class="workspace-form-section-kicker">Return Details</p>
-                                <p class="panel-copy">Capture the return date and reason. Then enter return quantities directly in the Product List worksheet.</p>
-                            </div>
-                            <div class="workspace-form-section-grid">
-                                <div class="field">
-                                    <label for="retail-return-date">Return Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="retail-return-date" class="input" type="date" value="${featureState.returnDraft.returnDate || ""}" required>
-                                </div>
-                                <div class="field field-full">
-                                    <label for="retail-return-reason">Return Reason <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <textarea id="retail-return-reason" class="textarea" placeholder="State why these products are being returned" required>${featureState.returnDraft.reason || ""}</textarea>
-                                </div>
-                            </div>
-                            <div class="retail-return-preview-row">
-                                <article class="retail-finance-chip">
-                                    <span>Selected Qty</span>
-                                    <strong id="retail-return-selected-qty">${returnDraftSummary.totalQuantity}</strong>
-                                </article>
-                                <article class="retail-finance-chip">
-                                    <span>Estimated Return Value</span>
-                                    <strong id="retail-return-selected-amount">${formatCurrency(returnDraftSummary.totalAmount)}</strong>
-                                </article>
-                            </div>
-                        </section>
-                    ` : ""}
                     ${isVoidMode ? `
                         <section class="workspace-form-section purchase-void-mode-reason">
                             <div class="workspace-form-section-head">
@@ -1790,6 +1762,35 @@ function renderRetailStoreViewShell(snapshot) {
                             </div>
                         </div>
                     </div>
+
+                    ${isReturnMode ? `
+                        <section class="workspace-form-section retail-return-reason-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Return Details</p>
+                                <p class="panel-copy">Capture the return date and reason after you finalize return quantities and review invoice impact.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field">
+                                    <label for="retail-return-date">Return Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-return-date" class="input" type="date" value="${featureState.returnDraft.returnDate || ""}" required>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-return-reason">Return Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-return-reason" class="textarea" placeholder="State why these products are being returned" required>${featureState.returnDraft.reason || ""}</textarea>
+                                </div>
+                            </div>
+                            <div class="retail-return-preview-row">
+                                <article class="retail-finance-chip">
+                                    <span>Selected Qty</span>
+                                    <strong id="retail-return-selected-qty">${returnDraftSummary.totalQuantity}</strong>
+                                </article>
+                                <article class="retail-finance-chip">
+                                    <span>Estimated Return Value</span>
+                                    <strong id="retail-return-selected-amount">${formatCurrency(returnDraftSummary.totalAmount)}</strong>
+                                </article>
+                            </div>
+                        </section>
+                    ` : ""}
 
                     <div class="form-actions">
                         <button id="retail-reset-button" class="button button-secondary" type="button">
