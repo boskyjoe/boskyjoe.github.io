@@ -448,6 +448,7 @@
     display: grid;
     gap: 0.75rem;
     grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.45fr);
+    align-items: start;
 }
 
 .dashboard-inventory-charts {
@@ -473,6 +474,10 @@
     margin-top: 0.5rem;
     height: 220px;
     position: relative;
+    overflow: hidden;
+    border: 1px solid #e7eef5;
+    border-radius: 0.7rem;
+    background: #fbfdff;
 }
 
 .dashboard-chart-canvas-wrap canvas {
@@ -481,16 +486,14 @@
 }
 
 .dashboard-chart-empty {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 0.85rem;
-    border: 1px dashed #d5dee9;
-    border-radius: 0.7rem;
-    background: #fbfdff;
+    padding: 1rem;
+    background: rgba(251, 253, 255, 0.96);
     color: #64748b;
     font-size: 0.82rem;
     line-height: 1.35;
@@ -501,6 +504,7 @@
     border-radius: 0.85rem;
     padding: 0.6rem 0.65rem;
     background: #fff;
+    height: fit-content;
 }
 
 .dashboard-inventory-grid-toolbar {
