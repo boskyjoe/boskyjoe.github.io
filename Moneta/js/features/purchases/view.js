@@ -349,68 +349,18 @@ function updatePaymentDraftPreview() {
     if (!invoice) return;
 
     const balanceDue = roundCurrency(invoice.balanceDue ?? invoice.invoiceTotal);
+    const voidingPayment = getVoidingPayment();
+    const isPaymentVoidMode = Boolean(voidingPayment);
     const draftAmount = roundCurrency(normalizeNumber(document.getElementById("purchase-payment-amount")?.value));
-    const remainingBalance = roundCurrency(Math.max(balanceDue - draftAmount, 0));
+    const voidingAmount = roundCurrency(normalizeNumber(voidingPayment?.amountPaid));
+    const remainingBalance = isPaymentVoidMode
+        ? roundCurrency(Math.max(balanceDue + voidingAmount, 0))
+        : roundCurrency(Math.max(balanceDue - draftAmount, 0));
     const remainingBalanceNode = document.getElementById("purchase-payment-balance-after-draft");
 
     if (remainingBalanceNode) {
         remainingBalanceNode.textContent = formatCurrency(remainingBalance);
     }
-}
-
-function renderVoidPaymentPanel() {
-    const payment = getVoidingPayment();
-    if (!payment) return "";
-
-    return `
-        <div class="purchase-payment-void-panel">
-            <div class="purchase-payment-void-header">
-                <div>
-                    <p class="section-kicker">Void Payment</p>
-                    <p class="panel-copy">Void the selected payment and create a reversing entry while keeping a full audit trail.</p>
-                </div>
-                <div class="toolbar-meta">
-                    ${getStatusMarkup(payment.paymentStatus || payment.status || "Verified", "Verified")}
-                </div>
-            </div>
-
-            <div class="purchase-payment-void-summary">
-                <article class="summary-card">
-                    <p class="summary-label">Amount</p>
-                    <p class="summary-value">${formatCurrency(payment.amountPaid || 0)}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Mode</p>
-                    <p class="summary-value payment-summary-copy">${payment.paymentMode || "-"}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Reference</p>
-                    <p class="summary-value payment-summary-copy">${payment.transactionRef || "-"}</p>
-                </article>
-                <article class="summary-card">
-                    <p class="summary-label">Recorded By</p>
-                    <p class="summary-value payment-summary-copy">${payment.recordedBy || payment.audit?.createdBy || "-"}</p>
-                </article>
-            </div>
-
-            <form id="purchase-payment-void-form" class="purchase-payment-void-form">
-                <div class="field field-full">
-                    <label for="purchase-payment-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
-                    <textarea id="purchase-payment-void-reason" class="textarea" placeholder="Explain why this payment is being voided" required>${featureState.paymentVoidReason}</textarea>
-                </div>
-                <p class="panel-copy panel-copy-tight">This action will mark the payment as voided, add a reversal entry, and reopen the invoice balance if needed.</p>
-                <div class="form-actions">
-                    <button id="purchase-payment-void-cancel-button" class="button button-secondary" type="button">
-                        <span class="button-icon">${icons.inactive}</span>
-                        Cancel
-                    </button>
-                    <button class="button grid-action-button grid-action-button-danger" type="submit">
-                        Void Payment
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
 }
 
 function renderPaymentModal(snapshot) {
@@ -421,8 +371,12 @@ function renderPaymentModal(snapshot) {
     const balanceDue = roundCurrency(paymentInvoice.balanceDue ?? paymentInvoice.invoiceTotal);
     const amountPaid = roundCurrency(paymentInvoice.amountPaid);
     const invoiceTotal = roundCurrency(paymentInvoice.invoiceTotal);
+    const voidingPayment = getVoidingPayment();
+    const isPaymentVoidMode = Boolean(voidingPayment);
+    const voidingPaymentAmount = roundCurrency(normalizeNumber(voidingPayment?.amountPaid));
     const draftAmount = roundCurrency(normalizeNumber(featureState.paymentDraft.amountPaid));
     const remainingBalance = roundCurrency(Math.max(balanceDue - draftAmount, 0));
+    const balanceAfterVoid = roundCurrency(Math.max(balanceDue + voidingPaymentAmount, 0));
     const canRecordPayment = balanceDue > 0 && paymentModes.length > 0;
     const recordPaymentDisabledReason = balanceDue <= 0
         ? "This invoice is already fully paid."
@@ -430,6 +384,43 @@ function renderPaymentModal(snapshot) {
             ? "Add at least one active payment mode before recording payment."
             : "This action is not available right now.";
     const recordPaymentDisabledAttrs = buildDisabledActionAttrs(!canRecordPayment, recordPaymentDisabledReason);
+    const paymentFieldDisabledAttrs = isPaymentVoidMode
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const amountFieldDisabledAttrs = (isPaymentVoidMode || balanceDue <= 0)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const modeFieldDisabledAttrs = (isPaymentVoidMode || !canRecordPayment)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const paymentDateValue = isPaymentVoidMode
+        ? toDateInputValue(voidingPayment?.paymentDate || voidingPayment?.createdAt || "")
+        : featureState.paymentDraft.paymentDate;
+    const paymentAmountValue = isPaymentVoidMode
+        ? String(voidingPaymentAmount || "")
+        : featureState.paymentDraft.amountPaid;
+    const paymentModeValue = isPaymentVoidMode
+        ? (voidingPayment?.paymentMode || "")
+        : featureState.paymentDraft.paymentMode;
+    const paymentReferenceValue = isPaymentVoidMode
+        ? (voidingPayment?.transactionRef || "")
+        : featureState.paymentDraft.transactionRef;
+    const paymentNotesValue = isPaymentVoidMode
+        ? (voidingPayment?.notes || "")
+        : featureState.paymentDraft.notes;
+    const headerClassName = isPaymentVoidMode
+        ? "panel-header panel-header-danger-soft purchase-payment-modal-header purchase-payment-modal-void-header"
+        : "panel-header panel-header-accent purchase-payment-modal-header";
+    const headerIconClassName = isPaymentVoidMode
+        ? "panel-icon panel-icon-danger-soft"
+        : "panel-icon panel-icon-alt";
+    const modalTitle = isPaymentVoidMode
+        ? "Void Supplier Payment"
+        : "Record Supplier Payment";
+    const modalCopy = isPaymentVoidMode
+        ? "Review the selected posted payment, provide a void reason, and confirm to post the reversal."
+        : "Use a focused payment modal for the transaction, with live invoice context and AG Grid history below the entry form.";
+    const balancePreviewValue = isPaymentVoidMode ? balanceAfterVoid : remainingBalance;
 
     return `
         <div id="purchase-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-modal-title">
@@ -437,19 +428,22 @@ function renderPaymentModal(snapshot) {
                 <button id="purchase-payments-close-button" class="purchase-payment-modal-corner-close" type="button" aria-label="Close payment modal">
                     <span class="button-icon">${icons.close}</span>
                 </button>
-                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                <div class="${headerClassName}">
                     <div class="purchase-payment-modal-title-row">
                         <div class="panel-title-wrap">
-                            <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                            <span class="${headerIconClassName}">${icons.payment}</span>
                             <div>
-                                <h3 id="purchase-payment-modal-title">Record Supplier Payment</h3>
-                                <p class="panel-copy">Use a focused payment modal for the transaction, with live invoice context and AG Grid history below the entry form.</p>
+                                <h3 id="purchase-payment-modal-title">${modalTitle}</h3>
+                                <p class="panel-copy">${modalCopy}</p>
                             </div>
                         </div>
                     </div>
                     <div class="toolbar-meta purchase-payment-modal-meta">
                         <span class="status-pill">${paymentInvoice.invoiceId || "Draft"}</span>
                         <span class="status-pill">${featureState.payments.length} payments</span>
+                        ${isPaymentVoidMode ? `
+                            <span class="status-pill purchase-payment-void-mode-pill">Void Mode</span>
+                        ` : ""}
                     </div>
                 </div>
                 <div class="panel-body purchase-payment-modal-body">
@@ -475,55 +469,78 @@ function renderPaymentModal(snapshot) {
                             </div>
 
                             <form id="purchase-payment-form" class="purchase-payment-form">
+                                ${isPaymentVoidMode ? `
+                                    <p class="panel-copy panel-copy-tight purchase-payment-void-inline-note">
+                                        Voiding payment <strong>${voidingPayment?.paymentId || voidingPayment?.id || "-"}</strong>.
+                                        Amount ${formatCurrency(voidingPaymentAmount)}, mode ${voidingPayment?.paymentMode || "-"}, recorded by ${voidingPayment?.recordedBy || voidingPayment?.audit?.createdBy || "-"}.
+                                    </p>
+                                ` : ""}
                                 <div class="form-grid">
                                     <div class="field">
                                         <label for="purchase-payment-date">Payment Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="purchase-payment-date" class="input" type="date" value="${featureState.paymentDraft.paymentDate}" required>
+                                        <input id="purchase-payment-date" class="input" type="date" value="${paymentDateValue}" ${paymentFieldDisabledAttrs} required>
                                     </div>
                                     <div class="field">
                                         <label for="purchase-payment-amount">Amount Paid <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${featureState.paymentDraft.amountPaid}" placeholder="0.00" ${balanceDue <= 0 ? "disabled" : ""} required>
+                                        <input id="purchase-payment-amount" class="input" type="number" min="0" step="0.01" value="${paymentAmountValue}" placeholder="0.00" ${amountFieldDisabledAttrs} required>
                                     </div>
                                     <div class="field">
                                         <label for="purchase-payment-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="purchase-payment-mode" class="select" ${canRecordPayment ? "" : "disabled"} required>
+                                        <select id="purchase-payment-mode" class="select" ${modeFieldDisabledAttrs} required>
                                             <option value="">Select mode</option>
-                                            ${renderPaymentModeOptions(paymentModes, featureState.paymentDraft.paymentMode)}
+                                            ${renderPaymentModeOptions(paymentModes, paymentModeValue)}
                                         </select>
                                     </div>
                                     <div class="field field-wide">
                                         <label for="purchase-payment-reference">Reference</label>
-                                        <input id="purchase-payment-reference" class="input" type="text" value="${featureState.paymentDraft.transactionRef}" placeholder="Cheque number, transfer ref, or receipt ID">
+                                        <input id="purchase-payment-reference" class="input" type="text" value="${paymentReferenceValue}" placeholder="Cheque number, transfer ref, or receipt ID" ${paymentFieldDisabledAttrs}>
                                     </div>
                                     <div class="field field-full">
                                         <label for="purchase-payment-notes">Notes</label>
-                                        <textarea id="purchase-payment-notes" class="textarea" placeholder="Optional internal note about this payment">${featureState.paymentDraft.notes}</textarea>
+                                        <textarea id="purchase-payment-notes" class="textarea" placeholder="Optional internal note about this payment" ${paymentFieldDisabledAttrs}>${paymentNotesValue}</textarea>
                                     </div>
+                                    ${isPaymentVoidMode ? `
+                                        <div class="field field-full">
+                                            <label for="purchase-payment-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <textarea id="purchase-payment-void-reason" class="textarea" placeholder="Explain why this payment is being voided" required>${featureState.paymentVoidReason}</textarea>
+                                        </div>
+                                    ` : ""}
                                 </div>
 
                                 <div class="purchase-payment-preview">
                                     <div>
                                         <p class="summary-label">Status</p>
-                                        <div class="purchase-payment-inline-pill">${getStatusMarkup(paymentInvoice.paymentStatus)}</div>
+                                        <div class="purchase-payment-inline-pill">${getStatusMarkup(isPaymentVoidMode ? (voidingPayment?.paymentStatus || voidingPayment?.status || "Verified") : paymentInvoice.paymentStatus)}</div>
                                     </div>
                                     <div>
-                                        <p class="summary-label">Balance After Draft</p>
-                                        <p id="purchase-payment-balance-after-draft" class="summary-value">${formatCurrency(remainingBalance)}</p>
+                                        <p class="summary-label">${isPaymentVoidMode ? "Balance After Void" : "Balance After Draft"}</p>
+                                        <p id="purchase-payment-balance-after-draft" class="summary-value">${formatCurrency(balancePreviewValue)}</p>
                                     </div>
                                 </div>
 
-                                ${balanceDue <= 0 ? `
+                                ${!isPaymentVoidMode && balanceDue <= 0 ? `
                                     <p class="panel-copy panel-copy-tight">This invoice is already fully paid. You can still review the payment history below.</p>
                                 ` : ""}
-                                ${balanceDue > 0 && paymentModes.length === 0 ? `
+                                ${!isPaymentVoidMode && balanceDue > 0 && paymentModes.length === 0 ? `
                                     <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording supplier payments.</p>
                                 ` : ""}
 
                                 <div class="form-actions">
-                                    <button class="button button-primary" type="submit" ${recordPaymentDisabledAttrs}>
-                                        <span class="button-icon">${icons.payment}</span>
-                                        Record Payment
-                                    </button>
+                                    ${isPaymentVoidMode ? `
+                                        <button id="purchase-payment-void-cancel-button" class="button button-secondary" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Cancel Void
+                                        </button>
+                                        <button id="purchase-payment-void-confirm-button" class="button button-danger-soft" type="button">
+                                            <span class="button-icon">${icons.warning}</span>
+                                            Confirm Void Payment
+                                        </button>
+                                    ` : `
+                                        <button class="button button-primary" type="submit" ${recordPaymentDisabledAttrs}>
+                                            <span class="button-icon">${icons.payment}</span>
+                                            Record Payment
+                                        </button>
+                                    `}
                                 </div>
                             </form>
                         </div>
@@ -538,7 +555,6 @@ function renderPaymentModal(snapshot) {
                             <div class="ag-shell purchase-payment-history-shell">
                                 <div id="purchase-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 420px; width: 100%;"></div>
                             </div>
-                            ${renderVoidPaymentPanel()}
                         </div>
                     </div>
                 </div>
@@ -859,6 +875,11 @@ async function handlePurchaseFormSubmit(event) {
 async function handlePurchasePaymentSubmit(event) {
     event.preventDefault();
 
+    if (featureState.voidingPaymentId) {
+        showToast("Void mode is active. Use Confirm Void Payment or Cancel Void.", "info");
+        return;
+    }
+
     const invoice = getPaymentInvoice();
     if (!invoice) {
         showToast("Choose an invoice before recording payment.", "error");
@@ -919,11 +940,24 @@ async function handlePurchasePaymentSubmit(event) {
 }
 
 async function handlePurchasePaymentVoidSubmit(event) {
-    event.preventDefault();
+    event?.preventDefault?.();
 
     const payment = getVoidingPayment();
     if (!payment) {
         showToast("Choose a payment before trying to void it.", "error");
+        return;
+    }
+
+    const reason = normalizeText(featureState.paymentVoidReason || document.getElementById("purchase-payment-void-reason")?.value);
+    if (!reason) {
+        showToast("A void reason is required.", "warning");
+        document.getElementById("purchase-payment-void-reason")?.focus();
+        return;
+    }
+
+    if (reason.length < 8) {
+        showToast("Please enter a more descriptive void reason.", "warning");
+        document.getElementById("purchase-payment-void-reason")?.focus();
         return;
     }
 
@@ -958,7 +992,7 @@ async function handlePurchasePaymentVoidSubmit(event) {
 
             await voidPurchasePayment(
                 payment,
-                document.getElementById("purchase-payment-void-reason")?.value || featureState.paymentVoidReason,
+                reason,
                 getState().currentUser
             );
 
@@ -1190,11 +1224,6 @@ function bindPurchasesDomEvents() {
             return;
         }
 
-        if (event.target.id === "purchase-payment-void-form") {
-            handlePurchasePaymentVoidSubmit(event);
-            return;
-        }
-
     });
 
     root.addEventListener("input", event => {
@@ -1252,6 +1281,7 @@ function bindPurchasesDomEvents() {
         const confirmInvoiceVoidButton = target.closest("#purchase-invoice-void-button");
         const closePaymentsButton = target.closest("#purchase-payments-close-button");
         const cancelVoidButton = target.closest("#purchase-payment-void-cancel-button");
+        const confirmVoidButton = target.closest("#purchase-payment-void-confirm-button");
         const paymentModal = target.closest("#purchase-payment-modal");
 
         if (editButton) {
@@ -1295,6 +1325,11 @@ function bindPurchasesDomEvents() {
         if (cancelVoidButton) {
             resetPaymentVoidState();
             renderPurchasesView();
+            return;
+        }
+
+        if (confirmVoidButton) {
+            handlePurchasePaymentVoidSubmit();
             return;
         }
 
