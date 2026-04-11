@@ -10,12 +10,15 @@ const LOW_STOCK_THRESHOLD = 5;
 const WINDOW_OPTIONS = [
     { key: "today", label: "Today" },
     { key: "7d", label: "Last 7 Days" },
-    { key: "30d", label: "Last 30 Days" }
+    { key: "30d", label: "Last 30 Days" },
+    { key: "custom", label: "Custom Range" }
 ];
 
 const featureState = {
     userKey: "",
     selectedWindow: "30d",
+    customFrom: "",
+    customTo: "",
     isLoading: false,
     source: "live",
     loadedAt: 0,
@@ -58,6 +61,44 @@ function formatDateTime(value) {
     });
 }
 
+function formatDateLabel(value) {
+    if (!value) return "-";
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
+function toDateInputValue(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function parseDateInput(value, { endOfDay = false } = {}) {
+    const text = normalizeText(value);
+    if (!text) return null;
+
+    const date = new Date(`${text}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+
+    if (endOfDay) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+
+    return date;
+}
+
 function formatSignedCurrency(value) {
     const amount = toNumber(value);
     if (amount > 0) return `+${formatCurrency(amount)}`;
@@ -84,16 +125,79 @@ function getWindowStart(windowKey) {
 }
 
 function getWindowLabel(windowKey) {
+    if (windowKey === "custom") return "Custom Range";
     return WINDOW_OPTIONS.find(option => option.key === windowKey)?.label || "Last 30 Days";
 }
 
-function buildCacheKey(user, windowKey) {
-    const identity = user?.uid || user?.email || "anonymous";
-    return `moneta.dashboard.snapshot.v1.${identity}.${windowKey}`;
+function getDefaultCustomRange() {
+    const endDate = new Date();
+    endDate.setHours(0, 0, 0, 0);
+    const startDate = getWindowStart("30d");
+
+    return {
+        from: toDateInputValue(startDate),
+        to: toDateInputValue(endDate)
+    };
 }
 
-function readDashboardCache(user, windowKey) {
-    const cacheKey = buildCacheKey(user, windowKey);
+function ensureCustomRangeDefaults() {
+    if (featureState.customFrom && featureState.customTo) return;
+    const defaults = getDefaultCustomRange();
+    featureState.customFrom = featureState.customFrom || defaults.from;
+    featureState.customTo = featureState.customTo || defaults.to;
+}
+
+function resolveActiveRangeSpec() {
+    if (featureState.selectedWindow !== "custom") {
+        const startDate = getWindowStart(featureState.selectedWindow);
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+
+        return {
+            isValid: true,
+            rangeKey: featureState.selectedWindow,
+            rangeLabel: getWindowLabel(featureState.selectedWindow),
+            startDate,
+            endDate
+        };
+    }
+
+    ensureCustomRangeDefaults();
+    const fromText = normalizeText(featureState.customFrom);
+    const toText = normalizeText(featureState.customTo);
+    const fromDate = parseDateInput(fromText, { endOfDay: false });
+    const toDate = parseDateInput(toText, { endOfDay: true });
+
+    if (!fromDate || !toDate) {
+        return {
+            isValid: false,
+            error: "Select valid From and To dates for the custom dashboard range."
+        };
+    }
+
+    if (fromDate.getTime() > toDate.getTime()) {
+        return {
+            isValid: false,
+            error: "Custom range is invalid. From date cannot be later than To date."
+        };
+    }
+
+    return {
+        isValid: true,
+        rangeKey: `custom:${fromText}:${toText}`,
+        rangeLabel: `${formatDateLabel(fromDate)} - ${formatDateLabel(toDate)}`,
+        startDate: fromDate,
+        endDate: toDate
+    };
+}
+
+function buildCacheKey(user, rangeKey) {
+    const identity = user?.uid || user?.email || "anonymous";
+    return `moneta.dashboard.snapshot.v1.${identity}.${rangeKey}`;
+}
+
+function readDashboardCache(user, rangeKey) {
+    const cacheKey = buildCacheKey(user, rangeKey);
 
     try {
         const raw = sessionStorage.getItem(cacheKey);
@@ -116,8 +220,8 @@ function readDashboardCache(user, windowKey) {
     }
 }
 
-function writeDashboardCache(user, windowKey, data, loadedAt) {
-    const cacheKey = buildCacheKey(user, windowKey);
+function writeDashboardCache(user, rangeKey, data, loadedAt) {
+    const cacheKey = buildCacheKey(user, rangeKey);
     const expiresAt = loadedAt + CACHE_TTL_MS;
 
     try {
@@ -170,14 +274,21 @@ function sortRowsByDateDesc(rows = [], dateField) {
     });
 }
 
-function filterRowsByWindow(rows = [], dateField, startDate) {
-    if (!startDate || !dateField) return rows;
-    return rows.filter(row => toDateValue(row?.[dateField]).getTime() >= startDate.getTime());
+function filterRowsByWindow(rows = [], dateField, startDate, endDate = null) {
+    if (!dateField || (!startDate && !endDate)) return rows;
+
+    return rows.filter(row => {
+        const time = toDateValue(row?.[dateField]).getTime();
+        if (startDate && time < startDate.getTime()) return false;
+        if (endDate && time > endDate.getTime()) return false;
+        return true;
+    });
 }
 
 async function fetchWindowedRows(path, {
     dateField = "",
     startDate = null,
+    endDate = null,
     createdBy = "",
     maxDocs = MAX_DOCS_PER_COLLECTION
 } = {}) {
@@ -190,11 +301,15 @@ async function fetchWindowedRows(path, {
             query = query.where("createdBy", "==", createdBy).limit(maxDocs);
             const scopedSnapshot = await query.get();
             const scopedRows = scopedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return sortRowsByDateDesc(filterRowsByWindow(scopedRows, dateField, startDate), dateField).slice(0, maxDocs);
+            return sortRowsByDateDesc(filterRowsByWindow(scopedRows, dateField, startDate, endDate), dateField).slice(0, maxDocs);
         }
 
         if (dateField && startDate) {
             query = query.where(dateField, ">=", startDate);
+        }
+
+        if (dateField && endDate) {
+            query = query.where(dateField, "<=", endDate);
         }
 
         if (dateField) {
@@ -209,7 +324,7 @@ async function fetchWindowedRows(path, {
         console.warn(`[Moneta] Dashboard query fallback for ${path}:`, error);
         const fallbackSnapshot = await db.collection(path).limit(maxDocs).get();
         const fallbackRows = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        return sortRowsByDateDesc(filterRowsByWindow(fallbackRows, dateField, startDate), dateField).slice(0, maxDocs);
+        return sortRowsByDateDesc(filterRowsByWindow(fallbackRows, dateField, startDate, endDate), dateField).slice(0, maxDocs);
     }
 }
 
@@ -624,9 +739,10 @@ function buildPrimaryMetricCards(profile, metrics) {
     return cards.slice(0, 6);
 }
 
-async function buildDashboardData(user, selectedWindow) {
+async function buildDashboardData(user, rangeSpec) {
     const startedAt = performance.now();
-    const startDate = getWindowStart(selectedWindow);
+    const startDate = rangeSpec?.startDate || getWindowStart("30d");
+    const endDate = rangeSpec?.endDate || null;
     const profile = getDashboardProfile(user);
     const scopedEmail = profile.scopeToOwnData ? normalizeText(user?.email) : "";
 
@@ -640,25 +756,25 @@ async function buildDashboardData(user, selectedWindow) {
         consignmentPayments
     ] = await Promise.all([
         profile.canLeads
-            ? fetchWindowedRows(COLLECTIONS.leads, { dateField: "enquiryDate", startDate, createdBy: scopedEmail })
+            ? fetchWindowedRows(COLLECTIONS.leads, { dateField: "enquiryDate", startDate, endDate, createdBy: scopedEmail })
             : Promise.resolve([]),
         profile.canRetail || profile.canFinance
-            ? fetchWindowedRows(COLLECTIONS.salesInvoices, { dateField: "saleDate", startDate, createdBy: scopedEmail })
+            ? fetchWindowedRows(COLLECTIONS.salesInvoices, { dateField: "saleDate", startDate, endDate, createdBy: scopedEmail })
             : Promise.resolve([]),
         profile.canPurchases || profile.canFinance
-            ? fetchWindowedRows(COLLECTIONS.purchaseInvoices, { dateField: "purchaseDate", startDate })
+            ? fetchWindowedRows(COLLECTIONS.purchaseInvoices, { dateField: "purchaseDate", startDate, endDate })
             : Promise.resolve([]),
         profile.canConsignment
-            ? fetchWindowedRows(COLLECTIONS.simpleConsignments, { dateField: "checkoutDate", startDate, createdBy: scopedEmail })
+            ? fetchWindowedRows(COLLECTIONS.simpleConsignments, { dateField: "checkoutDate", startDate, endDate, createdBy: scopedEmail })
             : Promise.resolve([]),
         profile.canCashFlow
-            ? fetchWindowedRows(COLLECTIONS.salesPaymentsLedger, { dateField: "paymentDate", startDate })
+            ? fetchWindowedRows(COLLECTIONS.salesPaymentsLedger, { dateField: "paymentDate", startDate, endDate })
             : Promise.resolve([]),
         profile.canCashFlow
-            ? fetchWindowedRows(COLLECTIONS.supplierPaymentsLedger, { dateField: "paymentDate", startDate })
+            ? fetchWindowedRows(COLLECTIONS.supplierPaymentsLedger, { dateField: "paymentDate", startDate, endDate })
             : Promise.resolve([]),
         profile.canCashFlow || profile.canConsignment
-            ? fetchWindowedRows(COLLECTIONS.consignmentPaymentsLedger, { dateField: "paymentDate", startDate })
+            ? fetchWindowedRows(COLLECTIONS.consignmentPaymentsLedger, { dateField: "paymentDate", startDate, endDate })
             : Promise.resolve([])
     ]);
 
@@ -678,8 +794,10 @@ async function buildDashboardData(user, selectedWindow) {
 
     return {
         profile,
-        windowLabel: getWindowLabel(selectedWindow),
+        rangeLabel: rangeSpec?.rangeLabel || getWindowLabel("30d"),
+        rangeKey: rangeSpec?.rangeKey || "30d",
         startDate,
+        endDate,
         generatedAt: Date.now(),
         durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
         metrics,
@@ -702,6 +820,26 @@ function buildWindowButtonsMarkup() {
             </button>
         `;
     }).join("");
+}
+
+function buildCustomRangeControlsMarkup() {
+    ensureCustomRangeDefaults();
+
+    return `
+        <div class="dashboard-custom-range ${featureState.selectedWindow === "custom" ? "is-visible" : ""}">
+            <div class="dashboard-custom-field">
+                <label for="dashboard-custom-from">From</label>
+                <input id="dashboard-custom-from" class="input dashboard-date-input" type="date" value="${featureState.customFrom || ""}" ${featureState.isLoading ? "disabled" : ""}>
+            </div>
+            <div class="dashboard-custom-field">
+                <label for="dashboard-custom-to">To</label>
+                <input id="dashboard-custom-to" class="input dashboard-date-input" type="date" value="${featureState.customTo || ""}" ${featureState.isLoading ? "disabled" : ""}>
+            </div>
+            <button id="dashboard-custom-apply" class="button button-secondary dashboard-custom-apply" type="button" ${featureState.isLoading ? "disabled" : ""}>
+                Apply
+            </button>
+        </div>
+    `;
 }
 
 function renderPrimaryCards(cards = []) {
@@ -817,7 +955,8 @@ function renderDashboardMarkup(user) {
     const sourceLabel = featureState.source === "cache" ? "Cached Snapshot" : "Live Data";
     const expiryLabel = featureState.expiresAt ? formatDateTime(featureState.expiresAt) : "-";
     const loadedLabel = featureState.loadedAt ? formatDateTime(featureState.loadedAt) : "-";
-    const windowLabel = dashboard?.windowLabel || getWindowLabel(featureState.selectedWindow);
+    const activeRangeSpec = resolveActiveRangeSpec();
+    const windowLabel = dashboard?.rangeLabel || (activeRangeSpec.isValid ? activeRangeSpec.rangeLabel : getWindowLabel(featureState.selectedWindow));
     const durationLabel = dashboard ? `${dashboard.durationMs} ms` : "-";
     const primaryCards = dashboard?.primaryCards || buildPrimaryMetricCards(profile, metrics);
     const actionQueue = dashboard?.actionQueue || buildActionQueue(profile, metrics);
@@ -836,6 +975,7 @@ function renderDashboardMarkup(user) {
                         <div class="dashboard-window-switcher">
                             ${buildWindowButtonsMarkup()}
                         </div>
+                        ${buildCustomRangeControlsMarkup()}
                         <button id="dashboard-refresh-button" class="button button-primary-alt" type="button" ${featureState.isLoading ? "disabled" : ""}>
                             <span class="button-icon">${icons.search}</span>
                             ${featureState.isLoading ? "Refreshing..." : "Refresh"}
@@ -1011,8 +1151,31 @@ function bindDashboardEvents(user) {
             featureState.data = null;
             featureState.errorMessage = "";
             renderDashboardView(user);
-            void loadDashboardData(user, { forceRefresh: false });
+
+            if (nextWindow !== "custom") {
+                void loadDashboardData(user, { forceRefresh: false });
+            }
         });
+    });
+
+    const fromInput = root.querySelector("#dashboard-custom-from");
+    const toInput = root.querySelector("#dashboard-custom-to");
+
+    fromInput?.addEventListener("change", event => {
+        featureState.customFrom = event.target.value || "";
+    });
+
+    toInput?.addEventListener("change", event => {
+        featureState.customTo = event.target.value || "";
+    });
+
+    root.querySelector("#dashboard-custom-apply")?.addEventListener("click", () => {
+        featureState.customFrom = fromInput?.value || featureState.customFrom;
+        featureState.customTo = toInput?.value || featureState.customTo;
+        featureState.selectedWindow = "custom";
+        featureState.data = null;
+        featureState.errorMessage = "";
+        void loadDashboardData(user, { forceRefresh: false });
     });
 
     root.querySelector("#dashboard-refresh-button")?.addEventListener("click", () => {
@@ -1023,8 +1186,12 @@ function bindDashboardEvents(user) {
 function resetDashboardStateForUser(user) {
     const nextUserKey = normalizeText(user?.uid || user?.email || "");
     if (featureState.userKey === nextUserKey) return;
+    const defaults = getDefaultCustomRange();
 
     featureState.userKey = nextUserKey;
+    featureState.selectedWindow = "30d";
+    featureState.customFrom = defaults.from;
+    featureState.customTo = defaults.to;
     featureState.isLoading = false;
     featureState.source = "live";
     featureState.loadedAt = 0;
@@ -1037,11 +1204,20 @@ function resetDashboardStateForUser(user) {
 async function loadDashboardData(user, { forceRefresh = false } = {}) {
     if (!user) return;
 
+    const rangeSpec = resolveActiveRangeSpec();
+    if (!rangeSpec.isValid) {
+        featureState.data = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Dashboard range is invalid.";
+        renderDashboardView(user);
+        return;
+    }
+
     const userKey = normalizeText(user?.uid || user?.email || "");
     const isSameUser = featureState.userKey === userKey;
     const hasFreshData = isSameUser
         && featureState.data
-        && featureState.selectedWindow === featureState.data?.windowKey
+        && rangeSpec.rangeKey === featureState.data?.rangeKey
         && Date.now() <= featureState.expiresAt;
 
     if (!forceRefresh && hasFreshData) {
@@ -1049,7 +1225,7 @@ async function loadDashboardData(user, { forceRefresh = false } = {}) {
     }
 
     if (!forceRefresh) {
-        const cached = readDashboardCache(user, featureState.selectedWindow);
+        const cached = readDashboardCache(user, rangeSpec.rangeKey);
         if (cached) {
             featureState.data = cached.data;
             featureState.source = "cache";
@@ -1067,17 +1243,16 @@ async function loadDashboardData(user, { forceRefresh = false } = {}) {
     renderDashboardView(user);
 
     try {
-        const data = await buildDashboardData(user, featureState.selectedWindow);
+        const data = await buildDashboardData(user, rangeSpec);
 
         if (token !== featureState.requestToken) {
             return;
         }
 
-        data.windowKey = featureState.selectedWindow;
         featureState.data = data;
         featureState.source = "live";
         featureState.loadedAt = Date.now();
-        featureState.expiresAt = writeDashboardCache(user, featureState.selectedWindow, data, featureState.loadedAt);
+        featureState.expiresAt = writeDashboardCache(user, rangeSpec.rangeKey, data, featureState.loadedAt);
         featureState.errorMessage = "";
     } catch (error) {
         if (token !== featureState.requestToken) return;
@@ -1111,7 +1286,8 @@ export function renderDashboardView(user) {
     root.innerHTML = renderDashboardMarkup(user);
     bindDashboardEvents(user);
 
-    if (!featureState.isLoading && (!featureState.data || Date.now() > featureState.expiresAt)) {
+    const rangeSpec = resolveActiveRangeSpec();
+    if (rangeSpec.isValid && !featureState.isLoading && (!featureState.data || Date.now() > featureState.expiresAt)) {
         void loadDashboardData(user, { forceRefresh: false });
     }
 }
