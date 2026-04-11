@@ -316,6 +316,29 @@ function renderLeadForm(snapshot) {
     const convertDisabledAttrs = !conversionEligibility.allowed
         ? `disabled title="${escapeAttribute(conversionEligibility.reason)}" data-disabled-reason="${escapeAttribute(conversionEligibility.reason)}"`
         : "";
+    const conversionChecklistMarkup = editingLead
+        ? `
+            <div class="lead-conversion-guidance ${conversionEligibility.allowed ? "" : "lead-conversion-guidance-muted"}">
+                <div class="lead-conversion-guidance-head">
+                    <span class="panel-icon panel-icon-alt">${icons.warning}</span>
+                    <div>
+                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Lead Conversion Checklist</p>
+                        <p class="panel-copy">Before converting this enquiry, confirm the details below.</p>
+                    </div>
+                </div>
+                <ul class="lead-conversion-guidance-list">
+                    <li>Verify the correct sales catalogue is selected.</li>
+                    <li>Check requested product quantities and customer contact details.</li>
+                    <li>After conversion, review pricing, tax, discount, and payment in Retail Store before saving.</li>
+                </ul>
+                <p class="lead-conversion-guidance-note">
+                    ${conversionEligibility.allowed
+        ? "Conversion opens Retail Store with a prefilled draft sale."
+        : `Conversion is disabled right now: ${escapeAttribute(conversionEligibility.reason)}`}
+                </p>
+            </div>
+        `
+        : "";
 
     return `
         <div class="panel-card">
@@ -443,6 +466,7 @@ function renderLeadForm(snapshot) {
                     <div class="ag-shell">
                         <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                     </div>
+                    ${conversionChecklistMarkup}
                     <div class="form-actions">
                         ${editingLead ? `
                             <button class="button button-primary-alt lead-convert-button" type="button" data-lead-id="${editingLead.id}" ${convertDisabledAttrs}>
@@ -867,6 +891,33 @@ async function handleLeadConvert(button) {
     const eligibility = getLeadConversionEligibility(lead, getState());
     if (!eligibility.allowed) {
         showToast(eligibility.reason, "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    const requestedProductCount = (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length;
+    const requestedValue = Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
+        return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
+    }, 0).toFixed(2));
+    const preConversionConfirmed = await showConfirmationModal({
+        title: "Convert Enquiry To Retail Sale",
+        message: "Open this enquiry in Retail Store as a prefilled draft sale?",
+        details: [
+            { label: "Lead ID", value: lead.businessLeadId || "-" },
+            { label: "Customer", value: lead.customerName || "-" },
+            { label: "Catalogue", value: lead.catalogueName || "-" },
+            { label: "No. Of Products", value: String(requestedProductCount) },
+            { label: "Est. Value", value: formatCurrency(requestedValue) }
+        ],
+        note: "No sale is saved yet. In Retail Store, review store, pricing, tax, discount, and payment before saving.",
+        confirmText: "Convert",
+        cancelText: "Cancel",
+        tone: "warning"
+    });
+
+    if (!preConversionConfirmed) {
+        showToast("Retail conversion cancelled.", "info", {
             title: "Leads & Enquiries"
         });
         return;
