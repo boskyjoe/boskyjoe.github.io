@@ -350,11 +350,17 @@ export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) 
             throw new Error("This purchase invoice has already been voided.");
         }
 
-        const relatedPaymentSnapshot = await transaction.get(
-            db.collection(COLLECTIONS.supplierPaymentsLedger)
-                .where("relatedInvoiceId", "==", invoiceDocId)
+        const relatedPaymentSnapshot = await db
+            .collection(COLLECTIONS.supplierPaymentsLedger)
+            .where("relatedInvoiceId", "==", invoiceDocId)
+            .get();
+        const relatedPaymentRefs = relatedPaymentSnapshot.docs.map(doc => doc.ref);
+        const relatedPaymentDocs = await Promise.all(
+            relatedPaymentRefs.map(paymentRef => transaction.get(paymentRef))
         );
-        const activePayments = relatedPaymentSnapshot.docs.filter(doc => {
+        const activePayments = relatedPaymentDocs.filter(doc => {
+            if (!doc.exists) return false;
+
             const data = doc.data() || {};
             const status = data.paymentStatus || data.status || "Verified";
             return !data.isReversalEntry && status !== "Voided" && roundCurrency(data.amountPaid) > 0;

@@ -893,10 +893,17 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             throw new Error("Sales with posted returns cannot be voided. Use return and credit-note history for reversal tracking.");
         }
 
-        const paymentSnapshot = await transaction.get(
-            db.collection(COLLECTIONS.salesPaymentsLedger).where("invoiceId", "==", saleId)
+        const paymentSnapshot = await db
+            .collection(COLLECTIONS.salesPaymentsLedger)
+            .where("invoiceId", "==", saleId)
+            .get();
+        const relatedPaymentRefs = paymentSnapshot.docs.map(doc => doc.ref);
+        const paymentDocs = await Promise.all(
+            relatedPaymentRefs.map(paymentRef => transaction.get(paymentRef))
         );
-        const activePayments = paymentSnapshot.docs.filter(doc => {
+        const activePayments = paymentDocs.filter(doc => {
+            if (!doc.exists) return false;
+
             const data = doc.data() || {};
             const status = normalizeText(data.paymentStatus || data.status || "Verified").toLowerCase();
             const appliedAmount = roundCurrency(data.amountApplied ?? data.amountPaid);
@@ -1016,10 +1023,14 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             voidedPaymentAmount += paymentAmount;
         });
 
-        const expenseSnapshot = await transaction.get(
-            saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION)
+        const expenseSnapshot = await saleRef.collection(RETAIL_SALE_EXPENSES_SUBCOLLECTION).get();
+        const relatedExpenseRefs = expenseSnapshot.docs.map(doc => doc.ref);
+        const expenseDocs = await Promise.all(
+            relatedExpenseRefs.map(expenseRef => transaction.get(expenseRef))
         );
-        const activeExpenses = expenseSnapshot.docs.filter(doc => {
+        const activeExpenses = expenseDocs.filter(doc => {
+            if (!doc.exists) return false;
+
             const data = doc.data() || {};
             const status = normalizeText(data.status || "Active").toLowerCase();
             return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
