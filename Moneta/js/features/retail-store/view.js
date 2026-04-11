@@ -778,6 +778,12 @@ function renderRetailPaymentModal(snapshot) {
     const donationPreviewValue = isPaymentVoidMode
         ? Math.max(totalDonation - voidingPaymentDonationAmount, 0)
         : draftDonation;
+    const headerClassName = isPaymentVoidMode
+        ? "panel-header panel-header-danger-soft purchase-payment-modal-header retail-payment-void-header"
+        : "panel-header panel-header-accent purchase-payment-modal-header";
+    const headerIconClassName = isPaymentVoidMode
+        ? "panel-icon panel-icon-danger-soft"
+        : "panel-icon panel-icon-alt";
     const paymentFormTitle = isVoidedSale
         ? "Record Retail Payment (Sale Voided - Read Only)"
         : isPaymentVoidMode
@@ -792,9 +798,9 @@ function renderRetailPaymentModal(snapshot) {
     return `
         <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
             <div class="purchase-payment-modal-card">
-                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                <div class="${headerClassName}">
                     <div class="purchase-payment-modal-title-row">
-                        <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                        <span class="${headerIconClassName}">${icons.payment}</span>
                         <div>
                             <h3 id="retail-payment-modal-title">${paymentFormTitle}</h3>
                             <p class="panel-copy">${paymentFormCopy}</p>
@@ -804,6 +810,9 @@ function renderRetailPaymentModal(snapshot) {
                         <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
                         <span class="status-pill">${sale.store || "-"}</span>
                         <span class="status-pill">${featureState.payments.length} payments</span>
+                        ${isPaymentVoidMode ? `
+                            <span class="status-pill retail-void-mode-pill">Void Mode</span>
+                        ` : ""}
                     </div>
                 </div>
                 <div class="panel-body purchase-payment-modal-body">
@@ -834,26 +843,10 @@ function renderRetailPaymentModal(snapshot) {
 
                             <form id="retail-payment-form" class="purchase-payment-form">
                                 ${isPaymentVoidMode ? `
-                                    <div class="panel-card panel-card-muted">
-                                        <div class="workspace-form-section-head">
-                                            <p class="workspace-form-section-kicker">Void Payment Mode</p>
-                                            <p class="panel-copy">Payment <strong>${voidingPayment?.paymentId || voidingPayment?.id || "-"}</strong> selected for void. Enter a reason and confirm.</p>
-                                        </div>
-                                        <div class="purchase-payment-meta-grid">
-                                            <article class="summary-card">
-                                                <p class="summary-label">Applied</p>
-                                                <p class="summary-value">${formatCurrency(voidingPaymentAppliedAmount)}</p>
-                                            </article>
-                                            <article class="summary-card">
-                                                <p class="summary-label">Received</p>
-                                                <p class="summary-value">${formatCurrency(voidingPaymentReceivedAmount)}</p>
-                                            </article>
-                                            <article class="summary-card">
-                                                <p class="summary-label">Donation</p>
-                                                <p class="summary-value">${formatCurrency(voidingPaymentDonationAmount)}</p>
-                                            </article>
-                                        </div>
-                                    </div>
+                                    <p class="panel-copy panel-copy-tight retail-payment-void-inline-note">
+                                        Voiding payment <strong>${voidingPayment?.paymentId || voidingPayment?.id || "-"}</strong>.
+                                        Applied ${formatCurrency(voidingPaymentAppliedAmount)}, received ${formatCurrency(voidingPaymentReceivedAmount)}, donation ${formatCurrency(voidingPaymentDonationAmount)}.
+                                    </p>
                                 ` : ""}
                                 <div class="form-grid">
                                     <div class="field">
