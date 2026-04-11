@@ -512,6 +512,7 @@ function getSalesHistoryRows() {
         lineItemCount: Number(sale.lineItemCount) || (sale.lineItems || []).length || 0,
         returnCount: Number(sale.returnCount) || 0,
         returnStatus: sale.returnStatus || "Not Returned",
+        orderStatus: sale.saleStatus || "Active",
         saleStatus: sale.saleStatus || "Active",
         invoiceTotal: Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0,
         amountPaid: Number(sale.totalAmountPaid) || 0,

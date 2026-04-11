@@ -33,8 +33,8 @@ function formatDate(value) {
     });
 }
 
-function statusMarkup(value) {
-    const status = value || "Unpaid";
+function statusMarkup(value, defaultStatus = "Unpaid") {
+    const status = value || defaultStatus;
     const normalized = status.toLowerCase().replace(/\s+/g, "-");
     return `<span class="purchase-status-pill purchase-status-${normalized}">${status}</span>`;
 }
@@ -326,11 +326,18 @@ function buildSalesColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "orderStatus",
+            headerName: "Order Status",
+            minWidth: 150,
+            flex: 0.85,
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value, "Active"))
+        },
+        {
             field: "paymentStatus",
-            headerName: "Status",
-            minWidth: 145,
-            flex: 0.8,
-            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value))
+            headerName: "Payment Status",
+            minWidth: 160,
+            flex: 0.9,
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value, "Unpaid"))
         },
         {
             headerName: "Actions",
@@ -395,7 +402,7 @@ function buildPaymentHistoryColumnDefs() {
             headerName: "Status",
             minWidth: 140,
             flex: 0.85,
-            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || params.data?.paymentStatus || "Verified"))
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || params.data?.paymentStatus, "Verified"))
         },
         {
             field: "recordedBy",
@@ -468,7 +475,7 @@ function buildReturnHistoryColumnDefs() {
             headerName: "Status",
             minWidth: 140,
             flex: 0.8,
-            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value || "Returned"))
+            cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value, "Returned"))
         },
         {
             field: "totalReturnedQuantity",
