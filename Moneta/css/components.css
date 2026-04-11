@@ -1839,6 +1839,56 @@ select {
     flex-wrap: wrap;
 }
 
+.lead-conversion-guidance {
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid #dbe7fb;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+}
+
+.lead-conversion-guidance-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+}
+
+.lead-conversion-guidance-head .panel-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.65rem;
+    color: #9a5a0a;
+    background: #fff4df;
+    border: 1px solid #f3d8a2;
+}
+
+.lead-conversion-guidance-list {
+    margin: 0;
+    padding-left: 1.05rem;
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.lead-conversion-guidance-note {
+    margin: 0;
+    font-size: 0.84rem;
+    color: #4b5f7e;
+}
+
+.lead-conversion-guidance-muted {
+    border-color: #e4e9f2;
+    background: linear-gradient(180deg, #fbfdff 0%, #f7f9fc 100%);
+}
+
+.lead-conversion-guidance-muted .lead-conversion-guidance-head .panel-icon {
+    color: #64748b;
+    background: #f4f7fb;
+    border-color: #dfe6f1;
+}
+
 .lead-worklog-modal-card {
     width: min(1080px, 100%);
 }
