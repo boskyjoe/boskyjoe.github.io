@@ -49,6 +49,27 @@ function toNumber(value) {
     return Number(value) || 0;
 }
 
+function buildCategoryNameMap(categories = []) {
+    return new Map(
+        (categories || [])
+            .map(category => [normalizeText(category.id), normalizeText(category.categoryName)])
+            .filter(([id, name]) => id && name)
+    );
+}
+
+function resolveProductCategoryName(product = {}, categoryNameMap = new Map()) {
+    const rawCategoryId = normalizeText(
+        product.categoryId
+        || product.category
+        || product.productCategoryId
+        || product.productCategory
+    );
+    const mappedCategoryName = rawCategoryId ? normalizeText(categoryNameMap.get(rawCategoryId)) : "";
+    const directCategoryName = normalizeText(product.categoryName || product.productCategoryName);
+
+    return directCategoryName || mappedCategoryName || rawCategoryId || "Uncategorized";
+}
+
 function toDateValue(value) {
     if (!value) return new Date(0);
     if (typeof value.toDate === "function") return value.toDate();
@@ -355,12 +376,13 @@ function resolveInventoryStatus(inventoryCount) {
     return { key: "healthy", label: "Healthy", tone: "success", priority: 3 };
 }
 
-function buildInventoryInsights(products = []) {
+function buildInventoryInsights(products = [], categories = []) {
+    const categoryNameMap = buildCategoryNameMap(categories);
     const rows = (products || []).map(product => {
         const inventoryCount = Math.max(0, Math.floor(toNumber(product.inventoryCount)));
         const status = resolveInventoryStatus(inventoryCount);
         const productName = normalizeText(product.itemName || product.productName || "Untitled Product");
-        const categoryName = normalizeText(product.productCategoryName || product.categoryName || "Uncategorized");
+        const categoryName = resolveProductCategoryName(product, categoryNameMap);
         const reorderSuggestion = status.key === "out" || status.key === "low"
             ? Math.max(INVENTORY_TARGET_STOCK - inventoryCount, 0)
             : 0;
@@ -662,11 +684,16 @@ function computeCashSummary({
     };
 }
 
-function computeStockSummary(products = [], threshold = LOW_STOCK_THRESHOLD) {
+function computeStockSummary(products = [], threshold = LOW_STOCK_THRESHOLD, categories = []) {
+    const categoryNameMap = buildCategoryNameMap(categories);
     const lowStockRows = (products || [])
         .filter(product => {
             return Math.max(0, Math.floor(toNumber(product.inventoryCount))) <= threshold;
         })
+        .map(product => ({
+            ...product,
+            resolvedCategoryName: resolveProductCategoryName(product, categoryNameMap)
+        }))
         .sort((left, right) => {
             return toNumber(left.inventoryCount) - toNumber(right.inventoryCount);
         });
@@ -781,8 +808,9 @@ async function buildDashboardData(user, rangeSpec) {
             : Promise.resolve([])
     ]);
 
+    const categories = getState().masterData.categories || [];
     const products = getState().masterData.products || [];
-    const inventory = buildInventoryInsights(products);
+    const inventory = buildInventoryInsights(products, categories);
     const metrics = {
         leads: computeLeadSummary(leads),
         retail: computeRetailSummary(sales),
@@ -793,7 +821,7 @@ async function buildDashboardData(user, rangeSpec) {
             supplierPayments,
             consignmentPayments
         }),
-        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD),
+        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
         inventory
     };
 
@@ -880,7 +908,7 @@ function renderLowStockList(stock = {}) {
                 <li class="dashboard-list-item tone-warning">
                     <div class="dashboard-list-item-main">
                         <p class="dashboard-list-item-title">${product.itemName || product.productName || "Untitled Product"}</p>
-                        <p class="dashboard-list-item-copy">${product.productCategoryName || product.categoryName || "Uncategorized"}</p>
+                        <p class="dashboard-list-item-copy">${product.resolvedCategoryName || product.productCategoryName || product.categoryName || "Uncategorized"}</p>
                     </div>
                     <div class="dashboard-list-item-meta">
                         <span class="status-pill">Stock: ${Math.max(0, Math.floor(toNumber(product.inventoryCount)))}</span>
@@ -910,14 +938,16 @@ function renderDashboardMarkup(user) {
     const dashboard = featureState.data;
     const displayName = user?.displayName || user?.email || "Team Member";
     const profile = dashboard?.profile || getDashboardProfile(user);
+    const categories = getState().masterData.categories || [];
+    const products = getState().masterData.products || [];
     const metrics = dashboard?.metrics || {
         leads: computeLeadSummary([]),
         retail: computeRetailSummary([]),
         purchases: computePurchaseSummary([]),
         consignment: computeConsignmentSummary([]),
         cash: computeCashSummary({}),
-        stock: computeStockSummary(getState().masterData.products || [], LOW_STOCK_THRESHOLD),
-        inventory: buildInventoryInsights(getState().masterData.products || [])
+        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
+        inventory: buildInventoryInsights(products, categories)
     };
     const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
     const storeChurch = metrics.retail.byStore?.["Church Store"] || { totalSales: 0, paymentReceived: 0, balanceDue: 0, expenses: 0, count: 0 };
@@ -928,7 +958,7 @@ function renderDashboardMarkup(user) {
     const windowLabel = dashboard?.rangeLabel || (activeRangeSpec.isValid ? activeRangeSpec.rangeLabel : getWindowLabel(featureState.selectedWindow));
     const durationLabel = dashboard ? `${dashboard.durationMs} ms` : "-";
     const primaryCards = dashboard?.primaryCards || buildPrimaryMetricCards(profile, metrics);
-    const inventory = metrics.inventory || buildInventoryInsights(getState().masterData.products || []);
+    const inventory = metrics.inventory || buildInventoryInsights(products, categories);
 
     return `
         <div class="dashboard-shell">
@@ -1336,10 +1366,12 @@ async function initializeInventoryCharts(inventory = {}) {
 }
 
 function syncDashboardInventoryVisuals() {
+    const categories = getState().masterData.categories || [];
+    const products = getState().masterData.products || [];
     const metrics = featureState.data?.metrics || {
-        inventory: buildInventoryInsights(getState().masterData.products || [])
+        inventory: buildInventoryInsights(products, categories)
     };
-    const inventory = metrics.inventory || buildInventoryInsights(getState().masterData.products || []);
+    const inventory = metrics.inventory || buildInventoryInsights(products, categories);
     initializeInventoryGrid(inventory);
     void initializeInventoryCharts(inventory);
 }
