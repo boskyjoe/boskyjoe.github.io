@@ -158,6 +158,10 @@ select {
     background: linear-gradient(135deg, var(--accent-alt) 0%, #3677bb 100%);
 }
 
+.panel-icon-danger-soft {
+    background: linear-gradient(135deg, #d85b5b 0%, #b84040 100%);
+}
+
 .panel-header h2,
 .panel-header h3 {
     margin: 0;
@@ -898,6 +902,10 @@ select {
     border-bottom: 1px solid var(--border);
 }
 
+.retail-payment-void-header .panel-copy {
+    color: #8f3d3d;
+}
+
 .purchase-payment-modal-title-row {
     display: flex;
     align-items: flex-start;
@@ -911,6 +919,21 @@ select {
 
 .purchase-payment-modal-body {
     overflow: auto;
+}
+
+.retail-void-mode-pill {
+    background: #fde9e6;
+    color: #9d2f2f;
+}
+
+.retail-payment-void-inline-note {
+    margin-top: 0;
+    margin-bottom: 0.95rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 0.8rem;
+    background: #fff3f1;
+    border: 1px solid rgba(184, 64, 64, 0.2);
+    color: #8f3d3d;
 }
 
 .retail-expense-modal-overlay {
@@ -1589,7 +1612,7 @@ select {
 .modal-root {
     position: fixed;
     inset: 0;
-    z-index: 1100;
+    z-index: 1400;
     display: none;
     align-items: center;
     justify-content: center;
