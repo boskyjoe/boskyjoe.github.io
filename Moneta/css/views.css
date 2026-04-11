@@ -98,6 +98,44 @@
     justify-content: flex-end;
 }
 
+.dashboard-custom-range {
+    display: none;
+    align-items: end;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.dashboard-custom-range.is-visible {
+    display: flex;
+}
+
+.dashboard-custom-field {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.dashboard-custom-field label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.dashboard-date-input {
+    min-height: 2rem;
+    min-width: 9.15rem;
+    font-size: 0.8rem;
+    padding: 0.36rem 0.55rem;
+}
+
+.dashboard-custom-apply {
+    min-height: 2rem;
+    padding: 0.35rem 0.72rem;
+    font-size: 0.78rem;
+}
+
 .dashboard-window-button {
     min-height: 2rem;
     padding: 0.4rem 0.75rem;
@@ -448,6 +486,10 @@
         justify-content: flex-start;
     }
 
+    .dashboard-custom-range {
+        justify-content: flex-start;
+    }
+
     .dashboard-secondary-grid {
         grid-template-columns: 1fr;
     }
@@ -458,6 +500,19 @@
     .dashboard-financial-grid,
     .dashboard-financial-grid-cash {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-custom-range {
+        align-items: stretch;
+    }
+
+    .dashboard-custom-field {
+        min-width: 100%;
+    }
+
+    .dashboard-date-input,
+    .dashboard-custom-apply {
+        width: 100%;
     }
 
     .dashboard-list-item {
