@@ -753,6 +753,26 @@
     max-width: 100%;
 }
 
+.reports-grid-toolbar {
+    margin-bottom: 0.8rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.reports-grid-search {
+    display: grid;
+    gap: 0.35rem;
+    min-width: min(100%, 24rem);
+    color: #516173;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.reports-activity-grid {
+    width: 100%;
+    min-height: 500px;
+}
+
 .reports-data-table th.reports-align-right,
 .reports-data-table td.reports-align-right {
     text-align: right;
