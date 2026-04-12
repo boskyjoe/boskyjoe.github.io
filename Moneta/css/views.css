@@ -558,6 +558,10 @@
     line-height: 1.35;
 }
 
+.dashboard-chart-empty[hidden] {
+    display: none;
+}
+
 .dashboard-inventory-grid-card {
     border: 1px solid #e2e8f0;
     border-radius: 0.85rem;
