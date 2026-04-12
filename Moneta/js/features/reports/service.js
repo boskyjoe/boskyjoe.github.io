@@ -98,6 +98,25 @@ export function formatDateTime(value) {
     });
 }
 
+export function formatUtcDateTime(value) {
+    if (!value) return "-";
+
+    const date = typeof value?.toDate === "function"
+        ? value.toDate()
+        : (value instanceof Date ? value : new Date(value));
+
+    if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "-";
+
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+    const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`;
+}
+
 export function formatAccountingCurrency(value, currency = "INR", locale = "en-IN") {
     const amount = roundCurrency(value);
     const formatter = new Intl.NumberFormat(locale, {
@@ -290,12 +309,33 @@ function resolveTransactionDate(row = {}, preferredFields = []) {
     return null;
 }
 
+function resolveRecordedAt(row = {}) {
+    const candidates = [
+        row?.recordedAt,
+        row?.createdAt,
+        row?.audit?.createdAt,
+        row?.updatedAt,
+        row?.audit?.updatedAt
+    ];
+
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        const date = toDateValue(candidate);
+        if (!Number.isNaN(date.getTime()) && date.getTime() > 0) {
+            return date;
+        }
+    }
+
+    return null;
+}
+
 function buildRetailMovementRows(rows = []) {
     return rows
         .map(row => {
             const amount = roundCurrency(row.amountApplied ?? row.amountPaid ?? row.totalCollected);
             if (amount === 0) return null;
             const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
+            const recordedAt = resolveRecordedAt(row);
             const storeName = normalizeText(row.store) || "Unknown Store";
             let storeKey = "other";
 
@@ -308,6 +348,8 @@ function buildRetailMovementRows(rows = []) {
             return {
                 id: row.id,
                 date: transactionDate,
+                transactionDate,
+                recordedAt,
                 sourceKey: "retail",
                 sourceLabel: `Retail Receipt${storeName ? ` - ${storeName}` : ""}`,
                 counterparty: normalizeText(row.customerName) || "Retail Customer",
@@ -328,10 +370,13 @@ function buildConsignmentMovementRows(rows = []) {
             const amount = roundCurrency(row.amountApplied ?? row.amountPaid ?? row.totalCollected);
             if (amount === 0) return null;
             const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
+            const recordedAt = resolveRecordedAt(row);
 
             return {
                 id: row.id,
                 date: transactionDate,
+                transactionDate,
+                recordedAt,
                 sourceKey: "consignment",
                 sourceLabel: "Consignment Receipt",
                 counterparty: normalizeText(row.teamName || row.teamMemberName) || "Consignment Team",
@@ -354,6 +399,7 @@ function buildDonationMovementRows(rows = [], { salesPayments = [] } = {}) {
             const amount = roundCurrency(row.amount);
             if (amount === 0) return null;
             const transactionDate = resolveTransactionDate(row, ["donationDate"]);
+            const recordedAt = resolveRecordedAt(row);
 
             const counterparty = normalizeText(row.customerName || row.teamName || row.donorName) || "Donation";
             const moduleType = normalizeText(row.moduleType);
@@ -379,6 +425,8 @@ function buildDonationMovementRows(rows = [], { salesPayments = [] } = {}) {
             return {
                 id: row.id,
                 date: transactionDate,
+                transactionDate,
+                recordedAt,
                 sourceKey: "donation",
                 sourceLabel: `Donation - ${donationSourceLabel}`,
                 counterparty,
@@ -398,12 +446,15 @@ function buildSupplierMovementRows(rows = []) {
             const paymentAmount = roundCurrency(row.amountPaid);
             if (paymentAmount === 0) return null;
             const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
+            const recordedAt = resolveRecordedAt(row);
 
             const cashAmount = roundCurrency(paymentAmount * -1);
 
             return {
                 id: row.id,
                 date: transactionDate,
+                transactionDate,
+                recordedAt,
                 sourceKey: "supplier",
                 sourceLabel: "Supplier Payment",
                 counterparty: normalizeText(row.supplierName) || "Supplier",

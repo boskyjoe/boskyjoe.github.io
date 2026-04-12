@@ -9,6 +9,7 @@ import {
     formatDateLabel,
     formatDateTime,
     formatSignedCurrency,
+    formatUtcDateTime,
     getCashFlowSummaryReport,
     getDefaultCashFlowCustomRange,
     resolveCashFlowRangeSpec
@@ -402,11 +403,18 @@ function getAccountingAmountClass(value) {
 function buildActivityGridColumnDefs() {
     return [
         {
-            field: "date",
+            field: "transactionDate",
             headerName: "Transaction Date",
             minWidth: 155,
             flex: 0.95,
             valueFormatter: params => formatDateLabel(params.value)
+        },
+        {
+            field: "recordedAt",
+            headerName: "Recorded At (UTC)",
+            minWidth: 200,
+            flex: 1.05,
+            valueFormatter: params => formatUtcDateTime(params.value)
         },
         {
             field: "sourceLabel",
