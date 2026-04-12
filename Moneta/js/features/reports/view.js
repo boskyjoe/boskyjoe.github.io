@@ -555,7 +555,7 @@ function renderActivitySection(reportData = null) {
                         value="${featureState.activitySearchTerm}">
                 </label>
             </div>
-            <div id="reports-cash-activity-grid" class="ag-theme-alpine moneta-grid reports-activity-grid" aria-label="Recent Cash Activity"></div>
+            <div id="reports-cash-activity-grid" class="ag-theme-alpine moneta-grid reports-activity-grid" style="height: 560px; width: 100%;" aria-label="Recent Cash Activity"></div>
         </section>
     `;
 }
