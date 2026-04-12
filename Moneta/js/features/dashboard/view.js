@@ -34,7 +34,12 @@ const featureState = {
     inventoryGridElement: null,
     stockStatusChart: null,
     lowStockCategoryChart: null,
-    chartSyncToken: 0
+    salesFinanceChart: null,
+    salesStoreChart: null,
+    cashPositionChart: null,
+    leadPipelineChart: null,
+    inventoryChartSyncToken: 0,
+    financialChartSyncToken: 0
 };
 
 function normalizeText(value) {
@@ -1085,49 +1090,71 @@ function renderDashboardMarkup(user) {
                     </div>
                     <span class="dashboard-section-badge">Window: ${windowLabel}</span>
                 </div>
-                <div class="dashboard-financial-grid">
-                    <article class="dashboard-financial-card dashboard-financial-card-hero">
-                        <p class="dashboard-financial-title">Total Sales</p>
-                        <p class="dashboard-financial-value">${formatCurrency(metrics.retail.totalSales)}</p>
-                        <div class="dashboard-financial-lines">
-                            <p><span>Payment Received</span><strong>${formatCurrency(metrics.retail.paymentReceived)}</strong></p>
-                            <p><span>Donations</span><strong>${formatCurrency(metrics.retail.donations)}</strong></p>
-                            <p><span>Balance Due</span><strong class="${metrics.retail.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.retail.balanceDue)}</strong></p>
-                            <p><span>Total Expenses</span><strong>${formatCurrency(metrics.retail.expenses)}</strong></p>
-                            <p><span>Returns</span><strong>${metrics.retail.returnCount}</strong></p>
-                        </div>
-                    </article>
-                    <article class="dashboard-financial-card">
-                        <p class="dashboard-financial-title">Consignment Orders</p>
-                        <div class="dashboard-financial-lines">
-                            <p><span>Checked Out</span><strong>${formatCurrency(metrics.consignment.checkedOutValue)}</strong></p>
-                            <p><span>Total Sold</span><strong>${formatCurrency(metrics.consignment.soldValue)}</strong></p>
-                            <p><span>Payment Received</span><strong>${formatCurrency(metrics.consignment.paymentReceived)}</strong></p>
-                            <p><span>Donations</span><strong>${formatCurrency(metrics.consignment.donations)}</strong></p>
-                            <p><span>Balance Due</span><strong class="${metrics.consignment.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.consignment.balanceDue)}</strong></p>
-                            <p><span>Expenses</span><strong>${formatCurrency(metrics.consignment.expenses)}</strong></p>
-                        </div>
-                    </article>
-                    <article class="dashboard-financial-card">
-                        <p class="dashboard-financial-title">Tasty Treats</p>
-                        <div class="dashboard-financial-lines">
-                            <p><span>Total Sold</span><strong>${formatCurrency(storeTasty.totalSales)}</strong></p>
-                            <p><span>Payment Received</span><strong>${formatCurrency(storeTasty.paymentReceived)}</strong></p>
-                            <p><span>Donations</span><strong>${formatCurrency(storeTasty.donations)}</strong></p>
-                            <p><span>Balance Due</span><strong class="${storeTasty.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeTasty.balanceDue)}</strong></p>
-                            <p><span>Expenses</span><strong>${formatCurrency(storeTasty.expenses)}</strong></p>
-                        </div>
-                    </article>
-                    <article class="dashboard-financial-card">
-                        <p class="dashboard-financial-title">Church Store</p>
-                        <div class="dashboard-financial-lines">
-                            <p><span>Total Sold</span><strong>${formatCurrency(storeChurch.totalSales)}</strong></p>
-                            <p><span>Payment Received</span><strong>${formatCurrency(storeChurch.paymentReceived)}</strong></p>
-                            <p><span>Donations</span><strong>${formatCurrency(storeChurch.donations)}</strong></p>
-                            <p><span>Balance Due</span><strong class="${storeChurch.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeChurch.balanceDue)}</strong></p>
-                            <p><span>Expenses</span><strong>${formatCurrency(storeChurch.expenses)}</strong></p>
-                        </div>
-                    </article>
+                <div class="dashboard-financial-layout">
+                    <div class="dashboard-financial-grid dashboard-financial-grid-compact is-compact">
+                        <article class="dashboard-financial-card dashboard-financial-card-hero">
+                            <p class="dashboard-financial-title">Total Sales</p>
+                            <p class="dashboard-financial-value">${formatCurrency(metrics.retail.totalSales)}</p>
+                            <div class="dashboard-financial-lines">
+                                <p><span>Payment Received</span><strong>${formatCurrency(metrics.retail.paymentReceived)}</strong></p>
+                                <p><span>Donations</span><strong>${formatCurrency(metrics.retail.donations)}</strong></p>
+                                <p><span>Balance Due</span><strong class="${metrics.retail.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.retail.balanceDue)}</strong></p>
+                                <p><span>Total Expenses</span><strong>${formatCurrency(metrics.retail.expenses)}</strong></p>
+                                <p><span>Returns</span><strong>${metrics.retail.returnCount}</strong></p>
+                            </div>
+                        </article>
+                        <article class="dashboard-financial-card">
+                            <p class="dashboard-financial-title">Consignment Orders</p>
+                            <div class="dashboard-financial-lines">
+                                <p><span>Checked Out</span><strong>${formatCurrency(metrics.consignment.checkedOutValue)}</strong></p>
+                                <p><span>Total Sold</span><strong>${formatCurrency(metrics.consignment.soldValue)}</strong></p>
+                                <p><span>Payment Received</span><strong>${formatCurrency(metrics.consignment.paymentReceived)}</strong></p>
+                                <p><span>Donations</span><strong>${formatCurrency(metrics.consignment.donations)}</strong></p>
+                                <p><span>Balance Due</span><strong class="${metrics.consignment.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.consignment.balanceDue)}</strong></p>
+                                <p><span>Expenses</span><strong>${formatCurrency(metrics.consignment.expenses)}</strong></p>
+                            </div>
+                        </article>
+                        <article class="dashboard-financial-card">
+                            <p class="dashboard-financial-title">Tasty Treats</p>
+                            <div class="dashboard-financial-lines">
+                                <p><span>Total Sold</span><strong>${formatCurrency(storeTasty.totalSales)}</strong></p>
+                                <p><span>Payment Received</span><strong>${formatCurrency(storeTasty.paymentReceived)}</strong></p>
+                                <p><span>Donations</span><strong>${formatCurrency(storeTasty.donations)}</strong></p>
+                                <p><span>Balance Due</span><strong class="${storeTasty.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeTasty.balanceDue)}</strong></p>
+                                <p><span>Expenses</span><strong>${formatCurrency(storeTasty.expenses)}</strong></p>
+                            </div>
+                        </article>
+                        <article class="dashboard-financial-card">
+                            <p class="dashboard-financial-title">Church Store</p>
+                            <div class="dashboard-financial-lines">
+                                <p><span>Total Sold</span><strong>${formatCurrency(storeChurch.totalSales)}</strong></p>
+                                <p><span>Payment Received</span><strong>${formatCurrency(storeChurch.paymentReceived)}</strong></p>
+                                <p><span>Donations</span><strong>${formatCurrency(storeChurch.donations)}</strong></p>
+                                <p><span>Balance Due</span><strong class="${storeChurch.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(storeChurch.balanceDue)}</strong></p>
+                                <p><span>Expenses</span><strong>${formatCurrency(storeChurch.expenses)}</strong></p>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="dashboard-financial-charts">
+                        <article class="dashboard-chart-card dashboard-chart-card-compact">
+                            <div class="dashboard-chart-head">
+                                <h4>Retail vs Consignment</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
+                                <canvas id="dashboard-sales-finance-chart"></canvas>
+                                <div id="dashboard-sales-finance-empty" class="dashboard-chart-empty" hidden></div>
+                            </div>
+                        </article>
+                        <article class="dashboard-chart-card dashboard-chart-card-compact">
+                            <div class="dashboard-chart-head">
+                                <h4>Store Performance</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
+                                <canvas id="dashboard-sales-store-chart"></canvas>
+                                <div id="dashboard-sales-store-empty" class="dashboard-chart-empty" hidden></div>
+                            </div>
+                        </article>
+                    </div>
                 </div>
             </section>
 
@@ -1143,33 +1170,55 @@ function renderDashboardMarkup(user) {
                         </div>
                         <span class="dashboard-section-badge">Cash Flow</span>
                     </div>
-                    <div class="dashboard-financial-grid dashboard-financial-grid-cash">
-                        <article class="dashboard-financial-card dashboard-financial-card-hero dashboard-financial-card-cash">
-                            <p class="dashboard-financial-title">Net Cash In Hand</p>
-                            <p class="dashboard-financial-value ${metrics.cash.netCash >= 0 ? "dashboard-tone-success" : "dashboard-tone-danger"}">${formatSignedCurrency(metrics.cash.netCash)}</p>
-                            <div class="dashboard-financial-lines">
-                                <p><span>Retail Inflow</span><strong>${formatCurrency(metrics.cash.retailInflow)}</strong></p>
-                                <p><span>Consignment Inflow</span><strong>${formatCurrency(metrics.cash.consignmentInflow)}</strong></p>
-                                <p><span>Donation Inflow</span><strong>${formatCurrency(metrics.cash.donationInflow)}</strong></p>
-                                <p><span>Supplier Outflow</span><strong>${formatCurrency(metrics.cash.supplierOutflow)}</strong></p>
-                            </div>
-                        </article>
-                        <article class="dashboard-financial-card">
-                            <p class="dashboard-financial-title">Purchases</p>
-                            <div class="dashboard-financial-lines">
-                                <p><span>Invoice Total</span><strong>${formatCurrency(metrics.purchases.invoiceTotal)}</strong></p>
-                                <p><span>Amount Paid</span><strong>${formatCurrency(metrics.purchases.amountPaid)}</strong></p>
-                                <p><span>Balance Due</span><strong class="${metrics.purchases.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.purchases.balanceDue)}</strong></p>
-                            </div>
-                        </article>
-                        <article class="dashboard-financial-card">
-                            <p class="dashboard-financial-title">Leads Pipeline</p>
-                            <div class="dashboard-financial-lines">
-                                <p><span>Open Leads</span><strong>${metrics.leads.open}</strong></p>
-                                <p><span>Qualified</span><strong>${metrics.leads.qualified}</strong></p>
-                                <p><span>Ready To Convert</span><strong>${metrics.leads.readyToConvert}</strong></p>
-                            </div>
-                        </article>
+                    <div class="dashboard-financial-layout dashboard-financial-layout-cash">
+                        <div class="dashboard-financial-grid dashboard-financial-grid-cash is-compact">
+                            <article class="dashboard-financial-card dashboard-financial-card-hero dashboard-financial-card-cash">
+                                <p class="dashboard-financial-title">Net Cash In Hand</p>
+                                <p class="dashboard-financial-value ${metrics.cash.netCash >= 0 ? "dashboard-tone-success" : "dashboard-tone-danger"}">${formatSignedCurrency(metrics.cash.netCash)}</p>
+                                <div class="dashboard-financial-lines">
+                                    <p><span>Retail Inflow</span><strong>${formatCurrency(metrics.cash.retailInflow)}</strong></p>
+                                    <p><span>Consignment Inflow</span><strong>${formatCurrency(metrics.cash.consignmentInflow)}</strong></p>
+                                    <p><span>Donation Inflow</span><strong>${formatCurrency(metrics.cash.donationInflow)}</strong></p>
+                                    <p><span>Supplier Outflow</span><strong>${formatCurrency(metrics.cash.supplierOutflow)}</strong></p>
+                                </div>
+                            </article>
+                            <article class="dashboard-financial-card">
+                                <p class="dashboard-financial-title">Purchases</p>
+                                <div class="dashboard-financial-lines">
+                                    <p><span>Invoice Total</span><strong>${formatCurrency(metrics.purchases.invoiceTotal)}</strong></p>
+                                    <p><span>Amount Paid</span><strong>${formatCurrency(metrics.purchases.amountPaid)}</strong></p>
+                                    <p><span>Balance Due</span><strong class="${metrics.purchases.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.purchases.balanceDue)}</strong></p>
+                                </div>
+                            </article>
+                            <article class="dashboard-financial-card">
+                                <p class="dashboard-financial-title">Leads Pipeline</p>
+                                <div class="dashboard-financial-lines">
+                                    <p><span>Open Leads</span><strong>${metrics.leads.open}</strong></p>
+                                    <p><span>Qualified</span><strong>${metrics.leads.qualified}</strong></p>
+                                    <p><span>Ready To Convert</span><strong>${metrics.leads.readyToConvert}</strong></p>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="dashboard-financial-charts dashboard-financial-charts-cash">
+                            <article class="dashboard-chart-card dashboard-chart-card-compact">
+                                <div class="dashboard-chart-head">
+                                    <h4>Cash Flow Mix</h4>
+                                </div>
+                                <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
+                                    <canvas id="dashboard-cash-position-chart"></canvas>
+                                    <div id="dashboard-cash-position-empty" class="dashboard-chart-empty" hidden></div>
+                                </div>
+                            </article>
+                            <article class="dashboard-chart-card dashboard-chart-card-compact">
+                                <div class="dashboard-chart-head">
+                                    <h4>Lead Pipeline Mix</h4>
+                                </div>
+                                <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
+                                    <canvas id="dashboard-lead-pipeline-chart"></canvas>
+                                    <div id="dashboard-lead-pipeline-empty" class="dashboard-chart-empty" hidden></div>
+                                </div>
+                            </article>
+                        </div>
                     </div>
                 </section>
             ` : ""}
@@ -1262,10 +1311,23 @@ function destroyInventoryCharts() {
     featureState.lowStockCategoryChart = null;
 }
 
+function destroyFinancialCharts() {
+    featureState.salesFinanceChart?.destroy();
+    featureState.salesStoreChart?.destroy();
+    featureState.cashPositionChart?.destroy();
+    featureState.leadPipelineChart?.destroy();
+    featureState.salesFinanceChart = null;
+    featureState.salesStoreChart = null;
+    featureState.cashPositionChart = null;
+    featureState.leadPipelineChart = null;
+}
+
 function cleanupDashboardVisuals() {
-    featureState.chartSyncToken += 1;
+    featureState.inventoryChartSyncToken += 1;
+    featureState.financialChartSyncToken += 1;
     destroyInventoryGrid();
     destroyInventoryCharts();
+    destroyFinancialCharts();
 }
 
 function initializeInventoryGrid(inventory = {}) {
@@ -1349,6 +1411,17 @@ async function loadChartJs() {
     return chartJsModulePromise;
 }
 
+function setChartVisibility(canvas, emptyNode, { showChart, message = "" }) {
+    if (!canvas) return;
+    canvas.hidden = !showChart;
+    if (emptyNode) {
+        emptyNode.hidden = showChart;
+        if (!showChart) {
+            emptyNode.textContent = message;
+        }
+    }
+}
+
 async function initializeInventoryCharts(inventory = {}) {
     const statusCanvas = document.getElementById("dashboard-inventory-status-chart");
     const categoryCanvas = document.getElementById("dashboard-inventory-category-chart");
@@ -1360,17 +1433,7 @@ async function initializeInventoryCharts(inventory = {}) {
         return;
     }
 
-    function setChartVisibility(canvas, emptyNode, { showChart, message = "" }) {
-        canvas.hidden = !showChart;
-        if (emptyNode) {
-            emptyNode.hidden = showChart;
-            if (!showChart) {
-                emptyNode.textContent = message;
-            }
-        }
-    }
-
-    const syncToken = ++featureState.chartSyncToken;
+    const syncToken = ++featureState.inventoryChartSyncToken;
     const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
     const statusData = [counts.out || 0, counts.low || 0, counts.medium || 0, counts.healthy || 0];
     const statusTotal = statusData.reduce((sum, value) => sum + (Number(value) || 0), 0);
@@ -1399,7 +1462,7 @@ async function initializeInventoryCharts(inventory = {}) {
 
     try {
         const chartJs = await loadChartJs();
-        if (syncToken !== featureState.chartSyncToken) return;
+        if (syncToken !== featureState.inventoryChartSyncToken) return;
 
         const {
             Chart,
@@ -1507,6 +1570,305 @@ async function initializeInventoryCharts(inventory = {}) {
     }
 }
 
+async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } = {}) {
+    const salesFinanceCanvas = document.getElementById("dashboard-sales-finance-chart");
+    const salesStoreCanvas = document.getElementById("dashboard-sales-store-chart");
+    const cashPositionCanvas = document.getElementById("dashboard-cash-position-chart");
+    const leadPipelineCanvas = document.getElementById("dashboard-lead-pipeline-chart");
+
+    const salesFinanceEmpty = document.getElementById("dashboard-sales-finance-empty");
+    const salesStoreEmpty = document.getElementById("dashboard-sales-store-empty");
+    const cashPositionEmpty = document.getElementById("dashboard-cash-position-empty");
+    const leadPipelineEmpty = document.getElementById("dashboard-lead-pipeline-empty");
+
+    if (!salesFinanceCanvas || !salesStoreCanvas) {
+        destroyFinancialCharts();
+        return;
+    }
+
+    const retail = metrics.retail || {};
+    const consignment = metrics.consignment || {};
+    const leads = metrics.leads || {};
+    const cash = metrics.cash || {};
+    const storeMetrics = retail.byStore || {};
+    const tastyStore = storeMetrics["Tasty Treats"] || {};
+    const churchStore = storeMetrics["Church Store"] || {};
+
+    const salesFinanceDatasets = {
+        labels: ["Total Sold", "Collected", "Donations", "Expenses", "Balance Due"],
+        retail: [
+            toNumber(retail.totalSales),
+            toNumber(retail.paymentReceived),
+            toNumber(retail.donations),
+            toNumber(retail.expenses),
+            toNumber(retail.balanceDue)
+        ],
+        consignment: [
+            toNumber(consignment.soldValue),
+            toNumber(consignment.paymentReceived),
+            toNumber(consignment.donations),
+            toNumber(consignment.expenses),
+            toNumber(consignment.balanceDue)
+        ]
+    };
+    const hasSalesFinanceData = [...salesFinanceDatasets.retail, ...salesFinanceDatasets.consignment].some(value => value > 0);
+
+    const salesStoreLabels = ["Tasty Treats", "Church Store"];
+    const salesStoreData = [
+        toNumber(tastyStore.totalSales),
+        toNumber(churchStore.totalSales)
+    ];
+    const hasStoreData = salesStoreData.some(value => value > 0);
+
+    const cashFlowLabels = ["Retail Inflow", "Consignment Inflow", "Donations", "Supplier Outflow"];
+    const cashFlowData = [
+        toNumber(cash.retailInflow),
+        toNumber(cash.consignmentInflow),
+        toNumber(cash.donationInflow),
+        toNumber(cash.supplierOutflow)
+    ];
+    const hasCashFlowData = cashFlowData.some(value => value > 0);
+
+    const leadPipelineLabels = ["Open", "Qualified", "Ready To Convert"];
+    const leadPipelineData = [
+        Math.max(0, Math.floor(toNumber(leads.open))),
+        Math.max(0, Math.floor(toNumber(leads.qualified))),
+        Math.max(0, Math.floor(toNumber(leads.readyToConvert)))
+    ];
+    const hasLeadData = leadPipelineData.some(value => value > 0);
+
+    setChartVisibility(salesFinanceCanvas, salesFinanceEmpty, {
+        showChart: hasSalesFinanceData,
+        message: "No sales finance data is available yet for this dashboard range."
+    });
+    setChartVisibility(salesStoreCanvas, salesStoreEmpty, {
+        showChart: hasStoreData,
+        message: "Store-level sales data will appear here once sales are recorded."
+    });
+
+    if (canCashFlow && cashPositionCanvas) {
+        setChartVisibility(cashPositionCanvas, cashPositionEmpty, {
+            showChart: hasCashFlowData,
+            message: "Cash flow data is not available yet for this dashboard range."
+        });
+    }
+    if (canCashFlow && leadPipelineCanvas) {
+        setChartVisibility(leadPipelineCanvas, leadPipelineEmpty, {
+            showChart: hasLeadData,
+            message: "Lead pipeline counts are not available yet for this dashboard range."
+        });
+    }
+
+    destroyFinancialCharts();
+
+    if (!hasSalesFinanceData && !hasStoreData && (!canCashFlow || (!hasCashFlowData && !hasLeadData))) {
+        return;
+    }
+
+    const syncToken = ++featureState.financialChartSyncToken;
+
+    try {
+        const chartJs = await loadChartJs();
+        if (syncToken !== featureState.financialChartSyncToken) return;
+
+        const {
+            Chart,
+            ArcElement,
+            Tooltip,
+            Legend,
+            CategoryScale,
+            LinearScale,
+            BarElement
+        } = chartJs;
+
+        Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+        if (hasSalesFinanceData) {
+            featureState.salesFinanceChart = new Chart(salesFinanceCanvas.getContext("2d"), {
+                type: "bar",
+                data: {
+                    labels: salesFinanceDatasets.labels,
+                    datasets: [
+                        {
+                            label: "Retail",
+                            data: salesFinanceDatasets.retail,
+                            backgroundColor: "#2563eb",
+                            borderRadius: 6
+                        },
+                        {
+                            label: "Consignment",
+                            data: salesFinanceDatasets.consignment,
+                            backgroundColor: "#0f766e",
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        if (hasStoreData) {
+            featureState.salesStoreChart = new Chart(salesStoreCanvas.getContext("2d"), {
+                type: "doughnut",
+                data: {
+                    labels: salesStoreLabels,
+                    datasets: [{
+                        data: salesStoreData,
+                        backgroundColor: ["#f97316", "#0ea5e9"],
+                        borderColor: "#ffffff",
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        if (canCashFlow && cashPositionCanvas && hasCashFlowData) {
+            featureState.cashPositionChart = new Chart(cashPositionCanvas.getContext("2d"), {
+                type: "bar",
+                data: {
+                    labels: cashFlowLabels,
+                    datasets: [{
+                        label: "Amount",
+                        data: cashFlowData,
+                        backgroundColor: ["#2563eb", "#0ea5e9", "#16a34a", "#dc2626"],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        if (canCashFlow && leadPipelineCanvas && hasLeadData) {
+            featureState.leadPipelineChart = new Chart(leadPipelineCanvas.getContext("2d"), {
+                type: "doughnut",
+                data: {
+                    labels: leadPipelineLabels,
+                    datasets: [{
+                        data: leadPipelineData,
+                        backgroundColor: ["#2563eb", "#f59e0b", "#16a34a"],
+                        borderColor: "#ffffff",
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        requestAnimationFrame(() => {
+            featureState.salesFinanceChart?.resize();
+            featureState.salesStoreChart?.resize();
+            featureState.cashPositionChart?.resize();
+            featureState.leadPipelineChart?.resize();
+        });
+
+        if (hasSalesFinanceData && !featureState.salesFinanceChart) {
+            setChartVisibility(salesFinanceCanvas, salesFinanceEmpty, {
+                showChart: false,
+                message: "Sales finance chart is unavailable right now. Card metrics are still up to date."
+            });
+        }
+        if (hasStoreData && !featureState.salesStoreChart) {
+            setChartVisibility(salesStoreCanvas, salesStoreEmpty, {
+                showChart: false,
+                message: "Store mix chart is unavailable right now. Use store cards for totals."
+            });
+        }
+        if (canCashFlow && hasCashFlowData && !featureState.cashPositionChart && cashPositionCanvas) {
+            setChartVisibility(cashPositionCanvas, cashPositionEmpty, {
+                showChart: false,
+                message: "Cash flow chart is unavailable right now. Card metrics are still available."
+            });
+        }
+        if (canCashFlow && hasLeadData && !featureState.leadPipelineChart && leadPipelineCanvas) {
+            setChartVisibility(leadPipelineCanvas, leadPipelineEmpty, {
+                showChart: false,
+                message: "Lead pipeline chart is unavailable right now. Lead counts are still visible in cards."
+            });
+        }
+    } catch (error) {
+        console.error("[Moneta] Dashboard finance charts failed:", error);
+        if (hasSalesFinanceData) {
+            setChartVisibility(salesFinanceCanvas, salesFinanceEmpty, {
+                showChart: false,
+                message: "Sales chart preview is unavailable right now. Use the card metrics above."
+            });
+        }
+        if (hasStoreData) {
+            setChartVisibility(salesStoreCanvas, salesStoreEmpty, {
+                showChart: false,
+                message: "Store chart is unavailable right now. Store totals remain available in cards."
+            });
+        }
+        if (canCashFlow && hasCashFlowData && cashPositionCanvas) {
+            setChartVisibility(cashPositionCanvas, cashPositionEmpty, {
+                showChart: false,
+                message: "Cash flow chart is unavailable right now. Use the card metrics above."
+            });
+        }
+        if (canCashFlow && hasLeadData && leadPipelineCanvas) {
+            setChartVisibility(leadPipelineCanvas, leadPipelineEmpty, {
+                showChart: false,
+                message: "Lead chart is unavailable right now. Lead counts remain available in cards."
+            });
+        }
+    }
+}
+
 function syncDashboardInventoryVisuals() {
     const categories = getState().masterData.categories || [];
     const products = getState().masterData.products || [];
@@ -1516,6 +1878,22 @@ function syncDashboardInventoryVisuals() {
     const inventory = metrics.inventory || buildInventoryInsights(products, categories);
     initializeInventoryGrid(inventory);
     void initializeInventoryCharts(inventory);
+}
+
+function syncDashboardFinancialVisuals() {
+    const categories = getState().masterData.categories || [];
+    const products = getState().masterData.products || [];
+    const metrics = featureState.data?.metrics || {
+        leads: computeLeadSummary([]),
+        retail: computeRetailSummary([]),
+        purchases: computePurchaseSummary([]),
+        consignment: computeConsignmentSummary([]),
+        cash: computeCashSummary({}),
+        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
+        inventory: buildInventoryInsights(products, categories)
+    };
+    const profile = featureState.data?.profile || getDashboardProfile(getState().currentUser);
+    void initializeFinancialCharts(metrics, { canCashFlow: Boolean(profile?.canCashFlow) });
 }
 
 function bindDashboardEvents(user) {
@@ -1674,6 +2052,7 @@ export function renderDashboardView(user) {
     root.innerHTML = renderDashboardMarkup(user);
     bindDashboardEvents(user);
     syncDashboardInventoryVisuals();
+    syncDashboardFinancialVisuals();
 
     const rangeSpec = resolveActiveRangeSpec();
     if (rangeSpec.isValid && !featureState.isLoading && (!featureState.data || Date.now() > featureState.expiresAt)) {
