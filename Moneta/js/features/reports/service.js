@@ -303,23 +303,47 @@ function buildConsignmentMovementRows(rows = []) {
         .filter(Boolean);
 }
 
-function buildDonationMovementRows(rows = []) {
+function buildDonationMovementRows(rows = [], { salesPayments = [] } = {}) {
+    const salesPaymentStoreMap = new Map(
+        (salesPayments || []).map(row => [row.id, normalizeText(row.store)])
+    );
+
     return rows
         .map(row => {
             const amount = roundCurrency(row.amount);
             if (amount === 0) return null;
 
             const counterparty = normalizeText(row.customerName || row.teamName || row.donorName) || "Donation";
+            const moduleType = normalizeText(row.moduleType);
+            const sourcePaymentDocId = normalizeText(row.sourcePaymentDocId);
+            const retailStore = salesPaymentStoreMap.get(sourcePaymentDocId) || "";
+            let donationSourceKey = "other";
+            let donationSourceLabel = "Other";
+
+            if (moduleType === "Simple Consignment") {
+                donationSourceKey = "consignment";
+                donationSourceLabel = "Consignment";
+            } else if (retailStore === "Tasty Treats") {
+                donationSourceKey = "tastyTreats";
+                donationSourceLabel = "Tasty Treats";
+            } else if (retailStore === "Church Store") {
+                donationSourceKey = "churchStore";
+                donationSourceLabel = "Church Store";
+            } else if (moduleType === "Retail Store") {
+                donationSourceKey = "otherRetail";
+                donationSourceLabel = "Retail Other";
+            }
 
             return {
                 id: row.id,
                 date: row.donationDate,
                 sourceKey: "donation",
-                sourceLabel: "Donation",
+                sourceLabel: `Donation - ${donationSourceLabel}`,
                 counterparty,
                 reference: normalizeText(row.donationId || row.paymentReference || row.sourceSaleId || row.sourceOrderId || row.id),
                 notes: normalizeText(row.notes || row.reason || row.sourceCollection || ""),
                 amount,
+                donationSourceKey,
                 statementBucket: amount >= 0 ? "donationReceipts" : "donationReversals"
             };
         })
@@ -366,6 +390,16 @@ function buildStatementTotals(movements = []) {
             churchStoreReversals: 0,
             otherReceipts: 0,
             otherReversals: 0
+        },
+        donationBySource: {
+            tastyTreatsReceipts: 0,
+            tastyTreatsReversals: 0,
+            churchStoreReceipts: 0,
+            churchStoreReversals: 0,
+            consignmentReceipts: 0,
+            consignmentReversals: 0,
+            otherReceipts: 0,
+            otherReversals: 0
         }
     };
 
@@ -389,6 +423,35 @@ function buildStatementTotals(movements = []) {
                     storeMap.otherReceipts = roundCurrency(storeMap.otherReceipts + row.amount);
                 } else {
                     storeMap.otherReversals = roundCurrency(storeMap.otherReversals + row.amount);
+                }
+            }
+        }
+
+        if (row.sourceKey === "donation") {
+            const donationMap = totals.donationBySource;
+            if (row.donationSourceKey === "tastyTreats") {
+                if (row.amount >= 0) {
+                    donationMap.tastyTreatsReceipts = roundCurrency(donationMap.tastyTreatsReceipts + row.amount);
+                } else {
+                    donationMap.tastyTreatsReversals = roundCurrency(donationMap.tastyTreatsReversals + row.amount);
+                }
+            } else if (row.donationSourceKey === "churchStore") {
+                if (row.amount >= 0) {
+                    donationMap.churchStoreReceipts = roundCurrency(donationMap.churchStoreReceipts + row.amount);
+                } else {
+                    donationMap.churchStoreReversals = roundCurrency(donationMap.churchStoreReversals + row.amount);
+                }
+            } else if (row.donationSourceKey === "consignment") {
+                if (row.amount >= 0) {
+                    donationMap.consignmentReceipts = roundCurrency(donationMap.consignmentReceipts + row.amount);
+                } else {
+                    donationMap.consignmentReversals = roundCurrency(donationMap.consignmentReversals + row.amount);
+                }
+            } else {
+                if (row.amount >= 0) {
+                    donationMap.otherReceipts = roundCurrency(donationMap.otherReceipts + row.amount);
+                } else {
+                    donationMap.otherReversals = roundCurrency(donationMap.otherReversals + row.amount);
                 }
             }
         }
@@ -473,12 +536,8 @@ function buildActivityRows(movements = []) {
 
 function buildStatementRows(statement = {}) {
     const rows = [
-        { section: "Cash Inflows", label: "Retail Receipts", amount: statement.retailReceipts, tone: "positive" },
-        { section: "Cash Inflows", label: "Retail Reversals / Refunds", amount: statement.retailReversals, tone: "negative" },
         { section: "Cash Inflows", label: "Consignment Receipts", amount: statement.consignmentReceipts, tone: "positive" },
         { section: "Cash Inflows", label: "Consignment Reversals", amount: statement.consignmentReversals, tone: "negative" },
-        { section: "Cash Inflows", label: "Donations Received", amount: statement.donationReceipts, tone: "positive" },
-        { section: "Cash Inflows", label: "Donation Reversals", amount: statement.donationReversals, tone: "negative" },
         { section: "Cash Inflows", label: "Total Cash Inflows", amount: statement.totalInflows, tone: "total" },
         { section: "Cash Outflows", label: "Supplier Payments", amount: statement.supplierPayments, tone: "positive" },
         { section: "Cash Outflows", label: "Supplier Payment Reversals", amount: statement.supplierReversals, tone: "negative" },
@@ -501,7 +560,38 @@ function buildStatementRows(statement = {}) {
         );
     }
 
-    return [...storeBreakdownRows, ...rows];
+    storeBreakdownRows.push({
+        section: "Retail Breakdown",
+        label: "Total Retail Net Cash",
+        amount: roundCurrency(statement.retailReceipts + statement.retailReversals),
+        tone: "total"
+    });
+
+    const donationBySource = statement.donationBySource || {};
+    const donationBreakdownRows = [
+        { section: "Donation Breakdown", label: "Tasty Treats Donations Received", amount: donationBySource.tastyTreatsReceipts || 0 },
+        { section: "Donation Breakdown", label: "Tasty Treats Donation Reversals", amount: donationBySource.tastyTreatsReversals || 0 },
+        { section: "Donation Breakdown", label: "Church Store Donations Received", amount: donationBySource.churchStoreReceipts || 0 },
+        { section: "Donation Breakdown", label: "Church Store Donation Reversals", amount: donationBySource.churchStoreReversals || 0 },
+        { section: "Donation Breakdown", label: "Consignment Donations Received", amount: donationBySource.consignmentReceipts || 0 },
+        { section: "Donation Breakdown", label: "Consignment Donation Reversals", amount: donationBySource.consignmentReversals || 0 }
+    ];
+
+    if ((donationBySource.otherReceipts || 0) !== 0 || (donationBySource.otherReversals || 0) !== 0) {
+        donationBreakdownRows.push(
+            { section: "Donation Breakdown", label: "Other Donations Received", amount: donationBySource.otherReceipts || 0 },
+            { section: "Donation Breakdown", label: "Other Donation Reversals", amount: donationBySource.otherReversals || 0 }
+        );
+    }
+
+    donationBreakdownRows.push({
+        section: "Donation Breakdown",
+        label: "Total Donation Net Cash",
+        amount: roundCurrency(statement.donationReceipts + statement.donationReversals),
+        tone: "total"
+    });
+
+    return [...storeBreakdownRows, ...donationBreakdownRows, ...rows];
 }
 
 function buildCashFlowSummaryFromRows({
@@ -516,7 +606,7 @@ function buildCashFlowSummaryFromRows({
     const movements = [
         ...buildRetailMovementRows(salesPayments),
         ...buildConsignmentMovementRows(consignmentPayments),
-        ...buildDonationMovementRows(donations),
+        ...buildDonationMovementRows(donations, { salesPayments }),
         ...buildSupplierMovementRows(supplierPayments)
     ].sort((left, right) => toDateValue(right.date).getTime() - toDateValue(left.date).getTime());
 
