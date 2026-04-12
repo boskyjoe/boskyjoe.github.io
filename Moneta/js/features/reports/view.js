@@ -338,6 +338,11 @@ function renderReportsHub(user) {
 
 function renderCashFlowSummaryCards(reportData = null) {
     const summary = reportData?.summary || {
+        retailByStore: {
+            tastyTreats: 0,
+            churchStore: 0,
+            other: 0
+        },
         retailNet: 0,
         consignmentNet: 0,
         donationNet: 0,
@@ -348,16 +353,21 @@ function renderCashFlowSummaryCards(reportData = null) {
     return `
         <section class="dashboard-kpi-grid">
             <article class="dashboard-kpi-card tone-primary">
-                <p class="dashboard-kpi-title">Retail Net Cash</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.retailNet)}</p>
-                <p class="dashboard-kpi-meta">Cash collected less retail reversals</p>
+                <p class="dashboard-kpi-title">Tasty Treats Net Cash</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.retailByStore.tastyTreats)}</p>
+                <p class="dashboard-kpi-meta">Receipts less reversals for Tasty Treats</p>
             </article>
             <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Church Store Net Cash</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.retailByStore.churchStore)}</p>
+                <p class="dashboard-kpi-meta">Receipts less reversals for Church Store</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
                 <p class="dashboard-kpi-title">Consignment Net Cash</p>
                 <p class="dashboard-kpi-value">${formatCurrency(summary.consignmentNet)}</p>
                 <p class="dashboard-kpi-meta">Settlements collected less reversals</p>
             </article>
-            <article class="dashboard-kpi-card tone-success">
+            <article class="dashboard-kpi-card tone-warning">
                 <p class="dashboard-kpi-title">Donation Net Cash</p>
                 <p class="dashboard-kpi-value">${formatCurrency(summary.donationNet)}</p>
                 <p class="dashboard-kpi-meta">Donation inflows after reversals</p>
@@ -374,6 +384,12 @@ function renderCashFlowSummaryCards(reportData = null) {
             </article>
         </section>
     `;
+}
+
+function getAccountingAmountClass(value) {
+    if ((Number(value) || 0) < 0) return "reports-amount-negative";
+    if ((Number(value) || 0) > 0) return "reports-amount-positive";
+    return "";
 }
 
 function renderCashFlowStatementSection(reportData = null) {
@@ -402,7 +418,7 @@ function renderCashFlowStatementSection(reportData = null) {
                             <tr class="${row.tone === "total" ? "reports-row-total" : ""}">
                                 <td>${row.section}</td>
                                 <td>${row.label}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(row.amount)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.amount)}">${formatAccountingCurrency(row.amount)}</td>
                             </tr>
                         `).join("") : `
                             <tr>
@@ -444,10 +460,10 @@ function renderDailyMovementSection(reportData = null) {
                         ${rows.length ? rows.map(row => `
                             <tr>
                                 <td>${formatDateLabel(row.date)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(row.retail)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(row.consignment)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(row.donations)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(row.suppliers)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.retail)}">${formatAccountingCurrency(row.retail)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.consignment)}">${formatAccountingCurrency(row.consignment)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.donations)}">${formatAccountingCurrency(row.donations)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.suppliers)}">${formatAccountingCurrency(row.suppliers)}</td>
                                 <td class="reports-align-right ${row.net >= 0 ? "reports-amount-positive" : "reports-amount-negative"}">${formatSignedCurrency(row.net)}</td>
                             </tr>
                         `).join("") : `

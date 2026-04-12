@@ -256,16 +256,26 @@ function buildRetailMovementRows(rows = []) {
         .map(row => {
             const amount = roundCurrency(row.amountApplied ?? row.amountPaid ?? row.totalCollected);
             if (amount === 0) return null;
+            const storeName = normalizeText(row.store) || "Unknown Store";
+            let storeKey = "other";
+
+            if (storeName === "Tasty Treats") {
+                storeKey = "tastyTreats";
+            } else if (storeName === "Church Store") {
+                storeKey = "churchStore";
+            }
 
             return {
                 id: row.id,
                 date: row.paymentDate,
                 sourceKey: "retail",
-                sourceLabel: "Retail Receipt",
+                sourceLabel: `Retail Receipt${storeName ? ` - ${storeName}` : ""}`,
                 counterparty: normalizeText(row.customerName) || "Retail Customer",
                 reference: normalizeText(row.paymentId || row.transactionRef || row.invoiceId || row.relatedSaleId || row.id),
                 notes: normalizeText(row.notes || row.paymentNotes || row.modeOfPayment || ""),
                 amount,
+                storeKey,
+                storeName,
                 statementBucket: amount >= 0 ? "retailReceipts" : "retailReversals"
             };
         })
@@ -348,10 +358,41 @@ function buildStatementTotals(movements = []) {
         donationReceipts: 0,
         donationReversals: 0,
         supplierPayments: 0,
-        supplierReversals: 0
+        supplierReversals: 0,
+        retailByStore: {
+            tastyTreatsReceipts: 0,
+            tastyTreatsReversals: 0,
+            churchStoreReceipts: 0,
+            churchStoreReversals: 0,
+            otherReceipts: 0,
+            otherReversals: 0
+        }
     };
 
     movements.forEach(row => {
+        if (row.sourceKey === "retail") {
+            const storeMap = totals.retailByStore;
+            if (row.storeKey === "tastyTreats") {
+                if (row.amount >= 0) {
+                    storeMap.tastyTreatsReceipts = roundCurrency(storeMap.tastyTreatsReceipts + row.amount);
+                } else {
+                    storeMap.tastyTreatsReversals = roundCurrency(storeMap.tastyTreatsReversals + row.amount);
+                }
+            } else if (row.storeKey === "churchStore") {
+                if (row.amount >= 0) {
+                    storeMap.churchStoreReceipts = roundCurrency(storeMap.churchStoreReceipts + row.amount);
+                } else {
+                    storeMap.churchStoreReversals = roundCurrency(storeMap.churchStoreReversals + row.amount);
+                }
+            } else {
+                if (row.amount >= 0) {
+                    storeMap.otherReceipts = roundCurrency(storeMap.otherReceipts + row.amount);
+                } else {
+                    storeMap.otherReversals = roundCurrency(storeMap.otherReversals + row.amount);
+                }
+            }
+        }
+
         if (!Object.prototype.hasOwnProperty.call(totals, row.statementBucket)) return;
 
         if (row.statementBucket === "supplierPayments") {
@@ -431,7 +472,7 @@ function buildActivityRows(movements = []) {
 }
 
 function buildStatementRows(statement = {}) {
-    return [
+    const rows = [
         { section: "Cash Inflows", label: "Retail Receipts", amount: statement.retailReceipts, tone: "positive" },
         { section: "Cash Inflows", label: "Retail Reversals / Refunds", amount: statement.retailReversals, tone: "negative" },
         { section: "Cash Inflows", label: "Consignment Receipts", amount: statement.consignmentReceipts, tone: "positive" },
@@ -444,6 +485,23 @@ function buildStatementRows(statement = {}) {
         { section: "Cash Outflows", label: "Total Cash Outflows", amount: statement.totalOutflows, tone: "total" },
         { section: "Net Movement", label: "Net Cash Movement", amount: statement.netCashMovement, tone: statement.netCashMovement >= 0 ? "positive" : "negative" }
     ];
+
+    const retailByStore = statement.retailByStore || {};
+    const storeBreakdownRows = [
+        { section: "Retail Breakdown", label: "Tasty Treats Receipts", amount: retailByStore.tastyTreatsReceipts || 0 },
+        { section: "Retail Breakdown", label: "Tasty Treats Reversals / Refunds", amount: retailByStore.tastyTreatsReversals || 0 },
+        { section: "Retail Breakdown", label: "Church Store Receipts", amount: retailByStore.churchStoreReceipts || 0 },
+        { section: "Retail Breakdown", label: "Church Store Reversals / Refunds", amount: retailByStore.churchStoreReversals || 0 }
+    ];
+
+    if ((retailByStore.otherReceipts || 0) !== 0 || (retailByStore.otherReversals || 0) !== 0) {
+        storeBreakdownRows.push(
+            { section: "Retail Breakdown", label: "Other Store Receipts", amount: retailByStore.otherReceipts || 0 },
+            { section: "Retail Breakdown", label: "Other Store Reversals / Refunds", amount: retailByStore.otherReversals || 0 }
+        );
+    }
+
+    return [...storeBreakdownRows, ...rows];
 }
 
 function buildCashFlowSummaryFromRows({
@@ -479,7 +537,12 @@ function buildCashFlowSummaryFromRows({
             donationNet: roundCurrency(statement.donationReceipts + statement.donationReversals),
             supplierNet: roundCurrency(statement.supplierPayments + statement.supplierReversals),
             netCashMovement: statement.netCashMovement,
-            movementCount: movements.length
+            movementCount: movements.length,
+            retailByStore: {
+                tastyTreats: roundCurrency((statement.retailByStore?.tastyTreatsReceipts || 0) + (statement.retailByStore?.tastyTreatsReversals || 0)),
+                churchStore: roundCurrency((statement.retailByStore?.churchStoreReceipts || 0) + (statement.retailByStore?.churchStoreReversals || 0)),
+                other: roundCurrency((statement.retailByStore?.otherReceipts || 0) + (statement.retailByStore?.otherReversals || 0))
+            }
         },
         statement,
         statementRows: buildStatementRows(statement),
