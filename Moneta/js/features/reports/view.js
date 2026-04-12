@@ -1,4 +1,17 @@
+import { getState } from "../../app/store.js";
 import { icons } from "../../shared/icons.js";
+import { showToast } from "../../shared/toast.js";
+import { formatCurrency } from "../../shared/utils/currency.js";
+import {
+    CASH_FLOW_RANGE_OPTIONS,
+    formatAccountingCurrency,
+    formatDateLabel,
+    formatDateTime,
+    formatSignedCurrency,
+    getCashFlowSummaryReport,
+    getDefaultCashFlowCustomRange,
+    resolveCashFlowRangeSpec
+} from "./service.js";
 
 const REPORT_GROUPS = [
     {
@@ -9,39 +22,49 @@ const REPORT_GROUPS = [
         badge: "Sales",
         reports: [
             {
+                id: "sales-summary",
                 title: "Sales Summary",
                 description: "Period totals for sales, collections, donations, expenses, and outstanding balance due.",
                 dataSource: "salesInvoices, salesPaymentsLedger, donations",
                 roles: ["admin", "sales_staff", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: false
             },
             {
+                id: "store-performance",
                 title: "Store Performance",
                 description: "Church Store versus Tasty Treats comparison with revenue, transaction count, and average sale value.",
                 dataSource: "salesInvoices, salesPaymentsLedger",
                 roles: ["admin", "sales_staff", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: false
             },
             {
+                id: "sales-trend",
                 title: "Sales Trend",
                 description: "Daily and weekly movement view with period-over-period growth and slowdown indicators.",
                 dataSource: "salesInvoices",
                 roles: ["admin", "sales_staff", "finance"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             },
             {
+                id: "lead-conversion",
                 title: "Lead Conversion",
                 description: "Open, qualified, ready-to-convert, converted, and sale-voided conversion outcome reporting.",
                 dataSource: "leads, salesInvoices",
                 roles: ["admin", "sales_staff", "team_lead"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             },
             {
+                id: "consignment-performance",
                 title: "Consignment Performance",
                 description: "Checked out, sold, returned, damaged, gifted, collected, and balance-due insight for consignment activity.",
                 dataSource: "consignmentOrdersV2, consignmentPaymentsLedger",
                 roles: ["admin", "inventory_manager", "finance"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             }
         ]
     },
@@ -53,32 +76,40 @@ const REPORT_GROUPS = [
         badge: "Inventory",
         reports: [
             {
+                id: "inventory-status",
                 title: "Inventory Status",
                 description: "Out-of-stock, low-stock, medium, and healthy stock analysis with alert detail.",
                 dataSource: "productCatalogue, productCategories",
                 roles: ["admin", "inventory_manager", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: false
             },
             {
+                id: "inventory-valuation",
                 title: "Inventory Valuation",
                 description: "Inventory at cost, selling value, and potential gross margin using current stock on hand.",
                 dataSource: "productCatalogue, purchaseInvoices",
                 roles: ["admin", "inventory_manager", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: false
             },
             {
+                id: "product-performance",
                 title: "Product Performance",
                 description: "Top and slow-moving products by quantity sold, revenue contribution, and stock exposure.",
                 dataSource: "productCatalogue, salesInvoices",
                 roles: ["admin", "inventory_manager", "finance", "sales_staff"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             },
             {
+                id: "reorder-recommendations",
                 title: "Reorder Recommendations",
                 description: "Suggested replenishment list based on threshold risk, stock depth, and operational urgency.",
                 dataSource: "productCatalogue, purchaseInvoices",
                 roles: ["admin", "inventory_manager"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             }
         ]
     },
@@ -90,36 +121,64 @@ const REPORT_GROUPS = [
         badge: "Finance",
         reports: [
             {
+                id: "cash-flow-summary",
                 title: "Cash Flow Summary",
-                description: "Retail inflow, consignment inflow, donation inflow, supplier outflow, and net cash movement.",
+                description: "Auditable net cash movement across retail receipts, consignment receipts, donations, and supplier payments.",
                 dataSource: "salesPaymentsLedger, supplierPaymentsLedger, consignmentPaymentsLedger, donations",
                 roles: ["admin", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: true
             },
             {
+                id: "outstanding-receivables",
                 title: "Outstanding Receivables",
                 description: "All unpaid direct-sales and consignment balances grouped by age and collection priority.",
                 dataSource: "salesInvoices, consignmentOrdersV2",
                 roles: ["admin", "finance"],
-                status: "priority"
+                status: "priority",
+                implemented: false
             },
             {
+                id: "purchase-payables",
                 title: "Purchase Payables",
                 description: "Supplier invoice totals, paid amount, overdue balances, and pending obligations by supplier.",
                 dataSource: "purchaseInvoices, supplierPaymentsLedger, suppliers",
                 roles: ["admin", "finance", "inventory_manager"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             },
             {
+                id: "profit-and-loss",
                 title: "Profit and Loss",
-                description: "Period profitability summary across sales, donations, expenses, and supplier-side cost activity.",
-                dataSource: "salesInvoices, purchaseInvoices, donations",
+                description: "Planned as a professional, auditable P&L statement covering both retail sales and consignment sales.",
+                dataSource: "salesInvoices, consignmentOrdersV2, purchaseInvoices, donations",
                 roles: ["admin", "finance"],
-                status: "planned"
+                status: "planned",
+                implemented: false
             }
         ]
     }
 ];
+
+const featureState = {
+    userKey: "",
+    activeGroupKey: "",
+    activeReportId: "",
+    selectedRangeKey: "30d",
+    customFrom: "",
+    customTo: "",
+    isLoading: false,
+    source: "live",
+    loadedAt: 0,
+    expiresAt: 0,
+    errorMessage: "",
+    requestToken: 0,
+    reportData: null
+};
+
+function normalizeText(value) {
+    return (value || "").trim();
+}
 
 function formatRoleLabel(role) {
     const labels = {
@@ -147,13 +206,65 @@ function getVisibleReportGroups(user) {
         .filter(group => group.reports.length > 0);
 }
 
+function findReportDefinition(reportId = "") {
+    for (const group of REPORT_GROUPS) {
+        const report = group.reports.find(entry => entry.id === reportId);
+        if (report) {
+            return {
+                ...report,
+                groupKey: group.key,
+                groupTitle: group.title
+            };
+        }
+    }
+
+    return null;
+}
+
 function getStatusLabel(status) {
     return status === "priority" ? "Priority" : "Planned";
 }
 
+function resetReportsStateForUser(user) {
+    const nextUserKey = normalizeText(user?.uid || user?.email || "");
+    if (featureState.userKey === nextUserKey) return;
+
+    const defaults = getDefaultCashFlowCustomRange();
+    featureState.userKey = nextUserKey;
+    featureState.activeGroupKey = "";
+    featureState.activeReportId = "";
+    featureState.selectedRangeKey = "30d";
+    featureState.customFrom = defaults.from;
+    featureState.customTo = defaults.to;
+    featureState.isLoading = false;
+    featureState.source = "live";
+    featureState.loadedAt = 0;
+    featureState.expiresAt = 0;
+    featureState.errorMessage = "";
+    featureState.requestToken = 0;
+    featureState.reportData = null;
+}
+
+function buildRangeButtonsMarkup() {
+    return CASH_FLOW_RANGE_OPTIONS.map(option => {
+        const isActive = featureState.selectedRangeKey === option.key;
+        return `
+            <button
+                class="button dashboard-window-button ${isActive ? "is-active" : ""}"
+                type="button"
+                data-range-key="${option.key}"
+                ${featureState.isLoading ? "disabled" : ""}>
+                ${option.label}
+            </button>
+        `;
+    }).join("");
+}
+
 function renderReportCard(report) {
+    const actionLabel = report.implemented ? "Open Report" : "Planned Next";
+
     return `
-        <article class="report-definition-card">
+        <article class="report-definition-card ${report.implemented ? "is-actionable" : ""}">
             <div class="report-definition-head">
                 <h4>${report.title}</h4>
                 <span class="report-definition-status tone-${report.status}">${getStatusLabel(report.status)}</span>
@@ -162,6 +273,14 @@ function renderReportCard(report) {
             <div class="report-definition-meta">
                 <span><strong>Data source:</strong> ${report.dataSource}</span>
                 <span><strong>Access:</strong> ${report.roles.map(formatRoleLabel).join(", ")}</span>
+            </div>
+            <div class="report-definition-actions">
+                <button
+                    class="button ${report.implemented ? "button-primary-alt" : "button-secondary"} report-definition-button"
+                    type="button"
+                    data-report-open="${report.id}">
+                    ${actionLabel}
+                </button>
             </div>
         </article>
     `;
@@ -187,6 +306,449 @@ function renderReportGroup(group) {
     `;
 }
 
+function renderReportsHub(user) {
+    const visibleGroups = getVisibleReportGroups(user);
+    const groupNames = visibleGroups.map(group => group.badge);
+
+    return `
+        <div class="reports-shell">
+            <section class="panel-card reports-header-card">
+                <div class="reports-header-copy">
+                    <p class="hero-kicker">Reporting Hub</p>
+                    <h2 class="hero-title">Reports</h2>
+                    <p>Use this module to organize report access by business area. The grouped list below is role-aware so each user only sees the reporting lanes relevant to their work.</p>
+                </div>
+                <div class="reports-access-strip">
+                    <span class="status-pill">Role: ${formatRoleLabel(user.role)}</span>
+                    <span class="status-pill">Visible Groups: ${groupNames.join(", ") || "None"}</span>
+                    <span class="status-pill">Finance first: Cash Flow Summary is live</span>
+                </div>
+            </section>
+
+            ${visibleGroups.length
+                ? visibleGroups.map(renderReportGroup).join("")
+                : `
+                    <section class="panel-card reports-empty-card">
+                        No report groups are available for your current role yet.
+                    </section>
+                `}
+        </div>
+    `;
+}
+
+function renderCashFlowSummaryCards(reportData = null) {
+    const summary = reportData?.summary || {
+        retailNet: 0,
+        consignmentNet: 0,
+        donationNet: 0,
+        supplierNet: 0,
+        netCashMovement: 0
+    };
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Retail Net Cash</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.retailNet)}</p>
+                <p class="dashboard-kpi-meta">Cash collected less retail reversals</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Consignment Net Cash</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.consignmentNet)}</p>
+                <p class="dashboard-kpi-meta">Settlements collected less reversals</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Donation Net Cash</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.donationNet)}</p>
+                <p class="dashboard-kpi-meta">Donation inflows after reversals</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Supplier Cash Outflow</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.supplierNet)}</p>
+                <p class="dashboard-kpi-meta">Supplier payments net of reversals</p>
+            </article>
+            <article class="dashboard-kpi-card ${summary.netCashMovement >= 0 ? "tone-success" : "tone-danger"}">
+                <p class="dashboard-kpi-title">Net Cash Movement</p>
+                <p class="dashboard-kpi-value">${formatSignedCurrency(summary.netCashMovement)}</p>
+                <p class="dashboard-kpi-meta">Net inflow for the selected period</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderCashFlowStatementSection(reportData = null) {
+    const rows = reportData?.statementRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Cash Flow Statement</h3>
+                    <p>Structured movement summary prepared from recorded ledgers for the selected period.</p>
+                </div>
+                <span class="status-pill">Basis: Recorded Cash Movements</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Section</th>
+                            <th>Line Item</th>
+                            <th class="reports-align-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr class="${row.tone === "total" ? "reports-row-total" : ""}">
+                                <td>${row.section}</td>
+                                <td>${row.label}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.amount)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="3" class="reports-table-empty">No cash movement rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderDailyMovementSection(reportData = null) {
+    const rows = reportData?.dailyRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Daily Net Movement</h3>
+                    <p>Daily net movement by cash source so reconciliation trends stay visible.</p>
+                </div>
+                <span class="status-pill">${rows.length} day${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="reports-align-right">Retail</th>
+                            <th class="reports-align-right">Consignment</th>
+                            <th class="reports-align-right">Donations</th>
+                            <th class="reports-align-right">Suppliers</th>
+                            <th class="reports-align-right">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${formatDateLabel(row.date)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.retail)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.consignment)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.donations)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.suppliers)}</td>
+                                <td class="reports-align-right ${row.net >= 0 ? "reports-amount-positive" : "reports-amount-negative"}">${formatSignedCurrency(row.net)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="6" class="reports-table-empty">No daily movement is available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderActivitySection(reportData = null) {
+    const rows = reportData?.activityRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Recent Cash Activity</h3>
+                    <p>Latest ledger-backed inflows and outflows for audit follow-up.</p>
+                </div>
+                <span class="status-pill">${rows.length} recent row${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Source</th>
+                            <th>Reference</th>
+                            <th>Counterparty</th>
+                            <th>Notes</th>
+                            <th class="reports-align-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${formatDateLabel(row.date)}</td>
+                                <td>${row.sourceLabel}</td>
+                                <td>${row.reference || "-"}</td>
+                                <td>${row.counterparty || "-"}</td>
+                                <td>${row.notes || "-"}</td>
+                                <td class="reports-align-right ${row.amount >= 0 ? "reports-amount-positive" : "reports-amount-negative"}">${formatSignedCurrency(row.amount)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="6" class="reports-table-empty">No recent movement rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderCashFlowMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {
+        salesPayments: 0,
+        consignmentPayments: 0,
+        supplierPayments: 0,
+        donations: 0
+    };
+    const truncatedSources = metadata.truncatedSources || {};
+    const truncatedLabels = Object.entries(truncatedSources)
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Report basis, source coverage, and generated metadata for finance review.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Source Rows</p>
+                    <p class="report-audit-value">${reportData?.summary?.movementCount || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Execution Time</p>
+                    <p class="report-audit-value">${reportData ? `${reportData.durationMs} ms` : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Retail payments ${sourceCounts.salesPayments || 0},
+                Consignment payments ${sourceCounts.consignmentPayments || 0},
+                Supplier payments ${sourceCounts.supplierPayments || 0},
+                Donations ${sourceCounts.donations || 0}.
+            </div>
+        </section>
+    `;
+}
+
+function renderCashFlowReportView(user, reportDef) {
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+    const reportData = featureState.reportData;
+    const loadedLabel = featureState.loadedAt ? formatDateTime(featureState.loadedAt) : "-";
+    const expiryLabel = featureState.expiresAt ? formatDateTime(featureState.expiresAt) : "-";
+    const sourceLabel = featureState.source === "cache" ? "Cached Snapshot" : "Live Data";
+
+    return `
+        <div class="reports-shell reports-workspace">
+            <section class="panel-card reports-header-card">
+                <div class="reports-toolbar">
+                    <div class="reports-header-copy">
+                        <button class="button button-secondary reports-back-button" type="button" data-report-back>
+                            <span class="button-icon">${icons.close}</span>
+                            Back To Reports
+                        </button>
+                        <p class="hero-kicker">${reportDef.groupTitle}</p>
+                        <h2 class="hero-title">${reportDef.title}</h2>
+                        <p>${reportDef.description}</p>
+                    </div>
+                    <div class="reports-toolbar-actions">
+                        <div class="dashboard-window-switcher">
+                            ${buildRangeButtonsMarkup()}
+                        </div>
+                        <div class="dashboard-custom-range ${featureState.selectedRangeKey === "custom" ? "is-visible" : ""}">
+                            <div class="dashboard-custom-field">
+                                <label for="cash-flow-custom-from">From</label>
+                                <input id="cash-flow-custom-from" class="input dashboard-date-input" type="date" value="${featureState.customFrom}" ${featureState.isLoading ? "disabled" : ""}>
+                            </div>
+                            <div class="dashboard-custom-field">
+                                <label for="cash-flow-custom-to">To</label>
+                                <input id="cash-flow-custom-to" class="input dashboard-date-input" type="date" value="${featureState.customTo}" ${featureState.isLoading ? "disabled" : ""}>
+                            </div>
+                            <button id="cash-flow-custom-apply" class="button button-secondary dashboard-custom-apply" type="button" ${featureState.isLoading ? "disabled" : ""}>
+                                Apply
+                            </button>
+                        </div>
+                        <button id="cash-flow-refresh-button" class="button button-primary-alt" type="button" ${featureState.isLoading ? "disabled" : ""}>
+                            <span class="button-icon">${icons.search}</span>
+                            ${featureState.isLoading ? "Refreshing..." : "Refresh"}
+                        </button>
+                    </div>
+                </div>
+                <div class="dashboard-cache-strip source-${featureState.source}">
+                    <span class="status-pill">${sourceLabel}</span>
+                    <span>Window: <strong>${reportData?.rangeLabel || (rangeSpec.isValid ? rangeSpec.rangeLabel : "Invalid Range")}</strong></span>
+                    <span>Loaded: <strong>${loadedLabel}</strong></span>
+                    <span>Cache Expires: <strong>${expiryLabel}</strong></span>
+                </div>
+                ${featureState.errorMessage ? `
+                    <div class="dashboard-error-strip">
+                        <span class="button-icon">${icons.warning}</span>
+                        ${featureState.errorMessage}
+                    </div>
+                ` : ""}
+            </section>
+
+            ${renderCashFlowSummaryCards(reportData)}
+            ${renderCashFlowStatementSection(reportData)}
+            ${renderDailyMovementSection(reportData)}
+            ${renderActivitySection(reportData)}
+            ${renderCashFlowMetadataSection(reportData)}
+        </div>
+    `;
+}
+
+function bindReportsEvents(user) {
+    const root = document.getElementById("reports-root");
+    if (!root) return;
+
+    root.querySelectorAll("[data-report-open]").forEach(button => {
+        button.addEventListener("click", () => {
+            const reportId = button.getAttribute("data-report-open");
+            const reportDef = findReportDefinition(reportId);
+            if (!reportDef || !canAccessReport(reportDef, user)) return;
+
+            if (!reportDef.implemented) {
+                showToast(`${reportDef.title} is queued next. Cash Flow Summary is the first live finance report.`, "info");
+                return;
+            }
+
+            featureState.activeGroupKey = reportDef.groupKey;
+            featureState.activeReportId = reportDef.id;
+            featureState.errorMessage = "";
+            renderReportsView(user);
+        });
+    });
+
+    root.querySelector("[data-report-back]")?.addEventListener("click", () => {
+        featureState.activeGroupKey = "";
+        featureState.activeReportId = "";
+        featureState.errorMessage = "";
+        renderReportsView(user);
+    });
+
+    root.querySelectorAll("[data-range-key]").forEach(button => {
+        button.addEventListener("click", () => {
+            const nextKey = button.getAttribute("data-range-key");
+            if (!nextKey || nextKey === featureState.selectedRangeKey) return;
+
+            featureState.selectedRangeKey = nextKey;
+            featureState.reportData = null;
+            featureState.errorMessage = "";
+            renderReportsView(user);
+
+            if (nextKey !== "custom") {
+                void loadCashFlowReport(user, { forceRefresh: false });
+            }
+        });
+    });
+
+    root.querySelector("#cash-flow-custom-from")?.addEventListener("change", event => {
+        featureState.customFrom = event.target.value || "";
+    });
+
+    root.querySelector("#cash-flow-custom-to")?.addEventListener("change", event => {
+        featureState.customTo = event.target.value || "";
+    });
+
+    root.querySelector("#cash-flow-custom-apply")?.addEventListener("click", () => {
+        featureState.selectedRangeKey = "custom";
+        featureState.reportData = null;
+        featureState.errorMessage = "";
+        void loadCashFlowReport(user, { forceRefresh: false });
+    });
+
+    root.querySelector("#cash-flow-refresh-button")?.addEventListener("click", () => {
+        void loadCashFlowReport(user, { forceRefresh: true });
+    });
+}
+
+async function loadCashFlowReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Cash flow range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getCashFlowSummaryReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = result.data;
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Cash flow report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the cash flow summary report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 export function renderReportsView(user) {
     const root = document.getElementById("reports-root");
     if (!root) return;
@@ -201,31 +763,29 @@ export function renderReportsView(user) {
         return;
     }
 
-    const visibleGroups = getVisibleReportGroups(user);
-    const groupNames = visibleGroups.map(group => group.badge);
+    resetReportsStateForUser(user);
 
-    root.innerHTML = `
-        <div class="reports-shell">
-            <section class="panel-card reports-header-card">
-                <div class="reports-header-copy">
-                    <p class="hero-kicker">Reporting Hub</p>
-                    <h2 class="hero-title">Reports</h2>
-                    <p>Use this module to organize report access by business area. The grouped list below is role-aware so each user only sees the reporting lanes relevant to their work.</p>
-                </div>
-                <div class="reports-access-strip">
-                    <span class="status-pill">Role: ${formatRoleLabel(user.role)}</span>
-                    <span class="status-pill">Visible Groups: ${groupNames.join(", ") || "None"}</span>
-                    <span class="status-pill">Next Step: Wire detail pages and exports</span>
-                </div>
-            </section>
+    const activeReport = featureState.activeReportId ? findReportDefinition(featureState.activeReportId) : null;
+    root.innerHTML = activeReport
+        ? renderCashFlowReportView(user, activeReport)
+        : renderReportsHub(user);
 
-            ${visibleGroups.length
-                ? visibleGroups.map(renderReportGroup).join("")
-                : `
-                    <section class="panel-card reports-empty-card">
-                        No report groups are available for your current role yet.
-                    </section>
-                `}
-        </div>
-    `;
+    bindReportsEvents(user);
+
+    if (activeReport?.id === "cash-flow-summary") {
+        const rangeSpec = resolveCashFlowRangeSpec({
+            rangeKey: featureState.selectedRangeKey,
+            customFrom: featureState.customFrom,
+            customTo: featureState.customTo
+        });
+        const shouldLoad = rangeSpec.isValid && !featureState.isLoading && (
+            !featureState.reportData
+            || featureState.reportData.rangeKey !== rangeSpec.rangeKey
+            || Date.now() > featureState.expiresAt
+        );
+
+        if (shouldLoad) {
+            void loadCashFlowReport(user, { forceRefresh: false });
+        }
+    }
 }
