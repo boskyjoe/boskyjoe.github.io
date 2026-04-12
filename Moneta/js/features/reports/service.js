@@ -2,8 +2,6 @@ import { COLLECTIONS } from "../../config/collections.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
-const MAX_ACTIVITY_ROWS = 36;
-
 export const CASH_FLOW_RANGE_OPTIONS = [
     { key: "30d", label: "Last 30 Days" },
     { key: "90d", label: "Last 90 Days" },
@@ -72,8 +70,10 @@ function writeCashFlowCache(user, rangeKey, data, loadedAt) {
 
 export function formatDateLabel(value) {
     if (!value) return "-";
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
+    const date = typeof value?.toDate === "function"
+        ? value.toDate()
+        : (value instanceof Date ? value : new Date(value));
+    if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "-";
 
     return date.toLocaleDateString("en-IN", {
         day: "2-digit",
@@ -84,8 +84,10 @@ export function formatDateLabel(value) {
 
 export function formatDateTime(value) {
     if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
+    const date = typeof value?.toDate === "function"
+        ? value.toDate()
+        : (value instanceof Date ? value : new Date(value));
+    if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "-";
 
     return date.toLocaleString("en-IN", {
         day: "2-digit",
@@ -251,11 +253,49 @@ function normalizeMovementDateLabel(value) {
     return Number.isNaN(date.getTime()) ? "-" : toDateInputValue(date);
 }
 
+function resolveTransactionDate(row = {}, preferredFields = []) {
+    const fallbackFields = [
+        ...preferredFields,
+        "transactionDate",
+        "paymentDate",
+        "donationDate",
+        "createdAt",
+        "updatedAt",
+        "recordedAt"
+    ];
+
+    for (const field of fallbackFields) {
+        const candidate = row?.[field];
+        if (!candidate) continue;
+
+        const date = toDateValue(candidate);
+        if (!Number.isNaN(date.getTime()) && date.getTime() > 0) {
+            return date;
+        }
+    }
+
+    const auditCandidates = [
+        row?.audit?.createdAt,
+        row?.audit?.updatedAt
+    ];
+
+    for (const candidate of auditCandidates) {
+        if (!candidate) continue;
+        const date = toDateValue(candidate);
+        if (!Number.isNaN(date.getTime()) && date.getTime() > 0) {
+            return date;
+        }
+    }
+
+    return null;
+}
+
 function buildRetailMovementRows(rows = []) {
     return rows
         .map(row => {
             const amount = roundCurrency(row.amountApplied ?? row.amountPaid ?? row.totalCollected);
             if (amount === 0) return null;
+            const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
             const storeName = normalizeText(row.store) || "Unknown Store";
             let storeKey = "other";
 
@@ -267,7 +307,7 @@ function buildRetailMovementRows(rows = []) {
 
             return {
                 id: row.id,
-                date: row.paymentDate,
+                date: transactionDate,
                 sourceKey: "retail",
                 sourceLabel: `Retail Receipt${storeName ? ` - ${storeName}` : ""}`,
                 counterparty: normalizeText(row.customerName) || "Retail Customer",
@@ -287,10 +327,11 @@ function buildConsignmentMovementRows(rows = []) {
         .map(row => {
             const amount = roundCurrency(row.amountApplied ?? row.amountPaid ?? row.totalCollected);
             if (amount === 0) return null;
+            const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
 
             return {
                 id: row.id,
-                date: row.paymentDate,
+                date: transactionDate,
                 sourceKey: "consignment",
                 sourceLabel: "Consignment Receipt",
                 counterparty: normalizeText(row.teamName || row.teamMemberName) || "Consignment Team",
@@ -312,6 +353,7 @@ function buildDonationMovementRows(rows = [], { salesPayments = [] } = {}) {
         .map(row => {
             const amount = roundCurrency(row.amount);
             if (amount === 0) return null;
+            const transactionDate = resolveTransactionDate(row, ["donationDate"]);
 
             const counterparty = normalizeText(row.customerName || row.teamName || row.donorName) || "Donation";
             const moduleType = normalizeText(row.moduleType);
@@ -336,7 +378,7 @@ function buildDonationMovementRows(rows = [], { salesPayments = [] } = {}) {
 
             return {
                 id: row.id,
-                date: row.donationDate,
+                date: transactionDate,
                 sourceKey: "donation",
                 sourceLabel: `Donation - ${donationSourceLabel}`,
                 counterparty,
@@ -355,12 +397,13 @@ function buildSupplierMovementRows(rows = []) {
         .map(row => {
             const paymentAmount = roundCurrency(row.amountPaid);
             if (paymentAmount === 0) return null;
+            const transactionDate = resolveTransactionDate(row, ["paymentDate"]);
 
             const cashAmount = roundCurrency(paymentAmount * -1);
 
             return {
                 id: row.id,
-                date: row.paymentDate,
+                date: transactionDate,
                 sourceKey: "supplier",
                 sourceLabel: "Supplier Payment",
                 counterparty: normalizeText(row.supplierName) || "Supplier",
@@ -530,8 +573,7 @@ function buildDailyRows(movements = []) {
 
 function buildActivityRows(movements = []) {
     return [...movements]
-        .sort((left, right) => toDateValue(right.date).getTime() - toDateValue(left.date).getTime())
-        .slice(0, MAX_ACTIVITY_ROWS);
+        .sort((left, right) => toDateValue(right.date).getTime() - toDateValue(left.date).getTime());
 }
 
 function buildStatementRows(statement = {}) {

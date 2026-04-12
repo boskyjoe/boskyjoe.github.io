@@ -2,6 +2,7 @@ import { getState } from "../../app/store.js";
 import { icons } from "../../shared/icons.js";
 import { showToast } from "../../shared/toast.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import {
     CASH_FLOW_RANGE_OPTIONS,
     formatAccountingCurrency,
@@ -173,7 +174,10 @@ const featureState = {
     expiresAt: 0,
     errorMessage: "",
     requestToken: 0,
-    reportData: null
+    reportData: null,
+    activitySearchTerm: "",
+    activityGridApi: null,
+    activityGridElement: null
 };
 
 function normalizeText(value) {
@@ -229,6 +233,8 @@ function resetReportsStateForUser(user) {
     const nextUserKey = normalizeText(user?.uid || user?.email || "");
     if (featureState.userKey === nextUserKey) return;
 
+    destroyActivityGrid();
+
     const defaults = getDefaultCashFlowCustomRange();
     featureState.userKey = nextUserKey;
     featureState.activeGroupKey = "";
@@ -243,6 +249,7 @@ function resetReportsStateForUser(user) {
     featureState.errorMessage = "";
     featureState.requestToken = 0;
     featureState.reportData = null;
+    featureState.activitySearchTerm = "";
 }
 
 function buildRangeButtonsMarkup() {
@@ -392,6 +399,99 @@ function getAccountingAmountClass(value) {
     return "";
 }
 
+function buildActivityGridColumnDefs() {
+    return [
+        {
+            field: "date",
+            headerName: "Transaction Date",
+            minWidth: 155,
+            flex: 0.95,
+            valueFormatter: params => formatDateLabel(params.value)
+        },
+        {
+            field: "sourceLabel",
+            headerName: "Source",
+            minWidth: 210,
+            flex: 1.1
+        },
+        {
+            field: "reference",
+            headerName: "Reference",
+            minWidth: 180,
+            flex: 1,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "counterparty",
+            headerName: "Counterparty",
+            minWidth: 210,
+            flex: 1.1,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "notes",
+            headerName: "Notes",
+            minWidth: 230,
+            flex: 1.3,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "amount",
+            headerName: "Amount",
+            minWidth: 140,
+            flex: 0.85,
+            cellClass: params => `ag-right-aligned-cell ${getAccountingAmountClass(params.value)}`.trim(),
+            headerClass: "ag-right-aligned-header",
+            valueFormatter: params => formatSignedCurrency(params.value || 0)
+        }
+    ];
+}
+
+function destroyActivityGrid() {
+    if (featureState.activityGridApi) {
+        featureState.activityGridApi.destroy();
+    }
+
+    featureState.activityGridApi = null;
+    featureState.activityGridElement = null;
+}
+
+function initializeActivityGrid(rows = []) {
+    const gridElement = document.getElementById("reports-cash-activity-grid");
+    if (!gridElement) {
+        destroyActivityGrid();
+        return;
+    }
+
+    if (featureState.activityGridApi && featureState.activityGridElement !== gridElement) {
+        destroyActivityGrid();
+    }
+
+    if (!featureState.activityGridApi) {
+        featureState.activityGridApi = createGrid(gridElement, {
+            columnDefs: buildActivityGridColumnDefs(),
+            rowData: [],
+            pagination: true,
+            paginationPageSize: 25,
+            paginationPageSizeSelector: [10, 25, 50, 100],
+            animateRows: false,
+            defaultColDef: {
+                sortable: true,
+                filter: true,
+                resizable: true,
+                wrapHeaderText: true,
+                autoHeaderHeight: true,
+                wrapText: true,
+                autoHeight: true
+            }
+        });
+        featureState.activityGridElement = gridElement;
+    }
+
+    featureState.activityGridApi.setGridOption("rowData", rows || []);
+    featureState.activityGridApi.setGridOption("quickFilterText", featureState.activitySearchTerm || "");
+}
+
 function renderCashFlowStatementSection(reportData = null) {
     const rows = reportData?.statementRows || [];
 
@@ -432,52 +532,6 @@ function renderCashFlowStatementSection(reportData = null) {
     `;
 }
 
-function renderDailyMovementSection(reportData = null) {
-    const rows = reportData?.dailyRows || [];
-
-    return `
-        <section class="panel-card reports-detail-card">
-            <div class="reports-detail-head">
-                <div>
-                    <h3>Daily Net Movement</h3>
-                    <p>Daily net movement by cash source so reconciliation trends stay visible.</p>
-                </div>
-                <span class="status-pill">${rows.length} day${rows.length === 1 ? "" : "s"}</span>
-            </div>
-            <div class="table-wrap reports-table-wrap">
-                <table class="data-table reports-data-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th class="reports-align-right">Retail</th>
-                            <th class="reports-align-right">Consignment</th>
-                            <th class="reports-align-right">Donations</th>
-                            <th class="reports-align-right">Suppliers</th>
-                            <th class="reports-align-right">Net</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows.length ? rows.map(row => `
-                            <tr>
-                                <td>${formatDateLabel(row.date)}</td>
-                                <td class="reports-align-right ${getAccountingAmountClass(row.retail)}">${formatAccountingCurrency(row.retail)}</td>
-                                <td class="reports-align-right ${getAccountingAmountClass(row.consignment)}">${formatAccountingCurrency(row.consignment)}</td>
-                                <td class="reports-align-right ${getAccountingAmountClass(row.donations)}">${formatAccountingCurrency(row.donations)}</td>
-                                <td class="reports-align-right ${getAccountingAmountClass(row.suppliers)}">${formatAccountingCurrency(row.suppliers)}</td>
-                                <td class="reports-align-right ${row.net >= 0 ? "reports-amount-positive" : "reports-amount-negative"}">${formatSignedCurrency(row.net)}</td>
-                            </tr>
-                        `).join("") : `
-                            <tr>
-                                <td colspan="6" class="reports-table-empty">No daily movement is available for this range.</td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    `;
-}
-
 function renderActivitySection(reportData = null) {
     const rows = reportData?.activityRows || [];
 
@@ -486,40 +540,22 @@ function renderActivitySection(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Recent Cash Activity</h3>
-                    <p>Latest ledger-backed inflows and outflows for audit follow-up.</p>
+                    <p>Ledger-backed transaction detail with pagination for audit follow-up and drilldown.</p>
                 </div>
-                <span class="status-pill">${rows.length} recent row${rows.length === 1 ? "" : "s"}</span>
+                <span class="status-pill">${rows.length} transaction${rows.length === 1 ? "" : "s"}</span>
             </div>
-            <div class="table-wrap reports-table-wrap">
-                <table class="data-table reports-data-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Source</th>
-                            <th>Reference</th>
-                            <th>Counterparty</th>
-                            <th>Notes</th>
-                            <th class="reports-align-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows.length ? rows.map(row => `
-                            <tr>
-                                <td>${formatDateLabel(row.date)}</td>
-                                <td>${row.sourceLabel}</td>
-                                <td>${row.reference || "-"}</td>
-                                <td>${row.counterparty || "-"}</td>
-                                <td>${row.notes || "-"}</td>
-                                <td class="reports-align-right ${row.amount >= 0 ? "reports-amount-positive" : "reports-amount-negative"}">${formatSignedCurrency(row.amount)}</td>
-                            </tr>
-                        `).join("") : `
-                            <tr>
-                                <td colspan="6" class="reports-table-empty">No recent movement rows are available for this range.</td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
+            <div class="reports-grid-toolbar">
+                <label class="reports-grid-search" for="reports-cash-activity-search">
+                    <span>Search Transactions</span>
+                    <input
+                        id="reports-cash-activity-search"
+                        class="input"
+                        type="search"
+                        placeholder="Search source, reference, counterparty, notes"
+                        value="${featureState.activitySearchTerm}">
+                </label>
             </div>
+            <div id="reports-cash-activity-grid" class="ag-theme-alpine moneta-grid reports-activity-grid" aria-label="Recent Cash Activity"></div>
         </section>
     `;
 }
@@ -639,7 +675,6 @@ function renderCashFlowReportView(user, reportDef) {
 
             ${renderCashFlowSummaryCards(reportData)}
             ${renderCashFlowStatementSection(reportData)}
-            ${renderDailyMovementSection(reportData)}
             ${renderActivitySection(reportData)}
             ${renderCashFlowMetadataSection(reportData)}
         </div>
@@ -709,6 +744,11 @@ function bindReportsEvents(user) {
     root.querySelector("#cash-flow-refresh-button")?.addEventListener("click", () => {
         void loadCashFlowReport(user, { forceRefresh: true });
     });
+
+    root.querySelector("#reports-cash-activity-search")?.addEventListener("input", event => {
+        featureState.activitySearchTerm = event.target.value || "";
+        featureState.activityGridApi?.setGridOption("quickFilterText", featureState.activitySearchTerm);
+    });
 }
 
 async function loadCashFlowReport(user, { forceRefresh = false } = {}) {
@@ -769,6 +809,8 @@ export function renderReportsView(user) {
     const root = document.getElementById("reports-root");
     if (!root) return;
 
+    destroyActivityGrid();
+
     if (!user) {
         root.innerHTML = `
             <section class="panel-card reports-empty-card">
@@ -787,6 +829,10 @@ export function renderReportsView(user) {
         : renderReportsHub(user);
 
     bindReportsEvents(user);
+
+    if (activeReport?.id === "cash-flow-summary") {
+        initializeActivityGrid(featureState.reportData?.activityRows || []);
+    }
 
     if (activeReport?.id === "cash-flow-summary") {
         const rangeSpec = resolveCashFlowRangeSpec({
