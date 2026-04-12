@@ -188,6 +188,10 @@ function normalizeText(value) {
     return (value || "").trim();
 }
 
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
 function formatRoleLabel(role) {
     const labels = {
         admin: "Admin",
@@ -1124,9 +1128,9 @@ function renderProfitAndLossSegmentSection(reportData = null) {
                             <tr>
                                 <td>${row.segment}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.grossSales)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(roundCurrency(row.discounts * -1))}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.discounts) || 0) * -1)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.netSales)}</td>
-                                <td class="reports-align-right">${formatAccountingCurrency(roundCurrency(row.cogs * -1))}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.cogs) || 0) * -1)}</td>
                                 <td class="reports-align-right ${getAccountingAmountClass(row.grossProfit)}">${formatAccountingCurrency(row.grossProfit)}</td>
                             </tr>
                         `).join("") : `
