@@ -278,8 +278,11 @@ function resolveTransactionDate(row = {}, preferredFields = []) {
         "transactionDate",
         "paymentDate",
         "donationDate",
+        "recordedOn",
         "createdAt",
+        "createdOn",
         "updatedAt",
+        "updatedOn",
         "recordedAt"
     ];
 
@@ -294,7 +297,9 @@ function resolveTransactionDate(row = {}, preferredFields = []) {
     }
 
     const auditCandidates = [
+        row?.audit?.createdOn,
         row?.audit?.createdAt,
+        row?.audit?.updatedOn,
         row?.audit?.updatedAt
     ];
 
@@ -312,9 +317,14 @@ function resolveTransactionDate(row = {}, preferredFields = []) {
 function resolveRecordedAt(row = {}) {
     const candidates = [
         row?.recordedAt,
+        row?.recordedOn,
         row?.createdAt,
+        row?.createdOn,
+        row?.audit?.createdOn,
         row?.audit?.createdAt,
         row?.updatedAt,
+        row?.updatedOn,
+        row?.audit?.updatedOn,
         row?.audit?.updatedAt
     ];
 
