@@ -10,6 +10,14 @@ export const icons = {
             <path d="M3 13.5h8v7H3zm10-10h8v17h-8zm-10 0h8v8H3z"></path>
         </svg>
     `,
+    reports: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 19h16v2H4z"></path>
+            <path d="M7 10h3v7H7z"></path>
+            <path d="M11 6h3v11h-3z"></path>
+            <path d="M15 12h3v5h-3z"></path>
+        </svg>
+    `,
     suppliers: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 19h16v2H4zM6 4h8a2 2 0 0 1 2 2v11H4V6a2 2 0 0 1 2-2zm12 5h2v8h-2zm-9 1h2v2H9zm0 4h2v2H9z"></path>

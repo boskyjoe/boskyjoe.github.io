@@ -1,6 +1,6 @@
 # MONETA Design + Development Context (Current State)
 
-Last updated: 2026-04-11  
+Last updated: 2026-04-11 (latest dashboard charts + UX/workflow sync)  
 Scope: `Moneta/` only (active rebuild).  
 Legacy reference: repository root `TrinityCart/` files are legacy and should be used only for behavior comparison.
 
@@ -29,7 +29,7 @@ progress toasts, summary modals, confirmation modals, disabled action tooltip re
 - Static web app (GitHub Pages compatible).
 - Firebase v8 CDN (`firebase-app`, `firebase-auth`, `firebase-firestore`).
 - AG Grid Community (`@32.3.3` via CDN ESM).
-- Chart.js (`@4.4.3` via dynamic CDN import) for dashboard inventory charts.
+- Chart.js (`@4.4.3` via dynamic CDN import) for dashboard inventory, sales, store-mix, cash-flow, and lead-pipeline charts.
 - html2pdf bundle for retail invoice and credit-note output.
 - ES module architecture by feature folder.
 
@@ -59,7 +59,7 @@ prefer bounded windows + caching, and keep fallbacks scoped to smallest safe dat
 - Authenticated users default to `#/home`.
 - Role access enforced using `nav-config.js`.
 - Active routes:
-`#/home`, `#/dashboard`, `#/leads`, `#/retail-store`, `#/simple-consignment`, `#/suppliers`, `#/products`, `#/sales-catalogues`, `#/admin-modules`, `#/purchases`, `#/user-management`.
+`#/home`, `#/dashboard`, `#/reports`, `#/leads`, `#/retail-store`, `#/simple-consignment`, `#/suppliers`, `#/products`, `#/sales-catalogues`, `#/admin-modules`, `#/purchases`, `#/user-management`.
 
 ### Global state
 `Moneta/js/app/store.js`
@@ -88,6 +88,8 @@ categories, seasons, products, suppliers, payment modes, sales catalogues, teams
 - Roles:
 `admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`, `guest`.
 - Home + Dashboard visible to all authenticated roles.
+- Reports visible to:
+`admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`.
 - Admin-only routes:
 `#/admin-modules`, `#/user-management`.
 - Unauthenticated shell shows Home link only.
@@ -149,6 +151,13 @@ Base path:
 `Moneta/js/shared/focus.js`
 - Form focus/scroll utility for edit flows and modal workflows.
 
+## Current UX Conventions (Do Not Regress)
+- Payment void UX pattern (retail + supplier): use the same payment entry form in a dedicated void mode.
+- Do not render separate "void panels" below payment history when void mode is active.
+- Void mode should be visually explicit at modal header level (danger-tinted header + void mode pill) and include inline void context above fields.
+- Payment entry fields become read-only in void mode; only void reason remains editable.
+- Payment modals should use action-row close controls (Close button in form actions), not top-right corner X controls.
+
 ## Feature Status (Implemented Behavior)
 ## 1) Home
 `Moneta/js/features/home/`
@@ -164,8 +173,29 @@ Base path:
 - Session cache per user + range (`10 min` TTL).
 - Aggregates:
 retail, consignment, purchases, leads, cash flow, low-stock watch, inventory health.
+- Window controls are interactive and re-render dashboard state before refresh:
+`today`, `7d`, `30d`, and custom date range apply through `data-dashboard-window` controls.
 - Inventory health includes:
 status chips, status doughnut chart, low-stock-by-category bar chart, searchable AG Grid.
+- Financial visualization layer now includes:
+`Retail vs Consignment` comparison bar chart and `Store Performance` doughnut chart.
+- Cash-enabled dashboard profiles also receive:
+`Cash Flow Mix` bar chart and `Lead Pipeline Mix` doughnut chart.
+- Chart behavior notes:
+all dashboard charts are rendered from `view.js`, use empty-state fallbacks when there is no data, and gracefully fall back to card/grid content if Chart.js fails to load.
+- Chart loading detail:
+Chart.js is loaded lazily from CDN through `loadChartJs()`, so charts depend on browser network access unless Chart.js is bundled locally later.
+
+## 2b) Reports
+`Moneta/js/features/reports/`
+- Reports hub route is now wired in nav + router at `#/reports`.
+- Current implementation is a role-aware report catalog rather than a full detail workspace.
+- Reports are grouped under:
+`Sales`, `Inventory`, and `Finance`.
+- Users only see report groups/cards that include their role.
+- Current menu access:
+all authenticated roles except `guest`.
+- Report detail pages and export actions are still future work.
 
 ## 3) Suppliers
 `Moneta/js/features/suppliers/`
@@ -194,6 +224,10 @@ status chips, status doughnut chart, low-stock-by-category bar chart, searchable
 - Payment void creates reversal ledger entries.
 - Invoice void:
 voids active linked payments, writes reversal payments, reverses inventory.
+- Supplier payment modal now uses a unified form UX:
+record mode and void mode share one form; void reason is shown only in void mode.
+- Legacy separate supplier payment void panel below payment history has been removed.
+- Supplier payment modal close interaction is now via action-row Close button (no top-right corner X).
 
 ## 7) Leads / Enquiries
 `Moneta/js/features/leads/`
@@ -217,6 +251,11 @@ create, view, edit (full/limited), payment, expense, return, void.
 `Void Payment` (payment-only reversal; sale remains active) and `Void Sale` (full sale cancellation).
 - `Void Payment` rules:
 requires mandatory reason, reverses only selected payment (plus donation reversal when applicable), does not touch expenses, does not set sale to void.
+- Retail payment modal uses unified form UX for void:
+void mode reuses the payment entry form with read-only payment fields and inline void reason.
+- Legacy separate retail payment void panel in payment-history area has been removed.
+- Retail payment void mode includes explicit visual state at modal header (danger tint + void mode badge).
+- In return workspace, `Return Details` now appears below `Invoice Adjustments` and before action buttons.
 - Return flow:
 partial/full return with inventory restoration and return history.
 - Void flow:
@@ -251,7 +290,7 @@ cannot edit self from this screen,
 cannot remove last active admin.
 
 ## Known Gaps (Current)
-- No dedicated reports/export route is wired in router/nav yet.
+- Reports hub route is wired, but dedicated report detail pages and export actions are not yet implemented in `Moneta/`.
 - No automated test suite is present in `Moneta/`; regression confidence is currently manual QA-based.
 - Final responsive QA sweep is still recommended, especially on dense dashboard and modal-heavy flows.
 
@@ -292,6 +331,14 @@ These are current risk items from code + architecture review.
 3. Master-data readiness now flips to true only after first snapshot has arrived for all configured master collections.
 4. Retail payment and sale void semantics were separated:
 payment void no longer implies sale void.
+5. Retail payment void UX was refactored to same-form void mode:
+no separate right-side/secondary void panel; void reason appears only during void mode.
+6. Supplier payment void UX was refactored to same-form void mode:
+no separate panel below history; confirm/cancel void actions now live in main form actions.
+7. Payment modal close UX consistency update:
+supplier payment modal corner X removed; close handled from action row button.
+8. Retail return workflow ordering update:
+`Return Details` moved below `Invoice Adjustments` to support quantity-first then justification flow.
 
 ## Recommended Next Hardening Pass
 1. Add reusable HTML escaping utilities for all `innerHTML` template insertions (or migrate to DOM APIs for user data).
@@ -311,6 +358,12 @@ purchase payment void, purchase invoice void, retail payment void, retail sale v
 8. Dashboard refresh and cache behavior across window switches.
 9. Mobile/tablet responsive checks for dashboard and Home.
 10. PDF generation for retail invoice and credit note.
+11. Retail payment modal:
+normal record flow, void mode entry/exit, reason validation, and no separate void panel render.
+12. Supplier payment modal:
+normal record flow, void mode entry/exit, reason validation, no corner X, action-row Close behavior.
+13. Retail return form order:
+`Return Details` section is below `Invoice Adjustments` and values still update live.
 
 ## Implementation Protocol For Future AI Work
 1. Keep feature boundaries strict:

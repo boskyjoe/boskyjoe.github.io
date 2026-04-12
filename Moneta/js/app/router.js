@@ -2,6 +2,7 @@ import { DEFAULT_AUTH_ROUTE, LOGIN_ROUTE } from "../config/constants.js";
 import { getState, setState } from "./store.js";
 import { renderShell } from "./shell.js";
 import { renderDashboardView } from "../features/dashboard/view.js";
+import { showReportsPage } from "../features/reports/index.js";
 import { navConfig } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
@@ -18,6 +19,7 @@ const ROUTE_TO_VIEW = {
     "#/login": "login-view",
     "#/home": "home-view",
     "#/dashboard": "dashboard-view",
+    "#/reports": "reports-view",
     "#/leads": "leads-view",
     "#/retail-store": "retail-store-view",
     "#/simple-consignment": "simple-consignment-view",
@@ -56,6 +58,8 @@ function getViewTitle(route) {
             return "Home";
         case "#/dashboard":
             return "Dashboard";
+        case "#/reports":
+            return "Reports";
         case "#/leads":
             return "Leads & Enquiries";
         case "#/retail-store":
@@ -108,6 +112,10 @@ export function resolveRoute() {
 
     if (route === "#/dashboard") {
         renderDashboardView(snapshot.currentUser);
+    }
+
+    if (route === "#/reports") {
+        showReportsPage(snapshot.currentUser);
     }
 
     if (route === "#/suppliers") {

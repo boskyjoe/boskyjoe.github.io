@@ -14,6 +14,7 @@ import { initializeLeadsModule } from "../features/leads/index.js";
 import { initializeRetailStoreModule } from "../features/retail-store/index.js";
 import { initializeSimpleConsignmentModule } from "../features/simple-consignment/index.js";
 import { initializeHomeModule } from "../features/home/index.js";
+import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
 
 function initializeFirebase() {
@@ -88,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeRetailStoreModule();
     initializeSimpleConsignmentModule();
     initializeHomeModule();
+    initializeReportsModule();
     initializeRouter();
     initializeAuth();
     initializeDisabledActionTooltips();
