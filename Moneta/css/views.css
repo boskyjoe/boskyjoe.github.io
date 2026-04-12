@@ -286,8 +286,25 @@
     margin-top: 0.24rem;
 }
 
+.dashboard-financial-layout {
+    display: grid;
+    gap: 0.72rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+    align-items: start;
+}
+
+.dashboard-financial-layout-cash {
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+}
+
+.dashboard-financial-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 0;
+}
+
 .dashboard-financial-grid-cash {
-    grid-template-columns: 1.3fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 0;
 }
 
 .dashboard-financial-card {
@@ -343,6 +360,48 @@
 
 .dashboard-financial-lines strong {
     font-size: 0.88rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-card {
+    border-radius: 0.78rem;
+    padding: 0.62rem 0.66rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-title {
+    font-size: 0.84rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-value {
+    margin: 0.3rem 0 0;
+    font-size: 1.23rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-lines {
+    margin-top: 0.35rem;
+    gap: 0.24rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-lines p {
+    padding: 0.26rem 0.4rem;
+    font-size: 0.74rem;
+}
+
+.dashboard-financial-grid.is-compact .dashboard-financial-lines strong {
+    font-size: 0.8rem;
+}
+
+.dashboard-financial-charts {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.dashboard-chart-card-compact {
+    padding: 0.54rem 0.6rem;
+}
+
+.dashboard-chart-canvas-wrap-compact {
+    margin-top: 0.42rem;
+    height: 170px;
 }
 
 .dashboard-list {
@@ -587,6 +646,15 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .dashboard-financial-layout,
+    .dashboard-financial-layout-cash {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-financial-charts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .dashboard-inventory-layout {
         grid-template-columns: 1fr;
     }
@@ -613,6 +681,10 @@
     .dashboard-inventory-grid-toolbar {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .dashboard-financial-charts {
+        grid-template-columns: 1fr;
     }
 }
 
