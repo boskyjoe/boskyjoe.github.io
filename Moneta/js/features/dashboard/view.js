@@ -1402,6 +1402,7 @@ function initializeInventoryGrid(inventory = {}) {
 }
 
 let chartJsModulePromise = null;
+let chartJsRegistrationPromise = null;
 
 async function loadChartJs() {
     if (!chartJsModulePromise) {
@@ -1409,6 +1410,48 @@ async function loadChartJs() {
     }
 
     return chartJsModulePromise;
+}
+
+async function ensureChartJsRegistered() {
+    if (!chartJsRegistrationPromise) {
+        chartJsRegistrationPromise = (async () => {
+            const chartJs = await loadChartJs();
+            const {
+                Chart,
+                registerables = [],
+                DoughnutController,
+                BarController,
+                ArcElement,
+                Tooltip,
+                Legend,
+                CategoryScale,
+                LinearScale,
+                BarElement
+            } = chartJs;
+
+            if (registerables.length) {
+                Chart.register(...registerables);
+            } else {
+                Chart.register(
+                    DoughnutController,
+                    BarController,
+                    ArcElement,
+                    Tooltip,
+                    Legend,
+                    CategoryScale,
+                    LinearScale,
+                    BarElement
+                );
+            }
+
+            return chartJs;
+        })().catch(error => {
+            chartJsRegistrationPromise = null;
+            throw error;
+        });
+    }
+
+    return chartJsRegistrationPromise;
 }
 
 function setChartVisibility(canvas, emptyNode, { showChart, message = "" }) {
@@ -1461,20 +1504,9 @@ async function initializeInventoryCharts(inventory = {}) {
     }
 
     try {
-        const chartJs = await loadChartJs();
+        const chartJs = await ensureChartJsRegistered();
         if (syncToken !== featureState.inventoryChartSyncToken) return;
-
-        const {
-            Chart,
-            ArcElement,
-            Tooltip,
-            Legend,
-            CategoryScale,
-            LinearScale,
-            BarElement
-        } = chartJs;
-
-        Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+        const { Chart } = chartJs;
 
         if (hasStatusData) {
             featureState.stockStatusChart = new Chart(statusCanvas.getContext("2d"), {
@@ -1668,20 +1700,9 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
     const syncToken = ++featureState.financialChartSyncToken;
 
     try {
-        const chartJs = await loadChartJs();
+        const chartJs = await ensureChartJsRegistered();
         if (syncToken !== featureState.financialChartSyncToken) return;
-
-        const {
-            Chart,
-            ArcElement,
-            Tooltip,
-            Legend,
-            CategoryScale,
-            LinearScale,
-            BarElement
-        } = chartJs;
-
-        Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+        const { Chart } = chartJs;
 
         if (hasSalesFinanceData) {
             featureState.salesFinanceChart = new Chart(salesFinanceCanvas.getContext("2d"), {
