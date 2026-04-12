@@ -770,7 +770,7 @@
 
 .reports-activity-grid {
     width: 100%;
-    min-height: 500px;
+    height: 560px;
 }
 
 .reports-data-table th.reports-align-right,
