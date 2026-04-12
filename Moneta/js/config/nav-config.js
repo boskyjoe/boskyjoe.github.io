@@ -20,15 +20,6 @@ export const navConfig = [
         enabled: true
     },
     {
-        type: "link",
-        route: "#/reports",
-        label: "Reports",
-        icon: icons.reports,
-        iconClass: "nav-icon-orange",
-        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"],
-        enabled: true
-    },
-    {
         type: "heading",
         label: "Pre-Sales",
         roles: ["admin", "sales_staff", "team_lead"]
@@ -114,7 +105,16 @@ export const navConfig = [
     {
         type: "heading",
         label: "System Settings",
-        roles: ["admin"]
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"]
+    },
+    {
+        type: "link",
+        route: "#/reports",
+        label: "Reports",
+        icon: icons.reports,
+        iconClass: "nav-icon-orange",
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"],
+        enabled: true
     },
     {
         type: "link",
