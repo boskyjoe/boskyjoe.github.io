@@ -68,6 +68,46 @@ function writeCashFlowCache(user, rangeKey, data, loadedAt) {
     return expiresAt;
 }
 
+function buildReportCacheKey(user, reportKey, scopeKey = "default") {
+    const identity = user?.uid || user?.email || "anonymous";
+    return `moneta.reports.${reportKey}.v1.${identity}.${scopeKey}`;
+}
+
+function readReportCache(user, reportKey, scopeKey = "default") {
+    try {
+        const raw = sessionStorage.getItem(buildReportCacheKey(user, reportKey, scopeKey));
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object") return null;
+        if (!parsed.expiresAt || Date.now() > Number(parsed.expiresAt)) {
+            sessionStorage.removeItem(buildReportCacheKey(user, reportKey, scopeKey));
+            return null;
+        }
+
+        return parsed;
+    } catch (error) {
+        console.warn(`[Moneta] Failed to read ${reportKey} report cache:`, error);
+        return null;
+    }
+}
+
+function writeReportCache(user, reportKey, scopeKey, data, loadedAt) {
+    const expiresAt = loadedAt + CACHE_TTL_MS;
+
+    try {
+        sessionStorage.setItem(buildReportCacheKey(user, reportKey, scopeKey), JSON.stringify({
+            loadedAt,
+            expiresAt,
+            data
+        }));
+    } catch (error) {
+        console.warn(`[Moneta] Failed to write ${reportKey} report cache:`, error);
+    }
+
+    return expiresAt;
+}
+
 export function formatDateLabel(value) {
     if (!value) return "-";
     const date = typeof value?.toDate === "function"
@@ -637,6 +677,400 @@ function buildActivityRows(movements = []) {
         .sort((left, right) => toDateValue(right.date).getTime() - toDateValue(left.date).getTime());
 }
 
+function normalizeStatus(value, fallback = "") {
+    return normalizeText(value || fallback);
+}
+
+function diffDays(fromValue, toValue = new Date()) {
+    const fromDate = toDateValue(fromValue);
+    const toDate = toDateValue(toValue);
+    if (fromDate.getTime() <= 0 || toDate.getTime() <= 0) return 0;
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.floor((toDate.getTime() - fromDate.getTime()) / msPerDay));
+}
+
+function resolveAgeBucket(ageDays = 0) {
+    if (ageDays <= 30) return "0-30 days";
+    if (ageDays <= 60) return "31-60 days";
+    if (ageDays <= 90) return "61-90 days";
+    return "91+ days";
+}
+
+function buildAgingSummary(rows = []) {
+    const seed = {
+        "0-30 days": { label: "0-30 days", count: 0, amount: 0 },
+        "31-60 days": { label: "31-60 days", count: 0, amount: 0 },
+        "61-90 days": { label: "61-90 days", count: 0, amount: 0 },
+        "91+ days": { label: "91+ days", count: 0, amount: 0 }
+    };
+
+    rows.forEach(row => {
+        const bucket = seed[row.ageBucket];
+        if (!bucket) return;
+        bucket.count += 1;
+        bucket.amount = roundCurrency(bucket.amount + roundCurrency(row.balanceDue || 0));
+    });
+
+    return Object.values(seed);
+}
+
+function buildRetailReceivableRows(rows = [], asOfDate = new Date()) {
+    return rows
+        .filter(row => normalizeStatus(row.saleStatus, "Active") !== "Voided")
+        .map(row => {
+            const balanceDue = roundCurrency(row.balanceDue);
+            if (balanceDue <= 0) return null;
+
+            const transactionDate = resolveTransactionDate(row, ["saleDate"]);
+            const ageDays = diffDays(transactionDate, asOfDate);
+
+            return {
+                id: row.id,
+                source: "Retail",
+                sourceLabel: normalizeText(row.store) || "Retail",
+                reference: normalizeText(row.saleId || row.manualVoucherNumber || row.id),
+                counterparty: normalizeText(row.customerInfo?.name) || "Retail Customer",
+                transactionDate,
+                ageDays,
+                ageBucket: resolveAgeBucket(ageDays),
+                grossAmount: roundCurrency(row.financials?.grandTotal),
+                amountPaid: roundCurrency(row.totalAmountPaid),
+                balanceDue,
+                status: normalizeStatus(row.paymentStatus, "Unpaid"),
+                notes: normalizeText(row.saleNotes || row.manualVoucherNumber || "")
+            };
+        })
+        .filter(Boolean);
+}
+
+function buildConsignmentReceivableRows(rows = [], asOfDate = new Date()) {
+    return rows
+        .filter(row => normalizeStatus(row.status, "Active") !== "Cancelled")
+        .map(row => {
+            const balanceDue = roundCurrency(row.balanceDue);
+            if (balanceDue <= 0) return null;
+
+            const transactionDate = resolveTransactionDate(row, ["checkoutDate"]);
+            const ageDays = diffDays(transactionDate, asOfDate);
+
+            return {
+                id: row.id,
+                source: "Consignment",
+                sourceLabel: "Consignment",
+                reference: normalizeText(row.consignmentId || row.manualVoucherNumber || row.id),
+                counterparty: normalizeText(row.teamName || row.teamMemberName) || "Consignment Team",
+                transactionDate,
+                ageDays,
+                ageBucket: resolveAgeBucket(ageDays),
+                grossAmount: roundCurrency(row.totalValueSold),
+                amountPaid: roundCurrency(row.totalAmountPaid),
+                balanceDue,
+                status: normalizeStatus(row.status, "Active"),
+                notes: normalizeText(row.venue || row.manualVoucherNumber || "")
+            };
+        })
+        .filter(Boolean);
+}
+
+function buildOutstandingReceivablesSummary(rows = []) {
+    const retailRows = rows.filter(row => row.source === "Retail");
+    const consignmentRows = rows.filter(row => row.source === "Consignment");
+    const overdueRows = rows.filter(row => row.ageDays > 30);
+    const uniqueParties = new Set(rows.map(row => normalizeText(row.counterparty)).filter(Boolean));
+
+    return {
+        openBalance: roundCurrency(rows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        retailBalance: roundCurrency(retailRows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        consignmentBalance: roundCurrency(consignmentRows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        overdueBalance: roundCurrency(overdueRows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        openItems: rows.length,
+        uniqueParties: uniqueParties.size
+    };
+}
+
+function buildOutstandingReceivablesReportData({
+    salesInvoices = [],
+    consignmentOrders = [],
+    asOfDate = new Date(),
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const detailRows = [
+        ...buildRetailReceivableRows(salesInvoices, asOfDate),
+        ...buildConsignmentReceivableRows(consignmentOrders, asOfDate)
+    ].sort((left, right) => right.ageDays - left.ageDays || toDateValue(left.transactionDate).getTime() - toDateValue(right.transactionDate).getTime());
+
+    return {
+        asOfDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: buildOutstandingReceivablesSummary(detailRows),
+        agingRows: buildAgingSummary(detailRows),
+        detailRows,
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                salesInvoices: salesInvoices.length,
+                consignmentOrders: consignmentOrders.length
+            }
+        }
+    };
+}
+
+function buildPurchasePayableRows(rows = [], asOfDate = new Date()) {
+    return rows
+        .filter(row => normalizeStatus(row.invoiceStatus || row.paymentStatus, "Unpaid") !== "Voided")
+        .map(row => {
+            const balanceDue = roundCurrency(row.balanceDue ?? row.invoiceTotal);
+            if (balanceDue <= 0) return null;
+
+            const transactionDate = resolveTransactionDate(row, ["purchaseDate"]);
+            const ageDays = diffDays(transactionDate, asOfDate);
+
+            return {
+                id: row.id,
+                supplierName: normalizeText(row.supplierName) || "Supplier",
+                reference: normalizeText(row.invoiceId || row.supplierInvoiceNo || row.id),
+                invoiceName: normalizeText(row.invoiceName) || "Purchase Invoice",
+                transactionDate,
+                ageDays,
+                ageBucket: resolveAgeBucket(ageDays),
+                invoiceTotal: roundCurrency(row.invoiceTotal),
+                amountPaid: roundCurrency(row.amountPaid),
+                balanceDue,
+                status: normalizeStatus(row.paymentStatus, "Unpaid")
+            };
+        })
+        .filter(Boolean);
+}
+
+function buildSupplierSummaryRows(rows = []) {
+    const bySupplier = new Map();
+
+    rows.forEach(row => {
+        const key = normalizeText(row.supplierName) || "Supplier";
+        if (!bySupplier.has(key)) {
+            bySupplier.set(key, {
+                supplierName: key,
+                invoiceCount: 0,
+                invoiceTotal: 0,
+                amountPaid: 0,
+                balanceDue: 0
+            });
+        }
+
+        const bucket = bySupplier.get(key);
+        bucket.invoiceCount += 1;
+        bucket.invoiceTotal = roundCurrency(bucket.invoiceTotal + row.invoiceTotal);
+        bucket.amountPaid = roundCurrency(bucket.amountPaid + row.amountPaid);
+        bucket.balanceDue = roundCurrency(bucket.balanceDue + row.balanceDue);
+    });
+
+    return [...bySupplier.values()].sort((left, right) => right.balanceDue - left.balanceDue);
+}
+
+function buildPurchasePayablesSummary(rows = [], supplierRows = []) {
+    const overdueRows = rows.filter(row => row.ageDays > 30);
+
+    return {
+        openBalance: roundCurrency(rows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        overdueBalance: roundCurrency(overdueRows.reduce((sum, row) => sum + row.balanceDue, 0)),
+        openInvoices: rows.length,
+        supplierCount: supplierRows.length
+    };
+}
+
+function buildPurchasePayablesReportData({
+    purchaseInvoices = [],
+    asOfDate = new Date(),
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const detailRows = buildPurchasePayableRows(purchaseInvoices, asOfDate)
+        .sort((left, right) => right.ageDays - left.ageDays || toDateValue(left.transactionDate).getTime() - toDateValue(right.transactionDate).getTime());
+    const supplierRows = buildSupplierSummaryRows(detailRows);
+
+    return {
+        asOfDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: buildPurchasePayablesSummary(detailRows, supplierRows),
+        agingRows: buildAgingSummary(detailRows),
+        supplierRows,
+        detailRows,
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                purchaseInvoices: purchaseInvoices.length
+            }
+        }
+    };
+}
+
+function buildRetailProfitRows(rows = [], productCostMap = new Map()) {
+    return rows
+        .filter(row => normalizeStatus(row.saleStatus, "Active") !== "Voided")
+        .filter(row => normalizeStatus(row.saleType, "Revenue") !== "Sample")
+        .map(row => {
+            const grossSales = roundCurrency(row.financials?.itemsSubtotal);
+            const discounts = roundCurrency((row.financials?.totalLineDiscount || 0) + (row.financials?.orderDiscountAmount || 0));
+            const netSales = roundCurrency(row.financials?.finalTaxableAmount);
+            const cogs = roundCurrency((row.lineItems || []).reduce((sum, item) => {
+                const unitCost = roundCurrency(productCostMap.get(normalizeText(item.productId)) || 0);
+                return sum + ((Number(item.quantity) || 0) * unitCost);
+            }, 0));
+
+            return {
+                id: row.id,
+                segment: normalizeText(row.store) || "Retail",
+                grossSales,
+                discounts,
+                netSales,
+                cogs,
+                expenses: roundCurrency(row.financials?.totalExpenses),
+                taxCollected: roundCurrency(row.financials?.totalTax)
+            };
+        });
+}
+
+function buildConsignmentProfitRows(rows = [], productCostMap = new Map()) {
+    return rows
+        .filter(row => normalizeStatus(row.status, "Active") !== "Cancelled")
+        .map(row => {
+            const cogs = roundCurrency((row.items || []).reduce((sum, item) => {
+                const unitCost = roundCurrency(productCostMap.get(normalizeText(item.productId)) || 0);
+                return sum + ((Number(item.quantitySold) || 0) * unitCost);
+            }, 0));
+
+            return {
+                id: row.id,
+                segment: "Consignment",
+                grossSales: roundCurrency(row.totalValueSold),
+                discounts: 0,
+                netSales: roundCurrency(row.totalValueSold),
+                cogs,
+                expenses: roundCurrency(row.totalExpenses),
+                taxCollected: 0
+            };
+        });
+}
+
+function sumMetric(rows = [], field) {
+    return roundCurrency(rows.reduce((sum, row) => sum + roundCurrency(row?.[field]), 0));
+}
+
+function buildSegmentSummaryRows(rows = []) {
+    const bySegment = new Map();
+
+    rows.forEach(row => {
+        const key = normalizeText(row.segment) || "Other";
+        if (!bySegment.has(key)) {
+            bySegment.set(key, {
+                segment: key,
+                grossSales: 0,
+                discounts: 0,
+                netSales: 0,
+                cogs: 0,
+                grossProfit: 0
+            });
+        }
+
+        const bucket = bySegment.get(key);
+        bucket.grossSales = roundCurrency(bucket.grossSales + row.grossSales);
+        bucket.discounts = roundCurrency(bucket.discounts + row.discounts);
+        bucket.netSales = roundCurrency(bucket.netSales + row.netSales);
+        bucket.cogs = roundCurrency(bucket.cogs + row.cogs);
+        bucket.grossProfit = roundCurrency(bucket.netSales - bucket.cogs);
+    });
+
+    return [...bySegment.values()].sort((left, right) => right.netSales - left.netSales);
+}
+
+function buildProfitAndLossReportData({
+    salesInvoices = [],
+    consignmentOrders = [],
+    donations = [],
+    products = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const productCostMap = new Map(
+        (products || []).map(product => [normalizeText(product.id), roundCurrency(product.unitPrice)])
+    );
+
+    const retailRows = buildRetailProfitRows(salesInvoices, productCostMap);
+    const consignmentRows = buildConsignmentProfitRows(consignmentOrders, productCostMap);
+    const segmentSourceRows = [...retailRows, ...consignmentRows];
+
+    const retailGrossSales = sumMetric(retailRows, "grossSales");
+    const retailDiscounts = sumMetric(retailRows, "discounts");
+    const retailNetSales = sumMetric(retailRows, "netSales");
+    const retailCogs = sumMetric(retailRows, "cogs");
+    const retailExpenses = sumMetric(retailRows, "expenses");
+    const retailTaxesCollected = sumMetric(retailRows, "taxCollected");
+
+    const consignmentNetSales = sumMetric(consignmentRows, "netSales");
+    const consignmentCogs = sumMetric(consignmentRows, "cogs");
+    const consignmentExpenses = sumMetric(consignmentRows, "expenses");
+
+    const netSalesRevenue = roundCurrency(retailNetSales + consignmentNetSales);
+    const totalCogs = roundCurrency(retailCogs + consignmentCogs);
+    const grossProfit = roundCurrency(netSalesRevenue - totalCogs);
+    const totalOperatingExpenses = roundCurrency(retailExpenses + consignmentExpenses);
+    const operatingProfit = roundCurrency(grossProfit - totalOperatingExpenses);
+    const netDonations = roundCurrency((donations || []).reduce((sum, row) => sum + roundCurrency(row.amount), 0));
+    const netProfit = roundCurrency(operatingProfit + netDonations);
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            netSalesRevenue,
+            grossProfit,
+            operatingProfit,
+            netDonations,
+            netProfit,
+            retailTaxesCollected
+        },
+        statementRows: [
+            { section: "Revenue", label: "Retail Gross Sales", amount: retailGrossSales },
+            { section: "Revenue", label: "Less Retail Discounts", amount: roundCurrency(retailDiscounts * -1) },
+            { section: "Revenue", label: "Retail Net Sales", amount: retailNetSales, tone: "total" },
+            { section: "Revenue", label: "Consignment Sales", amount: consignmentNetSales },
+            { section: "Revenue", label: "Net Sales Revenue", amount: netSalesRevenue, tone: "total" },
+            { section: "Cost Of Sales", label: "Retail Cost Of Goods Sold", amount: roundCurrency(retailCogs * -1) },
+            { section: "Cost Of Sales", label: "Consignment Cost Of Goods Sold", amount: roundCurrency(consignmentCogs * -1) },
+            { section: "Cost Of Sales", label: "Gross Profit", amount: grossProfit, tone: "total" },
+            { section: "Operating Expenses", label: "Retail Operating Expenses", amount: roundCurrency(retailExpenses * -1) },
+            { section: "Operating Expenses", label: "Consignment Operating Expenses", amount: roundCurrency(consignmentExpenses * -1) },
+            { section: "Operating Expenses", label: "Operating Profit", amount: operatingProfit, tone: "total" },
+            { section: "Other Income", label: "Net Donations", amount: netDonations },
+            { section: "Other Income", label: "Net Profit / (Loss)", amount: netProfit, tone: "total" }
+        ],
+        segmentRows: buildSegmentSummaryRows(segmentSourceRows),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                salesInvoices: salesInvoices.length,
+                consignmentOrders: consignmentOrders.length,
+                donations: donations.length,
+                products: products.length
+            },
+            notes: [
+                "Retail revenue excludes output tax and uses final taxable sales value.",
+                "Cost of goods sold is estimated from the current product cost basis stored in product master data.",
+                "Consignment revenue uses recorded sold value on consignment orders within the selected reporting window."
+            ]
+        }
+    };
+}
+
 function buildStatementRows(statement = {}) {
     const rows = [
         { section: "Cash Inflows", label: "Consignment Receipts", amount: statement.consignmentReceipts, tone: "positive" },
@@ -817,6 +1251,154 @@ export async function getCashFlowSummaryReport(user, rangeSpec, { forceRefresh =
 
     const loadedAt = Date.now();
     const expiresAt = writeCashFlowCache(user, rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getOutstandingReceivablesReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the outstanding receivables report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "receivables", "as-of-today");
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [salesInvoicesResult, consignmentOrdersResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, { dateField: "saleDate" }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, { dateField: "checkoutDate" })
+    ]);
+
+    const data = buildOutstandingReceivablesReportData({
+        salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
+        asOfDate: new Date(),
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            salesInvoices: salesInvoicesResult.truncated,
+            consignmentOrders: consignmentOrdersResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "receivables", "as-of-today", data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getPurchasePayablesReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance", "inventory_manager"].includes(user.role)) {
+        throw new Error("You do not have access to the purchase payables report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "payables", "as-of-today");
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const purchaseInvoicesResult = await fetchReportWindowedRows(COLLECTIONS.purchaseInvoices, { dateField: "purchaseDate" });
+
+    const data = buildPurchasePayablesReportData({
+        purchaseInvoices: purchaseInvoicesResult.rows,
+        asOfDate: new Date(),
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            purchaseInvoices: purchaseInvoicesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "payables", "as-of-today", data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the profit and loss report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "pnl", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [salesInvoicesResult, consignmentOrdersResult, donationsResult, productsResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.donations, {
+            dateField: "donationDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.products)
+    ]);
+
+    const data = buildProfitAndLossReportData({
+        salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
+        donations: donationsResult.rows,
+        products: productsResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            salesInvoices: salesInvoicesResult.truncated,
+            consignmentOrders: consignmentOrdersResult.truncated,
+            donations: donationsResult.truncated,
+            products: productsResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "pnl", rangeSpec.rangeKey, data, loadedAt);
 
     return {
         data,

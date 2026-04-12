@@ -12,6 +12,9 @@ import {
     formatUtcDateTime,
     getCashFlowSummaryReport,
     getDefaultCashFlowCustomRange,
+    getOutstandingReceivablesReport,
+    getProfitAndLossReport,
+    getPurchasePayablesReport,
     resolveCashFlowRangeSpec
 } from "./service.js";
 
@@ -138,7 +141,7 @@ const REPORT_GROUPS = [
                 dataSource: "salesInvoices, consignmentOrdersV2",
                 roles: ["admin", "finance"],
                 status: "priority",
-                implemented: false
+                implemented: true
             },
             {
                 id: "purchase-payables",
@@ -146,17 +149,17 @@ const REPORT_GROUPS = [
                 description: "Supplier invoice totals, paid amount, overdue balances, and pending obligations by supplier.",
                 dataSource: "purchaseInvoices, supplierPaymentsLedger, suppliers",
                 roles: ["admin", "finance", "inventory_manager"],
-                status: "planned",
-                implemented: false
+                status: "priority",
+                implemented: true
             },
             {
                 id: "profit-and-loss",
                 title: "Profit and Loss",
-                description: "Planned as a professional, auditable P&L statement covering both retail sales and consignment sales.",
+                description: "Professional statement-style P&L covering both retail sales and consignment sales.",
                 dataSource: "salesInvoices, consignmentOrdersV2, purchaseInvoices, donations",
                 roles: ["admin", "finance"],
-                status: "planned",
-                implemented: false
+                status: "priority",
+                implemented: true
             }
         ]
     }
@@ -268,6 +271,18 @@ function buildRangeButtonsMarkup() {
     }).join("");
 }
 
+function reportUsesRange(reportId = "") {
+    return ["cash-flow-summary", "profit-and-loss"].includes(reportId);
+}
+
+function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
+    if (reportDef?.id === "outstanding-receivables" || reportDef?.id === "purchase-payables") {
+        return reportData?.asOfDate ? `As Of ${formatDateLabel(reportData.asOfDate)}` : "As Of Today";
+    }
+
+    return reportData?.rangeLabel || (rangeSpec?.isValid ? rangeSpec.rangeLabel : "Invalid Range");
+}
+
 function renderReportCard(report) {
     const actionLabel = report.implemented ? "Open Report" : "Planned Next";
 
@@ -329,7 +344,7 @@ function renderReportsHub(user) {
                 <div class="reports-access-strip">
                     <span class="status-pill">Role: ${formatRoleLabel(user.role)}</span>
                     <span class="status-pill">Visible Groups: ${groupNames.join(", ") || "None"}</span>
-                    <span class="status-pill">Finance first: Cash Flow Summary is live</span>
+                    <span class="status-pill">Finance lane: 4 live reports</span>
                 </div>
             </section>
 
@@ -620,31 +635,31 @@ function renderCashFlowMetadataSection(reportData = null) {
     `;
 }
 
-function renderCashFlowReportView(user, reportDef) {
+function renderReportHeader(reportDef, reportData, { showRangeControls = false } = {}) {
     const rangeSpec = resolveCashFlowRangeSpec({
         rangeKey: featureState.selectedRangeKey,
         customFrom: featureState.customFrom,
         customTo: featureState.customTo
     });
-    const reportData = featureState.reportData;
     const loadedLabel = featureState.loadedAt ? formatDateTime(featureState.loadedAt) : "-";
     const expiryLabel = featureState.expiresAt ? formatDateTime(featureState.expiresAt) : "-";
     const sourceLabel = featureState.source === "cache" ? "Cached Snapshot" : "Live Data";
+    const windowLabel = buildReportWindowLabel(reportDef, reportData, rangeSpec);
 
     return `
-        <div class="reports-shell reports-workspace">
-            <section class="panel-card reports-header-card">
-                <div class="reports-toolbar">
-                    <div class="reports-header-copy">
-                        <button class="button button-secondary reports-back-button" type="button" data-report-back>
-                            <span class="button-icon">${icons.close}</span>
-                            Back To Reports
-                        </button>
-                        <p class="hero-kicker">${reportDef.groupTitle}</p>
-                        <h2 class="hero-title">${reportDef.title}</h2>
-                        <p>${reportDef.description}</p>
-                    </div>
-                    <div class="reports-toolbar-actions">
+        <section class="panel-card reports-header-card">
+            <div class="reports-toolbar">
+                <div class="reports-header-copy">
+                    <button class="button button-secondary reports-back-button" type="button" data-report-back>
+                        <span class="button-icon">${icons.close}</span>
+                        Back To Reports
+                    </button>
+                    <p class="hero-kicker">${reportDef.groupTitle}</p>
+                    <h2 class="hero-title">${reportDef.title}</h2>
+                    <p>${reportDef.description}</p>
+                </div>
+                <div class="reports-toolbar-actions">
+                    ${showRangeControls ? `
                         <div class="dashboard-window-switcher">
                             ${buildRangeButtonsMarkup()}
                         </div>
@@ -661,30 +676,575 @@ function renderCashFlowReportView(user, reportDef) {
                                 Apply
                             </button>
                         </div>
-                        <button id="cash-flow-refresh-button" class="button button-primary-alt" type="button" ${featureState.isLoading ? "disabled" : ""}>
-                            <span class="button-icon">${icons.search}</span>
-                            ${featureState.isLoading ? "Refreshing..." : "Refresh"}
-                        </button>
-                    </div>
+                    ` : ""}
+                    <button id="cash-flow-refresh-button" class="button button-primary-alt" type="button" ${featureState.isLoading ? "disabled" : ""}>
+                        <span class="button-icon">${icons.search}</span>
+                        ${featureState.isLoading ? "Refreshing..." : "Refresh"}
+                    </button>
                 </div>
-                <div class="dashboard-cache-strip source-${featureState.source}">
-                    <span class="status-pill">${sourceLabel}</span>
-                    <span>Window: <strong>${reportData?.rangeLabel || (rangeSpec.isValid ? rangeSpec.rangeLabel : "Invalid Range")}</strong></span>
-                    <span>Loaded: <strong>${loadedLabel}</strong></span>
-                    <span>Cache Expires: <strong>${expiryLabel}</strong></span>
+            </div>
+            <div class="dashboard-cache-strip source-${featureState.source}">
+                <span class="status-pill">${sourceLabel}</span>
+                <span>Window: <strong>${windowLabel}</strong></span>
+                <span>Loaded: <strong>${loadedLabel}</strong></span>
+                <span>Cache Expires: <strong>${expiryLabel}</strong></span>
+            </div>
+            ${featureState.errorMessage ? `
+                <div class="dashboard-error-strip">
+                    <span class="button-icon">${icons.warning}</span>
+                    ${featureState.errorMessage}
                 </div>
-                ${featureState.errorMessage ? `
-                    <div class="dashboard-error-strip">
-                        <span class="button-icon">${icons.warning}</span>
-                        ${featureState.errorMessage}
-                    </div>
-                ` : ""}
-            </section>
+            ` : ""}
+        </section>
+    `;
+}
 
+function renderAgingSection(title, rows = [], amountLabel = "Balance") {
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>${title}</h3>
+                    <p>Open exposure grouped by age bucket for collection and liability review.</p>
+                </div>
+                <span class="status-pill">${rows.length} bucket${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Bucket</th>
+                            <th class="reports-align-right">Items</th>
+                            <th class="reports-align-right">${amountLabel}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.label}</td>
+                                <td class="reports-align-right">${row.count}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.amount)}">${formatAccountingCurrency(row.amount)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="3" class="reports-table-empty">No aged balances are available.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderOutstandingReceivablesCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-danger">
+                <p class="dashboard-kpi-title">Open Receivables</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.openBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.openItems || 0} open customer exposures</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Retail Balance</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.retailBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">Outstanding direct retail balances</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Consignment Balance</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.consignmentBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">Outstanding consignment settlements</p>
+            </article>
+            <article class="dashboard-kpi-card tone-danger">
+                <p class="dashboard-kpi-title">Over 30 Days</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.overdueBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.uniqueParties || 0} unique parties</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderOutstandingReceivablesDetail(reportData = null) {
+    const rows = reportData?.detailRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Open Receivable Detail</h3>
+                    <p>Retail and consignment balances still outstanding as of the current report date.</p>
+                </div>
+                <span class="status-pill">${rows.length} open item${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Reference</th>
+                            <th>Counterparty</th>
+                            <th>Date</th>
+                            <th class="reports-align-right">Age</th>
+                            <th class="reports-align-right">Gross</th>
+                            <th class="reports-align-right">Paid</th>
+                            <th class="reports-align-right">Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.sourceLabel}</td>
+                                <td>${row.reference || "-"}</td>
+                                <td>${row.counterparty || "-"}</td>
+                                <td>${formatDateLabel(row.transactionDate)}</td>
+                                <td class="reports-align-right">${row.ageDays}d</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.grossAmount)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.amountPaid)}</td>
+                                <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency(row.balanceDue)}</td>
+                                <td>${row.status || "-"}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="9" class="reports-table-empty">No open receivables are currently outstanding.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderReceivablesMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Receivables are shown as an as-of report using current open balances and aging from the transaction date.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">As Of</p>
+                    <p class="report-audit-value">${reportData ? formatDateLabel(reportData.asOfDate) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Open Items</p>
+                    <p class="report-audit-value">${reportData?.summary?.openItems || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Execution Time</p>
+                    <p class="report-audit-value">${reportData ? `${reportData.durationMs} ms` : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Retail sales ${sourceCounts.salesInvoices || 0},
+                Consignment orders ${sourceCounts.consignmentOrders || 0}.
+            </div>
+        </section>
+    `;
+}
+
+function renderPurchasePayablesCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-danger">
+                <p class="dashboard-kpi-title">Open Payables</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.openBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.openInvoices || 0} open supplier invoices</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Over 30 Days</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.overdueBalance || 0)}</p>
+                <p class="dashboard-kpi-meta">Invoices aged over 30 days</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Suppliers Exposed</p>
+                <p class="dashboard-kpi-value">${summary.supplierCount || 0}</p>
+                <p class="dashboard-kpi-meta">Suppliers with unpaid balance</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderSupplierSummarySection(reportData = null) {
+    const rows = reportData?.supplierRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Supplier Exposure</h3>
+                    <p>Grouped payable balance by supplier for prioritization and payment planning.</p>
+                </div>
+                <span class="status-pill">${rows.length} supplier${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Supplier</th>
+                            <th class="reports-align-right">Invoices</th>
+                            <th class="reports-align-right">Invoice Total</th>
+                            <th class="reports-align-right">Paid</th>
+                            <th class="reports-align-right">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.supplierName}</td>
+                                <td class="reports-align-right">${row.invoiceCount}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.invoiceTotal)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.amountPaid)}</td>
+                                <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency(row.balanceDue)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="5" class="reports-table-empty">No supplier balances are currently outstanding.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderPurchasePayablesDetail(reportData = null) {
+    const rows = reportData?.detailRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Open Invoice Detail</h3>
+                    <p>Invoice-level unpaid balances with age and supplier context.</p>
+                </div>
+                <span class="status-pill">${rows.length} invoice${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Supplier</th>
+                            <th>Reference</th>
+                            <th>Invoice</th>
+                            <th>Date</th>
+                            <th class="reports-align-right">Age</th>
+                            <th class="reports-align-right">Total</th>
+                            <th class="reports-align-right">Paid</th>
+                            <th class="reports-align-right">Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.supplierName}</td>
+                                <td>${row.reference || "-"}</td>
+                                <td>${row.invoiceName || "-"}</td>
+                                <td>${formatDateLabel(row.transactionDate)}</td>
+                                <td class="reports-align-right">${row.ageDays}d</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.invoiceTotal)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.amountPaid)}</td>
+                                <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency(row.balanceDue)}</td>
+                                <td>${row.status || "-"}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="9" class="reports-table-empty">No purchase payables are currently outstanding.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderPurchasePayablesMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Purchase payables are shown as current outstanding supplier obligations aged from invoice date.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">As Of</p>
+                    <p class="report-audit-value">${reportData ? formatDateLabel(reportData.asOfDate) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Open Invoices</p>
+                    <p class="report-audit-value">${reportData?.summary?.openInvoices || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Suppliers</p>
+                    <p class="report-audit-value">${reportData?.summary?.supplierCount || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Purchase invoices ${sourceCounts.purchaseInvoices || 0}.
+            </div>
+        </section>
+    `;
+}
+
+function renderProfitAndLossCards(reportData = null) {
+    const summary = reportData?.summary || {};
+    const netProfitTone = (summary.netProfit || 0) >= 0 ? "tone-success" : "tone-danger";
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Net Sales Revenue</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.netSalesRevenue || 0)}</p>
+                <p class="dashboard-kpi-meta">Retail and consignment net sales</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Gross Profit</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.grossProfit || 0)}</p>
+                <p class="dashboard-kpi-meta">After estimated cost of goods sold</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Operating Profit</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.operatingProfit || 0)}</p>
+                <p class="dashboard-kpi-meta">After retail and consignment expenses</p>
+            </article>
+            <article class="dashboard-kpi-card ${netProfitTone}">
+                <p class="dashboard-kpi-title">Net Profit / Loss</p>
+                <p class="dashboard-kpi-value">${formatSignedCurrency(summary.netProfit || 0)}</p>
+                <p class="dashboard-kpi-meta">Including net donations</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderProfitAndLossStatementSection(reportData = null) {
+    const rows = reportData?.statementRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Profit And Loss Statement</h3>
+                    <p>Statement-style income view for the selected reporting window.</p>
+                </div>
+                <span class="status-pill">Basis: Accrual-style operational summary</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Section</th>
+                            <th>Line Item</th>
+                            <th class="reports-align-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr class="${row.tone === "total" ? "reports-row-total" : ""}">
+                                <td>${row.section}</td>
+                                <td>${row.label}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.amount)}">${formatAccountingCurrency(row.amount)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="3" class="reports-table-empty">No profit and loss rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderProfitAndLossSegmentSection(reportData = null) {
+    const rows = reportData?.segmentRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Business Segment Support</h3>
+                    <p>Supporting gross profit view by retail store and consignment segment.</p>
+                </div>
+                <span class="status-pill">${rows.length} segment${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Segment</th>
+                            <th class="reports-align-right">Gross Sales</th>
+                            <th class="reports-align-right">Discounts</th>
+                            <th class="reports-align-right">Net Sales</th>
+                            <th class="reports-align-right">COGS</th>
+                            <th class="reports-align-right">Gross Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.segment}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.grossSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(roundCurrency(row.discounts * -1))}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.netSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(roundCurrency(row.cogs * -1))}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.grossProfit)}">${formatAccountingCurrency(row.grossProfit)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="6" class="reports-table-empty">No business segment support rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderProfitAndLossMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Statement assumptions and source coverage used for this P&amp;L build.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Window</p>
+                    <p class="report-audit-value">${reportData?.rangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Retail Tax Excluded</p>
+                    <p class="report-audit-value">${formatAccountingCurrency(reportData?.summary?.retailTaxesCollected || 0)}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Retail sales ${sourceCounts.salesInvoices || 0},
+                Consignment orders ${sourceCounts.consignmentOrders || 0},
+                Donations ${sourceCounts.donations || 0},
+                Products ${sourceCounts.products || 0}.
+            </div>
+            ${(metadata.notes || []).length ? `
+                <div class="reports-audit-note">
+                    ${(metadata.notes || []).map(note => `- ${note}`).join("<br>")}
+                </div>
+            ` : ""}
+        </section>
+    `;
+}
+
+function renderCashFlowReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
             ${renderCashFlowSummaryCards(reportData)}
             ${renderCashFlowStatementSection(reportData)}
             ${renderActivitySection(reportData)}
             ${renderCashFlowMetadataSection(reportData)}
+        </div>
+    `;
+}
+
+function renderOutstandingReceivablesReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData)}
+            ${renderOutstandingReceivablesCards(reportData)}
+            ${renderAgingSection("Receivables Aging", reportData?.agingRows || [], "Balance")}
+            ${renderOutstandingReceivablesDetail(reportData)}
+            ${renderReceivablesMetadataSection(reportData)}
+        </div>
+    `;
+}
+
+function renderPurchasePayablesReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData)}
+            ${renderPurchasePayablesCards(reportData)}
+            ${renderAgingSection("Payables Aging", reportData?.agingRows || [], "Balance")}
+            ${renderSupplierSummarySection(reportData)}
+            ${renderPurchasePayablesDetail(reportData)}
+            ${renderPurchasePayablesMetadataSection(reportData)}
+        </div>
+    `;
+}
+
+function renderProfitAndLossReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
+            ${renderProfitAndLossCards(reportData)}
+            ${renderProfitAndLossStatementSection(reportData)}
+            ${renderProfitAndLossSegmentSection(reportData)}
+            ${renderProfitAndLossMetadataSection(reportData)}
         </div>
     `;
 }
@@ -700,7 +1260,7 @@ function bindReportsEvents(user) {
             if (!reportDef || !canAccessReport(reportDef, user)) return;
 
             if (!reportDef.implemented) {
-                showToast(`${reportDef.title} is queued next. Cash Flow Summary is the first live finance report.`, "info");
+                showToast(`${reportDef.title} is queued next in the reporting backlog.`, "info");
                 return;
             }
 
@@ -729,7 +1289,7 @@ function bindReportsEvents(user) {
             renderReportsView(user);
 
             if (nextKey !== "custom") {
-                void loadCashFlowReport(user, { forceRefresh: false });
+                void loadActiveReport(user, { forceRefresh: false });
             }
         });
     });
@@ -746,11 +1306,11 @@ function bindReportsEvents(user) {
         featureState.selectedRangeKey = "custom";
         featureState.reportData = null;
         featureState.errorMessage = "";
-        void loadCashFlowReport(user, { forceRefresh: false });
+        void loadActiveReport(user, { forceRefresh: false });
     });
 
     root.querySelector("#cash-flow-refresh-button")?.addEventListener("click", () => {
-        void loadCashFlowReport(user, { forceRefresh: true });
+        void loadActiveReport(user, { forceRefresh: true });
     });
 
     root.querySelector("#reports-cash-activity-search")?.addEventListener("input", event => {
@@ -794,7 +1354,10 @@ async function loadCashFlowReport(user, { forceRefresh = false } = {}) {
 
         if (token !== featureState.requestToken) return;
 
-        featureState.reportData = result.data;
+        featureState.reportData = {
+            ...result.data,
+            reportId: "cash-flow-summary"
+        };
         featureState.source = result.source;
         featureState.loadedAt = result.loadedAt;
         featureState.expiresAt = result.expiresAt;
@@ -811,6 +1374,169 @@ async function loadCashFlowReport(user, { forceRefresh = false } = {}) {
             }
         }
     }
+}
+
+async function loadOutstandingReceivablesReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance"].includes(user.role)) return;
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "outstanding-receivables"
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getOutstandingReceivablesReport(user, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "outstanding-receivables"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Outstanding receivables report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the outstanding receivables report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
+async function loadPurchasePayablesReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance", "inventory_manager"].includes(user.role)) return;
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "purchase-payables"
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getPurchasePayablesReport(user, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "purchase-payables"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Purchase payables report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the purchase payables report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
+async function loadProfitAndLossReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "finance"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Profit and loss range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "profit-and-loss"
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getProfitAndLossReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "profit-and-loss"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Profit and loss report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the profit and loss report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
+function loadActiveReport(user, options = {}) {
+    const reportId = featureState.activeReportId;
+
+    if (reportId === "cash-flow-summary") {
+        return loadCashFlowReport(user, options);
+    }
+    if (reportId === "outstanding-receivables") {
+        return loadOutstandingReceivablesReport(user, options);
+    }
+    if (reportId === "purchase-payables") {
+        return loadPurchasePayablesReport(user, options);
+    }
+    if (reportId === "profit-and-loss") {
+        return loadProfitAndLossReport(user, options);
+    }
+
+    return Promise.resolve();
 }
 
 export function renderReportsView(user) {
@@ -833,7 +1559,13 @@ export function renderReportsView(user) {
 
     const activeReport = featureState.activeReportId ? findReportDefinition(featureState.activeReportId) : null;
     root.innerHTML = activeReport
-        ? renderCashFlowReportView(user, activeReport)
+        ? (() => {
+            if (activeReport.id === "cash-flow-summary") return renderCashFlowReportView(user, activeReport);
+            if (activeReport.id === "outstanding-receivables") return renderOutstandingReceivablesReportView(user, activeReport);
+            if (activeReport.id === "purchase-payables") return renderPurchasePayablesReportView(user, activeReport);
+            if (activeReport.id === "profit-and-loss") return renderProfitAndLossReportView(user, activeReport);
+            return renderReportsHub(user);
+        })()
         : renderReportsHub(user);
 
     bindReportsEvents(user);
@@ -842,20 +1574,22 @@ export function renderReportsView(user) {
         initializeActivityGrid(featureState.reportData?.activityRows || []);
     }
 
-    if (activeReport?.id === "cash-flow-summary") {
+    if (activeReport) {
         const rangeSpec = resolveCashFlowRangeSpec({
             rangeKey: featureState.selectedRangeKey,
             customFrom: featureState.customFrom,
             customTo: featureState.customTo
         });
-        const shouldLoad = rangeSpec.isValid && !featureState.isLoading && (
+        const rangeReady = !reportUsesRange(activeReport.id) || rangeSpec.isValid;
+        const shouldLoad = rangeReady && !featureState.isLoading && (
             !featureState.reportData
-            || featureState.reportData.rangeKey !== rangeSpec.rangeKey
+            || featureState.reportData.reportId !== activeReport.id
+            || (reportUsesRange(activeReport.id) && featureState.reportData.rangeKey !== rangeSpec.rangeKey)
             || Date.now() > featureState.expiresAt
         );
 
         if (shouldLoad) {
-            void loadCashFlowReport(user, { forceRefresh: false });
+            void loadActiveReport(user, { forceRefresh: false });
         }
     }
 }
