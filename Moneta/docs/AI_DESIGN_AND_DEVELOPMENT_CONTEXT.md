@@ -1,6 +1,6 @@
 # MONETA Design + Development Context (Current State)
 
-Last updated: 2026-04-11 (latest dashboard charts + UX/workflow sync)  
+Last updated: 2026-04-12 (finance report lane implementation + prior dashboard/report sync)  
 Scope: `Moneta/` only (active rebuild).  
 Legacy reference: repository root `TrinityCart/` files are legacy and should be used only for behavior comparison.
 
@@ -88,7 +88,7 @@ categories, seasons, products, suppliers, payment modes, sales catalogues, teams
 - Roles:
 `admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`, `guest`.
 - Home + Dashboard visible to all authenticated roles.
-- Reports visible to:
+- Reports now sit under the `System Settings` navigation section and are visible to:
 `admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`.
 - Admin-only routes:
 `#/admin-modules`, `#/user-management`.
@@ -178,7 +178,7 @@ retail, consignment, purchases, leads, cash flow, low-stock watch, inventory hea
 - Inventory health includes:
 status chips, status doughnut chart, low-stock-by-category bar chart, searchable AG Grid.
 - Financial visualization layer now includes:
-`Retail vs Consignment` comparison bar chart and `Store Performance` doughnut chart.
+`Retail vs Consignment` comparison bar chart and `Direct Store Performance` doughnut chart.
 - Cash-enabled dashboard profiles also receive:
 `Cash Flow Mix` bar chart and `Lead Pipeline Mix` doughnut chart.
 - Chart behavior notes:
@@ -189,13 +189,51 @@ Chart.js is loaded lazily from CDN through `loadChartJs()`, so charts depend on 
 ## 2b) Reports
 `Moneta/js/features/reports/`
 - Reports hub route is now wired in nav + router at `#/reports`.
-- Current implementation is a role-aware report catalog rather than a full detail workspace.
+- Current implementation is a role-aware report catalog with live priority reports across sales, inventory, and finance.
 - Reports are grouped under:
 `Sales`, `Inventory`, and `Finance`.
 - Users only see report groups/cards that include their role.
 - Current menu access:
 all authenticated roles except `guest`.
-- Report detail pages and export actions are still future work.
+- Live sales reports:
+`Sales Summary`, `Direct Store Performance`, and `Consignment Performance`.
+- Live inventory reports:
+`Inventory Status` and `Inventory Valuation`.
+- Live finance reports:
+`Cash Flow Summary`, `Outstanding Receivables`, `Purchase Payables`, and `Profit and Loss`.
+- Sales Summary, Direct Store Performance, and Consignment Performance currently support date presets:
+`30d`, `90d`, `YTD`, and `custom`.
+- Cash Flow Summary and Profit and Loss currently support date presets:
+`30d`, `90d`, `YTD`, and `custom`.
+- Inventory Status and Inventory Valuation currently behave as:
+as-of reports using current active product stock on hand.
+- Sales Summary output includes:
+cross-channel summary cards, statement rows, channel rollup for `Tasty Treats`, `Church Store`, and `Consignment`, recent sales detail, and audit metadata.
+- Direct Store Performance output includes:
+direct-store comparison for `Tasty Treats` and `Church Store`, with transaction volume, average sale, donations, expenses, net contribution, collection rate, and balance due.
+- Consignment Performance output includes:
+channel KPI cards, team/member performance summary, consignment order detail, and audit metadata for the distributor sales lane, including donations, expenses, and net contribution visibility in the main tables.
+- Inventory Status output includes:
+stock-health KPI cards, stock bucket summary, low-stock/out-of-stock alert detail, and as-of metadata.
+- Inventory Valuation output includes:
+inventory at cost, inventory at retail, potential margin, weighted-cost coverage, category valuation, and top product valuation detail.
+- Outstanding Receivables and Purchase Payables currently behave as:
+as-of reports using current open balances and aging from transaction date / invoice date.
+- Cash Flow Summary output includes:
+summary cards, statement-style cash movement table, recent ledger activity, and audit metadata.
+- Cash Flow Summary statement detail currently includes:
+retail cash broken out by `Tasty Treats` and `Church Store`, donation cash broken out by `Tasty Treats`, `Church Store`, and `Consignment`, plus red bracketed negative values for accounting-style readability.
+- Cash Flow Summary transaction review currently uses:
+a paginated AG Grid for `Recent Cash Activity`, with `Transaction Date` for the business event, `Recorded At (UTC)` for audit traceability, quick search, and source/reference/counterparty/notes visibility; the separate daily net movement section was removed as redundant beside the statement.
+- Outstanding Receivables output includes:
+summary cards, aging buckets, and open retail + consignment balance detail.
+- Purchase Payables output includes:
+summary cards, aging buckets, supplier exposure summary, and open invoice detail.
+- Profit and Loss output includes:
+statement-style revenue / COGS / operating expense sections, segment support for retail stores + consignment, and audit notes on costing basis.
+- Current P&L costing note:
+retail is split by `Tasty Treats` and `Church Store`, consignment remains its own segment, and COGS now uses weighted purchase-history cost from active purchase invoices up to the report end date; if a product has no purchase history, product master cost is used as fallback.
+- Remaining report detail pages and export actions are still future work for the planned backlog items.
 
 ## 3) Suppliers
 `Moneta/js/features/suppliers/`
@@ -240,6 +278,26 @@ converted leads or leads linked to sales cannot be deleted.
 builds validated conversion package, stores in session storage, routes to retail.
 - Converted leads with later voided sales now display as
 `Converted (Sale Voided)` in lead status rendering while preserving underlying `leadStatus: Converted`.
+- Quote module storage implemented:
+quotes now persist under `leads/{leadId}/quotes/{quoteId}` and each quote stores a frozen customer / lead / catalogue / pricing / line-item snapshot.
+- Lead quote summary fields implemented on the parent lead:
+`quoteCount`, latest quote id/number/status/sent date, and accepted quote id/number/date/total are updated from quote history and used for fast UI state.
+- Leads grid quote UX implemented:
+the grid now shows one compact `Quotes` badge cell with count + latest status + accepted indicator instead of expanding the grid with many quote columns.
+- Hybrid quote workflow implemented:
+clicking the grid quote badge opens the lead in edit mode and shows both a right-side quick drawer for scanning quote versions and a full `Quotes Workspace` inside the lead editor for detailed quote work.
+- Quote lifecycle implemented:
+quotes support `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, `Superseded`, and `Cancelled`.
+- Quote versioning implemented:
+once a quote is `Sent`, it is treated as frozen; revising creates a new draft version and marks the prior quote `Superseded`.
+- Quote actions implemented in Leads:
+users can create a new quote draft, save draft, send quote, revise a sent/closed quote into a new version, mark a sent quote accepted, reject it, or cancel it.
+- Quote acceptance capture implemented:
+the quote workspace includes `Accepted By`, `Accepted Via`, and `Acceptance Notes` fields for marking sent quotes as accepted.
+- Quote delete guardrail implemented:
+leads with quote history cannot be deleted.
+- Quote conversion follow-up still pending:
+lead-to-retail conversion still uses live requested-products data today; a later pass should switch direct-store conversion to prefer the accepted quote snapshot and retain `sourceLeadId` / `sourceQuoteId` / `sourceQuoteNumber`.
 
 ## 8) Retail Store
 `Moneta/js/features/retail-store/`
@@ -290,7 +348,7 @@ cannot edit self from this screen,
 cannot remove last active admin.
 
 ## Known Gaps (Current)
-- Reports hub route is wired, but dedicated report detail pages and export actions are not yet implemented in `Moneta/`.
+- Reports hub route is wired and `Cash Flow Summary` is live, but most report detail pages and export actions are still not yet implemented in `Moneta/`.
 - No automated test suite is present in `Moneta/`; regression confidence is currently manual QA-based.
 - Final responsive QA sweep is still recommended, especially on dense dashboard and modal-heavy flows.
 

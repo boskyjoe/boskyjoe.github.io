@@ -1,15 +1,22 @@
 import {
+    createLeadQuoteRecord,
     addLeadWorkLogRecord,
     createLeadRecord,
     deleteLeadRecord,
+    fetchLeadQuoteRecord,
     fetchSalesCatalogueItems,
     getLeadDeleteRestriction,
+    updateLeadQuoteRecord,
+    updateLeadQuoteStatusRecord,
     updateLeadRecord
 } from "./repository.js";
+import { getRetailStoreTaxDefaults, RETAIL_STORES } from "../retail-store/service.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
-export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "General Note"];
+export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Revised", "General Note"];
+export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled"];
+export const LEAD_QUOTE_STORES = [...RETAIL_STORES, "Consignment"];
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -54,6 +61,199 @@ function normalizeRequestedProducts(rows = []) {
             sellingPrice: Number(row.sellingPrice) || 0,
             requestedQty: Number(row.requestedQty) || 0
         }));
+}
+
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
+function normalizeQuoteStore(value) {
+    const text = normalizeText(value);
+    return LEAD_QUOTE_STORES.includes(text) ? text : "Church Store";
+}
+
+function buildQuoteTaxDefaults(storeName = "") {
+    const normalizedStore = normalizeQuoteStore(storeName);
+
+    if (normalizedStore === "Consignment") {
+        return {
+            cgstPercentage: 0,
+            sgstPercentage: 0
+        };
+    }
+
+    return getRetailStoreTaxDefaults(normalizedStore);
+}
+
+function normalizeQuoteLineItems(rows = [], storeName = "") {
+    const taxDefaults = buildQuoteTaxDefaults(storeName);
+
+    return (rows || [])
+        .filter(row => (Number(row.quotedQty) || Number(row.requestedQty) || 0) > 0)
+        .map(row => {
+            const quotedQty = Math.max(0, Math.floor(Number(row.quotedQty ?? row.requestedQty) || 0));
+            const unitPrice = roundCurrency(row.unitPrice ?? row.sellingPrice);
+            const lineDiscountPercentage = Math.max(0, Math.min(100, Number(row.lineDiscountPercentage) || 0));
+            const cgstPercentage = Math.max(0, Number(row.cgstPercentage ?? taxDefaults.cgstPercentage) || 0);
+            const sgstPercentage = Math.max(0, Number(row.sgstPercentage ?? taxDefaults.sgstPercentage) || 0);
+            const lineSubtotal = roundCurrency(quotedQty * unitPrice);
+            const lineDiscountAmount = roundCurrency(lineSubtotal * (lineDiscountPercentage / 100));
+            const taxableAmount = roundCurrency(lineSubtotal - lineDiscountAmount);
+            const cgstAmount = roundCurrency(taxableAmount * (cgstPercentage / 100));
+            const sgstAmount = roundCurrency(taxableAmount * (sgstPercentage / 100));
+            const taxAmount = roundCurrency(cgstAmount + sgstAmount);
+            const lineTotal = roundCurrency(taxableAmount + taxAmount);
+
+            return {
+                productId: normalizeText(row.productId),
+                productName: normalizeText(row.productName) || "Untitled Product",
+                categoryId: normalizeText(row.categoryId),
+                categoryName: normalizeText(row.categoryName) || "-",
+                quotedQty,
+                unitPrice,
+                lineDiscountPercentage,
+                lineSubtotal,
+                lineDiscountAmount,
+                taxableAmount,
+                cgstPercentage,
+                sgstPercentage,
+                cgstAmount,
+                sgstAmount,
+                taxAmount,
+                lineTotal
+            };
+        })
+        .filter(item => item.quotedQty > 0);
+}
+
+export function calculateLeadQuoteTotals(lineItems = []) {
+    const subtotal = roundCurrency((lineItems || []).reduce((sum, item) => sum + roundCurrency(item.lineSubtotal), 0));
+    const discountTotal = roundCurrency((lineItems || []).reduce((sum, item) => sum + roundCurrency(item.lineDiscountAmount), 0));
+    const taxableAmount = roundCurrency((lineItems || []).reduce((sum, item) => sum + roundCurrency(item.taxableAmount), 0));
+    const taxTotal = roundCurrency((lineItems || []).reduce((sum, item) => sum + roundCurrency(item.taxAmount), 0));
+    const grandTotal = roundCurrency(taxableAmount + taxTotal);
+
+    return {
+        subtotal,
+        discountTotal,
+        taxableAmount,
+        taxTotal,
+        grandTotal
+    };
+}
+
+export function buildLeadQuoteDraft(lead, sourceQuote = null) {
+    if (!lead?.id) {
+        throw new Error("Select and save a lead before preparing a quote.");
+    }
+
+    const store = normalizeQuoteStore(sourceQuote?.store || "Church Store");
+    const seedItems = sourceQuote?.lineItems?.length
+        ? sourceQuote.lineItems
+        : normalizeRequestedProducts(lead.requestedProducts || []);
+    const lineItems = normalizeQuoteLineItems(seedItems, store);
+
+    return {
+        docId: "",
+        sourceQuoteId: sourceQuote?.id || "",
+        quoteStatus: "Draft",
+        store,
+        validUntil: sourceQuote?.validUntil ? formatDateOutput(sourceQuote.validUntil) : formatDateOutput(addDays(new Date(), 14)),
+        quoteNotes: normalizeText(sourceQuote?.quoteNotes) || normalizeText(lead.leadNotes),
+        internalNotes: normalizeText(sourceQuote?.internalNotes),
+        acceptanceNotes: "",
+        acceptedByCustomerName: "",
+        acceptedVia: "",
+        lineItems,
+        totals: calculateLeadQuoteTotals(lineItems)
+    };
+}
+
+function addDays(date, days) {
+    const value = new Date(date);
+    value.setDate(value.getDate() + days);
+    return value;
+}
+
+function formatDateOutput(value) {
+    if (!value) return "";
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function buildLeadQuotePayload(payload, lead, user, options = {}) {
+    const { submitStatus = "Draft", sourceQuote = null } = options;
+    const docId = normalizeText(payload.docId);
+    const store = normalizeQuoteStore(payload.store);
+    const validUntil = parseOptionalDate(payload.validUntil, "Quote validity date");
+    const lineItems = normalizeQuoteLineItems(payload.lineItems || [], store);
+
+    if (!lead?.id) {
+        throw new Error("Select and save a lead before creating quotes.");
+    }
+
+    if (!lineItems.length) {
+        throw new Error("Add at least one quoted product line before saving the quote.");
+    }
+
+    if (!LEAD_QUOTE_STATUSES.includes(submitStatus)) {
+        throw new Error("Select a valid quote status.");
+    }
+
+    const totals = calculateLeadQuoteTotals(lineItems);
+
+    return {
+        docId,
+        quoteData: {
+            leadId: lead.id,
+            businessLeadId: lead.businessLeadId || "",
+            quoteStatus: submitStatus,
+            store,
+            validUntil,
+            quoteNotes: normalizeText(payload.quoteNotes),
+            internalNotes: normalizeText(payload.internalNotes),
+            customerSnapshot: {
+                customerName: normalizeText(lead.customerName),
+                customerPhone: normalizeText(lead.customerPhone),
+                customerEmail: normalizeText(lead.customerEmail),
+                customerAddress: normalizeText(lead.customerAddress)
+            },
+            leadSnapshot: {
+                leadStatus: normalizeText(lead.leadStatus || "New"),
+                enquiryDate: lead.enquiryDate || null,
+                expectedDeliveryDate: lead.expectedDeliveryDate || null,
+                assignedTo: normalizeText(lead.assignedTo),
+                leadSource: normalizeText(lead.leadSource),
+                leadNotes: normalizeText(lead.leadNotes)
+            },
+            catalogueSnapshot: {
+                catalogueId: normalizeText(lead.catalogueId),
+                catalogueName: normalizeText(lead.catalogueName) || "-",
+                seasonName: normalizeText(lead.seasonName) || "-"
+            },
+            pricingContext: {
+                currency: "INR",
+                taxMode: store === "Consignment" ? "non-taxable" : "store-default-tax"
+            },
+            lineItems,
+            totals,
+            sourceQuoteId: normalizeText(payload.sourceQuoteId || sourceQuote?.id),
+            sentOn: submitStatus === "Sent" ? new Date() : null,
+            sentBy: submitStatus === "Sent" ? user.email : "",
+            acceptedOn: null,
+            acceptedByCustomerName: "",
+            acceptedVia: "",
+            acceptanceNotes: "",
+            rejectedOn: null,
+            rejectionReason: "",
+            cancelledOn: null,
+            cancellationReason: ""
+        }
+    };
 }
 
 function buildRequestedMetrics(requestedProducts = []) {
@@ -163,6 +363,142 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
 
     await createLeadRecord(leadData, user);
     return { mode: "create", leadData };
+}
+
+export async function saveLeadQuote(payload, lead, user, options = {}) {
+    if (!user) {
+        throw new Error("You must be logged in to save a quote.");
+    }
+
+    const { submitStatus = "Draft", sourceQuote = null } = options;
+    const { docId, quoteData } = buildLeadQuotePayload(payload, lead, user, { submitStatus, sourceQuote });
+
+    if (docId) {
+        await updateLeadQuoteRecord(lead.id, docId, quoteData, user, {
+            workLogEntry: submitStatus === "Sent"
+                ? {
+                    logType: "Quote Sent",
+                    notes: `Quote ${payload.businessQuoteId || docId} was sent to ${lead.customerName || "the customer"}.`
+                }
+                : null
+        });
+        return { mode: "update", quoteId: docId, quoteData };
+    }
+
+    const createdQuote = await createLeadQuoteRecord(lead.id, quoteData, user, {
+        workLogEntry: submitStatus === "Sent"
+            ? {
+                logType: "Quote Sent",
+                notes: `A new quote was sent to ${lead.customerName || "the customer"}.`
+            }
+            : null
+    });
+    return { mode: "create", quoteId: createdQuote?.id || "", quoteData };
+}
+
+export async function reviseLeadQuote(lead, quote, user) {
+    if (!user) {
+        throw new Error("You must be logged in to revise a quote.");
+    }
+
+    if (!lead?.id || !quote?.id) {
+        throw new Error("Lead and quote context are required before revising.");
+    }
+
+    const draft = buildLeadQuoteDraft(lead, quote);
+    const { quoteData } = buildLeadQuotePayload({
+        ...draft,
+        sourceQuoteId: quote.id
+    }, lead, user, {
+        submitStatus: "Draft",
+        sourceQuote: quote
+    });
+
+    return createLeadQuoteRecord(lead.id, quoteData, user, {
+        supersedeQuoteId: quote.id,
+        workLogEntry: {
+            logType: "Quote Revised",
+            notes: `Quote ${quote.businessQuoteId || quote.id} was revised and a new draft version was created.`
+        }
+    });
+}
+
+export async function acceptLeadQuote(lead, quote, acceptancePayload, user) {
+    if (!user) {
+        throw new Error("You must be logged in to accept a quote.");
+    }
+
+    if (!lead?.id || !quote?.id) {
+        throw new Error("Lead and quote context are required before accepting.");
+    }
+
+    const acceptedByCustomerName = normalizeText(acceptancePayload.acceptedByCustomerName);
+    const acceptedVia = normalizeText(acceptancePayload.acceptedVia);
+    const acceptanceNotes = normalizeText(acceptancePayload.acceptanceNotes);
+
+    if (!acceptedByCustomerName) {
+        throw new Error("Accepted by is required before marking a quote as accepted.");
+    }
+
+    await updateLeadQuoteStatusRecord(lead.id, quote.id, {
+        quoteStatus: "Accepted",
+        acceptedOn: new Date(),
+        acceptedByCustomerName,
+        acceptedVia,
+        acceptanceNotes
+    }, user, {
+        supersedeOtherAccepted: true,
+        workLogEntry: {
+            logType: "Quote Accepted",
+            notes: `Quote ${quote.businessQuoteId || quote.id} was accepted by ${acceptedByCustomerName}${acceptedVia ? ` via ${acceptedVia}` : ""}.`
+        }
+    });
+}
+
+export async function rejectLeadQuote(lead, quote, reason, user) {
+    if (!user) {
+        throw new Error("You must be logged in to reject a quote.");
+    }
+
+    if (!lead?.id || !quote?.id) {
+        throw new Error("Lead and quote context are required before rejecting.");
+    }
+
+    const rejectionReason = normalizeText(reason);
+
+    await updateLeadQuoteStatusRecord(lead.id, quote.id, {
+        quoteStatus: "Rejected",
+        rejectedOn: new Date(),
+        rejectionReason
+    }, user, {
+        workLogEntry: {
+            logType: "General Note",
+            notes: `Quote ${quote.businessQuoteId || quote.id} was marked rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ""}`
+        }
+    });
+}
+
+export async function cancelLeadQuote(lead, quote, reason, user) {
+    if (!user) {
+        throw new Error("You must be logged in to cancel a quote.");
+    }
+
+    if (!lead?.id || !quote?.id) {
+        throw new Error("Lead and quote context are required before cancelling.");
+    }
+
+    const cancellationReason = normalizeText(reason);
+
+    await updateLeadQuoteStatusRecord(lead.id, quote.id, {
+        quoteStatus: "Cancelled",
+        cancelledOn: new Date(),
+        cancellationReason
+    }, user, {
+        workLogEntry: {
+            logType: "General Note",
+            notes: `Quote ${quote.businessQuoteId || quote.id} was cancelled.${cancellationReason ? ` Reason: ${cancellationReason}` : ""}`
+        }
+    });
 }
 
 export async function deleteLead(lead) {
@@ -305,4 +641,8 @@ export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
         items,
         warnings
     };
+}
+
+export async function getLeadQuote(leadId, quoteId) {
+    return fetchLeadQuoteRecord(leadId, quoteId);
 }

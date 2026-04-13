@@ -16,16 +16,26 @@ import {
     updateLeadWorkLogGridSearch,
     updateLeadsGridSearch
 } from "./grid.js";
-import { fetchSalesCatalogueItems, subscribeToLeadWorkLog, subscribeToLeads } from "./repository.js";
+import { fetchSalesCatalogueItems, subscribeToLeadQuotes, subscribeToLeadWorkLog, subscribeToLeads } from "./repository.js";
 import {
+    acceptLeadQuote,
+    buildLeadQuoteDraft,
     buildLeadToRetailConversionDraft,
+    calculateLeadQuoteTotals,
+    cancelLeadQuote,
     deleteLead,
+    getLeadQuote,
     LEAD_LOG_TYPES,
+    LEAD_QUOTE_STORES,
     LEAD_SOURCES,
     LEAD_STATUSES,
+    rejectLeadQuote,
+    reviseLeadQuote,
     saveLead,
+    saveLeadQuote,
     saveLeadWorkLog
 } from "./service.js";
+import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 
 const featureState = {
     leads: [],
@@ -39,7 +49,13 @@ const featureState = {
     unsubscribeWorkLog: null,
     workLogListenerLeadId: null,
     workLogEntries: [],
-    workLogSearchTerm: ""
+    workLogSearchTerm: "",
+    quoteRows: [],
+    quoteDrawerLeadId: null,
+    unsubscribeQuotes: null,
+    quoteListenerLeadId: null,
+    activeQuoteId: null,
+    quoteDraft: null
 };
 
 const RETAIL_ROUTE = "#/retail-store";
@@ -70,6 +86,34 @@ function formatDateInputValue(value) {
     return `${year}-${month}-${day}`;
 }
 
+function formatDisplayDate(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
+function formatDisplayDateTime(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
 function getEditingLead() {
     if (!featureState.editingLeadId) return null;
     return featureState.leads.find(lead => lead.id === featureState.editingLeadId) || null;
@@ -80,17 +124,130 @@ function getActiveWorkLogLead() {
     return featureState.leads.find(lead => lead.id === featureState.activeWorkLogLeadId) || null;
 }
 
+function getQuoteContextLeadId() {
+    return featureState.editingLeadId || featureState.quoteDrawerLeadId || "";
+}
+
+function getQuoteContextLead() {
+    const leadId = getQuoteContextLeadId();
+    return leadId ? featureState.leads.find(lead => lead.id === leadId) || null : null;
+}
+
+function getSelectedQuote() {
+    if (!featureState.activeQuoteId) return null;
+    return featureState.quoteRows.find(quote => quote.id === featureState.activeQuoteId) || null;
+}
+
 function resetLeadWorkspace() {
     featureState.editingLeadId = null;
     featureState.selectedCatalogueId = "";
     featureState.catalogueItemRows = [];
     featureState.itemSearchTerm = "";
+    featureState.activeQuoteId = null;
+    featureState.quoteDraft = null;
 }
 
 function resetWorkLogWorkspace() {
     featureState.activeWorkLogLeadId = null;
     featureState.workLogEntries = [];
     featureState.workLogSearchTerm = "";
+}
+
+function resetQuoteWorkspace(options = {}) {
+    const { closeDrawer = false } = options;
+    featureState.activeQuoteId = null;
+    featureState.quoteDraft = null;
+
+    if (closeDrawer) {
+        featureState.quoteDrawerLeadId = null;
+    }
+}
+
+function buildQuoteDraftFromRecord(quote = null) {
+    if (!quote) return null;
+
+    const lineItems = (quote.lineItems || []).map(item => ({
+        productId: item.productId || "",
+        productName: item.productName || "",
+        categoryId: item.categoryId || "",
+        categoryName: item.categoryName || "-",
+        quotedQty: Math.max(0, Math.floor(Number(item.quotedQty) || 0)),
+        unitPrice: Number(item.unitPrice) || 0,
+        lineDiscountPercentage: Number(item.lineDiscountPercentage) || 0,
+        cgstPercentage: Number(item.cgstPercentage) || 0,
+        sgstPercentage: Number(item.sgstPercentage) || 0,
+        lineSubtotal: Number(item.lineSubtotal) || 0,
+        lineDiscountAmount: Number(item.lineDiscountAmount) || 0,
+        taxableAmount: Number(item.taxableAmount) || 0,
+        cgstAmount: Number(item.cgstAmount) || 0,
+        sgstAmount: Number(item.sgstAmount) || 0,
+        taxAmount: Number(item.taxAmount) || 0,
+        lineTotal: Number(item.lineTotal) || 0
+    }));
+
+    return {
+        docId: quote.id,
+        businessQuoteId: quote.businessQuoteId || "",
+        sourceQuoteId: quote.sourceQuoteId || quote.supersedesQuoteId || "",
+        quoteStatus: quote.quoteStatus || "Draft",
+        store: quote.store || "Church Store",
+        validUntil: formatDateInputValue(quote.validUntil),
+        quoteNotes: quote.quoteNotes || "",
+        internalNotes: quote.internalNotes || "",
+        acceptedByCustomerName: quote.acceptedByCustomerName || "",
+        acceptedVia: quote.acceptedVia || "",
+        acceptanceNotes: quote.acceptanceNotes || "",
+        rejectionReason: quote.rejectionReason || "",
+        cancellationReason: quote.cancellationReason || "",
+        lineItems,
+        totals: quote.totals || calculateLeadQuoteTotals(lineItems)
+    };
+}
+
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
+function recalculateQuoteLineItem(item = {}) {
+    const quotedQty = Math.max(0, Math.floor(Number(item.quotedQty) || 0));
+    const unitPrice = roundCurrency(item.unitPrice);
+    const lineDiscountPercentage = Math.max(0, Number(item.lineDiscountPercentage) || 0);
+    const cgstPercentage = Math.max(0, Number(item.cgstPercentage) || 0);
+    const sgstPercentage = Math.max(0, Number(item.sgstPercentage) || 0);
+    const lineSubtotal = roundCurrency(quotedQty * unitPrice);
+    const lineDiscountAmount = roundCurrency(lineSubtotal * (lineDiscountPercentage / 100));
+    const taxableAmount = roundCurrency(lineSubtotal - lineDiscountAmount);
+    const cgstAmount = roundCurrency(taxableAmount * (cgstPercentage / 100));
+    const sgstAmount = roundCurrency(taxableAmount * (sgstPercentage / 100));
+    const taxAmount = roundCurrency(cgstAmount + sgstAmount);
+    const lineTotal = roundCurrency(taxableAmount + taxAmount);
+
+    return {
+        ...item,
+        quotedQty,
+        unitPrice,
+        lineDiscountPercentage,
+        cgstPercentage,
+        sgstPercentage,
+        lineSubtotal,
+        lineDiscountAmount,
+        taxableAmount,
+        cgstAmount,
+        sgstAmount,
+        taxAmount,
+        lineTotal
+    };
+}
+
+function recalculateQuoteDraftTotals() {
+    if (!featureState.quoteDraft) return;
+    featureState.quoteDraft.lineItems = (featureState.quoteDraft.lineItems || []).map(item => recalculateQuoteLineItem(item));
+    featureState.quoteDraft.totals = calculateLeadQuoteTotals(featureState.quoteDraft.lineItems || []);
+}
+
+function isQuoteDraftEditable() {
+    if (!featureState.quoteDraft) return false;
+    return (featureState.quoteDraft.quoteStatus || "Draft") === "Draft";
 }
 
 function sortLeads(rows = []) {
@@ -139,6 +296,123 @@ function renderLogTypeOptions(currentValue = "General Note") {
             ${type}
         </option>
     `).join("");
+}
+
+function renderQuoteStoreOptions(currentValue = "Church Store") {
+    return LEAD_QUOTE_STORES.map(storeName => `
+        <option value="${storeName}" ${storeName === currentValue ? "selected" : ""}>
+            ${storeName}
+        </option>
+    `).join("");
+}
+
+function renderQuoteStatusPill(value = "") {
+    const status = normalizeText(value) || "No Quotes";
+    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    return `<span class="quote-status-pill quote-status-${normalized}">${status}</span>`;
+}
+
+function getQuoteStoreTaxDefaults(storeName = "") {
+    if (storeName === "Consignment") {
+        return {
+            cgstPercentage: 0,
+            sgstPercentage: 0
+        };
+    }
+
+    return getRetailStoreTaxDefaults(storeName || "Church Store");
+}
+
+function applyQuoteStoreTaxDefaults(storeName = "") {
+    if (!featureState.quoteDraft) return;
+
+    const taxDefaults = getQuoteStoreTaxDefaults(storeName);
+    featureState.quoteDraft.lineItems = (featureState.quoteDraft.lineItems || []).map(item => ({
+        ...item,
+        cgstPercentage: Number(taxDefaults.cgstPercentage) || 0,
+        sgstPercentage: Number(taxDefaults.sgstPercentage) || 0
+    }));
+    recalculateQuoteDraftTotals();
+}
+
+function ensureQuoteSelection() {
+    if (!featureState.activeQuoteId && featureState.quoteDraft && !featureState.quoteDraft.docId) {
+        return;
+    }
+
+    if (featureState.activeQuoteId && featureState.quoteRows.some(quote => quote.id === featureState.activeQuoteId)) {
+        return;
+    }
+
+    const latestQuote = featureState.quoteRows[0] || null;
+
+    if (latestQuote) {
+        featureState.activeQuoteId = latestQuote.id;
+        featureState.quoteDraft = buildQuoteDraftFromRecord(latestQuote);
+        return;
+    }
+
+    if (featureState.quoteDraft?.docId) {
+        featureState.quoteDraft = null;
+    }
+
+    featureState.activeQuoteId = "";
+}
+
+function hydrateQuoteDraftFromSelection() {
+    const selectedQuote = getSelectedQuote();
+    if (!selectedQuote) return;
+
+    const currentDocId = featureState.quoteDraft?.docId || "";
+    if (featureState.quoteDraft && !currentDocId) {
+        return;
+    }
+
+    if (!featureState.quoteDraft || currentDocId === selectedQuote.id || normalizeText(featureState.quoteDraft?.quoteStatus) !== "Draft") {
+        featureState.quoteDraft = buildQuoteDraftFromRecord(selectedQuote);
+    }
+}
+
+function buildQuoteListMarkup(rows = [], options = {}) {
+    const { compact = false } = options;
+
+    if (!(rows || []).length) {
+        return `
+            <div class="lead-quotes-empty">
+                <p class="lead-quotes-empty-title">No quotes yet</p>
+                <p class="panel-copy">Create the first quote from this enquiry when pricing is ready.</p>
+            </div>
+        `;
+    }
+
+    return (rows || []).map(quote => {
+        const isActive = quote.id === featureState.activeQuoteId;
+        const acceptedMeta = normalizeText(quote.acceptedByCustomerName)
+            ? `Accepted by ${quote.acceptedByCustomerName}${quote.acceptedOn ? ` on ${formatDisplayDate(quote.acceptedOn)}` : ""}`
+            : (quote.sentOn ? `Sent ${formatDisplayDate(quote.sentOn)}` : `Created ${formatDisplayDate(quote.createdOn)}`);
+
+        return `
+            <button
+                class="lead-quote-list-item ${isActive ? "lead-quote-list-item-active" : ""}"
+                type="button"
+                data-action="quote-select"
+                data-quote-id="${quote.id}">
+                <div class="lead-quote-list-item-head">
+                    <div>
+                        <p class="lead-quote-list-item-title">${quote.businessQuoteId || "Draft Quote"}</p>
+                        <p class="lead-quote-list-item-subtitle">Version ${quote.versionNo || "-"}</p>
+                    </div>
+                    ${renderQuoteStatusPill(quote.quoteStatus)}
+                </div>
+                <div class="lead-quote-list-item-meta">
+                    <span>${quote.store || "-"}</span>
+                    <span>${formatCurrency(quote.totals?.grandTotal || 0)}</span>
+                </div>
+                <p class="lead-quote-list-item-note">${acceptedMeta}</p>
+                ${compact ? "" : `<p class="lead-quote-list-item-note">Valid until ${formatDisplayDate(quote.validUntil)}</p>`}
+            </button>
+        `;
+    }).join("");
 }
 
 function resolveLeadStatusLabel(lead = {}) {
@@ -308,6 +582,388 @@ async function loadCatalogueItemsIntoWorkspace(catalogueId, savedProducts = []) 
             title: "Leads & Enquiries"
         });
     }
+}
+
+function renderQuoteLineItemsTable(quoteDraft, options = {}) {
+    const { readOnly = false } = options;
+    const lineItems = quoteDraft?.lineItems || [];
+
+    if (!lineItems.length) {
+        return `
+            <div class="lead-quotes-empty">
+                <p class="lead-quotes-empty-title">No quote lines</p>
+                <p class="panel-copy">This quote does not have any product lines yet.</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="lead-quote-lines-table-wrap">
+            <table class="lead-quote-lines-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th class="lead-quote-lines-number">Qty</th>
+                        <th class="lead-quote-lines-number">Unit Price</th>
+                        <th class="lead-quote-lines-number">Discount %</th>
+                        <th class="lead-quote-lines-number">CGST %</th>
+                        <th class="lead-quote-lines-number">SGST %</th>
+                        <th class="lead-quote-lines-number">Line Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${lineItems.map((item, index) => `
+                        <tr>
+                            <td>
+                                <div class="lead-quote-line-product">
+                                    <p>${item.productName || "-"}</p>
+                                    <span>${item.productId || "-"}</span>
+                                </div>
+                            </td>
+                            <td>${item.categoryName || "-"}</td>
+                            <td class="lead-quote-lines-number">
+                                <input
+                                    class="input lead-quote-line-input"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value="${Number(item.quotedQty) || 0}"
+                                    data-quote-line-index="${index}"
+                                    data-quote-line-field="quotedQty"
+                                    ${readOnly ? "disabled" : ""}>
+                            </td>
+                            <td class="lead-quote-lines-number">
+                                <input
+                                    class="input lead-quote-line-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value="${Number(item.unitPrice) || 0}"
+                                    data-quote-line-index="${index}"
+                                    data-quote-line-field="unitPrice"
+                                    ${readOnly ? "disabled" : ""}>
+                            </td>
+                            <td class="lead-quote-lines-number">
+                                <input
+                                    class="input lead-quote-line-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value="${Number(item.lineDiscountPercentage) || 0}"
+                                    data-quote-line-index="${index}"
+                                    data-quote-line-field="lineDiscountPercentage"
+                                    ${readOnly ? "disabled" : ""}>
+                            </td>
+                            <td class="lead-quote-lines-number">
+                                <input
+                                    class="input lead-quote-line-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value="${Number(item.cgstPercentage) || 0}"
+                                    data-quote-line-index="${index}"
+                                    data-quote-line-field="cgstPercentage"
+                                    ${readOnly ? "disabled" : ""}>
+                            </td>
+                            <td class="lead-quote-lines-number">
+                                <input
+                                    class="input lead-quote-line-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value="${Number(item.sgstPercentage) || 0}"
+                                    data-quote-line-index="${index}"
+                                    data-quote-line-field="sgstPercentage"
+                                    ${readOnly ? "disabled" : ""}>
+                            </td>
+                            <td class="lead-quote-lines-number lead-quote-lines-total">${formatCurrency(item.lineTotal || 0)}</td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderQuoteAcceptanceFields(quoteDraft, options = {}) {
+    const { readOnly = false } = options;
+    const quoteStatus = normalizeText(quoteDraft?.quoteStatus || "");
+
+    if (!["Sent", "Accepted"].includes(quoteStatus)) {
+        return "";
+    }
+
+    return `
+        <div class="lead-quote-acceptance-shell">
+            <div class="lead-form-section-head">
+                <p class="lead-form-section-kicker">Customer Acceptance</p>
+            </div>
+            <div class="lead-form-section-grid">
+                <div class="field">
+                    <label for="lead-quote-accepted-by">Accepted By</label>
+                    <input
+                        id="lead-quote-accepted-by"
+                        class="input"
+                        type="text"
+                        value="${quoteDraft.acceptedByCustomerName || ""}"
+                        ${readOnly ? "disabled" : ""}>
+                </div>
+                <div class="field">
+                    <label for="lead-quote-accepted-via">Accepted Via</label>
+                    <input
+                        id="lead-quote-accepted-via"
+                        class="input"
+                        type="text"
+                        value="${quoteDraft.acceptedVia || ""}"
+                        placeholder="Phone, Email, WhatsApp, In Person"
+                        ${readOnly ? "disabled" : ""}>
+                </div>
+                <div class="field field-full">
+                    <label for="lead-quote-acceptance-notes">Acceptance Notes</label>
+                    <textarea
+                        id="lead-quote-acceptance-notes"
+                        class="textarea"
+                        rows="3"
+                        placeholder="Record approval details or customer instructions"
+                        ${readOnly ? "disabled" : ""}>${quoteDraft.acceptanceNotes || ""}</textarea>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLeadQuotesWorkspace(editingLead) {
+    if (!editingLead?.id) return "";
+
+    const selectedQuote = getSelectedQuote();
+    const quoteDraft = featureState.quoteDraft;
+    const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
+    const isEditable = isQuoteDraftEditable();
+    const quoteTitle = quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft";
+    const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
+    const metadataNote = selectedQuote
+        ? `Version ${selectedQuote.versionNo || "-"} · ${selectedQuote.store || "-"}`
+        : "Start a fresh version from this enquiry when pricing is ready.";
+
+    return `
+        <section class="panel-card lead-quotes-workspace-card">
+            <div class="panel-header panel-header-accent">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
+                    <div>
+                        <h3>Quotes Workspace</h3>
+                        <p class="panel-copy">Draft, send, revise, and track accepted quote versions without leaving the lead.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">${Number(editingLead.quoteCount) || featureState.quoteRows.length} quotes</span>
+                    ${editingLead.latestQuoteStatus ? renderQuoteStatusPill(editingLead.latestQuoteStatus) : ""}
+                    ${editingLead.acceptedQuoteNumber ? `<span class="status-pill">Accepted: ${editingLead.acceptedQuoteNumber}</span>` : ""}
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="lead-quotes-workspace-layout">
+                    <aside class="lead-quotes-sidebar">
+                        <div class="lead-quotes-sidebar-head">
+                            <div>
+                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Quote Versions</p>
+                                <p class="panel-copy">Keep one accepted quote per enquiry and revise by version.</p>
+                            </div>
+                            <div class="lead-quotes-sidebar-actions">
+                                <button class="button button-secondary" type="button" data-action="quote-open-drawer">
+                                    <span class="button-icon">${icons.search}</span>
+                                    Quick View
+                                </button>
+                                <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                    <span class="button-icon">${icons.plus}</span>
+                                    New Quote
+                                </button>
+                            </div>
+                        </div>
+                        <div class="lead-quote-list">
+                            ${buildQuoteListMarkup(featureState.quoteRows)}
+                        </div>
+                    </aside>
+                    <div class="lead-quote-editor-card">
+                        <div class="lead-quote-editor-head">
+                            <div>
+                                <p class="lead-quote-editor-title">${quoteTitle}</p>
+                                <p class="lead-quote-editor-subtitle">${metadataNote}</p>
+                            </div>
+                            ${renderQuoteStatusPill(quoteStatus)}
+                        </div>
+                        ${quoteDraft ? `
+                            <div class="lead-form-section-grid lead-quote-editor-grid">
+                                <div class="field">
+                                    <label for="lead-quote-store">Sales Channel</label>
+                                    <select id="lead-quote-store" class="select" ${isEditable ? "" : "disabled"}>
+                                        ${renderQuoteStoreOptions(quoteDraft.store || "Church Store")}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="lead-quote-valid-until">Valid Until</label>
+                                    <input
+                                        id="lead-quote-valid-until"
+                                        class="input"
+                                        type="date"
+                                        value="${quoteDraft.validUntil || ""}"
+                                        ${isEditable ? "" : "disabled"}>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="lead-quote-notes">Customer Notes</label>
+                                    <textarea
+                                        id="lead-quote-notes"
+                                        class="textarea"
+                                        rows="3"
+                                        placeholder="Terms, delivery notes, pricing assumptions, or service details"
+                                        ${isEditable ? "" : "disabled"}>${quoteDraft.quoteNotes || ""}</textarea>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="lead-quote-internal-notes">Internal Notes</label>
+                                    <textarea
+                                        id="lead-quote-internal-notes"
+                                        class="textarea"
+                                        rows="3"
+                                        placeholder="Internal notes for revisions, approval checks, or follow-up reminders"
+                                        ${isEditable ? "" : "disabled"}>${quoteDraft.internalNotes || ""}</textarea>
+                                </div>
+                            </div>
+                            <div class="lead-quote-editor-section">
+                                <div class="lead-form-section-head">
+                                    <p class="lead-form-section-kicker">Quoted Products</p>
+                                </div>
+                                ${renderQuoteLineItemsTable(quoteDraft, { readOnly: !isEditable })}
+                            </div>
+                            <div class="lead-quote-totals-grid">
+                                <div class="metric-card">
+                                    <span class="metric-label">Subtotal</span>
+                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Discount</span>
+                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Tax</span>
+                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Grand Total</span>
+                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
+                                </div>
+                            </div>
+                            ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: normalizeText(quoteDraft.quoteStatus) === "Accepted" })}
+                            <div class="lead-quote-editor-footer">
+                                <div class="lead-quote-editor-note">
+                                    ${acceptedQuote
+            ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
+            : "Only one quote should be marked accepted for a lead. Sent quotes are frozen and should be revised into a new version."}
+                                </div>
+                                <div class="form-actions lead-quote-actions">
+                                    ${isEditable ? `
+                                        <button class="button button-secondary" type="button" data-action="quote-reset-selection">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Reset
+                                        </button>
+                                        <button class="button button-secondary" type="button" data-action="quote-save-draft">
+                                            <span class="button-icon">${icons.edit}</span>
+                                            Save Draft
+                                        </button>
+                                        <button class="button button-primary-alt" type="button" data-action="quote-send">
+                                            <span class="button-icon">${icons.plus}</span>
+                                            Send Quote
+                                        </button>
+                                    ` : `
+                                        <button class="button button-secondary" type="button" data-action="quote-new-draft">
+                                            <span class="button-icon">${icons.plus}</span>
+                                            New Quote
+                                        </button>
+                                        ${selectedQuote ? `
+                                            <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
+                                                <span class="button-icon">${icons.edit}</span>
+                                                Revise
+                                            </button>
+                                            ${normalizeText(selectedQuote.quoteStatus) === "Sent" ? `
+                                                <button class="button button-primary-alt" type="button" data-action="quote-accept" data-quote-id="${selectedQuote.id}">
+                                                    <span class="button-icon">${icons.active}</span>
+                                                    Mark Accepted
+                                                </button>
+                                                <button class="button button-secondary" type="button" data-action="quote-reject" data-quote-id="${selectedQuote.id}">
+                                                    <span class="button-icon">${icons.warning}</span>
+                                                    Reject
+                                                </button>
+                                                <button class="button button-secondary" type="button" data-action="quote-cancel" data-quote-id="${selectedQuote.id}">
+                                                    <span class="button-icon">${icons.inactive}</span>
+                                                    Cancel
+                                                </button>
+                                            ` : ""}
+                                        ` : ""}
+                                    `}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="lead-quotes-empty lead-quotes-empty-large">
+                                <p class="lead-quotes-empty-title">Quote history will appear here</p>
+                                <p class="panel-copy">Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer.</p>
+                                <div class="form-actions" style="justify-content: flex-start;">
+                                    <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                        <span class="button-icon">${icons.plus}</span>
+                                        Create Quote Draft
+                                    </button>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </section>
+    `;
+}
+
+function renderLeadQuotesDrawer() {
+    const activeLead = getQuoteContextLead();
+    const isOpen = Boolean(featureState.quoteDrawerLeadId && activeLead?.id === featureState.quoteDrawerLeadId);
+
+    return `
+        <div id="lead-quotes-drawer" class="lead-quotes-drawer-overlay" ${isOpen ? "" : "hidden"}>
+            <aside class="lead-quotes-drawer-card">
+                <div class="panel-header panel-header-accent">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
+                        <div>
+                            <h3>Quote Quick View</h3>
+                            <p class="panel-copy">Review quote versions, status, and acceptance without leaving the enquiry list.</p>
+                        </div>
+                    </div>
+                    <button class="button button-secondary" type="button" data-action="quote-close-drawer">
+                        <span class="button-icon">${icons.close}</span>
+                        Close
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <div class="lead-quotes-drawer-summary">
+                        <span class="status-pill">Lead: ${activeLead?.customerName || "-"}</span>
+                        <span class="status-pill">${Number(activeLead?.quoteCount) || featureState.quoteRows.length} quotes</span>
+                        ${activeLead?.latestQuoteStatus ? renderQuoteStatusPill(activeLead.latestQuoteStatus) : ""}
+                    </div>
+                    <div class="lead-quotes-drawer-actions">
+                        <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                            <span class="button-icon">${icons.plus}</span>
+                            New Quote
+                        </button>
+                        <button class="button button-secondary" type="button" data-action="quote-focus-workspace">
+                            <span class="button-icon">${icons.edit}</span>
+                            Open Workspace
+                        </button>
+                    </div>
+                    <div class="lead-quote-list lead-quote-list-compact">
+                        ${buildQuoteListMarkup(featureState.quoteRows, { compact: true })}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    `;
 }
 
 function renderLeadForm(snapshot) {
@@ -481,11 +1137,16 @@ function renderLeadForm(snapshot) {
                         <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                     </div>
                     ${conversionChecklistMarkup}
+                    ${editingLead ? renderLeadQuotesWorkspace(editingLead) : ""}
                     <div class="form-actions">
                         ${editingLead ? `
                             <button class="button button-primary-alt lead-convert-button" type="button" data-lead-id="${editingLead.id}" ${convertDisabledAttrs}>
                                 <span class="button-icon">${icons.retail}</span>
                                 Convert To Retail
+                            </button>
+                            <button class="button button-secondary" type="button" data-action="quote-open-drawer">
+                                <span class="button-icon">${icons.catalogue}</span>
+                                Quotes
                             </button>
                             <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
                                 <span class="button-icon">${icons.leads}</span>
@@ -653,6 +1314,7 @@ function renderLeadsViewShell(snapshot) {
             ${renderLeadsHistoryPanel()}
         </div>
         ${renderLeadWorkLogModal()}
+        ${renderLeadQuotesDrawer()}
     `;
 }
 
@@ -679,6 +1341,22 @@ function syncLeadWorkLogGrid() {
     updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
 }
 
+function detachQuoteListener(options = {}) {
+    const { reset = false } = options;
+
+    featureState.unsubscribeQuotes?.();
+    featureState.unsubscribeQuotes = null;
+    featureState.quoteListenerLeadId = null;
+
+    if (reset) {
+        featureState.quoteRows = [];
+        featureState.activeQuoteId = "";
+        if (featureState.quoteDraft?.docId) {
+            featureState.quoteDraft = null;
+        }
+    }
+}
+
 function detachWorkLogListener(options = {}) {
     const { reset = false } = options;
 
@@ -700,9 +1378,54 @@ function detachLeadsListener(options = {}) {
     if (clearRows) {
         featureState.leads = [];
         resetLeadWorkspace();
+        detachQuoteListener({ reset: true });
+        resetQuoteWorkspace({ closeDrawer: true });
         detachWorkLogListener({ reset: true });
         resetWorkLogWorkspace();
     }
+}
+
+function ensureQuoteListener(snapshot) {
+    const shouldListen = snapshot.currentRoute === "#/leads"
+        && Boolean(snapshot.currentUser)
+        && Boolean(getQuoteContextLeadId());
+
+    if (!shouldListen) {
+        if (snapshot.currentRoute !== "#/leads" || !snapshot.currentUser) {
+            resetQuoteWorkspace({ closeDrawer: true });
+        }
+        detachQuoteListener({ reset: true });
+        return;
+    }
+
+    const leadId = getQuoteContextLeadId();
+    if (
+        featureState.unsubscribeQuotes
+        && featureState.quoteListenerLeadId === leadId
+    ) {
+        return;
+    }
+
+    detachQuoteListener({ reset: true });
+    featureState.quoteListenerLeadId = leadId;
+    featureState.unsubscribeQuotes = subscribeToLeadQuotes(
+        leadId,
+        rows => {
+            featureState.quoteRows = rows || [];
+            ensureQuoteSelection();
+            hydrateQuoteDraftFromSelection();
+
+            if (getState().currentRoute === "#/leads" && getQuoteContextLeadId()) {
+                renderLeadsView();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load lead quotes:", error);
+            showToast("Could not load quote history for this enquiry.", "error", {
+                title: "Leads & Enquiries"
+            });
+        }
+    );
 }
 
 function ensureWorkLogListener(snapshot) {
@@ -759,6 +1482,7 @@ function ensureLeadsListener(snapshot) {
 
     if (!shouldListen) {
         detachLeadsListener();
+        detachQuoteListener();
         detachWorkLogListener();
         return;
     }
@@ -775,6 +1499,12 @@ function ensureLeadsListener(snapshot) {
 
             if (featureState.activeWorkLogLeadId && !rows.some(lead => lead.id === featureState.activeWorkLogLeadId)) {
                 closeLeadWorkLogModal();
+            }
+
+            const quoteContextLeadId = getQuoteContextLeadId();
+            if (quoteContextLeadId && !rows.some(lead => lead.id === quoteContextLeadId)) {
+                resetQuoteWorkspace({ closeDrawer: true });
+                detachQuoteListener({ reset: true });
             }
 
             if (getState().currentRoute === "#/leads") {
@@ -796,6 +1526,7 @@ export function renderLeadsView() {
     syncLeadProductsGrid();
     syncLeadsGrid();
     syncLeadWorkLogGrid();
+    ensureQuoteListener(snapshot);
 }
 
 function handleLeadSearchInput(target) {
@@ -851,6 +1582,7 @@ async function handleLeadSubmit(event) {
 
             update("Refreshing enquiry history...", 88, "Step 4 of 5");
             resetLeadWorkspace();
+            resetQuoteWorkspace({ closeDrawer: true });
             renderLeadsView();
             update("Leads and enquiry history are up to date.", 96, "Step 5 of 5");
             return result;
@@ -880,6 +1612,15 @@ async function handleLeadEdit(button) {
     const lead = featureState.leads.find(entry => entry.id === leadId) || null;
     if (!lead) return;
 
+    if (featureState.quoteListenerLeadId !== leadId) {
+        detachQuoteListener({ reset: true });
+        resetQuoteWorkspace();
+    }
+
+    if (featureState.quoteDrawerLeadId && featureState.quoteDrawerLeadId !== leadId) {
+        featureState.quoteDrawerLeadId = null;
+    }
+
     featureState.editingLeadId = leadId;
     featureState.selectedCatalogueId = lead.catalogueId || "";
     featureState.itemSearchTerm = "";
@@ -889,6 +1630,291 @@ async function handleLeadEdit(button) {
         inputSelector: "#lead-customer-name"
     });
     await loadCatalogueItemsIntoWorkspace(lead.catalogueId || "", lead.requestedProducts || []);
+}
+
+async function openLeadQuoteWorkspace(lead, options = {}) {
+    const {
+        quoteId = "",
+        openDrawer = false,
+        createDraft = false,
+        sourceQuote = null
+    } = options;
+
+    if (!lead?.id) return;
+
+    if (featureState.quoteListenerLeadId !== lead.id) {
+        detachQuoteListener({ reset: true });
+        resetQuoteWorkspace();
+    }
+
+    featureState.editingLeadId = lead.id;
+    featureState.selectedCatalogueId = lead.catalogueId || "";
+    featureState.itemSearchTerm = "";
+    featureState.quoteDrawerLeadId = openDrawer
+        ? lead.id
+        : (featureState.quoteDrawerLeadId === lead.id ? lead.id : null);
+
+    if (createDraft) {
+        featureState.activeQuoteId = "";
+        featureState.quoteDraft = buildLeadQuoteDraft(lead, sourceQuote);
+    } else if (quoteId) {
+        featureState.activeQuoteId = quoteId;
+        const selectedQuote = featureState.quoteRows.find(entry => entry.id === quoteId) || await getLeadQuote(lead.id, quoteId);
+        featureState.quoteDraft = selectedQuote ? buildQuoteDraftFromRecord(selectedQuote) : null;
+    } else if (!featureState.quoteDraft && featureState.quoteRows.length) {
+        ensureQuoteSelection();
+        hydrateQuoteDraftFromSelection();
+    }
+
+    renderLeadsView();
+    ensureQuoteListener(getState());
+    await loadCatalogueItemsIntoWorkspace(lead.catalogueId || "", lead.requestedProducts || []);
+
+    focusFormField({
+        formId: "lead-form",
+        inputSelector: "#lead-customer-name"
+    });
+}
+
+function openLeadQuotesDrawer(lead) {
+    if (!lead?.id) return;
+
+    featureState.quoteDrawerLeadId = lead.id;
+    renderLeadsView();
+    ensureQuoteListener(getState());
+}
+
+function closeLeadQuotesDrawer() {
+    featureState.quoteDrawerLeadId = null;
+    renderLeadsView();
+}
+
+function updateQuoteDraftField(field, value) {
+    if (!featureState.quoteDraft) return;
+    featureState.quoteDraft[field] = value;
+}
+
+function updateQuoteAcceptanceFieldsFromDom() {
+    if (!featureState.quoteDraft) return;
+
+    featureState.quoteDraft.acceptedByCustomerName = document.getElementById("lead-quote-accepted-by")?.value || "";
+    featureState.quoteDraft.acceptedVia = document.getElementById("lead-quote-accepted-via")?.value || "";
+    featureState.quoteDraft.acceptanceNotes = document.getElementById("lead-quote-acceptance-notes")?.value || "";
+}
+
+function getQuoteDraftPayload() {
+    if (!featureState.quoteDraft) {
+        throw new Error("Create or open a quote draft first.");
+    }
+
+    updateQuoteAcceptanceFieldsFromDom();
+
+    return {
+        docId: featureState.quoteDraft.docId || "",
+        businessQuoteId: featureState.quoteDraft.businessQuoteId || "",
+        sourceQuoteId: featureState.quoteDraft.sourceQuoteId || "",
+        store: featureState.quoteDraft.store || "Church Store",
+        validUntil: featureState.quoteDraft.validUntil || "",
+        quoteNotes: featureState.quoteDraft.quoteNotes || "",
+        internalNotes: featureState.quoteDraft.internalNotes || "",
+        lineItems: featureState.quoteDraft.lineItems || []
+    };
+}
+
+async function handleQuoteNewDraft() {
+    const lead = getEditingLead() || getQuoteContextLead();
+
+    if (!lead?.id) {
+        showToast("Save or open a lead first before creating quotes.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    await openLeadQuoteWorkspace(lead, {
+        openDrawer: featureState.quoteDrawerLeadId === lead.id,
+        createDraft: true
+    });
+}
+
+async function handleQuoteSelect(button) {
+    const quoteId = button.dataset.quoteId || "";
+    const lead = getEditingLead() || getQuoteContextLead();
+    if (!lead?.id || !quoteId) return;
+
+    await openLeadQuoteWorkspace(lead, {
+        quoteId,
+        openDrawer: featureState.quoteDrawerLeadId === lead.id
+    });
+}
+
+function handleQuoteLineFieldInput(target) {
+    if (!featureState.quoteDraft || !isQuoteDraftEditable()) return;
+
+    const lineIndex = Number(target.dataset.quoteLineIndex);
+    const field = target.dataset.quoteLineField || "";
+    const lineItems = featureState.quoteDraft.lineItems || [];
+    const currentLine = lineItems[lineIndex];
+    if (!currentLine) return;
+
+    const numericValue = Number(target.value);
+    const nextValue = Number.isFinite(numericValue) ? numericValue : 0;
+
+    currentLine[field] = field === "quotedQty"
+        ? Math.max(0, Math.floor(nextValue))
+        : Math.max(0, Number(nextValue.toFixed(2)));
+
+    recalculateQuoteDraftTotals();
+    renderLeadsView();
+}
+
+async function handleQuoteSave(submitStatus = "Draft") {
+    const lead = getEditingLead();
+
+    if (!lead?.id) {
+        showToast("Open a saved lead before saving quotes.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    try {
+        const result = await saveLeadQuote(
+            getQuoteDraftPayload(),
+            lead,
+            getState().currentUser,
+            { submitStatus }
+        );
+        const savedQuote = result.quoteId ? await getLeadQuote(lead.id, result.quoteId) : null;
+
+        featureState.activeQuoteId = result.quoteId || "";
+        featureState.quoteDraft = savedQuote ? buildQuoteDraftFromRecord(savedQuote) : null;
+        featureState.quoteDrawerLeadId = lead.id;
+        renderLeadsView();
+
+        showToast(submitStatus === "Sent" ? "Quote sent." : "Quote draft saved.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error("[Moneta] Lead quote save failed:", error);
+        showToast(error?.message || "Could not save this quote.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
+}
+
+async function handleQuoteRevise(button) {
+    const lead = getEditingLead();
+    const quoteId = button.dataset.quoteId || "";
+    const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
+
+    if (!lead?.id || !quote?.id) return;
+
+    try {
+        const result = await reviseLeadQuote(lead, quote, getState().currentUser);
+        const revisedQuote = result?.id ? await getLeadQuote(lead.id, result.id) : null;
+
+        featureState.activeQuoteId = result?.id || "";
+        featureState.quoteDraft = revisedQuote ? buildQuoteDraftFromRecord(revisedQuote) : buildLeadQuoteDraft(lead, quote);
+        featureState.quoteDrawerLeadId = lead.id;
+        renderLeadsView();
+
+        showToast("Revision draft created.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error("[Moneta] Quote revision failed:", error);
+        showToast(error?.message || "Could not revise this quote.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
+}
+
+async function handleQuoteAccept(button) {
+    const lead = getEditingLead();
+    const quoteId = button.dataset.quoteId || "";
+    const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
+
+    if (!lead?.id || !quote?.id) return;
+
+    try {
+        updateQuoteAcceptanceFieldsFromDom();
+        await acceptLeadQuote(lead, quote, {
+            acceptedByCustomerName: featureState.quoteDraft?.acceptedByCustomerName || "",
+            acceptedVia: featureState.quoteDraft?.acceptedVia || "",
+            acceptanceNotes: featureState.quoteDraft?.acceptanceNotes || ""
+        }, getState().currentUser);
+
+        const acceptedQuote = await getLeadQuote(lead.id, quote.id);
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = acceptedQuote ? buildQuoteDraftFromRecord(acceptedQuote) : null;
+        renderLeadsView();
+
+        showToast("Quote marked accepted.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error("[Moneta] Quote acceptance failed:", error);
+        showToast(error?.message || "Could not mark this quote as accepted.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
+}
+
+async function handleQuoteReject(button) {
+    const lead = getEditingLead();
+    const quoteId = button.dataset.quoteId || "";
+    const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
+
+    if (!lead?.id || !quote?.id) return;
+
+    const rejectionReason = window.prompt("Enter the rejection reason for this quote:", quote.rejectionReason || "") || "";
+    if (!rejectionReason.trim()) return;
+
+    try {
+        await rejectLeadQuote(lead, quote, rejectionReason, getState().currentUser);
+        const rejectedQuote = await getLeadQuote(lead.id, quote.id);
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = rejectedQuote ? buildQuoteDraftFromRecord(rejectedQuote) : null;
+        renderLeadsView();
+
+        showToast("Quote marked rejected.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error("[Moneta] Quote rejection failed:", error);
+        showToast(error?.message || "Could not reject this quote.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
+}
+
+async function handleQuoteCancel(button) {
+    const lead = getEditingLead();
+    const quoteId = button.dataset.quoteId || "";
+    const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
+
+    if (!lead?.id || !quote?.id) return;
+
+    const cancellationReason = window.prompt("Enter the cancellation reason for this quote:", quote.cancellationReason || "") || "";
+    if (!cancellationReason.trim()) return;
+
+    try {
+        await cancelLeadQuote(lead, quote, cancellationReason, getState().currentUser);
+        const cancelledQuote = await getLeadQuote(lead.id, quote.id);
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = cancelledQuote ? buildQuoteDraftFromRecord(cancelledQuote) : null;
+        renderLeadsView();
+
+        showToast("Quote cancelled.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error("[Moneta] Quote cancel failed:", error);
+        showToast(error?.message || "Could not cancel this quote.", "error", {
+            title: "Leads & Enquiries"
+        });
+    }
 }
 
 async function handleLeadConvert(button) {
@@ -1055,6 +2081,10 @@ async function handleLeadDelete(button) {
             update("Refreshing enquiry history...", 88, "Step 4 of 5");
             if (featureState.editingLeadId === leadId) {
                 resetLeadWorkspace();
+                resetQuoteWorkspace({ closeDrawer: true });
+            }
+            if (featureState.quoteDrawerLeadId === leadId) {
+                resetQuoteWorkspace({ closeDrawer: true });
             }
             renderLeadsView();
             update("Leads and enquiries are up to date.", 96, "Step 5 of 5");
@@ -1204,6 +2234,7 @@ async function handleLeadWorkLogSubmit(event) {
 
 function handleCancelEdit() {
     resetLeadWorkspace();
+    resetQuoteWorkspace({ closeDrawer: true });
     renderLeadsView();
 }
 
@@ -1215,6 +2246,11 @@ function bindLeadsDomEvents() {
         const leadsSearchInput = event.target.closest("#leads-grid-search");
         const productsSearchInput = event.target.closest("#lead-products-search");
         const workLogSearchInput = event.target.closest("#lead-worklog-search");
+        const quoteNotesInput = event.target.closest("#lead-quote-notes");
+        const quoteInternalNotesInput = event.target.closest("#lead-quote-internal-notes");
+        const quoteAcceptedByInput = event.target.closest("#lead-quote-accepted-by");
+        const quoteAcceptedViaInput = event.target.closest("#lead-quote-accepted-via");
+        const quoteAcceptanceNotesInput = event.target.closest("#lead-quote-acceptance-notes");
 
         if (leadsSearchInput) {
             handleLeadSearchInput(leadsSearchInput);
@@ -1228,13 +2264,59 @@ function bindLeadsDomEvents() {
 
         if (workLogSearchInput) {
             handleLeadWorkLogSearchInput(workLogSearchInput);
+            return;
+        }
+
+        if (quoteNotesInput) {
+            updateQuoteDraftField("quoteNotes", quoteNotesInput.value || "");
+            return;
+        }
+
+        if (quoteInternalNotesInput) {
+            updateQuoteDraftField("internalNotes", quoteInternalNotesInput.value || "");
+            return;
+        }
+
+        if (quoteAcceptedByInput) {
+            updateQuoteDraftField("acceptedByCustomerName", quoteAcceptedByInput.value || "");
+            return;
+        }
+
+        if (quoteAcceptedViaInput) {
+            updateQuoteDraftField("acceptedVia", quoteAcceptedViaInput.value || "");
+            return;
+        }
+
+        if (quoteAcceptanceNotesInput) {
+            updateQuoteDraftField("acceptanceNotes", quoteAcceptanceNotesInput.value || "");
         }
     });
 
     root.addEventListener("change", event => {
         const catalogueSelect = event.target.closest("#lead-catalogue");
+        const quoteStoreSelect = event.target.closest("#lead-quote-store");
+        const quoteValidUntilInput = event.target.closest("#lead-quote-valid-until");
+        const quoteLineInput = event.target.closest(".lead-quote-line-input");
+
         if (catalogueSelect) {
             handleCatalogueChange(catalogueSelect);
+            return;
+        }
+
+        if (quoteStoreSelect && featureState.quoteDraft) {
+            updateQuoteDraftField("store", quoteStoreSelect.value || "Church Store");
+            applyQuoteStoreTaxDefaults(featureState.quoteDraft.store || "Church Store");
+            renderLeadsView();
+            return;
+        }
+
+        if (quoteValidUntilInput && featureState.quoteDraft) {
+            updateQuoteDraftField("validUntil", quoteValidUntilInput.value || "");
+            return;
+        }
+
+        if (quoteLineInput) {
+            handleQuoteLineFieldInput(quoteLineInput);
         }
     });
 
@@ -1251,15 +2333,26 @@ function bindLeadsDomEvents() {
 
     root.addEventListener("click", event => {
         const editButton = event.target.closest(".lead-edit-button");
+        const quotesButton = event.target.closest(".lead-quotes-button");
         const convertButton = event.target.closest(".lead-convert-button");
         const workLogButton = event.target.closest(".lead-worklog-button");
         const deleteButton = event.target.closest(".lead-delete-button");
         const cancelButton = event.target.closest("#lead-cancel-button");
         const closeWorkLogButton = event.target.closest("#lead-worklog-close-button");
         const workLogModalBackdrop = event.target.closest("#lead-worklog-modal");
+        const quoteActionButton = event.target.closest("[data-action]");
+        const quoteDrawerBackdrop = event.target.id === "lead-quotes-drawer" ? event.target : null;
 
         if (editButton) {
             handleLeadEdit(editButton);
+            return;
+        }
+
+        if (quotesButton) {
+            const leadId = quotesButton.dataset.leadId || "";
+            const lead = featureState.leads.find(entry => entry.id === leadId) || null;
+            if (!lead) return;
+            openLeadQuoteWorkspace(lead, { openDrawer: true });
             return;
         }
 
@@ -1288,8 +2381,84 @@ function bindLeadsDomEvents() {
             return;
         }
 
+        if (quoteActionButton) {
+            const action = quoteActionButton.dataset.action || "";
+
+            if (action === "quote-open-drawer") {
+                const lead = getEditingLead() || getQuoteContextLead();
+                if (lead) {
+                    openLeadQuotesDrawer(lead);
+                }
+                return;
+            }
+
+            if (action === "quote-close-drawer") {
+                closeLeadQuotesDrawer();
+                return;
+            }
+
+            if (action === "quote-focus-workspace") {
+                const workspace = document.querySelector(".lead-quotes-workspace-card");
+                workspace?.scrollIntoView({ behavior: "smooth", block: "start" });
+                closeLeadQuotesDrawer();
+                return;
+            }
+
+            if (action === "quote-new-draft") {
+                handleQuoteNewDraft();
+                return;
+            }
+
+            if (action === "quote-select") {
+                handleQuoteSelect(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-save-draft") {
+                handleQuoteSave("Draft");
+                return;
+            }
+
+            if (action === "quote-send") {
+                handleQuoteSave("Sent");
+                return;
+            }
+
+            if (action === "quote-revise") {
+                handleQuoteRevise(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-accept") {
+                handleQuoteAccept(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-reject") {
+                handleQuoteReject(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-cancel") {
+                handleQuoteCancel(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-reset-selection") {
+                const selectedQuote = getSelectedQuote();
+                featureState.quoteDraft = selectedQuote ? buildQuoteDraftFromRecord(selectedQuote) : null;
+                renderLeadsView();
+                return;
+            }
+        }
+
         if (event.target.id === "lead-worklog-modal" && workLogModalBackdrop) {
             closeLeadWorkLogModal();
+            return;
+        }
+
+        if (quoteDrawerBackdrop) {
+            closeLeadQuotesDrawer();
         }
     });
 
@@ -1301,6 +2470,7 @@ export function initializeLeadsFeature() {
 
     subscribe(snapshot => {
         ensureLeadsListener(snapshot);
+        ensureQuoteListener(snapshot);
         ensureWorkLogListener(snapshot);
 
         if (snapshot.currentRoute === "#/leads") {

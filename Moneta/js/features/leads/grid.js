@@ -101,6 +101,29 @@ function leadActionMarkup(data) {
     `;
 }
 
+function quoteStatusMarkup(value) {
+    const status = value || "No Quotes";
+    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    return `<span class="quote-status-pill quote-status-${normalized}">${status}</span>`;
+}
+
+function leadQuotesMarkup(data) {
+    const quoteCount = Number(data?.quoteCount) || 0;
+    const latestStatus = data?.latestQuoteStatus || "";
+    const acceptedQuoteNumber = data?.acceptedQuoteNumber || "";
+
+    return `
+        <button class="button grid-action-button grid-action-button-secondary lead-quotes-button" type="button" data-lead-id="${data.id}">
+            <span class="button-icon">${icons.catalogue}</span>
+            ${quoteCount > 0 ? `${quoteCount} Quote${quoteCount === 1 ? "" : "s"}` : "Quotes"}
+        </button>
+        <div class="lead-quotes-cell-meta">
+            ${latestStatus ? quoteStatusMarkup(latestStatus) : `<span class="quote-status-pill quote-status-empty">No Quotes</span>`}
+            ${acceptedQuoteNumber ? `<span class="quote-status-pill quote-status-accepted-flag">Accepted: ${acceptedQuoteNumber}</span>` : ""}
+        </div>
+    `;
+}
+
 function buildLeadColumnDefs() {
     return [
         { field: "businessLeadId", headerName: "Lead ID", minWidth: 150, flex: 0.9 },
@@ -142,6 +165,14 @@ function buildLeadColumnDefs() {
             flex: 0.9,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Quotes",
+            minWidth: 230,
+            flex: 1.05,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => leadQuotesMarkup(params.data)
         },
         { field: "assignedTo", headerName: "Assigned To", minWidth: 160, flex: 0.95 },
         {
