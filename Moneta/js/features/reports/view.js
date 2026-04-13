@@ -5,6 +5,7 @@ import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import {
     CASH_FLOW_RANGE_OPTIONS,
+    getConsignmentPerformanceReport,
     formatAccountingCurrency,
     formatDateLabel,
     formatDateTime,
@@ -26,15 +27,15 @@ const REPORT_GROUPS = [
     {
         key: "sales",
         title: "Sales Reports",
-        description: "Commercial performance, collections, store comparison, and conversion tracking.",
+        description: "Commercial performance, channel collections, direct-store comparison, and conversion tracking.",
         icon: icons.retail,
         badge: "Sales",
         reports: [
             {
                 id: "sales-summary",
                 title: "Sales Summary",
-                description: "Period totals for sales, collections, donations, expenses, and outstanding balance due.",
-                dataSource: "salesInvoices, salesPaymentsLedger, donations",
+                description: "Cross-channel sales summary for Tasty Treats, Church Store, and Consignment.",
+                dataSource: "salesInvoices, consignmentOrdersV2",
                 roles: ["admin", "sales_staff", "finance"],
                 status: "priority",
                 implemented: true
@@ -42,8 +43,8 @@ const REPORT_GROUPS = [
             {
                 id: "store-performance",
                 title: "Store Performance",
-                description: "Church Store versus Tasty Treats comparison with revenue, transaction count, and average sale value.",
-                dataSource: "salesInvoices, salesPaymentsLedger",
+                description: "Direct-store comparison for Church Store versus Tasty Treats with revenue and collection performance.",
+                dataSource: "salesInvoices",
                 roles: ["admin", "sales_staff", "finance"],
                 status: "priority",
                 implemented: true
@@ -69,11 +70,11 @@ const REPORT_GROUPS = [
             {
                 id: "consignment-performance",
                 title: "Consignment Performance",
-                description: "Checked out, sold, returned, damaged, gifted, collected, and balance-due insight for consignment activity.",
-                dataSource: "consignmentOrdersV2, consignmentPaymentsLedger",
-                roles: ["admin", "inventory_manager", "finance"],
-                status: "planned",
-                implemented: false
+                description: "Distributor-channel view of checked out, sold, returned, damaged, gifted, collected, and balance-due activity.",
+                dataSource: "consignmentOrdersV2",
+                roles: ["admin", "inventory_manager", "finance", "sales_staff"],
+                status: "priority",
+                implemented: true
             }
         ]
     },
@@ -280,7 +281,7 @@ function buildRangeButtonsMarkup() {
 }
 
 function reportUsesRange(reportId = "") {
-    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "store-performance"].includes(reportId);
+    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "store-performance", "consignment-performance"].includes(reportId);
 }
 
 function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
@@ -437,24 +438,24 @@ function renderSalesSummaryCards(reportData = null) {
     return `
         <section class="dashboard-kpi-grid">
             <article class="dashboard-kpi-card tone-primary">
-                <p class="dashboard-kpi-title">Net Sales</p>
+                <p class="dashboard-kpi-title">Total Sales Revenue</p>
                 <p class="dashboard-kpi-value">${formatCurrency(summary.netSales || 0)}</p>
-                <p class="dashboard-kpi-meta">${summary.transactionCount || 0} sales in the selected window</p>
+                <p class="dashboard-kpi-meta">${summary.transactionCount || 0} direct and consignment transactions</p>
             </article>
             <article class="dashboard-kpi-card tone-success">
-                <p class="dashboard-kpi-title">Collections</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.collections || 0)}</p>
-                <p class="dashboard-kpi-meta">Cash collected during the period</p>
+                <p class="dashboard-kpi-title">Direct Sales</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.directNetSales || 0)}</p>
+                <p class="dashboard-kpi-meta">Tasty Treats plus Church Store net sales</p>
             </article>
             <article class="dashboard-kpi-card tone-warning">
-                <p class="dashboard-kpi-title">Outstanding Balance</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.balanceDue || 0)}</p>
-                <p class="dashboard-kpi-meta">Unsettled sales balance still open</p>
+                <p class="dashboard-kpi-title">Consignment Sales</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.consignmentNetSales || 0)}</p>
+                <p class="dashboard-kpi-meta">Distributor-channel sold value for the period</p>
             </article>
             <article class="dashboard-kpi-card tone-primary">
-                <p class="dashboard-kpi-title">Average Sale</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.averageSale || 0)}</p>
-                <p class="dashboard-kpi-meta">Average net sale per transaction</p>
+                <p class="dashboard-kpi-title">Outstanding Balance</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.balanceDue || 0)}</p>
+                <p class="dashboard-kpi-meta">Unsettled balance across all sales channels</p>
             </article>
         </section>
     `;
@@ -468,7 +469,7 @@ function renderSalesSummaryStatementSection(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Sales Summary Statement</h3>
-                    <p>Period revenue, settlement, and outstanding-balance view prepared from retail sales invoices.</p>
+                    <p>Cross-channel revenue, settlement, and outstanding-balance view for direct stores and consignment.</p>
                 </div>
                 <span class="status-pill">${rows.length} line${rows.length === 1 ? "" : "s"}</span>
             </div>
@@ -501,22 +502,22 @@ function renderSalesSummaryStatementSection(reportData = null) {
 }
 
 function renderSalesSummaryStoreSection(reportData = null) {
-    const rows = reportData?.storeRows || [];
+    const rows = reportData?.channelRows || [];
 
     return `
         <section class="panel-card reports-detail-card">
             <div class="reports-detail-head">
                 <div>
-                    <h3>Store Summary</h3>
-                    <p>Collections, donations, expenses, and balance due compared by retail store.</p>
+                    <h3>Channel Summary</h3>
+                    <p>Collections, donations, expenses, and balance due compared across direct stores and consignment.</p>
                 </div>
-                <span class="status-pill">${rows.length} store${rows.length === 1 ? "" : "s"}</span>
+                <span class="status-pill">${rows.length} channel${rows.length === 1 ? "" : "s"}</span>
             </div>
             <div class="table-wrap reports-table-wrap">
                 <table class="data-table reports-data-table">
                     <thead>
                         <tr>
-                            <th>Store</th>
+                            <th>Channel</th>
                             <th class="reports-align-right">Transactions</th>
                             <th class="reports-align-right">Net Sales</th>
                             <th class="reports-align-right">Collections</th>
@@ -528,7 +529,7 @@ function renderSalesSummaryStoreSection(reportData = null) {
                     <tbody>
                         ${rows.length ? rows.map(row => `
                             <tr>
-                                <td>${row.store}</td>
+                                <td>${row.channel}</td>
                                 <td class="reports-align-right">${row.transactionCount}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.netSales)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.collections)}</td>
@@ -538,7 +539,7 @@ function renderSalesSummaryStoreSection(reportData = null) {
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="7" class="reports-table-empty">No store summary is available for this range.</td>
+                                <td colspan="7" class="reports-table-empty">No channel summary is available for this range.</td>
                             </tr>
                         `}
                     </tbody>
@@ -556,7 +557,7 @@ function renderSalesSummaryDetailSection(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Recent Sales Detail</h3>
-                    <p>Latest in-range sales transactions for quick validation and follow-up.</p>
+                    <p>Latest in-range direct and consignment transactions for quick validation and follow-up.</p>
                 </div>
                 <span class="status-pill">${rows.length} row${rows.length === 1 ? "" : "s"}</span>
             </div>
@@ -565,9 +566,9 @@ function renderSalesSummaryDetailSection(reportData = null) {
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Store</th>
+                            <th>Channel</th>
                             <th>Reference</th>
-                            <th>Customer</th>
+                            <th>Counterparty</th>
                             <th class="reports-align-right">Qty</th>
                             <th class="reports-align-right">Net Sales</th>
                             <th class="reports-align-right">Paid</th>
@@ -578,7 +579,7 @@ function renderSalesSummaryDetailSection(reportData = null) {
                         ${rows.length ? rows.map(row => `
                             <tr>
                                 <td>${formatDateLabel(row.transactionDate)}</td>
-                                <td>${row.store || "-"}</td>
+                                <td>${row.channel || row.store || "-"}</td>
                                 <td>${row.reference || "-"}</td>
                                 <td>${row.customerName || "-"}</td>
                                 <td class="reports-align-right">${row.totalQuantity || 0}</td>
@@ -611,7 +612,7 @@ function renderSalesSummaryMetadataSection(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Audit Notes</h3>
-                    <p>Sales summary uses completed retail invoice activity within the selected report window.</p>
+                    <p>Sales summary combines direct retail invoices and consignment orders inside the selected report window.</p>
                 </div>
                 <span class="status-pill">Prepared by MONETA</span>
             </div>
@@ -635,7 +636,8 @@ function renderSalesSummaryMetadataSection(reportData = null) {
             </div>
             <div class="reports-audit-note">
                 <strong>Source counts:</strong>
-                Sales invoices ${sourceCounts.salesInvoices || 0}.
+                Sales invoices ${sourceCounts.salesInvoices || 0},
+                Consignment orders ${sourceCounts.consignmentOrders || 0}.
             </div>
         </section>
     `;
@@ -678,7 +680,7 @@ function renderStorePerformanceTable(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Store Comparison</h3>
-                    <p>Operational store comparison for sales, collections, donation support, and open balances.</p>
+                    <p>Operational direct-store comparison for sales, collections, donation support, and open balances.</p>
                 </div>
                 <span class="status-pill">${rows.length} store${rows.length === 1 ? "" : "s"}</span>
             </div>
@@ -733,7 +735,7 @@ function renderStorePerformanceMetadataSection(reportData = null) {
             <div class="reports-detail-head">
                 <div>
                     <h3>Audit Notes</h3>
-                    <p>Store performance compares retail sales activity between Tasty Treats and Church Store for the selected range.</p>
+                    <p>Store performance compares direct retail activity between Tasty Treats and Church Store for the selected range.</p>
                 </div>
                 <span class="status-pill">Prepared by MONETA</span>
             </div>
@@ -758,6 +760,184 @@ function renderStorePerformanceMetadataSection(reportData = null) {
             <div class="reports-audit-note">
                 <strong>Source counts:</strong>
                 Sales invoices ${sourceCounts.salesInvoices || 0}.
+            </div>
+        </section>
+    `;
+}
+
+function renderConsignmentPerformanceCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Sold Value</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.soldValue || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.orderCount || 0} consignment order${summary.orderCount === 1 ? "" : "s"} in range</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Collections</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.collections || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.teamCount || 0} teams or members active in the channel</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Balance Due</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.balanceDue || 0)}</p>
+                <p class="dashboard-kpi-meta">Open balance still due from consignment activity</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Sell Through</p>
+                <p class="dashboard-kpi-value">${formatPercent(summary.sellThroughRate || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.quantitySold || 0} sold from ${summary.quantityCheckedOut || 0} checked out</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderConsignmentPerformanceTeamSection(reportData = null) {
+    const rows = reportData?.teamRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Team Performance</h3>
+                    <p>Consignment activity grouped by team and member for distributor-channel follow-up.</p>
+                </div>
+                <span class="status-pill">${rows.length} team row${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Member</th>
+                            <th class="reports-align-right">Orders</th>
+                            <th class="reports-align-right">Checked Out</th>
+                            <th class="reports-align-right">Sold</th>
+                            <th class="reports-align-right">Sell Through</th>
+                            <th class="reports-align-right">Sold Value</th>
+                            <th class="reports-align-right">Collected</th>
+                            <th class="reports-align-right">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.teamName}</td>
+                                <td>${row.memberName}</td>
+                                <td class="reports-align-right">${row.orderCount}</td>
+                                <td class="reports-align-right">${row.quantityCheckedOut}</td>
+                                <td class="reports-align-right">${row.quantitySold}</td>
+                                <td class="reports-align-right">${formatPercent(row.sellThroughRate)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.soldValue)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.collections)}</td>
+                                <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency((Number(row.balanceDue) || 0) * -1)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="9" class="reports-table-empty">No consignment performance rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderConsignmentPerformanceDetailSection(reportData = null) {
+    const rows = reportData?.detailRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Consignment Order Detail</h3>
+                    <p>Order-level settlement, outcome, and exposure detail for the consignment channel.</p>
+                </div>
+                <span class="status-pill">${rows.length} order${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reference</th>
+                            <th>Team</th>
+                            <th>Member</th>
+                            <th class="reports-align-right">Sold</th>
+                            <th class="reports-align-right">Returned</th>
+                            <th class="reports-align-right">Damaged</th>
+                            <th class="reports-align-right">Gifted</th>
+                            <th class="reports-align-right">Sold Value</th>
+                            <th class="reports-align-right">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${formatDateLabel(row.transactionDate)}</td>
+                                <td>${row.reference || "-"}</td>
+                                <td>${row.teamName || "-"}</td>
+                                <td>${row.teamMemberName || "-"}</td>
+                                <td class="reports-align-right">${row.quantitySold || 0}</td>
+                                <td class="reports-align-right">${row.quantityReturned || 0}</td>
+                                <td class="reports-align-right">${row.quantityDamaged || 0}</td>
+                                <td class="reports-align-right">${row.quantityGifted || 0}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.valueSold || 0)}</td>
+                                <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency((Number(row.balanceDue) || 0) * -1)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="10" class="reports-table-empty">No consignment orders are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderConsignmentPerformanceMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Consignment performance treats the channel as a distributor sales lane using checked-out stock and sold-value settlement.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Window</p>
+                    <p class="report-audit-value">${reportData?.rangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Orders</p>
+                    <p class="report-audit-value">${reportData?.summary?.orderCount || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Consignment orders ${sourceCounts.consignmentOrders || 0}.
             </div>
         </section>
     `;
@@ -1992,6 +2172,20 @@ function renderInventoryValuationReportView(user, reportDef) {
     `;
 }
 
+function renderConsignmentPerformanceReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
+            ${renderConsignmentPerformanceCards(reportData)}
+            ${renderConsignmentPerformanceTeamSection(reportData)}
+            ${renderConsignmentPerformanceDetailSection(reportData)}
+            ${renderConsignmentPerformanceMetadataSection(reportData)}
+        </div>
+    `;
+}
+
 function bindReportsEvents(user) {
     const root = document.getElementById("reports-root");
     if (!root) return;
@@ -2379,6 +2573,64 @@ async function loadStorePerformanceReport(user, { forceRefresh = false } = {}) {
     }
 }
 
+async function loadConsignmentPerformanceReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Consignment performance range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "consignment-performance"
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getConsignmentPerformanceReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "consignment-performance"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Consignment performance report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the consignment performance report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 async function loadInventoryStatusReport(user, { forceRefresh = false } = {}) {
     if (!user || !["admin", "inventory_manager", "finance"].includes(user.role)) return;
 
@@ -2474,6 +2726,9 @@ function loadActiveReport(user, options = {}) {
     if (reportId === "store-performance") {
         return loadStorePerformanceReport(user, options);
     }
+    if (reportId === "consignment-performance") {
+        return loadConsignmentPerformanceReport(user, options);
+    }
     if (reportId === "inventory-status") {
         return loadInventoryStatusReport(user, options);
     }
@@ -2519,6 +2774,7 @@ export function renderReportsView(user) {
         ? (() => {
             if (activeReport.id === "sales-summary") return renderSalesSummaryReportView(user, activeReport);
             if (activeReport.id === "store-performance") return renderStorePerformanceReportView(user, activeReport);
+            if (activeReport.id === "consignment-performance") return renderConsignmentPerformanceReportView(user, activeReport);
             if (activeReport.id === "inventory-status") return renderInventoryStatusReportView(user, activeReport);
             if (activeReport.id === "inventory-valuation") return renderInventoryValuationReportView(user, activeReport);
             if (activeReport.id === "cash-flow-summary") return renderCashFlowReportView(user, activeReport);

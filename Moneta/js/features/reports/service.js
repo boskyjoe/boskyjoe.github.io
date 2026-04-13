@@ -930,6 +930,8 @@ function buildSalesInvoiceReportRows(rows = []) {
 
             return {
                 id: row.id,
+                source: "Retail",
+                channel: normalizeText(row.store) || "Other",
                 transactionDate,
                 store: normalizeText(row.store) || "Other",
                 reference: normalizeText(row.saleId || row.manualVoucherNumber || row.id),
@@ -945,6 +947,94 @@ function buildSalesInvoiceReportRows(rows = []) {
                 balanceDue,
                 totalQuantity: Number(row.totalQuantity) || 0,
                 paymentStatus: normalizeStatus(row.paymentStatus, "Unpaid")
+            };
+        });
+}
+
+function sumConsignmentQuantity(row = {}, field) {
+    if (row?.[field] !== undefined && row?.[field] !== null) {
+        return Math.max(0, Math.floor(Number(row[field]) || 0));
+    }
+
+    return (Array.isArray(row.items) ? row.items : []).reduce((sum, item) => {
+        return sum + Math.max(0, Math.floor(Number(item?.[field]) || 0));
+    }, 0);
+}
+
+function sumConsignmentValue(row = {}, field) {
+    if (row?.[field] !== undefined && row?.[field] !== null) {
+        return roundCurrency(row[field]);
+    }
+
+    return roundCurrency((Array.isArray(row.items) ? row.items : []).reduce((sum, item) => {
+        const quantity = Math.max(0, Math.floor(Number(item?.[field]) || 0));
+        const price = roundCurrency(item?.sellingPrice);
+        return sum + (quantity * price);
+    }, 0));
+}
+
+function buildConsignmentSalesReportRows(rows = []) {
+    return rows
+        .filter(row => normalizeStatus(row.status, "Active") !== "Cancelled")
+        .map(row => {
+            const transactionDate = resolveTransactionDate(row, ["checkoutDate"]);
+            const quantityCheckedOut = Math.max(
+                0,
+                Math.floor(Number(row.totalQuantityCheckedOut) || sumConsignmentQuantity(row, "quantityCheckedOut"))
+            );
+            const quantitySold = sumConsignmentQuantity(row, "totalQuantitySold") || sumConsignmentQuantity(row, "quantitySold");
+            const quantityReturned = sumConsignmentQuantity(row, "totalQuantityReturned") || sumConsignmentQuantity(row, "quantityReturned");
+            const quantityDamaged = sumConsignmentQuantity(row, "totalQuantityDamaged") || sumConsignmentQuantity(row, "quantityDamaged");
+            const quantityGifted = sumConsignmentQuantity(row, "totalQuantityGifted") || sumConsignmentQuantity(row, "quantityGifted");
+            const quantityOnHand = Math.max(
+                0,
+                Math.floor(Number(row.totalOnHandQuantity) || (quantityCheckedOut - quantitySold - quantityReturned - quantityDamaged - quantityGifted))
+            );
+            const valueCheckedOut = row.totalValueCheckedOut !== undefined && row.totalValueCheckedOut !== null
+                ? roundCurrency(row.totalValueCheckedOut)
+                : sumConsignmentValue(row, "quantityCheckedOut");
+            const valueSold = roundCurrency(row.totalValueSold);
+            const valueReturned = sumConsignmentValue(row, "quantityReturned");
+            const valueDamaged = sumConsignmentValue(row, "quantityDamaged");
+            const valueGifted = sumConsignmentValue(row, "quantityGifted");
+            const valueOnHand = row.totalValueOnHand !== undefined && row.totalValueOnHand !== null
+                ? roundCurrency(row.totalValueOnHand)
+                : roundCurrency(valueCheckedOut - valueSold - valueReturned - valueDamaged - valueGifted);
+
+            return {
+                id: row.id,
+                source: "Consignment",
+                channel: "Consignment",
+                transactionDate,
+                store: "Consignment",
+                reference: normalizeText(row.consignmentId || row.manualVoucherNumber || row.id),
+                customerName: normalizeText(row.teamName || row.teamMemberName) || "Consignment Team",
+                teamName: normalizeText(row.teamName) || "Team",
+                teamMemberName: normalizeText(row.teamMemberName) || "-",
+                venue: normalizeText(row.venue) || "-",
+                grossSales: roundCurrency(row.totalValueSold),
+                discounts: 0,
+                netSales: roundCurrency(row.totalValueSold),
+                tax: 0,
+                grossBilled: roundCurrency(row.totalValueSold),
+                collections: roundCurrency(row.totalAmountPaid),
+                donations: roundCurrency(row.totalDonation),
+                expenses: roundCurrency(row.totalExpenses),
+                balanceDue: roundCurrency(row.balanceDue),
+                totalQuantity: quantitySold,
+                quantityCheckedOut,
+                quantitySold,
+                quantityReturned,
+                quantityDamaged,
+                quantityGifted,
+                quantityOnHand,
+                valueCheckedOut,
+                valueSold,
+                valueReturned,
+                valueDamaged,
+                valueGifted,
+                valueOnHand,
+                paymentStatus: normalizeStatus(row.status, "Active")
             };
         });
 }
@@ -996,28 +1086,96 @@ function buildStoreSalesRows(rows = []) {
         .filter(bucket => bucket.transactionCount > 0 || bucket.store !== "Other");
 }
 
+function buildSalesChannelRows(rows = []) {
+    const buckets = new Map();
+
+    ["Tasty Treats", "Church Store", "Consignment", "Other"].forEach(channel => {
+        buckets.set(channel, {
+            channel,
+            transactionCount: 0,
+            totalQuantity: 0,
+            grossSales: 0,
+            discounts: 0,
+            netSales: 0,
+            tax: 0,
+            grossBilled: 0,
+            collections: 0,
+            donations: 0,
+            expenses: 0,
+            balanceDue: 0,
+            averageSale: 0,
+            collectionRate: 0
+        });
+    });
+
+    rows.forEach(row => {
+        const key = buckets.has(row.channel) ? row.channel : "Other";
+        const bucket = buckets.get(key);
+        bucket.transactionCount += 1;
+        bucket.totalQuantity += row.totalQuantity;
+        bucket.grossSales = roundCurrency(bucket.grossSales + row.grossSales);
+        bucket.discounts = roundCurrency(bucket.discounts + row.discounts);
+        bucket.netSales = roundCurrency(bucket.netSales + row.netSales);
+        bucket.tax = roundCurrency(bucket.tax + row.tax);
+        bucket.grossBilled = roundCurrency(bucket.grossBilled + row.grossBilled);
+        bucket.collections = roundCurrency(bucket.collections + row.collections);
+        bucket.donations = roundCurrency(bucket.donations + row.donations);
+        bucket.expenses = roundCurrency(bucket.expenses + row.expenses);
+        bucket.balanceDue = roundCurrency(bucket.balanceDue + row.balanceDue);
+    });
+
+    return [...buckets.values()]
+        .map(bucket => ({
+            ...bucket,
+            averageSale: bucket.transactionCount > 0 ? roundCurrency(bucket.netSales / bucket.transactionCount) : 0,
+            collectionRate: bucket.netSales > 0 ? roundCurrency((bucket.collections / bucket.netSales) * 100) : 0
+        }))
+        .filter(bucket => bucket.transactionCount > 0 || bucket.channel !== "Other");
+}
+
 function buildSalesSummaryReportData({
     salesInvoices = [],
+    consignmentOrders = [],
     rangeSpec,
     durationMs = 0,
     truncatedSources = {}
 }) {
-    const invoiceRows = buildSalesInvoiceReportRows(salesInvoices)
+    const retailRows = buildSalesInvoiceReportRows(salesInvoices);
+    const consignmentRows = buildConsignmentSalesReportRows(consignmentOrders);
+    const detailRows = [...retailRows, ...consignmentRows]
         .sort((left, right) => toDateValue(right.transactionDate).getTime() - toDateValue(left.transactionDate).getTime());
-    const storeRows = buildStoreSalesRows(invoiceRows);
+    const channelRows = buildSalesChannelRows(detailRows)
+        .filter(row => ["Tasty Treats", "Church Store", "Consignment"].includes(row.channel));
+    const directRows = channelRows.filter(row => row.channel !== "Consignment");
+
+    const directNetSales = sumMetric(directRows, "netSales");
+    const directCollections = sumMetric(directRows, "collections");
+    const directDonations = sumMetric(directRows, "donations");
+    const directExpenses = sumMetric(directRows, "expenses");
+    const directBalanceDue = sumMetric(directRows, "balanceDue");
+
+    const consignmentNetSales = sumMetric(consignmentRows, "netSales");
+    const consignmentCollections = sumMetric(consignmentRows, "collections");
+    const consignmentDonations = sumMetric(consignmentRows, "donations");
+    const consignmentExpenses = sumMetric(consignmentRows, "expenses");
+    const consignmentBalanceDue = sumMetric(consignmentRows, "balanceDue");
 
     const summary = {
-        grossSales: sumMetric(invoiceRows, "grossSales"),
-        discounts: sumMetric(invoiceRows, "discounts"),
-        netSales: sumMetric(invoiceRows, "netSales"),
-        tax: sumMetric(invoiceRows, "tax"),
-        grossBilled: sumMetric(invoiceRows, "grossBilled"),
-        collections: sumMetric(invoiceRows, "collections"),
-        donations: sumMetric(invoiceRows, "donations"),
-        expenses: sumMetric(invoiceRows, "expenses"),
-        balanceDue: sumMetric(invoiceRows, "balanceDue"),
-        transactionCount: invoiceRows.length,
-        averageSale: invoiceRows.length > 0 ? roundCurrency(sumMetric(invoiceRows, "netSales") / invoiceRows.length) : 0
+        grossSales: sumMetric(detailRows, "grossSales"),
+        discounts: sumMetric(detailRows, "discounts"),
+        netSales: sumMetric(detailRows, "netSales"),
+        tax: sumMetric(detailRows, "tax"),
+        grossBilled: sumMetric(detailRows, "grossBilled"),
+        collections: sumMetric(detailRows, "collections"),
+        donations: sumMetric(detailRows, "donations"),
+        expenses: sumMetric(detailRows, "expenses"),
+        balanceDue: sumMetric(detailRows, "balanceDue"),
+        transactionCount: detailRows.length,
+        averageSale: detailRows.length > 0 ? roundCurrency(sumMetric(detailRows, "netSales") / detailRows.length) : 0,
+        directNetSales,
+        consignmentNetSales,
+        directCollections,
+        consignmentCollections
     };
 
     return {
@@ -1029,22 +1187,36 @@ function buildSalesSummaryReportData({
         durationMs,
         summary,
         statementRows: [
-            { section: "Revenue", label: "Gross Sales", amount: summary.grossSales },
-            { section: "Revenue", label: "Less Discounts", amount: roundCurrency(summary.discounts * -1) },
-            { section: "Revenue", label: "Net Sales", amount: summary.netSales, tone: "total" },
+            { section: "Revenue", label: "Tasty Treats Gross Sales", amount: channelRows.find(row => row.channel === "Tasty Treats")?.grossSales || 0 },
+            { section: "Revenue", label: "Less Tasty Treats Discounts", amount: roundCurrency((channelRows.find(row => row.channel === "Tasty Treats")?.discounts || 0) * -1) },
+            { section: "Revenue", label: "Tasty Treats Net Sales", amount: channelRows.find(row => row.channel === "Tasty Treats")?.netSales || 0 },
+            { section: "Revenue", label: "Church Store Gross Sales", amount: channelRows.find(row => row.channel === "Church Store")?.grossSales || 0 },
+            { section: "Revenue", label: "Less Church Store Discounts", amount: roundCurrency((channelRows.find(row => row.channel === "Church Store")?.discounts || 0) * -1) },
+            { section: "Revenue", label: "Church Store Net Sales", amount: channelRows.find(row => row.channel === "Church Store")?.netSales || 0 },
+            { section: "Revenue", label: "Total Direct Sales", amount: directNetSales, tone: "total" },
+            { section: "Revenue", label: "Consignment Sales", amount: consignmentNetSales },
+            { section: "Revenue", label: "Total Sales Revenue", amount: summary.netSales, tone: "total" },
             { section: "Revenue", label: "Output Tax", amount: summary.tax },
-            { section: "Revenue", label: "Gross Billed", amount: summary.grossBilled, tone: "total" },
-            { section: "Settlement", label: "Collections", amount: summary.collections },
-            { section: "Settlement", label: "Donations", amount: summary.donations },
-            { section: "Settlement", label: "Store Expenses", amount: roundCurrency(summary.expenses * -1) },
-            { section: "Settlement", label: "Outstanding Balance", amount: roundCurrency(summary.balanceDue * -1), tone: "total" }
+            { section: "Settlement", label: "Direct Collections", amount: directCollections },
+            { section: "Settlement", label: "Consignment Collections", amount: consignmentCollections },
+            { section: "Settlement", label: "Total Collections", amount: summary.collections, tone: "total" },
+            { section: "Settlement", label: "Direct Donations", amount: directDonations },
+            { section: "Settlement", label: "Consignment Donations", amount: consignmentDonations },
+            { section: "Settlement", label: "Total Donations", amount: summary.donations, tone: "total" },
+            { section: "Settlement", label: "Direct Expenses", amount: roundCurrency(directExpenses * -1) },
+            { section: "Settlement", label: "Consignment Expenses", amount: roundCurrency(consignmentExpenses * -1) },
+            { section: "Settlement", label: "Total Expenses", amount: roundCurrency(summary.expenses * -1), tone: "total" },
+            { section: "Settlement", label: "Direct Outstanding Balance", amount: roundCurrency(directBalanceDue * -1) },
+            { section: "Settlement", label: "Consignment Outstanding Balance", amount: roundCurrency(consignmentBalanceDue * -1) },
+            { section: "Settlement", label: "Total Outstanding Balance", amount: roundCurrency(summary.balanceDue * -1), tone: "total" }
         ],
-        storeRows,
-        detailRows: invoiceRows.slice(0, 60),
+        channelRows,
+        detailRows: detailRows.slice(0, 60),
         metadata: {
             truncatedSources,
             sourceCounts: {
-                salesInvoices: salesInvoices.length
+                salesInvoices: salesInvoices.length,
+                consignmentOrders: consignmentOrders.length
             }
         }
     };
@@ -1086,6 +1258,108 @@ function buildStorePerformanceReportData({
             truncatedSources,
             sourceCounts: {
                 salesInvoices: salesInvoices.length
+            }
+        }
+    };
+}
+
+function buildConsignmentTeamRows(rows = []) {
+    const byTeam = new Map();
+
+    rows.forEach(row => {
+        const teamName = normalizeText(row.teamName) || "Team";
+        const memberName = normalizeText(row.teamMemberName) || "-";
+        const key = `${teamName}::${memberName}`;
+
+        if (!byTeam.has(key)) {
+            byTeam.set(key, {
+                teamName,
+                memberName,
+                orderCount: 0,
+                quantityCheckedOut: 0,
+                quantitySold: 0,
+                quantityReturned: 0,
+                quantityDamaged: 0,
+                quantityGifted: 0,
+                quantityOnHand: 0,
+                soldValue: 0,
+                collections: 0,
+                donations: 0,
+                expenses: 0,
+                balanceDue: 0,
+                sellThroughRate: 0
+            });
+        }
+
+        const bucket = byTeam.get(key);
+        bucket.orderCount += 1;
+        bucket.quantityCheckedOut += row.quantityCheckedOut;
+        bucket.quantitySold += row.quantitySold;
+        bucket.quantityReturned += row.quantityReturned;
+        bucket.quantityDamaged += row.quantityDamaged;
+        bucket.quantityGifted += row.quantityGifted;
+        bucket.quantityOnHand += row.quantityOnHand;
+        bucket.soldValue = roundCurrency(bucket.soldValue + row.valueSold);
+        bucket.collections = roundCurrency(bucket.collections + row.collections);
+        bucket.donations = roundCurrency(bucket.donations + row.donations);
+        bucket.expenses = roundCurrency(bucket.expenses + row.expenses);
+        bucket.balanceDue = roundCurrency(bucket.balanceDue + row.balanceDue);
+    });
+
+    return [...byTeam.values()]
+        .map(row => ({
+            ...row,
+            sellThroughRate: row.quantityCheckedOut > 0
+                ? roundCurrency((row.quantitySold / row.quantityCheckedOut) * 100)
+                : 0
+        }))
+        .sort((left, right) => right.soldValue - left.soldValue);
+}
+
+function buildConsignmentPerformanceReportData({
+    consignmentOrders = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const orderRows = buildConsignmentSalesReportRows(consignmentOrders)
+        .sort((left, right) => toDateValue(right.transactionDate).getTime() - toDateValue(left.transactionDate).getTime());
+    const teamRows = buildConsignmentTeamRows(orderRows);
+    const uniqueTeams = new Set(orderRows.map(row => normalizeText(row.teamName)).filter(Boolean));
+
+    const summary = {
+        orderCount: orderRows.length,
+        teamCount: uniqueTeams.size,
+        quantityCheckedOut: sumMetric(orderRows, "quantityCheckedOut"),
+        quantitySold: sumMetric(orderRows, "quantitySold"),
+        quantityReturned: sumMetric(orderRows, "quantityReturned"),
+        quantityDamaged: sumMetric(orderRows, "quantityDamaged"),
+        quantityGifted: sumMetric(orderRows, "quantityGifted"),
+        quantityOnHand: sumMetric(orderRows, "quantityOnHand"),
+        soldValue: sumMetric(orderRows, "valueSold"),
+        collections: sumMetric(orderRows, "collections"),
+        donations: sumMetric(orderRows, "donations"),
+        expenses: sumMetric(orderRows, "expenses"),
+        balanceDue: sumMetric(orderRows, "balanceDue"),
+        sellThroughRate: sumMetric(orderRows, "quantityCheckedOut") > 0
+            ? roundCurrency((sumMetric(orderRows, "quantitySold") / sumMetric(orderRows, "quantityCheckedOut")) * 100)
+            : 0
+    };
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary,
+        teamRows,
+        detailRows: orderRows.slice(0, 60),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                consignmentOrders: consignmentOrders.length
             }
         }
     };
@@ -1905,18 +2179,27 @@ export async function getSalesSummaryReport(user, rangeSpec, { forceRefresh = fa
     }
 
     const startedAt = performance.now();
-    const salesInvoicesResult = await fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
-        dateField: "saleDate",
-        startDate: rangeSpec.startDate,
-        endDate: rangeSpec.endDate
-    });
+    const [salesInvoicesResult, consignmentOrdersResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        })
+    ]);
 
     const data = buildSalesSummaryReportData({
         salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
         rangeSpec,
         durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
         truncatedSources: {
-            salesInvoices: salesInvoicesResult.truncated
+            salesInvoices: salesInvoicesResult.truncated,
+            consignmentOrders: consignmentOrdersResult.truncated
         }
     });
 
@@ -1966,6 +2249,50 @@ export async function getStorePerformanceReport(user, rangeSpec, { forceRefresh 
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "store-performance", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getConsignmentPerformanceReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) {
+        throw new Error("You do not have access to the consignment performance report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "consignment-performance", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const consignmentOrdersResult = await fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+        dateField: "checkoutDate",
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate
+    });
+
+    const data = buildConsignmentPerformanceReportData({
+        consignmentOrders: consignmentOrdersResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            consignmentOrders: consignmentOrdersResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "consignment-performance", rangeSpec.rangeKey, data, loadedAt);
 
     return {
         data,
