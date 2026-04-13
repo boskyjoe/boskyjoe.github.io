@@ -1005,29 +1005,6 @@ function renderLeadForm(snapshot) {
     const convertDisabledAttrs = !conversionEligibility.allowed
         ? `disabled title="${escapeAttribute(conversionEligibility.reason)}" data-disabled-reason="${escapeAttribute(conversionEligibility.reason)}"`
         : "";
-    const conversionChecklistMarkup = editingLead
-        ? `
-            <div class="lead-conversion-guidance ${conversionEligibility.allowed ? "" : "lead-conversion-guidance-muted"}">
-                <div class="lead-conversion-guidance-head">
-                    <span class="panel-icon panel-icon-alt">${icons.warning}</span>
-                    <div>
-                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Lead Conversion Checklist</p>
-                        <p class="panel-copy">Before converting this enquiry, confirm the details below.</p>
-                    </div>
-                </div>
-                <ul class="lead-conversion-guidance-list">
-                    <li>Verify the correct sales catalogue is selected.</li>
-                    <li>Check requested product quantities and customer contact details.</li>
-                    <li>After conversion, review pricing, tax, discount, and payment in Retail Store before saving.</li>
-                </ul>
-                <p class="lead-conversion-guidance-note">
-                    ${conversionEligibility.allowed
-        ? "Conversion opens Retail Store with a prefilled draft sale."
-        : `Conversion is disabled right now: ${escapeAttribute(conversionEligibility.reason)}`}
-                </p>
-            </div>
-        `
-        : "";
 
     return `
         <div class="panel-card">
@@ -1155,7 +1132,6 @@ function renderLeadForm(snapshot) {
                     <div class="ag-shell">
                         <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                     </div>
-                    ${conversionChecklistMarkup}
                     ${editingLead ? renderLeadQuotesWorkspace(editingLead) : ""}
                     <div class="form-actions">
                         ${editingLead ? `
@@ -1984,7 +1960,7 @@ async function handleLeadConvert(button) {
             { label: "No. Of Products", value: String(requestedProductCount) },
             { label: "Est. Value", value: formatCurrency(requestedValue) }
         ],
-        note: "No sale is saved yet. In Retail Store, review store, pricing, tax, discount, and payment before saving.",
+        note: "Checklist: verify the correct sales catalogue is selected, confirm requested quantities and customer contact details, then review store, pricing, tax, discount, and payment in Retail Store before saving. No sale is saved yet; conversion opens a prefilled draft sale.",
         confirmText: "Convert",
         cancelText: "Cancel",
         tone: "warning"
