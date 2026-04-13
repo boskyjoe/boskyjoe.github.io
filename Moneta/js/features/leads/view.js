@@ -52,6 +52,7 @@ const featureState = {
     workLogSearchTerm: "",
     quoteRows: [],
     quoteDrawerLeadId: null,
+    isQuoteDrawerOpen: false,
     unsubscribeQuotes: null,
     quoteListenerLeadId: null,
     activeQuoteId: null,
@@ -160,6 +161,7 @@ function resetQuoteWorkspace(options = {}) {
 
     if (closeDrawer) {
         featureState.quoteDrawerLeadId = null;
+        featureState.isQuoteDrawerOpen = false;
     }
 }
 
@@ -923,7 +925,11 @@ function renderLeadQuotesWorkspace(editingLead) {
 
 function renderLeadQuotesDrawer() {
     const activeLead = getQuoteContextLead();
-    const isOpen = Boolean(featureState.quoteDrawerLeadId && activeLead?.id === featureState.quoteDrawerLeadId);
+    const isOpen = Boolean(
+        featureState.isQuoteDrawerOpen
+        && featureState.quoteDrawerLeadId
+        && activeLead?.id === featureState.quoteDrawerLeadId
+    );
 
     return `
         <div id="lead-quotes-drawer" class="lead-quotes-drawer-overlay" ${isOpen ? "" : "hidden"}>
@@ -1619,6 +1625,7 @@ async function handleLeadEdit(button) {
 
     if (featureState.quoteDrawerLeadId && featureState.quoteDrawerLeadId !== leadId) {
         featureState.quoteDrawerLeadId = null;
+        featureState.isQuoteDrawerOpen = false;
     }
 
     featureState.editingLeadId = leadId;
@@ -1653,6 +1660,7 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
     featureState.quoteDrawerLeadId = openDrawer
         ? lead.id
         : (featureState.quoteDrawerLeadId === lead.id ? lead.id : null);
+    featureState.isQuoteDrawerOpen = Boolean(openDrawer);
 
     if (createDraft) {
         featureState.activeQuoteId = "";
@@ -1680,12 +1688,13 @@ function openLeadQuotesDrawer(lead) {
     if (!lead?.id) return;
 
     featureState.quoteDrawerLeadId = lead.id;
+    featureState.isQuoteDrawerOpen = true;
     renderLeadsView();
     ensureQuoteListener(getState());
 }
 
 function closeLeadQuotesDrawer() {
-    featureState.quoteDrawerLeadId = null;
+    featureState.isQuoteDrawerOpen = false;
     renderLeadsView();
 }
 
