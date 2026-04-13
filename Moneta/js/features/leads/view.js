@@ -931,8 +931,12 @@ function renderLeadQuotesDrawer() {
         && activeLead?.id === featureState.quoteDrawerLeadId
     );
 
+    if (!isOpen) {
+        return "";
+    }
+
     return `
-        <div id="lead-quotes-drawer" class="lead-quotes-drawer-overlay" ${isOpen ? "" : "hidden"}>
+        <div id="lead-quotes-drawer" class="lead-quotes-drawer-overlay">
             <aside class="lead-quotes-drawer-card">
                 <div class="panel-header panel-header-accent">
                     <div class="panel-title-wrap">
