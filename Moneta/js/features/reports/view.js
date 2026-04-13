@@ -694,6 +694,9 @@ function renderStorePerformanceTable(reportData = null) {
                             <th class="reports-align-right">Net Sales</th>
                             <th class="reports-align-right">Average Sale</th>
                             <th class="reports-align-right">Collections</th>
+                            <th class="reports-align-right">Donations</th>
+                            <th class="reports-align-right">Expenses</th>
+                            <th class="reports-align-right">Net Contribution</th>
                             <th class="reports-align-right">Collection Rate</th>
                             <th class="reports-align-right">Balance</th>
                         </tr>
@@ -707,12 +710,15 @@ function renderStorePerformanceTable(reportData = null) {
                                 <td class="reports-align-right">${formatAccountingCurrency(row.netSales)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.averageSale)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.collections)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.donations)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.expenses) || 0) * -1)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.netContribution)}">${formatAccountingCurrency(row.netContribution)}</td>
                                 <td class="reports-align-right">${formatPercent(row.collectionRate)}</td>
                                 <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency((Number(row.balanceDue) || 0) * -1)}</td>
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="8" class="reports-table-empty">No store performance rows are available for this range.</td>
+                                <td colspan="11" class="reports-table-empty">No store performance rows are available for this range.</td>
                             </tr>
                         `}
                     </tbody>
@@ -818,6 +824,9 @@ function renderConsignmentPerformanceTeamSection(reportData = null) {
                             <th class="reports-align-right">Sell Through</th>
                             <th class="reports-align-right">Sold Value</th>
                             <th class="reports-align-right">Collected</th>
+                            <th class="reports-align-right">Donations</th>
+                            <th class="reports-align-right">Expenses</th>
+                            <th class="reports-align-right">Net Contribution</th>
                             <th class="reports-align-right">Balance</th>
                         </tr>
                     </thead>
@@ -832,11 +841,14 @@ function renderConsignmentPerformanceTeamSection(reportData = null) {
                                 <td class="reports-align-right">${formatPercent(row.sellThroughRate)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.soldValue)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.collections)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.donations)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.expenses) || 0) * -1)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.netContribution)}">${formatAccountingCurrency(row.netContribution)}</td>
                                 <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency((Number(row.balanceDue) || 0) * -1)}</td>
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="9" class="reports-table-empty">No consignment performance rows are available for this range.</td>
+                                <td colspan="12" class="reports-table-empty">No consignment performance rows are available for this range.</td>
                             </tr>
                         `}
                     </tbody>
@@ -871,6 +883,10 @@ function renderConsignmentPerformanceDetailSection(reportData = null) {
                             <th class="reports-align-right">Damaged</th>
                             <th class="reports-align-right">Gifted</th>
                             <th class="reports-align-right">Sold Value</th>
+                            <th class="reports-align-right">Collected</th>
+                            <th class="reports-align-right">Donations</th>
+                            <th class="reports-align-right">Expenses</th>
+                            <th class="reports-align-right">Net Contribution</th>
                             <th class="reports-align-right">Balance</th>
                         </tr>
                     </thead>
@@ -886,11 +902,15 @@ function renderConsignmentPerformanceDetailSection(reportData = null) {
                                 <td class="reports-align-right">${row.quantityDamaged || 0}</td>
                                 <td class="reports-align-right">${row.quantityGifted || 0}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.valueSold || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.collections || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.donations || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.expenses) || 0) * -1)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass((Number(row.collections) || 0) + (Number(row.donations) || 0) - (Number(row.expenses) || 0))}">${formatAccountingCurrency((Number(row.collections) || 0) + (Number(row.donations) || 0) - (Number(row.expenses) || 0))}</td>
                                 <td class="reports-align-right reports-amount-negative">${formatAccountingCurrency((Number(row.balanceDue) || 0) * -1)}</td>
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="10" class="reports-table-empty">No consignment orders are available for this range.</td>
+                                <td colspan="14" class="reports-table-empty">No consignment orders are available for this range.</td>
                             </tr>
                         `}
                     </tbody>

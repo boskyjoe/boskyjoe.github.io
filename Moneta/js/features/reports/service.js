@@ -1057,7 +1057,8 @@ function buildStoreSalesRows(rows = []) {
             expenses: 0,
             balanceDue: 0,
             averageSale: 0,
-            collectionRate: 0
+            collectionRate: 0,
+            netContribution: 0
         });
     });
 
@@ -1081,7 +1082,8 @@ function buildStoreSalesRows(rows = []) {
         .map(bucket => ({
             ...bucket,
             averageSale: bucket.transactionCount > 0 ? roundCurrency(bucket.netSales / bucket.transactionCount) : 0,
-            collectionRate: bucket.netSales > 0 ? roundCurrency((bucket.collections / bucket.netSales) * 100) : 0
+            collectionRate: bucket.netSales > 0 ? roundCurrency((bucket.collections / bucket.netSales) * 100) : 0,
+            netContribution: roundCurrency(bucket.collections + bucket.donations - bucket.expenses)
         }))
         .filter(bucket => bucket.transactionCount > 0 || bucket.store !== "Other");
 }
@@ -1235,7 +1237,10 @@ function buildStorePerformanceReportData({
 
     const totalNetSales = sumMetric(storeRows, "netSales");
     const totalCollections = sumMetric(storeRows, "collections");
+    const totalDonations = sumMetric(storeRows, "donations");
+    const totalExpenses = sumMetric(storeRows, "expenses");
     const totalBalanceDue = sumMetric(storeRows, "balanceDue");
+    const totalNetContribution = sumMetric(storeRows, "netContribution");
     const topStore = storeRows[0] || null;
 
     return {
@@ -1248,7 +1253,10 @@ function buildStorePerformanceReportData({
         summary: {
             totalNetSales,
             totalCollections,
+            totalDonations,
+            totalExpenses,
             totalBalanceDue,
+            totalNetContribution,
             totalTransactions: storeRows.reduce((sum, row) => sum + row.transactionCount, 0),
             topStoreName: topStore?.store || "-",
             topStoreNetSales: topStore?.netSales || 0
@@ -1287,7 +1295,8 @@ function buildConsignmentTeamRows(rows = []) {
                 donations: 0,
                 expenses: 0,
                 balanceDue: 0,
-                sellThroughRate: 0
+                sellThroughRate: 0,
+                netContribution: 0
             });
         }
 
@@ -1311,7 +1320,8 @@ function buildConsignmentTeamRows(rows = []) {
             ...row,
             sellThroughRate: row.quantityCheckedOut > 0
                 ? roundCurrency((row.quantitySold / row.quantityCheckedOut) * 100)
-                : 0
+                : 0,
+            netContribution: roundCurrency(row.collections + row.donations - row.expenses)
         }))
         .sort((left, right) => right.soldValue - left.soldValue);
 }
@@ -1341,6 +1351,7 @@ function buildConsignmentPerformanceReportData({
         donations: sumMetric(orderRows, "donations"),
         expenses: sumMetric(orderRows, "expenses"),
         balanceDue: sumMetric(orderRows, "balanceDue"),
+        netContribution: roundCurrency(sumMetric(orderRows, "collections") + sumMetric(orderRows, "donations") - sumMetric(orderRows, "expenses")),
         sellThroughRate: sumMetric(orderRows, "quantityCheckedOut") > 0
             ? roundCurrency((sumMetric(orderRows, "quantitySold") / sumMetric(orderRows, "quantityCheckedOut")) * 100)
             : 0
