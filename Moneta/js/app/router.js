@@ -10,7 +10,7 @@ import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
 import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
-import { showLeadsPage } from "../features/leads/index.js";
+import { showLeadQuotesPage, showLeadsPage } from "../features/leads/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
 import { showSimpleConsignmentPage } from "../features/simple-consignment/index.js";
 import { showHomePage } from "../features/home/index.js";
@@ -21,6 +21,7 @@ const ROUTE_TO_VIEW = {
     "#/dashboard": "dashboard-view",
     "#/reports": "reports-view",
     "#/leads": "leads-view",
+    "#/lead-quotes": "lead-quotes-view",
     "#/retail-store": "retail-store-view",
     "#/simple-consignment": "simple-consignment-view",
     "#/suppliers": "suppliers-view",
@@ -33,7 +34,8 @@ const ROUTE_TO_VIEW = {
 
 function normalizeRoute(route) {
     if (!route || route === "#") return DEFAULT_AUTH_ROUTE;
-    return ROUTE_TO_VIEW[route] ? route : DEFAULT_AUTH_ROUTE;
+    const baseRoute = String(route).split("?")[0];
+    return ROUTE_TO_VIEW[baseRoute] ? baseRoute : DEFAULT_AUTH_ROUTE;
 }
 
 function hasRouteAccess(route, user) {
@@ -62,6 +64,8 @@ function getViewTitle(route) {
             return "Reports";
         case "#/leads":
             return "Leads & Enquiries";
+        case "#/lead-quotes":
+            return "Quote Workspace";
         case "#/retail-store":
             return "Retail Store";
         case "#/simple-consignment":
@@ -124,6 +128,10 @@ export function resolveRoute() {
 
     if (route === "#/leads") {
         showLeadsPage();
+    }
+
+    if (route === "#/lead-quotes") {
+        showLeadQuotesPage();
     }
 
     if (route === "#/retail-store") {

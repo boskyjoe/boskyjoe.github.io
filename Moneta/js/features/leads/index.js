@@ -1,4 +1,4 @@
-import { initializeLeadsFeature, renderLeadsView } from "./view.js";
+import { initializeLeadsFeature, renderLeadQuotesView, renderLeadsView } from "./view.js";
 
 export function initializeLeadsModule() {
     initializeLeadsFeature();
@@ -6,4 +6,8 @@ export function initializeLeadsModule() {
 
 export function showLeadsPage() {
     renderLeadsView();
+}
+
+export function showLeadQuotesPage() {
+    renderLeadQuotesView();
 }

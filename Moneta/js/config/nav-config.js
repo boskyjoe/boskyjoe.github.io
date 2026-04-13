@@ -34,6 +34,15 @@ export const navConfig = [
         enabled: true
     },
     {
+        type: "link",
+        route: "#/lead-quotes",
+        label: "Quote Workspace",
+        icon: icons.catalogue,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "sales_staff", "team_lead"],
+        enabled: false
+    },
+    {
         type: "heading",
         label: "Direct Sales",
         roles: ["admin", "sales_staff", "finance"]

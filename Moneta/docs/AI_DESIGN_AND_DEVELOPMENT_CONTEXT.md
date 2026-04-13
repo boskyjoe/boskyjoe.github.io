@@ -276,6 +276,8 @@ record mode and void mode share one form; void reason is shown only in void mode
 converted leads or leads linked to sales cannot be deleted.
 - Lead-to-retail conversion implemented:
 builds validated conversion package, stores in session storage, routes to retail.
+- Lead conversion guidance placement updated:
+the retail conversion checklist is no longer shown inline on the lead form; it now lives in the `Convert Enquiry To Retail Sale` confirmation modal so the lead workspace stays cleaner.
 - Converted leads with later voided sales now display as
 `Converted (Sale Voided)` in lead status rendering while preserving underlying `leadStatus: Converted`.
 - Quote module storage implemented:
@@ -284,8 +286,18 @@ quotes now persist under `leads/{leadId}/quotes/{quoteId}` and each quote stores
 `quoteCount`, latest quote id/number/status/sent date, and accepted quote id/number/date/total are updated from quote history and used for fast UI state.
 - Leads grid quote UX implemented:
 the grid now shows one compact `Quotes` badge cell with count + latest status + accepted indicator instead of expanding the grid with many quote columns.
-- Hybrid quote workflow implemented:
-clicking the grid quote badge opens the lead in edit mode and shows both a right-side quick drawer for scanning quote versions and a full `Quotes Workspace` inside the lead editor for detailed quote work.
+- Quote UI architecture updated:
+the main `Leads & Enquiries` page now keeps quote UI lightweight with a compact `Quote Summary` section, while full quote authoring has moved to a dedicated internal route at `#/lead-quotes`.
+- Dedicated quote workspace implemented:
+the quote route shows the full `Quote Workspace` for pricing, line-item editing, sending, revising, and acceptance without the full lead form on the same screen.
+- Quote handoff flow updated:
+from a lead, users can `Create Quote Draft`, open `Quick View`, or open the dedicated quote workspace; selecting a quote from Quick View now jumps into the dedicated workspace rather than editing inline on the lead page.
+- Quote drawer open-state fix implemented:
+the quick drawer now opens only after an explicit quote action and should not appear by default when simply landing on the Leads / Enquiries module.
+- Quote drawer visibility hardening implemented:
+the drawer now also avoids rendering entirely when closed, and CSS explicitly hides the quote overlay with `[hidden]` protection like the other Moneta overlays.
+- Quote Quick View UX simplified:
+the drawer is now treated as a scan-and-jump panel, not a second workspace. It explains the next step, uses `Create Quote Draft` wording, shows `Open Quotes Workspace` only when quote history exists, and selecting a quote from the drawer closes it and moves the user into the full Quotes Workspace.
 - Quote lifecycle implemented:
 quotes support `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, `Superseded`, and `Cancelled`.
 - Quote versioning implemented:

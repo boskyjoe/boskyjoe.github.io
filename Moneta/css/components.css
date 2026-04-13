@@ -2011,6 +2011,21 @@ select {
     overflow: hidden;
 }
 
+.lead-quote-summary-card .panel-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.lead-quote-summary-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lead-quote-summary-actions {
+    justify-content: flex-start;
+}
+
 .lead-quotes-workspace-layout {
     display: grid;
     grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.7fr);
@@ -2100,10 +2115,25 @@ select {
 .lead-quote-list-item-subtitle,
 .lead-quote-list-item-note,
 .lead-quote-editor-subtitle,
-.lead-quote-editor-note {
+.lead-quote-editor-note,
+.lead-quotes-drawer-sequence-title {
     margin: 0;
     font-size: 0.85rem;
     color: #55657f;
+}
+
+.lead-quotes-drawer-sequence {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px dashed #d7e1ef;
+    border-radius: 0.95rem;
+    background: #f8fbff;
+}
+
+.lead-quotes-drawer-sequence-title {
+    font-weight: 800;
+    color: #2f4f98;
 }
 
 .lead-quotes-empty {
@@ -2210,6 +2240,10 @@ select {
     backdrop-filter: blur(4px);
 }
 
+.lead-quotes-drawer-overlay[hidden] {
+    display: none;
+}
+
 .lead-quotes-drawer-card {
     width: min(460px, 100%);
     height: 100%;
@@ -2309,6 +2343,7 @@ select {
     .lead-form-sections,
     .lead-form-section-grid,
     .lead-worklog-entry-grid,
+    .lead-quote-summary-grid,
     .lead-quotes-workspace-layout,
     .lead-quote-totals-grid {
         grid-template-columns: 1fr;
