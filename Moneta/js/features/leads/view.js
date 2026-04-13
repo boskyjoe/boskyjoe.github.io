@@ -40,6 +40,7 @@ import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 const featureState = {
     leads: [],
     editingLeadId: null,
+    activeLeadTab: "details",
     searchTerm: "",
     itemSearchTerm: "",
     selectedCatalogueId: "",
@@ -206,8 +207,13 @@ function getSelectedQuote() {
     return featureState.quoteRows.find(quote => quote.id === featureState.activeQuoteId) || null;
 }
 
+function getActiveLeadTab() {
+    return featureState.activeLeadTab === "quotes" ? "quotes" : "details";
+}
+
 function resetLeadWorkspace() {
     featureState.editingLeadId = null;
+    featureState.activeLeadTab = "details";
     featureState.selectedCatalogueId = "";
     featureState.catalogueItemRows = [];
     featureState.itemSearchTerm = "";
@@ -802,6 +808,35 @@ function renderQuoteAcceptanceFields(quoteDraft, options = {}) {
     `;
 }
 
+function renderLeadEditorTabs(editingLead, activeTab = "details") {
+    if (!editingLead?.id) return "";
+
+    const quoteCount = Number(editingLead.quoteCount) || featureState.quoteRows.length;
+
+    return `
+        <div class="lead-editor-tabs" role="tablist" aria-label="Lead editor sections">
+            <button
+                class="lead-editor-tab ${activeTab === "details" ? "lead-editor-tab-active" : ""}"
+                type="button"
+                role="tab"
+                aria-selected="${activeTab === "details" ? "true" : "false"}"
+                data-action="lead-tab"
+                data-tab="details">
+                Edit Enquiry
+            </button>
+            <button
+                class="lead-editor-tab ${activeTab === "quotes" ? "lead-editor-tab-active" : ""}"
+                type="button"
+                role="tab"
+                aria-selected="${activeTab === "quotes" ? "true" : "false"}"
+                data-action="lead-tab"
+                data-tab="quotes">
+                Quotes${quoteCount ? ` (${quoteCount})` : ""}
+            </button>
+        </div>
+    `;
+}
+
 function renderLeadQuoteSummaryPanel(editingLead) {
     if (!editingLead?.id) return "";
 
@@ -864,10 +899,9 @@ function renderLeadQuoteSummaryPanel(editingLead) {
     `;
 }
 
-function renderLeadQuotesWorkspace(editingLead, options = {}) {
+function renderLeadQuotesWorkspace(editingLead) {
     if (!editingLead?.id) return "";
 
-    const { standalone = false } = options;
     const selectedQuote = getSelectedQuote();
     const quoteDraft = featureState.quoteDraft;
     const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
@@ -903,17 +937,6 @@ function renderLeadQuotesWorkspace(editingLead, options = {}) {
                                 <p class="panel-copy">Keep one accepted quote per enquiry and revise by version.</p>
                             </div>
                             <div class="lead-quotes-sidebar-actions">
-                                ${standalone ? `
-                                    <button class="button button-secondary" type="button" data-action="quote-back-to-lead" data-lead-id="${editingLead.id}">
-                                        <span class="button-icon">${icons.leads}</span>
-                                        Back To Lead
-                                    </button>
-                                ` : `
-                                    <button class="button button-secondary" type="button" data-action="quote-open-drawer">
-                                        <span class="button-icon">${icons.search}</span>
-                                        Quick View
-                                    </button>
-                                `}
                                 <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
                                     <span class="button-icon">${icons.plus}</span>
                                     New Quote
@@ -1128,6 +1151,7 @@ function renderLeadQuotesDrawer() {
 
 function renderLeadForm(snapshot) {
     const editingLead = getEditingLead();
+    const activeLeadTab = getActiveLeadTab();
     const currentCatalogueId = featureState.selectedCatalogueId || editingLead?.catalogueId || "";
     const totalLeads = featureState.leads.length;
     const qualifiedCount = featureState.leads.filter(lead => lead.leadStatus === "Qualified").length;
@@ -1164,141 +1188,139 @@ function renderLeadForm(snapshot) {
                 </div>
             </div>
             <div class="panel-body">
-                <form id="lead-form">
-                    <input id="lead-doc-id" type="hidden" value="${editingLead?.id || ""}">
-                    <div class="lead-form-sections">
-                        <section class="lead-form-section">
-                            <div class="lead-form-section-head">
-                                <p class="lead-form-section-kicker">Customer Info</p>
-                            </div>
-                            <div class="lead-form-section-grid">
-                                <div class="field field-full">
-                                    <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
+                ${editingLead ? renderLeadEditorTabs(editingLead, activeLeadTab) : ""}
+                ${!editingLead || activeLeadTab === "details" ? `
+                    <form id="lead-form">
+                        <input id="lead-doc-id" type="hidden" value="${editingLead?.id || ""}">
+                        <div class="lead-form-sections">
+                            <section class="lead-form-section">
+                                <div class="lead-form-section-head">
+                                    <p class="lead-form-section-kicker">Customer Info</p>
                                 </div>
-                                <div class="field">
-                                    <label for="lead-customer-phone">Phone</label>
-                                    <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567">
+                                <div class="lead-form-section-grid">
+                                    <div class="field field-full">
+                                        <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="lead-customer-phone">Phone</label>
+                                        <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567">
+                                    </div>
+                                    <div class="field">
+                                        <label for="lead-customer-email">Email</label>
+                                        <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com">
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="lead-customer-address">Customer Address</label>
+                                        <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
+                                    </div>
                                 </div>
-                                <div class="field">
-                                    <label for="lead-customer-email">Email</label>
-                                    <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com">
-                                </div>
-                                <div class="field field-full">
-                                    <label for="lead-customer-address">Customer Address</label>
-                                    <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
-                                </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <section class="lead-form-section">
-                            <div class="lead-form-section-head">
-                                <p class="lead-form-section-kicker">Lead Context</p>
-                            </div>
-                            <div class="lead-form-section-grid">
-                                <div class="field">
-                                    <label for="lead-enquiry-date">Enquiry Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
+                            <section class="lead-form-section">
+                                <div class="lead-form-section-head">
+                                    <p class="lead-form-section-kicker">Lead Context</p>
                                 </div>
-                                <div class="field">
-                                    <label for="lead-expected-delivery-date">Expected Delivery</label>
-                                    <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
+                                <div class="lead-form-section-grid">
+                                    <div class="field">
+                                        <label for="lead-enquiry-date">Enquiry Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="lead-expected-delivery-date">Expected Delivery</label>
+                                        <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="lead-assigned-to">Assigned To</label>
+                                        <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk">
+                                    </div>
+                                    <div class="field">
+                                        <label for="lead-source">Source <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="lead-source" class="select" required>
+                                            <option value="">Select source</option>
+                                            ${renderSourceOptions(editingLead?.leadSource || "")}
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="lead-status">Status <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="lead-status" class="select" required>
+                                            ${renderStatusOptions(editingLead?.leadStatus || "New")}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="field field-full">
-                                    <label for="lead-assigned-to">Assigned To</label>
-                                    <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk">
-                                </div>
-                                <div class="field">
-                                    <label for="lead-source">Source <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="lead-source" class="select" required>
-                                        <option value="">Select source</option>
-                                        ${renderSourceOptions(editingLead?.leadSource || "")}
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="lead-status">Status <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="lead-status" class="select" required>
-                                        ${renderStatusOptions(editingLead?.leadStatus || "New")}
-                                    </select>
-                                </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <section class="lead-form-section">
-                            <div class="lead-form-section-head">
-                                <p class="lead-form-section-kicker">Requirements</p>
-                            </div>
-                            <div class="lead-form-section-grid">
-                                <div class="field field-full">
-                                    <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <select id="lead-catalogue" class="select" required>
-                                        <option value="">Select a catalogue...</option>
-                                        ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
-                                    </select>
+                            <section class="lead-form-section">
+                                <div class="lead-form-section-head">
+                                    <p class="lead-form-section-kicker">Requirements</p>
                                 </div>
-                                <div class="field field-full">
-                                    <label for="lead-notes">General Notes</label>
-                                    <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details">${editingLead?.leadNotes || ""}</textarea>
+                                <div class="lead-form-section-grid">
+                                    <div class="field field-full">
+                                        <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="lead-catalogue" class="select" required>
+                                            <option value="">Select a catalogue...</option>
+                                            ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
+                                        </select>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="lead-notes">General Notes</label>
+                                        <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details">${editingLead?.leadNotes || ""}</textarea>
+                                    </div>
                                 </div>
+                            </section>
+                        </div>
+                    </form>
+                    <div class="lead-product-list-shell">
+                        <div class="lead-product-list-header">
+                            <div>
+                                <p class="lead-form-section-kicker lead-product-list-kicker">Product Inquiry List</p>
+                                <p class="panel-copy">Only items with quantity greater than zero will be saved with this enquiry.</p>
                             </div>
-                        </section>
-                    </div>
-                </form>
-                <div class="lead-product-list-shell">
-                    <div class="lead-product-list-header">
-                        <div>
-                            <p class="lead-form-section-kicker lead-product-list-kicker">Product Inquiry List</p>
-                            <p class="panel-copy">Only items with quantity greater than zero will be saved with this enquiry.</p>
+                            <div class="lead-product-list-meta">
+                                <span id="lead-requested-count" class="status-pill">Total Products: ${requestedSummary.requestedProductCount}</span>
+                                <span id="lead-requested-value" class="status-pill">Total Value: ${formatCurrency(requestedSummary.requestedValue)}</span>
+                            </div>
                         </div>
-                        <div class="lead-product-list-meta">
-                            <span id="lead-requested-count" class="status-pill">Total Products: ${requestedSummary.requestedProductCount}</span>
-                            <span id="lead-requested-value" class="status-pill">Total Value: ${formatCurrency(requestedSummary.requestedValue)}</span>
+                        <div class="toolbar">
+                            <div>
+                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Requested Products</p>
+                                <p class="panel-copy">Search within the selected catalogue and capture the requested quantities directly in the worksheet.</p>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">${icons.search}</span>
+                                <input
+                                    id="lead-products-search"
+                                    class="input toolbar-search"
+                                    type="search"
+                                    placeholder="Search product or category"
+                                    value="${featureState.itemSearchTerm}">
+                            </div>
+                        </div>
+                        <div class="ag-shell">
+                            <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
+                        </div>
+                        <div class="form-actions">
+                            ${editingLead ? `
+                                <button class="button button-primary-alt lead-convert-button" type="button" data-lead-id="${editingLead.id}" ${convertDisabledAttrs}>
+                                    <span class="button-icon">${icons.retail}</span>
+                                    Convert To Retail
+                                </button>
+                                <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
+                                    <span class="button-icon">${icons.leads}</span>
+                                    Work Log
+                                </button>
+                                <button id="lead-cancel-button" class="button button-secondary" type="button">
+                                    <span class="button-icon">${icons.inactive}</span>
+                                    Cancel
+                                </button>
+                            ` : ""}
+                            <button class="button button-primary-alt" type="submit" form="lead-form">
+                                <span class="button-icon">${editingLead ? icons.edit : icons.plus}</span>
+                                ${editingLead ? "Update Enquiry" : "Save Enquiry"}
+                            </button>
                         </div>
                     </div>
-                    <div class="toolbar">
-                        <div>
-                            <p class="section-kicker" style="margin-bottom: 0.25rem;">Requested Products</p>
-                            <p class="panel-copy">Search within the selected catalogue and capture the requested quantities directly in the worksheet.</p>
-                        </div>
-                        <div class="search-wrap">
-                            <span class="search-icon">${icons.search}</span>
-                            <input
-                                id="lead-products-search"
-                                class="input toolbar-search"
-                                type="search"
-                                placeholder="Search product or category"
-                                value="${featureState.itemSearchTerm}">
-                        </div>
-                    </div>
-                    <div class="ag-shell">
-                        <div id="lead-products-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
-                    </div>
-                    ${editingLead ? renderLeadQuoteSummaryPanel(editingLead) : ""}
-                    <div class="form-actions">
-                        ${editingLead ? `
-                            <button class="button button-primary-alt lead-convert-button" type="button" data-lead-id="${editingLead.id}" ${convertDisabledAttrs}>
-                                <span class="button-icon">${icons.retail}</span>
-                                Convert To Retail
-                            </button>
-                            <button class="button button-secondary" type="button" data-action="quote-open-drawer">
-                                <span class="button-icon">${icons.catalogue}</span>
-                                Quotes
-                            </button>
-                            <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
-                                <span class="button-icon">${icons.leads}</span>
-                                Work Log
-                            </button>
-                            <button id="lead-cancel-button" class="button button-secondary" type="button">
-                                <span class="button-icon">${icons.inactive}</span>
-                                Cancel
-                            </button>
-                        ` : ""}
-                        <button class="button button-primary-alt" type="submit" form="lead-form">
-                            <span class="button-icon">${editingLead ? icons.edit : icons.plus}</span>
-                            ${editingLead ? "Update Enquiry" : "Save Enquiry"}
-                        </button>
-                    </div>
-                </div>
+                ` : renderLeadQuotesWorkspace(editingLead)}
             </div>
         </div>
     `;
@@ -1504,12 +1526,14 @@ function renderLeadsViewShell(snapshot) {
             ${renderLeadsHistoryPanel()}
         </div>
         ${renderLeadWorkLogModal()}
-        ${renderLeadQuotesDrawer()}
     `;
 }
 
 function syncLeadProductsGrid() {
-    initializeLeadRequestedProductsGrid(document.getElementById("lead-products-grid"), () => {
+    const gridElement = document.getElementById("lead-products-grid");
+    if (!gridElement) return;
+
+    initializeLeadRequestedProductsGrid(gridElement, () => {
         updateRequestedSummary();
     });
     refreshLeadRequestedProductsGrid(featureState.catalogueItemRows);
@@ -1834,6 +1858,7 @@ async function handleLeadEdit(button) {
     }
 
     featureState.editingLeadId = leadId;
+    featureState.activeLeadTab = "details";
     featureState.selectedCatalogueId = lead.catalogueId || "";
     featureState.itemSearchTerm = "";
     renderLeadsView();
@@ -1860,6 +1885,7 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
     }
 
     featureState.editingLeadId = lead.id;
+    featureState.activeLeadTab = "quotes";
     featureState.selectedCatalogueId = lead.catalogueId || "";
     featureState.itemSearchTerm = "";
     featureState.quoteDrawerLeadId = openDrawer
@@ -1886,6 +1912,11 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
     }
     ensureQuoteListener(getState());
     await loadCatalogueItemsIntoWorkspace(lead.catalogueId || "", lead.requestedProducts || []);
+
+    if (featureState.activeLeadTab === "quotes") {
+        focusQuotesWorkspace();
+        return;
+    }
 
     focusFormField({
         formId: "lead-form",
@@ -1963,16 +1994,11 @@ async function handleQuoteNewDraft() {
         return;
     }
 
-    if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-        await openLeadQuoteWorkspace(lead, {
-            openDrawer: false,
-            createDraft: true
-        });
-        focusQuotesWorkspace();
-        return;
-    }
-
-    openLeadQuoteWorkspaceRoute(lead.id);
+    await openLeadQuoteWorkspace(lead, {
+        openDrawer: false,
+        createDraft: true
+    });
+    focusQuotesWorkspace();
 }
 
 async function handleQuoteSelect(button) {
@@ -1980,16 +2006,11 @@ async function handleQuoteSelect(button) {
     const lead = getEditingLead() || getQuoteContextLead();
     if (!lead?.id || !quoteId) return;
 
-    if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-        await openLeadQuoteWorkspace(lead, {
-            quoteId,
-            openDrawer: false
-        });
-        focusQuotesWorkspace();
-        return;
-    }
-
-    openLeadQuoteWorkspaceRoute(lead.id, { quoteId });
+    await openLeadQuoteWorkspace(lead, {
+        quoteId,
+        openDrawer: false
+    });
+    focusQuotesWorkspace();
 }
 
 function handleQuoteLineFieldInput(target) {
@@ -2623,7 +2644,7 @@ function bindLeadsDomEvents() {
             const leadId = quotesButton.dataset.leadId || "";
             const lead = featureState.leads.find(entry => entry.id === leadId) || null;
             if (!lead) return;
-            openLeadQuoteWorkspace(lead, { openDrawer: true });
+            openLeadQuoteWorkspace(lead, { openDrawer: false });
             return;
         }
 
@@ -2655,34 +2676,18 @@ function bindLeadsDomEvents() {
         if (quoteActionButton) {
             const action = quoteActionButton.dataset.action || "";
 
+            if (action === "lead-tab") {
+                const nextTab = quoteActionButton.dataset.tab || "details";
+                featureState.activeLeadTab = nextTab === "quotes" ? "quotes" : "details";
+                renderLeadsView();
+                if (featureState.activeLeadTab === "quotes") {
+                    focusQuotesWorkspace();
+                }
+                return;
+            }
+
             if (action === "quote-route-new") {
-                const leadId = quoteActionButton.dataset.leadId || getEditingLead()?.id || "";
-                if (leadId) {
-                    openLeadQuoteWorkspaceRoute(leadId, { mode: "new" });
-                }
-                return;
-            }
-
-            if (action === "quote-route-workspace") {
-                const leadId = quoteActionButton.dataset.leadId || getEditingLead()?.id || "";
-                const quoteId = getSelectedQuote()?.id || featureState.quoteRows[0]?.id || "";
-                if (leadId) {
-                    openLeadQuoteWorkspaceRoute(leadId, { quoteId });
-                }
-                return;
-            }
-
-            if (action === "quote-back-to-lead") {
-                const leadId = quoteActionButton.dataset.leadId || "";
-                if (leadId) {
-                    featureState.editingLeadId = leadId;
-                }
-                window.location.hash = "#/leads";
-                return;
-            }
-
-            if (action === "quote-back-to-lead-list") {
-                window.location.hash = "#/leads";
+                handleQuoteNewDraft();
                 return;
             }
 
@@ -2700,17 +2705,10 @@ function bindLeadsDomEvents() {
             }
 
             if (action === "quote-focus-workspace") {
-                if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-                    closeLeadQuotesDrawer();
-                    focusQuotesWorkspace();
-                    return;
-                }
-
-                const lead = getEditingLead() || getQuoteContextLead();
-                const quoteId = getSelectedQuote()?.id || featureState.quoteRows[0]?.id || "";
-                if (lead?.id) {
-                    openLeadQuoteWorkspaceRoute(lead.id, { quoteId });
-                }
+                featureState.activeLeadTab = "quotes";
+                closeLeadQuotesDrawer();
+                renderLeadsView();
+                focusQuotesWorkspace();
                 return;
             }
 
