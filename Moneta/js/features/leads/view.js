@@ -925,6 +925,7 @@ function renderLeadQuotesWorkspace(editingLead) {
 
 function renderLeadQuotesDrawer() {
     const activeLead = getQuoteContextLead();
+    const hasQuotes = featureState.quoteRows.length > 0;
     const isOpen = Boolean(
         featureState.isQuoteDrawerOpen
         && featureState.quoteDrawerLeadId
@@ -943,7 +944,7 @@ function renderLeadQuotesDrawer() {
                         <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
                         <div>
                             <h3>Quote Quick View</h3>
-                            <p class="panel-copy">Review quote versions, status, and acceptance without leaving the enquiry list.</p>
+                            <p class="panel-copy">Use this panel to scan quote history quickly. Drafting, editing, sending, and acceptance happen in the Quotes Workspace.</p>
                         </div>
                     </div>
                     <button class="button button-secondary" type="button" data-action="quote-close-drawer">
@@ -957,15 +958,23 @@ function renderLeadQuotesDrawer() {
                         <span class="status-pill">${Number(activeLead?.quoteCount) || featureState.quoteRows.length} quotes</span>
                         ${activeLead?.latestQuoteStatus ? renderQuoteStatusPill(activeLead.latestQuoteStatus) : ""}
                     </div>
+                    <div class="lead-quotes-drawer-sequence">
+                        <p class="lead-quotes-drawer-sequence-title">Recommended flow</p>
+                        <p class="panel-copy">${hasQuotes
+            ? "1. Review the quote versions below. 2. Pick one to continue in the Quotes Workspace, or create a new draft version."
+            : "1. Create the first quote draft. 2. Complete pricing and terms in the Quotes Workspace. 3. Send the quote from there."}</p>
+                    </div>
                     <div class="lead-quotes-drawer-actions">
                         <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
                             <span class="button-icon">${icons.plus}</span>
-                            New Quote
+                            Create Quote Draft
                         </button>
-                        <button class="button button-secondary" type="button" data-action="quote-focus-workspace">
-                            <span class="button-icon">${icons.edit}</span>
-                            Open Workspace
-                        </button>
+                        ${hasQuotes ? `
+                            <button class="button button-secondary" type="button" data-action="quote-focus-workspace">
+                                <span class="button-icon">${icons.edit}</span>
+                                Open Quotes Workspace
+                            </button>
+                        ` : ""}
                     </div>
                     <div class="lead-quote-list lead-quote-list-compact">
                         ${buildQuoteListMarkup(featureState.quoteRows, { compact: true })}
@@ -1699,7 +1708,15 @@ function openLeadQuotesDrawer(lead) {
 
 function closeLeadQuotesDrawer() {
     featureState.isQuoteDrawerOpen = false;
+    featureState.quoteDrawerLeadId = null;
     renderLeadsView();
+}
+
+function focusQuotesWorkspace() {
+    window.requestAnimationFrame(() => {
+        const workspace = document.querySelector(".lead-quotes-workspace-card");
+        workspace?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 }
 
 function updateQuoteDraftField(field, value) {
@@ -1745,9 +1762,11 @@ async function handleQuoteNewDraft() {
     }
 
     await openLeadQuoteWorkspace(lead, {
-        openDrawer: featureState.quoteDrawerLeadId === lead.id,
+        openDrawer: false,
         createDraft: true
     });
+    closeLeadQuotesDrawer();
+    focusQuotesWorkspace();
 }
 
 async function handleQuoteSelect(button) {
@@ -1757,8 +1776,10 @@ async function handleQuoteSelect(button) {
 
     await openLeadQuoteWorkspace(lead, {
         quoteId,
-        openDrawer: featureState.quoteDrawerLeadId === lead.id
+        openDrawer: false
     });
+    closeLeadQuotesDrawer();
+    focusQuotesWorkspace();
 }
 
 function handleQuoteLineFieldInput(target) {
@@ -2411,9 +2432,8 @@ function bindLeadsDomEvents() {
             }
 
             if (action === "quote-focus-workspace") {
-                const workspace = document.querySelector(".lead-quotes-workspace-card");
-                workspace?.scrollIntoView({ behavior: "smooth", block: "start" });
                 closeLeadQuotesDrawer();
+                focusQuotesWorkspace();
                 return;
             }
 
