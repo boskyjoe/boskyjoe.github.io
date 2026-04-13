@@ -42,7 +42,7 @@ const REPORT_GROUPS = [
             },
             {
                 id: "store-performance",
-                title: "Store Performance",
+                title: "Direct Store Performance",
                 description: "Direct-store comparison for Church Store versus Tasty Treats with revenue and collection performance.",
                 dataSource: "salesInvoices",
                 roles: ["admin", "sales_staff", "finance"],
