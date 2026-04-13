@@ -908,6 +908,78 @@ function buildPurchasePayablesReportData({
     };
 }
 
+function buildProductFallbackCostMap(products = []) {
+    return new Map(
+        (products || []).map(product => [normalizeText(product.id), roundCurrency(product.unitPrice)])
+    );
+}
+
+function buildWeightedPurchaseCostMap(purchaseInvoices = [], fallbackCostMap = new Map()) {
+    const totalsByProduct = new Map();
+
+    (purchaseInvoices || [])
+        .filter(row => normalizeStatus(row.invoiceStatus || row.paymentStatus, "Unpaid") !== "Voided")
+        .forEach(invoice => {
+            const items = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+            const invoiceDiscountAmount = roundCurrency(invoice.invoiceDiscountAmount);
+            const itemsSubtotal = roundCurrency(
+                invoice.itemsSubtotal
+                ?? items.reduce((sum, item) => sum + roundCurrency(item.netPrice), 0)
+            );
+
+            items.forEach(item => {
+                const productId = normalizeText(item.masterProductId);
+                const quantity = Number(item.quantity) || 0;
+                if (!productId || quantity <= 0) return;
+
+                const lineNetPrice = roundCurrency(item.netPrice);
+                const allocationRatio = itemsSubtotal > 0 ? (lineNetPrice / itemsSubtotal) : 0;
+                const allocatedInvoiceDiscount = roundCurrency(invoiceDiscountAmount * allocationRatio);
+                const adjustedLineCost = roundCurrency(Math.max(0, lineNetPrice - allocatedInvoiceDiscount));
+
+                if (!totalsByProduct.has(productId)) {
+                    totalsByProduct.set(productId, {
+                        totalQuantity: 0,
+                        totalCost: 0
+                    });
+                }
+
+                const bucket = totalsByProduct.get(productId);
+                bucket.totalQuantity += quantity;
+                bucket.totalCost = roundCurrency(bucket.totalCost + adjustedLineCost);
+            });
+        });
+
+    const weightedCostMap = new Map();
+    const productIds = new Set([
+        ...totalsByProduct.keys(),
+        ...fallbackCostMap.keys()
+    ]);
+
+    let weightedProductCount = 0;
+    let fallbackProductCount = 0;
+
+    productIds.forEach(productId => {
+        const weighted = totalsByProduct.get(productId);
+        if (weighted && weighted.totalQuantity > 0) {
+            weightedCostMap.set(productId, roundCurrency(weighted.totalCost / weighted.totalQuantity));
+            weightedProductCount += 1;
+            return;
+        }
+
+        weightedCostMap.set(productId, roundCurrency(fallbackCostMap.get(productId) || 0));
+        fallbackProductCount += 1;
+    });
+
+    return {
+        weightedCostMap,
+        costingSummary: {
+            weightedProductCount,
+            fallbackProductCount
+        }
+    };
+}
+
 function buildRetailProfitRows(rows = [], productCostMap = new Map()) {
     return rows
         .filter(row => normalizeStatus(row.saleStatus, "Active") !== "Voided")
@@ -972,7 +1044,9 @@ function buildSegmentSummaryRows(rows = []) {
                 discounts: 0,
                 netSales: 0,
                 cogs: 0,
-                grossProfit: 0
+                grossProfit: 0,
+                expenses: 0,
+                operatingProfit: 0
             });
         }
 
@@ -982,6 +1056,8 @@ function buildSegmentSummaryRows(rows = []) {
         bucket.netSales = roundCurrency(bucket.netSales + row.netSales);
         bucket.cogs = roundCurrency(bucket.cogs + row.cogs);
         bucket.grossProfit = roundCurrency(bucket.netSales - bucket.cogs);
+        bucket.expenses = roundCurrency(bucket.expenses + row.expenses);
+        bucket.operatingProfit = roundCurrency(bucket.grossProfit - bucket.expenses);
     });
 
     return [...bySegment.values()].sort((left, right) => right.netSales - left.netSales);
@@ -991,18 +1067,21 @@ function buildProfitAndLossReportData({
     salesInvoices = [],
     consignmentOrders = [],
     donations = [],
+    purchaseInvoices = [],
     products = [],
     rangeSpec,
     durationMs = 0,
     truncatedSources = {}
 }) {
-    const productCostMap = new Map(
-        (products || []).map(product => [normalizeText(product.id), roundCurrency(product.unitPrice)])
-    );
+    const fallbackCostMap = buildProductFallbackCostMap(products);
+    const { weightedCostMap: productCostMap, costingSummary } = buildWeightedPurchaseCostMap(purchaseInvoices, fallbackCostMap);
 
     const retailRows = buildRetailProfitRows(salesInvoices, productCostMap);
     const consignmentRows = buildConsignmentProfitRows(consignmentOrders, productCostMap);
     const segmentSourceRows = [...retailRows, ...consignmentRows];
+
+    const tastyTreatsRows = retailRows.filter(row => row.segment === "Tasty Treats");
+    const churchStoreRows = retailRows.filter(row => row.segment === "Church Store");
 
     const retailGrossSales = sumMetric(retailRows, "grossSales");
     const retailDiscounts = sumMetric(retailRows, "discounts");
@@ -1014,6 +1093,18 @@ function buildProfitAndLossReportData({
     const consignmentNetSales = sumMetric(consignmentRows, "netSales");
     const consignmentCogs = sumMetric(consignmentRows, "cogs");
     const consignmentExpenses = sumMetric(consignmentRows, "expenses");
+
+    const tastyTreatsGrossSales = sumMetric(tastyTreatsRows, "grossSales");
+    const tastyTreatsDiscounts = sumMetric(tastyTreatsRows, "discounts");
+    const tastyTreatsNetSales = sumMetric(tastyTreatsRows, "netSales");
+    const tastyTreatsCogs = sumMetric(tastyTreatsRows, "cogs");
+    const tastyTreatsExpenses = sumMetric(tastyTreatsRows, "expenses");
+
+    const churchStoreGrossSales = sumMetric(churchStoreRows, "grossSales");
+    const churchStoreDiscounts = sumMetric(churchStoreRows, "discounts");
+    const churchStoreNetSales = sumMetric(churchStoreRows, "netSales");
+    const churchStoreCogs = sumMetric(churchStoreRows, "cogs");
+    const churchStoreExpenses = sumMetric(churchStoreRows, "expenses");
 
     const netSalesRevenue = roundCurrency(retailNetSales + consignmentNetSales);
     const totalCogs = roundCurrency(retailCogs + consignmentCogs);
@@ -1036,19 +1127,29 @@ function buildProfitAndLossReportData({
             operatingProfit,
             netDonations,
             netProfit,
-            retailTaxesCollected
+            retailTaxesCollected,
+            weightedCostingProducts: costingSummary.weightedProductCount,
+            fallbackCostingProducts: costingSummary.fallbackProductCount
         },
         statementRows: [
-            { section: "Revenue", label: "Retail Gross Sales", amount: retailGrossSales },
-            { section: "Revenue", label: "Less Retail Discounts", amount: roundCurrency(retailDiscounts * -1) },
-            { section: "Revenue", label: "Retail Net Sales", amount: retailNetSales, tone: "total" },
+            { section: "Revenue", label: "Tasty Treats Gross Sales", amount: tastyTreatsGrossSales },
+            { section: "Revenue", label: "Less Tasty Treats Discounts", amount: roundCurrency(tastyTreatsDiscounts * -1) },
+            { section: "Revenue", label: "Tasty Treats Net Sales", amount: tastyTreatsNetSales },
+            { section: "Revenue", label: "Church Store Gross Sales", amount: churchStoreGrossSales },
+            { section: "Revenue", label: "Less Church Store Discounts", amount: roundCurrency(churchStoreDiscounts * -1) },
+            { section: "Revenue", label: "Church Store Net Sales", amount: churchStoreNetSales },
+            { section: "Revenue", label: "Total Retail Net Sales", amount: retailNetSales, tone: "total" },
             { section: "Revenue", label: "Consignment Sales", amount: consignmentNetSales },
             { section: "Revenue", label: "Net Sales Revenue", amount: netSalesRevenue, tone: "total" },
-            { section: "Cost Of Sales", label: "Retail Cost Of Goods Sold", amount: roundCurrency(retailCogs * -1) },
+            { section: "Cost Of Sales", label: "Tasty Treats Cost Of Goods Sold", amount: roundCurrency(tastyTreatsCogs * -1) },
+            { section: "Cost Of Sales", label: "Church Store Cost Of Goods Sold", amount: roundCurrency(churchStoreCogs * -1) },
             { section: "Cost Of Sales", label: "Consignment Cost Of Goods Sold", amount: roundCurrency(consignmentCogs * -1) },
+            { section: "Cost Of Sales", label: "Total Cost Of Goods Sold", amount: roundCurrency(totalCogs * -1), tone: "total" },
             { section: "Cost Of Sales", label: "Gross Profit", amount: grossProfit, tone: "total" },
-            { section: "Operating Expenses", label: "Retail Operating Expenses", amount: roundCurrency(retailExpenses * -1) },
+            { section: "Operating Expenses", label: "Tasty Treats Expenses", amount: roundCurrency(tastyTreatsExpenses * -1) },
+            { section: "Operating Expenses", label: "Church Store Expenses", amount: roundCurrency(churchStoreExpenses * -1) },
             { section: "Operating Expenses", label: "Consignment Operating Expenses", amount: roundCurrency(consignmentExpenses * -1) },
+            { section: "Operating Expenses", label: "Total Operating Expenses", amount: roundCurrency(totalOperatingExpenses * -1), tone: "total" },
             { section: "Operating Expenses", label: "Operating Profit", amount: operatingProfit, tone: "total" },
             { section: "Other Income", label: "Net Donations", amount: netDonations },
             { section: "Other Income", label: "Net Profit / (Loss)", amount: netProfit, tone: "total" }
@@ -1060,11 +1161,13 @@ function buildProfitAndLossReportData({
                 salesInvoices: salesInvoices.length,
                 consignmentOrders: consignmentOrders.length,
                 donations: donations.length,
+                purchaseInvoices: purchaseInvoices.length,
                 products: products.length
             },
             notes: [
-                "Retail revenue excludes output tax and uses final taxable sales value.",
-                "Cost of goods sold is estimated from the current product cost basis stored in product master data.",
+                "Retail revenue excludes output tax and uses final taxable sales value split by Tasty Treats and Church Store.",
+                "Cost of goods sold uses weighted purchase-history cost from active purchase invoices up to the report end date.",
+                "When a product has no purchase history, the current product master cost is used as fallback.",
                 "Consignment revenue uses recorded sold value on consignment orders within the selected reporting window."
             ]
         }
@@ -1363,7 +1466,7 @@ export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = f
     }
 
     const startedAt = performance.now();
-    const [salesInvoicesResult, consignmentOrdersResult, donationsResult, productsResult] = await Promise.all([
+    const [salesInvoicesResult, consignmentOrdersResult, donationsResult, purchaseInvoicesResult, productsResult] = await Promise.all([
         fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
             dateField: "saleDate",
             startDate: rangeSpec.startDate,
@@ -1379,6 +1482,10 @@ export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = f
             startDate: rangeSpec.startDate,
             endDate: rangeSpec.endDate
         }),
+        fetchReportWindowedRows(COLLECTIONS.purchaseInvoices, {
+            dateField: "purchaseDate",
+            endDate: rangeSpec.endDate
+        }),
         fetchReportWindowedRows(COLLECTIONS.products)
     ]);
 
@@ -1386,6 +1493,7 @@ export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = f
         salesInvoices: salesInvoicesResult.rows,
         consignmentOrders: consignmentOrdersResult.rows,
         donations: donationsResult.rows,
+        purchaseInvoices: purchaseInvoicesResult.rows,
         products: productsResult.rows,
         rangeSpec,
         durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
@@ -1393,6 +1501,7 @@ export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = f
             salesInvoices: salesInvoicesResult.truncated,
             consignmentOrders: consignmentOrdersResult.truncated,
             donations: donationsResult.truncated,
+            purchaseInvoices: purchaseInvoicesResult.truncated,
             products: productsResult.truncated
         }
     });

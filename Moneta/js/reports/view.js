@@ -188,6 +188,10 @@ function normalizeText(value) {
     return (value || "").trim();
 }
 
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
+
 function formatRoleLabel(role) {
     const labels = {
         admin: "Admin",
@@ -1117,6 +1121,8 @@ function renderProfitAndLossSegmentSection(reportData = null) {
                             <th class="reports-align-right">Net Sales</th>
                             <th class="reports-align-right">COGS</th>
                             <th class="reports-align-right">Gross Profit</th>
+                            <th class="reports-align-right">Expenses</th>
+                            <th class="reports-align-right">Operating Profit</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1128,10 +1134,12 @@ function renderProfitAndLossSegmentSection(reportData = null) {
                                 <td class="reports-align-right">${formatAccountingCurrency(row.netSales)}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency((Number(row.cogs) || 0) * -1)}</td>
                                 <td class="reports-align-right ${getAccountingAmountClass(row.grossProfit)}">${formatAccountingCurrency(row.grossProfit)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency((Number(row.expenses) || 0) * -1)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.operatingProfit)}">${formatAccountingCurrency(row.operatingProfit)}</td>
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="6" class="reports-table-empty">No business segment support rows are available for this range.</td>
+                                <td colspan="8" class="reports-table-empty">No business segment support rows are available for this range.</td>
                             </tr>
                         `}
                     </tbody>
@@ -1181,7 +1189,13 @@ function renderProfitAndLossMetadataSection(reportData = null) {
                 Retail sales ${sourceCounts.salesInvoices || 0},
                 Consignment orders ${sourceCounts.consignmentOrders || 0},
                 Donations ${sourceCounts.donations || 0},
+                Purchase invoices ${sourceCounts.purchaseInvoices || 0},
                 Products ${sourceCounts.products || 0}.
+            </div>
+            <div class="reports-audit-note">
+                <strong>COGS basis:</strong>
+                Weighted-cost products ${reportData?.summary?.weightedCostingProducts || 0},
+                Fallback-cost products ${reportData?.summary?.fallbackCostingProducts || 0}.
             </div>
             ${(metadata.notes || []).length ? `
                 <div class="reports-audit-note">
