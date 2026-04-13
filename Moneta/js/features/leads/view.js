@@ -1345,7 +1345,7 @@ function renderLeadQuotesPageShell() {
                 <div class="panel-body">
                     <div class="lead-quotes-empty lead-quotes-empty-large">
                         <p class="lead-quotes-empty-title">No lead selected</p>
-                        <p class="panel-copy">Return to Leads & Enquiries, open a lead, and choose `Create Quote Draft` or `Open Quote Workspace`.</p>
+                        <p class="panel-copy">Return to Leads & Enquiries, open a lead, and choose <strong>Create Quote Draft</strong> or <strong>Open Quote Workspace</strong>.</p>
                         <div class="form-actions" style="justify-content: flex-start;">
                             <button class="button button-secondary" type="button" data-action="quote-back-to-lead-list">
                                 <span class="button-icon">${icons.leads}</span>
