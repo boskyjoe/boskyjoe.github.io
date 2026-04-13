@@ -10,7 +10,7 @@ import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
 import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
-import { showLeadQuotesPage, showLeadsPage } from "../features/leads/index.js";
+import { showLeadsPage } from "../features/leads/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
 import { showSimpleConsignmentPage } from "../features/simple-consignment/index.js";
 import { showHomePage } from "../features/home/index.js";
@@ -35,6 +35,9 @@ const ROUTE_TO_VIEW = {
 function normalizeRoute(route) {
     if (!route || route === "#") return DEFAULT_AUTH_ROUTE;
     const baseRoute = String(route).split("?")[0];
+    if (baseRoute === "#/lead-quotes") {
+        return "#/leads";
+    }
     return ROUTE_TO_VIEW[baseRoute] ? baseRoute : DEFAULT_AUTH_ROUTE;
 }
 
@@ -64,8 +67,6 @@ function getViewTitle(route) {
             return "Reports";
         case "#/leads":
             return "Leads & Enquiries";
-        case "#/lead-quotes":
-            return "Quote Workspace";
         case "#/retail-store":
             return "Retail Store";
         case "#/simple-consignment":
@@ -128,10 +129,6 @@ export function resolveRoute() {
 
     if (route === "#/leads") {
         showLeadsPage();
-    }
-
-    if (route === "#/lead-quotes") {
-        showLeadQuotesPage();
     }
 
     if (route === "#/retail-store") {
