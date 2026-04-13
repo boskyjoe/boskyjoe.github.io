@@ -908,6 +908,376 @@ function buildPurchasePayablesReportData({
     };
 }
 
+const RETAIL_STORES = ["Tasty Treats", "Church Store"];
+const LOW_STOCK_THRESHOLD = 5;
+const MEDIUM_STOCK_THRESHOLD = 20;
+
+function buildSalesInvoiceReportRows(rows = []) {
+    return rows
+        .filter(row => normalizeStatus(row.saleStatus, "Active") !== "Voided")
+        .filter(row => normalizeStatus(row.saleType, "Revenue") !== "Sample")
+        .map(row => {
+            const transactionDate = resolveTransactionDate(row, ["saleDate"]);
+            const grossSales = roundCurrency(row.financials?.itemsSubtotal);
+            const discounts = roundCurrency((row.financials?.totalLineDiscount || 0) + (row.financials?.orderDiscountAmount || 0));
+            const netSales = roundCurrency(row.financials?.finalTaxableAmount);
+            const tax = roundCurrency(row.financials?.totalTax);
+            const grossBilled = roundCurrency(row.financials?.grandTotal);
+            const collections = roundCurrency(row.totalAmountPaid);
+            const donations = roundCurrency(row.totalDonation);
+            const expenses = roundCurrency(row.financials?.totalExpenses);
+            const balanceDue = roundCurrency(row.balanceDue);
+
+            return {
+                id: row.id,
+                transactionDate,
+                store: normalizeText(row.store) || "Other",
+                reference: normalizeText(row.saleId || row.manualVoucherNumber || row.id),
+                customerName: normalizeText(row.customerInfo?.name) || "Customer",
+                grossSales,
+                discounts,
+                netSales,
+                tax,
+                grossBilled,
+                collections,
+                donations,
+                expenses,
+                balanceDue,
+                totalQuantity: Number(row.totalQuantity) || 0,
+                paymentStatus: normalizeStatus(row.paymentStatus, "Unpaid")
+            };
+        });
+}
+
+function buildStoreSalesRows(rows = []) {
+    const buckets = new Map();
+
+    [...RETAIL_STORES, "Other"].forEach(store => {
+        buckets.set(store, {
+            store,
+            transactionCount: 0,
+            totalQuantity: 0,
+            grossSales: 0,
+            discounts: 0,
+            netSales: 0,
+            tax: 0,
+            grossBilled: 0,
+            collections: 0,
+            donations: 0,
+            expenses: 0,
+            balanceDue: 0,
+            averageSale: 0,
+            collectionRate: 0
+        });
+    });
+
+    rows.forEach(row => {
+        const key = buckets.has(row.store) ? row.store : "Other";
+        const bucket = buckets.get(key);
+        bucket.transactionCount += 1;
+        bucket.totalQuantity += row.totalQuantity;
+        bucket.grossSales = roundCurrency(bucket.grossSales + row.grossSales);
+        bucket.discounts = roundCurrency(bucket.discounts + row.discounts);
+        bucket.netSales = roundCurrency(bucket.netSales + row.netSales);
+        bucket.tax = roundCurrency(bucket.tax + row.tax);
+        bucket.grossBilled = roundCurrency(bucket.grossBilled + row.grossBilled);
+        bucket.collections = roundCurrency(bucket.collections + row.collections);
+        bucket.donations = roundCurrency(bucket.donations + row.donations);
+        bucket.expenses = roundCurrency(bucket.expenses + row.expenses);
+        bucket.balanceDue = roundCurrency(bucket.balanceDue + row.balanceDue);
+    });
+
+    return [...buckets.values()]
+        .map(bucket => ({
+            ...bucket,
+            averageSale: bucket.transactionCount > 0 ? roundCurrency(bucket.netSales / bucket.transactionCount) : 0,
+            collectionRate: bucket.netSales > 0 ? roundCurrency((bucket.collections / bucket.netSales) * 100) : 0
+        }))
+        .filter(bucket => bucket.transactionCount > 0 || bucket.store !== "Other");
+}
+
+function buildSalesSummaryReportData({
+    salesInvoices = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const invoiceRows = buildSalesInvoiceReportRows(salesInvoices)
+        .sort((left, right) => toDateValue(right.transactionDate).getTime() - toDateValue(left.transactionDate).getTime());
+    const storeRows = buildStoreSalesRows(invoiceRows);
+
+    const summary = {
+        grossSales: sumMetric(invoiceRows, "grossSales"),
+        discounts: sumMetric(invoiceRows, "discounts"),
+        netSales: sumMetric(invoiceRows, "netSales"),
+        tax: sumMetric(invoiceRows, "tax"),
+        grossBilled: sumMetric(invoiceRows, "grossBilled"),
+        collections: sumMetric(invoiceRows, "collections"),
+        donations: sumMetric(invoiceRows, "donations"),
+        expenses: sumMetric(invoiceRows, "expenses"),
+        balanceDue: sumMetric(invoiceRows, "balanceDue"),
+        transactionCount: invoiceRows.length,
+        averageSale: invoiceRows.length > 0 ? roundCurrency(sumMetric(invoiceRows, "netSales") / invoiceRows.length) : 0
+    };
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary,
+        statementRows: [
+            { section: "Revenue", label: "Gross Sales", amount: summary.grossSales },
+            { section: "Revenue", label: "Less Discounts", amount: roundCurrency(summary.discounts * -1) },
+            { section: "Revenue", label: "Net Sales", amount: summary.netSales, tone: "total" },
+            { section: "Revenue", label: "Output Tax", amount: summary.tax },
+            { section: "Revenue", label: "Gross Billed", amount: summary.grossBilled, tone: "total" },
+            { section: "Settlement", label: "Collections", amount: summary.collections },
+            { section: "Settlement", label: "Donations", amount: summary.donations },
+            { section: "Settlement", label: "Store Expenses", amount: roundCurrency(summary.expenses * -1) },
+            { section: "Settlement", label: "Outstanding Balance", amount: roundCurrency(summary.balanceDue * -1), tone: "total" }
+        ],
+        storeRows,
+        detailRows: invoiceRows.slice(0, 60),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                salesInvoices: salesInvoices.length
+            }
+        }
+    };
+}
+
+function buildStorePerformanceReportData({
+    salesInvoices = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const invoiceRows = buildSalesInvoiceReportRows(salesInvoices);
+    const storeRows = buildStoreSalesRows(invoiceRows)
+        .filter(row => RETAIL_STORES.includes(row.store))
+        .sort((left, right) => right.netSales - left.netSales);
+
+    const totalNetSales = sumMetric(storeRows, "netSales");
+    const totalCollections = sumMetric(storeRows, "collections");
+    const totalBalanceDue = sumMetric(storeRows, "balanceDue");
+    const topStore = storeRows[0] || null;
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            totalNetSales,
+            totalCollections,
+            totalBalanceDue,
+            totalTransactions: storeRows.reduce((sum, row) => sum + row.transactionCount, 0),
+            topStoreName: topStore?.store || "-",
+            topStoreNetSales: topStore?.netSales || 0
+        },
+        storeRows,
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                salesInvoices: salesInvoices.length
+            }
+        }
+    };
+}
+
+function buildCategoryNameMap(categories = []) {
+    return new Map(
+        (categories || []).map(category => [normalizeText(category.id), normalizeText(category.categoryName)]).filter(([id]) => id)
+    );
+}
+
+function resolveInventoryCategoryName(product = {}, categoryNameMap = new Map()) {
+    const categoryId = normalizeText(product.categoryId);
+    return normalizeText(categoryNameMap.get(categoryId)) || categoryId || "-";
+}
+
+function resolveInventoryStatus(units = 0) {
+    if (units <= 0) return "Out Of Stock";
+    if (units <= LOW_STOCK_THRESHOLD) return "Low Stock";
+    if (units <= MEDIUM_STOCK_THRESHOLD) return "Medium Stock";
+    return "Healthy Stock";
+}
+
+function buildInventoryRows(products = [], categories = []) {
+    const categoryNameMap = buildCategoryNameMap(categories);
+
+    return (products || [])
+        .filter(product => product.isActive !== false)
+        .map(product => {
+            const units = Math.max(0, Number(product.inventoryCount) || 0);
+            const unitCost = roundCurrency(product.unitPrice);
+            const unitSell = roundCurrency(product.sellingPrice);
+            const costValue = roundCurrency(units * unitCost);
+            const retailValue = roundCurrency(units * unitSell);
+
+            return {
+                id: product.id,
+                productName: normalizeText(product.itemName) || "Untitled Product",
+                categoryName: resolveInventoryCategoryName(product, categoryNameMap),
+                units,
+                unitCost,
+                unitSell,
+                costValue,
+                retailValue,
+                potentialMargin: roundCurrency(retailValue - costValue),
+                stockStatus: resolveInventoryStatus(units),
+                isReadyForSale: product.isReadyForSale !== false
+            };
+        })
+        .sort((left, right) => left.units - right.units || left.productName.localeCompare(right.productName));
+}
+
+function buildInventoryBucketRows(rows = []) {
+    const buckets = new Map([
+        ["Out Of Stock", { label: "Out Of Stock", count: 0, units: 0 }],
+        ["Low Stock", { label: "Low Stock", count: 0, units: 0 }],
+        ["Medium Stock", { label: "Medium Stock", count: 0, units: 0 }],
+        ["Healthy Stock", { label: "Healthy Stock", count: 0, units: 0 }]
+    ]);
+
+    rows.forEach(row => {
+        const bucket = buckets.get(row.stockStatus);
+        if (!bucket) return;
+        bucket.count += 1;
+        bucket.units += row.units;
+    });
+
+    return [...buckets.values()];
+}
+
+function buildInventoryStatusReportData({
+    products = [],
+    categories = [],
+    asOfDate = new Date(),
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const inventoryRows = buildInventoryRows(products, categories);
+    const bucketRows = buildInventoryBucketRows(inventoryRows);
+    const alertRows = inventoryRows.filter(row => ["Out Of Stock", "Low Stock"].includes(row.stockStatus));
+
+    return {
+        asOfDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            productCount: inventoryRows.length,
+            outOfStockCount: alertRows.filter(row => row.stockStatus === "Out Of Stock").length,
+            lowStockCount: alertRows.filter(row => row.stockStatus === "Low Stock").length,
+            totalUnits: inventoryRows.reduce((sum, row) => sum + row.units, 0)
+        },
+        bucketRows,
+        alertRows,
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                products: products.length,
+                categories: categories.length
+            }
+        }
+    };
+}
+
+function buildInventoryValuationCategoryRows(rows = []) {
+    const byCategory = new Map();
+
+    rows.forEach(row => {
+        const key = row.categoryName || "-";
+        if (!byCategory.has(key)) {
+            byCategory.set(key, {
+                categoryName: key,
+                productCount: 0,
+                totalUnits: 0,
+                costValue: 0,
+                retailValue: 0,
+                potentialMargin: 0
+            });
+        }
+
+        const bucket = byCategory.get(key);
+        bucket.productCount += 1;
+        bucket.totalUnits += row.units;
+        bucket.costValue = roundCurrency(bucket.costValue + row.costValue);
+        bucket.retailValue = roundCurrency(bucket.retailValue + row.retailValue);
+        bucket.potentialMargin = roundCurrency(bucket.retailValue - bucket.costValue);
+    });
+
+    return [...byCategory.values()].sort((left, right) => right.costValue - left.costValue);
+}
+
+function buildInventoryValuationReportData({
+    products = [],
+    categories = [],
+    purchaseInvoices = [],
+    asOfDate = new Date(),
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const fallbackCostMap = buildProductFallbackCostMap(products);
+    const { weightedCostMap, costingSummary } = buildWeightedPurchaseCostMap(purchaseInvoices, fallbackCostMap);
+    const categoryNameMap = buildCategoryNameMap(categories);
+
+    const valuationRows = (products || [])
+        .filter(product => product.isActive !== false)
+        .map(product => {
+            const units = Math.max(0, Number(product.inventoryCount) || 0);
+            const productId = normalizeText(product.id);
+            const unitCost = roundCurrency(weightedCostMap.get(productId) || 0);
+            const unitSell = roundCurrency(product.sellingPrice);
+            const costValue = roundCurrency(units * unitCost);
+            const retailValue = roundCurrency(units * unitSell);
+
+            return {
+                id: productId,
+                productName: normalizeText(product.itemName) || "Untitled Product",
+                categoryName: resolveInventoryCategoryName(product, categoryNameMap),
+                units,
+                unitCost,
+                unitSell,
+                costValue,
+                retailValue,
+                potentialMargin: roundCurrency(retailValue - costValue)
+            };
+        })
+        .sort((left, right) => right.costValue - left.costValue);
+
+    return {
+        asOfDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            totalUnits: valuationRows.reduce((sum, row) => sum + row.units, 0),
+            totalCostValue: sumMetric(valuationRows, "costValue"),
+            totalRetailValue: sumMetric(valuationRows, "retailValue"),
+            potentialMargin: sumMetric(valuationRows, "potentialMargin"),
+            productCount: valuationRows.length,
+            weightedCostingProducts: costingSummary.weightedProductCount,
+            fallbackCostingProducts: costingSummary.fallbackProductCount
+        },
+        categoryRows: buildInventoryValuationCategoryRows(valuationRows),
+        detailRows: valuationRows.slice(0, 60),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                products: products.length,
+                categories: categories.length,
+                purchaseInvoices: purchaseInvoices.length
+            }
+        }
+    };
+}
+
 function buildProductFallbackCostMap(products = []) {
     return new Map(
         (products || []).map(product => [normalizeText(product.id), roundCurrency(product.unitPrice)])
@@ -1508,6 +1878,190 @@ export async function getProfitAndLossReport(user, rangeSpec, { forceRefresh = f
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "pnl", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getSalesSummaryReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the sales summary report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "sales-summary", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const salesInvoicesResult = await fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+        dateField: "saleDate",
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate
+    });
+
+    const data = buildSalesSummaryReportData({
+        salesInvoices: salesInvoicesResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            salesInvoices: salesInvoicesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "sales-summary", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getStorePerformanceReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the store performance report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "store-performance", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const salesInvoicesResult = await fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+        dateField: "saleDate",
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate
+    });
+
+    const data = buildStorePerformanceReportData({
+        salesInvoices: salesInvoicesResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            salesInvoices: salesInvoicesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "store-performance", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getInventoryStatusReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the inventory status report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "inventory-status", "as-of-today");
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [productsResult, categoriesResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.products),
+        fetchReportWindowedRows(COLLECTIONS.categories)
+    ]);
+
+    const data = buildInventoryStatusReportData({
+        products: productsResult.rows,
+        categories: categoriesResult.rows,
+        asOfDate: new Date(),
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            products: productsResult.truncated,
+            categories: categoriesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "inventory-status", "as-of-today", data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getInventoryValuationReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the inventory valuation report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "inventory-valuation", "as-of-today");
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [productsResult, categoriesResult, purchaseInvoicesResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.products),
+        fetchReportWindowedRows(COLLECTIONS.categories),
+        fetchReportWindowedRows(COLLECTIONS.purchaseInvoices, {
+            dateField: "purchaseDate",
+            endDate: new Date()
+        })
+    ]);
+
+    const data = buildInventoryValuationReportData({
+        products: productsResult.rows,
+        categories: categoriesResult.rows,
+        purchaseInvoices: purchaseInvoicesResult.rows,
+        asOfDate: new Date(),
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            products: productsResult.truncated,
+            categories: categoriesResult.truncated,
+            purchaseInvoices: purchaseInvoicesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "inventory-valuation", "as-of-today", data, loadedAt);
 
     return {
         data,
