@@ -1959,7 +1959,9 @@ select {
 }
 
 .lead-editor-tabs {
-    display: inline-flex;
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
     margin-bottom: 1rem;
     padding: 0.4rem;
@@ -1971,7 +1973,8 @@ select {
 .lead-editor-tab {
     border: 0;
     border-radius: 0.8rem;
-    padding: 0.78rem 1rem;
+    width: 100%;
+    padding: 0.9rem 1rem;
     background: transparent;
     color: #52627a;
     font: inherit;
@@ -2054,14 +2057,8 @@ select {
     justify-content: flex-start;
 }
 
-.lead-quotes-workspace-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.7fr);
-    gap: 1rem;
-}
-
-.lead-quotes-sidebar,
-.lead-quote-editor-card {
+.lead-quote-editor-card,
+.lead-quotes-grid-card {
     display: grid;
     gap: 1rem;
     padding: 1rem;
@@ -2074,15 +2071,10 @@ select {
     margin-bottom: 0;
 }
 
-.lead-quotes-sidebar .ag-shell {
-    min-height: 0;
-}
-
 .lead-quote-editor-card {
     align-content: start;
 }
 
-.lead-quotes-sidebar-head,
 .lead-quote-editor-head,
 .lead-quotes-drawer-summary,
 .lead-quotes-drawer-actions {
@@ -2385,7 +2377,6 @@ select {
     .lead-editor-tabs,
     .lead-worklog-entry-grid,
     .lead-quote-summary-grid,
-    .lead-quotes-workspace-layout,
     .lead-quote-totals-grid {
         grid-template-columns: 1fr;
     }
@@ -2413,11 +2404,6 @@ select {
         align-items: stretch;
     }
 
-    .lead-editor-tabs {
-        display: grid;
-    }
-
-    .lead-quotes-sidebar-head,
     .lead-quote-editor-head,
     .lead-quotes-sidebar-actions,
     .lead-quotes-drawer-summary,
