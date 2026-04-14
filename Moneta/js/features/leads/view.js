@@ -29,11 +29,11 @@ import {
     deleteLead,
     getLeadQuote,
     LEAD_LOG_TYPES,
+    LEAD_QUOTE_MANUAL_STATUSES,
     LEAD_QUOTE_STORES,
     LEAD_SOURCES,
     LEAD_STATUSES,
     rejectLeadQuote,
-    reviseLeadQuote,
     saveLead,
     saveLeadQuote,
     saveLeadWorkLog
@@ -270,8 +270,13 @@ function buildQuoteDraftFromRecord(quote = null) {
         businessQuoteId: quote.businessQuoteId || "",
         sourceQuoteId: quote.sourceQuoteId || quote.supersedesQuoteId || "",
         quoteStatus: quote.quoteStatus || "Draft",
+        persistedQuoteStatus: quote.quoteStatus || "Draft",
         store: quote.store || "Church Store",
         validUntil: formatDateInputValue(quote.validUntil),
+        customerName: quote.customerSnapshot?.customerName || "",
+        customerPhone: quote.customerSnapshot?.customerPhone || "",
+        customerEmail: quote.customerSnapshot?.customerEmail || "",
+        customerAddress: quote.customerSnapshot?.customerAddress || "",
         quoteNotes: quote.quoteNotes || "",
         internalNotes: quote.internalNotes || "",
         acceptedByCustomerName: quote.acceptedByCustomerName || "",
@@ -327,7 +332,18 @@ function recalculateQuoteDraftTotals() {
 
 function isQuoteDraftEditable() {
     if (!featureState.quoteDraft) return false;
-    return (featureState.quoteDraft.quoteStatus || "Draft") === "Draft";
+    const persistedQuoteStatus = normalizeText(featureState.quoteDraft.persistedQuoteStatus || featureState.quoteDraft.quoteStatus || "Draft");
+    return persistedQuoteStatus === "Draft";
+}
+
+function getQuoteDraftSourceQuote() {
+    const sourceQuoteId = normalizeText(featureState.quoteDraft?.sourceQuoteId || "");
+    if (!sourceQuoteId) return null;
+    return featureState.quoteRows.find(quote => quote.id === sourceQuoteId) || null;
+}
+
+function isQuoteRevisionDraft() {
+    return Boolean(featureState.quoteDraft && !featureState.quoteDraft.docId && getQuoteDraftSourceQuote()?.id);
 }
 
 function sortLeads(rows = []) {
@@ -382,6 +398,15 @@ function renderQuoteStoreOptions(currentValue = "Church Store") {
     return LEAD_QUOTE_STORES.map(storeName => `
         <option value="${storeName}" ${storeName === currentValue ? "selected" : ""}>
             ${storeName}
+        </option>
+    `).join("");
+}
+
+function renderQuoteStatusOptions(currentValue = "Draft") {
+    const selectedValue = normalizeText(currentValue) || "Draft";
+    return LEAD_QUOTE_MANUAL_STATUSES.map(status => `
+        <option value="${status}" ${status === selectedValue ? "selected" : ""}>
+            ${status}
         </option>
     `).join("");
 }
@@ -909,13 +934,19 @@ function renderLeadQuotesWorkspace(editingLead) {
 
     const selectedQuote = getSelectedQuote();
     const quoteDraft = featureState.quoteDraft;
+    const sourceQuote = getQuoteDraftSourceQuote();
+    const revisionDraft = isQuoteRevisionDraft();
     const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
     const isEditable = isQuoteDraftEditable();
-    const quoteTitle = quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft";
+    const quoteTitle = revisionDraft
+        ? `Revision Draft${sourceQuote?.businessQuoteId ? ` for ${sourceQuote.businessQuoteId}` : ""}`
+        : (quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft");
     const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
-    const metadataNote = selectedQuote
-        ? `Version ${selectedQuote.versionNo || "-"} · ${selectedQuote.store || "-"}`
-        : "Start a fresh version from this enquiry when pricing is ready.";
+    const metadataNote = revisionDraft
+        ? `Based on ${sourceQuote?.businessQuoteId || "the selected quote"}${sourceQuote?.versionNo ? ` · Version ${sourceQuote.versionNo}` : ""} · Save draft or send to create the next version.`
+        : (selectedQuote
+            ? `Version ${selectedQuote.versionNo || "-"} · ${selectedQuote.store || "-"}`
+            : "Start a fresh version from this enquiry when pricing is ready.");
 
     return `
         <section class="panel-card lead-quotes-workspace-card">
@@ -951,6 +982,12 @@ function renderLeadQuotesWorkspace(editingLead) {
                                 </select>
                             </div>
                             <div class="field">
+                                <label for="lead-quote-status">Quote Status</label>
+                                <select id="lead-quote-status" class="select" ${isEditable ? "" : "disabled"}>
+                                    ${renderQuoteStatusOptions(quoteDraft.quoteStatus || "Draft")}
+                                </select>
+                            </div>
+                            <div class="field">
                                 <label for="lead-quote-valid-until">Valid Until</label>
                                 <input
                                     id="lead-quote-valid-until"
@@ -958,6 +995,45 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     type="date"
                                     value="${quoteDraft.validUntil || ""}"
                                     ${isEditable ? "" : "disabled"}>
+                            </div>
+                        </div>
+                        <div class="lead-form-section-grid lead-quote-editor-grid">
+                            <div class="field">
+                                <label for="lead-quote-customer-name">Customer Name</label>
+                                <input
+                                    id="lead-quote-customer-name"
+                                    class="input"
+                                    type="text"
+                                    value="${quoteDraft.customerName || ""}"
+                                    ${isEditable ? "" : "disabled"}>
+                            </div>
+                            <div class="field">
+                                <label for="lead-quote-customer-phone">Customer Phone</label>
+                                <input
+                                    id="lead-quote-customer-phone"
+                                    class="input"
+                                    type="text"
+                                    value="${quoteDraft.customerPhone || ""}"
+                                    ${isEditable ? "" : "disabled"}>
+                            </div>
+                            <div class="field">
+                                <label for="lead-quote-customer-email">Customer Email</label>
+                                <input
+                                    id="lead-quote-customer-email"
+                                    class="input"
+                                    type="email"
+                                    value="${quoteDraft.customerEmail || ""}"
+                                    placeholder="Required before sending the quote"
+                                    ${isEditable ? "" : "disabled"}>
+                            </div>
+                            <div class="field field-full">
+                                <label for="lead-quote-customer-address">Customer Address</label>
+                                <textarea
+                                    id="lead-quote-customer-address"
+                                    class="textarea"
+                                    rows="2"
+                                    placeholder="Quote snapshot copies from the lead and can be updated here"
+                                    ${isEditable ? "" : "disabled"}>${quoteDraft.customerAddress || ""}</textarea>
                             </div>
                             <div class="field field-full">
                                 <label for="lead-quote-notes">Customer Notes</label>
@@ -1005,9 +1081,11 @@ function renderLeadQuotesWorkspace(editingLead) {
                         ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: normalizeText(quoteDraft.quoteStatus) === "Accepted" })}
                         <div class="lead-quote-editor-footer">
                             <div class="lead-quote-editor-note">
-                                ${acceptedQuote
-            ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
-            : "Only one quote should be marked accepted for a lead. Sent quotes are frozen and should be revised into a new version."}
+                                ${revisionDraft
+            ? `Revision mode is active. Review the changes, then save draft or send to create the next version from ${sourceQuote?.businessQuoteId || "the selected quote"}.`
+            : (acceptedQuote
+                ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
+                : "Only one quote should be marked accepted for a lead. Sent quotes are frozen and should be revised into a new version.")}
                             </div>
                             <div class="form-actions lead-quote-actions">
                                 ${isEditable ? `
@@ -1017,11 +1095,11 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     </button>
                                     <button class="button button-secondary" type="button" data-action="quote-save-draft">
                                         <span class="button-icon">${icons.edit}</span>
-                                        Save Draft
+                                        ${revisionDraft ? "Save Revision Quote" : "Save Quote"}
                                     </button>
                                     <button class="button button-primary-alt" type="button" data-action="quote-send">
                                         <span class="button-icon">${icons.plus}</span>
-                                        Send Quote
+                                        ${revisionDraft ? "Send Revision Quote" : "Send Quote"}
                                     </button>
                                 ` : `
                                     <button class="button button-secondary" type="button" data-action="quote-new-draft">
@@ -2022,8 +2100,13 @@ function getQuoteDraftPayload() {
         docId: featureState.quoteDraft.docId || "",
         businessQuoteId: featureState.quoteDraft.businessQuoteId || "",
         sourceQuoteId: featureState.quoteDraft.sourceQuoteId || "",
+        quoteStatus: featureState.quoteDraft.quoteStatus || "Draft",
         store: featureState.quoteDraft.store || "Church Store",
         validUntil: featureState.quoteDraft.validUntil || "",
+        customerName: featureState.quoteDraft.customerName || "",
+        customerPhone: featureState.quoteDraft.customerPhone || "",
+        customerEmail: featureState.quoteDraft.customerEmail || "",
+        customerAddress: featureState.quoteDraft.customerAddress || "",
         quoteNotes: featureState.quoteDraft.quoteNotes || "",
         internalNotes: featureState.quoteDraft.internalNotes || "",
         lineItems: featureState.quoteDraft.lineItems || []
@@ -2079,7 +2162,7 @@ function handleQuoteLineFieldInput(target) {
     renderLeadsView();
 }
 
-async function handleQuoteSave(submitStatus = "Draft") {
+async function handleQuoteSave(submitStatusOverride = "") {
     const lead = getEditingLead() || getQuoteContextLead();
 
     if (!lead?.id) {
@@ -2090,27 +2173,91 @@ async function handleQuoteSave(submitStatus = "Draft") {
     }
 
     try {
-        const result = await saveLeadQuote(
-            getQuoteDraftPayload(),
-            lead,
-            getState().currentUser,
-            { submitStatus }
-        );
-        const savedQuote = result.quoteId ? await getLeadQuote(lead.id, result.quoteId) : null;
+        const payload = getQuoteDraftPayload();
+        const submitStatus = submitStatusOverride || payload.quoteStatus || "Draft";
+        const sourceQuote = payload.sourceQuoteId
+            ? featureState.quoteRows.find(entry => entry.id === payload.sourceQuoteId) || null
+            : null;
+        const isRevisionCreate = !payload.docId && Boolean(payload.sourceQuoteId);
+        const saveActionLabel = submitStatus === "Sent"
+            ? (isRevisionCreate ? "Revision Quote Sent" : "Quote Sent")
+            : submitStatus === "Expired"
+                ? "Quote Marked Expired"
+                : submitStatus === "Cancelled"
+                    ? "Quote Cancelled"
+                    : (isRevisionCreate ? "Revision Quote Saved" : "Quote Saved");
+        const saveActionMessage = submitStatus === "Sent"
+            ? "The quote was sent successfully."
+            : submitStatus === "Expired"
+                ? "The quote status was saved as expired."
+                : submitStatus === "Cancelled"
+                    ? "The quote status was saved as cancelled."
+                    : "The quote was saved successfully.";
+        const saveToastMessage = submitStatus === "Sent"
+            ? (isRevisionCreate ? "Revision quote sent." : "Quote sent.")
+            : submitStatus === "Expired"
+                ? "Quote marked expired."
+                : submitStatus === "Cancelled"
+                    ? "Quote marked cancelled."
+                    : (isRevisionCreate ? "Revision quote saved." : "Quote saved.");
+        const result = await runProgressToastFlow({
+            title: submitStatus === "Sent"
+                ? (isRevisionCreate ? "Sending Revision Quote" : "Sending Quote")
+                : (isRevisionCreate ? "Saving Revision Quote" : "Saving Quote"),
+            initialMessage: "Reading quote draft inputs...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: saveActionLabel,
+            successMessage: saveActionMessage
+        }, async ({ update }) => {
+            update("Validating customer details, quote status, and quoted items...", 38, "Step 2 of 5");
 
-        featureState.activeQuoteId = result.quoteId || "";
-        featureState.quoteDraft = savedQuote ? buildQuoteDraftFromRecord(savedQuote) : null;
-        featureState.quoteDrawerLeadId = lead.id;
+            update("Writing the quote snapshot to the database...", 70, "Step 3 of 5");
+            const saveResult = await saveLeadQuote(
+                payload,
+                lead,
+                getState().currentUser,
+                {
+                    submitStatus,
+                    sourceQuote,
+                    supersedeQuoteId: !payload.docId ? payload.sourceQuoteId || "" : ""
+                }
+            );
 
-        if (getState().currentRoute === LEAD_QUOTES_ROUTE && result.quoteId) {
-            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: result.quoteId }));
-        }
+            update("Refreshing the latest quote version...", 86, "Step 4 of 5");
+            const savedQuote = saveResult.quoteId ? await getLeadQuote(lead.id, saveResult.quoteId) : null;
 
-        showToast(submitStatus === "Sent" ? "Quote sent." : "Quote draft saved.", "success", {
-            title: "Leads & Enquiries"
+            featureState.activeQuoteId = saveResult.quoteId || "";
+            featureState.quoteDraft = savedQuote ? buildQuoteDraftFromRecord(savedQuote) : null;
+            featureState.quoteDrawerLeadId = lead.id;
+
+            if (getState().currentRoute === LEAD_QUOTES_ROUTE && saveResult.quoteId) {
+                window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: saveResult.quoteId }));
+            }
+
+            update("Quote workspace is up to date.", 96, "Step 5 of 5");
+            return { saveResult, savedQuote };
+        });
+
+        showToast(saveToastMessage, "success", {
+                title: "Leads & Enquiries"
+            });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: saveActionLabel,
+            message: saveActionMessage,
+            details: [
+                { label: "Action", value: result.saveResult?.mode === "create" ? "Create" : "Update" },
+                { label: "Quote", value: result.savedQuote?.businessQuoteId || "Pending" },
+                { label: "Customer", value: payload.customerName || lead.customerName || "-" },
+                { label: "Email", value: payload.customerEmail || "-" },
+                { label: "Status", value: submitStatus },
+                { label: "Channel", value: payload.store || "-" }
+            ]
         });
     } catch (error) {
         console.error("[Moneta] Lead quote save failed:", error);
+        ProgressToast.hide(0);
         showToast(error?.message || "Could not save this quote.", "error", {
             title: "Leads & Enquiries"
         });
@@ -2125,18 +2272,13 @@ async function handleQuoteRevise(button) {
     if (!lead?.id || !quote?.id) return;
 
     try {
-        const result = await reviseLeadQuote(lead, quote, getState().currentUser);
-        const revisedQuote = result?.id ? await getLeadQuote(lead.id, result.id) : null;
-
-        featureState.activeQuoteId = result?.id || "";
-        featureState.quoteDraft = revisedQuote ? buildQuoteDraftFromRecord(revisedQuote) : buildLeadQuoteDraft(lead, quote);
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = buildLeadQuoteDraft(lead, quote);
         featureState.quoteDrawerLeadId = lead.id;
+        renderActiveLeadSurface();
+        focusQuotesWorkspace();
 
-        if (getState().currentRoute === LEAD_QUOTES_ROUTE && result?.id) {
-            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: result.id }));
-        }
-
-        showToast("Revision draft created.", "success", {
+        showToast("Revision mode is ready. Save draft or send when the new version is ready.", "success", {
             title: "Leads & Enquiries"
         });
     } catch (error) {
@@ -2584,6 +2726,10 @@ function bindLeadsDomEvents() {
         const productsSearchInput = event.target.closest("#lead-products-search");
         const workLogSearchInput = event.target.closest("#lead-worklog-search");
         const quoteSearchInput = event.target.closest("#lead-quotes-search");
+        const quoteCustomerNameInput = event.target.closest("#lead-quote-customer-name");
+        const quoteCustomerPhoneInput = event.target.closest("#lead-quote-customer-phone");
+        const quoteCustomerEmailInput = event.target.closest("#lead-quote-customer-email");
+        const quoteCustomerAddressInput = event.target.closest("#lead-quote-customer-address");
         const quoteNotesInput = event.target.closest("#lead-quote-notes");
         const quoteInternalNotesInput = event.target.closest("#lead-quote-internal-notes");
         const quoteAcceptedByInput = event.target.closest("#lead-quote-accepted-by");
@@ -2607,6 +2753,26 @@ function bindLeadsDomEvents() {
 
         if (quoteSearchInput) {
             handleLeadQuoteSearchInput(quoteSearchInput);
+            return;
+        }
+
+        if (quoteCustomerNameInput) {
+            updateQuoteDraftField("customerName", quoteCustomerNameInput.value || "");
+            return;
+        }
+
+        if (quoteCustomerPhoneInput) {
+            updateQuoteDraftField("customerPhone", quoteCustomerPhoneInput.value || "");
+            return;
+        }
+
+        if (quoteCustomerEmailInput) {
+            updateQuoteDraftField("customerEmail", quoteCustomerEmailInput.value || "");
+            return;
+        }
+
+        if (quoteCustomerAddressInput) {
+            updateQuoteDraftField("customerAddress", quoteCustomerAddressInput.value || "");
             return;
         }
 
@@ -2638,6 +2804,7 @@ function bindLeadsDomEvents() {
     root.addEventListener("change", event => {
         const catalogueSelect = event.target.closest("#lead-catalogue");
         const quoteStoreSelect = event.target.closest("#lead-quote-store");
+        const quoteStatusSelect = event.target.closest("#lead-quote-status");
         const quoteValidUntilInput = event.target.closest("#lead-quote-valid-until");
         const quoteLineInput = event.target.closest(".lead-quote-line-input");
 
@@ -2649,6 +2816,12 @@ function bindLeadsDomEvents() {
         if (quoteStoreSelect && featureState.quoteDraft) {
             updateQuoteDraftField("store", quoteStoreSelect.value || "Church Store");
             applyQuoteStoreTaxDefaults(featureState.quoteDraft.store || "Church Store");
+            renderLeadsView();
+            return;
+        }
+
+        if (quoteStatusSelect && featureState.quoteDraft) {
+            updateQuoteDraftField("quoteStatus", quoteStatusSelect.value || "Draft");
             renderLeadsView();
             return;
         }
@@ -2774,7 +2947,7 @@ function bindLeadsDomEvents() {
             }
 
             if (action === "quote-save-draft") {
-                handleQuoteSave("Draft");
+                handleQuoteSave();
                 return;
             }
 
