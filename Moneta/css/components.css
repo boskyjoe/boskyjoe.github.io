@@ -2042,6 +2042,11 @@ select {
     overflow: hidden;
 }
 
+.lead-quotes-workspace-card .panel-body {
+    display: grid;
+    gap: 1.5rem;
+}
+
 .lead-quote-summary-card .panel-body {
     display: grid;
     gap: 1rem;
@@ -2067,12 +2072,33 @@ select {
     background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
 }
 
+.lead-quotes-grid-card {
+    margin-top: 0.25rem;
+}
+
 .lead-quotes-toolbar {
     margin-bottom: 0;
 }
 
 .lead-quote-editor-card {
     align-content: start;
+}
+
+.lead-quote-editor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+}
+
+.lead-quote-editor-grid .textarea {
+    min-height: 92px;
+}
+
+.lead-quote-field-span-2 {
+    grid-column: span 2;
+}
+
+.lead-quote-field-span-3 {
+    grid-column: 1 / -1;
 }
 
 .lead-quote-editor-head,
@@ -2374,11 +2400,17 @@ select {
     .bulk-product-list,
     .lead-form-sections,
     .lead-form-section-grid,
+    .lead-quote-editor-grid,
     .lead-editor-tabs,
     .lead-worklog-entry-grid,
     .lead-quote-summary-grid,
     .lead-quote-totals-grid {
         grid-template-columns: 1fr;
+    }
+
+    .lead-quote-field-span-2,
+    .lead-quote-field-span-3 {
+        grid-column: auto;
     }
 
     .bulk-product-picker-header,
