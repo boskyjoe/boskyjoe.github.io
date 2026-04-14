@@ -15,7 +15,7 @@ import { getRetailStoreTaxDefaults, RETAIL_STORES } from "../retail-store/servic
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
 export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Revised", "General Note"];
-export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled"];
+export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled", "Converted"];
 export const LEAD_QUOTE_STORES = [...RETAIL_STORES, "Consignment"];
 export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Cancelled"];
 
@@ -146,6 +146,10 @@ export function calculateLeadQuoteTotals(lineItems = []) {
 export function buildLeadQuoteDraft(lead, sourceQuote = null) {
     if (!lead?.id) {
         throw new Error("Select and save a lead before preparing a quote.");
+    }
+
+    if (normalizeText(lead.leadStatus) === "Converted") {
+        throw new Error("Converted leads are read-only. Create a new enquiry if a replacement quote is needed.");
     }
 
     const store = normalizeQuoteStore(sourceQuote?.store || "Church Store");
@@ -412,6 +416,10 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
         throw new Error("You must be logged in to save a quote.");
     }
 
+    if (normalizeText(lead?.leadStatus) === "Converted") {
+        throw new Error("Converted leads are read-only. Quotes can no longer be changed.");
+    }
+
     const { submitStatus = "Draft", sourceQuote = null, supersedeQuoteId = "", existingQuote = null } = options;
     const { docId, quoteData } = buildLeadQuotePayload(payload, lead, user, { submitStatus, sourceQuote, existingQuote });
     const supersededQuoteId = normalizeText(supersedeQuoteId || quoteData.sourceQuoteId);
@@ -528,6 +536,10 @@ export async function acceptLeadQuote(lead, quote, acceptancePayload, user) {
         throw new Error("Lead and quote context are required before accepting.");
     }
 
+    if (normalizeText(lead?.leadStatus) === "Converted") {
+        throw new Error("Converted leads are read-only. Quotes can no longer be changed.");
+    }
+
     const acceptedByCustomerName = normalizeText(acceptancePayload.acceptedByCustomerName);
     const acceptedVia = normalizeText(acceptancePayload.acceptedVia);
     const acceptanceNotes = normalizeText(acceptancePayload.acceptanceNotes);
@@ -560,6 +572,10 @@ export async function rejectLeadQuote(lead, quote, reason, user) {
         throw new Error("Lead and quote context are required before rejecting.");
     }
 
+    if (normalizeText(lead?.leadStatus) === "Converted") {
+        throw new Error("Converted leads are read-only. Quotes can no longer be changed.");
+    }
+
     const rejectionReason = normalizeText(reason);
 
     await updateLeadQuoteStatusRecord(lead.id, quote.id, {
@@ -581,6 +597,10 @@ export async function cancelLeadQuote(lead, quote, reason, user) {
 
     if (!lead?.id || !quote?.id) {
         throw new Error("Lead and quote context are required before cancelling.");
+    }
+
+    if (normalizeText(lead?.leadStatus) === "Converted") {
+        throw new Error("Converted leads are read-only. Quotes can no longer be changed.");
     }
 
     const cancellationReason = normalizeText(reason);

@@ -6,6 +6,7 @@ let leadsGridApi = null;
 let currentLeadsGridElement = null;
 let leadRequestedProductsGridApi = null;
 let currentLeadRequestedProductsGridElement = null;
+let leadRequestedProductsReadOnly = false;
 let leadWorkLogGridApi = null;
 let currentLeadWorkLogGridElement = null;
 let leadQuotesGridApi = null;
@@ -46,7 +47,7 @@ function formatDateTime(value) {
 
 function statusMarkup(value) {
     const status = value || "New";
-    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    const normalized = status.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return `<span class="lead-status-pill lead-status-${normalized}">${status}</span>`;
 }
 
@@ -72,6 +73,7 @@ function buildNumberSetter(field, decimals = 0) {
 function leadActionMarkup(data) {
     const convertDisabled = data?.canConvertToRetail === false;
     const convertReason = data?.convertDisabledReason || "This enquiry cannot be converted right now.";
+    const isConverted = String(data?.leadStatus || "").trim() === "Converted";
     const safeReason = String(convertReason)
         .replaceAll("&", "&amp;")
         .replaceAll('"', "&quot;")
@@ -93,7 +95,7 @@ function leadActionMarkup(data) {
             </button>
             <button class="button grid-action-button grid-action-button-secondary lead-worklog-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.leads}</span>
-                Work Log
+                ${isConverted ? "View Work Log" : "Work Log"}
             </button>
             <button class="button grid-action-button grid-action-button-danger lead-delete-button" type="button" data-lead-id="${data.id}">
                 <span class="button-icon">${icons.inactive}</span>
@@ -105,7 +107,7 @@ function leadActionMarkup(data) {
 
 function quoteStatusMarkup(value) {
     const status = value || "No Quotes";
-    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    const normalized = status.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return `<span class="quote-status-pill quote-status-${normalized}">${status}</span>`;
 }
 
@@ -221,6 +223,7 @@ function buildLeadWorkLogColumnDefs() {
 
 function quoteGridActionMarkup(data) {
     const status = String(data?.quoteStatus || "").trim();
+    const isLocked = Boolean(data?._leadLocked || status === "Converted");
 
     return `
         <div class="table-actions grid-actions-inline">
@@ -228,11 +231,13 @@ function quoteGridActionMarkup(data) {
                 <span class="button-icon">${icons.search}</span>
                 Open
             </button>
-            <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-revise" data-quote-id="${data.id}">
-                <span class="button-icon">${icons.edit}</span>
-                Revise
-            </button>
-            ${status === "Sent" ? `
+            ${isLocked ? "" : `
+                <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-revise" data-quote-id="${data.id}">
+                    <span class="button-icon">${icons.edit}</span>
+                    Revise
+                </button>
+            `}
+            ${!isLocked && status === "Sent" ? `
                 <button class="button grid-action-button grid-action-button-primary" type="button" data-action="quote-accept" data-quote-id="${data.id}">
                     <span class="button-icon">${icons.active}</span>
                     Accept
@@ -242,7 +247,7 @@ function quoteGridActionMarkup(data) {
                     Reject
                 </button>
             ` : ""}
-            ${["Draft", "Sent"].includes(status) ? `
+            ${!isLocked && ["Draft", "Sent"].includes(status) ? `
                 <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-cancel" data-quote-id="${data.id}">
                     <span class="button-icon">${icons.inactive}</span>
                     Cancel
@@ -267,7 +272,7 @@ function buildLeadQuotesColumnDefs() {
             headerName: "Status",
             minWidth: 130,
             flex: 0.85,
-            cellRenderer: params => quoteStatusMarkup(params.value)
+            cellRenderer: params => quoteStatusMarkup(params.data?.displayQuoteStatus || params.value)
         },
         { field: "store", headerName: "Channel", minWidth: 150, flex: 0.95 },
         {
@@ -310,7 +315,7 @@ function buildRequestedProductsColumnDefs(onRowsChanged) {
             headerName: "Qty",
             minWidth: 95,
             maxWidth: 110,
-            editable: params => !params.node?.rowPinned,
+            editable: params => !params.node?.rowPinned && !leadRequestedProductsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("requestedQty", 0),
             ...rightAlignedNumberColumn
@@ -477,6 +482,10 @@ export function initializeLeadRequestedProductsGrid(gridElement, onRowsChanged) 
 
     currentLeadRequestedProductsGridElement = gridElement;
     return leadRequestedProductsGridApi;
+}
+
+export function setLeadRequestedProductsReadOnly(value) {
+    leadRequestedProductsReadOnly = Boolean(value);
 }
 
 export function refreshLeadRequestedProductsGrid(rows) {

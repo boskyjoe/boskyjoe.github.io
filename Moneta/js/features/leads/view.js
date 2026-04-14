@@ -14,6 +14,7 @@ import {
     refreshLeadRequestedProductsGrid,
     refreshLeadWorkLogGrid,
     refreshLeadsGrid,
+    setLeadRequestedProductsReadOnly,
     updateLeadQuotesGridSearch,
     updateLeadRequestedProductsGridSearch,
     updateLeadWorkLogGridSearch,
@@ -370,7 +371,7 @@ function isQuoteDraftEditable() {
 function canEditQuoteDraftStatus() {
     if (!featureState.quoteDraft) return false;
     const persistedQuoteStatus = normalizeText(featureState.quoteDraft.persistedQuoteStatus || featureState.quoteDraft.quoteStatus || "Draft");
-    return persistedQuoteStatus !== "Superseded";
+    return !["Superseded", "Converted"].includes(persistedQuoteStatus);
 }
 
 function getQuoteDraftSourceQuote() {
@@ -450,7 +451,7 @@ function renderQuoteStatusOptions(currentValue = "Draft") {
 
 function renderQuoteStatusPill(value = "") {
     const status = normalizeText(value) || "No Quotes";
-    const normalized = status.toLowerCase().replace(/\s+/g, "-");
+    const normalized = status.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     return `<span class="quote-status-pill quote-status-${normalized}">${status}</span>`;
 }
 
@@ -576,7 +577,9 @@ function buildQuoteListMarkup(rows = [], options = {}) {
 
     return (rows || []).map(quote => {
         const isActive = quote.id === featureState.activeQuoteId;
-        const acceptedMeta = normalizeText(quote.acceptedByCustomerName)
+        const acceptedMeta = normalizeText(quote.quoteStatus) === "Converted"
+            ? `Converted to ${quote.convertedToSaleNumber || quote.convertedToSaleId || "linked retail sale"}${normalizeText(quote.convertedSaleStatus || quote.conversionOutcomeStatus).toLowerCase() === "voided" ? " · Sale voided" : ""}`
+            : normalizeText(quote.acceptedByCustomerName)
             ? `Accepted by ${quote.acceptedByCustomerName}${quote.acceptedOn ? ` on ${formatDisplayDate(quote.acceptedOn)}` : ""}`
             : (quote.sentOn ? `Sent ${formatDisplayDate(quote.sentOn)}` : `Created ${formatDisplayDate(quote.createdOn)}`);
 
@@ -591,7 +594,7 @@ function buildQuoteListMarkup(rows = [], options = {}) {
                         <p class="lead-quote-list-item-title">${quote.businessQuoteId || "Draft Quote"}</p>
                         <p class="lead-quote-list-item-subtitle">Version ${quote.versionNo || "-"}</p>
                     </div>
-                    ${renderQuoteStatusPill(quote.quoteStatus)}
+                    ${renderQuoteStatusPill(resolveQuoteStatusLabel(quote))}
                 </div>
                 <div class="lead-quote-list-item-meta">
                     <span>${quote.store || "-"}</span>
@@ -615,6 +618,66 @@ function resolveLeadStatusLabel(lead = {}) {
     }
 
     return leadStatus || "New";
+}
+
+function isLeadConversionLocked(lead = null) {
+    if (!lead?.id) return false;
+    return normalizeText(lead.leadStatus || "") === "Converted";
+}
+
+function isLeadConversionVoided(lead = null) {
+    const conversionOutcomeStatus = normalizeText(
+        lead?.conversionOutcomeStatus || lead?.conversionOutcome || lead?.convertedSaleStatus
+    ).toLowerCase();
+
+    return conversionOutcomeStatus === "voided";
+}
+
+function resolveLeadLinkedSaleLabel(lead = null) {
+    if (!lead?.id) return "-";
+
+    const saleNumber = normalizeText(lead.convertedToSaleNumber || "");
+    const saleId = normalizeText(lead.convertedToSaleId || "");
+    return saleNumber || (saleId ? `SALE-${saleId.slice(-6).toUpperCase()}` : "-");
+}
+
+function resolveQuoteStatusLabel(quote = {}) {
+    const status = normalizeText(quote.quoteStatus || "");
+    const saleStatus = normalizeText(quote.convertedSaleStatus || quote.conversionOutcomeStatus || "").toLowerCase();
+
+    if (status === "Converted" && saleStatus === "voided") {
+        return "Converted (Sale Voided)";
+    }
+
+    return status || "No Quotes";
+}
+
+function renderLeadConversionLockBanner(lead, options = {}) {
+    if (!isLeadConversionLocked(lead)) return "";
+
+    const { context = "details" } = options;
+    const saleLabel = resolveLeadLinkedSaleLabel(lead);
+    const isVoided = isLeadConversionVoided(lead);
+    const title = isVoided ? "Retail Sale Voided" : "Converted To Retail Sale";
+    const note = isVoided
+        ? "This enquiry and its quote history are locked for audit safety because the linked retail sale was later voided. If a replacement transaction is needed, start a new enquiry or quote thread."
+        : "This enquiry is now locked because it has been converted into a retail sale. Review is still available, but no further edits are allowed here.";
+    const contextNote = context === "quotes"
+        ? "Quote pricing, status, and version actions are disabled in this converted thread."
+        : "Customer details, requested products, and work-log edits are disabled in this converted thread.";
+
+    return `
+        <div class="lead-conversion-lock-banner">
+            <div>
+                <p class="section-kicker">${title}</p>
+                <p class="panel-copy">${note} ${contextNote}</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">Sale: ${saleLabel}</span>
+                <span class="status-pill">${isVoided ? "Outcome: Voided" : "Outcome: Active"}</span>
+            </div>
+        </div>
+    `;
 }
 
 function buildLeadGridRows() {
@@ -1073,7 +1136,8 @@ function renderLeadQuoteSummaryPanel(editingLead) {
 
 function renderLeadQuotesWorkspaceMeta(editingLead) {
     const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
-    const latestStatus = featureState.quoteRows[0]?.quoteStatus || editingLead?.latestQuoteStatus || "";
+    const latestQuote = featureState.quoteRows[0] || null;
+    const latestStatus = latestQuote ? resolveQuoteStatusLabel(latestQuote) : (editingLead?.latestQuoteStatus || "");
     const quoteCount = Number(editingLead?.quoteCount) || featureState.quoteRows.length;
 
     return `
@@ -1091,12 +1155,14 @@ function renderLeadQuotesEditorCard(editingLead) {
     const sourceQuote = getQuoteDraftSourceQuote();
     const revisionDraft = isQuoteRevisionDraft();
     const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
+    const isLeadLocked = isLeadConversionLocked(editingLead);
     const isEditable = isQuoteDraftEditable();
-    const canEditStatus = canEditQuoteDraftStatus();
+    const canEditStatus = !isLeadLocked && canEditQuoteDraftStatus();
     const quoteTitle = revisionDraft
         ? `Revision Draft${sourceQuote?.businessQuoteId ? ` for ${sourceQuote.businessQuoteId}` : ""}`
         : (quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft");
     const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
+    const displayQuoteStatus = selectedQuote ? resolveQuoteStatusLabel(selectedQuote) : quoteStatus;
     const metadataNote = revisionDraft
         ? `Based on ${sourceQuote?.businessQuoteId || "the selected quote"}${sourceQuote?.versionNo ? ` · Version ${sourceQuote.versionNo}` : ""} · Save draft or send to create the next version.`
         : (selectedQuote
@@ -1110,9 +1176,10 @@ function renderLeadQuotesEditorCard(editingLead) {
                             <p class="lead-quote-editor-title">${quoteTitle}</p>
                             <p class="lead-quote-editor-subtitle">${metadataNote}</p>
                         </div>
-                        ${renderQuoteStatusPill(quoteStatus)}
+                        ${renderQuoteStatusPill(displayQuoteStatus)}
                     </div>
                     ${quoteDraft ? `
+                        ${renderLeadConversionLockBanner(editingLead, { context: "quotes" })}
                         <div class="lead-form-section-grid lead-quote-editor-grid">
                             <div class="field">
                                 <label for="lead-quote-store">Sales Channel</label>
@@ -1220,14 +1287,21 @@ function renderLeadQuotesEditorCard(editingLead) {
                         ${renderQuoteCancellationFields(quoteDraft, { readOnly: !canEditStatus })}
                         <div class="lead-quote-editor-footer">
                             <div class="lead-quote-editor-note">
-                                ${revisionDraft
+                                ${isLeadLocked
+            ? `This quote thread is locked because the linked enquiry was converted to retail sale ${resolveLeadLinkedSaleLabel(editingLead)}${isLeadConversionVoided(editingLead) ? ", and that sale was later voided." : "."}`
+            : revisionDraft
             ? `Revision mode is active. Review the changes, then save draft or send to create the next version from ${sourceQuote?.businessQuoteId || "the selected quote"}.`
             : (acceptedQuote
                 ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
                 : "Only one quote should be marked accepted for a lead. Sent quotes stay frozen for pricing, but their lifecycle status can still be updated here.")}
                             </div>
                             <div class="form-actions lead-quote-actions">
-                                ${isEditable ? `
+                                ${isLeadLocked ? `
+                                    <button class="button button-secondary" type="button" data-action="quote-reset-selection">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Close View
+                                    </button>
+                                ` : isEditable ? `
                                     <button class="button button-secondary" type="button" data-action="quote-reset-selection">
                                         <span class="button-icon">${icons.inactive}</span>
                                         Discard Changes
@@ -1247,16 +1321,20 @@ function renderLeadQuotesEditorCard(editingLead) {
                                             Save Status Update
                                         </button>
                                     ` : ""}
-                                    <button class="button button-secondary" type="button" data-action="quote-new-draft">
-                                        <span class="button-icon">${icons.plus}</span>
-                                        Create New Draft Version
-                                    </button>
-                                    ${selectedQuote ? `
-                                        <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
-                                            <span class="button-icon">${icons.edit}</span>
-                                            Revise
+                                    ${isLeadLocked ? "" : `
+                                        <button class="button button-secondary" type="button" data-action="quote-new-draft">
+                                            <span class="button-icon">${icons.plus}</span>
+                                            Create New Draft Version
                                         </button>
-                                        ${normalizeText(quoteStatus) === "Sent" ? `
+                                    `}
+                                    ${selectedQuote ? `
+                                        ${isLeadLocked ? "" : `
+                                            <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
+                                                <span class="button-icon">${icons.edit}</span>
+                                                Revise
+                                            </button>
+                                        `}
+                                        ${!isLeadLocked && normalizeText(quoteStatus) === "Sent" ? `
                                             <button class="button button-primary-alt" type="button" data-action="quote-accept" data-quote-id="${selectedQuote.id}">
                                                 <span class="button-icon">${icons.active}</span>
                                                 Mark Accepted
@@ -1277,13 +1355,17 @@ function renderLeadQuotesEditorCard(editingLead) {
                     ` : `
                         <div class="lead-quotes-empty lead-quotes-empty-large">
                             <p class="lead-quotes-empty-title">Quote history will appear here</p>
-                            <p class="panel-copy">Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer.</p>
-                            <div class="form-actions" style="justify-content: flex-start;">
-                                <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
-                                    <span class="button-icon">${icons.plus}</span>
-                                    Create Quote Draft
-                                </button>
-                            </div>
+                            <p class="panel-copy">${isLeadLocked
+            ? "This converted enquiry is read-only. No new quotes can be created in this thread."
+            : "Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer."}</p>
+                            ${isLeadLocked ? "" : `
+                                <div class="form-actions" style="justify-content: flex-start;">
+                                    <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                        <span class="button-icon">${icons.plus}</span>
+                                        Create Quote Draft
+                                    </button>
+                                </div>
+                            `}
                         </div>
                     `}
         </div>
@@ -1292,6 +1374,8 @@ function renderLeadQuotesEditorCard(editingLead) {
 
 function renderLeadQuotesWorkspace(editingLead) {
     if (!editingLead?.id) return "";
+
+    const isLeadLocked = isLeadConversionLocked(editingLead);
 
     return `
         <section class="panel-card lead-quotes-workspace-card">
@@ -1313,21 +1397,27 @@ function renderLeadQuotesWorkspace(editingLead) {
                             <span class="panel-icon">${icons.catalogue}</span>
                             <div>
                                 <h4>Quote Versions</h4>
-                                <p class="panel-copy">Review all quote records below and use the action column for basic quote actions.</p>
+                                <p class="panel-copy">${isLeadLocked
+            ? "Review the frozen quote history below. Converted threads stay read-only, including when the linked sale is later voided."
+            : "Review all quote records below and use the action column for basic quote actions."}</p>
                             </div>
                         </div>
                         <div class="lead-quotes-sidebar-actions">
-                            <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
-                                <span class="button-icon">${icons.plus}</span>
-                                ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
-                            </button>
+                            ${isLeadLocked ? "" : `
+                                <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                    <span class="button-icon">${icons.plus}</span>
+                                    ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
+                                </button>
+                            `}
                         </div>
                     </div>
                     <div class="panel-body">
                         <div class="toolbar lead-quotes-toolbar">
                             <div>
                                 <p class="section-kicker" style="margin-bottom: 0.25rem;">Versions Grid</p>
-                                <p class="panel-copy">Minimal columns, full width, and actions at the far right for faster handling.</p>
+                                <p class="panel-copy">${isLeadLocked
+            ? "Use this grid to inspect the frozen versions. Editing, revising, and status changes are disabled after conversion."
+            : "Minimal columns, full width, and actions at the far right for faster handling."}</p>
                             </div>
                             <div class="search-wrap">
                                 <span class="search-icon">${icons.search}</span>
@@ -1356,6 +1446,8 @@ function renderLeadQuotesDrawer() {
 
     const activeLead = getQuoteContextLead();
     const hasQuotes = featureState.quoteRows.length > 0;
+    const isLeadLocked = isLeadConversionLocked(activeLead);
+    const latestQuote = featureState.quoteRows[0] || null;
     const isOpen = Boolean(
         featureState.isQuoteDrawerOpen
         && featureState.quoteDrawerLeadId
@@ -1386,19 +1478,23 @@ function renderLeadQuotesDrawer() {
                     <div class="lead-quotes-drawer-summary">
                         <span class="status-pill">Lead: ${activeLead?.customerName || "-"}</span>
                         <span class="status-pill">${Number(activeLead?.quoteCount) || featureState.quoteRows.length} quotes</span>
-                        ${activeLead?.latestQuoteStatus ? renderQuoteStatusPill(activeLead.latestQuoteStatus) : ""}
+                        ${(latestQuote || activeLead?.latestQuoteStatus) ? renderQuoteStatusPill(latestQuote ? resolveQuoteStatusLabel(latestQuote) : activeLead.latestQuoteStatus) : ""}
                     </div>
                     <div class="lead-quotes-drawer-sequence">
                         <p class="lead-quotes-drawer-sequence-title">Recommended flow</p>
-                        <p class="panel-copy">${hasQuotes
+                        <p class="panel-copy">${isLeadLocked
+            ? "This converted enquiry is read-only. Review quote history here or open the Quotes Workspace for a fuller read-only view."
+            : hasQuotes
             ? "1. Review the quote versions below. 2. Pick one to continue in the Quotes Workspace, or create a new draft version."
             : "1. Create the first quote draft. 2. Complete pricing and terms in the Quotes Workspace. 3. Send the quote from there."}</p>
                     </div>
                     <div class="lead-quotes-drawer-actions">
-                        <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
-                            <span class="button-icon">${icons.plus}</span>
-                            Create Quote Draft
-                        </button>
+                        ${isLeadLocked ? "" : `
+                            <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                <span class="button-icon">${icons.plus}</span>
+                                Create Quote Draft
+                            </button>
+                        `}
                         ${hasQuotes ? `
                             <button class="button button-secondary" type="button" data-action="quote-focus-workspace">
                                 <span class="button-icon">${icons.edit}</span>
@@ -1433,9 +1529,12 @@ function renderLeadForm(snapshot) {
     const conversionEligibility = editingLead
         ? getLeadConversionEligibility(editingLead, snapshot)
         : { allowed: false, reason: "Save this enquiry first to enable conversion." };
+    const isLeadLocked = isLeadConversionLocked(editingLead);
     const convertDisabledAttrs = !conversionEligibility.allowed
         ? `disabled title="${escapeAttribute(conversionEligibility.reason)}" data-disabled-reason="${escapeAttribute(conversionEligibility.reason)}"`
         : "";
+    const fieldDisabledAttr = isLeadLocked ? "disabled" : "";
+    const workLogLabel = isLeadLocked ? "View Work Log" : "Work Log";
 
     return `
         <div class="panel-card">
@@ -1458,6 +1557,7 @@ function renderLeadForm(snapshot) {
                 ${!editingLead || activeLeadTab === "details" ? `
                     <form id="lead-form">
                         <input id="lead-doc-id" type="hidden" value="${editingLead?.id || ""}">
+                        ${renderLeadConversionLockBanner(editingLead, { context: "details" })}
                         <div class="lead-form-sections">
                             <section class="lead-form-section">
                                 <div class="lead-form-section-head">
@@ -1466,19 +1566,19 @@ function renderLeadForm(snapshot) {
                                 <div class="lead-form-section-grid">
                                     <div class="field field-full">
                                         <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required>
+                                        <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field">
                                         <label for="lead-customer-phone">Phone</label>
-                                        <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567">
+                                        <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567" ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field">
                                         <label for="lead-customer-email">Email</label>
-                                        <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com">
+                                        <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com" ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field field-full">
                                         <label for="lead-customer-address">Customer Address</label>
-                                        <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes">${editingLead?.customerAddress || ""}</textarea>
+                                        <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes" ${fieldDisabledAttr}>${editingLead?.customerAddress || ""}</textarea>
                                     </div>
                                 </div>
                             </section>
@@ -1490,26 +1590,26 @@ function renderLeadForm(snapshot) {
                                 <div class="lead-form-section-grid">
                                     <div class="field">
                                         <label for="lead-enquiry-date">Enquiry Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required>
+                                        <input id="lead-enquiry-date" class="input" type="date" value="${formatDateInputValue(editingLead?.enquiryDate) || formatDateInputValue(new Date())}" required ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field">
                                         <label for="lead-expected-delivery-date">Expected Delivery</label>
-                                        <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}">
+                                        <input id="lead-expected-delivery-date" class="input" type="date" value="${formatDateInputValue(editingLead?.expectedDeliveryDate)}" ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field field-full">
                                         <label for="lead-assigned-to">Assigned To</label>
-                                        <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk">
+                                        <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk" ${fieldDisabledAttr}>
                                     </div>
                                     <div class="field">
                                         <label for="lead-source">Source <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="lead-source" class="select" required>
+                                        <select id="lead-source" class="select" required ${fieldDisabledAttr}>
                                             <option value="">Select source</option>
                                             ${renderSourceOptions(editingLead?.leadSource || "")}
                                         </select>
                                     </div>
                                     <div class="field">
                                         <label for="lead-status">Status <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="lead-status" class="select" required>
+                                        <select id="lead-status" class="select" required ${fieldDisabledAttr}>
                                             ${renderStatusOptions(editingLead?.leadStatus || "New")}
                                         </select>
                                     </div>
@@ -1523,14 +1623,14 @@ function renderLeadForm(snapshot) {
                                 <div class="lead-form-section-grid">
                                     <div class="field field-full">
                                         <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="lead-catalogue" class="select" required>
+                                        <select id="lead-catalogue" class="select" required ${fieldDisabledAttr}>
                                             <option value="">Select a catalogue...</option>
                                             ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
                                         </select>
                                     </div>
                                     <div class="field field-full">
                                         <label for="lead-notes">General Notes</label>
-                                        <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details">${editingLead?.leadNotes || ""}</textarea>
+                                        <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details" ${fieldDisabledAttr}>${editingLead?.leadNotes || ""}</textarea>
                                     </div>
                                 </div>
                             </section>
@@ -1573,17 +1673,19 @@ function renderLeadForm(snapshot) {
                                 </button>
                                 <button class="button button-secondary lead-worklog-button" type="button" data-lead-id="${editingLead.id}">
                                     <span class="button-icon">${icons.leads}</span>
-                                    Work Log
+                                    ${workLogLabel}
                                 </button>
                                 <button id="lead-cancel-button" class="button button-secondary" type="button">
                                     <span class="button-icon">${icons.inactive}</span>
                                     Cancel
                                 </button>
                             ` : ""}
-                            <button class="button button-primary-alt" type="submit" form="lead-form">
-                                <span class="button-icon">${editingLead ? icons.edit : icons.plus}</span>
-                                ${editingLead ? "Update Enquiry" : "Save Enquiry"}
-                            </button>
+                            ${isLeadLocked ? "" : `
+                                <button class="button button-primary-alt" type="submit" form="lead-form">
+                                    <span class="button-icon">${editingLead ? icons.edit : icons.plus}</span>
+                                    ${editingLead ? "Update Enquiry" : "Save Enquiry"}
+                                </button>
+                            `}
                         </div>
                     </div>
                 ` : renderLeadQuotesWorkspace(editingLead)}
@@ -1685,6 +1787,7 @@ function renderLeadsHistoryPanel() {
 function renderLeadWorkLogModal() {
     const activeLead = getActiveWorkLogLead();
     const entryCount = featureState.workLogEntries.length;
+    const isLeadLocked = isLeadConversionLocked(activeLead);
 
     return `
         <div id="lead-worklog-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-worklog-title" ${activeLead ? "" : "hidden"}>
@@ -1714,27 +1817,36 @@ function renderLeadWorkLogModal() {
                                 </div>
                             </div>
                             <div class="panel-body">
-                                <form id="lead-worklog-entry-form">
-                                    <input id="lead-worklog-lead-id" type="hidden" value="${activeLead?.id || ""}">
-                                    <div class="lead-worklog-entry-grid">
-                                        <div class="field">
-                                            <label for="lead-worklog-type">Log Type <span class="required-mark" aria-hidden="true">*</span></label>
-                                            <select id="lead-worklog-type" class="select" required>
-                                                ${renderLogTypeOptions()}
-                                            </select>
-                                        </div>
-                                        <div class="field field-full">
-                                            <label for="lead-worklog-notes">Notes <span class="required-mark" aria-hidden="true">*</span></label>
-                                            <textarea id="lead-worklog-notes" class="textarea" rows="3" placeholder="Document the interaction, follow-up outcome, or next action..." required></textarea>
+                                ${isLeadLocked ? `
+                                    <div class="lead-conversion-lock-banner">
+                                        <div>
+                                            <p class="section-kicker">Read Only Activity History</p>
+                                            <p class="panel-copy">This converted enquiry is locked. You can review past work-log activity, but no new entries can be added.</p>
                                         </div>
                                     </div>
-                                    <div class="form-actions">
-                                        <button id="lead-worklog-save-button" class="button button-primary-alt" type="submit">
-                                            <span class="button-icon">${icons.plus}</span>
-                                            Save Log Entry
-                                        </button>
-                                    </div>
-                                </form>
+                                ` : `
+                                    <form id="lead-worklog-entry-form">
+                                        <input id="lead-worklog-lead-id" type="hidden" value="${activeLead?.id || ""}">
+                                        <div class="lead-worklog-entry-grid">
+                                            <div class="field">
+                                                <label for="lead-worklog-type">Log Type <span class="required-mark" aria-hidden="true">*</span></label>
+                                                <select id="lead-worklog-type" class="select" required>
+                                                    ${renderLogTypeOptions()}
+                                                </select>
+                                            </div>
+                                            <div class="field field-full">
+                                                <label for="lead-worklog-notes">Notes <span class="required-mark" aria-hidden="true">*</span></label>
+                                                <textarea id="lead-worklog-notes" class="textarea" rows="3" placeholder="Document the interaction, follow-up outcome, or next action..." required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-actions">
+                                            <button id="lead-worklog-save-button" class="button button-primary-alt" type="submit">
+                                                <span class="button-icon">${icons.plus}</span>
+                                                Save Log Entry
+                                            </button>
+                                        </div>
+                                    </form>
+                                `}
                             </div>
                         </div>
 
@@ -1834,11 +1946,17 @@ function refreshLeadQuotesWorkspaceDom() {
 function syncLeadProductsGrid() {
     const gridElement = document.getElementById("lead-products-grid");
     if (!gridElement) return;
+    const editingLead = getEditingLead();
+    const isLeadLocked = isLeadConversionLocked(editingLead);
 
     initializeLeadRequestedProductsGrid(gridElement, () => {
         updateRequestedSummary();
     });
-    refreshLeadRequestedProductsGrid(featureState.catalogueItemRows);
+    setLeadRequestedProductsReadOnly(isLeadLocked);
+    refreshLeadRequestedProductsGrid((featureState.catalogueItemRows || []).map(row => ({
+        ...row,
+        _readOnly: isLeadLocked
+    })));
     updateLeadRequestedProductsGridSearch(featureState.itemSearchTerm);
     updateRequestedSummary();
 }
@@ -1860,6 +1978,8 @@ function syncLeadWorkLogGrid() {
 function syncLeadQuotesGrid() {
     const gridElement = document.getElementById("lead-quotes-grid");
     if (!gridElement) return;
+    const activeLead = getEditingLead() || getQuoteContextLead();
+    const isLeadLocked = isLeadConversionLocked(activeLead);
 
     initializeLeadQuotesGrid(gridElement, quote => {
         if (!quote?.id) return;
@@ -1868,7 +1988,11 @@ function syncLeadQuotesGrid() {
         featureState.quoteDraft = buildQuoteDraftFromRecord(quote);
         renderActiveLeadSurface();
     });
-    refreshLeadQuotesGrid(featureState.quoteRows, featureState.activeQuoteId || "");
+    refreshLeadQuotesGrid((featureState.quoteRows || []).map(quote => ({
+        ...quote,
+        _leadLocked: isLeadLocked,
+        displayQuoteStatus: resolveQuoteStatusLabel(quote)
+    })), featureState.activeQuoteId || "");
     updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
 }
 
@@ -2093,8 +2217,14 @@ export function renderLeadQuotesView() {
     const activeLead = getQuoteContextLead();
 
     if (routeParams.mode === "new" && activeLead?.id && (!featureState.quoteDraft || featureState.quoteDraft.docId)) {
-        featureState.activeQuoteId = "";
-        featureState.quoteDraft = buildLeadQuoteDraft(activeLead);
+        try {
+            featureState.activeQuoteId = "";
+            featureState.quoteDraft = buildLeadQuoteDraft(activeLead);
+        } catch (error) {
+            showToast(error?.message || "Could not open a new quote draft.", "warning", {
+                title: "Leads & Enquiries"
+            });
+        }
     }
 
     renderLeadQuotesPageShell();
@@ -2118,6 +2248,13 @@ async function handleCatalogueChange(target) {
 
 async function handleLeadSubmit(event) {
     event.preventDefault();
+
+    if (isLeadConversionLocked(getEditingLead())) {
+        showToast("Converted enquiries are read-only and cannot be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
 
     try {
         const docId = document.getElementById("lead-doc-id")?.value || "";
@@ -2200,10 +2337,12 @@ async function handleLeadEdit(button) {
     featureState.itemSearchTerm = "";
     featureState.quoteSearchTerm = "";
     renderLeadsView();
-    focusFormField({
-        formId: "lead-form",
-        inputSelector: "#lead-customer-name"
-    });
+    if (!isLeadConversionLocked(lead)) {
+        focusFormField({
+            formId: "lead-form",
+            inputSelector: "#lead-customer-name"
+        });
+    }
     await loadCatalogueItemsIntoWorkspace(lead.catalogueId || "", lead.requestedProducts || []);
 }
 
@@ -2232,6 +2371,10 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
         : (featureState.quoteDrawerLeadId === lead.id ? lead.id : null);
     featureState.isQuoteDrawerOpen = Boolean(openDrawer);
     featureState.pendingQuoteSelectionId = "";
+
+    if (createDraft && isLeadConversionLocked(lead)) {
+        throw new Error("Converted leads are read-only. No new quotes can be created in this thread.");
+    }
 
     if (createDraft) {
         featureState.activeQuoteId = "";
@@ -2346,6 +2489,13 @@ async function handleQuoteNewDraft() {
         return;
     }
 
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. No new quotes can be created.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
     await openLeadQuoteWorkspace(lead, {
         openDrawer: false,
         createDraft: true
@@ -2390,6 +2540,13 @@ async function handleQuoteSave(submitStatusOverride = "") {
 
     if (!lead?.id) {
         showToast("Open a saved lead before saving quotes.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quotes can no longer be changed.", "warning", {
             title: "Leads & Enquiries"
         });
         return;
@@ -2526,6 +2683,13 @@ async function handleQuoteRevise(button) {
 
     if (!lead?.id || !quote?.id) return;
 
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote revisions are disabled.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
     try {
         featureState.pendingQuoteSelectionId = "";
         featureState.activeQuoteId = quote.id;
@@ -2551,6 +2715,13 @@ async function handleQuoteAccept(button) {
     const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
 
     if (!lead?.id || !quote?.id) return;
+
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
 
     try {
         updateQuoteAcceptanceFieldsFromDom();
@@ -2585,6 +2756,13 @@ async function handleQuoteReject(button) {
 
     if (!lead?.id || !quote?.id) return;
 
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
     const rejectionReason = window.prompt("Enter the rejection reason for this quote:", quote.rejectionReason || "") || "";
     if (!rejectionReason.trim()) return;
 
@@ -2614,6 +2792,13 @@ async function handleQuoteCancel(button) {
     const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
 
     if (!lead?.id || !quote?.id) return;
+
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
 
     const cancellationReason = window.prompt("Enter the cancellation reason for this quote:", quote.cancellationReason || "") || "";
     if (!cancellationReason.trim()) return;
@@ -2995,6 +3180,14 @@ async function handleLeadWorkLogSubmit(event) {
     event.preventDefault();
 
     const leadId = document.getElementById("lead-worklog-lead-id")?.value || "";
+    const lead = featureState.leads.find(entry => entry.id === leadId) || null;
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted enquiries are read-only. No new work-log entries can be added.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
     const logType = document.getElementById("lead-worklog-type")?.value || "";
     const notes = document.getElementById("lead-worklog-notes")?.value || "";
     try {
