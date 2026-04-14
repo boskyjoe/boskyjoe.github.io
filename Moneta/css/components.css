@@ -1843,6 +1843,11 @@ select {
     color: #1f7a3b;
 }
 
+.lead-status-converted-sale-voided {
+    background: #fff4df;
+    color: #9a5a0a;
+}
+
 .lead-status-lost {
     background: #ffe8e8;
     color: #af2d2d;
@@ -1958,6 +1963,18 @@ select {
     border-color: #dfe6f1;
 }
 
+.lead-conversion-lock-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid #f3d8a2;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #fffaf0 0%, #fff4df 100%);
+}
+
 .lead-editor-tabs {
     display: grid;
     width: 100%;
@@ -2021,6 +2038,16 @@ select {
 .quote-status-cancelled {
     background: #ffe8e8;
     color: #af2d2d;
+}
+
+.quote-status-converted {
+    background: #eef3ff;
+    color: #3056c6;
+}
+
+.quote-status-converted-sale-voided {
+    background: #fff4df;
+    color: #9a5a0a;
 }
 
 .quote-status-expired,
