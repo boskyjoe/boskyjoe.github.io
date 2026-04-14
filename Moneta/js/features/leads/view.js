@@ -1583,7 +1583,7 @@ function syncLeadQuotesGrid() {
         if (!quote?.id) return;
         featureState.activeQuoteId = quote.id;
         featureState.quoteDraft = buildQuoteDraftFromRecord(quote);
-        renderLeadsView();
+        renderActiveLeadSurface();
     });
     refreshLeadQuotesGrid(featureState.quoteRows, featureState.activeQuoteId || "");
     updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
@@ -1634,15 +1634,20 @@ function detachLeadsListener(options = {}) {
 }
 
 function ensureQuoteListener(snapshot) {
+    const isQuoteUiActive = getActiveLeadTab() === "quotes" || featureState.isQuoteDrawerOpen;
     const shouldListen = [ "#/leads", LEAD_QUOTES_ROUTE ].includes(snapshot.currentRoute)
         && Boolean(snapshot.currentUser)
-        && Boolean(getQuoteContextLeadId());
+        && Boolean(getQuoteContextLeadId())
+        && isQuoteUiActive;
 
     if (!shouldListen) {
-        if (snapshot.currentRoute !== "#/leads" || !snapshot.currentUser) {
+        if (![ "#/leads", LEAD_QUOTES_ROUTE ].includes(snapshot.currentRoute) || !snapshot.currentUser) {
             resetQuoteWorkspace({ closeDrawer: true });
+            detachQuoteListener({ reset: true });
+            return;
         }
-        detachQuoteListener({ reset: true });
+
+        detachQuoteListener();
         return;
     }
 
@@ -2095,9 +2100,6 @@ async function handleQuoteSave(submitStatus = "Draft") {
 
         if (getState().currentRoute === LEAD_QUOTES_ROUTE && result.quoteId) {
             window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: result.quoteId }));
-            renderLeadQuotesView();
-        } else {
-            renderLeadsView();
         }
 
         showToast(submitStatus === "Sent" ? "Quote sent." : "Quote draft saved.", "success", {
@@ -2128,9 +2130,6 @@ async function handleQuoteRevise(button) {
 
         if (getState().currentRoute === LEAD_QUOTES_ROUTE && result?.id) {
             window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: result.id }));
-            renderLeadQuotesView();
-        } else {
-            renderLeadsView();
         }
 
         showToast("Revision draft created.", "success", {
@@ -2164,9 +2163,6 @@ async function handleQuoteAccept(button) {
         featureState.quoteDraft = acceptedQuote ? buildQuoteDraftFromRecord(acceptedQuote) : null;
         if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
             window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-            renderLeadQuotesView();
-        } else {
-            renderLeadsView();
         }
 
         showToast("Quote marked accepted.", "success", {
@@ -2197,9 +2193,6 @@ async function handleQuoteReject(button) {
         featureState.quoteDraft = rejectedQuote ? buildQuoteDraftFromRecord(rejectedQuote) : null;
         if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
             window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-            renderLeadQuotesView();
-        } else {
-            renderLeadsView();
         }
 
         showToast("Quote marked rejected.", "success", {
@@ -2230,9 +2223,6 @@ async function handleQuoteCancel(button) {
         featureState.quoteDraft = cancelledQuote ? buildQuoteDraftFromRecord(cancelledQuote) : null;
         if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
             window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-            renderLeadQuotesView();
-        } else {
-            renderLeadsView();
         }
 
         showToast("Quote cancelled.", "success", {
@@ -2509,6 +2499,15 @@ function handleLeadWorkLogSearchInput(target) {
 function handleLeadQuoteSearchInput(target) {
     featureState.quoteSearchTerm = target.value || "";
     updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
+}
+
+function renderActiveLeadSurface() {
+    if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
+        renderLeadQuotesView();
+        return;
+    }
+
+    renderLeadsView();
 }
 
 async function handleLeadWorkLogOpen(button) {
