@@ -973,9 +973,21 @@ function renderLeadQuoteSummaryPanel(editingLead) {
     `;
 }
 
-function renderLeadQuotesWorkspace(editingLead) {
-    if (!editingLead?.id) return "";
+function renderLeadQuotesWorkspaceMeta(editingLead) {
+    const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
+    const latestStatus = featureState.quoteRows[0]?.quoteStatus || editingLead?.latestQuoteStatus || "";
+    const quoteCount = Number(editingLead?.quoteCount) || featureState.quoteRows.length;
 
+    return `
+        <div class="toolbar-meta lead-quotes-workspace-meta">
+            <span class="status-pill">${quoteCount} quotes</span>
+            ${latestStatus ? renderQuoteStatusPill(latestStatus) : ""}
+            ${acceptedQuote?.businessQuoteId ? `<span class="status-pill">Accepted: ${acceptedQuote.businessQuoteId}</span>` : ""}
+        </div>
+    `;
+}
+
+function renderLeadQuotesEditorCard(editingLead) {
     const selectedQuote = getSelectedQuote();
     const quoteDraft = featureState.quoteDraft;
     const sourceQuote = getQuoteDraftSourceQuote();
@@ -993,23 +1005,7 @@ function renderLeadQuotesWorkspace(editingLead) {
             : "Start a fresh version from this enquiry when pricing is ready.");
 
     return `
-        <section class="panel-card lead-quotes-workspace-card">
-            <div class="panel-header panel-header-accent">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
-                    <div>
-                        <h3>Quotes Workspace</h3>
-                        <p class="panel-copy">Draft, send, revise, and track accepted quote versions without leaving the lead.</p>
-                    </div>
-                </div>
-                <div class="toolbar-meta">
-                    <span class="status-pill">${Number(editingLead.quoteCount) || featureState.quoteRows.length} quotes</span>
-                    ${editingLead.latestQuoteStatus ? renderQuoteStatusPill(editingLead.latestQuoteStatus) : ""}
-                    ${editingLead.acceptedQuoteNumber ? `<span class="status-pill">Accepted: ${editingLead.acceptedQuoteNumber}</span>` : ""}
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="lead-quote-editor-card">
+        <div class="lead-quote-editor-card">
                     <div class="lead-quote-editor-head">
                         <div>
                             <p class="lead-quote-editor-title">${quoteTitle}</p>
@@ -1183,7 +1179,27 @@ function renderLeadQuotesWorkspace(editingLead) {
                             </div>
                         </div>
                     `}
+        </div>
+    `;
+}
+
+function renderLeadQuotesWorkspace(editingLead) {
+    if (!editingLead?.id) return "";
+
+    return `
+        <section class="panel-card lead-quotes-workspace-card">
+            <div class="panel-header panel-header-accent">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
+                    <div>
+                        <h3>Quotes Workspace</h3>
+                        <p class="panel-copy">Draft, send, revise, and track accepted quote versions without leaving the lead.</p>
+                    </div>
                 </div>
+                ${renderLeadQuotesWorkspaceMeta(editingLead)}
+            </div>
+            <div class="panel-body">
+                ${renderLeadQuotesEditorCard(editingLead)}
                 <div class="panel-card lead-quotes-grid-card">
                     <div class="panel-header">
                         <div class="panel-title-wrap">
@@ -1673,6 +1689,41 @@ function renderLeadsViewShell(snapshot) {
     `;
 }
 
+function refreshLeadQuotesWorkspaceDom() {
+    const activeLead = getEditingLead() || getQuoteContextLead();
+    const workspace = document.querySelector(".lead-quotes-workspace-card");
+
+    if (!activeLead?.id || !workspace) {
+        renderActiveLeadSurface();
+        return;
+    }
+
+    const tabsNode = document.querySelector(".lead-editor-tabs");
+    if (tabsNode && getState().currentRoute === "#/leads") {
+        tabsNode.outerHTML = renderLeadEditorTabs(activeLead, getActiveLeadTab());
+    }
+
+    const workspaceMetaNode = workspace.querySelector(".lead-quotes-workspace-meta");
+    if (workspaceMetaNode) {
+        workspaceMetaNode.outerHTML = renderLeadQuotesWorkspaceMeta(activeLead);
+    }
+
+    const editorCardNode = workspace.querySelector(".lead-quote-editor-card");
+    if (editorCardNode) {
+        editorCardNode.outerHTML = renderLeadQuotesEditorCard(activeLead);
+    }
+
+    const createDraftButton = workspace.querySelector(".lead-quotes-sidebar-actions [data-action=\"quote-new-draft\"]");
+    if (createDraftButton) {
+        createDraftButton.innerHTML = `
+            <span class="button-icon">${icons.plus}</span>
+            ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
+        `;
+    }
+
+    syncLeadQuotesGrid();
+}
+
 function syncLeadProductsGrid() {
     const gridElement = document.getElementById("lead-products-grid");
     if (!gridElement) return;
@@ -1803,7 +1854,11 @@ function ensureQuoteListener(snapshot) {
                 if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
                     renderLeadQuotesView();
                 } else if (getState().currentRoute === "#/leads") {
-                    renderLeadsView();
+                    if (getActiveLeadTab() === "quotes") {
+                        refreshLeadQuotesWorkspaceDom();
+                    } else {
+                        renderLeadsView();
+                    }
                 }
             }
         },
@@ -1898,7 +1953,11 @@ function ensureLeadsListener(snapshot) {
             if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
                 renderLeadQuotesView();
             } else if (getState().currentRoute === "#/leads") {
-                renderLeadsView();
+                if (getActiveLeadTab() === "quotes") {
+                    refreshLeadQuotesWorkspaceDom();
+                } else {
+                    renderLeadsView();
+                }
             }
         },
         error => {
@@ -2296,7 +2355,11 @@ async function handleQuoteSave(submitStatusOverride = "") {
         if (hasSelectedQuoteRow) {
             ensureQuoteSelection();
             hydrateQuoteDraftFromSelection();
-            renderActiveLeadSurface();
+            if (getState().currentRoute === "#/leads" && getActiveLeadTab() === "quotes") {
+                refreshLeadQuotesWorkspaceDom();
+            } else {
+                renderActiveLeadSurface();
+            }
         }
 
         showToast(saveToastMessage, "success", {
