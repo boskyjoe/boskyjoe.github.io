@@ -3,6 +3,7 @@ import { COLLECTIONS } from "../../config/collections.js";
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
 const RETAIL_SALE_EXPENSES_SUBCOLLECTION = "expenses";
 const RETAIL_SALE_RETURNS_SUBCOLLECTION = "returns";
+const LEAD_QUOTES_SUBCOLLECTION = "quotes";
 
 function getDb() {
     return firebase.firestore();
@@ -320,14 +321,21 @@ export async function createRetailSaleRecord(payload, user) {
     const saleRef = db.collection(COLLECTIONS.salesInvoices).doc();
     const productRefs = payload.lineItems.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
     const sourceLeadId = normalizeText(payload.sourceLeadId);
+    const sourceQuoteId = normalizeText(payload.sourceQuoteId);
     const sourceLeadRef = sourceLeadId
         ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
+        : null;
+    const sourceQuoteRef = sourceLeadRef && sourceQuoteId
+        ? sourceLeadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(sourceQuoteId)
         : null;
 
     return db.runTransaction(async transaction => {
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
         const sourceLeadDoc = sourceLeadRef
             ? await transaction.get(sourceLeadRef)
+            : null;
+        const sourceQuoteDoc = sourceQuoteRef
+            ? await transaction.get(sourceQuoteRef)
             : null;
 
         if (sourceLeadRef) {
@@ -341,6 +349,19 @@ export async function createRetailSaleRecord(payload, user) {
 
             if (leadStatus === "Converted" && linkedSaleId && linkedSaleId !== saleRef.id) {
                 throw new Error("This lead is already linked to another sale.");
+            }
+        }
+
+        if (sourceQuoteRef) {
+            if (!sourceQuoteDoc?.exists) {
+                throw new Error("The source quote could not be found. Refresh and try conversion again.");
+            }
+
+            const quoteData = sourceQuoteDoc.data() || {};
+            const linkedSaleId = normalizeText(quoteData.convertedToSaleId);
+
+            if (normalizeText(quoteData.quoteStatus) === "Converted" && linkedSaleId && linkedSaleId !== saleRef.id) {
+                throw new Error("This quote is already linked to another retail sale.");
             }
         }
 
@@ -501,6 +522,22 @@ export async function createRetailSaleRecord(payload, user) {
                 convertedStore: payload.store || "",
                 convertedOn: now,
                 convertedBy: user.email,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
+        if (sourceQuoteRef) {
+            transaction.update(sourceQuoteRef, {
+                quoteStatus: "Converted",
+                convertedToSaleId: saleRef.id,
+                convertedToSaleNumber: payload.manualVoucherNumber || "",
+                convertedStore: payload.store || "",
+                convertedOn: now,
+                convertedBy: user.email,
+                conversionOutcome: "Sale Active",
+                conversionOutcomeStatus: "Active",
+                convertedSaleStatus: "Active",
                 updatedBy: user.email,
                 updatedOn: now
             });
@@ -1117,11 +1154,18 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             return !data.isReversalEntry && status !== "voided" && roundCurrency(data.amount) > 0;
         });
         const sourceLeadId = normalizeText(sale.sourceLeadId);
+        const sourceQuoteId = normalizeText(sale.sourceQuoteId);
         const sourceLeadRef = sourceLeadId
             ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
             : null;
+        const sourceQuoteRef = sourceLeadRef && sourceQuoteId
+            ? sourceLeadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(sourceQuoteId)
+            : null;
         const sourceLeadDoc = sourceLeadRef
             ? await transaction.get(sourceLeadRef)
+            : null;
+        const sourceQuoteDoc = sourceQuoteRef
+            ? await transaction.get(sourceQuoteRef)
             : null;
 
         let voidedPaymentCount = 0;
@@ -1325,6 +1369,23 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
         if (sourceLeadRef && sourceLeadDoc?.exists) {
             transaction.update(sourceLeadRef, {
                 leadStatus: "Converted",
+                convertedToSaleId: saleId,
+                convertedToSaleNumber: sale.manualVoucherNumber || "",
+                convertedStore: sale.store || "",
+                conversionOutcome: "Sale Voided",
+                conversionOutcomeStatus: "Voided",
+                convertedSaleStatus: "Voided",
+                convertedSaleVoidedOn: now,
+                convertedSaleVoidedBy: user.email,
+                convertedSaleVoidReason: voidReason,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
+        if (sourceQuoteRef && sourceQuoteDoc?.exists) {
+            transaction.update(sourceQuoteRef, {
+                quoteStatus: "Converted",
                 convertedToSaleId: saleId,
                 convertedToSaleNumber: sale.manualVoucherNumber || "",
                 convertedStore: sale.store || "",
