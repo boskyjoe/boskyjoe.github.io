@@ -280,8 +280,8 @@ function buildLeadQuotesColumnDefs() {
         {
             field: "quoteStatus",
             headerName: "Status",
-            minWidth: 130,
-            flex: 0.85,
+            minWidth: 180,
+            flex: 1.1,
             cellRenderer: params => quoteStatusMarkup(params.data?.displayQuoteStatus || params.value)
         },
         { field: "store", headerName: "Channel", minWidth: 150, flex: 0.95 },
