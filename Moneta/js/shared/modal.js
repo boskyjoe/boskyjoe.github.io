@@ -33,7 +33,8 @@ function renderModal({
     cancelText = "Cancel",
     showCancel = false,
     tone = "default",
-    confirmVariant = "primary"
+    confirmVariant = "primary",
+    choices = []
 }) {
     const root = document.getElementById("modal-root");
     if (!root) return;
@@ -55,8 +56,20 @@ function renderModal({
                 ${note ? `<p class="modal-note">${escapeHtml(note)}</p>` : ""}
             </div>
             <div class="modal-actions">
-                ${showCancel ? `<button id="modal-cancel" class="button button-secondary" type="button">${escapeHtml(cancelText)}</button>` : ""}
-                <button id="modal-confirm" class="${confirmClass}" type="button">${escapeHtml(confirmText)}</button>
+                ${choices.length
+            ? choices.map((choice, index) => {
+                const variantClass = choice.variant === "primary"
+                    ? "button button-primary"
+                    : choice.variant === "danger"
+                        ? "button button-danger-soft"
+                        : "button button-secondary";
+
+                return `<button class="${variantClass}" type="button" data-modal-choice="${escapeHtml(choice.value)}">${escapeHtml(choice.label || `Choice ${index + 1}`)}</button>`;
+            }).join("")
+            : `
+                    ${showCancel ? `<button id="modal-cancel" class="button button-secondary" type="button">${escapeHtml(cancelText)}</button>` : ""}
+                    <button id="modal-confirm" class="${confirmClass}" type="button">${escapeHtml(confirmText)}</button>
+                `}
             </div>
         </div>
     `;
@@ -69,6 +82,9 @@ function renderModal({
 
     confirmButton?.addEventListener("click", () => closeModal(true), { once: true });
     cancelButton?.addEventListener("click", () => closeModal(false), { once: true });
+    root.querySelectorAll("[data-modal-choice]").forEach(button => {
+        button.addEventListener("click", () => closeModal(button.getAttribute("data-modal-choice") || ""), { once: true });
+    });
 }
 
 export function closeModal(result = false) {
@@ -128,5 +144,17 @@ export function showConfirmationModal({
         showCancel: true,
         tone,
         confirmVariant: tone === "danger" ? "danger" : "primary"
+    });
+}
+
+export function showChoiceModal({ title, message = "", details = [], note = "", choices = [] }) {
+    return showModal({
+        title,
+        message,
+        details,
+        note,
+        choices,
+        showCancel: false,
+        tone: "default"
     });
 }

@@ -686,6 +686,7 @@ export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
     }
 
     return {
+        sourceType: "lead",
         leadId: lead.id,
         businessLeadId: lead.businessLeadId || "",
         customerName: normalizeText(lead.customerName),
@@ -695,6 +696,127 @@ export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
         catalogueId,
         catalogueName: selectedCatalogue?.catalogueName || lead.catalogueName || "-",
         leadNotes: normalizeText(lead.leadNotes),
+        items,
+        warnings
+    };
+}
+
+export async function buildLeadQuoteToRetailConversionDraft(lead, quote, masterData = {}) {
+    if (!lead?.id) {
+        throw new Error("Lead record could not be found.");
+    }
+
+    if (!quote?.id) {
+        throw new Error("Quote record could not be found.");
+    }
+
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    if (leadStatus === "Converted") {
+        throw new Error("This lead is already converted.");
+    }
+
+    if (leadStatus === "Lost") {
+        throw new Error("Lost leads cannot be converted to retail sales.");
+    }
+
+    const quoteStore = normalizeQuoteStore(quote.store);
+    if (quoteStore === "Consignment") {
+        throw new Error("Consignment quotes cannot be converted into Retail Store sales.");
+    }
+
+    const catalogueId = normalizeText(quote.catalogueSnapshot?.catalogueId || lead.catalogueId);
+    if (!catalogueId) {
+        throw new Error("This quote does not have a sales catalogue selected.");
+    }
+
+    const quoteLineItems = Array.isArray(quote.lineItems) ? quote.lineItems : [];
+    if (!quoteLineItems.length) {
+        throw new Error("No quoted products are available to convert.");
+    }
+
+    const catalogueItems = await fetchSalesCatalogueItems(catalogueId);
+    const catalogueItemMap = new Map((catalogueItems || []).map(item => [item.productId, item]));
+    const productMap = new Map((masterData.products || []).map(product => [product.id, product]));
+    const catalogueHeaders = masterData.salesCatalogues || [];
+    const selectedCatalogue = catalogueHeaders.find(catalogue => catalogue.id === catalogueId) || null;
+
+    const warnings = [];
+    const items = [];
+    const quoteStatus = normalizeText(quote.quoteStatus || "Draft");
+
+    if (quoteStatus === "Draft") {
+        warnings.push("This conversion is using a draft quote. Review pricing, tax, and customer details carefully before saving the retail sale.");
+    } else if (quoteStatus !== "Accepted") {
+        warnings.push(`This conversion is using a ${quoteStatus.toLowerCase()} quote, not an accepted quote.`);
+    }
+
+    quoteLineItems.forEach(lineItem => {
+        const productId = normalizeText(lineItem.productId);
+        if (!productId) return;
+
+        const quantity = Math.max(0, Math.floor(Number(lineItem.quotedQty) || 0));
+        if (quantity <= 0) return;
+
+        const product = productMap.get(productId) || null;
+        const catalogueItem = catalogueItemMap.get(productId) || null;
+        const unitPrice = Number(lineItem.unitPrice) || 0;
+
+        if (!catalogueItem) {
+            warnings.push(`${lineItem.productName || productId}: not found in the selected sales catalogue. Quote pricing will still be used.`);
+        } else {
+            const currentCataloguePrice = Number(catalogueItem.sellingPrice) || 0;
+            if (currentCataloguePrice > 0 && Number(currentCataloguePrice.toFixed(2)) !== Number(unitPrice.toFixed(2))) {
+                warnings.push(`${lineItem.productName || productId}: using quoted price ${unitPrice.toFixed(2)} instead of current catalogue price ${currentCataloguePrice.toFixed(2)}.`);
+            }
+        }
+
+        if (!product) {
+            warnings.push(`${lineItem.productName || productId}: product is not currently active in the product catalogue.`);
+        } else {
+            const currentStock = Number(product.inventoryCount) || 0;
+            if (currentStock < quantity) {
+                warnings.push(`${lineItem.productName || productId}: quoted ${quantity}, available stock is ${currentStock}.`);
+            }
+        }
+
+        items.push({
+            productId,
+            productName: lineItem.productName || catalogueItem?.productName || product?.itemName || "Untitled Product",
+            categoryId: lineItem.categoryId || catalogueItem?.categoryId || product?.categoryId || "",
+            categoryName: lineItem.categoryName || catalogueItem?.categoryName || "-",
+            quantity,
+            unitPrice,
+            lineDiscountPercentage: Number(lineItem.lineDiscountPercentage) || 0,
+            cgstPercentage: Number(lineItem.cgstPercentage) || 0,
+            sgstPercentage: Number(lineItem.sgstPercentage) || 0
+        });
+    });
+
+    if (!items.length) {
+        throw new Error("No valid quoted product lines could be prepared for this conversion.");
+    }
+
+    if (!selectedCatalogue) {
+        warnings.push("The selected sales catalogue header could not be resolved. Review before saving.");
+    } else if (!selectedCatalogue.isActive) {
+        warnings.push("This sales catalogue is inactive. Activate it or choose another catalogue before saving.");
+    }
+
+    return {
+        sourceType: "quote",
+        sourceQuoteId: quote.id,
+        sourceQuoteNumber: quote.businessQuoteId || "",
+        sourceQuoteStatus: quoteStatus || "Draft",
+        leadId: lead.id,
+        businessLeadId: lead.businessLeadId || "",
+        customerName: normalizeText(quote.customerSnapshot?.customerName || lead.customerName),
+        customerPhone: normalizeText(quote.customerSnapshot?.customerPhone || lead.customerPhone),
+        customerEmail: normalizeText(quote.customerSnapshot?.customerEmail || lead.customerEmail),
+        customerAddress: normalizeText(quote.customerSnapshot?.customerAddress || lead.customerAddress),
+        catalogueId,
+        catalogueName: selectedCatalogue?.catalogueName || quote.catalogueSnapshot?.catalogueName || lead.catalogueName || "-",
+        leadNotes: normalizeText(quote.quoteNotes || lead.leadNotes),
+        preferredStore: quoteStore,
         items,
         warnings
     };

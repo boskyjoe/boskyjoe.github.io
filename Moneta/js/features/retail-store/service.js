@@ -84,7 +84,8 @@ function buildProductLookup(catalogueItems = []) {
     return new Map((catalogueItems || []).map(item => [item.productId, item]));
 }
 
-function normalizeLineItems(rows = [], catalogueItems = []) {
+function normalizeLineItems(rows = [], catalogueItems = [], options = {}) {
+    const { preserveInputPricing = false } = options;
     const catalogueLookup = buildProductLookup(catalogueItems);
 
     return (rows || [])
@@ -97,7 +98,9 @@ function normalizeLineItems(rows = [], catalogueItems = []) {
             }
 
             const quantity = Math.max(0, Math.floor(normalizeNumber(row.quantity)));
-            const unitPrice = roundCurrency(normalizeNumber(catalogueItem.sellingPrice, row.unitPrice));
+            const unitPrice = preserveInputPricing
+                ? roundCurrency(normalizeNumber(row.unitPrice, catalogueItem.sellingPrice))
+                : roundCurrency(normalizeNumber(catalogueItem.sellingPrice, row.unitPrice));
             const lineDiscountPercentage = Math.max(0, normalizeNumber(row.lineDiscountPercentage));
             const cgstPercentage = Math.max(0, normalizeNumber(row.cgstPercentage));
             const sgstPercentage = Math.max(0, normalizeNumber(row.sgstPercentage));
@@ -240,6 +243,10 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
     const sourceLeadId = normalizeText(payload.sourceLeadId);
     const sourceLeadBusinessId = normalizeText(payload.sourceLeadBusinessId);
     const sourceLeadCustomerName = normalizeText(payload.sourceLeadCustomerName);
+    const sourceType = normalizeText(payload.sourceType);
+    const sourceQuoteId = normalizeText(payload.sourceQuoteId);
+    const sourceQuoteNumber = normalizeText(payload.sourceQuoteNumber);
+    const sourceQuoteStatus = normalizeText(payload.sourceQuoteStatus);
     const customerName = normalizeText(payload.customerName);
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
@@ -292,7 +299,9 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
         amountReceived: payload.amountReceived
     });
 
-    const normalizedLineItems = normalizeLineItems(draftSummary.lineItems, catalogueItems);
+    const normalizedLineItems = normalizeLineItems(draftSummary.lineItems, catalogueItems, {
+        preserveInputPricing: Boolean(sourceQuoteId)
+    });
     if (normalizedLineItems.length === 0) {
         throw new Error("Add at least one product with quantity greater than zero.");
     }
@@ -352,9 +361,13 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             salesSeasonId: catalogueHeader.seasonId || "",
             salesSeasonName: catalogueHeader.seasonName || "-",
             manualVoucherNumber,
+            sourceType,
             sourceLeadId,
             sourceLeadBusinessId,
             sourceLeadCustomerName: sourceLeadCustomerName || customerName,
+            sourceQuoteId,
+            sourceQuoteNumber,
+            sourceQuoteStatus,
             customerInfo: {
                 name: customerName,
                 phone: customerPhone,

@@ -286,12 +286,34 @@ quotes now persist under `leads/{leadId}/quotes/{quoteId}` and each quote stores
 `quoteCount`, latest quote id/number/status/sent date, and accepted quote id/number/date/total are updated from quote history and used for fast UI state.
 - Leads grid quote UX implemented:
 the grid now shows one compact `Quotes` badge cell with count + latest status + accepted indicator instead of expanding the grid with many quote columns.
-- Quote UI architecture updated:
-the main `Leads & Enquiries` page now keeps quote UI lightweight with a compact `Quote Summary` section, while full quote authoring has moved to a dedicated internal route at `#/lead-quotes`.
-- Dedicated quote workspace implemented:
-the quote route shows the full `Quote Workspace` for pricing, line-item editing, sending, revising, and acceptance without the full lead form on the same screen.
-- Quote handoff flow updated:
-from a lead, users can `Create Quote Draft`, open `Quick View`, or open the dedicated quote workspace; selecting a quote from Quick View now jumps into the dedicated workspace rather than editing inline on the lead page.
+- Quote UI architecture updated again:
+the current preferred experience is a two-tab lead editor inside `Leads & Enquiries`, with `Edit Enquiry` and `Quotes` tabs sharing the same lead context.
+- Quote tab workflow implemented:
+clicking the grid `Quotes` button now opens the selected lead directly on the `Quotes` tab, while the normal `Edit` button opens the same lead on `Edit Enquiry`.
+- Full quote workspace moved back into the lead editor:
+quote authoring is no longer the default inline experience, but it now lives behind the `Quotes` tab instead of a separate full-page route so users do not lose lead context.
+- Quotes tab layout enhanced:
+the `Quotes` tab now uses a split workspace with a compact AG Grid of quote versions on the left (minimal columns + action column) and the selected quote form/editor on the right.
+- Quotes tab layout refined again:
+to better match the rest of Moneta, the `Quotes` tab now follows the standard pattern of form/workspace first and full-width grid below, and `Enquiry History` is intentionally hidden while the `Quotes` tab is active.
+- Quotes tab spacing and revision flow refined:
+the quote form and `Quote Versions` grid now have explicit breathing room between them, and clicking `Revise` no longer writes immediately; it now opens a local revision draft in the form, then only creates the next version when the user saves or sends it. After that save/send, the latest created version should remain auto-selected in the grid.
+- Quotes tab clarity refined again:
+the vertical separation between the quote form and `Quote Versions` is now more explicit, and the old `Reset` button in the quote form has been relabeled to `Discard Changes` because its purpose is to throw away unsaved edits and reload the selected quote snapshot (or clear the unsaved draft if no saved quote is selected).
+- Quote form compactness refined:
+the quote editor now uses a denser 3-column layout for the core fields, with longer text areas using controlled spans instead of consuming a full row each. This keeps the form shorter while preserving readability and still collapses back to a single-column layout on smaller screens.
+- Quote form customer snapshot and save confirmation refined:
+the quote form now includes editable customer name / phone / email / address copied from the lead, quote save/send now uses the same success-summary modal pattern as other Moneta modules, and customer email is required before a quote can be sent.
+- Quote status control refined:
+the quote form now includes a controlled manual status field for user-managed states (`Draft`, `Sent`, `Expired`, `Cancelled`), while `Accepted` and `Rejected` remain action-driven so audit metadata stays explicit. Quote customer contact edits are also synced back to the parent lead on quote save.
+- Quote listener scope tightened for cost and UX:
+the quote subcollection listener should now be active only while the quote UI is actually open (`Quotes` tab or quick drawer), which reduces unnecessary reads and avoids extra re-render churn on the free Firestore plan.
+- Quote revision save selection stabilized:
+the quote workspace now preserves a pending selected quote id while a quote save is in flight, so the quote listener should not briefly reselect the superseded prior version during revision saves. This is intended to reduce grid flicker and keep the newly created revision version checked once it lands.
+- Quote line editing flicker reduced:
+quoted product qty / price / discount / tax edits in the quote form should no longer trigger a full `renderLeadsView()` redraw. Those edits now update line totals and quote totals in place so the `Quote Versions` grid does not flicker while users are adjusting pricing.
+- Quote workspace listener refresh path refined:
+when the user is on the `Quotes` tab, quote and lead listener updates should now prefer refreshing the quote workspace editor/meta and syncing the `Quote Versions` grid in place instead of rebuilding the full Leads page. This is specifically meant to reduce grid flicker during quote saves and version updates.
 - Quote drawer open-state fix implemented:
 the quick drawer now opens only after an explicit quote action and should not appear by default when simply landing on the Leads / Enquiries module.
 - Quote drawer visibility hardening implemented:
@@ -308,8 +330,12 @@ users can create a new quote draft, save draft, send quote, revise a sent/closed
 the quote workspace includes `Accepted By`, `Accepted Via`, and `Acceptance Notes` fields for marking sent quotes as accepted.
 - Quote delete guardrail implemented:
 leads with quote history cannot be deleted.
-- Quote conversion follow-up still pending:
-lead-to-retail conversion still uses live requested-products data today; a later pass should switch direct-store conversion to prefer the accepted quote snapshot and retain `sourceLeadId` / `sourceQuoteId` / `sourceQuoteNumber`.
+- Lead-to-retail conversion enhanced:
+when a retail-convertible quote is available for a lead, Moneta now prompts the user to choose whether Retail Store should be prepared from the quote snapshot or from the lead request. Quote conversion carries frozen quote customer details, line quantities, pricing, tax, and quote source metadata into Retail Store; lead conversion preserves the previous requested-product flow.
+- Retail Store quote-source audit trail enhanced:
+retail drafts and saved sales now retain `sourceType`, `sourceQuoteId`, `sourceQuoteNumber`, and `sourceQuoteStatus` when conversion came from a quote, and quote-based retail saves preserve quoted pricing instead of silently reverting to current catalogue pricing.
+- Lead-to-retail conversion rule refined:
+`Accepted` quotes should be the preferred conversion source when available; otherwise Moneta can use the currently selected retail-convertible quote (`Draft` / `Sent`) or fall back to the lead request. `Consignment` quotes are intentionally blocked from Retail Store conversion.
 
 ## 8) Retail Store
 `Moneta/js/features/retail-store/`

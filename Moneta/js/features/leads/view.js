@@ -1,5 +1,5 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
@@ -22,6 +22,7 @@ import {
 import { fetchSalesCatalogueItems, subscribeToLeadQuotes, subscribeToLeadWorkLog, subscribeToLeads } from "./repository.js";
 import {
     acceptLeadQuote,
+    buildLeadQuoteToRetailConversionDraft,
     buildLeadQuoteDraft,
     buildLeadToRetailConversionDraft,
     calculateLeadQuoteTotals,
@@ -445,6 +446,41 @@ function renderQuoteStatusPill(value = "") {
     const status = normalizeText(value) || "No Quotes";
     const normalized = status.toLowerCase().replace(/\s+/g, "-");
     return `<span class="quote-status-pill quote-status-${normalized}">${status}</span>`;
+}
+
+function isRetailConvertibleQuote(quote = null) {
+    if (!quote?.id) return false;
+
+    const status = normalizeText(quote.quoteStatus || "");
+    const store = normalizeText(quote.store || "");
+
+    if (store === "Consignment") return false;
+    return ["Draft", "Sent", "Accepted"].includes(status);
+}
+
+async function resolveLeadConversionQuoteSource(lead) {
+    if (!lead?.id) return null;
+
+    const selectedQuote = getEditingLead()?.id === lead.id ? getSelectedQuote() : null;
+    if (isRetailConvertibleQuote(selectedQuote)) {
+        return {
+            quote: selectedQuote,
+            label: selectedQuote.quoteStatus === "Accepted" ? "Accepted Quote" : "Selected Quote"
+        };
+    }
+
+    const acceptedQuoteId = normalizeText(lead.acceptedQuoteId || "");
+    if (acceptedQuoteId) {
+        const acceptedQuote = await getLeadQuote(lead.id, acceptedQuoteId);
+        if (isRetailConvertibleQuote(acceptedQuote)) {
+            return {
+                quote: acceptedQuote,
+                label: "Accepted Quote"
+            };
+        }
+    }
+
+    return null;
 }
 
 function getQuoteStoreTaxDefaults(storeName = "") {
@@ -2531,17 +2567,61 @@ async function handleLeadConvert(button) {
     const requestedValue = Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
         return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
     }, 0).toFixed(2));
-    const preConversionConfirmed = await showConfirmationModal({
-        title: "Convert Enquiry To Retail Sale",
-        message: "Open this enquiry in Retail Store as a prefilled draft sale?",
-        details: [
+    const quoteSource = await resolveLeadConversionQuoteSource(lead);
+    let conversionSource = "lead";
+
+    if (quoteSource?.quote) {
+        const choice = await showChoiceModal({
+            title: "Choose Conversion Source",
+            message: "Select which source Moneta should use to prepare the Retail Store draft sale.",
+            details: [
+                { label: "Lead ID", value: lead.businessLeadId || "-" },
+                { label: "Customer", value: lead.customerName || "-" },
+                { label: "Quote", value: quoteSource.quote.businessQuoteId || "-" },
+                { label: "Quote Status", value: quoteSource.quote.quoteStatus || "-" },
+                { label: "Quote Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0) }
+            ],
+            note: "Quote conversion uses the quote snapshot for pricing, tax, and customer details. Lead conversion uses the enquiry requested products and current retail review flow.",
+            choices: [
+                { value: "quote", label: `Use ${quoteSource.label}`, variant: "primary" },
+                { value: "lead", label: "Use Lead Request", variant: "secondary" },
+                { value: "cancel", label: "Cancel", variant: "secondary" }
+            ]
+        });
+
+        if (!choice || choice === "cancel") {
+            showToast("Retail conversion cancelled.", "info", {
+                title: "Leads & Enquiries"
+            });
+            return;
+        }
+
+        conversionSource = choice;
+    }
+
+    const preConversionDetails = conversionSource === "quote" && quoteSource?.quote
+        ? [
+            { label: "Lead ID", value: lead.businessLeadId || "-" },
+            { label: "Customer", value: quoteSource.quote.customerSnapshot?.customerName || lead.customerName || "-" },
+            { label: "Source", value: `${quoteSource.label}: ${quoteSource.quote.businessQuoteId || "-"}` },
+            { label: "Quote Status", value: quoteSource.quote.quoteStatus || "-" },
+            { label: "No. Of Products", value: String((quoteSource.quote.lineItems || []).filter(item => (Number(item.quotedQty) || 0) > 0).length) },
+            { label: "Quoted Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0) }
+        ]
+        : [
             { label: "Lead ID", value: lead.businessLeadId || "-" },
             { label: "Customer", value: lead.customerName || "-" },
             { label: "Catalogue", value: lead.catalogueName || "-" },
             { label: "No. Of Products", value: String(requestedProductCount) },
             { label: "Est. Value", value: formatCurrency(requestedValue) }
-        ],
-        note: "Checklist: verify the correct sales catalogue is selected, confirm requested quantities and customer contact details, then review store, pricing, tax, discount, and payment in Retail Store before saving. No sale is saved yet; conversion opens a prefilled draft sale.",
+        ];
+    const preConversionConfirmed = await showConfirmationModal({
+        title: "Convert Enquiry To Retail Sale",
+        message: "Open this enquiry in Retail Store as a prefilled draft sale?",
+        details: preConversionDetails,
+        note: conversionSource === "quote"
+            ? "Checklist: review the selected quote snapshot, confirm the retail store, and verify payment handling before saving. Quote conversion carries frozen quote pricing, tax, and customer details into Retail Store."
+            : "Checklist: verify the correct sales catalogue is selected, confirm requested quantities and customer contact details, then review store, pricing, tax, discount, and payment in Retail Store before saving. No sale is saved yet; conversion opens a prefilled draft sale.",
         confirmText: "Convert",
         cancelText: "Cancel",
         tone: "warning"
@@ -2557,15 +2637,31 @@ async function handleLeadConvert(button) {
     try {
         const conversionDraft = await runProgressToastFlow({
             title: "Preparing Retail Conversion",
-            initialMessage: "Reading enquiry details and requested products...",
+            initialMessage: conversionSource === "quote"
+                ? "Reading enquiry and selected quote snapshot..."
+                : "Reading enquiry details and requested products...",
             initialProgress: 18,
             initialStep: "Step 1 of 4",
             successTitle: "Conversion Package Ready",
             successMessage: "The enquiry is ready to open in Retail Store."
         }, async ({ update }) => {
-            update("Validating lead status, catalogue, and requested products...", 42, "Step 2 of 4");
-            const conversionDraft = await buildLeadToRetailConversionDraft(lead, getState().masterData);
-            update("Preparing retail worksheet line items using current catalogue pricing...", 76, "Step 3 of 4");
+            update(
+                conversionSource === "quote"
+                    ? "Validating lead status, selected quote snapshot, and quoted products..."
+                    : "Validating lead status, catalogue, and requested products...",
+                42,
+                "Step 2 of 4"
+            );
+            const conversionDraft = conversionSource === "quote" && quoteSource?.quote
+                ? await buildLeadQuoteToRetailConversionDraft(lead, quoteSource.quote, getState().masterData)
+                : await buildLeadToRetailConversionDraft(lead, getState().masterData);
+            update(
+                conversionSource === "quote"
+                    ? "Preparing retail worksheet line items using quote pricing and tax..."
+                    : "Preparing retail worksheet line items using current catalogue pricing...",
+                76,
+                "Step 3 of 4"
+            );
             update("Conversion package prepared.", 96, "Step 4 of 4");
             return conversionDraft;
         });
@@ -2600,14 +2696,19 @@ async function handleLeadConvert(button) {
         }
 
         const conversionPackage = {
+            sourceType: conversionDraft.sourceType || conversionSource,
             leadId: conversionDraft.leadId,
             businessLeadId: conversionDraft.businessLeadId,
+            sourceQuoteId: conversionDraft.sourceQuoteId || "",
+            sourceQuoteNumber: conversionDraft.sourceQuoteNumber || "",
+            sourceQuoteStatus: conversionDraft.sourceQuoteStatus || "",
             customerName: conversionDraft.customerName,
             customerPhone: conversionDraft.customerPhone,
             customerEmail: conversionDraft.customerEmail,
             customerAddress: conversionDraft.customerAddress,
             catalogueId: conversionDraft.catalogueId,
             catalogueName: conversionDraft.catalogueName,
+            preferredStore: conversionDraft.preferredStore || "",
             leadNotes: conversionDraft.leadNotes,
             items: conversionDraft.items,
             warnings: conversionDraft.warnings || [],

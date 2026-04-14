@@ -110,9 +110,13 @@ function createDefaultSaleDraft() {
         orderDiscountPercentage: "",
         orderDiscountAmount: "",
         orderTaxPercentage: "",
+        sourceType: "",
         sourceLeadId: "",
         sourceLeadBusinessId: "",
-        sourceLeadCustomerName: ""
+        sourceLeadCustomerName: "",
+        sourceQuoteId: "",
+        sourceQuoteNumber: "",
+        sourceQuoteStatus: ""
     };
 }
 
@@ -1299,9 +1303,13 @@ function renderRetailStoreViewShell(snapshot) {
     const paymentStatus = hasPersistedSaleStatus
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
+    const sourceType = normalizeText(featureState.saleDraft.sourceType || workspaceSale?.sourceType || "");
     const sourceLeadId = normalizeText(featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "");
     const sourceLeadBusinessId = normalizeText(featureState.saleDraft.sourceLeadBusinessId || workspaceSale?.sourceLeadBusinessId || "");
     const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId ? `LEAD-${sourceLeadId.slice(-6).toUpperCase()}` : "");
+    const sourceQuoteId = normalizeText(featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || "");
+    const sourceQuoteNumber = normalizeText(featureState.saleDraft.sourceQuoteNumber || workspaceSale?.sourceQuoteNumber || "");
+    const sourceQuoteStatus = normalizeText(featureState.saleDraft.sourceQuoteStatus || workspaceSale?.sourceQuoteStatus || "");
     const expenseModalSale = getExpenseModalSale();
     const canEditSaleIdentity = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
     const canEditCustomerInfo = !isViewMode && !isReturnMode && !isVoidMode;
@@ -1374,10 +1382,15 @@ function renderRetailStoreViewShell(snapshot) {
         <div class="retail-source-lead-banner">
             <div>
                 <p class="section-kicker">Lead Conversion</p>
-                <p class="panel-copy">This retail sale is linked to enquiry <strong>${sourceLeadDisplayId || sourceLeadId}</strong>.</p>
+                <p class="panel-copy">
+                    This retail sale is linked to enquiry <strong>${sourceLeadDisplayId || sourceLeadId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
+                </p>
             </div>
             <div class="toolbar-meta">
                 <span class="status-pill">${sourceLeadDisplayId || sourceLeadId}</span>
+                ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
+                ${sourceQuoteStatus ? `<span class="status-pill">${sourceQuoteStatus}</span>` : ""}
+                ${sourceType ? `<span class="status-pill">Source: ${sourceType === "quote" ? "Quote" : "Lead"}</span>` : ""}
             </div>
         </div>
     ` : "";
@@ -1407,6 +1420,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <span class="status-pill">${summary.itemCount} active products</span>
                     <span class="status-pill">${featureState.sales.length} sales recorded</span>
                     ${sourceLeadId ? `<span class="status-pill">Lead: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
+                    ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
                 </div>
             </div>
             <div class="panel-body">
@@ -2153,10 +2167,17 @@ function applyPendingLeadConversionPackage() {
         customerAddress: conversionPackage.customerAddress || "",
         salesCatalogueId: conversionPackage.catalogueId || "",
         saleNotes: conversionPackage.leadNotes || "",
+        sourceType: conversionPackage.sourceType || "lead",
         sourceLeadId: conversionPackage.leadId || "",
         sourceLeadBusinessId: conversionPackage.businessLeadId || "",
-        sourceLeadCustomerName: conversionPackage.customerName || ""
+        sourceLeadCustomerName: conversionPackage.customerName || "",
+        sourceQuoteId: conversionPackage.sourceQuoteId || "",
+        sourceQuoteNumber: conversionPackage.sourceQuoteNumber || "",
+        sourceQuoteStatus: conversionPackage.sourceQuoteStatus || ""
     };
+    if (conversionPackage.preferredStore && RETAIL_STORES.includes(conversionPackage.preferredStore)) {
+        featureState.saleDraft.store = conversionPackage.preferredStore;
+    }
     featureState.lineItemDrafts = Object.fromEntries((conversionPackage.items || []).map(item => [item.productId, {
         productName: item.productName || "",
         categoryId: item.categoryId || "",
@@ -2239,9 +2260,13 @@ function buildSaleDraftFromSale(sale) {
             ? String(Number(sale.financials?.orderDiscountValue) || 0)
             : "",
         orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
+        sourceType: sale.sourceType || "",
         sourceLeadId: sale.sourceLeadId || "",
         sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
         sourceLeadCustomerName: sale.sourceLeadCustomerName || "",
+        sourceQuoteId: sale.sourceQuoteId || "",
+        sourceQuoteNumber: sale.sourceQuoteNumber || "",
+        sourceQuoteStatus: sale.sourceQuoteStatus || "",
         editReason: "",
         voidReason: ""
     };
