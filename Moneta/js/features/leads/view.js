@@ -996,8 +996,6 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     value="${quoteDraft.validUntil || ""}"
                                     ${isEditable ? "" : "disabled"}>
                             </div>
-                        </div>
-                        <div class="lead-form-section-grid lead-quote-editor-grid">
                             <div class="field">
                                 <label for="lead-quote-customer-name">Customer Name</label>
                                 <input
@@ -1026,7 +1024,7 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     placeholder="Required before sending the quote"
                                     ${isEditable ? "" : "disabled"}>
                             </div>
-                            <div class="field field-full">
+                            <div class="field lead-quote-field-span-3">
                                 <label for="lead-quote-customer-address">Customer Address</label>
                                 <textarea
                                     id="lead-quote-customer-address"
@@ -1035,7 +1033,7 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     placeholder="Quote snapshot copies from the lead and can be updated here"
                                     ${isEditable ? "" : "disabled"}>${quoteDraft.customerAddress || ""}</textarea>
                             </div>
-                            <div class="field field-full">
+                            <div class="field lead-quote-field-span-2">
                                 <label for="lead-quote-notes">Customer Notes</label>
                                 <textarea
                                     id="lead-quote-notes"
@@ -1044,7 +1042,7 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     placeholder="Terms, delivery notes, pricing assumptions, or service details"
                                     ${isEditable ? "" : "disabled"}>${quoteDraft.quoteNotes || ""}</textarea>
                             </div>
-                            <div class="field field-full">
+                            <div class="field">
                                 <label for="lead-quote-internal-notes">Internal Notes</label>
                                 <textarea
                                     id="lead-quote-internal-notes"
@@ -1091,7 +1089,7 @@ function renderLeadQuotesWorkspace(editingLead) {
                                 ${isEditable ? `
                                     <button class="button button-secondary" type="button" data-action="quote-reset-selection">
                                         <span class="button-icon">${icons.inactive}</span>
-                                        Reset
+                                        Discard Changes
                                     </button>
                                     <button class="button button-secondary" type="button" data-action="quote-save-draft">
                                         <span class="button-icon">${icons.edit}</span>
