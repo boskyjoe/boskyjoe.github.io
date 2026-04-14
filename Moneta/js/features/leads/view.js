@@ -41,6 +41,7 @@ import {
     saveLeadWorkLog
 } from "./service.js";
 import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
+import { downloadLeadQuotePdf } from "./pdf.js";
 
 const featureState = {
     leads: [],
@@ -215,6 +216,14 @@ function getSelectedQuote() {
     return featureState.quoteRows.find(quote => quote.id === featureState.activeQuoteId) || null;
 }
 
+function getQuotePdfSource() {
+    if (featureState.quoteDraft) {
+        return featureState.quoteDraft;
+    }
+
+    return getSelectedQuote();
+}
+
 function getActiveLeadTab() {
     return featureState.activeLeadTab === "quotes" ? "quotes" : "details";
 }
@@ -274,6 +283,7 @@ function buildQuoteDraftFromRecord(quote = null) {
     return {
         docId: quote.id,
         businessQuoteId: quote.businessQuoteId || "",
+        versionNo: Number(quote.versionNo) || 0,
         sourceQuoteId: quote.sourceQuoteId || quote.supersedesQuoteId || "",
         quoteStatus: quote.quoteStatus || "Draft",
         persistedQuoteStatus: quote.quoteStatus || "Draft",
@@ -288,8 +298,16 @@ function buildQuoteDraftFromRecord(quote = null) {
         acceptedByCustomerName: quote.acceptedByCustomerName || "",
         acceptedVia: quote.acceptedVia || "",
         acceptanceNotes: quote.acceptanceNotes || "",
+        acceptedOn: quote.acceptedOn || null,
         rejectionReason: quote.rejectionReason || "",
         cancellationReason: quote.cancellationReason || "",
+        createdOn: quote.createdOn || null,
+        createdBy: quote.createdBy || "",
+        updatedOn: quote.updatedOn || null,
+        updatedBy: quote.updatedBy || "",
+        convertedToSaleNumber: quote.convertedToSaleNumber || "",
+        conversionOutcome: quote.conversionOutcome || "",
+        convertedSaleStatus: quote.convertedSaleStatus || "",
         lineItems,
         totals: quote.totals || calculateLeadQuoteTotals(lineItems)
     };
@@ -1173,6 +1191,7 @@ function renderLeadQuotesEditorCard(editingLead) {
         : (quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft");
     const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
     const displayQuoteStatus = selectedQuote ? resolveQuoteStatusLabel(selectedQuote) : quoteStatus;
+    const quotePdfButtonLabel = isEditable ? "Preview Quote PDF" : "Download Quote PDF";
     const metadataNote = revisionDraft
         ? `Based on ${sourceQuote?.businessQuoteId || "the selected quote"}${sourceQuote?.versionNo ? ` · Version ${sourceQuote.versionNo}` : ""} · Save draft or send to create the next version.`
         : (selectedQuote
@@ -1307,11 +1326,19 @@ function renderLeadQuotesEditorCard(editingLead) {
                             </div>
                             <div class="form-actions lead-quote-actions">
                                 ${isLeadLocked ? `
+                                    <button class="button button-secondary" type="button" data-action="quote-download-pdf">
+                                        <span class="button-icon">${icons.download}</span>
+                                        ${quotePdfButtonLabel}
+                                    </button>
                                     <button class="button button-secondary" type="button" data-action="quote-reset-selection">
                                         <span class="button-icon">${icons.inactive}</span>
                                         Close View
                                     </button>
                                 ` : isEditable ? `
+                                    <button class="button button-secondary" type="button" data-action="quote-download-pdf">
+                                        <span class="button-icon">${icons.download}</span>
+                                        ${quotePdfButtonLabel}
+                                    </button>
                                     <button class="button button-secondary" type="button" data-action="quote-reset-selection">
                                         <span class="button-icon">${icons.inactive}</span>
                                         Discard Changes
@@ -1325,6 +1352,10 @@ function renderLeadQuotesEditorCard(editingLead) {
                                         ${revisionDraft ? "Send Revision Quote" : "Send Quote"}
                                     </button>
                                 ` : `
+                                    <button class="button button-secondary" type="button" data-action="quote-download-pdf">
+                                        <span class="button-icon">${icons.download}</span>
+                                        ${quotePdfButtonLabel}
+                                    </button>
                                     ${canEditStatus ? `
                                         <button class="button button-primary-alt" type="button" data-action="quote-save-draft">
                                             <span class="button-icon">${icons.edit}</span>
@@ -2686,6 +2717,34 @@ async function handleQuoteSave(submitStatusOverride = "") {
     }
 }
 
+async function handleQuoteDownloadPdf() {
+    const lead = getEditingLead() || getQuoteContextLead();
+    const quoteSource = getQuotePdfSource();
+
+    if (!lead) {
+        showToast("Select a lead before generating a quote PDF.", "warning", {
+            title: "Leads"
+        });
+        return;
+    }
+
+    if (!quoteSource) {
+        showToast("Prepare or open a quote before generating the PDF.", "warning", {
+            title: "Quotes"
+        });
+        return;
+    }
+
+    try {
+        await downloadLeadQuotePdf(lead, quoteSource);
+    } catch (error) {
+        console.error("[Moneta] Quote PDF download failed:", error);
+        showToast(error?.message || "Could not generate the quote PDF.", "error", {
+            title: "Quotes"
+        });
+    }
+}
+
 async function handleQuoteRevise(button) {
     const lead = getEditingLead() || getQuoteContextLead();
     const quoteId = button.dataset.quoteId || "";
@@ -3496,6 +3555,11 @@ function bindLeadsDomEvents() {
 
             if (action === "quote-send") {
                 handleQuoteSave("Sent");
+                return;
+            }
+
+            if (action === "quote-download-pdf") {
+                handleQuoteDownloadPdf();
                 return;
             }
 
