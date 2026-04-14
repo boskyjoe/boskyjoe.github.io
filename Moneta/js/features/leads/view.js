@@ -1330,7 +1330,7 @@ function renderLeadQuotesEditorCard(editingLead) {
                                         <span class="button-icon">${icons.download}</span>
                                         ${quotePdfButtonLabel}
                                     </button>
-                                    <button class="button button-secondary" type="button" data-action="quote-reset-selection">
+                                    <button class="button button-secondary" type="button" data-action="quote-close-view">
                                         <span class="button-icon">${icons.inactive}</span>
                                         Close View
                                     </button>
@@ -3580,6 +3580,12 @@ function bindLeadsDomEvents() {
 
             if (action === "quote-cancel") {
                 handleQuoteCancel(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-close-view") {
+                featureState.activeLeadTab = "details";
+                renderLeadsView();
                 return;
             }
 
