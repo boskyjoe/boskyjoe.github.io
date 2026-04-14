@@ -61,7 +61,9 @@ const featureState = {
     unsubscribeQuotes: null,
     quoteListenerLeadId: null,
     activeQuoteId: null,
-    quoteDraft: null
+    quoteDraft: null,
+    pendingQuoteSelectionId: "",
+    isQuoteSaveInFlight: false
 };
 
 const RETAIL_ROUTE = "#/retail-store";
@@ -236,6 +238,8 @@ function resetQuoteWorkspace(options = {}) {
     const { closeDrawer = false } = options;
     featureState.activeQuoteId = null;
     featureState.quoteDraft = null;
+    featureState.pendingQuoteSelectionId = "";
+    featureState.isQuoteSaveInFlight = false;
 
     if (closeDrawer) {
         featureState.quoteDrawerLeadId = null;
@@ -441,6 +445,18 @@ function applyQuoteStoreTaxDefaults(storeName = "") {
 }
 
 function ensureQuoteSelection() {
+    if (featureState.pendingQuoteSelectionId) {
+        const pendingQuote = featureState.quoteRows.find(quote => quote.id === featureState.pendingQuoteSelectionId) || null;
+
+        if (pendingQuote) {
+            featureState.activeQuoteId = pendingQuote.id;
+            featureState.pendingQuoteSelectionId = "";
+            return;
+        }
+
+        return;
+    }
+
     if (!featureState.activeQuoteId && featureState.quoteDraft && !featureState.quoteDraft.docId) {
         return;
     }
@@ -1661,6 +1677,7 @@ function syncLeadQuotesGrid() {
 
     initializeLeadQuotesGrid(gridElement, quote => {
         if (!quote?.id) return;
+        featureState.pendingQuoteSelectionId = "";
         featureState.activeQuoteId = quote.id;
         featureState.quoteDraft = buildQuoteDraftFromRecord(quote);
         renderActiveLeadSurface();
@@ -1679,6 +1696,7 @@ function detachQuoteListener(options = {}) {
     if (reset) {
         featureState.quoteRows = [];
         featureState.activeQuoteId = "";
+        featureState.pendingQuoteSelectionId = "";
         if (featureState.quoteDraft?.docId) {
             featureState.quoteDraft = null;
         }
@@ -1745,6 +1763,11 @@ function ensureQuoteListener(snapshot) {
         leadId,
         rows => {
             featureState.quoteRows = rows || [];
+
+            if (featureState.isQuoteSaveInFlight) {
+                return;
+            }
+
             ensureQuoteSelection();
             hydrateQuoteDraftFromSelection();
 
@@ -2014,6 +2037,7 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
         ? lead.id
         : (featureState.quoteDrawerLeadId === lead.id ? lead.id : null);
     featureState.isQuoteDrawerOpen = Boolean(openDrawer);
+    featureState.pendingQuoteSelectionId = "";
 
     if (createDraft) {
         featureState.activeQuoteId = "";
@@ -2171,6 +2195,7 @@ async function handleQuoteSave(submitStatusOverride = "") {
     }
 
     try {
+        featureState.isQuoteSaveInFlight = true;
         const payload = getQuoteDraftPayload();
         const submitStatus = submitStatusOverride || payload.quoteStatus || "Draft";
         const sourceQuote = payload.sourceQuoteId
@@ -2226,6 +2251,7 @@ async function handleQuoteSave(submitStatusOverride = "") {
             const savedQuote = saveResult.quoteId ? await getLeadQuote(lead.id, saveResult.quoteId) : null;
 
             featureState.activeQuoteId = saveResult.quoteId || "";
+            featureState.pendingQuoteSelectionId = saveResult.quoteId || "";
             featureState.quoteDraft = savedQuote ? buildQuoteDraftFromRecord(savedQuote) : null;
             featureState.quoteDrawerLeadId = lead.id;
 
@@ -2236,6 +2262,14 @@ async function handleQuoteSave(submitStatusOverride = "") {
             update("Quote workspace is up to date.", 96, "Step 5 of 5");
             return { saveResult, savedQuote };
         });
+
+        featureState.isQuoteSaveInFlight = false;
+        const hasSelectedQuoteRow = featureState.quoteRows.some(quote => quote.id === featureState.pendingQuoteSelectionId);
+        if (hasSelectedQuoteRow) {
+            ensureQuoteSelection();
+            hydrateQuoteDraftFromSelection();
+            renderActiveLeadSurface();
+        }
 
         showToast(saveToastMessage, "success", {
                 title: "Leads & Enquiries"
@@ -2255,6 +2289,8 @@ async function handleQuoteSave(submitStatusOverride = "") {
         });
     } catch (error) {
         console.error("[Moneta] Lead quote save failed:", error);
+        featureState.isQuoteSaveInFlight = false;
+        featureState.pendingQuoteSelectionId = "";
         ProgressToast.hide(0);
         showToast(error?.message || "Could not save this quote.", "error", {
             title: "Leads & Enquiries"
@@ -2270,6 +2306,7 @@ async function handleQuoteRevise(button) {
     if (!lead?.id || !quote?.id) return;
 
     try {
+        featureState.pendingQuoteSelectionId = "";
         featureState.activeQuoteId = quote.id;
         featureState.quoteDraft = buildLeadQuoteDraft(lead, quote);
         featureState.quoteDrawerLeadId = lead.id;
