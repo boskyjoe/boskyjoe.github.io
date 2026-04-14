@@ -17,7 +17,7 @@ export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Los
 export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Revised", "General Note"];
 export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled"];
 export const LEAD_QUOTE_STORES = [...RETAIL_STORES, "Consignment"];
-export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Expired", "Cancelled"];
+export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Cancelled"];
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -170,6 +170,8 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         acceptanceNotes: "",
         acceptedByCustomerName: "",
         acceptedVia: "",
+        rejectionReason: "",
+        cancellationReason: "",
         lineItems,
         totals: calculateLeadQuoteTotals(lineItems)
     };
@@ -192,13 +194,18 @@ function formatDateOutput(value) {
 }
 
 function buildLeadQuotePayload(payload, lead, user, options = {}) {
-    const { submitStatus = "Draft", sourceQuote = null } = options;
+    const { submitStatus = "Draft", sourceQuote = null, existingQuote = null } = options;
     const docId = normalizeText(payload.docId);
     const store = normalizeQuoteStore(payload.store);
     const customerName = normalizeText(payload.customerName || lead?.customerName);
     const customerPhone = normalizeText(payload.customerPhone || "");
     const customerEmail = normalizeText(payload.customerEmail || "");
     const customerAddress = normalizeText(payload.customerAddress || "");
+    const acceptedByCustomerName = normalizeText(payload.acceptedByCustomerName || "");
+    const acceptedVia = normalizeText(payload.acceptedVia || "");
+    const acceptanceNotes = normalizeText(payload.acceptanceNotes || "");
+    const rejectionReason = normalizeText(payload.rejectionReason || "");
+    const cancellationReason = normalizeText(payload.cancellationReason || "");
     const validUntil = parseOptionalDate(payload.validUntil, "Quote validity date");
     const lineItems = normalizeQuoteLineItems(payload.lineItems || [], store);
 
@@ -226,7 +233,19 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
         throw new Error("Customer email is required before sending the quote.");
     }
 
+    if (submitStatus === "Accepted" && !acceptedByCustomerName) {
+        throw new Error("Accepted by is required before marking a quote as accepted.");
+    }
+
     const totals = calculateLeadQuoteTotals(lineItems);
+    const previousStatus = normalizeText(existingQuote?.quoteStatus || "");
+    const preserveStatusDate = (statusValue, dateValue) => {
+        if (submitStatus !== statusValue) return null;
+        if (previousStatus === statusValue && dateValue) {
+            return dateValue;
+        }
+        return new Date();
+    };
 
     return {
         docId,
@@ -264,17 +283,17 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
             lineItems,
             totals,
             sourceQuoteId: normalizeText(payload.sourceQuoteId || sourceQuote?.id),
-            sentOn: submitStatus === "Sent" ? new Date() : null,
-            sentBy: submitStatus === "Sent" ? user.email : "",
-            expiredOn: submitStatus === "Expired" ? new Date() : null,
-            acceptedOn: null,
-            acceptedByCustomerName: "",
-            acceptedVia: "",
-            acceptanceNotes: "",
-            rejectedOn: null,
-            rejectionReason: "",
-            cancelledOn: submitStatus === "Cancelled" ? new Date() : null,
-            cancellationReason: ""
+            sentOn: existingQuote?.sentOn || (submitStatus === "Sent" ? new Date() : null),
+            sentBy: normalizeText(existingQuote?.sentBy) || (submitStatus === "Sent" ? user.email : ""),
+            expiredOn: preserveStatusDate("Expired", existingQuote?.expiredOn),
+            acceptedOn: preserveStatusDate("Accepted", existingQuote?.acceptedOn),
+            acceptedByCustomerName: submitStatus === "Accepted" ? acceptedByCustomerName : "",
+            acceptedVia: submitStatus === "Accepted" ? acceptedVia : "",
+            acceptanceNotes: submitStatus === "Accepted" ? acceptanceNotes : "",
+            rejectedOn: preserveStatusDate("Rejected", existingQuote?.rejectedOn),
+            rejectionReason: submitStatus === "Rejected" ? rejectionReason : "",
+            cancelledOn: preserveStatusDate("Cancelled", existingQuote?.cancelledOn),
+            cancellationReason: submitStatus === "Cancelled" ? cancellationReason : ""
         }
     };
 }
@@ -393,8 +412,8 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
         throw new Error("You must be logged in to save a quote.");
     }
 
-    const { submitStatus = "Draft", sourceQuote = null, supersedeQuoteId = "" } = options;
-    const { docId, quoteData } = buildLeadQuotePayload(payload, lead, user, { submitStatus, sourceQuote });
+    const { submitStatus = "Draft", sourceQuote = null, supersedeQuoteId = "", existingQuote = null } = options;
+    const { docId, quoteData } = buildLeadQuotePayload(payload, lead, user, { submitStatus, sourceQuote, existingQuote });
     const supersededQuoteId = normalizeText(supersedeQuoteId || quoteData.sourceQuoteId);
     const sourceQuoteLabel = normalizeText(sourceQuote?.businessQuoteId) || supersededQuoteId;
     const isRevisionCreate = !docId && Boolean(supersededQuoteId);
@@ -428,6 +447,24 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
             };
         }
 
+        if (submitStatus === "Rejected") {
+            return {
+                logType: "General Note",
+                notes: docId
+                    ? `Quote ${payload.businessQuoteId || docId} was saved with status Rejected${quoteData.rejectionReason ? `. Reason: ${quoteData.rejectionReason}` : "."}`
+                    : `A quote was saved with status Rejected${quoteData.rejectionReason ? `. Reason: ${quoteData.rejectionReason}` : "."}`
+            };
+        }
+
+        if (submitStatus === "Accepted") {
+            return {
+                logType: "Quote Accepted",
+                notes: docId
+                    ? `Quote ${payload.businessQuoteId || docId} was accepted by ${quoteData.acceptedByCustomerName || customerLabel}${quoteData.acceptedVia ? ` via ${quoteData.acceptedVia}` : ""}.`
+                    : `A quote was accepted by ${quoteData.acceptedByCustomerName || customerLabel}${quoteData.acceptedVia ? ` via ${quoteData.acceptedVia}` : ""}.`
+            };
+        }
+
         if (submitStatus === "Expired") {
             return {
                 logType: "General Note",
@@ -449,7 +486,8 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
 
     if (docId) {
         await updateLeadQuoteRecord(lead.id, docId, quoteData, user, {
-            workLogEntry: buildQuoteWorkLogEntry()
+            workLogEntry: buildQuoteWorkLogEntry(),
+            supersedeOtherAccepted: submitStatus === "Accepted"
         });
 
         if (shouldSyncLeadCustomer) {
@@ -465,7 +503,8 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
 
     const createdQuote = await createLeadQuoteRecord(lead.id, quoteData, user, {
         supersedeQuoteId: supersededQuoteId,
-        workLogEntry: buildQuoteWorkLogEntry()
+        workLogEntry: buildQuoteWorkLogEntry(),
+        supersedeOtherAccepted: submitStatus === "Accepted"
     });
 
     if (shouldSyncLeadCustomer) {

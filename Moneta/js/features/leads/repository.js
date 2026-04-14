@@ -227,7 +227,7 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
         throw new Error("Lead id is required before creating a quote.");
     }
 
-    const { supersedeQuoteId = "", workLogEntry = null } = options;
+    const { supersedeQuoteId = "", workLogEntry = null, supersedeOtherAccepted = false } = options;
     const db = getDb();
     const now = getNow();
     const versionNo = await getNextQuoteVersion(leadId);
@@ -241,6 +241,21 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
             supersededOn: now,
             updatedBy: user.email,
             updatedOn: now
+        });
+    }
+
+    if (supersedeOtherAccepted) {
+        const snapshot = await leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).get();
+        snapshot.docs.forEach(doc => {
+            if (doc.id === supersedeQuoteId) return;
+            if (normalizeText(doc.data()?.quoteStatus) !== "Accepted") return;
+
+            batch.update(doc.ref, {
+                quoteStatus: "Superseded",
+                supersededOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
         });
     }
 
@@ -280,12 +295,27 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
         throw new Error("Lead id and quote id are required before updating a quote.");
     }
 
-    const { workLogEntry = null } = options;
+    const { workLogEntry = null, supersedeOtherAccepted = false } = options;
     const db = getDb();
     const now = getNow();
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(quoteId);
     const batch = db.batch();
+
+    if (supersedeOtherAccepted) {
+        const snapshot = await leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).get();
+        snapshot.docs.forEach(doc => {
+            if (doc.id === quoteId) return;
+            if (normalizeText(doc.data()?.quoteStatus) !== "Accepted") return;
+
+            batch.update(doc.ref, {
+                quoteStatus: "Superseded",
+                supersededOn: now,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        });
+    }
 
     batch.update(quoteRef, {
         ...quoteData,
