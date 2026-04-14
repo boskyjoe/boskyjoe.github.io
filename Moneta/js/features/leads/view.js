@@ -934,24 +934,157 @@ function renderLeadQuotesWorkspace(editingLead) {
                 </div>
             </div>
             <div class="panel-body">
-                <div class="lead-quotes-workspace-layout">
-                    <aside class="lead-quotes-sidebar">
-                        <div class="lead-quotes-sidebar-head">
-                            <div>
-                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Quote Versions</p>
-                                <p class="panel-copy">Review active quote records on the left, then manage the selected version on the right.</p>
+                <div class="lead-quote-editor-card">
+                    <div class="lead-quote-editor-head">
+                        <div>
+                            <p class="lead-quote-editor-title">${quoteTitle}</p>
+                            <p class="lead-quote-editor-subtitle">${metadataNote}</p>
+                        </div>
+                        ${renderQuoteStatusPill(quoteStatus)}
+                    </div>
+                    ${quoteDraft ? `
+                        <div class="lead-form-section-grid lead-quote-editor-grid">
+                            <div class="field">
+                                <label for="lead-quote-store">Sales Channel</label>
+                                <select id="lead-quote-store" class="select" ${isEditable ? "" : "disabled"}>
+                                    ${renderQuoteStoreOptions(quoteDraft.store || "Church Store")}
+                                </select>
                             </div>
-                            <div class="lead-quotes-sidebar-actions">
+                            <div class="field">
+                                <label for="lead-quote-valid-until">Valid Until</label>
+                                <input
+                                    id="lead-quote-valid-until"
+                                    class="input"
+                                    type="date"
+                                    value="${quoteDraft.validUntil || ""}"
+                                    ${isEditable ? "" : "disabled"}>
+                            </div>
+                            <div class="field field-full">
+                                <label for="lead-quote-notes">Customer Notes</label>
+                                <textarea
+                                    id="lead-quote-notes"
+                                    class="textarea"
+                                    rows="3"
+                                    placeholder="Terms, delivery notes, pricing assumptions, or service details"
+                                    ${isEditable ? "" : "disabled"}>${quoteDraft.quoteNotes || ""}</textarea>
+                            </div>
+                            <div class="field field-full">
+                                <label for="lead-quote-internal-notes">Internal Notes</label>
+                                <textarea
+                                    id="lead-quote-internal-notes"
+                                    class="textarea"
+                                    rows="3"
+                                    placeholder="Internal notes for revisions, approval checks, or follow-up reminders"
+                                    ${isEditable ? "" : "disabled"}>${quoteDraft.internalNotes || ""}</textarea>
+                            </div>
+                        </div>
+                        <div class="lead-quote-editor-section">
+                            <div class="lead-form-section-head">
+                                <p class="lead-form-section-kicker">Quoted Products</p>
+                            </div>
+                            ${renderQuoteLineItemsTable(quoteDraft, { readOnly: !isEditable })}
+                        </div>
+                        <div class="lead-quote-totals-grid">
+                            <div class="metric-card">
+                                <span class="metric-label">Subtotal</span>
+                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Discount</span>
+                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Tax</span>
+                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Grand Total</span>
+                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
+                            </div>
+                        </div>
+                        ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: normalizeText(quoteDraft.quoteStatus) === "Accepted" })}
+                        <div class="lead-quote-editor-footer">
+                            <div class="lead-quote-editor-note">
+                                ${acceptedQuote
+            ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
+            : "Only one quote should be marked accepted for a lead. Sent quotes are frozen and should be revised into a new version."}
+                            </div>
+                            <div class="form-actions lead-quote-actions">
+                                ${isEditable ? `
+                                    <button class="button button-secondary" type="button" data-action="quote-reset-selection">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Reset
+                                    </button>
+                                    <button class="button button-secondary" type="button" data-action="quote-save-draft">
+                                        <span class="button-icon">${icons.edit}</span>
+                                        Save Draft
+                                    </button>
+                                    <button class="button button-primary-alt" type="button" data-action="quote-send">
+                                        <span class="button-icon">${icons.plus}</span>
+                                        Send Quote
+                                    </button>
+                                ` : `
+                                    <button class="button button-secondary" type="button" data-action="quote-new-draft">
+                                        <span class="button-icon">${icons.plus}</span>
+                                        Create New Draft Version
+                                    </button>
+                                    ${selectedQuote ? `
+                                        <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
+                                            <span class="button-icon">${icons.edit}</span>
+                                            Revise
+                                        </button>
+                                        ${normalizeText(selectedQuote.quoteStatus) === "Sent" ? `
+                                            <button class="button button-primary-alt" type="button" data-action="quote-accept" data-quote-id="${selectedQuote.id}">
+                                                <span class="button-icon">${icons.active}</span>
+                                                Mark Accepted
+                                            </button>
+                                            <button class="button button-secondary" type="button" data-action="quote-reject" data-quote-id="${selectedQuote.id}">
+                                                <span class="button-icon">${icons.warning}</span>
+                                                Reject
+                                            </button>
+                                            <button class="button button-secondary" type="button" data-action="quote-cancel" data-quote-id="${selectedQuote.id}">
+                                                <span class="button-icon">${icons.inactive}</span>
+                                                Cancel
+                                            </button>
+                                        ` : ""}
+                                    ` : ""}
+                                `}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="lead-quotes-empty lead-quotes-empty-large">
+                            <p class="lead-quotes-empty-title">Quote history will appear here</p>
+                            <p class="panel-copy">Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer.</p>
+                            <div class="form-actions" style="justify-content: flex-start;">
                                 <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
                                     <span class="button-icon">${icons.plus}</span>
-                                    ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
+                                    Create Quote Draft
                                 </button>
                             </div>
                         </div>
+                    `}
+                </div>
+                <div class="panel-card lead-quotes-grid-card">
+                    <div class="panel-header">
+                        <div class="panel-title-wrap">
+                            <span class="panel-icon">${icons.catalogue}</span>
+                            <div>
+                                <h4>Quote Versions</h4>
+                                <p class="panel-copy">Review all quote records below and use the action column for basic quote actions.</p>
+                            </div>
+                        </div>
+                        <div class="lead-quotes-sidebar-actions">
+                            <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
+                                <span class="button-icon">${icons.plus}</span>
+                                ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body">
                         <div class="toolbar lead-quotes-toolbar">
                             <div>
-                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Versions</p>
-                                <p class="panel-copy">Minimal rows for fast review, with actions in the last column.</p>
+                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Versions Grid</p>
+                                <p class="panel-copy">Minimal columns, full width, and actions at the far right for faster handling.</p>
                             </div>
                             <div class="search-wrap">
                                 <span class="search-icon">${icons.search}</span>
@@ -963,139 +1096,9 @@ function renderLeadQuotesWorkspace(editingLead) {
                                     value="${featureState.quoteSearchTerm}">
                             </div>
                         </div>
-                        <div class="ag-shell ag-shell-compact">
-                            <div id="lead-quotes-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
+                        <div class="ag-shell">
+                            <div id="lead-quotes-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
                         </div>
-                    </aside>
-                    <div class="lead-quote-editor-card">
-                        <div class="lead-quote-editor-head">
-                            <div>
-                                <p class="lead-quote-editor-title">${quoteTitle}</p>
-                                <p class="lead-quote-editor-subtitle">${metadataNote}</p>
-                            </div>
-                            ${renderQuoteStatusPill(quoteStatus)}
-                        </div>
-                        ${quoteDraft ? `
-                            <div class="lead-form-section-grid lead-quote-editor-grid">
-                                <div class="field">
-                                    <label for="lead-quote-store">Sales Channel</label>
-                                    <select id="lead-quote-store" class="select" ${isEditable ? "" : "disabled"}>
-                                        ${renderQuoteStoreOptions(quoteDraft.store || "Church Store")}
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="lead-quote-valid-until">Valid Until</label>
-                                    <input
-                                        id="lead-quote-valid-until"
-                                        class="input"
-                                        type="date"
-                                        value="${quoteDraft.validUntil || ""}"
-                                        ${isEditable ? "" : "disabled"}>
-                                </div>
-                                <div class="field field-full">
-                                    <label for="lead-quote-notes">Customer Notes</label>
-                                    <textarea
-                                        id="lead-quote-notes"
-                                        class="textarea"
-                                        rows="3"
-                                        placeholder="Terms, delivery notes, pricing assumptions, or service details"
-                                        ${isEditable ? "" : "disabled"}>${quoteDraft.quoteNotes || ""}</textarea>
-                                </div>
-                                <div class="field field-full">
-                                    <label for="lead-quote-internal-notes">Internal Notes</label>
-                                    <textarea
-                                        id="lead-quote-internal-notes"
-                                        class="textarea"
-                                        rows="3"
-                                        placeholder="Internal notes for revisions, approval checks, or follow-up reminders"
-                                        ${isEditable ? "" : "disabled"}>${quoteDraft.internalNotes || ""}</textarea>
-                                </div>
-                            </div>
-                            <div class="lead-quote-editor-section">
-                                <div class="lead-form-section-head">
-                                    <p class="lead-form-section-kicker">Quoted Products</p>
-                                </div>
-                                ${renderQuoteLineItemsTable(quoteDraft, { readOnly: !isEditable })}
-                            </div>
-                            <div class="lead-quote-totals-grid">
-                                <div class="metric-card">
-                                    <span class="metric-label">Subtotal</span>
-                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
-                                </div>
-                                <div class="metric-card">
-                                    <span class="metric-label">Discount</span>
-                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
-                                </div>
-                                <div class="metric-card">
-                                    <span class="metric-label">Tax</span>
-                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
-                                </div>
-                                <div class="metric-card">
-                                    <span class="metric-label">Grand Total</span>
-                                    <strong class="metric-value">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
-                                </div>
-                            </div>
-                            ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: normalizeText(quoteDraft.quoteStatus) === "Accepted" })}
-                            <div class="lead-quote-editor-footer">
-                                <div class="lead-quote-editor-note">
-                                    ${acceptedQuote
-            ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
-            : "Only one quote should be marked accepted for a lead. Sent quotes are frozen and should be revised into a new version."}
-                                </div>
-                                <div class="form-actions lead-quote-actions">
-                                    ${isEditable ? `
-                                        <button class="button button-secondary" type="button" data-action="quote-reset-selection">
-                                            <span class="button-icon">${icons.inactive}</span>
-                                            Reset
-                                        </button>
-                                        <button class="button button-secondary" type="button" data-action="quote-save-draft">
-                                            <span class="button-icon">${icons.edit}</span>
-                                            Save Draft
-                                        </button>
-                                        <button class="button button-primary-alt" type="button" data-action="quote-send">
-                                            <span class="button-icon">${icons.plus}</span>
-                                            Send Quote
-                                        </button>
-                                    ` : `
-                                        <button class="button button-secondary" type="button" data-action="quote-new-draft">
-                                            <span class="button-icon">${icons.plus}</span>
-                                            New Quote
-                                        </button>
-                                        ${selectedQuote ? `
-                                            <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
-                                                <span class="button-icon">${icons.edit}</span>
-                                                Revise
-                                            </button>
-                                            ${normalizeText(selectedQuote.quoteStatus) === "Sent" ? `
-                                                <button class="button button-primary-alt" type="button" data-action="quote-accept" data-quote-id="${selectedQuote.id}">
-                                                    <span class="button-icon">${icons.active}</span>
-                                                    Mark Accepted
-                                                </button>
-                                                <button class="button button-secondary" type="button" data-action="quote-reject" data-quote-id="${selectedQuote.id}">
-                                                    <span class="button-icon">${icons.warning}</span>
-                                                    Reject
-                                                </button>
-                                                <button class="button button-secondary" type="button" data-action="quote-cancel" data-quote-id="${selectedQuote.id}">
-                                                    <span class="button-icon">${icons.inactive}</span>
-                                                    Cancel
-                                                </button>
-                                            ` : ""}
-                                        ` : ""}
-                                    `}
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="lead-quotes-empty lead-quotes-empty-large">
-                                <p class="lead-quotes-empty-title">Quote history will appear here</p>
-                                <p class="panel-copy">Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer.</p>
-                                <div class="form-actions" style="justify-content: flex-start;">
-                                    <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
-                                        <span class="button-icon">${icons.plus}</span>
-                                        Create Quote Draft
-                                    </button>
-                                </div>
-                            </div>
-                        `}
                     </div>
                 </div>
             </div>
@@ -1539,11 +1542,12 @@ function renderLeadWorkLogModal() {
 function renderLeadsViewShell(snapshot) {
     const root = document.getElementById("leads-root");
     if (!root) return;
+    const shouldShowHistory = !(getEditingLead()?.id && getActiveLeadTab() === "quotes");
 
     root.innerHTML = `
         <div style="display:grid; gap:1rem;">
             ${renderLeadForm(snapshot)}
-            ${renderLeadsHistoryPanel()}
+            ${shouldShowHistory ? renderLeadsHistoryPanel() : ""}
         </div>
         ${renderLeadWorkLogModal()}
     `;
