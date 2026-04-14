@@ -2070,6 +2070,18 @@ select {
     background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
 }
 
+.lead-quotes-toolbar {
+    margin-bottom: 0;
+}
+
+.lead-quotes-sidebar .ag-shell {
+    min-height: 0;
+}
+
+.lead-quote-editor-card {
+    align-content: start;
+}
+
 .lead-quotes-sidebar-head,
 .lead-quote-editor-head,
 .lead-quotes-drawer-summary,
