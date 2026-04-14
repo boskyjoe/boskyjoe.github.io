@@ -74,13 +74,23 @@ function leadActionMarkup(data) {
     const convertDisabled = data?.canConvertToRetail === false;
     const convertReason = data?.convertDisabledReason || "This enquiry cannot be converted right now.";
     const isConverted = String(data?.leadStatus || "").trim() === "Converted";
+    const deleteDisabled = data?.canDeleteLead === false;
+    const deleteReason = data?.deleteDisabledReason || "This enquiry cannot be deleted right now.";
     const safeReason = String(convertReason)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    const safeDeleteReason = String(deleteReason)
         .replaceAll("&", "&amp;")
         .replaceAll('"', "&quot;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
     const convertDisabledAttrs = convertDisabled
         ? `disabled title="${safeReason}" data-disabled-reason="${safeReason}"`
+        : "";
+    const deleteDisabledAttrs = deleteDisabled
+        ? `disabled title="${safeDeleteReason}" data-disabled-reason="${safeDeleteReason}"`
         : "";
 
     return `
@@ -97,7 +107,7 @@ function leadActionMarkup(data) {
                 <span class="button-icon">${icons.leads}</span>
                 ${isConverted ? "View Work Log" : "Work Log"}
             </button>
-            <button class="button grid-action-button grid-action-button-danger lead-delete-button" type="button" data-lead-id="${data.id}">
+            <button class="button grid-action-button grid-action-button-danger lead-delete-button" type="button" data-lead-id="${data.id}" ${deleteDisabledAttrs}>
                 <span class="button-icon">${icons.inactive}</span>
                 Delete
             </button>

@@ -687,6 +687,16 @@ function buildLeadGridRows() {
     return sortLeads(featureState.leads).map(lead => ({
         ...lead,
         displayLeadStatus: resolveLeadStatusLabel(lead),
+        canDeleteLead: normalizeText(lead.leadStatus) !== "Converted"
+            && (Number(lead.quoteCount) || 0) === 0
+            && !normalizeText(lead.convertedToSaleId || lead.linkedSaleId),
+        deleteDisabledReason: normalizeText(lead.leadStatus) === "Converted"
+            ? "Converted enquiries cannot be deleted."
+            : (Number(lead.quoteCount) || 0) > 0
+                ? "Enquiries with quote history cannot be deleted."
+                : normalizeText(lead.convertedToSaleId || lead.linkedSaleId)
+                    ? "Enquiries already linked to a sale cannot be deleted."
+                    : "",
         requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
         requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
             return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
