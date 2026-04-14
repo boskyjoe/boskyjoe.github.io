@@ -8,6 +8,8 @@ let leadRequestedProductsGridApi = null;
 let currentLeadRequestedProductsGridElement = null;
 let leadWorkLogGridApi = null;
 let currentLeadWorkLogGridElement = null;
+let leadQuotesGridApi = null;
+let currentLeadQuotesGridElement = null;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -213,6 +215,90 @@ function buildLeadWorkLogColumnDefs() {
             headerName: "Logged By",
             minWidth: 210,
             flex: 1
+        }
+    ];
+}
+
+function quoteGridActionMarkup(data) {
+    const status = String(data?.quoteStatus || "").trim();
+
+    return `
+        <div class="table-actions grid-actions-inline">
+            <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-select" data-quote-id="${data.id}">
+                <span class="button-icon">${icons.search}</span>
+                Open
+            </button>
+            <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-revise" data-quote-id="${data.id}">
+                <span class="button-icon">${icons.edit}</span>
+                Revise
+            </button>
+            ${status === "Sent" ? `
+                <button class="button grid-action-button grid-action-button-primary" type="button" data-action="quote-accept" data-quote-id="${data.id}">
+                    <span class="button-icon">${icons.active}</span>
+                    Accept
+                </button>
+                <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-reject" data-quote-id="${data.id}">
+                    <span class="button-icon">${icons.warning}</span>
+                    Reject
+                </button>
+            ` : ""}
+            ${["Draft", "Sent"].includes(status) ? `
+                <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-cancel" data-quote-id="${data.id}">
+                    <span class="button-icon">${icons.inactive}</span>
+                    Cancel
+                </button>
+            ` : ""}
+        </div>
+    `;
+}
+
+function buildLeadQuotesColumnDefs() {
+    return [
+        { field: "businessQuoteId", headerName: "Quote No", minWidth: 170, flex: 1.05 },
+        {
+            field: "versionNo",
+            headerName: "Ver",
+            minWidth: 90,
+            maxWidth: 110,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "quoteStatus",
+            headerName: "Status",
+            minWidth: 130,
+            flex: 0.85,
+            cellRenderer: params => quoteStatusMarkup(params.value)
+        },
+        { field: "store", headerName: "Channel", minWidth: 150, flex: 0.95 },
+        {
+            field: "validUntil",
+            headerName: "Valid Until",
+            minWidth: 135,
+            flex: 0.85,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Total",
+            minWidth: 130,
+            flex: 0.9,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => Number(params.data?.totals?.grandTotal) || 0,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "sentOn",
+            headerName: "Sent On",
+            minWidth: 145,
+            flex: 0.9,
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 310,
+            flex: 1.7,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => quoteGridActionMarkup(params.data)
         }
     ];
 }
@@ -444,4 +530,55 @@ export function refreshLeadWorkLogGrid(rows) {
 
 export function updateLeadWorkLogGridSearch(searchTerm) {
     leadWorkLogGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeLeadQuotesGrid(gridElement, onQuoteSelected) {
+    if (!gridElement) return leadQuotesGridApi;
+
+    if (leadQuotesGridApi && currentLeadQuotesGridElement !== gridElement) {
+        leadQuotesGridApi.destroy();
+        leadQuotesGridApi = null;
+        currentLeadQuotesGridElement = null;
+    }
+
+    if (leadQuotesGridApi) return leadQuotesGridApi;
+
+    leadQuotesGridApi = createGrid(gridElement, {
+        columnDefs: buildLeadQuotesColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        pagination: true,
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 20, 50],
+        rowSelection: {
+            mode: "singleRow",
+            enableClickSelection: true
+        },
+        getRowId: params => params.data.id,
+        onRowClicked: event => {
+            if (event.event?.target?.closest("button")) {
+                return;
+            }
+            onQuoteSelected?.(event.data);
+        }
+    });
+
+    currentLeadQuotesGridElement = gridElement;
+    return leadQuotesGridApi;
+}
+
+export function refreshLeadQuotesGrid(rows, selectedQuoteId = "") {
+    if (!leadQuotesGridApi) return;
+
+    leadQuotesGridApi.setGridOption("rowData", rows || []);
+
+    if (!selectedQuoteId) return;
+
+    leadQuotesGridApi.forEachNode(node => {
+        node.setSelected(node.data?.id === selectedQuoteId);
+    });
+}
+
+export function updateLeadQuotesGridSearch(searchTerm) {
+    leadQuotesGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }

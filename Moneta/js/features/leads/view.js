@@ -5,13 +5,16 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
+    initializeLeadQuotesGrid,
     initializeLeadWorkLogGrid,
     getLeadRequestedProductsGridRows,
     initializeLeadRequestedProductsGrid,
     initializeLeadsGrid,
+    refreshLeadQuotesGrid,
     refreshLeadRequestedProductsGrid,
     refreshLeadWorkLogGrid,
     refreshLeadsGrid,
+    updateLeadQuotesGridSearch,
     updateLeadRequestedProductsGridSearch,
     updateLeadWorkLogGridSearch,
     updateLeadsGridSearch
@@ -52,6 +55,7 @@ const featureState = {
     workLogEntries: [],
     workLogSearchTerm: "",
     quoteRows: [],
+    quoteSearchTerm: "",
     quoteDrawerLeadId: null,
     isQuoteDrawerOpen: false,
     unsubscribeQuotes: null,
@@ -217,6 +221,7 @@ function resetLeadWorkspace() {
     featureState.selectedCatalogueId = "";
     featureState.catalogueItemRows = [];
     featureState.itemSearchTerm = "";
+    featureState.quoteSearchTerm = "";
     featureState.activeQuoteId = null;
     featureState.quoteDraft = null;
 }
@@ -934,17 +939,32 @@ function renderLeadQuotesWorkspace(editingLead) {
                         <div class="lead-quotes-sidebar-head">
                             <div>
                                 <p class="section-kicker" style="margin-bottom: 0.25rem;">Quote Versions</p>
-                                <p class="panel-copy">Keep one accepted quote per enquiry and revise by version.</p>
+                                <p class="panel-copy">Review active quote records on the left, then manage the selected version on the right.</p>
                             </div>
                             <div class="lead-quotes-sidebar-actions">
                                 <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
                                     <span class="button-icon">${icons.plus}</span>
-                                    New Quote
+                                    ${featureState.quoteRows.length ? "Create New Draft Version" : "Create Quote Draft"}
                                 </button>
                             </div>
                         </div>
-                        <div class="lead-quote-list">
-                            ${buildQuoteListMarkup(featureState.quoteRows)}
+                        <div class="toolbar lead-quotes-toolbar">
+                            <div>
+                                <p class="section-kicker" style="margin-bottom: 0.25rem;">Versions</p>
+                                <p class="panel-copy">Minimal rows for fast review, with actions in the last column.</p>
+                            </div>
+                            <div class="search-wrap">
+                                <span class="search-icon">${icons.search}</span>
+                                <input
+                                    id="lead-quotes-search"
+                                    class="input toolbar-search"
+                                    type="search"
+                                    placeholder="Search quote no, status, channel"
+                                    value="${featureState.quoteSearchTerm}">
+                            </div>
+                        </div>
+                        <div class="ag-shell ag-shell-compact">
+                            <div id="lead-quotes-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
                         </div>
                     </aside>
                     <div class="lead-quote-editor-card">
@@ -1555,6 +1575,20 @@ function syncLeadWorkLogGrid() {
     updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
 }
 
+function syncLeadQuotesGrid() {
+    const gridElement = document.getElementById("lead-quotes-grid");
+    if (!gridElement) return;
+
+    initializeLeadQuotesGrid(gridElement, quote => {
+        if (!quote?.id) return;
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = buildQuoteDraftFromRecord(quote);
+        renderLeadsView();
+    });
+    refreshLeadQuotesGrid(featureState.quoteRows, featureState.activeQuoteId || "");
+    updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
+}
+
 function detachQuoteListener(options = {}) {
     const { reset = false } = options;
 
@@ -1746,6 +1780,7 @@ export function renderLeadsView() {
     syncLeadProductsGrid();
     syncLeadsGrid();
     syncLeadWorkLogGrid();
+    syncLeadQuotesGrid();
     ensureQuoteListener(snapshot);
 }
 
@@ -1861,6 +1896,7 @@ async function handleLeadEdit(button) {
     featureState.activeLeadTab = "details";
     featureState.selectedCatalogueId = lead.catalogueId || "";
     featureState.itemSearchTerm = "";
+    featureState.quoteSearchTerm = "";
     renderLeadsView();
     focusFormField({
         formId: "lead-form",
@@ -1888,6 +1924,7 @@ async function openLeadQuoteWorkspace(lead, options = {}) {
     featureState.activeLeadTab = "quotes";
     featureState.selectedCatalogueId = lead.catalogueId || "";
     featureState.itemSearchTerm = "";
+    featureState.quoteSearchTerm = "";
     featureState.quoteDrawerLeadId = openDrawer
         ? lead.id
         : (featureState.quoteDrawerLeadId === lead.id ? lead.id : null);
@@ -2469,6 +2506,11 @@ function handleLeadWorkLogSearchInput(target) {
     updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
 }
 
+function handleLeadQuoteSearchInput(target) {
+    featureState.quoteSearchTerm = target.value || "";
+    updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
+}
+
 async function handleLeadWorkLogOpen(button) {
     const leadId = button.dataset.leadId || null;
     const lead = featureState.leads.find(entry => entry.id === leadId) || null;
@@ -2538,6 +2580,7 @@ function bindLeadsDomEvents() {
         const leadsSearchInput = event.target.closest("#leads-grid-search");
         const productsSearchInput = event.target.closest("#lead-products-search");
         const workLogSearchInput = event.target.closest("#lead-worklog-search");
+        const quoteSearchInput = event.target.closest("#lead-quotes-search");
         const quoteNotesInput = event.target.closest("#lead-quote-notes");
         const quoteInternalNotesInput = event.target.closest("#lead-quote-internal-notes");
         const quoteAcceptedByInput = event.target.closest("#lead-quote-accepted-by");
@@ -2556,6 +2599,11 @@ function bindLeadsDomEvents() {
 
         if (workLogSearchInput) {
             handleLeadWorkLogSearchInput(workLogSearchInput);
+            return;
+        }
+
+        if (quoteSearchInput) {
+            handleLeadQuoteSearchInput(quoteSearchInput);
             return;
         }
 
