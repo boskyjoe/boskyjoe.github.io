@@ -334,6 +334,32 @@ function recalculateQuoteDraftTotals() {
     featureState.quoteDraft.totals = calculateLeadQuoteTotals(featureState.quoteDraft.lineItems || []);
 }
 
+function updateQuoteDraftMetricsDom() {
+    if (!featureState.quoteDraft) return;
+
+    (featureState.quoteDraft.lineItems || []).forEach((item, index) => {
+        const totalNode = document.querySelector(`[data-quote-line-total-index="${index}"]`);
+        if (totalNode) {
+            totalNode.textContent = formatCurrency(item.lineTotal || 0);
+        }
+    });
+
+    const totals = featureState.quoteDraft.totals || {};
+    const totalFieldMap = {
+        subtotal: totals.subtotal || 0,
+        discount: totals.discountTotal || 0,
+        tax: totals.taxTotal || 0,
+        grandTotal: totals.grandTotal || 0
+    };
+
+    Object.entries(totalFieldMap).forEach(([field, value]) => {
+        const node = document.querySelector(`[data-quote-total-field="${field}"]`);
+        if (node) {
+            node.textContent = formatCurrency(value);
+        }
+    });
+}
+
 function isQuoteDraftEditable() {
     if (!featureState.quoteDraft) return false;
     const persistedQuoteStatus = normalizeText(featureState.quoteDraft.persistedQuoteStatus || featureState.quoteDraft.quoteStatus || "Draft");
@@ -798,7 +824,9 @@ function renderQuoteLineItemsTable(quoteDraft, options = {}) {
                                     data-quote-line-field="sgstPercentage"
                                     ${readOnly ? "disabled" : ""}>
                             </td>
-                            <td class="lead-quote-lines-number lead-quote-lines-total">${formatCurrency(item.lineTotal || 0)}</td>
+                            <td
+                                class="lead-quote-lines-number lead-quote-lines-total"
+                                data-quote-line-total-index="${index}">${formatCurrency(item.lineTotal || 0)}</td>
                         </tr>
                     `).join("")}
                 </tbody>
@@ -1077,19 +1105,19 @@ function renderLeadQuotesWorkspace(editingLead) {
                         <div class="lead-quote-totals-grid">
                             <div class="metric-card">
                                 <span class="metric-label">Subtotal</span>
-                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
+                                <strong class="metric-value" data-quote-total-field="subtotal">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
                             </div>
                             <div class="metric-card">
                                 <span class="metric-label">Discount</span>
-                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
+                                <strong class="metric-value" data-quote-total-field="discount">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
                             </div>
                             <div class="metric-card">
                                 <span class="metric-label">Tax</span>
-                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
+                                <strong class="metric-value" data-quote-total-field="tax">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
                             </div>
                             <div class="metric-card">
                                 <span class="metric-label">Grand Total</span>
-                                <strong class="metric-value">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
+                                <strong class="metric-value" data-quote-total-field="grandTotal">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
                             </div>
                         </div>
                         ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: normalizeText(quoteDraft.quoteStatus) === "Accepted" })}
@@ -2181,7 +2209,7 @@ function handleQuoteLineFieldInput(target) {
         : Math.max(0, Number(nextValue.toFixed(2)));
 
     recalculateQuoteDraftTotals();
-    renderLeadsView();
+    updateQuoteDraftMetricsDom();
 }
 
 async function handleQuoteSave(submitStatusOverride = "") {
