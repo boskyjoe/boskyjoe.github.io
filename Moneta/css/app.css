@@ -233,7 +233,8 @@
 
 .app-content {
     flex: 1 0 auto;
-    width: min(calc(100% - 1.8rem), var(--content-max));
+    width: auto;
+    max-width: none;
     margin: 0 0.9rem 1.2rem 0.45rem;
 }
 
