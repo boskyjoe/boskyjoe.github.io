@@ -20,6 +20,15 @@ export const navConfig = [
         enabled: true
     },
     {
+        type: "link",
+        route: "#/assistant",
+        label: "Assistant",
+        icon: icons.assistant,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"],
+        enabled: true
+    },
+    {
         type: "heading",
         label: "Pre-Sales",
         roles: ["admin", "sales_staff", "team_lead"]

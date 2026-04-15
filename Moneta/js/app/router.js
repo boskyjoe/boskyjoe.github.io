@@ -14,11 +14,13 @@ import { showLeadsPage } from "../features/leads/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
 import { showSimpleConsignmentPage } from "../features/simple-consignment/index.js";
 import { showHomePage } from "../features/home/index.js";
+import { showAssistantPage } from "../features/assistant/index.js";
 
 const ROUTE_TO_VIEW = {
     "#/login": "login-view",
     "#/home": "home-view",
     "#/dashboard": "dashboard-view",
+    "#/assistant": "assistant-view",
     "#/reports": "reports-view",
     "#/leads": "leads-view",
     "#/lead-quotes": "lead-quotes-view",
@@ -63,6 +65,8 @@ function getViewTitle(route) {
             return "Home";
         case "#/dashboard":
             return "Dashboard";
+        case "#/assistant":
+            return "Assistant";
         case "#/reports":
             return "Reports";
         case "#/leads":
@@ -117,6 +121,10 @@ export function resolveRoute() {
 
     if (route === "#/dashboard") {
         renderDashboardView(snapshot.currentUser);
+    }
+
+    if (route === "#/assistant") {
+        showAssistantPage(snapshot.currentUser);
     }
 
     if (route === "#/reports") {

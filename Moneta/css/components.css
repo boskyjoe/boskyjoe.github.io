@@ -2103,6 +2103,13 @@ select {
     margin-top: 0.25rem;
 }
 
+.lead-quotes-grid-card .quote-status-pill {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+}
+
 .lead-quotes-toolbar {
     margin-bottom: 0;
 }

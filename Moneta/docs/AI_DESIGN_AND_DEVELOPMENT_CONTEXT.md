@@ -274,6 +274,8 @@ record mode and void mode share one form; void reason is shown only in void mode
 - Lead work log modal with subcollection history + entry form.
 - Lead delete guardrails:
 converted leads or leads linked to sales cannot be deleted.
+- Leads grid delete action refined:
+the history grid keeps the `Delete` action visible for consistency with the Moneta action pattern, but it is disabled with a tooltip for records that are already known to be protected, such as converted enquiries, enquiries linked to sales, and enquiries with quote history.
 - Lead-to-retail conversion implemented:
 builds validated conversion package, stores in session storage, routes to retail.
 - Lead conversion guidance placement updated:
@@ -305,7 +307,7 @@ the quote editor now uses a denser 3-column layout for the core fields, with lon
 - Quote form customer snapshot and save confirmation refined:
 the quote form now includes editable customer name / phone / email / address copied from the lead, quote save/send now uses the same success-summary modal pattern as other Moneta modules, and customer email is required before a quote can be sent.
 - Quote status control refined:
-the quote form now includes a controlled manual status field for user-managed states (`Draft`, `Sent`, `Expired`, `Cancelled`), while `Accepted` and `Rejected` remain action-driven so audit metadata stays explicit. Quote customer contact edits are also synced back to the parent lead on quote save.
+the quote workspace status field now supports user-managed lifecycle updates for `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, and `Cancelled`. `Accepted` can now be recorded directly in the workspace for verbal/offline customer approval, with acceptance metadata captured in-form; `Rejected` and `Cancelled` also expose their note fields in-form. `Superseded` remains system-managed so quote revision history stays intact. Quote customer contact edits are also synced back to the parent lead on quote save.
 - Quote listener scope tightened for cost and UX:
 the quote subcollection listener should now be active only while the quote UI is actually open (`Quotes` tab or quick drawer), which reduces unnecessary reads and avoids extra re-render churn on the free Firestore plan.
 - Quote revision save selection stabilized:
@@ -321,13 +323,15 @@ the drawer now also avoids rendering entirely when closed, and CSS explicitly hi
 - Quote Quick View UX simplified:
 the drawer is now treated as a scan-and-jump panel, not a second workspace. It explains the next step, uses `Create Quote Draft` wording, shows `Open Quotes Workspace` only when quote history exists, and selecting a quote from the drawer closes it and moves the user into the full Quotes Workspace.
 - Quote lifecycle implemented:
-quotes support `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, `Superseded`, and `Cancelled`.
+quotes support `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, `Superseded`, `Cancelled`, and system-managed `Converted`.
 - Quote versioning implemented:
 once a quote is `Sent`, it is treated as frozen; revising creates a new draft version and marks the prior quote `Superseded`.
 - Quote actions implemented in Leads:
 users can create a new quote draft, save draft, send quote, revise a sent/closed quote into a new version, mark a sent quote accepted, reject it, or cancel it.
 - Quote acceptance capture implemented:
 the quote workspace includes `Accepted By`, `Accepted Via`, and `Acceptance Notes` fields for marking sent quotes as accepted.
+- Quote PDF generation implemented:
+the `Quotes` workspace now includes a `Preview / Download Quote PDF` action that generates an on-demand customer-style PDF in the browser using the current draft values or the saved quote snapshot. It reuses Moneta's existing `html2pdf` pattern, applies store-aware branding for `Church Store`, `Tasty Treats`, and `Consignment`, and does not archive/store the PDF file yet.
 - Quote delete guardrail implemented:
 leads with quote history cannot be deleted.
 - Lead-to-retail conversion enhanced:
@@ -336,6 +340,14 @@ when a retail-convertible quote is available for a lead, Moneta now prompts the 
 retail drafts and saved sales now retain `sourceType`, `sourceQuoteId`, `sourceQuoteNumber`, and `sourceQuoteStatus` when conversion came from a quote, and quote-based retail saves preserve quoted pricing instead of silently reverting to current catalogue pricing.
 - Lead-to-retail conversion rule refined:
 `Accepted` quotes should be the preferred conversion source when available; otherwise Moneta can use the currently selected retail-convertible quote (`Draft` / `Sent`) or fall back to the lead request. `Consignment` quotes are intentionally blocked from Retail Store conversion.
+- Converted lead / quote lock implemented:
+once a retail sale is actually saved from a lead, the lead remains `Converted` and the originating quote (when one was used) is marked `Converted` with linked sale metadata. The lead details tab, requested-products worksheet, quote workspace, quote actions, and quote draft creation all become read-only so the original commercial thread stays audit-safe.
+- Voided-sale workflow refined for converted leads:
+if a converted retail sale is later voided, the lead and quote stay locked rather than reopening for edits. Both retain their conversion linkage, and the UI now shows a clear `Converted (Sale Voided)` / read-only outcome so staff can review history safely and start a fresh enquiry if a replacement transaction is needed.
+- Quote versions grid status readability refined:
+the `Status` column in the quote versions grid is now wider, and long status pills such as `Converted (Sale Voided)` are allowed to wrap inside that grid so the full state remains readable.
+- Quote workspace close behavior refined:
+in read-only converted quote threads, `Close View` should take the user back to the `Edit Enquiry` tab instead of acting like `Discard Changes`.
 
 ## 8) Retail Store
 `Moneta/js/features/retail-store/`
@@ -361,7 +373,26 @@ lead stays `Converted` but stores conversion outcome metadata (`Sale Voided` + a
 - PDF outputs:
 invoice and return credit-note generation.
 
-## 9) Simple Consignment
+## 9) Assistant
+`Moneta/js/features/assistant/`
+- Moneta Assistant V1 implemented as a dedicated in-app module:
+route `#/assistant`, visible in the sidebar for internal roles (`admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`).
+- Assistant V1 is intentionally read-only and role-aware:
+it does not bypass Moneta permissions or query Firestore directly. Instead, it routes natural-language prompts into the existing report service functions so answers reuse the same business logic as the Reporting module.
+- Current assistant data lanes:
+`Cash Flow Summary`, `Outstanding Receivables`, `Purchase Payables`, `Profit and Loss`, `Sales Summary`, `Direct Store Performance`, `Consignment Performance`, `Inventory Status`, and `Inventory Valuation`.
+- Current role access model:
+`admin` and `finance` can access the full assistant dataset; `sales_staff` is limited to sales/direct-store/consignment answers; `inventory_manager` is limited to payables/consignment/inventory answers; `team_lead` currently gets guidance-only assistant help because V1 does not expose live data tools for that role yet.
+- Assistant prompt parsing is deterministic, not LLM-backed yet:
+it supports report-style language such as “show cash flow for the last 30 days”, “show P&L YTD”, “what products are low stock”, and custom explicit date ranges like `2026-01-01 to 2026-03-31`.
+- Date-window handling in Assistant V1:
+range-aware answers use the same `30d` / `90d` / `YTD` / custom window logic already used by the report services; as-of reports like inventory status, inventory valuation, receivables, and payables stay as-of snapshots.
+- Assistant UI behavior:
+chat transcript, role/capability strip, suggested prompt chips, structured answer cards with metrics, source labels (`Live Data` / `Cached Snapshot`), and report window/prepared-at metadata.
+- Future direction kept open:
+the current module is designed so a true LLM backend can later sit behind the same role-gated tool layer, rather than replacing the permission model or direct report service access patterns.
+
+## 10) Simple Consignment
 `Moneta/js/features/simple-consignment/`
 - Checkout order creation from sales catalogue.
 - Settlement updates with item-level sold/returned/damaged/gifted accounting.
@@ -372,13 +403,13 @@ allowed only if no product/financial/transaction activity.
 - Close guardrails:
 requires all quantities accounted and balance due = 0.
 
-## 10) Admin Modules
+## 11) Admin Modules
 `Moneta/js/features/admin-modules/`
 - Manages Product Categories, Payment Modes, Sales Seasons.
 - Edit restrictions enforce downstream usage protection.
 - In-use records can still be activated/deactivated.
 
-## 11) User Management
+## 12) User Management
 `Moneta/js/features/user-management/`
 - Admin-only user access management.
 - Safety rules:
