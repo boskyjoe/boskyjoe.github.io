@@ -1,12 +1,15 @@
+import { getState } from "../../app/store.js";
 import { getAssistantCapabilities, getAssistantPromptSuggestions, askMonetaAssistant, buildAssistantWelcome } from "./service.js";
 import { icons } from "../../shared/icons.js";
 import { showToast } from "../../shared/toast.js";
+
+const ASSISTANT_ROLES = new Set(["admin", "inventory_manager", "sales_staff", "finance", "team_lead"]);
 
 const featureState = {
     messages: [],
     promptValue: "",
     isLoading: false,
-    bound: false
+    overlayOpen: false
 };
 
 function normalizeText(value) {
@@ -20,6 +23,18 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+}
+
+function canUseAssistant(user) {
+    return Boolean(user?.role && ASSISTANT_ROLES.has(user.role));
+}
+
+function getCurrentSnapshot() {
+    return getState();
+}
+
+function getCurrentUser() {
+    return getCurrentSnapshot().currentUser;
 }
 
 function renderCapabilities(user) {
@@ -108,7 +123,33 @@ function renderTranscript() {
     return featureState.messages.map(renderMessage).join("");
 }
 
-function renderPromptSuggestions(user) {
+function renderLoadingMessage() {
+    if (!featureState.isLoading) return "";
+
+    return `
+        <article class="assistant-message assistant-message-assistant">
+            <div class="assistant-message-bubble assistant-message-loading">
+                <p>Working through Moneta's data services...</p>
+            </div>
+        </article>
+    `;
+}
+
+function renderPromptChipGrid(user) {
+    const prompts = getAssistantPromptSuggestions(user);
+
+    return `
+        <div class="assistant-prompt-grid">
+            ${prompts.map(prompt => `
+                <button class="button button-secondary assistant-prompt-chip" type="button" data-assistant-prompt="${escapeHtml(prompt)}">
+                    ${escapeHtml(prompt)}
+                </button>
+            `).join("")}
+        </div>
+    `;
+}
+
+function renderPromptSuggestionsCard(user) {
     const prompts = getAssistantPromptSuggestions(user);
 
     return `
@@ -120,14 +161,31 @@ function renderPromptSuggestions(user) {
                 </div>
                 <span class="status-pill">${prompts.length} prompt${prompts.length === 1 ? "" : "s"}</span>
             </div>
-            <div class="assistant-prompt-grid">
-                ${prompts.map(prompt => `
-                    <button class="button button-secondary assistant-prompt-chip" type="button" data-assistant-prompt="${escapeHtml(prompt)}">
-                        ${escapeHtml(prompt)}
-                    </button>
-                `).join("")}
-            </div>
+            ${renderPromptChipGrid(user)}
         </section>
+    `;
+}
+
+function renderComposer({ formId, inputId, label = "Ask a question", placeholder, rows = 3, compact = false }) {
+    return `
+        <form id="${formId}" class="assistant-composer${compact ? " assistant-overlay-composer" : ""}" data-assistant-form>
+            <label class="assistant-composer-field" for="${inputId}">
+                <span>${escapeHtml(label)}</span>
+                <textarea
+                    id="${inputId}"
+                    class="textarea"
+                    rows="${rows}"
+                    data-assistant-input
+                    placeholder="${escapeHtml(placeholder)}"
+                    ${featureState.isLoading ? "disabled" : ""}>${escapeHtml(featureState.promptValue)}</textarea>
+            </label>
+            <div class="assistant-composer-actions">
+                <button class="button button-primary-alt" type="submit" ${featureState.isLoading ? "disabled" : ""}>
+                    <span class="button-icon">${icons.search}</span>
+                    ${featureState.isLoading ? "Thinking..." : "Ask Assistant"}
+                </button>
+            </div>
+        </form>
     `;
 }
 
@@ -143,7 +201,18 @@ function ensureWelcomeMessage(user) {
     ];
 }
 
-function renderAssistantShell(user) {
+function scrollThread(rootId, selector) {
+    const root = document.getElementById(rootId);
+    const thread = root?.querySelector(selector);
+    if (!thread) return;
+
+    thread.scrollTo({
+        top: thread.scrollHeight || 0,
+        behavior: "smooth"
+    });
+}
+
+function renderAssistantPage(user) {
     const root = document.getElementById("assistant-root");
     if (!root) return;
 
@@ -167,48 +236,121 @@ function renderAssistantShell(user) {
             </section>
 
             <section class="panel-card assistant-chat-card">
-                <div class="assistant-thread" id="assistant-thread">
+                <div class="assistant-thread" data-assistant-thread>
                     ${renderTranscript()}
-                    ${featureState.isLoading ? `
-                        <article class="assistant-message assistant-message-assistant">
-                            <div class="assistant-message-bubble assistant-message-loading">
-                                <p>Working through Moneta's data services...</p>
-                            </div>
-                        </article>
-                    ` : ""}
+                    ${renderLoadingMessage()}
                 </div>
-                <form id="assistant-form" class="assistant-composer">
-                    <label class="assistant-composer-field" for="assistant-prompt-input">
-                        <span>Ask a question</span>
-                        <textarea
-                            id="assistant-prompt-input"
-                            class="textarea"
-                            rows="3"
-                            placeholder="Example: Show cash flow for the last 30 days"
-                            ${featureState.isLoading ? "disabled" : ""}>${escapeHtml(featureState.promptValue)}</textarea>
-                    </label>
-                    <div class="assistant-composer-actions">
-                        <button class="button button-primary-alt" type="submit" ${featureState.isLoading ? "disabled" : ""}>
-                            <span class="button-icon">${icons.search}</span>
-                            ${featureState.isLoading ? "Thinking..." : "Ask Assistant"}
-                        </button>
-                    </div>
-                </form>
+                ${renderComposer({
+                    formId: "assistant-form",
+                    inputId: "assistant-prompt-input",
+                    placeholder: "Example: Show cash flow for the last 30 days"
+                })}
             </section>
 
-            ${renderPromptSuggestions(user)}
+            ${renderPromptSuggestionsCard(user)}
         </div>
     `;
 
-    document.getElementById("assistant-thread")?.scrollTo({
-        top: document.getElementById("assistant-thread")?.scrollHeight || 0,
-        behavior: "smooth"
-    });
+    scrollThread("assistant-root", "[data-assistant-thread]");
 }
 
-async function submitPrompt(user, promptText) {
+function renderAssistantOverlay(user, route) {
+    const root = document.getElementById("assistant-overlay-root");
+    if (!root) return;
+
+    if (!user || route === "#/login") {
+        featureState.overlayOpen = false;
+    }
+
+    if (!canUseAssistant(user) || route === "#/assistant") {
+        root.innerHTML = "";
+        return;
+    }
+
+    ensureWelcomeMessage(user);
+
+    root.innerHTML = `
+        <div class="assistant-overlay-shell${featureState.overlayOpen ? " is-open" : ""}">
+            ${featureState.overlayOpen ? `
+                <button class="assistant-overlay-backdrop" type="button" aria-label="Close Moneta Assistant" data-assistant-close></button>
+            ` : ""}
+            ${featureState.overlayOpen ? `
+                <aside class="assistant-overlay-panel" aria-label="Moneta Assistant">
+                    <div class="assistant-overlay-head">
+                        <div class="assistant-overlay-head-copy">
+                            <p class="assistant-overlay-kicker">Role-Aware AI</p>
+                            <h2>Moneta Assistant</h2>
+                            <p>Ask for report-style insight without leaving your current workspace.</p>
+                        </div>
+                        <div class="assistant-overlay-head-actions">
+                            <button class="button button-secondary" type="button" data-assistant-clear ${featureState.isLoading ? "disabled" : ""}>
+                                <span class="button-icon">${icons.inactive}</span>
+                                Clear
+                            </button>
+                            <button class="assistant-overlay-icon-button" type="button" aria-label="Close assistant" data-assistant-close>
+                                <span>${icons.close}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="assistant-overlay-capabilities">
+                        ${renderCapabilities(user)}
+                    </div>
+
+                    <div class="assistant-thread assistant-overlay-thread" data-assistant-thread>
+                        ${renderTranscript()}
+                        ${renderLoadingMessage()}
+                    </div>
+
+                    ${renderComposer({
+                        formId: "assistant-overlay-form",
+                        inputId: "assistant-overlay-prompt-input",
+                        label: "Ask Moneta AI",
+                        placeholder: "Example: Compare Church Store and Tasty Treats for 90 days",
+                        rows: 2,
+                        compact: true
+                    })}
+
+                    <section class="assistant-overlay-suggestions">
+                        <div class="assistant-overlay-suggestions-head">
+                            <div>
+                                <p class="hero-kicker">Suggested Prompts</p>
+                                <h3>Quick Start</h3>
+                            </div>
+                            <span class="status-pill">Read Only</span>
+                        </div>
+                        ${renderPromptChipGrid(user)}
+                    </section>
+                </aside>
+            ` : ""}
+
+            <button
+                class="assistant-overlay-launcher"
+                type="button"
+                aria-label="${featureState.overlayOpen ? "Close Moneta Assistant" : "Open Moneta Assistant"}"
+                aria-expanded="${featureState.overlayOpen ? "true" : "false"}"
+                data-assistant-toggle>
+                <span class="assistant-overlay-launcher-icon">${icons.assistant}</span>
+                <span class="assistant-overlay-launcher-copy">
+                    <strong>Moneta AI</strong>
+                    <small>${featureState.overlayOpen ? "Close assistant" : "Ask about reports, sales, and inventory"}</small>
+                </span>
+            </button>
+        </div>
+    `;
+
+    scrollThread("assistant-overlay-root", "[data-assistant-thread]");
+}
+
+function renderAssistantUi(user = getCurrentUser(), route = getCurrentSnapshot().currentRoute) {
+    renderAssistantPage(user);
+    renderAssistantOverlay(user, route);
+}
+
+async function submitPrompt(promptText) {
+    const user = getCurrentUser();
     const text = normalizeText(promptText);
-    if (!text || featureState.isLoading) return;
+    if (!user || !text || featureState.isLoading) return;
 
     featureState.messages = [
         ...featureState.messages,
@@ -216,7 +358,7 @@ async function submitPrompt(user, promptText) {
     ];
     featureState.promptValue = "";
     featureState.isLoading = true;
-    renderAssistantShell(user);
+    renderAssistantUi(user);
 
     try {
         const response = await askMonetaAssistant(user, text);
@@ -245,46 +387,69 @@ async function submitPrompt(user, promptText) {
         ];
     } finally {
         featureState.isLoading = false;
-        renderAssistantShell(user);
+        renderAssistantUi(user);
     }
 }
 
-function bindAssistantEvents(user) {
-    const root = document.getElementById("assistant-root");
+function bindAssistantRoot(rootId) {
+    const root = document.getElementById(rootId);
     if (!root || root.dataset.assistantBound === "true") return;
 
     root.addEventListener("input", event => {
-        const input = event.target.closest("#assistant-prompt-input");
+        const input = event.target.closest("[data-assistant-input]");
         if (!input) return;
         featureState.promptValue = input.value;
     });
 
     root.addEventListener("submit", event => {
-        if (!event.target.closest("#assistant-form")) return;
+        if (!event.target.closest("[data-assistant-form]")) return;
         event.preventDefault();
-        submitPrompt(user, featureState.promptValue);
+        submitPrompt(featureState.promptValue);
     });
 
     root.addEventListener("click", event => {
         const promptButton = event.target.closest("[data-assistant-prompt]");
         const clearButton = event.target.closest("[data-assistant-clear]");
+        const toggleButton = event.target.closest("[data-assistant-toggle]");
+        const closeButton = event.target.closest("[data-assistant-close]");
 
         if (clearButton) {
             featureState.messages = [];
             featureState.promptValue = "";
-            renderAssistantShell(user);
+            renderAssistantUi();
+            return;
+        }
+
+        if (toggleButton) {
+            featureState.overlayOpen = !featureState.overlayOpen;
+            renderAssistantUi();
+            return;
+        }
+
+        if (closeButton) {
+            featureState.overlayOpen = false;
+            renderAssistantUi();
             return;
         }
 
         if (promptButton) {
-            submitPrompt(user, promptButton.dataset.assistantPrompt || "");
+            if (!featureState.overlayOpen && rootId === "assistant-overlay-root") {
+                featureState.overlayOpen = true;
+            }
+            submitPrompt(promptButton.dataset.assistantPrompt || "");
         }
     });
 
     root.dataset.assistantBound = "true";
 }
 
+export function initializeAssistantUi(user, route) {
+    bindAssistantRoot("assistant-root");
+    bindAssistantRoot("assistant-overlay-root");
+    renderAssistantUi(user, route);
+}
+
 export function renderAssistantView(user) {
-    renderAssistantShell(user);
-    bindAssistantEvents(user);
+    bindAssistantRoot("assistant-root");
+    renderAssistantUi(user, getCurrentSnapshot().currentRoute);
 }

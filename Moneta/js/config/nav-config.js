@@ -26,7 +26,7 @@ export const navConfig = [
         icon: icons.assistant,
         iconClass: "nav-icon-cyan",
         roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"],
-        enabled: true
+        enabled: false
     },
     {
         type: "heading",

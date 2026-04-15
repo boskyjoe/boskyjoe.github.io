@@ -375,8 +375,10 @@ invoice and return credit-note generation.
 
 ## 9) Assistant
 `Moneta/js/features/assistant/`
-- Moneta Assistant V1 implemented as a dedicated in-app module:
-route `#/assistant`, visible in the sidebar for internal roles (`admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`).
+- Moneta Assistant V1 now has two shells over the same shared state:
+  - a hidden fallback route at `#/assistant`
+  - the primary UX is a pinned bottom-right launcher that opens an expanding overlay panel
+- Assistant is no longer shown in the sidebar menu; the route remains available as a fallback/debug surface for allowed internal roles (`admin`, `inventory_manager`, `sales_staff`, `finance`, `team_lead`).
 - Assistant V1 is intentionally read-only and role-aware:
 it does not bypass Moneta permissions or query Firestore directly. Instead, it routes natural-language prompts into the existing report service functions so answers reuse the same business logic as the Reporting module.
 - Current assistant data lanes:
@@ -389,6 +391,10 @@ it supports report-style language such as “show cash flow for the last 30 days
 range-aware answers use the same `30d` / `90d` / `YTD` / custom window logic already used by the report services; as-of reports like inventory status, inventory valuation, receivables, and payables stay as-of snapshots.
 - Assistant UI behavior:
 chat transcript, role/capability strip, suggested prompt chips, structured answer cards with metrics, source labels (`Live Data` / `Cached Snapshot`), and report window/prepared-at metadata.
+- Assistant overlay UX:
+global pinned launcher at the lower-right of the shell, compact professional launcher copy (`Moneta AI`), expandable overlay panel with close/clear actions, transcript, prompt composer, and suggested prompts; hidden automatically on the login screen and on the fallback `#/assistant` route.
+- Assistant card spacing refined:
+the top `Role-Aware Data Assistant` card and bottom `Suggested Prompts` card now have explicit internal padding so text and chips do not sit against the card edges.
 - Future direction kept open:
 the current module is designed so a true LLM backend can later sit behind the same role-gated tool layer, rather than replacing the permission model or direct report service access patterns.
 
@@ -431,6 +437,12 @@ cannot remove last active admin.
 - Most modules follow intended layer split:
 `view` orchestration, `service` validation/business logic, `repository` Firebase IO, `grid` AG Grid setup.
 - Dashboard currently mixes UI + data access + aggregation in a single `view.js` file (intentional for speed, but now large).
+- Shared app header layout was hardened for longer module titles:
+the top bar now allows the left title block to shrink/wrap cleanly and the auth card to drop below when space is tight, so titles like `Moneta Assistant` are not clipped.
+- Shared shell edge spacing was refined:
+header padding, main content gutters, and footer inner width were widened so text in the Assistant/top-bar/footer areas does not sit too close to the screen edges.
+- Main content alignment was refined again:
+the central content pane is now left-anchored with a smaller sidebar-side gutter instead of being strongly centered, so pages sit closer to the menu and waste less horizontal space.
 
 ## Code Review Findings (2026-04-11)
 These are current risk items from code + architecture review.
