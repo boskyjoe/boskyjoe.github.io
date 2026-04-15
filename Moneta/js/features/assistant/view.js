@@ -272,9 +272,6 @@ function renderAssistantOverlay(user, route) {
     root.innerHTML = `
         <div class="assistant-overlay-shell${featureState.overlayOpen ? " is-open" : ""}">
             ${featureState.overlayOpen ? `
-                <button class="assistant-overlay-backdrop" type="button" aria-label="Close Moneta Assistant" data-assistant-close></button>
-            ` : ""}
-            ${featureState.overlayOpen ? `
                 <aside class="assistant-overlay-panel" aria-label="Moneta Assistant">
                     <div class="assistant-overlay-head">
                         <div class="assistant-overlay-head-copy">
