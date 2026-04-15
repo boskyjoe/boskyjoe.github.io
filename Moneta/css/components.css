@@ -2251,6 +2251,21 @@ select {
     gap: 0.9rem;
 }
 
+.lead-quote-line-items-shell {
+    border: 1px solid #e1e7f0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.lead-quote-line-items-shell-empty {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.lead-quote-line-items-grid .ag-cell {
+    align-items: center;
+}
+
 .lead-quote-lines-table-wrap {
     overflow: auto;
     border: 1px solid #e1e7f0;
