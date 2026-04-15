@@ -5,15 +5,19 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
+    getLeadQuoteLineItemsGridRows,
     initializeLeadQuotesGrid,
+    initializeLeadQuoteLineItemsGrid,
     initializeLeadWorkLogGrid,
     getLeadRequestedProductsGridRows,
     initializeLeadRequestedProductsGrid,
     initializeLeadsGrid,
+    refreshLeadQuoteLineItemsGrid,
     refreshLeadQuotesGrid,
     refreshLeadRequestedProductsGrid,
     refreshLeadWorkLogGrid,
     refreshLeadsGrid,
+    setLeadQuoteLineItemsReadOnly,
     setLeadRequestedProductsReadOnly,
     updateLeadQuotesGridSearch,
     updateLeadRequestedProductsGridSearch,
@@ -378,6 +382,15 @@ function updateQuoteDraftMetricsDom() {
             node.textContent = formatCurrency(value);
         }
     });
+}
+
+function handleQuoteLineItemsGridChanged() {
+    if (!featureState.quoteDraft || !isQuoteDraftEditable()) return;
+
+    featureState.quoteDraft.lineItems = getLeadQuoteLineItemsGridRows().map(item => recalculateQuoteLineItem(item));
+    featureState.quoteDraft.totals = calculateLeadQuoteTotals(featureState.quoteDraft.lineItems || []);
+    refreshLeadQuoteLineItemsGrid(featureState.quoteDraft.lineItems || []);
+    updateQuoteDraftMetricsDom();
 }
 
 function isQuoteDraftEditable() {
@@ -864,106 +877,17 @@ async function loadCatalogueItemsIntoWorkspace(catalogueId, savedProducts = []) 
     }
 }
 
-function renderQuoteLineItemsTable(quoteDraft, options = {}) {
+function renderQuoteLineItemsGrid(quoteDraft, options = {}) {
     const { readOnly = false } = options;
     const lineItems = quoteDraft?.lineItems || [];
 
-    if (!lineItems.length) {
-        return `
-            <div class="lead-quotes-empty">
-                <p class="lead-quotes-empty-title">No quote lines</p>
-                <p class="panel-copy">This quote does not have any product lines yet.</p>
-            </div>
-        `;
-    }
-
     return `
-        <div class="lead-quote-lines-table-wrap">
-            <table class="lead-quote-lines-table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Category</th>
-                        <th class="lead-quote-lines-number">Qty</th>
-                        <th class="lead-quote-lines-number">Unit Price</th>
-                        <th class="lead-quote-lines-number">Discount %</th>
-                        <th class="lead-quote-lines-number">CGST %</th>
-                        <th class="lead-quote-lines-number">SGST %</th>
-                        <th class="lead-quote-lines-number">Line Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${lineItems.map((item, index) => `
-                        <tr>
-                            <td>
-                                <div class="lead-quote-line-product">
-                                    <p>${item.productName || "-"}</p>
-                                    <span>${item.productId || "-"}</span>
-                                </div>
-                            </td>
-                            <td>${item.categoryName || "-"}</td>
-                            <td class="lead-quote-lines-number">
-                                <input
-                                    class="input lead-quote-line-input"
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value="${Number(item.quotedQty) || 0}"
-                                    data-quote-line-index="${index}"
-                                    data-quote-line-field="quotedQty"
-                                    ${readOnly ? "disabled" : ""}>
-                            </td>
-                            <td class="lead-quote-lines-number">
-                                <input
-                                    class="input lead-quote-line-input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value="${Number(item.unitPrice) || 0}"
-                                    data-quote-line-index="${index}"
-                                    data-quote-line-field="unitPrice"
-                                    ${readOnly ? "disabled" : ""}>
-                            </td>
-                            <td class="lead-quote-lines-number">
-                                <input
-                                    class="input lead-quote-line-input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value="${Number(item.lineDiscountPercentage) || 0}"
-                                    data-quote-line-index="${index}"
-                                    data-quote-line-field="lineDiscountPercentage"
-                                    ${readOnly ? "disabled" : ""}>
-                            </td>
-                            <td class="lead-quote-lines-number">
-                                <input
-                                    class="input lead-quote-line-input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value="${Number(item.cgstPercentage) || 0}"
-                                    data-quote-line-index="${index}"
-                                    data-quote-line-field="cgstPercentage"
-                                    ${readOnly ? "disabled" : ""}>
-                            </td>
-                            <td class="lead-quote-lines-number">
-                                <input
-                                    class="input lead-quote-line-input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value="${Number(item.sgstPercentage) || 0}"
-                                    data-quote-line-index="${index}"
-                                    data-quote-line-field="sgstPercentage"
-                                    ${readOnly ? "disabled" : ""}>
-                            </td>
-                            <td
-                                class="lead-quote-lines-number lead-quote-lines-total"
-                                data-quote-line-total-index="${index}">${formatCurrency(item.lineTotal || 0)}</td>
-                        </tr>
-                    `).join("")}
-                </tbody>
-            </table>
+        <div class="ag-shell lead-quote-line-items-shell ${!lineItems.length ? "lead-quote-line-items-shell-empty" : ""}">
+            <div
+                id="lead-quote-line-items-grid"
+                class="ag-theme-alpine moneta-grid lead-quote-line-items-grid"
+                data-read-only="${readOnly ? "true" : "false"}"
+                style="height: ${lineItems.length ? 360 : 220}px; width: 100%;"></div>
         </div>
     `;
 }
@@ -1291,7 +1215,7 @@ function renderLeadQuotesEditorCard(editingLead) {
                             <div class="lead-form-section-head">
                                 <p class="lead-form-section-kicker">Quoted Products</p>
                             </div>
-                            ${renderQuoteLineItemsTable(quoteDraft, { readOnly: !isEditable })}
+                            ${renderQuoteLineItemsGrid(quoteDraft, { readOnly: !isEditable })}
                         </div>
                         <div class="lead-quote-totals-grid">
                             <div class="metric-card">
@@ -1982,6 +1906,7 @@ function refreshLeadQuotesWorkspaceDom() {
     }
 
     syncLeadQuotesGrid();
+    syncLeadQuoteLineItemsGrid();
 }
 
 function syncLeadProductsGrid() {
@@ -2035,6 +1960,19 @@ function syncLeadQuotesGrid() {
         displayQuoteStatus: resolveQuoteStatusLabel(quote)
     })), featureState.activeQuoteId || "");
     updateLeadQuotesGridSearch(featureState.quoteSearchTerm);
+}
+
+function syncLeadQuoteLineItemsGrid() {
+    const gridElement = document.getElementById("lead-quote-line-items-grid");
+    if (!gridElement) return;
+
+    const isEditable = isQuoteDraftEditable();
+    initializeLeadQuoteLineItemsGrid(gridElement, handleQuoteLineItemsGridChanged);
+    setLeadQuoteLineItemsReadOnly(!isEditable);
+    refreshLeadQuoteLineItemsGrid((featureState.quoteDraft?.lineItems || []).map(item => ({
+        ...item,
+        _readOnly: !isEditable
+    })));
 }
 
 function detachQuoteListener(options = {}) {
@@ -2248,6 +2186,7 @@ export function renderLeadsView() {
     syncLeadsGrid();
     syncLeadWorkLogGrid();
     syncLeadQuotesGrid();
+    syncLeadQuoteLineItemsGrid();
     ensureQuoteListener(snapshot);
 }
 
@@ -2270,6 +2209,7 @@ export function renderLeadQuotesView() {
 
     renderLeadQuotesPageShell();
     ensureQuoteListener(snapshot);
+    syncLeadQuoteLineItemsGrid();
 }
 
 function handleLeadSearchInput(target) {
@@ -2554,26 +2494,6 @@ async function handleQuoteSelect(button) {
         openDrawer: false
     });
     focusQuotesWorkspace();
-}
-
-function handleQuoteLineFieldInput(target) {
-    if (!featureState.quoteDraft || !isQuoteDraftEditable()) return;
-
-    const lineIndex = Number(target.dataset.quoteLineIndex);
-    const field = target.dataset.quoteLineField || "";
-    const lineItems = featureState.quoteDraft.lineItems || [];
-    const currentLine = lineItems[lineIndex];
-    if (!currentLine) return;
-
-    const numericValue = Number(target.value);
-    const nextValue = Number.isFinite(numericValue) ? numericValue : 0;
-
-    currentLine[field] = field === "quotedQty"
-        ? Math.max(0, Math.floor(nextValue))
-        : Math.max(0, Number(nextValue.toFixed(2)));
-
-    recalculateQuoteDraftTotals();
-    updateQuoteDraftMetricsDom();
 }
 
 async function handleQuoteSave(submitStatusOverride = "") {
@@ -3401,7 +3321,6 @@ function bindLeadsDomEvents() {
         const quoteStoreSelect = event.target.closest("#lead-quote-store");
         const quoteStatusSelect = event.target.closest("#lead-quote-status");
         const quoteValidUntilInput = event.target.closest("#lead-quote-valid-until");
-        const quoteLineInput = event.target.closest(".lead-quote-line-input");
 
         if (catalogueSelect) {
             handleCatalogueChange(catalogueSelect);
@@ -3430,11 +3349,6 @@ function bindLeadsDomEvents() {
 
         if (quoteValidUntilInput && featureState.quoteDraft) {
             updateQuoteDraftField("validUntil", quoteValidUntilInput.value || "");
-            return;
-        }
-
-        if (quoteLineInput) {
-            handleQuoteLineFieldInput(quoteLineInput);
         }
     });
 

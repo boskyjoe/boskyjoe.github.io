@@ -11,6 +11,9 @@ let leadWorkLogGridApi = null;
 let currentLeadWorkLogGridElement = null;
 let leadQuotesGridApi = null;
 let currentLeadQuotesGridElement = null;
+let leadQuoteLineItemsGridApi = null;
+let currentLeadQuoteLineItemsGridElement = null;
+let leadQuoteLineItemsReadOnly = false;
 
 const rightAlignedNumberColumn = {
     cellClass: "ag-right-aligned-cell",
@@ -318,6 +321,87 @@ function buildLeadQuotesColumnDefs() {
     ];
 }
 
+function buildLeadQuoteLineItemsColumnDefs() {
+    return [
+        {
+            field: "productName",
+            headerName: "Product",
+            minWidth: 240,
+            flex: 1.35,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "categoryName",
+            headerName: "Category",
+            minWidth: 150,
+            flex: 0.9,
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "quotedQty",
+            headerName: "Qty",
+            minWidth: 100,
+            maxWidth: 120,
+            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("quotedQty", 0),
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "unitPrice",
+            headerName: "Unit Price",
+            minWidth: 130,
+            flex: 0.9,
+            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("unitPrice", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "lineDiscountPercentage",
+            headerName: "Discount %",
+            minWidth: 125,
+            flex: 0.85,
+            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            field: "cgstPercentage",
+            headerName: "CGST %",
+            minWidth: 110,
+            flex: 0.8,
+            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("cgstPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            field: "sgstPercentage",
+            headerName: "SGST %",
+            minWidth: 110,
+            flex: 0.8,
+            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            cellEditor: "agNumberCellEditor",
+            valueSetter: buildNumberSetter("sgstPercentage", 2),
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            field: "lineTotal",
+            headerName: "Line Total",
+            minWidth: 140,
+            flex: 0.95,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        }
+    ];
+}
+
 function buildRequestedProductsColumnDefs(onRowsChanged) {
     return [
         {
@@ -600,4 +684,53 @@ export function refreshLeadQuotesGrid(rows, selectedQuoteId = "") {
 
 export function updateLeadQuotesGridSearch(searchTerm) {
     leadQuotesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeLeadQuoteLineItemsGrid(gridElement, onRowsChanged) {
+    if (!gridElement) return leadQuoteLineItemsGridApi;
+
+    if (leadQuoteLineItemsGridApi && currentLeadQuoteLineItemsGridElement !== gridElement) {
+        leadQuoteLineItemsGridApi.destroy();
+        leadQuoteLineItemsGridApi = null;
+        currentLeadQuoteLineItemsGridElement = null;
+    }
+
+    if (leadQuoteLineItemsGridApi) return leadQuoteLineItemsGridApi;
+
+    leadQuoteLineItemsGridApi = createGrid(gridElement, {
+        columnDefs: buildLeadQuoteLineItemsColumnDefs(),
+        rowData: [],
+        defaultColDef: buildDefaultColDef(),
+        getRowId: params => params.data.productId,
+        singleClickEdit: true,
+        stopEditingWhenCellsLoseFocus: true,
+        pagination: true,
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 20, 50],
+        onCellValueChanged: params => {
+            params.api.refreshCells({ rowNodes: [params.node], force: true });
+            onRowsChanged?.();
+        }
+    });
+
+    currentLeadQuoteLineItemsGridElement = gridElement;
+    return leadQuoteLineItemsGridApi;
+}
+
+export function setLeadQuoteLineItemsReadOnly(value) {
+    leadQuoteLineItemsReadOnly = Boolean(value);
+}
+
+export function refreshLeadQuoteLineItemsGrid(rows) {
+    leadQuoteLineItemsGridApi?.setGridOption("rowData", rows || []);
+}
+
+export function getLeadQuoteLineItemsGridRows() {
+    if (!leadQuoteLineItemsGridApi) return [];
+
+    const rows = [];
+    leadQuoteLineItemsGridApi.forEachNode(node => {
+        rows.push(node.data);
+    });
+    return rows;
 }
