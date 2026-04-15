@@ -1641,6 +1641,10 @@
     gap: 8px;
 }
 
+.assistant-overlay-head-actions .button.button-secondary {
+    padding: 0.58rem 0.9rem;
+}
+
 .assistant-overlay-icon-button {
     width: 2.2rem;
     height: 2.2rem;
@@ -1654,14 +1658,48 @@
     cursor: pointer;
 }
 
-.assistant-overlay-capabilities {
-    padding: 10px 16px 0;
+.assistant-overlay-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 16px 0;
+    color: #0f5f7a;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.assistant-overlay-meta-bar span {
+    position: relative;
+}
+
+.assistant-overlay-meta-bar span + span::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin: 0 10px 2px 0;
+    border-radius: 999px;
+    background: rgba(15, 95, 122, 0.38);
+    vertical-align: middle;
+}
+
+.assistant-overlay-intro-note {
+    margin: 10px 16px 0;
+    padding: 0.78rem 0.9rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(20, 63, 102, 0.08);
+    color: var(--text-subtle);
+    font-size: 0.84rem;
+    line-height: 1.4;
 }
 
 .assistant-overlay-thread {
     min-height: 0;
     max-height: none;
-    padding: 14px 16px;
+    padding: 10px 16px 12px;
 }
 
 .assistant-overlay-thread .assistant-message-bubble {
@@ -1696,15 +1734,41 @@
 }
 
 .assistant-overlay-suggestions-head h3 {
-    margin: 0.15rem 0 0;
-    font-size: 1rem;
+    margin: 0;
+    font-size: 0.96rem;
 }
 
 .assistant-overlay-suggestions-note {
     color: var(--text-subtle);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     line-height: 1.35;
     text-align: right;
+}
+
+.assistant-overlay-prompt-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.assistant-overlay-prompt-chip {
+    min-height: 38px;
+    padding: 0.56rem 0.82rem;
+    justify-content: flex-start;
+    border-radius: 999px;
+    background: rgba(222, 231, 241, 0.88);
+    color: var(--text-main);
+    box-shadow: none;
+    text-align: left;
+    line-height: 1.2;
+    font-size: 0.88rem;
+    flex: 0 1 auto;
+    max-width: 100%;
+}
+
+.assistant-overlay-prompt-chip:hover {
+    box-shadow: none;
+    background: rgba(212, 224, 238, 0.96);
 }
 
 @media (max-width: 900px) {
@@ -1770,5 +1834,15 @@
     .assistant-overlay-head-actions {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .assistant-overlay-meta-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .assistant-overlay-meta-bar span + span::before {
+        display: none;
     }
 }
