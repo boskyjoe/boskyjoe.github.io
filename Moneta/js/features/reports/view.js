@@ -15,6 +15,7 @@ import {
     getDefaultCashFlowCustomRange,
     getInventoryStatusReport,
     getInventoryValuationReport,
+    getProductPerformanceReport,
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
     getPurchasePayablesReport,
@@ -107,10 +108,10 @@ const REPORT_GROUPS = [
                 id: "product-performance",
                 title: "Product Performance",
                 description: "Top and slow-moving products by quantity sold, revenue contribution, and stock exposure.",
-                dataSource: "productCatalogue, salesInvoices",
+                dataSource: "productCatalogue, salesInvoices, consignmentOrdersV2",
                 roles: ["admin", "inventory_manager", "finance", "sales_staff"],
-                status: "planned",
-                implemented: false
+                status: "priority",
+                implemented: true
             },
             {
                 id: "reorder-recommendations",
@@ -281,7 +282,7 @@ function buildRangeButtonsMarkup() {
 }
 
 function reportUsesRange(reportId = "") {
-    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "store-performance", "consignment-performance"].includes(reportId);
+    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "store-performance", "consignment-performance", "product-performance"].includes(reportId);
 }
 
 function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
@@ -1292,6 +1293,180 @@ function renderInventoryValuationMetadataSection(reportData = null) {
     `;
 }
 
+function renderProductPerformanceCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Products Sold</p>
+                <p class="dashboard-kpi-value">${summary.productCount || 0}</p>
+                <p class="dashboard-kpi-meta">Distinct products sold in the selected window</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Units Sold</p>
+                <p class="dashboard-kpi-value">${summary.totalUnitsSold || 0}</p>
+                <p class="dashboard-kpi-meta">Retail and consignment units sold</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Top By Revenue</p>
+                <p class="dashboard-kpi-value">${summary.topRevenueProductName || "-"}</p>
+                <p class="dashboard-kpi-meta">${formatCurrency(summary.topRevenueProductRevenue || 0)} net sales</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Top By Units</p>
+                <p class="dashboard-kpi-value">${summary.topUnitProductName || "-"}</p>
+                <p class="dashboard-kpi-meta">${summary.topUnitProductUnits || 0} units sold</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderProductPerformanceTopSection(reportData = null) {
+    const rows = reportData?.topRows || [];
+    const totalRevenue = Number(reportData?.summary?.totalRevenue) || 0;
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Top Selling Products</h3>
+                    <p>Products ranked by revenue and units sold across direct retail and consignment channels.</p>
+                </div>
+                <span class="status-pill">${rows.length} product${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th class="reports-align-right">Units Sold</th>
+                            <th class="reports-align-right">Revenue</th>
+                            <th class="reports-align-right">Retail Units</th>
+                            <th class="reports-align-right">Consignment Units</th>
+                            <th class="reports-align-right">Revenue Share</th>
+                            <th>Last Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.productName}</td>
+                                <td>${row.categoryName}</td>
+                                <td class="reports-align-right">${row.unitsSold}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.revenue)}</td>
+                                <td class="reports-align-right">${row.retailUnitsSold}</td>
+                                <td class="reports-align-right">${row.consignmentUnitsSold}</td>
+                                <td class="reports-align-right">${formatPercent(totalRevenue > 0 ? ((Number(row.revenue) || 0) / totalRevenue) * 100 : 0)}</td>
+                                <td>${row.lastSoldOn ? formatDateLabel(row.lastSoldOn) : "-"}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="8" class="reports-table-empty">No product sales are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderProductPerformanceExposureSection(reportData = null) {
+    const rows = reportData?.stockExposureRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Slow-Moving Stock Exposure</h3>
+                    <p>Products with low sold quantity but current stock still on hand, useful for stock-risk and merchandising review.</p>
+                </div>
+                <span class="status-pill">${rows.length} product${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th class="reports-align-right">Units Sold</th>
+                            <th class="reports-align-right">On Hand</th>
+                            <th class="reports-align-right">Stock Exposure</th>
+                            <th class="reports-align-right">Average Unit Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.productName}</td>
+                                <td>${row.categoryName}</td>
+                                <td>${row.stockStatus}</td>
+                                <td class="reports-align-right">${row.unitsSold}</td>
+                                <td class="reports-align-right">${row.unitsOnHand}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.stockExposureValue)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageUnitRevenue)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="7" class="reports-table-empty">No stock exposure products are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderProductPerformanceMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Product performance is built from sold retail line items and consignment item settlements inside the selected reporting window.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Window</p>
+                    <p class="report-audit-value">${reportData?.rangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Products Sold</p>
+                    <p class="report-audit-value">${reportData?.summary?.productCount || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Products ${sourceCounts.products || 0},
+                Categories ${sourceCounts.categories || 0},
+                Retail sales ${sourceCounts.salesInvoices || 0},
+                Consignment orders ${sourceCounts.consignmentOrders || 0}.
+            </div>
+        </section>
+    `;
+}
+
 function buildActivityGridColumnDefs() {
     return [
         {
@@ -2206,6 +2381,20 @@ function renderConsignmentPerformanceReportView(user, reportDef) {
     `;
 }
 
+function renderProductPerformanceReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
+            ${renderProductPerformanceCards(reportData)}
+            ${renderProductPerformanceTopSection(reportData)}
+            ${renderProductPerformanceExposureSection(reportData)}
+            ${renderProductPerformanceMetadataSection(reportData)}
+        </div>
+    `;
+}
+
 function bindReportsEvents(user) {
     const root = document.getElementById("reports-root");
     if (!root) return;
@@ -2737,6 +2926,64 @@ async function loadInventoryValuationReport(user, { forceRefresh = false } = {})
     }
 }
 
+async function loadProductPerformanceReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Product performance range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "product-performance"
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getProductPerformanceReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "product-performance"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Product performance report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the product performance report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 function loadActiveReport(user, options = {}) {
     const reportId = featureState.activeReportId;
 
@@ -2754,6 +3001,9 @@ function loadActiveReport(user, options = {}) {
     }
     if (reportId === "inventory-valuation") {
         return loadInventoryValuationReport(user, options);
+    }
+    if (reportId === "product-performance") {
+        return loadProductPerformanceReport(user, options);
     }
     if (reportId === "cash-flow-summary") {
         return loadCashFlowReport(user, options);
@@ -2797,6 +3047,7 @@ export function renderReportsView(user) {
             if (activeReport.id === "consignment-performance") return renderConsignmentPerformanceReportView(user, activeReport);
             if (activeReport.id === "inventory-status") return renderInventoryStatusReportView(user, activeReport);
             if (activeReport.id === "inventory-valuation") return renderInventoryValuationReportView(user, activeReport);
+            if (activeReport.id === "product-performance") return renderProductPerformanceReportView(user, activeReport);
             if (activeReport.id === "cash-flow-summary") return renderCashFlowReportView(user, activeReport);
             if (activeReport.id === "outstanding-receivables") return renderOutstandingReceivablesReportView(user, activeReport);
             if (activeReport.id === "purchase-payables") return renderPurchasePayablesReportView(user, activeReport);

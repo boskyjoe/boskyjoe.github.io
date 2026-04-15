@@ -1135,6 +1135,209 @@ function buildSalesChannelRows(rows = []) {
         .filter(bucket => bucket.transactionCount > 0 || bucket.channel !== "Other");
 }
 
+function buildProductPerformanceSalesRows({
+    salesInvoices = [],
+    consignmentOrders = []
+}) {
+    const rows = [];
+
+    (salesInvoices || [])
+        .filter(row => normalizeStatus(row.saleStatus, "Active") !== "Voided")
+        .filter(row => normalizeStatus(row.saleType, "Revenue") !== "Sample")
+        .forEach(row => {
+            const transactionDate = resolveTransactionDate(row, ["saleDate"]);
+            const channel = normalizeText(row.store) || "Other";
+            const reference = normalizeText(row.saleId || row.manualVoucherNumber || row.id);
+            const lineItems = Array.isArray(row.lineItems) ? row.lineItems : [];
+
+            lineItems.forEach(item => {
+                const productId = normalizeText(item.productId);
+                const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+                if (!productId || quantity <= 0) return;
+
+                rows.push({
+                    productId,
+                    productName: normalizeText(item.productName) || "Untitled Product",
+                    categoryId: normalizeText(item.categoryId),
+                    categoryName: normalizeText(item.categoryName) || "-",
+                    channel,
+                    transactionDate,
+                    reference,
+                    quantitySold: quantity,
+                    netSales: roundCurrency(item.taxableAmount),
+                    grossSales: roundCurrency(item.lineSubtotal),
+                    taxAmount: roundCurrency(item.taxAmount),
+                    transactionCount: 1,
+                    source: "Retail"
+                });
+            });
+        });
+
+    (consignmentOrders || [])
+        .filter(row => normalizeStatus(row.status, "Active") !== "Cancelled")
+        .forEach(row => {
+            const transactionDate = resolveTransactionDate(row, ["checkoutDate"]);
+            const reference = normalizeText(row.consignmentId || row.manualVoucherNumber || row.id);
+            const items = Array.isArray(row.items) ? row.items : [];
+
+            items.forEach(item => {
+                const productId = normalizeText(item.productId);
+                const quantitySold = Math.max(0, Math.floor(Number(item.quantitySold) || 0));
+                if (!productId || quantitySold <= 0) return;
+
+                const sellingPrice = roundCurrency(item.sellingPrice);
+                rows.push({
+                    productId,
+                    productName: normalizeText(item.productName) || "Untitled Product",
+                    categoryId: normalizeText(item.categoryId),
+                    categoryName: normalizeText(item.categoryName) || "-",
+                    channel: "Consignment",
+                    transactionDate,
+                    reference,
+                    quantitySold,
+                    netSales: roundCurrency(quantitySold * sellingPrice),
+                    grossSales: roundCurrency(quantitySold * sellingPrice),
+                    taxAmount: 0,
+                    transactionCount: 1,
+                    source: "Consignment"
+                });
+            });
+        });
+
+    return rows;
+}
+
+function buildProductPerformanceRows({
+    products = [],
+    categories = [],
+    salesInvoices = [],
+    consignmentOrders = []
+}) {
+    const categoryNameMap = buildCategoryNameMap(categories);
+    const productRows = buildProductPerformanceSalesRows({ salesInvoices, consignmentOrders });
+    const productMap = new Map(
+        (products || [])
+            .filter(product => normalizeText(product.id))
+            .map(product => [normalizeText(product.id), product])
+    );
+    const buckets = new Map();
+
+    productRows.forEach(row => {
+        if (!buckets.has(row.productId)) {
+            const product = productMap.get(row.productId) || {};
+            const unitsOnHand = Math.max(0, Number(product.inventoryCount) || 0);
+            const unitSell = roundCurrency(product.sellingPrice);
+
+            buckets.set(row.productId, {
+                productId: row.productId,
+                productName: row.productName || normalizeText(product.itemName) || "Untitled Product",
+                categoryName: row.categoryName && row.categoryName !== "-"
+                    ? row.categoryName
+                    : (resolveInventoryCategoryName(product, categoryNameMap) || "-"),
+                unitsSold: 0,
+                retailUnitsSold: 0,
+                consignmentUnitsSold: 0,
+                revenue: 0,
+                retailRevenue: 0,
+                consignmentRevenue: 0,
+                grossRevenue: 0,
+                transactionCount: 0,
+                lastSoldOn: null,
+                unitsOnHand,
+                stockStatus: resolveInventoryStatus(unitsOnHand),
+                unitSell,
+                stockExposureValue: roundCurrency(unitsOnHand * unitSell)
+            });
+        }
+
+        const bucket = buckets.get(row.productId);
+        bucket.unitsSold += row.quantitySold;
+        bucket.revenue = roundCurrency(bucket.revenue + row.netSales);
+        bucket.grossRevenue = roundCurrency(bucket.grossRevenue + row.grossSales);
+        bucket.transactionCount += row.transactionCount;
+        bucket.lastSoldOn = !bucket.lastSoldOn || toDateValue(row.transactionDate).getTime() > toDateValue(bucket.lastSoldOn).getTime()
+            ? row.transactionDate
+            : bucket.lastSoldOn;
+
+        if (row.channel === "Consignment") {
+            bucket.consignmentUnitsSold += row.quantitySold;
+            bucket.consignmentRevenue = roundCurrency(bucket.consignmentRevenue + row.netSales);
+        } else {
+            bucket.retailUnitsSold += row.quantitySold;
+            bucket.retailRevenue = roundCurrency(bucket.retailRevenue + row.netSales);
+        }
+    });
+
+    return [...buckets.values()]
+        .map(row => ({
+            ...row,
+            averageUnitRevenue: row.unitsSold > 0 ? roundCurrency(row.revenue / row.unitsSold) : 0
+        }))
+        .sort((left, right) => right.revenue - left.revenue || right.unitsSold - left.unitsSold || left.productName.localeCompare(right.productName));
+}
+
+function buildProductPerformanceReportData({
+    products = [],
+    categories = [],
+    salesInvoices = [],
+    consignmentOrders = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const detailRows = buildProductPerformanceRows({
+        products,
+        categories,
+        salesInvoices,
+        consignmentOrders
+    });
+    const totalUnitsSold = detailRows.reduce((sum, row) => sum + (row.unitsSold || 0), 0);
+    const totalRevenue = sumMetric(detailRows, "revenue");
+    const topByRevenue = detailRows[0] || null;
+    const topByUnits = detailRows
+        .slice()
+        .sort((left, right) => right.unitsSold - left.unitsSold || right.revenue - left.revenue)[0] || null;
+    const stockExposureRows = detailRows
+        .filter(row => row.unitsOnHand > 0)
+        .slice()
+        .sort((left, right) => {
+            if (left.unitsSold !== right.unitsSold) return left.unitsSold - right.unitsSold;
+            if (left.unitsOnHand !== right.unitsOnHand) return right.unitsOnHand - left.unitsOnHand;
+            return right.stockExposureValue - left.stockExposureValue;
+        });
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            productCount: detailRows.length,
+            totalUnitsSold,
+            totalRevenue,
+            topRevenueProductName: topByRevenue?.productName || "-",
+            topRevenueProductRevenue: topByRevenue?.revenue || 0,
+            topUnitProductName: topByUnits?.productName || "-",
+            topUnitProductUnits: topByUnits?.unitsSold || 0,
+            stockExposureUnits: detailRows.reduce((sum, row) => sum + (row.unitsOnHand || 0), 0)
+        },
+        topRows: detailRows.slice(0, 20),
+        stockExposureRows: stockExposureRows.slice(0, 20),
+        detailRows: detailRows.slice(0, 60),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                products: products.length,
+                categories: categories.length,
+                salesInvoices: salesInvoices.length,
+                consignmentOrders: consignmentOrders.length
+            }
+        }
+    };
+}
+
 function buildSalesSummaryReportData({
     salesInvoices = [],
     consignmentOrders = [],
@@ -2400,6 +2603,65 @@ export async function getInventoryValuationReport(user, { forceRefresh = false }
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "inventory-valuation", "as-of-today", data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getProductPerformanceReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) {
+        throw new Error("You do not have access to the product performance report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "product-performance", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [productsResult, categoriesResult, salesInvoicesResult, consignmentOrdersResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.products),
+        fetchReportWindowedRows(COLLECTIONS.categories),
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        })
+    ]);
+
+    const data = buildProductPerformanceReportData({
+        products: productsResult.rows,
+        categories: categoriesResult.rows,
+        salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            products: productsResult.truncated,
+            categories: categoriesResult.truncated,
+            salesInvoices: salesInvoicesResult.truncated,
+            consignmentOrders: consignmentOrdersResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "product-performance", rangeSpec.rangeKey, data, loadedAt);
 
     return {
         data,

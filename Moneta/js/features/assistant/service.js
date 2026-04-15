@@ -8,6 +8,7 @@ import {
     getInventoryValuationReport,
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
+    getProductPerformanceReport,
     getPurchasePayablesReport,
     getSalesSummaryReport,
     getStorePerformanceReport,
@@ -235,16 +236,17 @@ function resolveRangeSpecFromQuery(query, defaultRangeKey = "30d", previousRange
 const INTENT_MATCHERS = {
     cashFlow: [/\bcash ?flow\b/, /\bcash movement\b/, /\bnet cash\b/, /\bliquidity\b/, /\binflow\b/, /\boutflow\b/, /\bdonation cash\b/, /\bsupplier cash\b/],
     receivables: [/\breceivable\b/, /\boutstanding receivable\b/, /\bcustomer balance\b/, /\bopen receivable\b/, /\boverdue customer\b/, /\bwho owes us\b/, /\bunpaid customer\b/, /\baccounts receivable\b/],
-    payables: [/\bpayable\b/, /\bpurchase payable\b/, /\bsupplier balance\b/, /\bvendor balance\b/, /\bowe suppliers\b/, /\bopen payables\b/, /\bsupplier exposure\b/, /\baccounts payable\b/],
+    payables: [/\bpayable\b/, /\bpurchase payable\b/, /\bsupplier balance\b/, /\bvendor balance\b/, /\bowe suppliers\b/, /\bopen payables\b/, /\bsupplier exposure\b/, /\baccounts payable\b/, /\bopen supplier bills?\b/, /\bopen supplier invoices?\b/, /\bunpaid supplier bills?\b/, /\bsupplier bills?\b/],
     profitAndLoss: [/\bp&l\b/, /\bp and l\b/, /\bprofit and loss\b/, /\bincome statement\b/, /\bnet profit\b/, /\bgross profit\b/, /\boperating profit\b/, /\bprofitability\b/],
     salesSummary: [/\bsales\b/, /\brevenue\b/, /\bturnover\b/, /\bchannel performance\b/, /\bcommercial performance\b/, /\bdirect sales\b/],
     storePerformance: [/\bdirect store\b/, /\bstore performance\b/, /\bcompare stores?\b/, /\bwhich store\b/, /\btasty treats\b/, /\bchurch store\b/, /\btop store\b/],
     consignmentPerformance: [/\bconsignment\b/, /\bdistributor\b/, /\bsell[- ]through\b/, /\bchecked out\b/, /\bteam performance\b/, /\bbulk channel\b/],
-    inventoryStatus: [/\binventory status\b/, /\blow stock\b/, /\bout of stock\b/, /\bstock health\b/, /\bstock alerts?\b/, /\breplenishment\b/, /\bstock level\b/],
-    inventoryValuation: [/\binventory valuation\b/, /\bvaluation\b/, /\bstock value\b/, /\binventory worth\b/, /\bpotential margin\b/, /\binventory at cost\b/, /\binventory at retail\b/, /\bweighted cost\b/]
+    inventoryStatus: [/\binventory status\b/, /\blow stock\b/, /\bout of stock\b/, /\bstock health\b/, /\bstock alerts?\b/, /\breplenishment\b/, /\bstock level\b/, /\bhow is my inventory\b/, /\bhow's my inventory\b/, /\bhow is inventory\b/, /\binventory overview\b/, /\binventory snapshot\b/],
+    inventoryValuation: [/\binventory valuation\b/, /\bvaluation\b/, /\bstock value\b/, /\binventory worth\b/, /\bpotential margin\b/, /\binventory at cost\b/, /\binventory at retail\b/, /\bweighted cost\b/],
+    productPerformance: [/\bproduct performance\b/, /\btop selling product\b/, /\btop seller\b/, /\btop sellers\b/, /\bbest[- ]seller\b/, /\bbest selling\b/, /\bmost sold product\b/, /\bhighest selling product\b/, /\btop product\b/, /\bproduct ranking\b/, /\bslow moving\b/, /\bslow-moving\b/, /\bfast moving\b/, /\bfast-moving\b/, /\bwhich products\b/, /\btop selling\b/]
 };
 
-const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance"]);
+const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "productPerformance"]);
 
 function getIntentKeyFromId(intentId = "") {
     return Object.entries(ASSISTANT_INTENTS).find(([, value]) => value.id === intentId)?.[0] || "";
@@ -738,14 +740,64 @@ const ASSISTANT_INTENTS = {
                 ]
             };
         }
+    },
+    productPerformance: {
+        id: "product-performance",
+        label: "Product Performance",
+        roles: ["admin", "inventory_manager", "finance", "sales_staff"],
+        defaultRangeKey: "30d",
+        prompts: [
+            "What is the top selling product?",
+            "Show product performance for the last 30 days",
+            "Which products are slow moving?"
+        ],
+        async run(user, query, { rangeSpec } = {}) {
+            const result = await getProductPerformanceReport(user, rangeSpec);
+            const reportData = result.data;
+            const summary = reportData.summary || {};
+            const meta = makeSourceMeta(result, reportData, reportData.rangeLabel);
+            const topRevenueProduct = (reportData.topRows || [])[0] || null;
+            const topUnitProduct = (reportData.topRows || [])
+                .slice()
+                .sort((left, right) => (right.unitsSold || 0) - (left.unitsSold || 0))[0] || null;
+            const slowMovingProduct = (reportData.stockExposureRows || [])[0] || null;
+            const normalizedQuery = normalizeQuery(query);
+            const wantsSlowMovingView = /\bslow moving\b|\bslow-moving\b|\bstock exposure\b|\boverstock\b/.test(normalizedQuery);
+
+            return {
+                title: "Product Performance",
+                reportLabel: "Sales / Inventory",
+                sourceMeta: meta,
+                summary: wantsSlowMovingView
+                    ? `Slow-moving stock exposure for ${meta.windowLabel} is led by ${slowMovingProduct?.productName || "-"} with ${slowMovingProduct?.unitsOnHand || 0} units still on hand.`
+                    : `Top product performance for ${meta.windowLabel} is led by ${topRevenueProduct?.productName || "-"} at ${formatCurrency(topRevenueProduct?.revenue || 0)} in revenue.`,
+                metrics: [
+                    makeMetric("Products Sold", `${summary.productCount || 0}`, "neutral"),
+                    makeMetric("Units Sold", `${summary.totalUnitsSold || 0}`, "positive"),
+                    makeMetric("Top By Revenue", topRevenueProduct ? `${topRevenueProduct.productName} · ${formatCurrency(topRevenueProduct.revenue || 0)}` : "-", "positive"),
+                    makeMetric("Top By Units", topUnitProduct ? `${topUnitProduct.productName} · ${topUnitProduct.unitsSold || 0}` : "-", "neutral")
+                ],
+                bullets: [
+                    topRevenueProduct ? `${topRevenueProduct.productName} is the top revenue product at ${formatCurrency(topRevenueProduct.revenue || 0)} across ${topRevenueProduct.unitsSold || 0} units.` : `No product sales were found in the selected window.`,
+                    topUnitProduct ? `${topUnitProduct.productName} leads by unit volume with ${topUnitProduct.unitsSold || 0} units sold.` : `Unit-volume ranking is only available when sold rows exist in the selected window.`,
+                    slowMovingProduct ? `${slowMovingProduct.productName} is the biggest current slow-moving stock exposure at ${formatCurrency(slowMovingProduct.stockExposureValue || 0)} on hand.` : `No meaningful slow-moving stock exposure was found in the current window.`
+                ],
+                followUps: [
+                    "Which products are slow moving?",
+                    "Show sales summary for the last 30 days",
+                    "How is my inventory?",
+                    "Show inventory valuation"
+                ]
+            };
+        }
     }
 };
 
 const ROLE_VISIBLE_INTENTS = {
-    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation"],
-    finance: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation"],
-    sales_staff: ["salesSummary", "storePerformance", "consignmentPerformance"],
-    inventory_manager: ["payables", "consignmentPerformance", "inventoryStatus", "inventoryValuation"],
+    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
+    finance: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
+    sales_staff: ["salesSummary", "storePerformance", "consignmentPerformance", "productPerformance"],
+    inventory_manager: ["payables", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
     team_lead: [],
     guest: []
 };
