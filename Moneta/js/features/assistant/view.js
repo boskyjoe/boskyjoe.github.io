@@ -301,9 +301,12 @@ function renderAssistantOverlay(user, route) {
                 <aside class="assistant-overlay-panel" aria-label="Moneta Assistant">
                     <div class="assistant-overlay-head">
                         <div class="assistant-overlay-head-copy">
-                            <p class="assistant-overlay-kicker">Role-Aware AI</p>
+                            <div class="assistant-overlay-head-title-row">
+                                <p class="assistant-overlay-kicker">Role-Aware AI</p>
+                                <span class="status-pill">Read Only</span>
+                            </div>
                             <h2>Moneta Assistant</h2>
-                            <p>Ask for report-style insight without leaving your current workspace.</p>
+                            <p>Report insight without leaving your workspace.</p>
                         </div>
                         <div class="assistant-overlay-head-actions">
                             <button class="button button-secondary" type="button" data-assistant-clear ${featureState.isLoading ? "disabled" : ""}>
@@ -340,7 +343,7 @@ function renderAssistantOverlay(user, route) {
                                 <p class="hero-kicker">Suggested Prompts</p>
                                 <h3>Quick Start</h3>
                             </div>
-                            <span class="status-pill">Read Only</span>
+                            <span class="assistant-overlay-suggestions-note">Tap a prompt or ask your own question.</span>
                         </div>
                         ${renderPromptChipGrid(user)}
                     </section>
