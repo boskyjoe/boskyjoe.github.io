@@ -9,11 +9,22 @@ const featureState = {
     messages: [],
     promptValue: "",
     isLoading: false,
-    overlayOpen: false
+    overlayOpen: false,
+    activeUserKey: "",
+    sessionContext: {
+        lastIntentKey: "",
+        lastIntentLabel: "",
+        lastRangeSpec: null,
+        lastFollowUps: []
+    }
 };
 
 function normalizeText(value) {
     return String(value || "").trim();
+}
+
+function getUserKey(user) {
+    return normalizeText(user?.uid || user?.email || "");
 }
 
 function escapeHtml(value) {
@@ -136,7 +147,7 @@ function renderLoadingMessage() {
 }
 
 function renderPromptChipGrid(user) {
-    const prompts = getAssistantPromptSuggestions(user);
+    const prompts = getAssistantPromptSuggestions(user, featureState.sessionContext);
 
     return `
         <div class="assistant-prompt-grid">
@@ -150,7 +161,7 @@ function renderPromptChipGrid(user) {
 }
 
 function renderPromptSuggestionsCard(user) {
-    const prompts = getAssistantPromptSuggestions(user);
+    const prompts = getAssistantPromptSuggestions(user, featureState.sessionContext);
 
     return `
         <section class="panel-card assistant-suggestions-card">
@@ -190,13 +201,28 @@ function renderComposer({ formId, inputId, label = "Ask a question", placeholder
 }
 
 function ensureWelcomeMessage(user) {
+    const userKey = getUserKey(user);
+    if (featureState.activeUserKey !== userKey) {
+        featureState.activeUserKey = userKey;
+        featureState.messages = [];
+        featureState.promptValue = "";
+        featureState.isLoading = false;
+        featureState.sessionContext = {
+            lastIntentKey: "",
+            lastIntentLabel: "",
+            lastRangeSpec: null,
+            lastFollowUps: []
+        };
+        featureState.overlayOpen = false;
+    }
+
     if (featureState.messages.length) return;
     featureState.messages = [
         {
             type: "assistant",
             reportLabel: "Moneta Assistant",
-            ...buildAssistantWelcome(user),
-            followUps: getAssistantPromptSuggestions(user).slice(0, 4)
+            ...buildAssistantWelcome(user, featureState.sessionContext),
+            followUps: getAssistantPromptSuggestions(user, featureState.sessionContext).slice(0, 4)
         }
     ];
 }
@@ -358,7 +384,13 @@ async function submitPrompt(promptText) {
     renderAssistantUi(user);
 
     try {
-        const response = await askMonetaAssistant(user, text);
+        const response = await askMonetaAssistant(user, text, featureState.sessionContext);
+        if (response?.assistantContext) {
+            featureState.sessionContext = {
+                ...featureState.sessionContext,
+                ...response.assistantContext
+            };
+        }
         featureState.messages = [
             ...featureState.messages,
             response
@@ -379,7 +411,7 @@ async function submitPrompt(promptText) {
                     "Try a different prompt or a narrower report question.",
                     "Assistant V1 currently supports report-style questions only."
                 ],
-                followUps: getAssistantPromptSuggestions(user).slice(0, 4)
+                followUps: getAssistantPromptSuggestions(user, featureState.sessionContext).slice(0, 4)
             }
         ];
     } finally {
@@ -413,6 +445,12 @@ function bindAssistantRoot(rootId) {
         if (clearButton) {
             featureState.messages = [];
             featureState.promptValue = "";
+            featureState.sessionContext = {
+                lastIntentKey: "",
+                lastIntentLabel: "",
+                lastRangeSpec: null,
+                lastFollowUps: []
+            };
             renderAssistantUi();
             return;
         }
