@@ -68,6 +68,29 @@ function renderCapabilities(user) {
     `;
 }
 
+function renderOverlayCapabilitySummary(user) {
+    const capabilities = getAssistantCapabilities(user);
+    const roleLabel = normalizeText(user?.role || "guest") || "guest";
+    const laneCount = capabilities.length;
+
+    if (!laneCount) {
+        return `
+            <div class="assistant-overlay-meta">
+                <span class="assistant-overlay-meta-item">Role: ${escapeHtml(roleLabel)}</span>
+                <span class="assistant-overlay-meta-item">Guidance only</span>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="assistant-overlay-meta">
+            <span class="assistant-overlay-meta-item">Role: ${escapeHtml(roleLabel)}</span>
+            <span class="assistant-overlay-meta-item">${laneCount} report lanes active</span>
+            <span class="assistant-overlay-meta-item">Read-only answers</span>
+        </div>
+    `;
+}
+
 function renderMessage(message = {}) {
     if (message.type === "user") {
         return `
@@ -153,6 +176,20 @@ function renderPromptChipGrid(user) {
         <div class="assistant-prompt-grid">
             ${prompts.map(prompt => `
                 <button class="button button-secondary assistant-prompt-chip" type="button" data-assistant-prompt="${escapeHtml(prompt)}">
+                    ${escapeHtml(prompt)}
+                </button>
+            `).join("")}
+        </div>
+    `;
+}
+
+function renderOverlayPromptGrid(user) {
+    const prompts = getAssistantPromptSuggestions(user, featureState.sessionContext).slice(0, 4);
+
+    return `
+        <div class="assistant-overlay-prompt-grid">
+            ${prompts.map(prompt => `
+                <button class="button button-secondary assistant-prompt-chip assistant-overlay-prompt-chip" type="button" data-assistant-prompt="${escapeHtml(prompt)}">
                     ${escapeHtml(prompt)}
                 </button>
             `).join("")}
@@ -319,9 +356,7 @@ function renderAssistantOverlay(user, route) {
                         </div>
                     </div>
 
-                    <div class="assistant-overlay-capabilities">
-                        ${renderCapabilities(user)}
-                    </div>
+                    ${renderOverlayCapabilitySummary(user)}
 
                     <div class="assistant-thread assistant-overlay-thread" data-assistant-thread>
                         ${renderTranscript()}
@@ -340,12 +375,12 @@ function renderAssistantOverlay(user, route) {
                     <section class="assistant-overlay-suggestions">
                         <div class="assistant-overlay-suggestions-head">
                             <div>
-                                <p class="hero-kicker">Suggested Prompts</p>
+                                <p class="hero-kicker">Quick Start</p>
                                 <h3>Quick Start</h3>
                             </div>
-                            <span class="assistant-overlay-suggestions-note">Tap a prompt or ask your own question.</span>
+                            <span class="assistant-overlay-suggestions-note">Tap a prompt.</span>
                         </div>
-                        ${renderPromptChipGrid(user)}
+                        ${renderOverlayPromptGrid(user)}
                     </section>
                 </aside>
             ` : ""}
