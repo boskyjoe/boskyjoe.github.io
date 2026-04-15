@@ -96,7 +96,7 @@ function renderFooter() {
                 </div>
 
                 <div class="app-footer-center">
-                    <p class="app-footer-copy">Copyright &copy; ${currentYear} strategiccattva.com</p>
+                    <p class="app-footer-copy">Copyright &copy; ${currentYear} <a class="app-footer-link" href="https://strategictattva.com" target="_blank" rel="noopener noreferrer">strategiccattva.com</a></p>
                     <p class="app-footer-subcopy">All Rights Reserved</p>
                 </div>
 
