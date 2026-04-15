@@ -1338,6 +1338,320 @@ function buildProductPerformanceReportData({
     };
 }
 
+function normalizeLeadConversionOutcomeStatus(lead = {}) {
+    return normalizeText(lead.conversionOutcomeStatus || lead.conversionOutcome || lead.convertedSaleStatus).toLowerCase();
+}
+
+function hasLeadReadyQuote(lead = {}) {
+    if (normalizeText(lead.acceptedQuoteId)) return true;
+
+    const latestQuoteStatus = normalizeText(lead.latestQuoteStatus);
+    return ["Draft", "Sent", "Accepted"].includes(latestQuoteStatus);
+}
+
+function resolveLeadConversionStage(lead = {}) {
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const conversionOutcomeStatus = normalizeLeadConversionOutcomeStatus(lead);
+
+    if (leadStatus === "Converted" && conversionOutcomeStatus === "voided") {
+        return "Converted (Sale Voided)";
+    }
+
+    if (leadStatus === "Converted") {
+        return "Converted";
+    }
+
+    if (leadStatus === "Lost") {
+        return "Lost";
+    }
+
+    if (hasLeadReadyQuote(lead)) {
+        return "Ready To Convert";
+    }
+
+    if (leadStatus === "Qualified") {
+        return "Qualified";
+    }
+
+    return "Open";
+}
+
+function buildLeadRequestedMetrics(lead = {}) {
+    const requestedProducts = Array.isArray(lead.requestedProducts) ? lead.requestedProducts : [];
+    const requestedItemCount = requestedProducts.reduce((sum, item) => {
+        return sum + Math.max(0, Number(item.requestedQty) || 0);
+    }, 0);
+    const fallbackRequestedValue = requestedProducts.reduce((sum, item) => {
+        return sum + (Math.max(0, Number(item.requestedQty) || 0) * roundCurrency(item.sellingPrice));
+    }, 0);
+
+    return {
+        requestedItemCount,
+        requestedValue: roundCurrency((Number(lead.requestedValue) || fallbackRequestedValue))
+    };
+}
+
+function buildLeadConversionSalesById(salesInvoices = []) {
+    return new Map(
+        (salesInvoices || [])
+            .filter(row => normalizeText(row.id))
+            .map(row => [normalizeText(row.id), row])
+    );
+}
+
+function buildLeadConversionDetailRows({
+    leads = [],
+    salesInvoices = []
+}) {
+    const salesById = buildLeadConversionSalesById(salesInvoices);
+
+    return (leads || [])
+        .map(lead => {
+            const stage = resolveLeadConversionStage(lead);
+            const requestedMetrics = buildLeadRequestedMetrics(lead);
+            const linkedSaleId = normalizeText(lead.convertedToSaleId || lead.linkedSaleId);
+            const linkedSale = linkedSaleId ? salesById.get(linkedSaleId) || null : null;
+            const saleValue = roundCurrency(linkedSale?.financials?.grandTotal);
+            const latestQuoteStatus = normalizeText(lead.latestQuoteStatus);
+            const latestQuoteLabel = latestQuoteStatus
+                ? `${latestQuoteStatus}${normalizeText(lead.latestQuoteNumber) ? ` · ${lead.latestQuoteNumber}` : ""}`
+                : (Number(lead.quoteCount) || 0) > 0
+                    ? `${Number(lead.quoteCount)} quote${Number(lead.quoteCount) === 1 ? "" : "s"}`
+                    : "-";
+
+            return {
+                id: lead.id,
+                businessLeadId: normalizeText(lead.businessLeadId || lead.id),
+                customerName: normalizeText(lead.customerName) || "Untitled Lead",
+                leadSource: normalizeText(lead.leadSource) || "Other",
+                assignedTo: normalizeText(lead.assignedTo) || "-",
+                enquiryDate: lead.enquiryDate || null,
+                expectedDeliveryDate: lead.expectedDeliveryDate || null,
+                stage,
+                leadStatus: normalizeText(lead.leadStatus || "New"),
+                latestQuoteStatus,
+                latestQuoteLabel,
+                quoteCount: Number(lead.quoteCount) || 0,
+                acceptedQuoteValue: roundCurrency(lead.acceptedQuoteTotal),
+                requestedItemCount: requestedMetrics.requestedItemCount,
+                requestedValue: requestedMetrics.requestedValue,
+                convertedToSaleId: linkedSaleId,
+                convertedToSaleNumber: normalizeText(lead.convertedToSaleNumber || linkedSale?.manualVoucherNumber || linkedSale?.saleId),
+                convertedStore: normalizeText(lead.convertedStore || linkedSale?.store),
+                convertedSaleStatus: normalizeText(linkedSale?.saleStatus || lead.convertedSaleStatus || lead.conversionOutcomeStatus || ""),
+                saleValue,
+                convertedOn: lead.convertedOn || linkedSale?.saleDate || null,
+                conversionOutcomeStatus: normalizeLeadConversionOutcomeStatus(lead)
+            };
+        })
+        .sort((left, right) => toDateValue(right.enquiryDate).getTime() - toDateValue(left.enquiryDate).getTime());
+}
+
+function buildLeadConversionStageRows(detailRows = []) {
+    const stageOrder = ["Open", "Qualified", "Ready To Convert", "Converted", "Converted (Sale Voided)", "Lost"];
+    const byStage = new Map(
+        stageOrder.map(stage => [stage, {
+            stage,
+            count: 0,
+            requestedValue: 0,
+            acceptedQuoteValue: 0,
+            averageRequestedValue: 0,
+            sharePercent: 0
+        }])
+    );
+    const totalCount = detailRows.length;
+
+    detailRows.forEach(row => {
+        const key = stageOrder.includes(row.stage) ? row.stage : "Open";
+        const bucket = byStage.get(key);
+
+        bucket.count += 1;
+        bucket.requestedValue = roundCurrency(bucket.requestedValue + roundCurrency(row.requestedValue));
+        bucket.acceptedQuoteValue = roundCurrency(bucket.acceptedQuoteValue + roundCurrency(row.acceptedQuoteValue));
+    });
+
+    return stageOrder.map(stage => {
+        const bucket = byStage.get(stage);
+        return {
+            ...bucket,
+            averageRequestedValue: bucket.count > 0 ? roundCurrency(bucket.requestedValue / bucket.count) : 0,
+            sharePercent: totalCount > 0 ? roundCurrency((bucket.count / totalCount) * 100) : 0
+        };
+    });
+}
+
+function buildLeadConversionSourceRows(detailRows = []) {
+    const bySource = new Map();
+
+    detailRows.forEach(row => {
+        const key = normalizeText(row.leadSource) || "Other";
+
+        if (!bySource.has(key)) {
+            bySource.set(key, {
+                leadSource: key,
+                leadCount: 0,
+                readyCount: 0,
+                convertedActiveCount: 0,
+                convertedVoidedCount: 0,
+                lostCount: 0,
+                requestedValue: 0,
+                acceptedQuoteValue: 0,
+                conversionRate: 0
+            });
+        }
+
+        const bucket = bySource.get(key);
+        bucket.leadCount += 1;
+        bucket.requestedValue = roundCurrency(bucket.requestedValue + roundCurrency(row.requestedValue));
+        bucket.acceptedQuoteValue = roundCurrency(bucket.acceptedQuoteValue + roundCurrency(row.acceptedQuoteValue));
+
+        if (row.stage === "Ready To Convert") {
+            bucket.readyCount += 1;
+        }
+        if (row.stage === "Converted") {
+            bucket.convertedActiveCount += 1;
+        }
+        if (row.stage === "Converted (Sale Voided)") {
+            bucket.convertedVoidedCount += 1;
+        }
+        if (row.stage === "Lost") {
+            bucket.lostCount += 1;
+        }
+    });
+
+    return [...bySource.values()]
+        .map(row => ({
+            ...row,
+            conversionRate: row.leadCount > 0 ? roundCurrency((row.convertedActiveCount / row.leadCount) * 100) : 0
+        }))
+        .sort((left, right) => right.convertedActiveCount - left.convertedActiveCount || right.leadCount - left.leadCount || left.leadSource.localeCompare(right.leadSource));
+}
+
+function buildLeadConversionStoreRows(salesInvoices = []) {
+    const byStore = new Map(
+        RETAIL_STORES.map(store => [store, {
+            store,
+            saleCount: 0,
+            activeSales: 0,
+            voidedSales: 0,
+            salesValue: 0,
+            averageSale: 0
+        }])
+    );
+
+    (salesInvoices || [])
+        .filter(row => normalizeText(row.sourceLeadId))
+        .forEach(row => {
+            const store = RETAIL_STORES.includes(normalizeText(row.store)) ? normalizeText(row.store) : "Other";
+
+            if (!byStore.has(store)) {
+                byStore.set(store, {
+                    store,
+                    saleCount: 0,
+                    activeSales: 0,
+                    voidedSales: 0,
+                    salesValue: 0,
+                    averageSale: 0
+                });
+            }
+
+            const bucket = byStore.get(store);
+            const saleStatus = normalizeStatus(row.saleStatus, "Active");
+            const saleValue = roundCurrency(row.financials?.grandTotal);
+
+            bucket.saleCount += 1;
+            bucket.salesValue = roundCurrency(bucket.salesValue + saleValue);
+
+            if (saleStatus === "Voided") {
+                bucket.voidedSales += 1;
+            } else {
+                bucket.activeSales += 1;
+            }
+        });
+
+    return [...byStore.values()]
+        .map(row => ({
+            ...row,
+            averageSale: row.saleCount > 0 ? roundCurrency(row.salesValue / row.saleCount) : 0
+        }))
+        .filter(row => row.saleCount > 0 || row.store !== "Other")
+        .sort((left, right) => right.salesValue - left.salesValue || right.saleCount - left.saleCount);
+}
+
+function buildLeadConversionReportData({
+    leads = [],
+    salesInvoices = [],
+    rangeSpec,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const detailRows = buildLeadConversionDetailRows({
+        leads,
+        salesInvoices
+    });
+    const stageRows = buildLeadConversionStageRows(detailRows);
+    const sourceRows = buildLeadConversionSourceRows(detailRows);
+    const storeRows = buildLeadConversionStoreRows(salesInvoices);
+    const openCount = stageRows.find(row => row.stage === "Open")?.count || 0;
+    const qualifiedCount = stageRows.find(row => row.stage === "Qualified")?.count || 0;
+    const readyToConvertCount = stageRows.find(row => row.stage === "Ready To Convert")?.count || 0;
+    const convertedActiveCount = stageRows.find(row => row.stage === "Converted")?.count || 0;
+    const convertedVoidedCount = stageRows.find(row => row.stage === "Converted (Sale Voided)")?.count || 0;
+    const lostCount = stageRows.find(row => row.stage === "Lost")?.count || 0;
+    const leadCount = detailRows.length;
+    const convertedSalesCount = storeRows.reduce((sum, row) => sum + (row.saleCount || 0), 0);
+    const convertedSalesValue = sumMetric(storeRows, "salesValue");
+    const readyPipelineValue = detailRows
+        .filter(row => row.stage === "Ready To Convert")
+        .reduce((sum, row) => sum + roundCurrency(row.requestedValue), 0);
+    const acceptedQuotePipelineValue = detailRows
+        .filter(row => ["Ready To Convert", "Qualified", "Open"].includes(row.stage))
+        .reduce((sum, row) => sum + roundCurrency(row.acceptedQuoteValue), 0);
+    const topLeadSource = sourceRows[0] || null;
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            leadCount,
+            openCount,
+            qualifiedCount,
+            readyToConvertCount,
+            convertedActiveCount,
+            convertedVoidedCount,
+            lostCount,
+            convertedSalesCount,
+            convertedSalesValue,
+            readyPipelineValue: roundCurrency(readyPipelineValue),
+            acceptedQuotePipelineValue: roundCurrency(acceptedQuotePipelineValue),
+            activeConversionRate: leadCount > 0 ? roundCurrency((convertedActiveCount / leadCount) * 100) : 0,
+            resolvedOutcomeRate: leadCount > 0 ? roundCurrency(((convertedActiveCount + convertedVoidedCount + lostCount) / leadCount) * 100) : 0,
+            topLeadSourceName: topLeadSource?.leadSource || "-",
+            topLeadSourceConversions: topLeadSource?.convertedActiveCount || 0
+        },
+        stageRows,
+        sourceRows,
+        storeRows,
+        detailRows: detailRows.slice(0, 60),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                leads: leads.length,
+                salesInvoices: salesInvoices.length
+            },
+            notes: [
+                "Enquiry funnel counts are based on leads with enquiry dates inside the selected report window.",
+                "Ready To Convert means the enquiry is still active and has a live quote state of Draft, Sent, or Accepted, or an accepted quote on file.",
+                "Closed retail value uses retail sales linked by sourceLeadId and dated inside the same report window."
+            ]
+        }
+    };
+}
+
 function buildSalesSummaryReportData({
     salesInvoices = [],
     consignmentOrders = [],
@@ -2419,6 +2733,59 @@ export async function getSalesSummaryReport(user, rangeSpec, { forceRefresh = fa
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "sales-summary", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getLeadConversionReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "team_lead"].includes(user.role)) {
+        throw new Error("You do not have access to the lead conversion report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "lead-conversion", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [leadsResult, salesInvoicesResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.leads, {
+            dateField: "enquiryDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        })
+    ]);
+
+    const data = buildLeadConversionReportData({
+        leads: leadsResult.rows,
+        salesInvoices: salesInvoicesResult.rows,
+        rangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            leads: leadsResult.truncated,
+            salesInvoices: salesInvoicesResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "lead-conversion", rangeSpec.rangeKey, data, loadedAt);
 
     return {
         data,

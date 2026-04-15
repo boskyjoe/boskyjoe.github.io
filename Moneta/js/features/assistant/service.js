@@ -6,6 +6,7 @@ import {
     getConsignmentPerformanceReport,
     getInventoryStatusReport,
     getInventoryValuationReport,
+    getLeadConversionReport,
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
     getProductPerformanceReport,
@@ -239,6 +240,7 @@ const INTENT_MATCHERS = {
     payables: [/\bpayable\b/, /\bpurchase payable\b/, /\bsupplier balance\b/, /\bvendor balance\b/, /\bowe suppliers\b/, /\bopen payables\b/, /\bsupplier exposure\b/, /\baccounts payable\b/, /\bopen supplier bills?\b/, /\bopen supplier invoices?\b/, /\bunpaid supplier bills?\b/, /\bsupplier bills?\b/],
     profitAndLoss: [/\bp&l\b/, /\bp and l\b/, /\bprofit and loss\b/, /\bincome statement\b/, /\bnet profit\b/, /\bgross profit\b/, /\boperating profit\b/, /\bprofitability\b/],
     salesSummary: [/\bsales\b/, /\brevenue\b/, /\bturnover\b/, /\bchannel performance\b/, /\bcommercial performance\b/, /\bdirect sales\b/],
+    leadConversion: [/\blead conversion\b/, /\bconversion funnel\b/, /\bconverted leads?\b/, /\bready to convert\b/, /\bconversion rate\b/, /\bhow many enquiries are (ready|converted|qualified|open)\b/, /\benquiry conversion\b/, /\blead pipeline\b/],
     storePerformance: [/\bdirect store\b/, /\bstore performance\b/, /\bcompare stores?\b/, /\bwhich store\b/, /\btasty treats\b/, /\bchurch store\b/, /\btop store\b/],
     consignmentPerformance: [/\bconsignment\b/, /\bdistributor\b/, /\bsell[- ]through\b/, /\bchecked out\b/, /\bteam performance\b/, /\bbulk channel\b/],
     inventoryStatus: [/\binventory status\b/, /\blow stock\b/, /\bout of stock\b/, /\bstock health\b/, /\bstock alerts?\b/, /\breplenishment\b/, /\bstock level\b/, /\bhow is my inventory\b/, /\bhow's my inventory\b/, /\bhow is inventory\b/, /\binventory overview\b/, /\binventory snapshot\b/],
@@ -246,7 +248,7 @@ const INTENT_MATCHERS = {
     productPerformance: [/\bproduct performance\b/, /\btop selling product\b/, /\btop seller\b/, /\btop sellers\b/, /\bbest[- ]seller\b/, /\bbest selling\b/, /\bmost sold product\b/, /\bhighest selling product\b/, /\btop product\b/, /\bproduct ranking\b/, /\bslow moving\b/, /\bslow-moving\b/, /\bfast moving\b/, /\bfast-moving\b/, /\bwhich products\b/, /\btop selling\b/]
 };
 
-const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "productPerformance"]);
+const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"]);
 
 function getIntentKeyFromId(intentId = "") {
     return Object.entries(ASSISTANT_INTENTS).find(([, value]) => value.id === intentId)?.[0] || "";
@@ -572,6 +574,51 @@ const ASSISTANT_INTENTS = {
             };
         }
     },
+    leadConversion: {
+        id: "lead-conversion",
+        label: "Lead Conversion",
+        roles: ["admin", "sales_staff"],
+        defaultRangeKey: "30d",
+        prompts: [
+            "Show lead conversion for the last 30 days",
+            "How many enquiries are ready to convert?",
+            "Show converted leads for 90 days"
+        ],
+        async run(user, query, { rangeSpec } = {}) {
+            const result = await getLeadConversionReport(user, rangeSpec);
+            const reportData = result.data;
+            const summary = reportData.summary || {};
+            const meta = makeSourceMeta(result, reportData, reportData.rangeLabel);
+            const topSource = (reportData.sourceRows || [])[0] || null;
+            const normalizedQuery = normalizeQuery(query);
+            const wantsReadyView = /\bready to convert\b|\bready enquiries\b|\bopen pipeline\b/.test(normalizedQuery);
+
+            return {
+                title: "Lead Conversion",
+                reportLabel: "Sales",
+                sourceMeta: meta,
+                summary: wantsReadyView
+                    ? `${summary.readyToConvertCount || 0} enquiries are currently ready to convert in ${meta.windowLabel}.`
+                    : `${summary.convertedActiveCount || 0} enquiries remain actively converted in ${meta.windowLabel}, with ${summary.convertedVoidedCount || 0} later voided sale outcomes.`,
+                metrics: [
+                    makeMetric("Enquiries", `${summary.leadCount || 0}`, "neutral"),
+                    makeMetric("Ready To Convert", `${summary.readyToConvertCount || 0}`, "warning"),
+                    makeMetric("Converted Active", `${summary.convertedActiveCount || 0}`, "positive"),
+                    makeMetric("Sale Voided", `${summary.convertedVoidedCount || 0}`, "negative")
+                ],
+                bullets: [
+                    `Active conversion rate is ${formatPercent(summary.activeConversionRate || 0)} for the selected enquiry window.`,
+                    topSource ? `${topSource.leadSource} is currently the strongest converting lead source with ${topSource.convertedActiveCount || 0} active conversions.` : `Lead conversion is grouped by source, quote readiness, and converted sale outcome.`,
+                    `${formatCurrency(summary.convertedSalesValue || 0)} of linked retail sales closed inside the same window.`
+                ],
+                followUps: [
+                    "Show sales summary for the last 30 days",
+                    "Compare Church Store and Tasty Treats for the last 30 days",
+                    "Show cash flow for the last 30 days"
+                ]
+            };
+        }
+    },
     storePerformance: {
         id: "store-performance",
         label: "Direct Store Performance",
@@ -794,9 +841,9 @@ const ASSISTANT_INTENTS = {
 };
 
 const ROLE_VISIBLE_INTENTS = {
-    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
+    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
     finance: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
-    sales_staff: ["salesSummary", "storePerformance", "consignmentPerformance", "productPerformance"],
+    sales_staff: ["salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"],
     inventory_manager: ["payables", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
     team_lead: [],
     guest: []

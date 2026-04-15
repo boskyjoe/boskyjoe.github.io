@@ -15,6 +15,7 @@ import {
     getDefaultCashFlowCustomRange,
     getInventoryStatusReport,
     getInventoryValuationReport,
+    getLeadConversionReport,
     getProductPerformanceReport,
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
@@ -65,8 +66,8 @@ const REPORT_GROUPS = [
                 description: "Open, qualified, ready-to-convert, converted, and sale-voided conversion outcome reporting.",
                 dataSource: "leads, salesInvoices",
                 roles: ["admin", "sales_staff", "team_lead"],
-                status: "planned",
-                implemented: false
+                status: "priority",
+                implemented: true
             },
             {
                 id: "consignment-performance",
@@ -282,7 +283,7 @@ function buildRangeButtonsMarkup() {
 }
 
 function reportUsesRange(reportId = "") {
-    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "store-performance", "consignment-performance", "product-performance"].includes(reportId);
+    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "lead-conversion", "store-performance", "consignment-performance", "product-performance"].includes(reportId);
 }
 
 function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
@@ -644,6 +645,284 @@ function renderSalesSummaryMetadataSection(reportData = null) {
     `;
 }
 
+function renderLeadConversionCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Enquiries In Window</p>
+                <p class="dashboard-kpi-value">${summary.leadCount || 0}</p>
+                <p class="dashboard-kpi-meta">${formatCurrency(summary.readyPipelineValue || 0)} estimated ready pipeline value</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Ready To Convert</p>
+                <p class="dashboard-kpi-value">${summary.readyToConvertCount || 0}</p>
+                <p class="dashboard-kpi-meta">${formatCurrency(summary.acceptedQuotePipelineValue || 0)} accepted quote value still open</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Converted Active</p>
+                <p class="dashboard-kpi-value">${summary.convertedActiveCount || 0}</p>
+                <p class="dashboard-kpi-meta">${formatPercent(summary.activeConversionRate || 0)} active conversion rate</p>
+            </article>
+            <article class="dashboard-kpi-card tone-danger">
+                <p class="dashboard-kpi-title">Sale Voided</p>
+                <p class="dashboard-kpi-value">${summary.convertedVoidedCount || 0}</p>
+                <p class="dashboard-kpi-meta">Converted leads whose linked sale was later voided</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Closed Retail Value</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.convertedSalesValue || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.convertedSalesCount || 0} linked retail sale${summary.convertedSalesCount === 1 ? "" : "s"} in this window</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderLeadConversionStageSection(reportData = null) {
+    const rows = reportData?.stageRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Conversion Funnel</h3>
+                    <p>Enquiries grouped into operational stages using current lead state, quote readiness, and converted-sale outcome.</p>
+                </div>
+                <span class="status-pill">${rows.length} stage${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Stage</th>
+                            <th class="reports-align-right">Enquiries</th>
+                            <th class="reports-align-right">Share</th>
+                            <th class="reports-align-right">Est. Value</th>
+                            <th class="reports-align-right">Accepted Quote Value</th>
+                            <th class="reports-align-right">Average Est. Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.stage}</td>
+                                <td class="reports-align-right">${row.count || 0}</td>
+                                <td class="reports-align-right">${formatPercent(row.sharePercent || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.requestedValue || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.acceptedQuoteValue || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageRequestedValue || 0)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="6" class="reports-table-empty">No lead conversion stages are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderLeadConversionSourceSection(reportData = null) {
+    const rows = reportData?.sourceRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Lead Source Mix</h3>
+                    <p>Lead source comparison for readiness, active conversions, sale-voided outcomes, and estimated enquiry value.</p>
+                </div>
+                <span class="status-pill">${rows.length} source${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th class="reports-align-right">Enquiries</th>
+                            <th class="reports-align-right">Ready</th>
+                            <th class="reports-align-right">Converted</th>
+                            <th class="reports-align-right">Sale Voided</th>
+                            <th class="reports-align-right">Conversion Rate</th>
+                            <th class="reports-align-right">Est. Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.leadSource}</td>
+                                <td class="reports-align-right">${row.leadCount || 0}</td>
+                                <td class="reports-align-right">${row.readyCount || 0}</td>
+                                <td class="reports-align-right">${row.convertedActiveCount || 0}</td>
+                                <td class="reports-align-right">${row.convertedVoidedCount || 0}</td>
+                                <td class="reports-align-right">${formatPercent(row.conversionRate || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.requestedValue || 0)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="7" class="reports-table-empty">No lead source rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderLeadConversionStoreSection(reportData = null) {
+    const rows = reportData?.storeRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Retail Conversion Outcomes</h3>
+                    <p>Retail sales linked from leads and closed in the selected window, grouped by store.</p>
+                </div>
+                <span class="status-pill">${rows.length} store${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Store</th>
+                            <th class="reports-align-right">Sales</th>
+                            <th class="reports-align-right">Active</th>
+                            <th class="reports-align-right">Voided</th>
+                            <th class="reports-align-right">Sales Value</th>
+                            <th class="reports-align-right">Average Sale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.store}</td>
+                                <td class="reports-align-right">${row.saleCount || 0}</td>
+                                <td class="reports-align-right">${row.activeSales || 0}</td>
+                                <td class="reports-align-right">${row.voidedSales || 0}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.salesValue || 0)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageSale || 0)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="6" class="reports-table-empty">No linked retail conversions closed in this window.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderLeadConversionDetailSection(reportData = null) {
+    const rows = reportData?.detailRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Recent Enquiry Detail</h3>
+                    <p>Latest enquiries in range with source, stage, quote context, and linked retail conversion reference.</p>
+                </div>
+                <span class="status-pill">${rows.length} row${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Enquiry Date</th>
+                            <th>Lead</th>
+                            <th>Customer</th>
+                            <th>Source</th>
+                            <th>Stage</th>
+                            <th>Latest Quote</th>
+                            <th class="reports-align-right">Est. Value</th>
+                            <th>Retail Sale</th>
+                            <th>Store</th>
+                            <th class="reports-align-right">Sale Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${formatDateLabel(row.enquiryDate)}</td>
+                                <td>${row.businessLeadId || "-"}</td>
+                                <td>${row.customerName || "-"}</td>
+                                <td>${row.leadSource || "-"}</td>
+                                <td>${row.stage || "-"}</td>
+                                <td>${row.latestQuoteLabel || "-"}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.requestedValue || 0)}</td>
+                                <td>${row.convertedToSaleNumber || "-"}</td>
+                                <td>${row.convertedStore || "-"}</td>
+                                <td class="reports-align-right">${row.saleValue ? formatAccountingCurrency(row.saleValue) : "-"}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="10" class="reports-table-empty">No enquiry detail rows are available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderLeadConversionMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+    const notes = metadata.notes || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Lead conversion combines enquiry funnel status with linked Retail Store conversion outcomes inside the selected window.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Window</p>
+                    <p class="report-audit-value">${reportData?.rangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Execution Time</p>
+                    <p class="report-audit-value">${reportData ? `${reportData.durationMs} ms` : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            ${notes.length ? `
+                <div class="reports-audit-note">
+                    ${notes.map(note => `<div>${note}</div>`).join("")}
+                </div>
+            ` : ""}
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Leads ${sourceCounts.leads || 0},
+                Sales invoices ${sourceCounts.salesInvoices || 0}.
+            </div>
+        </section>
+    `;
+}
+
 function renderStorePerformanceCards(reportData = null) {
     const summary = reportData?.summary || {};
 
@@ -670,6 +949,22 @@ function renderStorePerformanceCards(reportData = null) {
                 <p class="dashboard-kpi-meta">${formatCurrency(summary.topStoreNetSales || 0)} net sales</p>
             </article>
         </section>
+    `;
+}
+
+function renderLeadConversionReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
+            ${renderLeadConversionCards(reportData)}
+            ${renderLeadConversionStageSection(reportData)}
+            ${renderLeadConversionSourceSection(reportData)}
+            ${renderLeadConversionStoreSection(reportData)}
+            ${renderLeadConversionDetailSection(reportData)}
+            ${renderLeadConversionMetadataSection(reportData)}
+        </div>
     `;
 }
 
@@ -2782,6 +3077,64 @@ async function loadStorePerformanceReport(user, { forceRefresh = false } = {}) {
     }
 }
 
+async function loadLeadConversionReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "team_lead"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Lead conversion range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "lead-conversion"
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getLeadConversionReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "lead-conversion"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Lead conversion report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the lead conversion report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 async function loadConsignmentPerformanceReport(user, { forceRefresh = false } = {}) {
     if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) return;
 
@@ -2990,6 +3343,9 @@ function loadActiveReport(user, options = {}) {
     if (reportId === "sales-summary") {
         return loadSalesSummaryReport(user, options);
     }
+    if (reportId === "lead-conversion") {
+        return loadLeadConversionReport(user, options);
+    }
     if (reportId === "store-performance") {
         return loadStorePerformanceReport(user, options);
     }
@@ -3043,6 +3399,7 @@ export function renderReportsView(user) {
     root.innerHTML = activeReport
         ? (() => {
             if (activeReport.id === "sales-summary") return renderSalesSummaryReportView(user, activeReport);
+            if (activeReport.id === "lead-conversion") return renderLeadConversionReportView(user, activeReport);
             if (activeReport.id === "store-performance") return renderStorePerformanceReportView(user, activeReport);
             if (activeReport.id === "consignment-performance") return renderConsignmentPerformanceReportView(user, activeReport);
             if (activeReport.id === "inventory-status") return renderInventoryStatusReportView(user, activeReport);
