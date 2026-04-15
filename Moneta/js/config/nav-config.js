@@ -5,7 +5,7 @@ export const navConfig = [
         type: "link",
         route: "#/home",
         label: "Home",
-        icon: icons.dashboard,
+        icon: icons.home,
         iconClass: "nav-icon-cyan",
         roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead", "guest"],
         enabled: true
