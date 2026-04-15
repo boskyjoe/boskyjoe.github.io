@@ -311,6 +311,18 @@
     font-weight: 700;
 }
 
+.app-footer-link {
+    color: #6f79ff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(111, 121, 255, 0.38);
+    transition: color 120ms ease, border-color 120ms ease;
+}
+
+.app-footer-link:hover {
+    color: #8b93ff;
+    border-color: rgba(139, 147, 255, 0.72);
+}
+
 .app-footer-powered {
     justify-self: end;
     display: inline-flex;
