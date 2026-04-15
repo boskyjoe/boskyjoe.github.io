@@ -85,7 +85,8 @@ select {
 .nav-icon svg,
 .panel-icon svg,
 .search-icon svg,
-.brand-mark svg {
+.brand-mark svg,
+.app-footer-brand-mark svg {
     width: 100%;
     height: 100%;
     fill: none;
