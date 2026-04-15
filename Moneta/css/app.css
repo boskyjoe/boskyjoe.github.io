@@ -234,7 +234,7 @@
 .app-content {
     flex: 1 0 auto;
     width: min(calc(100% - 1.8rem), var(--content-max));
-    margin: 0 auto 1.2rem;
+    margin: 0 0.9rem 1.2rem 0.45rem;
 }
 
 .app-footer {
@@ -375,7 +375,7 @@
 
     .app-content {
         width: min(calc(100% - 1rem), var(--content-max));
-        margin: 0 auto 1rem;
+        margin: 0 0.5rem 1rem;
     }
 
     .auth-slot {
@@ -404,6 +404,7 @@
 
     .app-content {
         width: calc(100% - 1rem);
+        margin: 0 0.5rem 1rem;
     }
 
     .app-footer-inner {
