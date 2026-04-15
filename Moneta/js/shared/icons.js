@@ -10,6 +10,13 @@ export const icons = {
             <path d="M3 13.5h8v7H3zm10-10h8v17h-8zm-10 0h8v8H3z"></path>
         </svg>
     `,
+    home: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 10.5 12 4l8 6.5"></path>
+            <path d="M6.5 9.5V20h11V9.5"></path>
+            <path d="M10 20v-5.5h4V20"></path>
+        </svg>
+    `,
     reports: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 19h16v2H4z"></path>
