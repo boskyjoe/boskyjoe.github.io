@@ -20,6 +20,7 @@ import {
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
     getPurchasePayablesReport,
+    getSalesTrendReport,
     getSalesSummaryReport,
     getStorePerformanceReport,
     resolveCashFlowRangeSpec
@@ -55,10 +56,10 @@ const REPORT_GROUPS = [
                 id: "sales-trend",
                 title: "Sales Trend",
                 description: "Daily and weekly movement view with period-over-period growth and slowdown indicators.",
-                dataSource: "salesInvoices",
+                dataSource: "salesInvoices, consignmentOrdersV2",
                 roles: ["admin", "sales_staff", "finance"],
-                status: "planned",
-                implemented: false
+                status: "priority",
+                implemented: true
             },
             {
                 id: "lead-conversion",
@@ -283,7 +284,7 @@ function buildRangeButtonsMarkup() {
 }
 
 function reportUsesRange(reportId = "") {
-    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "lead-conversion", "store-performance", "consignment-performance", "product-performance"].includes(reportId);
+    return ["cash-flow-summary", "profit-and-loss", "sales-summary", "sales-trend", "lead-conversion", "store-performance", "consignment-performance", "product-performance"].includes(reportId);
 }
 
 function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
@@ -432,6 +433,15 @@ function getAccountingAmountClass(value) {
 
 function formatPercent(value) {
     return `${roundCurrency(value)}%`;
+}
+
+function formatGrowthPercent(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return "New Activity";
+    }
+
+    const amount = roundCurrency(value);
+    return `${amount > 0 ? "+" : ""}${amount}%`;
 }
 
 function renderSalesSummaryCards(reportData = null) {
@@ -641,6 +651,242 @@ function renderSalesSummaryMetadataSection(reportData = null) {
                 Sales invoices ${sourceCounts.salesInvoices || 0},
                 Consignment orders ${sourceCounts.consignmentOrders || 0}.
             </div>
+        </section>
+    `;
+}
+
+function renderSalesTrendCards(reportData = null) {
+    const summary = reportData?.summary || {};
+    const growthTone = summary.growthAmount > 0
+        ? "tone-success"
+        : summary.growthAmount < 0
+            ? "tone-danger"
+            : "tone-primary";
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Net Sales</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.totalNetSales || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.transactionCount || 0} transactions in the active window</p>
+            </article>
+            <article class="dashboard-kpi-card ${growthTone}">
+                <p class="dashboard-kpi-title">Vs Prior Window</p>
+                <p class="dashboard-kpi-value">${formatGrowthPercent(summary.periodGrowthPercent)}</p>
+                <p class="dashboard-kpi-meta">${formatSignedCurrency(summary.growthAmount || 0)} against ${formatCurrency(summary.previousNetSales || 0)}</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Average Daily Sales</p>
+                <p class="dashboard-kpi-value">${formatCurrency(summary.averageDailySales || 0)}</p>
+                <p class="dashboard-kpi-meta">${summary.activeDays || 0} active day${summary.activeDays === 1 ? "" : "s"} in range</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Best Sales Day</p>
+                <p class="dashboard-kpi-value">${summary.topDayLabel || "-"}</p>
+                <p class="dashboard-kpi-meta">${formatCurrency(summary.topDayNetSales || 0)} net sales</p>
+            </article>
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Strongest Channel</p>
+                <p class="dashboard-kpi-value">${summary.strongestChannelName || "-"}</p>
+                <p class="dashboard-kpi-meta">${formatCurrency(summary.strongestChannelNetSales || 0)} in the active window</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderSalesTrendDailySection(reportData = null) {
+    const rows = reportData?.dailyRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Daily Movement</h3>
+                    <p>Chronological daily sales movement across direct retail and consignment for the selected range.</p>
+                </div>
+                <span class="status-pill">${rows.length} day${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th class="reports-align-right">Transactions</th>
+                            <th class="reports-align-right">Net Sales</th>
+                            <th class="reports-align-right">Direct</th>
+                            <th class="reports-align-right">Consignment</th>
+                            <th class="reports-align-right">Average Sale</th>
+                            <th class="reports-align-right">Vs Previous Day</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.label}</td>
+                                <td>${row.dayName}</td>
+                                <td class="reports-align-right">${row.transactionCount}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.totalNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.directNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.consignmentNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageSale)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.changeFromPreviousDay)}">${!row.hasPriorDay ? "Baseline" : `${formatSignedCurrency(row.changeFromPreviousDay)} (${formatGrowthPercent(row.changePercentFromPreviousDay)})`}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="8" class="reports-table-empty">No daily sales movement is available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderSalesTrendWeeklySection(reportData = null) {
+    const rows = reportData?.weeklyRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Weekly Momentum</h3>
+                    <p>Week-by-week rollup to spot acceleration, slowdown, and broader sales shape inside the current window.</p>
+                </div>
+                <span class="status-pill">${rows.length} week${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th class="reports-align-right">Transactions</th>
+                            <th class="reports-align-right">Net Sales</th>
+                            <th class="reports-align-right">Direct</th>
+                            <th class="reports-align-right">Consignment</th>
+                            <th class="reports-align-right">Average Daily</th>
+                            <th class="reports-align-right">Vs Previous Week</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.weekLabel}</td>
+                                <td class="reports-align-right">${row.transactionCount}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.totalNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.directNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.consignmentNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageDailySales)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.changeFromPreviousWeek)}">${!row.hasPriorWeek ? "Baseline" : `${formatSignedCurrency(row.changeFromPreviousWeek)} (${formatGrowthPercent(row.changePercentFromPreviousWeek)})`}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="7" class="reports-table-empty">No weekly sales trend is available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderSalesTrendChannelSection(reportData = null) {
+    const rows = reportData?.channelRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Channel Momentum</h3>
+                    <p>Current-window performance compared with the immediately preceding window of the same length.</p>
+                </div>
+                <span class="status-pill">${rows.length} channel${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Channel</th>
+                            <th class="reports-align-right">Current Window</th>
+                            <th class="reports-align-right">Prior Window</th>
+                            <th class="reports-align-right">Change</th>
+                            <th class="reports-align-right">Growth</th>
+                            <th class="reports-align-right">Transactions</th>
+                            <th class="reports-align-right">Average Sale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.channel}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.currentNetSales)}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.previousNetSales)}</td>
+                                <td class="reports-align-right ${getAccountingAmountClass(row.changeAmount)}">${formatSignedCurrency(row.changeAmount)}</td>
+                                <td class="reports-align-right">${formatGrowthPercent(row.changePercent)}</td>
+                                <td class="reports-align-right">${row.transactionCount}</td>
+                                <td class="reports-align-right">${formatAccountingCurrency(row.averageSale)}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="7" class="reports-table-empty">No channel comparison is available for this range.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderSalesTrendMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Sales Trend uses the active reporting window plus the immediately preceding window of equal length for comparison.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Prepared At</p>
+                    <p class="report-audit-value">${reportData ? formatDateTime(reportData.generatedAt) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Window</p>
+                    <p class="report-audit-value">${reportData?.rangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Compare Window</p>
+                    <p class="report-audit-value">${reportData?.compareRangeLabel || "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Current retail sales ${sourceCounts.currentSalesInvoices || 0},
+                Current consignment orders ${sourceCounts.currentConsignmentOrders || 0},
+                Prior retail sales ${sourceCounts.comparisonSalesInvoices || 0},
+                Prior consignment orders ${sourceCounts.comparisonConsignmentOrders || 0}.
+            </div>
+            ${(metadata.notes || []).length ? `
+                <div class="reports-audit-note">
+                    ${(metadata.notes || []).map(note => `- ${note}`).join("<br>")}
+                </div>
+            ` : ""}
         </section>
     `;
 }
@@ -2621,6 +2867,21 @@ function renderSalesSummaryReportView(user, reportDef) {
     `;
 }
 
+function renderSalesTrendReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData, { showRangeControls: true })}
+            ${renderSalesTrendCards(reportData)}
+            ${renderSalesTrendDailySection(reportData)}
+            ${renderSalesTrendWeeklySection(reportData)}
+            ${renderSalesTrendChannelSection(reportData)}
+            ${renderSalesTrendMetadataSection(reportData)}
+        </div>
+    `;
+}
+
 function renderStorePerformanceReportView(user, reportDef) {
     const reportData = featureState.reportData;
 
@@ -3019,6 +3280,64 @@ async function loadSalesSummaryReport(user, { forceRefresh = false } = {}) {
     }
 }
 
+async function loadSalesTrendReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "finance"].includes(user.role)) return;
+
+    const rangeSpec = resolveCashFlowRangeSpec({
+        rangeKey: featureState.selectedRangeKey,
+        customFrom: featureState.customFrom,
+        customTo: featureState.customTo
+    });
+
+    if (!rangeSpec.isValid) {
+        featureState.reportData = null;
+        featureState.isLoading = false;
+        featureState.errorMessage = rangeSpec.error || "Sales trend range is invalid.";
+        renderReportsView(user);
+        return;
+    }
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "sales-trend"
+        && featureState.reportData.rangeKey === rangeSpec.rangeKey
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getSalesTrendReport(user, rangeSpec, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "sales-trend"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Sales trend report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the sales trend report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 async function loadStorePerformanceReport(user, { forceRefresh = false } = {}) {
     if (!user || !["admin", "sales_staff", "finance"].includes(user.role)) return;
 
@@ -3343,6 +3662,9 @@ function loadActiveReport(user, options = {}) {
     if (reportId === "sales-summary") {
         return loadSalesSummaryReport(user, options);
     }
+    if (reportId === "sales-trend") {
+        return loadSalesTrendReport(user, options);
+    }
     if (reportId === "lead-conversion") {
         return loadLeadConversionReport(user, options);
     }
@@ -3399,6 +3721,7 @@ export function renderReportsView(user) {
     root.innerHTML = activeReport
         ? (() => {
             if (activeReport.id === "sales-summary") return renderSalesSummaryReportView(user, activeReport);
+            if (activeReport.id === "sales-trend") return renderSalesTrendReportView(user, activeReport);
             if (activeReport.id === "lead-conversion") return renderLeadConversionReportView(user, activeReport);
             if (activeReport.id === "store-performance") return renderStorePerformanceReportView(user, activeReport);
             if (activeReport.id === "consignment-performance") return renderConsignmentPerformanceReportView(user, activeReport);

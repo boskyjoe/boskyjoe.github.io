@@ -28,6 +28,38 @@ function toDateValue(value) {
     return Number.isNaN(date.getTime()) ? new Date(0) : date;
 }
 
+function calculateGrowthPercent(currentValue = 0, previousValue = 0) {
+    const current = roundCurrency(currentValue);
+    const previous = roundCurrency(previousValue);
+
+    if (previous === 0) {
+        return current === 0 ? 0 : null;
+    }
+
+    return roundCurrency(((current - previous) / Math.abs(previous)) * 100);
+}
+
+function buildComparableRangeSpec(rangeSpec = {}) {
+    const startDate = toDateValue(rangeSpec.startDate);
+    const endDate = toDateValue(rangeSpec.endDate);
+
+    if (startDate.getTime() <= 0 || endDate.getTime() <= 0 || endDate.getTime() < startDate.getTime()) {
+        return null;
+    }
+
+    const durationMs = endDate.getTime() - startDate.getTime();
+    const compareEndDate = new Date(startDate.getTime() - 1);
+    const compareStartDate = new Date(compareEndDate.getTime() - durationMs);
+
+    return {
+        isValid: true,
+        rangeKey: `compare:${toDateInputValue(compareStartDate)}:${toDateInputValue(compareEndDate)}`,
+        rangeLabel: `${formatDateLabel(compareStartDate)} - ${formatDateLabel(compareEndDate)}`,
+        startDate: compareStartDate,
+        endDate: compareEndDate
+    };
+}
+
 function buildCashFlowCacheKey(user, rangeKey) {
     const identity = user?.uid || user?.email || "anonymous";
     return `moneta.reports.cashflow.v1.${identity}.${rangeKey}`;
@@ -1135,6 +1167,153 @@ function buildSalesChannelRows(rows = []) {
         .filter(bucket => bucket.transactionCount > 0 || bucket.channel !== "Other");
 }
 
+function startOfWeek(value = new Date()) {
+    const date = toDateValue(value);
+    if (date.getTime() <= 0) return new Date(0);
+
+    const start = new Date(date);
+    const weekday = start.getDay();
+    const offset = weekday === 0 ? -6 : 1 - weekday;
+    start.setDate(start.getDate() + offset);
+    start.setHours(0, 0, 0, 0);
+    return start;
+}
+
+function buildSalesTrendDailyRows(rows = []) {
+    const byDay = new Map();
+
+    rows.forEach(row => {
+        const transactionDate = toDateValue(row.transactionDate);
+        if (transactionDate.getTime() <= 0) return;
+
+        const dayDate = new Date(transactionDate);
+        dayDate.setHours(0, 0, 0, 0);
+        const dayKey = toDateInputValue(dayDate);
+
+        if (!byDay.has(dayKey)) {
+            byDay.set(dayKey, {
+                dayKey,
+                date: dayDate,
+                label: formatDateLabel(dayDate),
+                dayName: dayDate.toLocaleDateString("en-IN", { weekday: "short" }),
+                totalNetSales: 0,
+                directNetSales: 0,
+                consignmentNetSales: 0,
+                transactionCount: 0,
+                totalQuantity: 0,
+                averageSale: 0
+            });
+        }
+
+        const bucket = byDay.get(dayKey);
+        const isConsignment = normalizeText(row.channel) === "Consignment";
+
+        bucket.totalNetSales = roundCurrency(bucket.totalNetSales + roundCurrency(row.netSales));
+        bucket.directNetSales = roundCurrency(bucket.directNetSales + (isConsignment ? 0 : roundCurrency(row.netSales)));
+        bucket.consignmentNetSales = roundCurrency(bucket.consignmentNetSales + (isConsignment ? roundCurrency(row.netSales) : 0));
+        bucket.transactionCount += 1;
+        bucket.totalQuantity += Math.max(0, Number(row.totalQuantity) || 0);
+    });
+
+    const orderedRows = [...byDay.values()].sort((left, right) => left.date.getTime() - right.date.getTime());
+
+    return orderedRows.map((row, index) => {
+        const previousRow = orderedRows[index - 1] || null;
+        const changeFromPreviousDay = previousRow
+            ? roundCurrency(row.totalNetSales - previousRow.totalNetSales)
+            : 0;
+
+        return {
+            ...row,
+            averageSale: row.transactionCount > 0 ? roundCurrency(row.totalNetSales / row.transactionCount) : 0,
+            hasPriorDay: Boolean(previousRow),
+            changeFromPreviousDay,
+            changePercentFromPreviousDay: previousRow
+                ? calculateGrowthPercent(row.totalNetSales, previousRow.totalNetSales)
+                : null
+        };
+    });
+}
+
+function buildSalesTrendWeeklyRows(dailyRows = []) {
+    const byWeek = new Map();
+
+    (dailyRows || []).forEach(row => {
+        const weekStartDate = startOfWeek(row.date);
+        if (weekStartDate.getTime() <= 0) return;
+
+        const weekKey = toDateInputValue(weekStartDate);
+
+        if (!byWeek.has(weekKey)) {
+            byWeek.set(weekKey, {
+                weekKey,
+                weekStartDate,
+                firstDate: row.date,
+                lastDate: row.date,
+                totalNetSales: 0,
+                directNetSales: 0,
+                consignmentNetSales: 0,
+                transactionCount: 0,
+                averageDailySales: 0,
+                activeDays: 0
+            });
+        }
+
+        const bucket = byWeek.get(weekKey);
+        bucket.firstDate = toDateValue(bucket.firstDate).getTime() <= row.date.getTime() ? bucket.firstDate : row.date;
+        bucket.lastDate = toDateValue(bucket.lastDate).getTime() >= row.date.getTime() ? bucket.lastDate : row.date;
+        bucket.totalNetSales = roundCurrency(bucket.totalNetSales + roundCurrency(row.totalNetSales));
+        bucket.directNetSales = roundCurrency(bucket.directNetSales + roundCurrency(row.directNetSales));
+        bucket.consignmentNetSales = roundCurrency(bucket.consignmentNetSales + roundCurrency(row.consignmentNetSales));
+        bucket.transactionCount += Number(row.transactionCount) || 0;
+        bucket.activeDays += 1;
+    });
+
+    const orderedRows = [...byWeek.values()].sort((left, right) => left.weekStartDate.getTime() - right.weekStartDate.getTime());
+
+    return orderedRows.map((row, index) => {
+        const previousRow = orderedRows[index - 1] || null;
+
+        return {
+            ...row,
+            weekLabel: `${formatDateLabel(row.firstDate)} - ${formatDateLabel(row.lastDate)}`,
+            averageDailySales: row.activeDays > 0 ? roundCurrency(row.totalNetSales / row.activeDays) : 0,
+            hasPriorWeek: Boolean(previousRow),
+            changeFromPreviousWeek: previousRow
+                ? roundCurrency(row.totalNetSales - previousRow.totalNetSales)
+                : 0,
+            changePercentFromPreviousWeek: previousRow
+                ? calculateGrowthPercent(row.totalNetSales, previousRow.totalNetSales)
+                : null
+        };
+    });
+}
+
+function buildSalesTrendChannelRows(currentRows = [], previousRows = []) {
+    const currentByChannel = new Map(buildSalesChannelRows(currentRows).map(row => [row.channel, row]));
+    const previousByChannel = new Map(buildSalesChannelRows(previousRows).map(row => [row.channel, row]));
+
+    return ["Tasty Treats", "Church Store", "Consignment"].map(channel => {
+        const currentRow = currentByChannel.get(channel) || {};
+        const previousRow = previousByChannel.get(channel) || {};
+        const currentNetSales = roundCurrency(currentRow.netSales);
+        const previousNetSales = roundCurrency(previousRow.netSales);
+
+        return {
+            channel,
+            currentNetSales,
+            previousNetSales,
+            changeAmount: roundCurrency(currentNetSales - previousNetSales),
+            changePercent: calculateGrowthPercent(currentNetSales, previousNetSales),
+            transactionCount: Number(currentRow.transactionCount) || 0,
+            previousTransactionCount: Number(previousRow.transactionCount) || 0,
+            averageSale: roundCurrency(currentRow.averageSale),
+            collections: roundCurrency(currentRow.collections),
+            previousCollections: roundCurrency(previousRow.collections)
+        };
+    });
+}
+
 function buildProductPerformanceSalesRows({
     salesInvoices = [],
     consignmentOrders = []
@@ -1737,6 +1916,85 @@ function buildSalesSummaryReportData({
                 salesInvoices: salesInvoices.length,
                 consignmentOrders: consignmentOrders.length
             }
+        }
+    };
+}
+
+function buildSalesTrendReportData({
+    salesInvoices = [],
+    consignmentOrders = [],
+    comparisonSalesInvoices = [],
+    comparisonConsignmentOrders = [],
+    rangeSpec,
+    compareRangeSpec = null,
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const currentRows = [
+        ...buildSalesInvoiceReportRows(salesInvoices),
+        ...buildConsignmentSalesReportRows(consignmentOrders)
+    ];
+    const comparisonRows = [
+        ...buildSalesInvoiceReportRows(comparisonSalesInvoices),
+        ...buildConsignmentSalesReportRows(comparisonConsignmentOrders)
+    ];
+    const dailyRows = buildSalesTrendDailyRows(currentRows);
+    const weeklyRows = buildSalesTrendWeeklyRows(dailyRows);
+    const channelRows = buildSalesTrendChannelRows(currentRows, comparisonRows);
+    const totalNetSales = sumMetric(currentRows, "netSales");
+    const previousNetSales = sumMetric(comparisonRows, "netSales");
+    const topDay = [...dailyRows].sort((left, right) => right.totalNetSales - left.totalNetSales)[0] || null;
+    const slowestDay = [...dailyRows].sort((left, right) => left.totalNetSales - right.totalNetSales)[0] || null;
+    const topWeek = [...weeklyRows].sort((left, right) => right.totalNetSales - left.totalNetSales)[0] || null;
+    const strongestChannel = [...channelRows].sort((left, right) => right.currentNetSales - left.currentNetSales)[0] || null;
+    const growthAmount = roundCurrency(totalNetSales - previousNetSales);
+    const periodGrowthPercent = calculateGrowthPercent(totalNetSales, previousNetSales);
+
+    return {
+        rangeKey: rangeSpec.rangeKey,
+        rangeLabel: rangeSpec.rangeLabel,
+        compareRangeLabel: compareRangeSpec?.rangeLabel || "-",
+        startDate: rangeSpec.startDate,
+        endDate: rangeSpec.endDate,
+        compareStartDate: compareRangeSpec?.startDate || null,
+        compareEndDate: compareRangeSpec?.endDate || null,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            totalNetSales,
+            previousNetSales,
+            growthAmount,
+            periodGrowthPercent,
+            transactionCount: currentRows.length,
+            previousTransactionCount: comparisonRows.length,
+            activeDays: dailyRows.length,
+            averageDailySales: dailyRows.length > 0 ? roundCurrency(totalNetSales / dailyRows.length) : 0,
+            averageTransactionsPerDay: dailyRows.length > 0 ? roundCurrency(currentRows.length / dailyRows.length) : 0,
+            topDayLabel: topDay?.label || "-",
+            topDayNetSales: topDay?.totalNetSales || 0,
+            slowestDayLabel: slowestDay?.label || "-",
+            slowestDayNetSales: slowestDay?.totalNetSales || 0,
+            topWeekLabel: topWeek?.weekLabel || "-",
+            topWeekNetSales: topWeek?.totalNetSales || 0,
+            strongestChannelName: strongestChannel?.channel || "-",
+            strongestChannelNetSales: strongestChannel?.currentNetSales || 0,
+            strongestChannelGrowthPercent: strongestChannel?.changePercent ?? null
+        },
+        dailyRows,
+        weeklyRows,
+        channelRows,
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                currentSalesInvoices: salesInvoices.length,
+                currentConsignmentOrders: consignmentOrders.length,
+                comparisonSalesInvoices: comparisonSalesInvoices.length,
+                comparisonConsignmentOrders: comparisonConsignmentOrders.length
+            },
+            notes: [
+                "Sales Trend compares the selected window against the immediately preceding window of the same length.",
+                "Firestore reads stay bounded to the selected range plus one comparison window, then cache for 10 minutes."
+            ]
         }
     };
 }
@@ -2733,6 +2991,78 @@ export async function getSalesSummaryReport(user, rangeSpec, { forceRefresh = fa
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "sales-summary", rangeSpec.rangeKey, data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getSalesTrendReport(user, rangeSpec, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "sales_staff", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the sales trend report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "sales-trend", rangeSpec.rangeKey);
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const compareRangeSpec = buildComparableRangeSpec(rangeSpec);
+    if (!compareRangeSpec) {
+        throw new Error("Sales trend comparison window is invalid.");
+    }
+    const startedAt = performance.now();
+    const [salesInvoicesResult, consignmentOrdersResult, comparisonSalesInvoicesResult, comparisonConsignmentOrdersResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate: rangeSpec.startDate,
+            endDate: rangeSpec.endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate: compareRangeSpec?.startDate || null,
+            endDate: compareRangeSpec?.endDate || null
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate: compareRangeSpec?.startDate || null,
+            endDate: compareRangeSpec?.endDate || null
+        })
+    ]);
+
+    const data = buildSalesTrendReportData({
+        salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
+        comparisonSalesInvoices: comparisonSalesInvoicesResult.rows,
+        comparisonConsignmentOrders: comparisonConsignmentOrdersResult.rows,
+        rangeSpec,
+        compareRangeSpec,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            currentSalesInvoices: salesInvoicesResult.truncated,
+            currentConsignmentOrders: consignmentOrdersResult.truncated,
+            comparisonSalesInvoices: comparisonSalesInvoicesResult.truncated,
+            comparisonConsignmentOrders: comparisonConsignmentOrdersResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "sales-trend", rangeSpec.rangeKey, data, loadedAt);
 
     return {
         data,
