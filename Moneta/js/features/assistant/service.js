@@ -11,6 +11,7 @@ import {
     getProfitAndLossReport,
     getProductPerformanceReport,
     getPurchasePayablesReport,
+    getSalesTrendReport,
     getSalesSummaryReport,
     getStorePerformanceReport,
     resolveCashFlowRangeSpec
@@ -30,6 +31,15 @@ function dedupeStrings(values = []) {
 
 function formatPercent(value) {
     return `${Number(Number(value) || 0).toFixed(2)}%`;
+}
+
+function formatGrowthPercent(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return "New Activity";
+    }
+
+    const amount = Number(Number(value) || 0).toFixed(2);
+    return `${Number(value) > 0 ? "+" : ""}${amount}%`;
 }
 
 function makeMetric(label, value, tone = "neutral") {
@@ -240,6 +250,7 @@ const INTENT_MATCHERS = {
     payables: [/\bpayable\b/, /\bpurchase payable\b/, /\bsupplier balance\b/, /\bvendor balance\b/, /\bowe suppliers\b/, /\bopen payables\b/, /\bsupplier exposure\b/, /\baccounts payable\b/, /\bopen supplier bills?\b/, /\bopen supplier invoices?\b/, /\bunpaid supplier bills?\b/, /\bsupplier bills?\b/],
     profitAndLoss: [/\bp&l\b/, /\bp and l\b/, /\bprofit and loss\b/, /\bincome statement\b/, /\bnet profit\b/, /\bgross profit\b/, /\boperating profit\b/, /\bprofitability\b/],
     salesSummary: [/\bsales\b/, /\brevenue\b/, /\bturnover\b/, /\bchannel performance\b/, /\bcommercial performance\b/, /\bdirect sales\b/],
+    salesTrend: [/\bsales trend\b/, /\bdaily sales\b/, /\bweekly sales\b/, /\bsales movement\b/, /\bgrowth trend\b/, /\bslowdown\b/, /\btrend report\b/, /\btrend view\b/, /\bperiod over period\b/, /\bperiod-over-period\b/],
     leadConversion: [/\blead conversion\b/, /\bconversion funnel\b/, /\bconverted leads?\b/, /\bready to convert\b/, /\bconversion rate\b/, /\bhow many enquiries are (ready|converted|qualified|open)\b/, /\benquiry conversion\b/, /\blead pipeline\b/],
     storePerformance: [/\bdirect store\b/, /\bstore performance\b/, /\bcompare stores?\b/, /\bwhich store\b/, /\btasty treats\b/, /\bchurch store\b/, /\btop store\b/],
     consignmentPerformance: [/\bconsignment\b/, /\bdistributor\b/, /\bsell[- ]through\b/, /\bchecked out\b/, /\bteam performance\b/, /\bbulk channel\b/],
@@ -248,7 +259,7 @@ const INTENT_MATCHERS = {
     productPerformance: [/\bproduct performance\b/, /\btop selling product\b/, /\btop seller\b/, /\btop sellers\b/, /\bbest[- ]seller\b/, /\bbest selling\b/, /\bmost sold product\b/, /\bhighest selling product\b/, /\btop product\b/, /\bproduct ranking\b/, /\bslow moving\b/, /\bslow-moving\b/, /\bfast moving\b/, /\bfast-moving\b/, /\bwhich products\b/, /\btop selling\b/]
 };
 
-const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"]);
+const RANGE_AWARE_INTENT_KEYS = new Set(["cashFlow", "profitAndLoss", "salesSummary", "salesTrend", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"]);
 
 function getIntentKeyFromId(intentId = "") {
     return Object.entries(ASSISTANT_INTENTS).find(([, value]) => value.id === intentId)?.[0] || "";
@@ -574,6 +585,53 @@ const ASSISTANT_INTENTS = {
             };
         }
     },
+    salesTrend: {
+        id: "sales-trend",
+        label: "Sales Trend",
+        roles: ["admin", "sales_staff", "finance"],
+        defaultRangeKey: "30d",
+        prompts: [
+            "Show sales trend for the last 30 days",
+            "How are weekly sales trending this quarter?",
+            "Is there a sales slowdown this month?"
+        ],
+        async run(user, query, { rangeSpec } = {}) {
+            const result = await getSalesTrendReport(user, rangeSpec);
+            const reportData = result.data;
+            const summary = reportData.summary || {};
+            const meta = makeSourceMeta(result, reportData, reportData.rangeLabel);
+            const strongestChannel = (reportData.channelRows || [])
+                .slice()
+                .sort((left, right) => (right.currentNetSales || 0) - (left.currentNetSales || 0))[0] || null;
+            const normalizedQuery = normalizeQuery(query);
+            const wantsSlowdownView = /\bslowdown\b|\bslower\b|\bdowntrend\b|\bdecline\b/.test(normalizedQuery);
+
+            return {
+                title: "Sales Trend",
+                reportLabel: "Sales",
+                sourceMeta: meta,
+                summary: wantsSlowdownView
+                    ? `Sales for ${meta.windowLabel} are ${summary.growthAmount < 0 ? "down" : summary.growthAmount > 0 ? "up" : "flat"} ${formatGrowthPercent(summary.periodGrowthPercent)} versus ${reportData.compareRangeLabel || "the prior window"}.`
+                    : `Net sales for ${meta.windowLabel} are ${formatCurrency(summary.totalNetSales || 0)}, with ${formatGrowthPercent(summary.periodGrowthPercent)} change versus ${reportData.compareRangeLabel || "the prior window"}.`,
+                metrics: [
+                    makeMetric("Net Sales", formatCurrency(summary.totalNetSales || 0), "positive"),
+                    makeMetric("Vs Prior Window", formatGrowthPercent(summary.periodGrowthPercent), summary.growthAmount >= 0 ? "positive" : "negative"),
+                    makeMetric("Average Daily Sales", formatCurrency(summary.averageDailySales || 0), "neutral"),
+                    makeMetric("Best Day", summary.topDayLabel ? `${summary.topDayLabel} · ${formatCurrency(summary.topDayNetSales || 0)}` : "-", "positive")
+                ],
+                bullets: [
+                    strongestChannel ? `${strongestChannel.channel} is currently the strongest channel at ${formatCurrency(strongestChannel.currentNetSales || 0)}.` : `Channel momentum is available when the selected window has sales activity.`,
+                    `The comparison window is ${reportData.compareRangeLabel || "the immediately preceding same-length period"}.`,
+                    `${summary.activeDays || 0} active sales day${summary.activeDays === 1 ? "" : "s"} were found in the selected window.`
+                ],
+                followUps: [
+                    "Show sales summary for the same window",
+                    "Compare Church Store and Tasty Treats for the same window",
+                    "Show cash flow for the same window"
+                ]
+            };
+        }
+    },
     leadConversion: {
         id: "lead-conversion",
         label: "Lead Conversion",
@@ -841,9 +899,9 @@ const ASSISTANT_INTENTS = {
 };
 
 const ROLE_VISIBLE_INTENTS = {
-    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
-    finance: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
-    sales_staff: ["salesSummary", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"],
+    admin: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "salesTrend", "leadConversion", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
+    finance: ["cashFlow", "receivables", "payables", "profitAndLoss", "salesSummary", "salesTrend", "storePerformance", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
+    sales_staff: ["salesSummary", "salesTrend", "leadConversion", "storePerformance", "consignmentPerformance", "productPerformance"],
     inventory_manager: ["payables", "consignmentPerformance", "inventoryStatus", "inventoryValuation", "productPerformance"],
     team_lead: [],
     guest: []
