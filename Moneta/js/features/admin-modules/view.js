@@ -19,8 +19,11 @@ import {
 } from "./grid.js";
 import {
     DEFAULT_REORDER_POLICY,
+    buildReorderPolicyPrecedenceSummary,
     buildReorderPolicyExplanation,
-    buildReorderPolicyScopeSummary
+    buildReorderPolicyScopeSummary,
+    buildReorderPolicyWorkedExample,
+    resolveReorderPolicyFallbackChain
 } from "../../shared/reorder-policy.js";
 import {
     getAdminEditRestriction,
@@ -175,8 +178,31 @@ function buildPolicyContext(snapshot) {
     };
 }
 
-function renderCategorySelectOptions(snapshot, currentValue = "") {
-    const rows = (snapshot.masterData.categories || []).filter(row => row.isActive || row.id === currentValue);
+function getReorderPolicyAssignableProducts(snapshot, currentProductId = "") {
+    return (snapshot.masterData.products || []).filter(row => row.id === currentProductId || row.isActive !== false);
+}
+
+function findProductById(snapshot, productId = "") {
+    return (snapshot.masterData.products || []).find(row => row.id === productId) || null;
+}
+
+function inferReorderPolicyCategoryId(snapshot, productId = "") {
+    return findProductById(snapshot, productId)?.categoryId || "";
+}
+
+function renderCategorySelectOptions(snapshot, {
+    currentValue = "",
+    currentProductId = ""
+} = {}) {
+    const categoryIdsWithProducts = new Set(
+        getReorderPolicyAssignableProducts(snapshot, currentProductId)
+            .map(row => row.categoryId || "")
+            .filter(Boolean)
+    );
+    const rows = (snapshot.masterData.categories || []).filter(row =>
+        categoryIdsWithProducts.has(row.id)
+        || row.id === currentValue
+    );
     return rows
         .slice()
         .sort((left, right) => (left.categoryName || "").localeCompare(right.categoryName || ""))
@@ -184,8 +210,14 @@ function renderCategorySelectOptions(snapshot, currentValue = "") {
         .join("");
 }
 
-function renderProductSelectOptions(snapshot, currentValue = "") {
-    const rows = (snapshot.masterData.products || []).filter(row => row.id === currentValue || row.isActive !== false);
+function renderProductSelectOptions(snapshot, {
+    currentValue = "",
+    categoryId = ""
+} = {}) {
+    const rows = getReorderPolicyAssignableProducts(snapshot, currentValue).filter(row =>
+        row.id === currentValue
+        || (categoryId && row.categoryId === categoryId)
+    );
     return rows
         .slice()
         .sort((left, right) => (left.itemName || "").localeCompare(right.itemName || ""))
@@ -195,11 +227,14 @@ function renderProductSelectOptions(snapshot, currentValue = "") {
 
 function getReorderPolicyDraft(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "reorderPolicies");
+    const derivedCategoryId = editingRecord?.scopeType === "product"
+        ? (editingRecord?.categoryId || inferReorderPolicyCategoryId(snapshot, editingRecord?.productId || ""))
+        : (editingRecord?.categoryId || "");
 
     return {
         policyName: editingRecord?.policyName || "",
         scopeType: editingRecord?.scopeType || DEFAULT_REORDER_POLICY.scopeType,
-        categoryId: editingRecord?.categoryId || "",
+        categoryId: derivedCategoryId,
         productId: editingRecord?.productId || "",
         shortWindowDays: editingRecord?.shortWindowDays ?? DEFAULT_REORDER_POLICY.shortWindowDays,
         shortWindowWeight: editingRecord?.shortWindowWeight ?? DEFAULT_REORDER_POLICY.shortWindowWeight,
@@ -216,20 +251,110 @@ function getReorderPolicyDraft(snapshot) {
     };
 }
 
-function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}) {
-    const context = buildPolicyContext(snapshot);
-    const explanation = buildReorderPolicyExplanation(policyDraft, context);
-    const scopeSummary = buildReorderPolicyScopeSummary(policyDraft, context);
-
+function renderReorderPolicyReferenceCard(title, policy = {}, context = {}) {
     return `
         <div class="reports-audit-note">
-            <strong>Scope:</strong> ${scopeSummary}
+            <strong>${title}:</strong> ${buildReorderPolicyScopeSummary(policy, context)}
         </div>
         <div class="reports-audit-note">
-            <strong>Plain-English Rule:</strong> ${explanation}
+            ${buildReorderPolicyExplanation(policy, context)}
         </div>
-        <div class="reports-audit-note">
-            <strong>How Moneta will use this:</strong> The Reorder Recommendations report will apply the most specific active policy first: product, then category, then global.
+    `;
+}
+
+function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) {
+    const scopeType = policyDraft.scopeType || DEFAULT_REORDER_POLICY.scopeType;
+
+    if (scopeType === "global") {
+        return "This draft is the global default, so narrower active product or category rules can still override it.";
+    }
+
+    if (scopeType === "category") {
+        return fallbackChain.length
+            ? "If this category rule cannot be used, Moneta will move down to the active fallback below."
+            : "No active global default is available right now, so this category rule does not currently have a fallback.";
+    }
+
+    if (fallbackChain.length === 2) {
+        return "If this product rule cannot be used, Moneta will move down the active fallback chain below.";
+    }
+
+    if (fallbackChain.length === 1) {
+        return "Moneta found only one active fallback step for this product rule, so the chain below is shorter than normal.";
+    }
+
+    return "No active category or global fallback is available right now for this product rule.";
+}
+
+function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editingRecord = null) {
+    const context = buildPolicyContext(snapshot);
+    const draftScopeSummary = buildReorderPolicyScopeSummary(policyDraft, context);
+    const draftExplanation = buildReorderPolicyExplanation(policyDraft, context);
+    const workedExample = buildReorderPolicyWorkedExample(policyDraft, context);
+    const precedenceSummary = buildReorderPolicyPrecedenceSummary(policyDraft, context);
+    const fallbackChain = resolveReorderPolicyFallbackChain(
+        policyDraft,
+        snapshot.masterData.reorderPolicies || [],
+        editingRecord?.id || ""
+    );
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
+                    <div>
+                        <h3>This Rule In Simple English</h3>
+                        <p class="panel-copy">Use this to confirm the draft rule reads clearly before you save it.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="reports-audit-note">
+                    <strong>Draft Rule:</strong> ${draftScopeSummary}
+                </div>
+                <div class="reports-audit-note">
+                    ${draftExplanation}
+                </div>
+            </div>
+        </div>
+        <div class="panel-card" style="margin-top:1rem;">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
+                    <div>
+                        <h3>Worked Example</h3>
+                        <p class="panel-copy">A simple example using the numbers from this rule.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="reports-audit-note">
+                    ${workedExample}
+                </div>
+            </div>
+        </div>
+        <div class="panel-card" style="margin-top:1rem;">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
+                    <div>
+                        <h3>How Moneta Applies This Rule</h3>
+                        <p class="panel-copy">Moneta always prefers the most specific active rule.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="reports-audit-note">
+                    ${precedenceSummary}
+                </div>
+                <div class="reports-audit-note">
+                    <strong>Relevant Fallback Chain:</strong> ${buildReorderPolicyFallbackNotice(policyDraft, fallbackChain)}
+                </div>
+                ${fallbackChain.length ? `
+                    ${fallbackChain.map(entry => renderReorderPolicyReferenceCard(entry.title, entry.policy, context)).join("")}
+                ` : ""}
+            </div>
         </div>
     `;
 }
@@ -238,11 +363,13 @@ function renderSectionTabs(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const seasons = snapshot.masterData.seasons || [];
     const paymentModes = snapshot.masterData.paymentModes || [];
+    const reorderPolicies = snapshot.masterData.reorderPolicies || [];
 
     const counts = {
         categories: categories.length,
         seasons: seasons.length,
-        paymentModes: paymentModes.length
+        paymentModes: paymentModes.length,
+        reorderPolicies: reorderPolicies.length
     };
 
     return `
@@ -437,6 +564,8 @@ function renderReorderPolicyForm(snapshot) {
     const draft = getReorderPolicyDraft(snapshot);
     const isCategoryScope = draft.scopeType === "category";
     const isProductScope = draft.scopeType === "product";
+    const showCategoryField = isCategoryScope || isProductScope;
+    const isProductDisabled = isProductScope && !draft.categoryId;
 
     return `
         <div class="panel-card">
@@ -466,19 +595,29 @@ function renderReorderPolicyForm(snapshot) {
                                 <option value="product" ${draft.scopeType === "product" ? "selected" : ""}>Product Override</option>
                             </select>
                         </div>
-                        <div class="field" id="admin-reorder-policy-category-field" ${isCategoryScope ? "" : "hidden"}>
+                        <div class="field" id="admin-reorder-policy-category-field" ${showCategoryField ? "" : "hidden"}>
                             <label for="admin-reorder-policy-category-id">Category</label>
                             <select id="admin-reorder-policy-category-id" class="select">
                                 <option value="">Select category</option>
-                                ${renderCategorySelectOptions(snapshot, draft.categoryId)}
+                                ${renderCategorySelectOptions(snapshot, {
+                                    currentValue: draft.categoryId,
+                                    currentProductId: draft.productId
+                                })}
                             </select>
+                            <p id="admin-reorder-policy-category-help" class="panel-copy panel-copy-tight">${isProductScope
+                                ? "Choose a category first so Moneta can narrow the product list to matching items."
+                                : "Only categories that already have products assigned are listed here."}</p>
                         </div>
                         <div class="field" id="admin-reorder-policy-product-field" ${isProductScope ? "" : "hidden"}>
                             <label for="admin-reorder-policy-product-id">Product</label>
-                            <select id="admin-reorder-policy-product-id" class="select">
-                                <option value="">Select product</option>
-                                ${renderProductSelectOptions(snapshot, draft.productId)}
+                            <select id="admin-reorder-policy-product-id" class="select" ${isProductDisabled ? "disabled" : ""}>
+                                <option value="">${isProductDisabled ? "Select category first" : "Select product"}</option>
+                                ${renderProductSelectOptions(snapshot, {
+                                    currentValue: draft.productId,
+                                    categoryId: draft.categoryId
+                                })}
                             </select>
+                            <p id="admin-reorder-policy-product-help" class="panel-copy panel-copy-tight">Moneta will only show products from the selected category.</p>
                         </div>
                         <div class="field">
                             <label for="admin-reorder-policy-status">Status</label>
@@ -541,12 +680,12 @@ function renderReorderPolicyForm(snapshot) {
                                 <span class="panel-icon panel-icon-alt">${icons.reports}</span>
                                 <div>
                                     <h3>Plain-English Rule Preview</h3>
-                                    <p class="panel-copy">This explanation is what Moneta will show to users when this policy is applied.</p>
+                                    <p class="panel-copy">This preview helps the admin understand the draft rule, a worked example, and the fallback/default rule chain.</p>
                                 </div>
                             </div>
                         </div>
                         <div id="admin-reorder-policy-explanation" class="panel-body">
-                            ${renderReorderPolicyExplanationPreview(snapshot, draft)}
+                            ${renderReorderPolicyExplanationPreview(snapshot, draft, editingRecord)}
                         </div>
                     </div>
                     <div class="form-actions">
@@ -881,22 +1020,103 @@ function collectReorderPolicyFormDraft() {
 
 function refreshReorderPolicyExplanationUi() {
     const snapshot = getState();
+    const scopeTypeInput = document.getElementById("admin-reorder-policy-scope-type");
+    const categorySelect = document.getElementById("admin-reorder-policy-category-id");
+    const productSelect = document.getElementById("admin-reorder-policy-product-id");
     const draft = collectReorderPolicyFormDraft();
     const scopeType = draft.scopeType || DEFAULT_REORDER_POLICY.scopeType;
+    const showCategoryField = scopeType === "category" || scopeType === "product";
     const categoryField = document.getElementById("admin-reorder-policy-category-field");
     const productField = document.getElementById("admin-reorder-policy-product-field");
+    const categoryHelp = document.getElementById("admin-reorder-policy-category-help");
+    const productHelp = document.getElementById("admin-reorder-policy-product-help");
     const explanationRoot = document.getElementById("admin-reorder-policy-explanation");
+    let resolvedCategoryId = draft.categoryId;
+    let resolvedProductId = draft.productId;
+
+    if (scopeType === "product" && !resolvedCategoryId && resolvedProductId) {
+        resolvedCategoryId = inferReorderPolicyCategoryId(snapshot, resolvedProductId);
+    }
+
+    if (scopeTypeInput) {
+        scopeTypeInput.value = scopeType;
+    }
 
     if (categoryField) {
-        categoryField.hidden = scopeType !== "category";
+        categoryField.hidden = !showCategoryField;
     }
 
     if (productField) {
         productField.hidden = scopeType !== "product";
     }
 
+    if (categoryHelp) {
+        categoryHelp.textContent = scopeType === "product"
+            ? "Choose a category first so Moneta can narrow the product list to matching items."
+            : "Only categories that already have products assigned are listed here.";
+    }
+
+    if (productHelp) {
+        productHelp.textContent = "Moneta will only show products from the selected category.";
+    }
+
+    if (categorySelect) {
+        const categoryOptions = renderCategorySelectOptions(snapshot, {
+            currentValue: resolvedCategoryId,
+            currentProductId: resolvedProductId
+        });
+        const categoryIds = new Set(
+            getReorderPolicyAssignableProducts(snapshot, resolvedProductId)
+                .map(row => row.categoryId || "")
+                .filter(Boolean)
+        );
+
+        if (resolvedCategoryId && !categoryIds.has(resolvedCategoryId)) {
+            resolvedCategoryId = "";
+        }
+
+        categorySelect.innerHTML = `<option value="">Select category</option>${categoryOptions}`;
+        categorySelect.value = resolvedCategoryId;
+    }
+
+    if (scopeType === "product" && resolvedProductId) {
+        const productCategoryId = inferReorderPolicyCategoryId(snapshot, resolvedProductId);
+        if (!resolvedCategoryId) {
+            resolvedCategoryId = productCategoryId;
+            if (categorySelect) {
+                categorySelect.value = resolvedCategoryId;
+            }
+        } else if (productCategoryId && productCategoryId !== resolvedCategoryId) {
+            resolvedProductId = "";
+        }
+    }
+
+    if (productSelect) {
+        const productOptions = renderProductSelectOptions(snapshot, {
+            currentValue: resolvedProductId,
+            categoryId: scopeType === "product" ? resolvedCategoryId : ""
+        });
+        const productIds = new Set(
+            getReorderPolicyAssignableProducts(snapshot, resolvedProductId)
+                .filter(row => row.id === resolvedProductId || (resolvedCategoryId && row.categoryId === resolvedCategoryId))
+                .map(row => row.id)
+        );
+
+        if (resolvedProductId && !productIds.has(resolvedProductId)) {
+            resolvedProductId = "";
+        }
+
+        productSelect.disabled = scopeType !== "product" || !resolvedCategoryId;
+        productSelect.innerHTML = `<option value="">${resolvedCategoryId ? "Select product" : "Select category first"}</option>${productOptions}`;
+        productSelect.value = resolvedProductId;
+    }
+
     if (explanationRoot) {
-        explanationRoot.innerHTML = renderReorderPolicyExplanationPreview(snapshot, draft);
+        explanationRoot.innerHTML = renderReorderPolicyExplanationPreview(snapshot, {
+            ...draft,
+            categoryId: resolvedCategoryId,
+            productId: resolvedProductId
+        }, getEditingRecord(snapshot, "reorderPolicies"));
     }
 }
 

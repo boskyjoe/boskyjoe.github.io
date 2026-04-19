@@ -65,7 +65,8 @@ function buildNameMap(rows = [], labelField) {
 function buildPolicyContext(existingCategories = [], existingProducts = []) {
     return {
         categoryNameById: buildNameMap(existingCategories, "categoryName"),
-        productNameById: buildNameMap(existingProducts, "itemName")
+        productNameById: buildNameMap(existingProducts, "itemName"),
+        productCategoryIdById: new Map((existingProducts || []).map(row => [row.id, normalizeText(row.categoryId)]))
     };
 }
 
@@ -421,6 +422,19 @@ export function validateReorderPolicyPayload(payload, existingPolicies = [], exi
         if (!context.productNameById.has(productId)) {
             throw new Error("Selected product could not be found.");
         }
+
+        const selectedCategoryId = normalizeText(payload.categoryId);
+        const productCategoryId = normalizeText(context.productCategoryIdById.get(productId));
+
+        if (!productCategoryId) {
+            throw new Error("Selected product is not assigned to a category yet.");
+        }
+
+        if (selectedCategoryId && selectedCategoryId !== productCategoryId) {
+            throw new Error("Selected product does not belong to the chosen category.");
+        }
+
+        categoryId = productCategoryId;
     }
 
     const policyRecord = {

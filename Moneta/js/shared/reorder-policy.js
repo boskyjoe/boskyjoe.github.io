@@ -27,6 +27,41 @@ function toInteger(value, fallback = 0, minimum = 0) {
     return Math.max(minimum, parsed);
 }
 
+function roundUpToPack(quantity = 0, packSize = 1) {
+    if (quantity <= 0) return 0;
+    if (packSize <= 1) return quantity;
+    return Math.ceil(quantity / packSize) * packSize;
+}
+
+function pluralize(value, singular, plural = `${singular}s`) {
+    return value === 1 ? singular : plural;
+}
+
+function getNormalizedPolicySettings(policy = {}) {
+    return {
+        scopeType: normalizeText(policy.scopeType || DEFAULT_REORDER_POLICY.scopeType),
+        shortWindowDays: toInteger(policy.shortWindowDays, DEFAULT_REORDER_POLICY.shortWindowDays, 1),
+        shortWindowWeight: toInteger(policy.shortWindowWeight, DEFAULT_REORDER_POLICY.shortWindowWeight, 0),
+        longWindowDays: toInteger(policy.longWindowDays, DEFAULT_REORDER_POLICY.longWindowDays, 1),
+        longWindowWeight: toInteger(policy.longWindowWeight, DEFAULT_REORDER_POLICY.longWindowWeight, 0),
+        leadTimeDays: toInteger(policy.leadTimeDays, DEFAULT_REORDER_POLICY.leadTimeDays, 0),
+        safetyDays: toInteger(policy.safetyDays, DEFAULT_REORDER_POLICY.safetyDays, 0),
+        targetCoverDays: toInteger(policy.targetCoverDays, DEFAULT_REORDER_POLICY.targetCoverDays, 1),
+        lowHistoryUnitThreshold: toInteger(policy.lowHistoryUnitThreshold, DEFAULT_REORDER_POLICY.lowHistoryUnitThreshold, 0),
+        minimumOrderQty: toInteger(policy.minimumOrderQty, DEFAULT_REORDER_POLICY.minimumOrderQty, 0),
+        packSize: Math.max(1, toInteger(policy.packSize, DEFAULT_REORDER_POLICY.packSize, 1)),
+        zeroDemandBehavior: ZERO_DEMAND_BEHAVIORS.includes(policy.zeroDemandBehavior)
+            ? policy.zeroDemandBehavior
+            : DEFAULT_REORDER_POLICY.zeroDemandBehavior
+    };
+}
+
+function pickLatestPolicy(policies = [], predicate = () => true) {
+    return (policies || [])
+        .filter(policy => predicate(policy))
+        .sort((left, right) => getUpdatedTime(right) - getUpdatedTime(left))[0] || null;
+}
+
 export function resolveReorderPolicyTargetLabel(policy = {}, {
     categoryNameById = new Map(),
     productNameById = new Map()
@@ -63,43 +98,142 @@ export function buildReorderPolicyScopeSummary(policy = {}, options = {}) {
     return "Global Default";
 }
 
-export function buildReorderPolicyExplanation(policy = {}, options = {}) {
-    const scopeType = normalizeText(policy.scopeType || DEFAULT_REORDER_POLICY.scopeType);
+export function buildReorderPolicySimpleExplanation(policy = {}, options = {}) {
     const targetLabel = resolveReorderPolicyTargetLabel(policy, options);
-    const shortWindowDays = toInteger(policy.shortWindowDays, DEFAULT_REORDER_POLICY.shortWindowDays, 1);
-    const shortWindowWeight = toInteger(policy.shortWindowWeight, DEFAULT_REORDER_POLICY.shortWindowWeight, 0);
-    const longWindowDays = toInteger(policy.longWindowDays, DEFAULT_REORDER_POLICY.longWindowDays, 1);
-    const longWindowWeight = toInteger(policy.longWindowWeight, DEFAULT_REORDER_POLICY.longWindowWeight, 0);
-    const leadTimeDays = toInteger(policy.leadTimeDays, DEFAULT_REORDER_POLICY.leadTimeDays, 0);
-    const safetyDays = toInteger(policy.safetyDays, DEFAULT_REORDER_POLICY.safetyDays, 0);
-    const targetCoverDays = toInteger(policy.targetCoverDays, DEFAULT_REORDER_POLICY.targetCoverDays, 1);
-    const lowHistoryUnitThreshold = toInteger(policy.lowHistoryUnitThreshold, DEFAULT_REORDER_POLICY.lowHistoryUnitThreshold, 0);
-    const minimumOrderQty = toInteger(policy.minimumOrderQty, DEFAULT_REORDER_POLICY.minimumOrderQty, 0);
-    const packSize = Math.max(1, toInteger(policy.packSize, DEFAULT_REORDER_POLICY.packSize, 1));
-    const zeroDemandBehavior = ZERO_DEMAND_BEHAVIORS.includes(policy.zeroDemandBehavior)
-        ? policy.zeroDemandBehavior
-        : DEFAULT_REORDER_POLICY.zeroDemandBehavior;
+    const {
+        scopeType,
+        shortWindowDays,
+        shortWindowWeight,
+        longWindowDays,
+        longWindowWeight,
+        leadTimeDays,
+        safetyDays,
+        targetCoverDays,
+        lowHistoryUnitThreshold,
+        minimumOrderQty,
+        packSize,
+        zeroDemandBehavior
+    } = getNormalizedPolicySettings(policy);
 
     const scopeLine = scopeType === "category"
-        ? `This policy applies to active products in the ${targetLabel} category.`
+        ? `Moneta uses this rule for active products in the ${targetLabel} category when there is no product-specific rule.`
         : scopeType === "product"
-            ? `This policy applies only to ${targetLabel}.`
-            : "This policy applies to all active products that do not have a more specific reorder policy.";
+            ? `Moneta uses this rule only for ${targetLabel}.`
+            : "Moneta uses this as the default reorder rule unless a category or product rule takes over.";
 
-    const demandLine = `Moneta estimates daily demand using ${shortWindowWeight}% of the last ${shortWindowDays} days and ${longWindowWeight}% of the last ${longWindowDays} days.`;
-    const thresholdLine = `It recommends reorder when stock on hand falls below demand cover for ${leadTimeDays} lead-time days plus ${safetyDays} safety days.`;
-    const targetLine = `When reorder is triggered, Moneta tops stock up to ${targetCoverDays} days of cover.`;
+    const demandLine = `It blends demand using ${shortWindowWeight}% from the last ${shortWindowDays} days and ${longWindowWeight}% from the last ${longWindowDays} days.`;
+    const thresholdLine = `It tells the team to reorder when stock drops below ${leadTimeDays + safetyDays} days of cover (${leadTimeDays} lead-time days and ${safetyDays} safety days).`;
+    const targetLine = `When that happens, it aims to top stock back up to ${targetCoverDays} days of cover.`;
     const lowHistoryLine = lowHistoryUnitThreshold > 0
-        ? `If a product sells ${lowHistoryUnitThreshold} units or less in the longer window, Moneta marks it for manual review instead of trusting the recommendation completely.`
-        : "Low-history products follow the same demand rule as the rest of the policy.";
+        ? `If an item sells ${lowHistoryUnitThreshold} ${pluralize(lowHistoryUnitThreshold, "unit")} or less across the ${longWindowDays}-day window, Moneta asks for manual review first.`
+        : "Low-history items follow the same rule as the rest of this policy.";
     const zeroDemandLine = zeroDemandBehavior === "suppress"
-        ? "If a product has no recent demand, Moneta suppresses the reorder recommendation."
-        : "If a product has no recent demand, Moneta flags it for manual review instead of auto-recommending a reorder.";
+        ? "If there is no recent demand, Moneta does not recommend a reorder."
+        : "If there is no recent demand, Moneta shows manual review instead of auto-reordering.";
     const orderingLine = minimumOrderQty > 0 || packSize > 1
-        ? `Order quantities are rounded to a minimum of ${minimumOrderQty || 0} units and then packed in multiples of ${packSize}.`
-        : "Order quantities are recommended exactly from the stock-cover calculation.";
+        ? `Suggested orders respect a minimum of ${minimumOrderQty || 0} ${pluralize(minimumOrderQty || 0, "unit")} and pack sizes of ${packSize}.`
+        : "Suggested order quantity comes straight from the stock-cover calculation.";
 
     return [scopeLine, demandLine, thresholdLine, targetLine, lowHistoryLine, zeroDemandLine, orderingLine].join(" ");
+}
+
+export function buildReorderPolicyExplanation(policy = {}, options = {}) {
+    return buildReorderPolicySimpleExplanation(policy, options);
+}
+
+export function buildReorderPolicyWorkedExample(policy = {}, options = {}) {
+    const sampleDailyUnits = Math.max(1, toInteger(options.sampleDailyUnits, 2, 1));
+    const {
+        longWindowDays,
+        leadTimeDays,
+        safetyDays,
+        targetCoverDays,
+        lowHistoryUnitThreshold,
+        minimumOrderQty,
+        packSize,
+        zeroDemandBehavior
+    } = getNormalizedPolicySettings(policy);
+
+    const reorderPoint = Math.ceil(sampleDailyUnits * (leadTimeDays + safetyDays));
+    const targetStock = Math.ceil(sampleDailyUnits * targetCoverDays);
+    const rawSuggestedQty = Math.max(0, targetStock - reorderPoint);
+    const minimumAdjustedQty = minimumOrderQty > 0
+        ? Math.max(rawSuggestedQty, minimumOrderQty)
+        : rawSuggestedQty;
+    const finalSuggestedQty = roundUpToPack(minimumAdjustedQty, packSize);
+
+    const exampleLines = [
+        `If an item sells about ${sampleDailyUnits} ${pluralize(sampleDailyUnits, "unit")} per day, Moneta will reorder when stock falls to ${reorderPoint} ${pluralize(reorderPoint, "unit")} or below.`,
+        `It will then aim to bring stock back up to ${targetStock} ${pluralize(targetStock, "unit")} on hand.`
+    ];
+
+    if (rawSuggestedQty > 0) {
+        if (finalSuggestedQty !== rawSuggestedQty) {
+            exampleLines.push(`That starts as ${rawSuggestedQty} ${pluralize(rawSuggestedQty, "unit")}, then rounds to ${finalSuggestedQty} because of the minimum-order and pack rules.`);
+        } else {
+            exampleLines.push(`That means Moneta would suggest ordering ${finalSuggestedQty} ${pluralize(finalSuggestedQty, "unit")}.`);
+        }
+    } else {
+        exampleLines.push("In this example, the reorder trigger and target stock do not create a separate order quantity.");
+    }
+
+    if (lowHistoryUnitThreshold > 0) {
+        exampleLines.push(`If the item sells only ${lowHistoryUnitThreshold} ${pluralize(lowHistoryUnitThreshold, "unit")} or less in ${longWindowDays} days, Moneta will still ask for manual review.`);
+    }
+
+    exampleLines.push(zeroDemandBehavior === "suppress"
+        ? "If there are no recent sales at all, Moneta will hide the recommendation."
+        : "If there are no recent sales at all, Moneta will show manual review.");
+
+    return exampleLines.join(" ");
+}
+
+export function buildReorderPolicyPrecedenceSummary(policy = {}, options = {}) {
+    const targetLabel = resolveReorderPolicyTargetLabel(policy, options);
+    const { scopeType } = getNormalizedPolicySettings(policy);
+
+    if (scopeType === "product") {
+        return `Moneta checks this product rule first for ${targetLabel}. If it cannot use it, Moneta falls back to the matching category rule, then the active global default.`;
+    }
+
+    if (scopeType === "category") {
+        return `Moneta uses this category rule after checking for a product-specific rule. If no product rule applies, Moneta uses this category rule, then falls back to the active global default if needed.`;
+    }
+
+    return "This is the global default. Moneta uses it only when there is no active product rule or category rule that is more specific.";
+}
+
+export function resolveReorderPolicyFallbackChain(policy = {}, policies = [], excludePolicyId = "") {
+    const { scopeType } = getNormalizedPolicySettings(policy);
+    const activePolicies = (policies || []).filter(candidate => candidate?.isActive && candidate.id !== excludePolicyId);
+    const entries = [];
+
+    if (scopeType === "product") {
+        const categoryFallback = pickLatestPolicy(activePolicies, candidate =>
+            normalizeText(candidate.scopeType) === "category"
+            && normalizeText(candidate.categoryId) === normalizeText(policy.categoryId)
+        );
+        const globalFallback = pickLatestPolicy(activePolicies, candidate => normalizeText(candidate.scopeType) === "global");
+
+        if (categoryFallback) {
+            entries.push({ key: "category", title: "Category Fallback", policy: categoryFallback });
+        }
+
+        if (globalFallback) {
+            entries.push({ key: "global", title: "Global Default", policy: globalFallback });
+        }
+
+        return entries;
+    }
+
+    if (scopeType === "category") {
+        const globalFallback = pickLatestPolicy(activePolicies, candidate => normalizeText(candidate.scopeType) === "global");
+        if (globalFallback) {
+            entries.push({ key: "global", title: "Global Default", policy: globalFallback });
+        }
+    }
+
+    return entries;
 }
 
 function getSpecificityRank(scopeType = "") {
