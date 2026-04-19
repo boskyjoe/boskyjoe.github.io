@@ -17,6 +17,7 @@ import {
     getInventoryValuationReport,
     getLeadConversionReport,
     getProductPerformanceReport,
+    getReorderRecommendationsReport,
     getOutstandingReceivablesReport,
     getProfitAndLossReport,
     getPurchasePayablesReport,
@@ -119,10 +120,10 @@ const REPORT_GROUPS = [
                 id: "reorder-recommendations",
                 title: "Reorder Recommendations",
                 description: "Suggested replenishment list based on threshold risk, stock depth, and operational urgency.",
-                dataSource: "productCatalogue, purchaseInvoices",
-                roles: ["admin", "inventory_manager"],
-                status: "planned",
-                implemented: false
+                dataSource: "productCatalogue, salesInvoices, consignmentOrdersV2, reorderPolicies",
+                roles: ["admin", "inventory_manager", "finance"],
+                status: "priority",
+                implemented: true
             }
         ]
     },
@@ -288,7 +289,7 @@ function reportUsesRange(reportId = "") {
 }
 
 function buildReportWindowLabel(reportDef, reportData, rangeSpec) {
-    if (["outstanding-receivables", "purchase-payables", "inventory-status", "inventory-valuation"].includes(reportDef?.id)) {
+    if (["outstanding-receivables", "purchase-payables", "inventory-status", "inventory-valuation", "reorder-recommendations"].includes(reportDef?.id)) {
         return reportData?.asOfDate ? `As Of ${formatDateLabel(reportData.asOfDate)}` : "As Of Today";
     }
 
@@ -1834,6 +1835,179 @@ function renderInventoryValuationMetadataSection(reportData = null) {
     `;
 }
 
+function renderReorderRecommendationsCards(reportData = null) {
+    const summary = reportData?.summary || {};
+
+    return `
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card tone-primary">
+                <p class="dashboard-kpi-title">Products Reviewed</p>
+                <p class="dashboard-kpi-value">${summary.productsReviewed || 0}</p>
+                <p class="dashboard-kpi-meta">${summary.activePolicyCount || 0} active reorder polic${summary.activePolicyCount === 1 ? "y" : "ies"}</p>
+            </article>
+            <article class="dashboard-kpi-card tone-danger">
+                <p class="dashboard-kpi-title">Critical Items</p>
+                <p class="dashboard-kpi-value">${summary.criticalCount || 0}</p>
+                <p class="dashboard-kpi-meta">Products with near-zero stock cover</p>
+            </article>
+            <article class="dashboard-kpi-card tone-warning">
+                <p class="dashboard-kpi-title">Reorder Now</p>
+                <p class="dashboard-kpi-value">${summary.reorderNowCount || 0}</p>
+                <p class="dashboard-kpi-meta">${summary.manualReviewCount || 0} product${summary.manualReviewCount === 1 ? "" : "s"} also need manual review</p>
+            </article>
+            <article class="dashboard-kpi-card tone-success">
+                <p class="dashboard-kpi-title">Suggested Units</p>
+                <p class="dashboard-kpi-value">${summary.totalRecommendedQty || 0}</p>
+                <p class="dashboard-kpi-meta">${summary.actionableCount || 0} immediately actionable recommendation${summary.actionableCount === 1 ? "" : "s"}</p>
+            </article>
+        </section>
+    `;
+}
+
+function renderReorderPolicyOverviewSection(reportData = null) {
+    const rows = reportData?.policyRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Active Policy Rules</h3>
+                    <p>The report uses the most specific active policy first, so users can read the rule in plain English before acting on the recommendations.</p>
+                </div>
+                <span class="status-pill">${rows.length} active polic${rows.length === 1 ? "y" : "ies"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Policy</th>
+                            <th>Scope</th>
+                            <th>Plain-English Rule</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.policyName}</td>
+                                <td>${row.scopeSummary}</td>
+                                <td>${row.ruleExplanation}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="3" class="reports-table-empty">No active reorder policies are available.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderReorderRecommendationsDetailSection(reportData = null) {
+    const rows = reportData?.detailRows || [];
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Recommendation Queue</h3>
+                    <p>Products that need action, attention, or manual review based on the active reorder policy rules.</p>
+                </div>
+                <span class="status-pill">${rows.length} row${rows.length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="table-wrap reports-table-wrap">
+                <table class="data-table reports-data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th class="reports-align-right">On Hand</th>
+                            <th class="reports-align-right">Avg Daily Demand</th>
+                            <th class="reports-align-right">Reorder Point</th>
+                            <th class="reports-align-right">Suggested Qty</th>
+                            <th>Policy</th>
+                            <th>Why</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length ? rows.map(row => `
+                            <tr>
+                                <td>${row.productName}</td>
+                                <td>${row.categoryName}</td>
+                                <td>${row.state}</td>
+                                <td class="reports-align-right">${row.onHand}</td>
+                                <td class="reports-align-right">${row.avgDailyDemand}</td>
+                                <td class="reports-align-right">${row.reorderPoint}</td>
+                                <td class="reports-align-right">${row.recommendedQty}</td>
+                                <td>${row.policyName}<br><span class="table-note">${row.policyScopeSummary}</span></td>
+                                <td>${row.appliedExplanation}</td>
+                            </tr>
+                        `).join("") : `
+                            <tr>
+                                <td colspan="9" class="reports-table-empty">No reorder actions are currently open.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderReorderRecommendationsMetadataSection(reportData = null) {
+    const metadata = reportData?.metadata || {};
+    const sourceCounts = metadata.sourceCounts || {};
+    const truncatedLabels = Object.entries(metadata.truncatedSources || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(", ");
+
+    return `
+        <section class="panel-card reports-detail-card">
+            <div class="reports-detail-head">
+                <div>
+                    <h3>Audit Notes</h3>
+                    <p>Reorder Recommendations is an as-of stock report that applies the active policy hierarchy and explains the matched rule in plain English.</p>
+                </div>
+                <span class="status-pill">Prepared by MONETA</span>
+            </div>
+            <div class="reports-audit-grid">
+                <article class="report-audit-card">
+                    <p class="report-audit-label">As Of</p>
+                    <p class="report-audit-value">${reportData ? formatDateLabel(reportData.asOfDate) : "-"}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Active Policies</p>
+                    <p class="report-audit-value">${reportData?.summary?.activePolicyCount || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Products Reviewed</p>
+                    <p class="report-audit-value">${reportData?.summary?.productsReviewed || 0}</p>
+                </article>
+                <article class="report-audit-card">
+                    <p class="report-audit-label">Query Coverage</p>
+                    <p class="report-audit-value">${truncatedLabels ? `Review limit hit: ${truncatedLabels}` : "Within current fetch limit"}</p>
+                </article>
+            </div>
+            <div class="reports-audit-note">
+                <strong>Source counts:</strong>
+                Products ${sourceCounts.products || 0},
+                Categories ${sourceCounts.categories || 0},
+                Reorder policies ${sourceCounts.reorderPolicies || 0},
+                Retail sales ${sourceCounts.salesInvoices || 0},
+                Consignment orders ${sourceCounts.consignmentOrders || 0}.
+            </div>
+            ${(metadata.notes || []).length ? `
+                <div class="reports-audit-note">
+                    ${(metadata.notes || []).map(note => `- ${note}`).join("<br>")}
+                </div>
+            ` : ""}
+        </section>
+    `;
+}
+
 function renderProductPerformanceCards(reportData = null) {
     const summary = reportData?.summary || {};
 
@@ -2923,6 +3097,20 @@ function renderInventoryValuationReportView(user, reportDef) {
     `;
 }
 
+function renderReorderRecommendationsReportView(user, reportDef) {
+    const reportData = featureState.reportData;
+
+    return `
+        <div class="reports-shell reports-workspace">
+            ${renderReportHeader(reportDef, reportData)}
+            ${renderReorderRecommendationsCards(reportData)}
+            ${renderReorderPolicyOverviewSection(reportData)}
+            ${renderReorderRecommendationsDetailSection(reportData)}
+            ${renderReorderRecommendationsMetadataSection(reportData)}
+        </div>
+    `;
+}
+
 function renderConsignmentPerformanceReportView(user, reportDef) {
     const reportData = featureState.reportData;
 
@@ -3598,6 +3786,49 @@ async function loadInventoryValuationReport(user, { forceRefresh = false } = {})
     }
 }
 
+async function loadReorderRecommendationsReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance"].includes(user.role)) return;
+
+    const hasFreshData = featureState.reportData
+        && featureState.reportData.reportId === "reorder-recommendations"
+        && Date.now() <= featureState.expiresAt;
+
+    if (!forceRefresh && hasFreshData) {
+        return;
+    }
+
+    const token = ++featureState.requestToken;
+    featureState.isLoading = true;
+    featureState.errorMessage = "";
+    renderReportsView(user);
+
+    try {
+        const result = await getReorderRecommendationsReport(user, { forceRefresh });
+
+        if (token !== featureState.requestToken) return;
+
+        featureState.reportData = {
+            ...result.data,
+            reportId: "reorder-recommendations"
+        };
+        featureState.source = result.source;
+        featureState.loadedAt = result.loadedAt;
+        featureState.expiresAt = result.expiresAt;
+        featureState.errorMessage = "";
+    } catch (error) {
+        if (token !== featureState.requestToken) return;
+        console.error("[Moneta] Reorder recommendations report load failed:", error);
+        featureState.errorMessage = error.message || "Could not load the reorder recommendations report.";
+    } finally {
+        if (token === featureState.requestToken) {
+            featureState.isLoading = false;
+            if (getState().currentRoute === "#/reports") {
+                renderReportsView(user);
+            }
+        }
+    }
+}
+
 async function loadProductPerformanceReport(user, { forceRefresh = false } = {}) {
     if (!user || !["admin", "inventory_manager", "finance", "sales_staff"].includes(user.role)) return;
 
@@ -3680,6 +3911,9 @@ function loadActiveReport(user, options = {}) {
     if (reportId === "inventory-valuation") {
         return loadInventoryValuationReport(user, options);
     }
+    if (reportId === "reorder-recommendations") {
+        return loadReorderRecommendationsReport(user, options);
+    }
     if (reportId === "product-performance") {
         return loadProductPerformanceReport(user, options);
     }
@@ -3727,6 +3961,7 @@ export function renderReportsView(user) {
             if (activeReport.id === "consignment-performance") return renderConsignmentPerformanceReportView(user, activeReport);
             if (activeReport.id === "inventory-status") return renderInventoryStatusReportView(user, activeReport);
             if (activeReport.id === "inventory-valuation") return renderInventoryValuationReportView(user, activeReport);
+            if (activeReport.id === "reorder-recommendations") return renderReorderRecommendationsReportView(user, activeReport);
             if (activeReport.id === "product-performance") return renderProductPerformanceReportView(user, activeReport);
             if (activeReport.id === "cash-flow-summary") return renderCashFlowReportView(user, activeReport);
             if (activeReport.id === "outstanding-receivables") return renderOutstandingReceivablesReportView(user, activeReport);

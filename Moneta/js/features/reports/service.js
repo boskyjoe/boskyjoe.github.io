@@ -1,4 +1,10 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import {
+    buildReorderPolicyExplanation,
+    buildReorderPolicyScopeSummary,
+    getMaxReorderPolicyWindowDays,
+    resolvePolicyForProduct
+} from "../../shared/reorder-policy.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -1513,6 +1519,307 @@ function buildProductPerformanceReportData({
                 salesInvoices: salesInvoices.length,
                 consignmentOrders: consignmentOrders.length
             }
+        }
+    };
+}
+
+function getWindowStartFromDays(days = 30, asOfDate = new Date()) {
+    const end = toDateValue(asOfDate);
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(end);
+    start.setDate(start.getDate() - (Math.max(1, Number(days) || 1) - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+}
+
+function buildSalesRowsByProductId(rows = []) {
+    const buckets = new Map();
+
+    (rows || []).forEach(row => {
+        const productId = normalizeText(row.productId);
+        if (!productId) return;
+
+        if (!buckets.has(productId)) {
+            buckets.set(productId, []);
+        }
+
+        buckets.get(productId).push(row);
+    });
+
+    return buckets;
+}
+
+function sumUnitsInWindow(rows = [], startDate = null, endDate = null) {
+    if (!startDate || !endDate) return 0;
+
+    return (rows || []).reduce((sum, row) => {
+        const transactionDate = toDateValue(row.transactionDate);
+        const time = transactionDate.getTime();
+        if (time < startDate.getTime() || time > endDate.getTime()) {
+            return sum;
+        }
+
+        return sum + Math.max(0, Number(row.quantitySold) || 0);
+    }, 0);
+}
+
+function roundQuantity(value) {
+    return Math.max(0, Math.ceil(Number(value) || 0));
+}
+
+function roundUpToPack(value, packSize = 1) {
+    const safeValue = Math.max(0, Math.ceil(Number(value) || 0));
+    const safePackSize = Math.max(1, Math.ceil(Number(packSize) || 1));
+    return Math.ceil(safeValue / safePackSize) * safePackSize;
+}
+
+function buildAppliedReorderExplanation({
+    policy = null,
+    product = {},
+    scopeSummary = "",
+    avgDailyDemand = 0,
+    onHand = 0,
+    reorderPoint = 0,
+    daysCover = null,
+    recommendedQty = 0,
+    shortWindowUnits = 0,
+    longWindowUnits = 0,
+    state = "",
+    reasonCode = ""
+} = {}) {
+    if (!policy) {
+        return `No active reorder policy matched ${product.itemName || "this product"}, so Moneta could not calculate a recommendation.`;
+    }
+
+    if (reasonCode === "zero-demand-suppress") {
+        return `${scopeSummary} applies. ${product.itemName || "This product"} has no recent demand in the policy windows, so Moneta suppresses the reorder recommendation.`;
+    }
+
+    if (reasonCode === "zero-demand-review") {
+        return `${scopeSummary} applies. ${product.itemName || "This product"} has no recent demand in the policy windows, so Moneta flags it for manual review instead of auto-reordering.`;
+    }
+
+    if (reasonCode === "low-history") {
+        return `${scopeSummary} applies. ${product.itemName || "This product"} sold only ${longWindowUnits} units in the longer window, which is at or below the low-history threshold of ${policy.lowHistoryUnitThreshold}. Moneta shows the suggestion, but asks for manual review first.`;
+    }
+
+    if (reasonCode === "watch") {
+        return `${scopeSummary} applies. On hand is ${onHand} units, which is close to the reorder point of ${reorderPoint}. Estimated cover is ${daysCover === null ? "-" : `${roundCurrency(daysCover)} days`}, so Moneta marks this item to watch.`;
+    }
+
+    return `${scopeSummary} applies. Estimated daily demand is ${roundCurrency(avgDailyDemand)} units using ${policy.shortWindowWeight}% of the last ${policy.shortWindowDays} days (${shortWindowUnits} units) and ${policy.longWindowWeight}% of the last ${policy.longWindowDays} days (${longWindowUnits} units). On hand ${onHand} is below the reorder point of ${reorderPoint}, so Moneta recommends ${recommendedQty} units and marks the item ${state.toLowerCase()}.`;
+}
+
+function buildReorderRecommendationRows({
+    products = [],
+    categories = [],
+    activePolicies = [],
+    salesInvoices = [],
+    consignmentOrders = [],
+    asOfDate = new Date()
+}) {
+    const categoryNameMap = buildCategoryNameMap(categories);
+    const salesRows = buildProductPerformanceSalesRows({ salesInvoices, consignmentOrders });
+    const salesRowsByProductId = buildSalesRowsByProductId(salesRows);
+    const activeProductRows = (products || []).filter(product => product?.isActive !== false);
+    const rows = [];
+
+    activeProductRows.forEach(product => {
+        const policy = resolvePolicyForProduct(product, activePolicies);
+        if (!policy) return;
+
+        const productSalesRows = salesRowsByProductId.get(product.id) || [];
+        const shortWindowStart = getWindowStartFromDays(policy.shortWindowDays, asOfDate);
+        const longWindowStart = getWindowStartFromDays(policy.longWindowDays, asOfDate);
+        const asOfEnd = new Date(asOfDate);
+        asOfEnd.setHours(23, 59, 59, 999);
+
+        const shortWindowUnits = sumUnitsInWindow(productSalesRows, shortWindowStart, asOfEnd);
+        const longWindowUnits = sumUnitsInWindow(productSalesRows, longWindowStart, asOfEnd);
+        const weightedShortDemand = (shortWindowUnits * (Number(policy.shortWindowWeight) || 0)) / 100 / Math.max(1, Number(policy.shortWindowDays) || 1);
+        const weightedLongDemand = (longWindowUnits * (Number(policy.longWindowWeight) || 0)) / 100 / Math.max(1, Number(policy.longWindowDays) || 1);
+        const avgDailyDemand = roundCurrency(weightedShortDemand + weightedLongDemand);
+        const onHand = Math.max(0, Math.floor(Number(product.inventoryCount) || 0));
+        const reorderPoint = roundQuantity(avgDailyDemand * (Number(policy.leadTimeDays) + Number(policy.safetyDays)));
+        const targetStock = roundQuantity(avgDailyDemand * Number(policy.targetCoverDays));
+        let recommendedQty = Math.max(0, targetStock - onHand);
+        const scopeSummary = buildReorderPolicyScopeSummary(policy, {
+            categoryNameById: categoryNameMap,
+            productNameById: new Map([[product.id, product.itemName || ""]])
+        });
+        const staticRuleExplanation = buildReorderPolicyExplanation(policy, {
+            categoryNameById: categoryNameMap,
+            productNameById: new Map([[product.id, product.itemName || ""]])
+        });
+
+        let state = "Healthy";
+        let reasonCode = "healthy";
+
+        if (avgDailyDemand <= 0) {
+            state = policy.zeroDemandBehavior === "suppress" ? "Suppressed" : "Manual Review";
+            reasonCode = policy.zeroDemandBehavior === "suppress" ? "zero-demand-suppress" : "zero-demand-review";
+            recommendedQty = 0;
+        } else {
+            if (recommendedQty > 0) {
+                recommendedQty = Math.max(recommendedQty, Number(policy.minimumOrderQty) || 0);
+                recommendedQty = roundUpToPack(recommendedQty, policy.packSize);
+            }
+
+            const daysCover = onHand > 0 ? roundCurrency(onHand / avgDailyDemand) : 0;
+
+            if (onHand <= 0 || daysCover <= 3) {
+                state = "Critical";
+                reasonCode = "critical";
+            } else if (onHand <= reorderPoint) {
+                state = "Reorder Now";
+                reasonCode = "reorder-now";
+            } else if (onHand <= Math.ceil(reorderPoint * 1.2)) {
+                state = "Watch";
+                reasonCode = "watch";
+            }
+
+            if (state !== "Healthy" && (Number(policy.lowHistoryUnitThreshold) || 0) > 0 && longWindowUnits <= Number(policy.lowHistoryUnitThreshold)) {
+                state = "Manual Review";
+                reasonCode = "low-history";
+            }
+        }
+
+        const daysCover = avgDailyDemand > 0 ? roundCurrency(onHand / avgDailyDemand) : null;
+        const appliedExplanation = buildAppliedReorderExplanation({
+            policy,
+            product,
+            scopeSummary,
+            avgDailyDemand,
+            onHand,
+            reorderPoint,
+            daysCover,
+            recommendedQty,
+            shortWindowUnits,
+            longWindowUnits,
+            state,
+            reasonCode
+        });
+
+        rows.push({
+            productId: product.id,
+            productName: normalizeText(product.itemName) || "Untitled Product",
+            categoryName: categoryNameMap.get(product.categoryId) || "-",
+            onHand,
+            shortWindowUnits,
+            longWindowUnits,
+            avgDailyDemand,
+            reorderPoint,
+            targetStock,
+            recommendedQty,
+            daysCover,
+            state,
+            reasonCode,
+            policyName: policy.policyName || "Unnamed Policy",
+            policyScopeSummary: scopeSummary,
+            policyExplanation: staticRuleExplanation,
+            appliedExplanation,
+            leadTimeDays: Number(policy.leadTimeDays) || 0,
+            safetyDays: Number(policy.safetyDays) || 0,
+            targetCoverDays: Number(policy.targetCoverDays) || 0,
+            minimumOrderQty: Number(policy.minimumOrderQty) || 0,
+            packSize: Number(policy.packSize) || 1,
+            unitCost: roundCurrency(product.unitPrice),
+            unitSell: roundCurrency(product.sellingPrice),
+            stockValueAtCost: roundCurrency(onHand * roundCurrency(product.unitPrice)),
+            stockValueAtRetail: roundCurrency(onHand * roundCurrency(product.sellingPrice))
+        });
+    });
+
+    const severityRank = {
+        "Critical": 1,
+        "Reorder Now": 2,
+        "Manual Review": 3,
+        "Watch": 4,
+        "Suppressed": 5,
+        "Healthy": 6
+    };
+
+    return rows
+        .filter(row => row.state !== "Healthy")
+        .sort((left, right) => {
+            const severityDiff = (severityRank[left.state] || 99) - (severityRank[right.state] || 99);
+            if (severityDiff !== 0) return severityDiff;
+            if ((left.recommendedQty || 0) !== (right.recommendedQty || 0)) {
+                return (right.recommendedQty || 0) - (left.recommendedQty || 0);
+            }
+
+            return (left.productName || "").localeCompare(right.productName || "");
+        });
+}
+
+function buildReorderRecommendationsReportData({
+    products = [],
+    categories = [],
+    reorderPolicies = [],
+    salesInvoices = [],
+    consignmentOrders = [],
+    asOfDate = new Date(),
+    durationMs = 0,
+    truncatedSources = {}
+}) {
+    const activePolicies = (reorderPolicies || []).filter(policy => policy?.isActive);
+    const detailRows = buildReorderRecommendationRows({
+        products,
+        categories,
+        activePolicies,
+        salesInvoices,
+        consignmentOrders,
+        asOfDate
+    });
+    const criticalRows = detailRows.filter(row => row.state === "Critical");
+    const reorderRows = detailRows.filter(row => row.state === "Reorder Now");
+    const manualReviewRows = detailRows.filter(row => row.state === "Manual Review");
+    const watchRows = detailRows.filter(row => row.state === "Watch");
+    const suppressedRows = detailRows.filter(row => row.state === "Suppressed");
+
+    return {
+        asOfDate,
+        generatedAt: Date.now(),
+        durationMs,
+        summary: {
+            activePolicyCount: activePolicies.length,
+            productsReviewed: (products || []).filter(product => product?.isActive !== false).length,
+            actionableCount: criticalRows.length + reorderRows.length,
+            criticalCount: criticalRows.length,
+            reorderNowCount: reorderRows.length,
+            manualReviewCount: manualReviewRows.length,
+            watchCount: watchRows.length,
+            suppressedCount: suppressedRows.length,
+            totalRecommendedQty: detailRows.reduce((sum, row) => sum + (row.recommendedQty || 0), 0)
+        },
+        policyRows: activePolicies
+            .map(policy => ({
+                policyName: policy.policyName || "Unnamed Policy",
+                scopeSummary: buildReorderPolicyScopeSummary(policy, {
+                    categoryNameById: buildCategoryNameMap(categories),
+                    productNameById: new Map((products || []).map(row => [row.id, row.itemName || ""]))
+                }),
+                ruleExplanation: buildReorderPolicyExplanation(policy, {
+                    categoryNameById: buildCategoryNameMap(categories),
+                    productNameById: new Map((products || []).map(row => [row.id, row.itemName || ""]))
+                }),
+                isActive: Boolean(policy.isActive)
+            }))
+            .sort((left, right) => left.scopeSummary.localeCompare(right.scopeSummary) || left.policyName.localeCompare(right.policyName)),
+        detailRows: detailRows.slice(0, 120),
+        metadata: {
+            truncatedSources,
+            sourceCounts: {
+                products: products.length,
+                categories: categories.length,
+                reorderPolicies: reorderPolicies.length,
+                salesInvoices: salesInvoices.length,
+                consignmentOrders: consignmentOrders.length
+            },
+            notes: [
+                "Reorder Recommendations is an as-of report that uses the active reorder policy scope hierarchy: product, category, then global.",
+                "Demand is calculated only from the bounded lookback windows required by the active policies."
+            ]
         }
     };
 }
@@ -3300,6 +3607,82 @@ export async function getInventoryValuationReport(user, { forceRefresh = false }
 
     const loadedAt = Date.now();
     const expiresAt = writeReportCache(user, "inventory-valuation", "as-of-today", data, loadedAt);
+
+    return {
+        data,
+        source: "live",
+        loadedAt,
+        expiresAt
+    };
+}
+
+export async function getReorderRecommendationsReport(user, { forceRefresh = false } = {}) {
+    if (!user || !["admin", "inventory_manager", "finance"].includes(user.role)) {
+        throw new Error("You do not have access to the reorder recommendations report.");
+    }
+
+    if (!forceRefresh) {
+        const cached = readReportCache(user, "reorder-recommendations", "as-of-today");
+        if (cached?.data) {
+            return {
+                data: cached.data,
+                source: "cache",
+                loadedAt: Number(cached.loadedAt) || Date.now(),
+                expiresAt: Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS)
+            };
+        }
+    }
+
+    const startedAt = performance.now();
+    const [productsResult, categoriesResult, reorderPoliciesResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.products),
+        fetchReportWindowedRows(COLLECTIONS.categories),
+        fetchReportWindowedRows(COLLECTIONS.reorderPolicies)
+    ]);
+    const activePolicies = (reorderPoliciesResult.rows || []).filter(policy => policy?.isActive);
+    const hasActiveGlobalPolicy = activePolicies.some(policy => normalizeText(policy.scopeType) === "global");
+
+    if (!hasActiveGlobalPolicy) {
+        throw new Error("Create at least one active global reorder policy in Admin Modules before using this report.");
+    }
+
+    const maxLookbackDays = getMaxReorderPolicyWindowDays(activePolicies);
+    const startDate = getWindowStartFromDays(maxLookbackDays, new Date());
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const [salesInvoicesResult, consignmentOrdersResult] = await Promise.all([
+        fetchReportWindowedRows(COLLECTIONS.salesInvoices, {
+            dateField: "saleDate",
+            startDate,
+            endDate
+        }),
+        fetchReportWindowedRows(COLLECTIONS.simpleConsignments, {
+            dateField: "checkoutDate",
+            startDate,
+            endDate
+        })
+    ]);
+
+    const data = buildReorderRecommendationsReportData({
+        products: productsResult.rows,
+        categories: categoriesResult.rows,
+        reorderPolicies: reorderPoliciesResult.rows,
+        salesInvoices: salesInvoicesResult.rows,
+        consignmentOrders: consignmentOrdersResult.rows,
+        asOfDate: new Date(),
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        truncatedSources: {
+            products: productsResult.truncated,
+            categories: categoriesResult.truncated,
+            reorderPolicies: reorderPoliciesResult.truncated,
+            salesInvoices: salesInvoicesResult.truncated,
+            consignmentOrders: consignmentOrdersResult.truncated
+        }
+    });
+
+    const loadedAt = Date.now();
+    const expiresAt = writeReportCache(user, "reorder-recommendations", "as-of-today", data, loadedAt);
 
     return {
         data,

@@ -7,6 +7,8 @@ let paymentModesGridApi = null;
 let paymentModesGridElement = null;
 let seasonsGridApi = null;
 let seasonsGridElement = null;
+let reorderPoliciesGridApi = null;
+let reorderPoliciesGridElement = null;
 
 function statusMarkup(isActive) {
     return `
@@ -168,6 +170,49 @@ function buildSeasonsColumnDefs() {
     ];
 }
 
+function buildReorderPoliciesColumnDefs() {
+    return [
+        { field: "policyCode", headerName: "Policy ID", minWidth: 150, flex: 0.85 },
+        { field: "policyName", headerName: "Policy Name", minWidth: 220, flex: 1.15 },
+        { field: "scopeSummary", headerName: "Scope", minWidth: 180, flex: 1 },
+        {
+            field: "leadTimeDays",
+            headerName: "Lead Time",
+            minWidth: 120,
+            flex: 0.7,
+            valueFormatter: params => `${params.value || 0}d`
+        },
+        {
+            field: "targetCoverDays",
+            headerName: "Target Cover",
+            minWidth: 130,
+            flex: 0.8,
+            valueFormatter: params => `${params.value || 0}d`
+        },
+        {
+            field: "isActive",
+            headerName: "Status",
+            minWidth: 140,
+            flex: 0.8,
+            cellRenderer: params => statusMarkup(Boolean(params.value))
+        },
+        {
+            field: "ruleExplanation",
+            headerName: "Rule Summary",
+            minWidth: 360,
+            flex: 1.9
+        },
+        {
+            headerName: "Actions",
+            minWidth: 280,
+            flex: 1.35,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("reorderPolicies", params.data)
+        }
+    ];
+}
+
 function initializeGrid(gridElement, currentApi, currentElement, columnDefs) {
     if (!gridElement) return currentApi;
 
@@ -233,4 +278,18 @@ export function refreshSeasonsGrid(rows) {
 
 export function updateSeasonsGridSearch(searchTerm) {
     seasonsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeReorderPoliciesGrid(gridElement) {
+    reorderPoliciesGridApi = initializeGrid(gridElement, reorderPoliciesGridApi, reorderPoliciesGridElement, buildReorderPoliciesColumnDefs());
+    reorderPoliciesGridElement = gridElement;
+    return reorderPoliciesGridApi;
+}
+
+export function refreshReorderPoliciesGrid(rows) {
+    reorderPoliciesGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateReorderPoliciesGridSearch(searchTerm) {
+    reorderPoliciesGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }

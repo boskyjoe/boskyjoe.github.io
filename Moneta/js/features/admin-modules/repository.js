@@ -24,6 +24,10 @@ function buildSeasonCode() {
     return `SEASON-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
 }
 
+function buildReorderPolicyCode() {
+    return `ROP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+}
+
 async function queryHasMatch(query) {
     const snapshot = await query.limit(1).get();
     return !snapshot.empty;
@@ -220,4 +224,31 @@ export async function getSeasonUsageStatus(seasonDocId) {
     }
 
     return { isUsed: false };
+}
+
+export async function createReorderPolicyRecord(policyData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.reorderPolicies).add({
+        ...policyData,
+        policyCode: buildReorderPolicyCode(),
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function updateReorderPolicyRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.reorderPolicies).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function setReorderPolicyActiveStatus(docId, isActive, user) {
+    return updateReorderPolicyRecord(docId, { isActive }, user);
 }

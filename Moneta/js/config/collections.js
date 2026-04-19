@@ -13,6 +13,7 @@ export const COLLECTIONS = {
     simpleConsignments: `${BASE_DOC_PATH}/consignmentOrdersV2`,
     categories: `${BASE_DOC_PATH}/productCategories`,
     paymentModes: `${BASE_DOC_PATH}/paymentModes`,
+    reorderPolicies: `${BASE_DOC_PATH}/reorderPolicies`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
     salesCatalogues: `${BASE_DOC_PATH}/salesCatalogues`,
     teams: `${BASE_DOC_PATH}/churchTeams`,

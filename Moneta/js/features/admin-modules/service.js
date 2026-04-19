@@ -1,17 +1,27 @@
 import {
     createCategoryRecord,
     createPaymentModeRecord,
+    createReorderPolicyRecord,
     createSeasonRecord,
     getCategoryUsageStatus,
     getPaymentModeUsageStatus,
     getSeasonUsageStatus,
     setCategoryActiveStatus,
     setPaymentModeActiveStatus,
+    setReorderPolicyActiveStatus,
     setSeasonActiveStatus,
     updateCategoryRecord,
     updatePaymentModeRecord,
+    updateReorderPolicyRecord,
     updateSeasonRecord
 } from "./repository.js";
+import {
+    buildReorderPolicyExplanation,
+    buildReorderPolicyScopeSummary,
+    DEFAULT_REORDER_POLICY,
+    REORDER_POLICY_SCOPE_TYPES,
+    ZERO_DEMAND_BEHAVIORS
+} from "../../shared/reorder-policy.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 
@@ -40,6 +50,23 @@ function parseDateInput(value, label) {
     }
 
     return date;
+}
+
+function normalizeInteger(value, fallback = 0, minimum = 0) {
+    const parsed = Math.floor(Number(value));
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(minimum, parsed);
+}
+
+function buildNameMap(rows = [], labelField) {
+    return new Map((rows || []).map(row => [row.id, normalizeText(row[labelField])]));
+}
+
+function buildPolicyContext(existingCategories = [], existingProducts = []) {
+    return {
+        categoryNameById: buildNameMap(existingCategories, "categoryName"),
+        productNameById: buildNameMap(existingProducts, "itemName")
+    };
 }
 
 async function ensureCategoryIsEditable(docId, existingCategories = []) {
@@ -286,6 +313,207 @@ export async function toggleSeasonStatus(docId, nextValue, user) {
     await setSeasonActiveStatus(docId, nextValue, user);
 }
 
+function countActiveGlobalPolicies(policies = [], excludeDocId = "") {
+    return (policies || []).filter(policy =>
+        policy?.isActive
+        && policy.scopeType === "global"
+        && policy.id !== excludeDocId
+    ).length;
+}
+
+function findDuplicatePolicyName(existingPolicies = [], policyName = "", docId = "") {
+    return (existingPolicies || []).find(policy =>
+        normalizeText(policy.policyName).toLowerCase() === normalizeText(policyName).toLowerCase()
+        && policy.id !== docId
+    ) || null;
+}
+
+function findActiveScopeConflict(existingPolicies = [], candidate = {}, docId = "") {
+    return (existingPolicies || []).find(policy => {
+        if (!policy?.isActive || policy.id === docId) return false;
+        if (normalizeText(policy.scopeType) !== normalizeText(candidate.scopeType)) return false;
+
+        if (candidate.scopeType === "category") {
+            return normalizeText(policy.categoryId) === normalizeText(candidate.categoryId);
+        }
+
+        if (candidate.scopeType === "product") {
+            return normalizeText(policy.productId) === normalizeText(candidate.productId);
+        }
+
+        return candidate.scopeType === "global";
+    }) || null;
+}
+
+export function validateReorderPolicyPayload(payload, existingPolicies = [], existingCategories = [], existingProducts = []) {
+    const docId = normalizeText(payload.docId);
+    const policyName = normalizeText(payload.policyName);
+    const scopeType = REORDER_POLICY_SCOPE_TYPES.includes(normalizeText(payload.scopeType))
+        ? normalizeText(payload.scopeType)
+        : DEFAULT_REORDER_POLICY.scopeType;
+    const isActive = payload.isActive === false || payload.isActive === "false"
+        ? false
+        : Boolean(payload.isActive ?? DEFAULT_REORDER_POLICY.isActive);
+    const shortWindowDays = normalizeInteger(payload.shortWindowDays, DEFAULT_REORDER_POLICY.shortWindowDays, 1);
+    const shortWindowWeight = normalizeInteger(payload.shortWindowWeight, DEFAULT_REORDER_POLICY.shortWindowWeight, 0);
+    const longWindowDays = normalizeInteger(payload.longWindowDays, DEFAULT_REORDER_POLICY.longWindowDays, 1);
+    const longWindowWeight = normalizeInteger(payload.longWindowWeight, DEFAULT_REORDER_POLICY.longWindowWeight, 0);
+    const leadTimeDays = normalizeInteger(payload.leadTimeDays, DEFAULT_REORDER_POLICY.leadTimeDays, 0);
+    const safetyDays = normalizeInteger(payload.safetyDays, DEFAULT_REORDER_POLICY.safetyDays, 0);
+    const targetCoverDays = normalizeInteger(payload.targetCoverDays, DEFAULT_REORDER_POLICY.targetCoverDays, 1);
+    const lowHistoryUnitThreshold = normalizeInteger(payload.lowHistoryUnitThreshold, DEFAULT_REORDER_POLICY.lowHistoryUnitThreshold, 0);
+    const minimumOrderQty = normalizeInteger(payload.minimumOrderQty, DEFAULT_REORDER_POLICY.minimumOrderQty, 0);
+    const packSize = normalizeInteger(payload.packSize, DEFAULT_REORDER_POLICY.packSize, 1);
+    const zeroDemandBehavior = ZERO_DEMAND_BEHAVIORS.includes(normalizeText(payload.zeroDemandBehavior))
+        ? normalizeText(payload.zeroDemandBehavior)
+        : DEFAULT_REORDER_POLICY.zeroDemandBehavior;
+
+    if (!policyName) {
+        throw new Error("Policy name is required.");
+    }
+
+    if (policyName.length < 3) {
+        throw new Error("Policy name must be at least 3 characters long.");
+    }
+
+    if (policyName.length > 80) {
+        throw new Error("Policy name must be 80 characters or less.");
+    }
+
+    if ((shortWindowWeight + longWindowWeight) !== 100) {
+        throw new Error("Short-window and long-window weights must add up to 100%.");
+    }
+
+    if (shortWindowDays > longWindowDays) {
+        throw new Error("Short demand window cannot be longer than the long demand window.");
+    }
+
+    if (targetCoverDays < (leadTimeDays + safetyDays)) {
+        throw new Error("Target cover days must be at least as large as lead time plus safety days.");
+    }
+
+    const duplicateName = findDuplicatePolicyName(existingPolicies, policyName, docId);
+    if (duplicateName) {
+        throw new Error(`Policy "${duplicateName.policyName}" already exists.`);
+    }
+
+    let categoryId = "";
+    let productId = "";
+    const context = buildPolicyContext(existingCategories, existingProducts);
+
+    if (scopeType === "category") {
+        categoryId = normalizeText(payload.categoryId);
+        if (!categoryId) {
+            throw new Error("Select a category for category-scoped policy.");
+        }
+
+        if (!context.categoryNameById.has(categoryId)) {
+            throw new Error("Selected category could not be found.");
+        }
+    }
+
+    if (scopeType === "product") {
+        productId = normalizeText(payload.productId);
+        if (!productId) {
+            throw new Error("Select a product for product-scoped policy.");
+        }
+
+        if (!context.productNameById.has(productId)) {
+            throw new Error("Selected product could not be found.");
+        }
+    }
+
+    const policyRecord = {
+        policyName,
+        scopeType,
+        categoryId,
+        categoryName: categoryId ? normalizeText(context.categoryNameById.get(categoryId)) : "",
+        productId,
+        productName: productId ? normalizeText(context.productNameById.get(productId)) : "",
+        shortWindowDays,
+        shortWindowWeight,
+        longWindowDays,
+        longWindowWeight,
+        leadTimeDays,
+        safetyDays,
+        targetCoverDays,
+        lowHistoryUnitThreshold,
+        zeroDemandBehavior,
+        minimumOrderQty,
+        packSize,
+        isActive
+    };
+
+    if (isActive) {
+        const conflict = findActiveScopeConflict(existingPolicies, policyRecord, docId);
+        if (conflict) {
+            throw new Error(`Active policy "${conflict.policyName}" already covers ${buildReorderPolicyScopeSummary(conflict, context)}. Deactivate it first or edit that policy instead.`);
+        }
+    }
+
+    const scopeSummary = buildReorderPolicyScopeSummary(policyRecord, context);
+    const ruleExplanation = buildReorderPolicyExplanation(policyRecord, context);
+
+    return {
+        docId,
+        ...policyRecord,
+        scopeSummary,
+        ruleExplanation
+    };
+}
+
+export async function saveReorderPolicy(payload, user, existingPolicies = [], existingCategories = [], existingProducts = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save a reorder policy.");
+    }
+
+    const { docId, ...policyData } = validateReorderPolicyPayload(payload, existingPolicies, existingCategories, existingProducts);
+
+    if (policyData.scopeType === "global" && !policyData.isActive && countActiveGlobalPolicies(existingPolicies, docId) === 0) {
+        throw new Error("Moneta must always keep one active global reorder policy.");
+    }
+
+    if (docId) {
+        await updateReorderPolicyRecord(docId, policyData, user);
+        return { mode: "update" };
+    }
+
+    if (policyData.scopeType !== "global" && countActiveGlobalPolicies(existingPolicies) === 0) {
+        throw new Error("Create an active global reorder policy before adding narrower overrides.");
+    }
+
+    await createReorderPolicyRecord(policyData, user);
+    return { mode: "create" };
+}
+
+export async function toggleReorderPolicyStatus(docId, nextValue, user, existingPolicies = []) {
+    if (!user) {
+        throw new Error("You must be logged in to update reorder policy status.");
+    }
+
+    if (!docId) {
+        throw new Error("Reorder policy record could not be found.");
+    }
+
+    const record = (existingPolicies || []).find(policy => policy.id === docId) || null;
+    if (!record) {
+        throw new Error("Reorder policy record could not be found.");
+    }
+
+    if (!nextValue && record.scopeType === "global" && countActiveGlobalPolicies(existingPolicies, docId) === 0) {
+        throw new Error("Moneta must always keep one active global reorder policy.");
+    }
+
+    if (nextValue) {
+        const conflict = findActiveScopeConflict(existingPolicies, record, docId);
+        if (conflict) {
+            throw new Error(`Active policy "${conflict.policyName}" already covers ${buildReorderPolicyScopeSummary(conflict, buildPolicyContext())}. Deactivate it first or edit that policy instead.`);
+        }
+    }
+
+    await setReorderPolicyActiveStatus(docId, nextValue, user);
+}
+
 export async function getAdminEditRestriction(entity, record) {
     if (!record?.id) {
         return {
@@ -315,6 +543,13 @@ export async function getAdminEditRestriction(entity, record) {
         return {
             isLocked: usage.isUsed,
             message: usage.message || ""
+        };
+    }
+
+    if (entity === "reorderPolicies") {
+        return {
+            isLocked: false,
+            message: ""
         };
     }
 
