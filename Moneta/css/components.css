@@ -196,6 +196,47 @@ select {
     grid-column: 1 / -1;
 }
 
+.reorder-policy-form-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.reorder-policy-setup-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.reorder-policy-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reorder-policy-span-8 {
+    grid-column: span 8;
+}
+
+.reorder-policy-span-6 {
+    grid-column: span 6;
+}
+
+.reorder-policy-span-2 {
+    grid-column: span 2;
+}
+
+.reorder-policy-form-section {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+.reorder-policy-form-section-head {
+    margin-bottom: 0.9rem;
+}
+
+.reorder-policy-setup-grid .panel-copy-tight {
+    margin-top: 0.35rem;
+    min-height: 2.8rem;
+}
+
 .field label {
     font-size: 0.92rem;
     font-weight: 700;
@@ -2414,6 +2455,26 @@ select {
 @media (max-width: 860px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .reorder-policy-setup-grid,
+    .reorder-policy-metric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reorder-policy-span-8,
+    .reorder-policy-span-6,
+    .reorder-policy-span-2 {
+        grid-column: auto;
+    }
+
+    .reorder-policy-form-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+
+    .reorder-policy-setup-grid .panel-copy-tight {
+        min-height: 0;
     }
 
     .purchase-payment-modal-overlay,
