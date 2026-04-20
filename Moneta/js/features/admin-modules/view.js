@@ -298,6 +298,10 @@ function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) 
     return "No active category or global fallback is available right now for this product rule.";
 }
 
+function normalizePreviewText(value) {
+    return (value || "").trim();
+}
+
 function getReorderPolicyUpdatedTime(policy = {}) {
     const candidates = [policy.updatedOn, policy.updateDate, policy.createdOn];
 
@@ -383,37 +387,58 @@ function buildReorderPolicyFlowEntries(primaryPolicy = {}, fallbackChain = [], d
 function resolveLiveReorderPolicyPreview(snapshot, policyDraft = {}, context = {}) {
     const activePolicies = (snapshot.masterData.reorderPolicies || []).filter(policy => policy?.isActive);
     const systemDefaultPolicy = resolveSystemDefaultPolicy(activePolicies, { activeOnly: true });
-    const scopeType = policyDraft.scopeType || DEFAULT_REORDER_POLICY.scopeType;
-    const categoryId = policyDraft.categoryId || "";
-    const productId = policyDraft.productId || "";
+    const scopeType = normalizePreviewText(policyDraft.scopeType || DEFAULT_REORDER_POLICY.scopeType);
+    const categoryId = normalizePreviewText(policyDraft.categoryId);
+    const productId = normalizePreviewText(policyDraft.productId);
     const derivedCategoryId = categoryId || inferReorderPolicyCategoryId(snapshot, productId);
 
     if (scopeType === "product") {
+        if (!productId && !derivedCategoryId) {
+            return {
+                livePolicy: null,
+                fallbackChain: [],
+                selectionRequired: true
+            };
+        }
+
         const productRule = pickLatestMatchingReorderPolicy(activePolicies, policy =>
-            policy.scopeType === "product" && policy.productId === productId
+            normalizePreviewText(policy.scopeType) === "product"
+            && normalizePreviewText(policy.productId) === productId
         );
         const categoryRule = pickLatestMatchingReorderPolicy(activePolicies, policy =>
-            policy.scopeType === "category" && policy.categoryId === derivedCategoryId
+            normalizePreviewText(policy.scopeType) === "category"
+            && normalizePreviewText(policy.categoryId) === normalizePreviewText(derivedCategoryId)
         );
         const livePolicy = productRule || categoryRule || systemDefaultPolicy || policyDraft;
         return {
             livePolicy,
             fallbackChain: livePolicy?.id
                 ? resolveReorderPolicyFallbackChain(livePolicy, activePolicies, livePolicy.id)
-                : []
+                : [],
+            selectionRequired: false
         };
     }
 
     if (scopeType === "category") {
+        if (!categoryId) {
+            return {
+                livePolicy: null,
+                fallbackChain: [],
+                selectionRequired: true
+            };
+        }
+
         const categoryRule = pickLatestMatchingReorderPolicy(activePolicies, policy =>
-            policy.scopeType === "category" && policy.categoryId === categoryId
+            normalizePreviewText(policy.scopeType) === "category"
+            && normalizePreviewText(policy.categoryId) === categoryId
         );
         const livePolicy = categoryRule || systemDefaultPolicy || policyDraft;
         return {
             livePolicy,
             fallbackChain: livePolicy?.id
                 ? resolveReorderPolicyFallbackChain(livePolicy, activePolicies, livePolicy.id)
-                : []
+                : [],
+            selectionRequired: false
         };
     }
 
@@ -422,7 +447,8 @@ function resolveLiveReorderPolicyPreview(snapshot, policyDraft = {}, context = {
         livePolicy,
         fallbackChain: livePolicy?.id
             ? resolveReorderPolicyFallbackChain(livePolicy, activePolicies, livePolicy.id)
-            : []
+            : [],
+        selectionRequired: false
     };
 }
 
@@ -460,16 +486,19 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
                 effectiveDraft,
                 snapshot.masterData.reorderPolicies || [],
                 editingRecord?.id || ""
-            )
+            ),
+            selectionRequired: false
         };
-    const previewLeadPolicy = livePreview.livePolicy || effectiveDraft;
+    const previewLeadPolicy = livePreview.selectionRequired
+        ? effectiveDraft
+        : (livePreview.livePolicy || effectiveDraft);
     const previewScopeSummary = buildReorderPolicyScopeSummary(previewLeadPolicy, context);
     const previewExplanation = buildReorderPolicyExplanation(previewLeadPolicy, context);
     const workedExample = buildReorderPolicyWorkedExample(previewLeadPolicy, context);
     const precedenceSummary = buildReorderPolicyPrecedenceSummary(previewLeadPolicy, context);
     const flowEntries = buildReorderPolicyFlowEntries(
         previewLeadPolicy,
-        livePreview.fallbackChain,
+        livePreview.selectionRequired ? [] : livePreview.fallbackChain,
         defaultPreviewPolicy,
         { isCreateMode }
     );
@@ -478,11 +507,15 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
         : "";
     const pendingDraftSummary = buildReorderPolicyScopeSummary(effectiveDraft, context);
     const pendingDraftNote = isCreateMode
-        ? (previewScopeSummary === pendingDraftSummary
-            ? "This form matches the live rule Moneta is already using for this setup."
-            : `This form is preparing ${pendingDraftSummary}. Moneta will keep using the live flow below until you save.`)
+        ? (livePreview.selectionRequired
+            ? `Choose ${effectiveDraft.scopeType === "product" ? "a product" : "a category"} to preview the matching live rule. Until then, Moneta can only show the rule shape you are preparing.`
+            : (previewScopeSummary === pendingDraftSummary
+                ? "This form matches the live rule Moneta is already using for this setup."
+                : `This form is preparing ${pendingDraftSummary}. Moneta will keep using the live flow below until you save.`))
         : "";
-    const leadingSummaryLabel = isCreateMode ? "Current live flow" : "Rule you are editing";
+    const leadingSummaryLabel = isCreateMode
+        ? (livePreview.selectionRequired ? "Draft flow" : "Current live flow")
+        : "Rule you are editing";
 
     return `
         <div class="panel-card">
@@ -508,9 +541,11 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
                     </div>
                     <article class="report-audit-card">
                         <p class="report-audit-label">Example</p>
-                        <p class="report-audit-value">${isCreateMode ? "How Moneta Uses This Flow Right Now" : "How Moneta Uses This Flow"}</p>
-                        <div class="reports-audit-note"><strong>Active rule in simple English:</strong> ${previewExplanation}</div>
-                        <div class="reports-audit-note"><strong>Example using the active rule:</strong> ${workedExample}</div>
+                        <p class="report-audit-value">${isCreateMode
+                            ? (livePreview.selectionRequired ? "How This Draft Would Work" : "How Moneta Uses This Flow Right Now")
+                            : "How Moneta Uses This Flow"}</p>
+                        <div class="reports-audit-note"><strong>${livePreview.selectionRequired ? "Draft rule in simple English" : "Active rule in simple English"}:</strong> ${previewExplanation}</div>
+                        <div class="reports-audit-note"><strong>${livePreview.selectionRequired ? "Example using this draft" : "Example using the active rule"}:</strong> ${workedExample}</div>
                         ${defaultPreviewPolicy && !isSystemDefaultReorderPolicy(previewLeadPolicy) ? `
                             <div class="reports-audit-note"><strong>Moneta default rule:</strong> ${buildReorderPolicyScopeSummary(defaultPreviewPolicy, context)}</div>
                             <div class="reports-audit-note"><strong>Example using the default rule:</strong> ${defaultExampleText}</div>
@@ -518,7 +553,7 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
                             <div class="reports-audit-note"><strong>Moneta default rule:</strong> The active rule shown above is already the Moneta default rule.</div>
                         `}
                         <div class="reports-audit-note"><strong>How fallback works:</strong> ${precedenceSummary}</div>
-                        <div class="reports-audit-note"><strong>Fallback note:</strong> ${buildReorderPolicyFallbackNotice(previewLeadPolicy, livePreview.fallbackChain)}</div>
+                        <div class="reports-audit-note"><strong>Fallback note:</strong> ${buildReorderPolicyFallbackNotice(previewLeadPolicy, livePreview.selectionRequired ? [] : livePreview.fallbackChain)}</div>
                     </article>
                 </div>
             </div>
