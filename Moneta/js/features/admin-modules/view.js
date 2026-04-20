@@ -115,6 +115,41 @@ function toDateInputValue(value) {
     return `${year}-${month}-${day}`;
 }
 
+function escapeHtml(value = "") {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function renderFieldLabel({
+    forId,
+    label,
+    required = false,
+    tooltip = ""
+} = {}) {
+    const tooltipText = escapeHtml(tooltip);
+
+    return `
+        <label for="${forId}" class="field-label-row">
+            <span class="field-label-main">
+                <span>${label}</span>
+                ${required ? `<span class="required-mark" aria-hidden="true">*</span>` : ""}
+            </span>
+            ${tooltip ? `
+                <span
+                    class="field-help-tip"
+                    tabindex="0"
+                    role="img"
+                    aria-label="${escapeHtml(`${label}. ${tooltip}`)}"
+                    title="${tooltipText}">?</span>
+            ` : ""}
+        </label>
+    `;
+}
+
 function getActiveSectionConfig() {
     return ADMIN_SECTIONS[featureState.activeSection];
 }
@@ -894,12 +929,22 @@ function renderReorderPolicyForm(snapshot) {
                     <input id="admin-reorder-policy-doc-id" type="hidden" value="${editingRecord?.id || ""}">
                     <div class="reorder-policy-form-grid reorder-policy-setup-grid">
                         <div class="field reorder-policy-span-8">
-                            <label for="admin-reorder-policy-name">Policy Name <span class="required-mark" aria-hidden="true">*</span></label>
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-policy-name",
+                                label: "Policy Name",
+                                required: true,
+                                tooltip: "This is the business name users will see for the rule. Use a clear name that explains where Moneta should apply it."
+                            })}
                             <input id="admin-reorder-policy-name" class="input" type="text" value="${draft.policyName}" placeholder="Global Default Policy, Bakery Category Policy" required>
                         </div>
                         <div class="field reorder-policy-span-2">
-                            <label for="admin-reorder-policy-scope-type">Scope</label>
-                            <select id="admin-reorder-policy-scope-type" class="select" ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule must stay as a global policy.\"" : ""}>
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-policy-scope-type",
+                                label: "Scope",
+                                required: true,
+                                tooltip: "Scope decides how broad the rule is. Product rules win first, then category rules, then the Moneta default rule."
+                            })}
+                            <select id="admin-reorder-policy-scope-type" class="select" required ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule must stay as a global policy.\"" : ""}>
                                 ${allowGlobalScopeOption ? `
                                     <option value="global" ${draft.scopeType === "global" ? "selected" : ""}>Global Default</option>
                                 ` : ""}
@@ -915,8 +960,13 @@ function renderReorderPolicyForm(snapshot) {
                                         : "Moneta already has a protected default rule. New rules should be category or product overrides."))}</p>
                         </div>
                         <div class="field reorder-policy-span-2">
-                            <label for="admin-reorder-policy-status">Status</label>
-                            <select id="admin-reorder-policy-status" class="select" ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule can be updated, but it cannot be deactivated.\"" : ""}>
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-policy-status",
+                                label: "Status",
+                                required: true,
+                                tooltip: "Only active rules can drive reorder recommendations. Inactive rules stay in history but Moneta ignores them."
+                            })}
+                            <select id="admin-reorder-policy-status" class="select" required ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule can be updated, but it cannot be deactivated.\"" : ""}>
                                 <option value="true" ${draft.isActive ? "selected" : ""}>Active</option>
                                 <option value="false" ${!draft.isActive ? "selected" : ""}>Inactive</option>
                             </select>
@@ -925,8 +975,13 @@ function renderReorderPolicyForm(snapshot) {
                                 : "Inactive rules stay visible in Admin Modules but Moneta will not apply them in reports."}</p>
                         </div>
                         <div class="field reorder-policy-span-6" id="admin-reorder-policy-category-field" ${showCategoryField ? "" : "hidden"}>
-                            <label for="admin-reorder-policy-category-id">Category</label>
-                            <select id="admin-reorder-policy-category-id" class="select">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-policy-category-id",
+                                label: "Category",
+                                required: showCategoryField,
+                                tooltip: "Category tells Moneta which product group this override should control. Category rules affect every product in that category unless a product-specific rule overrides them."
+                            })}
+                            <select id="admin-reorder-policy-category-id" class="select" ${showCategoryField ? "required" : ""}>
                                 <option value="">Select category</option>
                                 ${renderCategorySelectOptions(snapshot, {
                                     currentValue: draft.categoryId,
@@ -938,8 +993,13 @@ function renderReorderPolicyForm(snapshot) {
                                 : "Only categories that already have products assigned are listed here."}</p>
                         </div>
                         <div class="field reorder-policy-span-6" id="admin-reorder-policy-product-field" ${isProductScope ? "" : "hidden"}>
-                            <label for="admin-reorder-policy-product-id">Product</label>
-                            <select id="admin-reorder-policy-product-id" class="select" ${isProductDisabled ? "disabled" : ""}>
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-policy-product-id",
+                                label: "Product",
+                                required: isProductScope,
+                                tooltip: "Product narrows the rule to one specific item. A product rule is the most specific rule Moneta can apply."
+                            })}
+                            <select id="admin-reorder-policy-product-id" class="select" ${isProductScope ? "required" : ""} ${isProductDisabled ? "disabled" : ""}>
                                 <option value="">${isProductDisabled ? "Select category first" : "Select product"}</option>
                                 ${renderProductSelectOptions(snapshot, {
                                     currentValue: draft.productId,
@@ -956,20 +1016,40 @@ function renderReorderPolicyForm(snapshot) {
                         </div>
                         <div class="reorder-policy-form-grid reorder-policy-metric-grid">
                             <div class="field">
-                            <label for="admin-reorder-short-window-days">Short Demand Window (days)</label>
-                            <input id="admin-reorder-short-window-days" class="input" type="number" min="1" step="1" value="${draft.shortWindowDays}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-short-window-days",
+                                label: "Short Demand Window (days)",
+                                required: true,
+                                tooltip: "This is the recent sales window Moneta looks at first. A shorter window makes the rule react faster to recent demand changes."
+                            })}
+                            <input id="admin-reorder-short-window-days" class="input" type="number" min="1" step="1" value="${draft.shortWindowDays}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-short-window-weight">Short Window Weight %</label>
-                            <input id="admin-reorder-short-window-weight" class="input" type="number" min="0" max="100" step="1" value="${draft.shortWindowWeight}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-short-window-weight",
+                                label: "Short Window Weight %",
+                                required: true,
+                                tooltip: "This percentage controls how much influence the short demand window has in the final demand estimate. Higher values make Moneta more reactive."
+                            })}
+                            <input id="admin-reorder-short-window-weight" class="input" type="number" min="0" max="100" step="1" value="${draft.shortWindowWeight}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-long-window-days">Long Demand Window (days)</label>
-                            <input id="admin-reorder-long-window-days" class="input" type="number" min="1" step="1" value="${draft.longWindowDays}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-long-window-days",
+                                label: "Long Demand Window (days)",
+                                required: true,
+                                tooltip: "This is the stabilizing sales window Moneta uses to smooth out short-term spikes. A longer window makes the rule less volatile."
+                            })}
+                            <input id="admin-reorder-long-window-days" class="input" type="number" min="1" step="1" value="${draft.longWindowDays}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-long-window-weight">Long Window Weight %</label>
-                            <input id="admin-reorder-long-window-weight" class="input" type="number" min="0" max="100" step="1" value="${draft.longWindowWeight}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-long-window-weight",
+                                label: "Long Window Weight %",
+                                required: true,
+                                tooltip: "This percentage controls how much the longer history affects the demand estimate. The short and long weights together must add up to 100%."
+                            })}
+                            <input id="admin-reorder-long-window-weight" class="input" type="number" min="0" max="100" step="1" value="${draft.longWindowWeight}" required>
                         </div>
                         </div>
                     </div>
@@ -980,35 +1060,70 @@ function renderReorderPolicyForm(snapshot) {
                         </div>
                         <div class="reorder-policy-form-grid reorder-policy-metric-grid">
                         <div class="field">
-                            <label for="admin-reorder-lead-time-days">Lead Time (days)</label>
-                            <input id="admin-reorder-lead-time-days" class="input" type="number" min="0" step="1" value="${draft.leadTimeDays}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-lead-time-days",
+                                label: "Lead Time (days)",
+                                required: true,
+                                tooltip: "Lead time is how many days Moneta assumes it takes to replenish stock after you decide to reorder."
+                            })}
+                            <input id="admin-reorder-lead-time-days" class="input" type="number" min="0" step="1" value="${draft.leadTimeDays}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-safety-days">Safety Stock (days)</label>
-                            <input id="admin-reorder-safety-days" class="input" type="number" min="0" step="1" value="${draft.safetyDays}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-safety-days",
+                                label: "Safety Stock (days)",
+                                required: true,
+                                tooltip: "Safety stock adds extra cover above expected demand. Higher safety days make Moneta reorder earlier to reduce stockout risk."
+                            })}
+                            <input id="admin-reorder-safety-days" class="input" type="number" min="0" step="1" value="${draft.safetyDays}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-target-cover-days">Target Cover (days)</label>
-                            <input id="admin-reorder-target-cover-days" class="input" type="number" min="1" step="1" value="${draft.targetCoverDays}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-target-cover-days",
+                                label: "Target Cover (days)",
+                                required: true,
+                                tooltip: "Target cover is how many days of stock Moneta tries to restore after a reorder is triggered. It must be at least lead time plus safety stock."
+                            })}
+                            <input id="admin-reorder-target-cover-days" class="input" type="number" min="1" step="1" value="${draft.targetCoverDays}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-low-history-threshold">Low-History Threshold (units)</label>
-                            <input id="admin-reorder-low-history-threshold" class="input" type="number" min="0" step="1" value="${draft.lowHistoryUnitThreshold}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-low-history-threshold",
+                                label: "Low-History Threshold (units)",
+                                required: true,
+                                tooltip: "If sales in the long window are at or below this level, Moneta treats the item as low-history and becomes more cautious instead of auto-reordering."
+                            })}
+                            <input id="admin-reorder-low-history-threshold" class="input" type="number" min="0" step="1" value="${draft.lowHistoryUnitThreshold}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-zero-demand-behavior">Zero-Demand Behavior</label>
-                            <select id="admin-reorder-zero-demand-behavior" class="select">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-zero-demand-behavior",
+                                label: "Zero-Demand Behavior",
+                                required: true,
+                                tooltip: "This tells Moneta what to do when there were no recent sales at all. It can either suppress the recommendation or send the item for manual review."
+                            })}
+                            <select id="admin-reorder-zero-demand-behavior" class="select" required>
                                 <option value="manual-review" ${draft.zeroDemandBehavior === "manual-review" ? "selected" : ""}>Manual Review</option>
                                 <option value="suppress" ${draft.zeroDemandBehavior === "suppress" ? "selected" : ""}>Suppress Recommendation</option>
                             </select>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-min-order-qty">Minimum Order Qty</label>
-                            <input id="admin-reorder-min-order-qty" class="input" type="number" min="0" step="1" value="${draft.minimumOrderQty}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-min-order-qty",
+                                label: "Minimum Order Qty",
+                                required: true,
+                                tooltip: "This is the smallest reorder quantity Moneta is allowed to suggest, even if the stock-cover math produces a smaller number."
+                            })}
+                            <input id="admin-reorder-min-order-qty" class="input" type="number" min="0" step="1" value="${draft.minimumOrderQty}" required>
                         </div>
                         <div class="field">
-                            <label for="admin-reorder-pack-size">Pack Size</label>
-                            <input id="admin-reorder-pack-size" class="input" type="number" min="1" step="1" value="${draft.packSize}">
+                            ${renderFieldLabel({
+                                forId: "admin-reorder-pack-size",
+                                label: "Pack Size",
+                                required: true,
+                                tooltip: "Pack size tells Moneta how to round suggested order quantities so they match how the item is bought or stocked."
+                            })}
+                            <input id="admin-reorder-pack-size" class="input" type="number" min="1" step="1" value="${draft.packSize}" required>
                         </div>
                         </div>
                     </div>
@@ -1352,6 +1467,7 @@ function collectReorderPolicyFormDraft() {
 function refreshReorderPolicyExplanationUi() {
     const snapshot = getState();
     const scopeTypeInput = document.getElementById("admin-reorder-policy-scope-type");
+    const statusSelect = document.getElementById("admin-reorder-policy-status");
     const categorySelect = document.getElementById("admin-reorder-policy-category-id");
     const productSelect = document.getElementById("admin-reorder-policy-product-id");
     const draft = collectReorderPolicyFormDraft();
@@ -1371,6 +1487,11 @@ function refreshReorderPolicyExplanationUi() {
 
     if (scopeTypeInput) {
         scopeTypeInput.value = scopeType;
+        scopeTypeInput.required = true;
+    }
+
+    if (statusSelect) {
+        statusSelect.required = true;
     }
 
     if (categoryField) {
@@ -1408,6 +1529,7 @@ function refreshReorderPolicyExplanationUi() {
 
         categorySelect.innerHTML = `<option value="">Select category</option>${categoryOptions}`;
         categorySelect.value = resolvedCategoryId;
+        categorySelect.required = showCategoryField;
     }
 
     if (scopeType === "product" && resolvedProductId) {
@@ -1440,6 +1562,7 @@ function refreshReorderPolicyExplanationUi() {
         productSelect.disabled = scopeType !== "product" || !resolvedCategoryId;
         productSelect.innerHTML = `<option value="">${resolvedCategoryId ? "Select product" : "Select category first"}</option>${productOptions}`;
         productSelect.value = resolvedProductId;
+        productSelect.required = scopeType === "product";
     }
 
     if (explanationRoot) {
