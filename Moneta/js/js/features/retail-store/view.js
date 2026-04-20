@@ -1,0 +1,3523 @@
+import { getState, subscribe } from "../../app/store.js";
+import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
+import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { icons } from "../../shared/icons.js";
+import { formatCurrency } from "../../shared/utils/currency.js";
+import {
+    initializeRetailExpenseHistoryGrid,
+    initializeRetailPaymentHistoryGrid,
+    initializeRetailReturnHistoryGrid,
+    initializeRetailSalesGrid,
+    initializeRetailWorksheetGrid,
+    refreshRetailExpenseHistoryGrid,
+    refreshRetailPaymentHistoryGrid,
+    refreshRetailReturnHistoryGrid,
+    refreshRetailSalesGrid,
+    refreshRetailWorksheetGrid,
+    setRetailWorksheetMode,
+    setRetailWorksheetReadOnly,
+    updateRetailSalesGridSearch,
+    updateRetailWorksheetGridSearch
+} from "./grid.js";
+import {
+    getRetailSaleReturns,
+    getRetailSalePayments,
+    subscribeToRetailCatalogueItems,
+    subscribeToRetailSaleExpenses,
+    subscribeToRetailSalePayments,
+    subscribeToRetailSaleReturns,
+    subscribeToRetailSales
+} from "./repository.js";
+import { downloadRetailReturnCreditNotePdf, downloadRetailSalePdf } from "./pdf.js";
+import {
+    addRetailSaleReturn,
+    addRetailSaleExpense,
+    calculateRetailDraftSummary,
+    RETAIL_DISCOUNT_TYPES,
+    RETAIL_PAYMENT_TYPES,
+    RETAIL_SALE_TYPES,
+    RETAIL_STORES,
+    getRetailStoreTaxDefaults,
+    resolveRetailSaleEditScope,
+    saveRetailSalePayment,
+    saveRetailSaleUpdate,
+    saveRetailSale,
+    voidRetailSalePayment,
+    voidRetailSale
+} from "./service.js";
+
+const featureState = {
+    sales: [],
+    selectedCatalogueItems: [],
+    searchTerm: "",
+    worksheetSearchTerm: "",
+    filteredSalesCount: null,
+    saleActionsModalOpen: false,
+    saleActionsSaleId: null,
+    unsubscribeSales: null,
+    unsubscribeCatalogueItems: null,
+    catalogueItemsListenerId: null,
+    workspaceMode: "create",
+    viewingSaleId: null,
+    editingSaleId: null,
+    voidingSaleId: null,
+    editModeScope: null,
+    paymentModalOpen: false,
+    paymentSaleId: null,
+    payments: [],
+    unsubscribePayments: null,
+    paymentDraft: createDefaultRetailPaymentDraft(),
+    paymentVoidReason: "",
+    voidingPaymentId: null,
+    returnHistoryModalOpen: false,
+    returnHistorySaleId: null,
+    returnHistoryRows: [],
+    unsubscribeReturnHistory: null,
+    returningSaleId: null,
+    returnDraft: createDefaultRetailReturnDraft(),
+    expenseModalOpen: false,
+    expenseSaleId: null,
+    expenseHistory: [],
+    unsubscribeExpenseHistory: null,
+    expenseDraft: createDefaultExpenseDraft(),
+    saleDraft: createDefaultSaleDraft(),
+    lineItemDrafts: {},
+    pendingLeadFocus: false
+};
+
+const LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY = "moneta.pendingLeadRetailConversion";
+
+function createDefaultSaleDraft() {
+    return {
+        saleDate: toDateInputValue(new Date()),
+        customerName: "",
+        customerPhone: "",
+        customerEmail: "",
+        customerAddress: "",
+        manualVoucherNumber: "",
+        store: "",
+        saleType: "Revenue",
+        salesCatalogueId: "",
+        paymentType: "Pay Later",
+        paymentMode: "",
+        amountReceived: "",
+        transactionRef: "",
+        paymentNotes: "",
+        saleNotes: "",
+        editReason: "",
+        voidReason: "",
+        orderDiscountType: "Percentage",
+        orderDiscountPercentage: "",
+        orderDiscountAmount: "",
+        orderTaxPercentage: "",
+        sourceType: "",
+        sourceLeadId: "",
+        sourceLeadBusinessId: "",
+        sourceLeadCustomerName: "",
+        sourceQuoteId: "",
+        sourceQuoteNumber: "",
+        sourceQuoteStatus: ""
+    };
+}
+
+function createDefaultExpenseDraft(defaultDate = new Date()) {
+    return {
+        expenseDate: toDateInputValue(defaultDate),
+        justification: "",
+        amount: ""
+    };
+}
+
+function createDefaultRetailPaymentDraft(defaultDate = new Date()) {
+    return {
+        paymentDate: toDateInputValue(defaultDate),
+        amountPaid: "",
+        paymentMode: "",
+        transactionRef: "",
+        notes: ""
+    };
+}
+
+function createDefaultRetailReturnDraft(defaultDate = new Date()) {
+    return {
+        returnDate: toDateInputValue(defaultDate),
+        reason: ""
+    };
+}
+
+function normalizeText(value) {
+    return (value || "").trim();
+}
+
+function buildDisabledActionAttrs(disabled, reason) {
+    if (!disabled) return "";
+
+    const safeReason = String(reason || "This action is not available right now.")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+    return `disabled title="${safeReason}"`;
+}
+
+function toDateInputValue(value) {
+    if (!value) return "";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function resetRetailWorkspace() {
+    featureState.workspaceMode = "create";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = null;
+    featureState.pendingLeadFocus = false;
+    featureState.saleDraft = createDefaultSaleDraft();
+    featureState.lineItemDrafts = {};
+    clearCatalogueItemsSubscription();
+    closeRetailSaleActionsModalState();
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+}
+
+function clearCatalogueItemsSubscription() {
+    featureState.unsubscribeCatalogueItems?.();
+    featureState.unsubscribeCatalogueItems = null;
+    featureState.catalogueItemsListenerId = null;
+    featureState.selectedCatalogueItems = [];
+}
+
+function closeRetailExpenseModalState() {
+    featureState.unsubscribeExpenseHistory?.();
+    featureState.unsubscribeExpenseHistory = null;
+    featureState.expenseModalOpen = false;
+    featureState.expenseSaleId = null;
+    featureState.expenseHistory = [];
+    featureState.expenseDraft = createDefaultExpenseDraft();
+}
+
+function closeRetailSaleActionsModalState() {
+    featureState.saleActionsModalOpen = false;
+    featureState.saleActionsSaleId = null;
+}
+
+function closeRetailReturnHistoryModalState() {
+    featureState.unsubscribeReturnHistory?.();
+    featureState.unsubscribeReturnHistory = null;
+    featureState.returnHistoryModalOpen = false;
+    featureState.returnHistorySaleId = null;
+    featureState.returnHistoryRows = [];
+}
+
+function closeRetailReturnModalState() {
+    featureState.returningSaleId = null;
+    featureState.returnDraft = createDefaultRetailReturnDraft();
+}
+
+function exitRetailReturnWorkspaceIfActive() {
+    if (!isRetailReturnMode()) return;
+
+    featureState.workspaceMode = "create";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = null;
+    featureState.saleDraft = createDefaultSaleDraft();
+    featureState.lineItemDrafts = {};
+    clearCatalogueItemsSubscription();
+}
+
+function closeRetailPaymentModalState() {
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.paymentModalOpen = false;
+    featureState.paymentSaleId = null;
+    featureState.payments = [];
+    featureState.paymentDraft = createDefaultRetailPaymentDraft();
+    featureState.paymentVoidReason = "";
+    featureState.voidingPaymentId = null;
+}
+
+function openRetailPaymentModal(sale) {
+    if (!sale?.id) return;
+
+    exitRetailReturnWorkspaceIfActive();
+    closeRetailReturnModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailExpenseModalState();
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.paymentModalOpen = true;
+    featureState.paymentSaleId = sale.id;
+    featureState.payments = [];
+    featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+    featureState.paymentVoidReason = "";
+    featureState.voidingPaymentId = null;
+
+    featureState.unsubscribePayments = subscribeToRetailSalePayments(
+        sale.id,
+        rows => {
+            featureState.payments = rows;
+            if (featureState.voidingPaymentId && !rows.some(entry => entry.id === featureState.voidingPaymentId)) {
+                featureState.voidingPaymentId = null;
+                featureState.paymentVoidReason = "";
+            }
+
+            if (getState().currentRoute === "#/retail-store" && featureState.paymentModalOpen) {
+                syncRetailPaymentHistoryGrid();
+                syncRetailPaymentDraftPreview();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail payments:", error);
+            showToast("Could not load retail payment history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailPaymentModal() {
+    closeRetailPaymentModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function openRetailExpenseModal(sale) {
+    if (!sale?.id) return;
+
+    exitRetailReturnWorkspaceIfActive();
+    closeRetailPaymentModalState();
+    closeRetailReturnModalState();
+    closeRetailReturnHistoryModalState();
+    featureState.unsubscribeExpenseHistory?.();
+    featureState.unsubscribeExpenseHistory = null;
+    featureState.expenseModalOpen = true;
+    featureState.expenseSaleId = sale.id;
+    featureState.expenseDraft = createDefaultExpenseDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+    featureState.expenseHistory = [];
+
+    featureState.unsubscribeExpenseHistory = subscribeToRetailSaleExpenses(
+        sale.id,
+        rows => {
+            featureState.expenseHistory = rows;
+            if (getState().currentRoute === "#/retail-store" && featureState.expenseModalOpen) {
+                syncRetailExpenseHistoryGrid();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail sale expenses:", error);
+            showToast("Could not load retail sale expense history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailReturnModal() {
+    resetRetailWorkspace();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function closeRetailExpenseModal() {
+    closeRetailExpenseModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function getRetailSaleActionsModalSale() {
+    if (!featureState.saleActionsSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.saleActionsSaleId) || null;
+}
+
+function openRetailSaleActionsModal(sale) {
+    if (!sale?.id) return;
+    featureState.saleActionsModalOpen = true;
+    featureState.saleActionsSaleId = sale.id;
+}
+
+function closeRetailSaleActionsModal() {
+    closeRetailSaleActionsModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function getReturnHistoryModalSale() {
+    if (!featureState.returnHistorySaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.returnHistorySaleId) || null;
+}
+
+function openRetailReturnHistoryModal(sale) {
+    if (!sale?.id) return;
+
+    closeRetailPaymentModalState();
+    closeRetailExpenseModalState();
+    featureState.unsubscribeReturnHistory?.();
+    featureState.unsubscribeReturnHistory = null;
+    featureState.returnHistoryModalOpen = true;
+    featureState.returnHistorySaleId = sale.id;
+    featureState.returnHistoryRows = [];
+
+    featureState.unsubscribeReturnHistory = subscribeToRetailSaleReturns(
+        sale.id,
+        rows => {
+            featureState.returnHistoryRows = rows;
+            if (getState().currentRoute === "#/retail-store" && featureState.returnHistoryModalOpen) {
+                syncRetailReturnHistoryGrid();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail return history:", error);
+            showToast("Could not load retail return history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailReturnHistoryModal() {
+    closeRetailReturnHistoryModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
+function buildRetailWorksheetRows(snapshot) {
+    const isStaticWorksheetMode = featureState.workspaceMode === "view"
+        || featureState.workspaceMode === "return"
+        || featureState.workspaceMode === "void"
+        || (isRetailEditMode() && featureState.editModeScope !== "full");
+
+    if (isStaticWorksheetMode) {
+        const products = snapshot.masterData.products || [];
+        const categories = snapshot.masterData.categories || [];
+
+        return Object.entries(featureState.lineItemDrafts).map(([productId, draft]) => {
+            const product = products.find(entry => entry.id === productId) || null;
+            const categoryId = draft.categoryId || product?.categoryId || "";
+            const categoryName = draft.categoryName
+                || categories.find(category => category.id === categoryId)?.categoryName
+                || "-";
+
+            return {
+                productId,
+                productName: draft.productName || product?.itemName || "Untitled Product",
+                categoryId,
+                categoryName,
+                inventoryCount: Number(product?.inventoryCount) || 0,
+                unitPrice: Number(draft.unitPrice) || 0,
+                quantity: Number(draft.quantity) || 0,
+                returnQuantity: Number(draft.returnQuantity) || 0,
+                lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0,
+                cgstPercentage: Number(draft.cgstPercentage) || 0,
+                sgstPercentage: Number(draft.sgstPercentage) || 0,
+                lineTotal: Number(draft.lineTotal) || 0
+            };
+        });
+    }
+
+    const categories = snapshot.masterData.categories || [];
+    const products = snapshot.masterData.products || [];
+    const storeTaxDefaults = getRetailStoreTaxDefaults(featureState.saleDraft.store);
+    const selectedRows = (featureState.selectedCatalogueItems || []).map(item => {
+        const product = products.find(entry => entry.id === item.productId) || null;
+        const draft = featureState.lineItemDrafts[item.productId] || {};
+        const categoryId = item.categoryId || product?.categoryId || "";
+        const categoryName = item.categoryName
+            || categories.find(category => category.id === categoryId)?.categoryName
+            || "-";
+
+        return {
+            productId: item.productId,
+            productName: item.productName || product?.itemName || "Untitled Product",
+            categoryId,
+            categoryName,
+            inventoryCount: Number(product?.inventoryCount) || 0,
+            unitPrice: Number(item.sellingPrice) || 0,
+            quantity: Number(draft.quantity) || 0,
+            returnQuantity: Number(draft.returnQuantity) || 0,
+            lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0,
+            cgstPercentage: draft.cgstPercentage ?? storeTaxDefaults.cgstPercentage,
+            sgstPercentage: draft.sgstPercentage ?? storeTaxDefaults.sgstPercentage
+        };
+    });
+    const selectedIds = new Set(selectedRows.map(row => row.productId));
+    const draftOnlyRows = Object.entries(featureState.lineItemDrafts || {})
+        .filter(([productId]) => !selectedIds.has(productId))
+        .map(([productId, draft]) => {
+            const product = products.find(entry => entry.id === productId) || null;
+            const categoryId = draft.categoryId || product?.categoryId || "";
+            const categoryName = draft.categoryName
+                || categories.find(category => category.id === categoryId)?.categoryName
+                || "-";
+
+            return {
+                productId,
+                productName: draft.productName || product?.itemName || "Untitled Product",
+                categoryId,
+                categoryName,
+                inventoryCount: Number(product?.inventoryCount) || 0,
+                unitPrice: Number(draft.unitPrice) || 0,
+                quantity: Number(draft.quantity) || 0,
+                returnQuantity: Number(draft.returnQuantity) || 0,
+                lineDiscountPercentage: Number(draft.lineDiscountPercentage) || 0,
+                cgstPercentage: draft.cgstPercentage ?? storeTaxDefaults.cgstPercentage,
+                sgstPercentage: draft.sgstPercentage ?? storeTaxDefaults.sgstPercentage,
+                lineTotal: Number(draft.lineTotal) || 0
+            };
+        });
+
+    return [...selectedRows, ...draftOnlyRows];
+}
+
+function applyStoreTaxDefaultsToLineItemDrafts(storeName) {
+    const storeTaxDefaults = getRetailStoreTaxDefaults(storeName);
+
+    featureState.lineItemDrafts = Object.fromEntries(Object.entries(featureState.lineItemDrafts).map(([productId, draft]) => {
+        return [productId, {
+            ...draft,
+            cgstPercentage: storeTaxDefaults.cgstPercentage,
+            sgstPercentage: storeTaxDefaults.sgstPercentage
+        }];
+    }));
+}
+
+function getRetailSummary(snapshot = getState()) {
+    return calculateRetailDraftSummary(buildRetailWorksheetRows(snapshot), {
+        orderDiscountType: featureState.saleDraft.orderDiscountType,
+        orderDiscountPercentage: featureState.saleDraft.orderDiscountPercentage,
+        orderDiscountAmount: featureState.saleDraft.orderDiscountAmount,
+        orderTaxPercentage: featureState.saleDraft.orderTaxPercentage
+    }, {
+        amountReceived: featureState.saleDraft.amountReceived
+    });
+}
+
+function getSalesHistoryRows() {
+    return (featureState.sales || []).map(sale => ({
+        id: sale.id,
+        saleId: sale.saleId || "-",
+        manualVoucherNumber: sale.manualVoucherNumber || "-",
+        saleDate: sale.saleDate,
+        customerName: sale.customerInfo?.name || "-",
+        store: sale.store || "-",
+        saleType: sale.saleType || "-",
+        lineItemCount: Number(sale.lineItemCount) || (sale.lineItems || []).length || 0,
+        returnCount: Number(sale.returnCount) || 0,
+        returnStatus: sale.returnStatus || "Not Returned",
+        orderStatus: sale.saleStatus || "Active",
+        saleStatus: sale.saleStatus || "Active",
+        invoiceTotal: Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0,
+        amountPaid: Number(sale.totalAmountPaid) || 0,
+        totalDonation: Number(sale.totalDonation) || 0,
+        totalExpenses: Number(sale.financials?.totalExpenses) || 0,
+        balanceDue: Number(sale.balanceDue) || 0,
+        paymentStatus: sale.paymentStatus || "Unpaid"
+    }));
+}
+
+function renderStoreOptions(currentValue) {
+    return RETAIL_STORES.map(store => `
+        <option value="${store}" ${store === currentValue ? "selected" : ""}>${store}</option>
+    `).join("");
+}
+
+function renderSaleTypeOptions(currentValue) {
+    return RETAIL_SALE_TYPES.map(type => `
+        <option value="${type}" ${type === currentValue ? "selected" : ""}>${type}</option>
+    `).join("");
+}
+
+function renderPaymentTypeOptions(currentValue) {
+    return RETAIL_PAYMENT_TYPES.map(type => `
+        <option value="${type}" ${type === currentValue ? "selected" : ""}>${type}</option>
+    `).join("");
+}
+
+function renderDiscountTypeOptions(currentValue) {
+    return RETAIL_DISCOUNT_TYPES.map(type => `
+        <option value="${type}" ${type === currentValue ? "selected" : ""}>${type}</option>
+    `).join("");
+}
+
+function renderSalesCatalogueOptions(snapshot, currentValue) {
+    return (snapshot.masterData.salesCatalogues || [])
+        .filter(catalogue => catalogue.isActive || catalogue.id === currentValue)
+        .map(catalogue => `
+            <option value="${catalogue.id}" ${catalogue.id === currentValue ? "selected" : ""}>
+                ${catalogue.catalogueName} (${catalogue.seasonName || "No Season"})
+            </option>
+        `).join("");
+}
+
+function renderPaymentModeOptions(snapshot, currentValue) {
+    return (snapshot.masterData.paymentModes || [])
+        .filter(mode => mode.isActive || mode.paymentMode === currentValue)
+        .map(mode => `
+            <option value="${mode.paymentMode}" ${mode.paymentMode === currentValue ? "selected" : ""}>
+                ${mode.paymentMode}
+            </option>
+        `).join("");
+}
+
+function getPaymentModalSale() {
+    if (!featureState.paymentSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.paymentSaleId) || null;
+}
+
+function getVoidingRetailPayment() {
+    if (!featureState.voidingPaymentId) return null;
+    return featureState.payments.find(entry => entry.id === featureState.voidingPaymentId) || null;
+}
+
+function getReturnWorkspaceSale() {
+    if (!featureState.returningSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null;
+}
+
+function getVoidWorkspaceSale() {
+    if (!featureState.voidingSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.voidingSaleId) || null;
+}
+
+function getReturnDraftQuantity(productId, fallback = 0) {
+    const draft = featureState.lineItemDrafts?.[productId] || {};
+    const value = draft.returnQuantity ?? fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+}
+
+function calculateWorksheetLineTotal(item) {
+    const quantity = Number(item?.quantity) || 0;
+    const unitPrice = Number(item?.unitPrice) || 0;
+    const lineDiscountPercentage = Number(item?.lineDiscountPercentage) || 0;
+    const cgstPercentage = Number(item?.cgstPercentage) || 0;
+    const sgstPercentage = Number(item?.sgstPercentage) || 0;
+    const gross = quantity * unitPrice;
+    const discount = gross * (lineDiscountPercentage / 100);
+    const taxableAmount = gross - discount;
+    const cgstAmount = taxableAmount * (cgstPercentage / 100);
+    const sgstAmount = taxableAmount * (sgstPercentage / 100);
+    return Number((taxableAmount + cgstAmount + sgstAmount).toFixed(2));
+}
+
+function calculateRetailReturnDraftSummary(sale) {
+    const lineItems = buildRetailWorksheetRows(getState()) || sale?.lineItems || [];
+    const selectedItems = [];
+    let totalQuantity = 0;
+    let totalAmount = 0;
+
+    lineItems.forEach(item => {
+        const productId = item.productId;
+        const availableQuantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+        if (!productId || availableQuantity <= 0) return;
+
+        const requestedQuantity = Math.min(getReturnDraftQuantity(productId), availableQuantity);
+        if (requestedQuantity <= 0) return;
+
+        const lineTotal = Number(item.lineTotal) || calculateWorksheetLineTotal(item);
+        const unitReturnAmount = availableQuantity > 0
+            ? lineTotal / availableQuantity
+            : Number(item.unitPrice) || 0;
+        const estimatedAmount = Number((requestedQuantity * unitReturnAmount).toFixed(2));
+
+        selectedItems.push({
+            productId,
+            productName: item.productName || "",
+            quantity: requestedQuantity,
+            estimatedAmount
+        });
+
+        totalQuantity += requestedQuantity;
+        totalAmount += estimatedAmount;
+    });
+
+    return {
+        selectedItems,
+        totalQuantity,
+        totalAmount: Number(totalAmount.toFixed(2))
+    };
+}
+
+function isRetailEditMode() {
+    return featureState.workspaceMode === "edit";
+}
+
+function isRetailReturnMode() {
+    return featureState.workspaceMode === "return";
+}
+
+function isRetailVoidMode() {
+    return featureState.workspaceMode === "void";
+}
+
+function isRetailWorksheetLockedMode() {
+    if (featureState.workspaceMode === "view") return true;
+    if (isRetailVoidMode()) return true;
+    if (isRetailEditMode() && featureState.editModeScope !== "full") return true;
+    return false;
+}
+
+function getPaymentDraftAmount() {
+    const amountInput = document.getElementById("retail-payment-entry-amount");
+    const value = amountInput?.value ?? featureState.paymentDraft.amountPaid;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+}
+
+function syncRetailPaymentDraftPreview() {
+    if (!featureState.paymentModalOpen) return;
+
+    const sale = getPaymentModalSale();
+    if (!sale) return;
+
+    const balanceDue = Number(sale.balanceDue) || 0;
+    const isVoidedSale = normalizeText(sale.saleStatus || "").toLowerCase() === "voided";
+    const voidingPayment = getVoidingRetailPayment();
+    const isPaymentVoidMode = Boolean(voidingPayment) && !isVoidedSale;
+
+    let remaining = balanceDue;
+    let donationValue = Number(sale.totalDonation) || 0;
+
+    if (isPaymentVoidMode) {
+        const voidAppliedAmount = Number(voidingPayment.amountApplied ?? voidingPayment.amountPaid) || 0;
+        const voidDonationAmount = Number(voidingPayment.donationAmount) || 0;
+        remaining = Math.max(balanceDue + voidAppliedAmount, 0);
+        donationValue = Math.max((Number(sale.totalDonation) || 0) - voidDonationAmount, 0);
+    } else {
+        const draftAmount = getPaymentDraftAmount();
+        const appliedDraft = Math.min(draftAmount, balanceDue);
+        const donationDraft = Math.max(draftAmount - appliedDraft, 0);
+        remaining = Math.max(balanceDue - appliedDraft, 0);
+        donationValue = donationDraft;
+    }
+
+    const remainingNode = document.getElementById("retail-payment-balance-after-draft");
+    const donationNode = document.getElementById("retail-payment-donation-after-draft");
+
+    if (remainingNode) {
+        remainingNode.textContent = formatCurrency(remaining);
+    }
+
+    if (donationNode) {
+        donationNode.textContent = formatCurrency(donationValue);
+    }
+}
+
+function renderRetailPaymentModal(snapshot) {
+    if (!featureState.paymentModalOpen) return "";
+
+    const sale = getPaymentModalSale();
+    if (!sale) return "";
+
+    const paymentModes = (snapshot.masterData.paymentModes || []).filter(mode => mode.isActive);
+    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const amountPaid = Number(sale.totalAmountPaid) || 0;
+    const totalDonation = Number(sale.totalDonation) || 0;
+    const balanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - amountPaid, 0)) || 0;
+    const draftAmount = Number(featureState.paymentDraft.amountPaid) || 0;
+    const draftDonation = Math.max(draftAmount - Math.min(draftAmount, balanceDue), 0);
+    const remainingBalance = Math.max(balanceDue - Math.min(draftAmount, balanceDue), 0);
+    const isVoidedSale = normalizeText(sale.saleStatus || "").toLowerCase() === "voided";
+    const canRecordPayment = !isVoidedSale && balanceDue > 0 && paymentModes.length > 0;
+    const recordPaymentDisabledReason = isVoidedSale
+        ? "Cannot record payment on a voided sale."
+        : balanceDue <= 0
+            ? "This sale is already fully paid."
+            : paymentModes.length === 0
+                ? "Add at least one active payment mode before recording payment."
+                : "This action is not available right now.";
+    const recordPaymentDisabledAttrs = buildDisabledActionAttrs(!canRecordPayment, recordPaymentDisabledReason);
+    const paymentStatus = sale.paymentStatus || "Unpaid";
+    const voidingPayment = getVoidingRetailPayment();
+    const isPaymentVoidMode = Boolean(voidingPayment) && !isVoidedSale;
+    const voidingPaymentAppliedAmount = Number(voidingPayment?.amountApplied ?? voidingPayment?.amountPaid) || 0;
+    const voidingPaymentReceivedAmount = Number(voidingPayment?.amountReceived ?? voidingPayment?.totalCollected ?? voidingPayment?.amountPaid) || 0;
+    const voidingPaymentDonationAmount = Number(voidingPayment?.donationAmount) || 0;
+    const paymentFieldDisabledAttrs = (isVoidedSale || isPaymentVoidMode)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const amountFieldDisabledAttrs = (isVoidedSale || isPaymentVoidMode || balanceDue <= 0)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const modeFieldDisabledAttrs = (isPaymentVoidMode || !canRecordPayment)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const paymentDateValue = isPaymentVoidMode
+        ? toDateInputValue(voidingPayment?.paymentDate || voidingPayment?.createdAt || "")
+        : featureState.paymentDraft.paymentDate;
+    const paymentAmountValue = isPaymentVoidMode
+        ? String(voidingPaymentReceivedAmount || "")
+        : featureState.paymentDraft.amountPaid;
+    const paymentModeValue = isPaymentVoidMode
+        ? (voidingPayment?.paymentMode || "")
+        : featureState.paymentDraft.paymentMode;
+    const paymentReferenceValue = isPaymentVoidMode
+        ? (voidingPayment?.transactionRef || "")
+        : featureState.paymentDraft.transactionRef;
+    const paymentNotesValue = isPaymentVoidMode
+        ? (voidingPayment?.notes || "")
+        : featureState.paymentDraft.notes;
+    const balancePreviewValue = isPaymentVoidMode
+        ? Math.max(balanceDue + voidingPaymentAppliedAmount, 0)
+        : remainingBalance;
+    const donationPreviewValue = isPaymentVoidMode
+        ? Math.max(totalDonation - voidingPaymentDonationAmount, 0)
+        : draftDonation;
+    const headerClassName = isPaymentVoidMode
+        ? "panel-header panel-header-danger-soft purchase-payment-modal-header retail-payment-void-header"
+        : "panel-header panel-header-accent purchase-payment-modal-header";
+    const headerIconClassName = isPaymentVoidMode
+        ? "panel-icon panel-icon-danger-soft"
+        : "panel-icon panel-icon-alt";
+    const paymentFormTitle = isVoidedSale
+        ? "Record Retail Payment (Sale Voided - Read Only)"
+        : isPaymentVoidMode
+            ? "Void Retail Payment"
+            : "Record Retail Payment";
+    const paymentFormCopy = isVoidedSale
+        ? "This sale is voided. No new payment can be recorded. Payment history is available below for audit only."
+        : isPaymentVoidMode
+            ? "Review the selected posted payment, provide a void reason, and confirm to post the reversal."
+            : "Capture customer payments for the selected retail sale and keep the payment history visible below.";
+
+    return `
+        <div id="retail-payment-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-payment-modal-title">
+            <div class="purchase-payment-modal-card">
+                <div class="${headerClassName}">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="${headerIconClassName}">${icons.payment}</span>
+                        <div>
+                            <h3 id="retail-payment-modal-title">${paymentFormTitle}</h3>
+                            <p class="panel-copy">${paymentFormCopy}</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${featureState.payments.length} payments</span>
+                        ${isPaymentVoidMode ? `
+                            <span class="status-pill retail-void-mode-pill">Void Mode</span>
+                        ` : ""}
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer</p>
+                                    <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Invoice Total</p>
+                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Applied Payment</p>
+                                    <p class="summary-value">${formatCurrency(amountPaid)}</p>
+                                </article>
+                                <article class="summary-card retail-summary-card-strong">
+                                    <p class="summary-label">Balance Due</p>
+                                    <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Donation Total</p>
+                                    <p class="summary-value">${formatCurrency(totalDonation)}</p>
+                                </article>
+                            </div>
+
+                            <form id="retail-payment-form" class="purchase-payment-form">
+                                ${isPaymentVoidMode ? `
+                                    <p class="panel-copy panel-copy-tight retail-payment-void-inline-note">
+                                        Voiding payment <strong>${voidingPayment?.paymentId || voidingPayment?.id || "-"}</strong>.
+                                        Applied ${formatCurrency(voidingPaymentAppliedAmount)}, received ${formatCurrency(voidingPaymentReceivedAmount)}, donation ${formatCurrency(voidingPaymentDonationAmount)}.
+                                    </p>
+                                ` : ""}
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="retail-payment-entry-date">Payment Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-date" class="input" type="date" value="${paymentDateValue}" ${paymentFieldDisabledAttrs} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-payment-entry-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-amount" class="input" type="number" min="0" step="0.01" value="${paymentAmountValue}" placeholder="0.00" ${amountFieldDisabledAttrs} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-payment-entry-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="retail-payment-entry-mode" class="select" ${modeFieldDisabledAttrs} required>
+                                            <option value="">Select payment mode</option>
+                                            ${renderPaymentModeOptions(snapshot, paymentModeValue)}
+                                        </select>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-payment-entry-reference">Payment Reference <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-payment-entry-reference" class="input" type="text" value="${paymentReferenceValue}" placeholder="UPI / cash reference / card slip" ${paymentFieldDisabledAttrs}>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-payment-entry-notes">Payment Notes</label>
+                                        <textarea id="retail-payment-entry-notes" class="textarea" placeholder="Optional notes for this payment" ${paymentFieldDisabledAttrs}>${paymentNotesValue}</textarea>
+                                    </div>
+                                    ${isPaymentVoidMode ? `
+                                        <div class="field field-full">
+                                            <label for="retail-payment-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <textarea id="retail-payment-void-reason" class="textarea" placeholder="Reason for voiding the selected payment">${featureState.paymentVoidReason || ""}</textarea>
+                                        </div>
+                                    ` : ""}
+                                </div>
+                                <div class="purchase-payment-preview">
+                                    <article class="summary-card">
+                                        <p class="summary-label">Current Status</p>
+                                        <p class="summary-value">${isPaymentVoidMode ? (voidingPayment?.paymentStatus || voidingPayment?.status || paymentStatus) : paymentStatus}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">${isPaymentVoidMode ? "Balance After Void" : "Balance After Draft"}</p>
+                                        <p id="retail-payment-balance-after-draft" class="summary-value">${formatCurrency(balancePreviewValue)}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">${isPaymentVoidMode ? "Donation After Void" : "Donation From Draft"}</p>
+                                        <p id="retail-payment-donation-after-draft" class="summary-value">${formatCurrency(donationPreviewValue)}</p>
+                                    </article>
+                                </div>
+                                ${!isPaymentVoidMode && balanceDue <= 0 ? `
+                                    <p class="panel-copy panel-copy-tight">This sale is already fully paid. You can still review the payment history below.</p>
+                                ` : ""}
+                                ${!isPaymentVoidMode && balanceDue > 0 && paymentModes.length === 0 ? `
+                                    <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording retail payments.</p>
+                                ` : ""}
+                                <div class="form-actions">
+                                    ${isPaymentVoidMode ? `
+                                        <button id="retail-payment-cancel-button" class="button button-secondary retail-payment-close-trigger" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Close
+                                        </button>
+                                        <button id="retail-payment-void-cancel-button" class="button button-secondary" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Cancel Void
+                                        </button>
+                                        <button id="retail-payment-void-confirm-button" class="button button-danger-soft" type="button" data-payment-id="${voidingPayment?.id || ""}" data-void-action="confirm">
+                                            <span class="button-icon">${icons.warning}</span>
+                                            Confirm Void Payment
+                                        </button>
+                                    ` : `
+                                        <button id="retail-payment-cancel-button" class="button button-secondary retail-payment-close-trigger" type="button">
+                                            <span class="button-icon">${icons.inactive}</span>
+                                            Close
+                                        </button>
+                                        <button class="button button-primary-alt" type="submit" ${recordPaymentDisabledAttrs}>
+                                            <span class="button-icon">${icons.payment}</span>
+                                            Record Payment
+                                        </button>
+                                    `}
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Payment History</p>
+                                <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} payment record(s) linked to this sale.</p>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="retail-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function syncRetailReturnDraftPreview() {
+    if (!isRetailReturnMode()) return;
+    const sale = getReturnWorkspaceSale();
+    if (!sale) return;
+
+    const draftSummary = calculateRetailReturnDraftSummary(sale);
+    const qtyNode = document.getElementById("retail-return-selected-qty");
+    const amountNode = document.getElementById("retail-return-selected-amount");
+
+    if (qtyNode) {
+        qtyNode.textContent = String(draftSummary.totalQuantity);
+    }
+
+    if (amountNode) {
+        amountNode.textContent = formatCurrency(draftSummary.totalAmount);
+    }
+}
+
+function getExpenseModalSale() {
+    if (!featureState.expenseSaleId) return null;
+
+    const liveSale = featureState.sales.find(entry => entry.id === featureState.expenseSaleId);
+    if (liveSale) return liveSale;
+
+    if (featureState.viewingSaleId === featureState.expenseSaleId) {
+        return {
+            id: featureState.viewingSaleId,
+            saleId: featureState.saleDraft.manualVoucherNumber || "-",
+            manualVoucherNumber: featureState.saleDraft.manualVoucherNumber || "-",
+            saleDate: featureState.saleDraft.saleDate,
+            customerInfo: {
+                name: featureState.saleDraft.customerName || "-",
+                phone: featureState.saleDraft.customerPhone || "",
+                email: featureState.saleDraft.customerEmail || "",
+                address: featureState.saleDraft.customerAddress || ""
+            },
+            balanceDue: 0,
+            financials: {
+                grandTotal: 0,
+                totalExpenses: 0
+            },
+            paymentStatus: "Unknown"
+        };
+    }
+
+    return null;
+}
+
+function renderRetailExpenseModal(sale) {
+    if (!featureState.expenseModalOpen || !sale) return "";
+
+    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const currentExpenses = Number(sale.financials?.totalExpenses) || 0;
+    const balanceDue = Number(sale.balanceDue) || 0;
+    const expenseCount = featureState.expenseHistory.length;
+    const displaySaleId = sale.saleId || sale.manualVoucherNumber || "-";
+    const defaultDate = featureState.expenseDraft.expenseDate || toDateInputValue(new Date());
+
+    return `
+        <div id="retail-expense-modal" class="retail-expense-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-expense-modal-title">
+            <div class="retail-expense-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon">${icons.payment}</span>
+                        <div>
+                            <h3 id="retail-expense-modal-title">Add Sale Expense</h3>
+                            <p class="panel-copy">Log retail sale expenses, keep the expense history visible, and update sale balance in one safe operation.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${displaySaleId}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${sale.paymentStatus || "Unpaid"}</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="retail-expense-layout">
+                        <div class="retail-expense-summary-grid">
+                            <article class="summary-card">
+                                <p class="summary-label">Invoice Total</p>
+                                <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                            </article>
+                            <article class="summary-card">
+                                <p class="summary-label">Current Expenses</p>
+                                <p class="summary-value">${formatCurrency(currentExpenses)}</p>
+                            </article>
+                            <article class="summary-card retail-summary-card-strong">
+                                <p class="summary-label">Balance Due</p>
+                                <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                            </article>
+                        </div>
+
+                        <section class="payment-workspace-card retail-expense-entry-card">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Add New Expense</p>
+                                <p class="panel-copy">Capture date, reason, and amount. Expenses reduce the open sale balance due.</p>
+                            </div>
+                            <form id="retail-expense-form">
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="retail-expense-date">Expense Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-expense-date" class="input" type="date" value="${defaultDate}" required>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-expense-justification">Justification <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-expense-justification" class="input" type="text" value="${featureState.expenseDraft.justification}" placeholder="Delivery charges, special packaging, etc." required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-expense-amount">Amount <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-expense-amount" class="input" type="number" min="0.01" step="0.01" value="${featureState.expenseDraft.amount}" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button id="retail-expense-cancel-button" class="button button-secondary" type="button">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Close
+                                    </button>
+                                    <button class="button button-primary-alt" type="submit">
+                                        <span class="button-icon">${icons.plus}</span>
+                                        Add Expense
+                                    </button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Expense History</p>
+                                <p id="retail-expense-history-count" class="panel-copy">${expenseCount} expense record(s) linked to this sale.</p>
+                            </div>
+                            <div class="purchase-payment-history-shell">
+                                <div id="retail-expense-history-grid" class="ag-theme-alpine moneta-grid" style="height: 300px; width: 100%;"></div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRetailReturnHistoryModal() {
+    if (!featureState.returnHistoryModalOpen) return "";
+
+    const sale = getReturnHistoryModalSale();
+    if (!sale) return "";
+
+    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const totalReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
+    const totalReturnedAmount = Number(sale.totalReturnedAmount) || 0;
+    const returnCount = Number(sale.returnCount) || 0;
+
+    return `
+        <div id="retail-return-history-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-return-history-modal-title">
+            <div class="purchase-payment-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.warning}</span>
+                        <div>
+                            <h3 id="retail-return-history-modal-title">Return History</h3>
+                            <p class="panel-copy">Review all return records posted against this sale, including quantities, amounts, reasons, and who processed them.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${returnCount} return(s)</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer</p>
+                                    <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Invoice Total</p>
+                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Returned Qty</p>
+                                    <p class="summary-value">${totalReturnedQuantity}</p>
+                                </article>
+                                <article class="summary-card retail-summary-card-strong">
+                                    <p class="summary-label">Returned Amount</p>
+                                    <p class="summary-value">${formatCurrency(totalReturnedAmount)}</p>
+                                </article>
+                            </div>
+                            <div class="form-actions">
+                                <button id="retail-return-history-close-button" class="button button-secondary" type="button">
+                                    <span class="button-icon">${icons.inactive}</span>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Return Entries</p>
+                                <p id="retail-return-history-count" class="panel-copy">${featureState.returnHistoryRows.length} return record(s) linked to this sale.</p>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="retail-return-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRetailSaleActionsModal() {
+    if (!featureState.saleActionsModalOpen) return "";
+
+    const sale = getRetailSaleActionsModalSale();
+    if (!sale) return "";
+
+    const isVoided = (sale.saleStatus || "").toLowerCase() === "voided";
+    const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
+    const hasReturns = (Number(sale.returnCount) || 0) > 0;
+    const canVoidSale = !isVoided && !hasReturns;
+    const editDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot edit a voided sale.");
+    const returnDisabledAttrs = buildDisabledActionAttrs(
+        isVoided || !hasReturnableItems,
+        isVoided ? "Cannot return products on a voided sale." : "No products are available to return on this sale."
+    );
+    const expenseDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot add expense to a voided sale.");
+    const creditNoteDisabledAttrs = buildDisabledActionAttrs(!hasReturns, "No return history found. Process a return first.");
+    const voidDisabledAttrs = buildDisabledActionAttrs(
+        !canVoidSale,
+        isVoided ? "Sale is already voided." : "Sales with posted returns cannot be voided."
+    );
+
+    return `
+        <div id="retail-sale-actions-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-sale-actions-modal-title">
+            <div class="purchase-payment-modal-card" style="max-width: 560px;">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.settings}</span>
+                        <div>
+                            <h3 id="retail-sale-actions-modal-title">More Actions</h3>
+                            <p class="panel-copy">Choose an operation for this sale. High-impact actions remain guarded with business validations.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        <span class="status-pill">${sale.paymentStatus || "Unpaid"}</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="retail-sale-actions-list">
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-edit" type="button" data-sale-id="${sale.id}" ${editDisabledAttrs}>
+                            <span class="button-icon">${icons.edit}</span>
+                            Edit Sale
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-return" type="button" data-sale-id="${sale.id}" ${returnDisabledAttrs}>
+                            <span class="button-icon">${icons.warning}</span>
+                            Return Products
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-return-history" type="button" data-sale-id="${sale.id}">
+                            <span class="button-icon">${icons.search}</span>
+                            Return History
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-expense" type="button" data-sale-id="${sale.id}" ${expenseDisabledAttrs}>
+                            <span class="button-icon">${icons.plus}</span>
+                            Add Expense
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-pdf" type="button" data-sale-id="${sale.id}">
+                            <span class="button-icon">${icons.download}</span>
+                            Download Invoice PDF
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
+                            <span class="button-icon">${icons.download}</span>
+                            Download Credit Note
+                        </button>
+                        <button class="button grid-action-button grid-action-button-danger retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${voidDisabledAttrs}>
+                            <span class="button-icon">${icons.warning}</span>
+                            Void Sale
+                        </button>
+                    </div>
+                    <div class="form-actions">
+                        <button id="retail-sale-actions-close-button" class="button grid-action-button grid-action-button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRetailStoreViewShell(snapshot) {
+    const root = document.getElementById("retail-store-root");
+    if (!root) return;
+
+    const summary = getRetailSummary(snapshot);
+    const activeCatalogues = snapshot.masterData.salesCatalogues?.filter(catalogue => catalogue.isActive).length || 0;
+    const selectedCatalogueLabel = snapshot.masterData.salesCatalogues
+        ?.find(catalogue => catalogue.id === featureState.saleDraft.salesCatalogueId)?.catalogueName || "No catalogue";
+    const isPayNow = featureState.saleDraft.paymentType === "Pay Now";
+    const isSampleSale = featureState.saleDraft.saleType === "Sample";
+    const isTastyTreats = featureState.saleDraft.store === "Tasty Treats";
+    const isViewMode = featureState.workspaceMode === "view";
+    const isEditMode = featureState.workspaceMode === "edit";
+    const isReturnMode = featureState.workspaceMode === "return";
+    const isVoidMode = featureState.workspaceMode === "void";
+    const isEditModeFull = isEditMode && featureState.editModeScope === "full";
+    const isEditModeLimited = isEditMode && featureState.editModeScope === "limited";
+    const viewingSale = isViewMode
+        ? featureState.sales.find(entry => entry.id === featureState.viewingSaleId) || null
+        : null;
+    const editingSale = isEditMode
+        ? featureState.sales.find(entry => entry.id === featureState.editingSaleId) || null
+        : null;
+    const returningSale = isReturnMode
+        ? featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null
+        : null;
+    const voidingSale = isVoidMode
+        ? getVoidWorkspaceSale()
+        : null;
+    const workspaceSale = viewingSale || editingSale || returningSale || voidingSale;
+    const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
+    const workspaceTotalDonation = Number(workspaceSale?.totalDonation) || 0;
+    const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
+    const workspaceCreditBalance = Number(workspaceSale?.creditBalance) || 0;
+    const returnDraftSummary = isReturnMode && returningSale
+        ? calculateRetailReturnDraftSummary(returningSale)
+        : { totalQuantity: 0, totalAmount: 0 };
+    const projectedGrandTotal = Math.max(summary.grandTotal - returnDraftSummary.totalAmount, 0);
+    const projectedBalanceDue = Math.max(workspaceBalanceDue - returnDraftSummary.totalAmount, 0);
+    const projectedCreditBalance = Number((workspaceCreditBalance + Math.max(returnDraftSummary.totalAmount - workspaceBalanceDue, 0)).toFixed(2));
+    const draftCreditBalance = featureState.saleDraft.paymentType === "Pay Now"
+        ? Math.max((Number(featureState.saleDraft.amountReceived) || 0) - summary.grandTotal, 0)
+        : 0;
+    const displayedCreditBalance = isReturnMode
+        ? projectedCreditBalance
+        : (isViewMode || isEditMode || isVoidMode)
+            ? workspaceCreditBalance
+            : draftCreditBalance;
+    const displayedDonation = (isViewMode || isEditMode || isReturnMode || isVoidMode)
+        ? workspaceTotalDonation
+        : summary.donationAmount;
+    const filteredHistoryCount = featureState.filteredSalesCount ?? featureState.sales.length;
+    const draftPaymentStatus = summary.grandTotal <= 0
+        ? "Paid"
+        : featureState.saleDraft.paymentType === "Pay Now"
+            ? (summary.balanceDue <= 0 ? "Paid" : summary.appliedPayment > 0 ? "Partially Paid" : "Unpaid")
+            : "Unpaid";
+    const hasPersistedSaleStatus = isViewMode || isEditMode || isReturnMode || isVoidMode;
+    const paymentStatus = hasPersistedSaleStatus
+        ? workspaceSale?.paymentStatus || draftPaymentStatus
+        : draftPaymentStatus;
+    const sourceType = normalizeText(featureState.saleDraft.sourceType || workspaceSale?.sourceType || "");
+    const sourceLeadId = normalizeText(featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "");
+    const sourceLeadBusinessId = normalizeText(featureState.saleDraft.sourceLeadBusinessId || workspaceSale?.sourceLeadBusinessId || "");
+    const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId ? `LEAD-${sourceLeadId.slice(-6).toUpperCase()}` : "");
+    const sourceQuoteId = normalizeText(featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || "");
+    const sourceQuoteNumber = normalizeText(featureState.saleDraft.sourceQuoteNumber || workspaceSale?.sourceQuoteNumber || "");
+    const sourceQuoteStatus = normalizeText(featureState.saleDraft.sourceQuoteStatus || workspaceSale?.sourceQuoteStatus || "");
+    const expenseModalSale = getExpenseModalSale();
+    const canEditSaleIdentity = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
+    const canEditCustomerInfo = !isViewMode && !isReturnMode && !isVoidMode;
+    const canEditSaleContext = !isViewMode && !isEditMode && !isReturnMode && !isVoidMode;
+    const canEditSettlement = !isViewMode && !isEditMode && !isReturnMode && !isVoidMode;
+    const canEditFinancials = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
+
+    const saleIdentityDisabledAttr = canEditSaleIdentity ? "" : "disabled";
+    const customerDisabledAttr = canEditCustomerInfo ? "" : "disabled";
+    const saleContextDisabledAttr = canEditSaleContext ? "" : "disabled";
+    const financialDisabledAttr = canEditFinancials ? "" : "disabled";
+
+    const viewModeBanner = isViewMode ? `
+        <div class="retail-view-mode-banner">
+            <div>
+                <p class="section-kicker">Read Only View</p>
+                <p class="panel-copy">You are reviewing a posted retail sale. All fields are locked so you can inspect the full sale safely.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${formatCurrency(summary.grandTotal)} total</span>
+                <span class="status-pill">${paymentStatus}</span>
+            </div>
+        </div>
+    ` : "";
+    const editModeBanner = isEditMode ? `
+        <div class="retail-edit-mode-banner ${isEditModeLimited ? "retail-edit-mode-banner-limited" : "retail-edit-mode-banner-full"}">
+            <div>
+                <p class="section-kicker">${isEditModeLimited ? "Limited Edit Mode" : "Full Edit Mode"}</p>
+                <p class="panel-copy">
+                    ${isEditModeLimited
+                        ? `<span class="retail-edit-warning-prefix"><span class="retail-edit-warning-icon" aria-hidden="true">${icons.warning}</span>Payments, expenses, or returns are already linked.</span> You can update customer details and notes only. Product list, discounts, tax, and settlement are locked.`
+                        : "No linked payments, expenses, or returns were found. Full retail edit is enabled, including product list and invoice adjustments."}
+                </p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${formatCurrency(summary.grandTotal)} total</span>
+                <span class="status-pill">${paymentStatus}</span>
+            </div>
+        </div>
+    ` : "";
+    const returnModeBanner = isReturnMode ? `
+        <div class="retail-return-mode-banner">
+            <div>
+                <p class="section-kicker">Return Mode</p>
+                <p class="panel-copy"><span class="retail-edit-warning-prefix"><span class="retail-edit-warning-icon" aria-hidden="true">${icons.warning}</span>Read-only sale snapshot.</span> Set return quantities in Product List, add a return reason, then process the return.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${returnDraftSummary.totalQuantity} qty selected</span>
+                <span class="status-pill">${formatCurrency(returnDraftSummary.totalAmount)} est. return</span>
+            </div>
+        </div>
+    ` : "";
+    const voidModeBanner = isVoidMode ? `
+        <div class="purchase-void-mode-banner">
+            <div>
+                <p class="section-kicker">Void Mode</p>
+                <p class="panel-copy"><span class="retail-edit-warning-prefix"><span class="retail-edit-warning-icon" aria-hidden="true">${icons.warning}</span>High-impact operation.</span> This sale will be marked void, active payments and expenses will be reversed, and remaining product quantities will be restored to inventory.</p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${featureState.saleDraft.manualVoucherNumber || "-"}</span>
+                <span class="status-pill">${formatCurrency(summary.grandTotal)} total</span>
+                <span class="status-pill">Cannot be undone</span>
+            </div>
+        </div>
+    ` : "";
+    const sourceLeadBanner = sourceLeadId ? `
+        <div class="retail-source-lead-banner">
+            <div>
+                <p class="section-kicker">Lead Conversion</p>
+                <p class="panel-copy">
+                    This retail sale is linked to enquiry <strong>${sourceLeadDisplayId || sourceLeadId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
+                </p>
+            </div>
+            <div class="toolbar-meta">
+                <span class="status-pill">${sourceLeadDisplayId || sourceLeadId}</span>
+                ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
+                ${sourceQuoteStatus ? `<span class="status-pill">${sourceQuoteStatus}</span>` : ""}
+                ${sourceType ? `<span class="status-pill">Source: ${sourceType === "quote" ? "Quote" : "Lead"}</span>` : ""}
+            </div>
+        </div>
+    ` : "";
+
+    root.innerHTML = `
+        <div class="panel-card ${(isViewMode || isEditMode || isReturnMode) ? "retail-view-mode-card" : ""} ${isVoidMode ? "purchase-void-mode-card" : ""}">
+            <div class="panel-header panel-header-accent">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.retail}</span>
+                    <div>
+                        <h2>${isViewMode ? "View Retail Sale" : isEditMode ? "Edit Retail Sale" : isReturnMode ? "Return Retail Sale" : isVoidMode ? "Void Retail Sale" : "Retail Store"}</h2>
+                        <p class="panel-copy">
+                            ${isViewMode
+                                ? "Review the full retail sale exactly as it was posted, including customer, settlement, product tax, and totals."
+                                : isEditMode
+                                    ? "Edit the selected retail sale with strict safeguards based on linked payments and expenses."
+                                    : isReturnMode
+                                        ? "Process a product return from this posted sale using a controlled, read-only workspace with explicit return quantities."
+                                        : isVoidMode
+                                            ? "Review the posted sale in read-only mode, enter a mandatory void reason, and complete a controlled reversal flow."
+                                            : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
+                        </p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">${activeCatalogues} active catalogues</span>
+                    <span class="status-pill">${summary.itemCount} active products</span>
+                    <span class="status-pill">${featureState.sales.length} sales recorded</span>
+                    ${sourceLeadId ? `<span class="status-pill">Lead: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
+                    ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
+                </div>
+            </div>
+            <div class="panel-body">
+                ${viewModeBanner}
+                ${editModeBanner}
+                ${returnModeBanner}
+                ${voidModeBanner}
+                ${sourceLeadBanner}
+                <form id="retail-store-form">
+                    <div class="workspace-form-sections">
+                        <section class="workspace-form-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Customer Info</p>
+                                <p class="panel-copy">Capture the sale date, customer identity, and the contact details needed for follow-up.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field">
+                                    <label for="retail-sale-date">Sale Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-sale-date" class="input" type="date" value="${featureState.saleDraft.saleDate}" ${saleIdentityDisabledAttr} required>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-voucher-number">Manual Voucher # <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-voucher-number" class="input" type="text" value="${featureState.saleDraft.manualVoucherNumber}" placeholder="TT-APR-001" ${saleIdentityDisabledAttr} required>
+                                </div>
+                                <div class="field field-wide">
+                                    <label for="retail-customer-name">Customer Name <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-customer-name" class="input" type="text" value="${featureState.saleDraft.customerName}" placeholder="Customer name" ${customerDisabledAttr} required>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-customer-phone">Customer Phone <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-customer-phone" class="input" type="tel" value="${featureState.saleDraft.customerPhone}" placeholder="Customer phone" ${customerDisabledAttr} required>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-customer-email">Email</label>
+                                    <input id="retail-customer-email" class="input" type="email" value="${featureState.saleDraft.customerEmail}" placeholder="Customer email" ${customerDisabledAttr}>
+                                </div>
+                                <div class="field field-full" ${isTastyTreats ? "" : "hidden"}>
+                                    <label for="retail-customer-address">Customer Address <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-customer-address" class="textarea" ${customerDisabledAttr} placeholder="Delivery address for Tasty Treats orders">${featureState.saleDraft.customerAddress}</textarea>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="workspace-form-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Sale Context</p>
+                                <p class="panel-copy">Choose the store and catalogue that define which products, prices, and rules apply to this sale.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field">
+                                    <label for="retail-store">Store <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <select id="retail-store" class="select" ${saleContextDisabledAttr} required>
+                                        <option value="">Select store</option>
+                                        ${renderStoreOptions(featureState.saleDraft.store)}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-sale-type">Sale Type <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <select id="retail-sale-type" class="select" ${saleContextDisabledAttr} required>
+                                        <option value="">Select sale type</option>
+                                        ${renderSaleTypeOptions(featureState.saleDraft.saleType)}
+                                    </select>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-sales-catalogue">Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <select id="retail-sales-catalogue" class="select" ${saleContextDisabledAttr} required>
+                                        <option value="">Select catalogue</option>
+                                        ${renderSalesCatalogueOptions(snapshot, featureState.saleDraft.salesCatalogueId)}
+                                    </select>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-sale-notes">Sale Notes</label>
+                                    <textarea id="retail-sale-notes" class="textarea" ${customerDisabledAttr} placeholder="Optional notes for this retail sale">${featureState.saleDraft.saleNotes}</textarea>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="workspace-form-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Settlement</p>
+                                <p class="panel-copy">Choose whether to invoice the customer or capture payment immediately as part of the sale.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field">
+                                    <label for="retail-payment-type">Payment Type <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <select id="retail-payment-type" class="select" ${(isSampleSale || !canEditSettlement) ? "disabled" : ""} required>
+                                        ${renderPaymentTypeOptions(featureState.saleDraft.paymentType)}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-payment-mode">Payment Mode ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
+                                    <select id="retail-payment-mode" class="select" ${(isPayNow && canEditSettlement) ? "" : "disabled"}>
+                                        <option value="">Select payment mode</option>
+                                        ${renderPaymentModeOptions(snapshot, featureState.saleDraft.paymentMode)}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-amount-received">Amount Received ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
+                                    <input id="retail-amount-received" class="input" type="number" min="0" step="0.01" value="${featureState.saleDraft.amountReceived}" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="0.00">
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-transaction-ref">Payment Reference ${isPayNow ? '<span class="required-mark" aria-hidden="true">*</span>' : ""}</label>
+                                    <input id="retail-transaction-ref" class="input" type="text" value="${featureState.saleDraft.transactionRef}" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="UPI / Cash Ref / Card Slip">
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-payment-notes">Payment Notes</label>
+                                    <textarea id="retail-payment-notes" class="textarea" ${(isPayNow && canEditSettlement) ? "" : "disabled"} placeholder="Optional notes about the payment">${featureState.saleDraft.paymentNotes}</textarea>
+                                </div>
+                            </div>
+                            ${isEditMode ? `
+                                <p class="panel-copy panel-copy-tight">Settlement fields are locked during edit. Use the <strong>Payments</strong> action in Sales History to record customer payments.</p>
+                            ` : ""}
+                        </section>
+                    </div>
+                    ${isEditMode ? `
+                        <section class="workspace-form-section retail-edit-reason-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Edit Audit</p>
+                                <p class="panel-copy">Capture why this sale is being edited. The reason is stored on the sale for audit history.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="retail-edit-reason">Edit Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-edit-reason" class="textarea" placeholder="Explain why this retail sale is being edited" ${customerDisabledAttr} required>${featureState.saleDraft.editReason || ""}</textarea>
+                                </div>
+                            </div>
+                        </section>
+                    ` : ""}
+                    ${isVoidMode ? `
+                        <section class="workspace-form-section purchase-void-mode-reason">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Void Details</p>
+                                <p class="panel-copy">Enter a clear reason for voiding this sale. This reason is stored in the audit trail.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field field-full">
+                                    <label for="retail-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-void-reason" class="textarea purchase-void-reason-textarea" placeholder="Explain why this retail sale is being voided" required>${featureState.saleDraft.voidReason || ""}</textarea>
+                                </div>
+                            </div>
+                        </section>
+                    ` : ""}
+
+                    <div class="retail-product-list-shell">
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <div class="panel-title-wrap">
+                                    <span class="panel-icon">${icons.products}</span>
+                                    <div>
+                                        <h3>Product List</h3>
+                                        <p class="panel-copy">
+                                            ${isReturnMode
+                                                ? "Review sold products and set Return Qty for each line item you need to bring back into stock."
+                                                : isVoidMode
+                                                    ? "Review the posted product list that will be reversed from this sale. Product data is locked in void mode for audit safety."
+                                                    : "Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue, and each line carries CGST and SGST."}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="toolbar-meta">
+                                    <span class="status-pill">${selectedCatalogueLabel}</span>
+                                    <span class="status-pill">${summary.totalQuantity} ${isReturnMode ? "sold qty" : "total qty"}</span>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="toolbar">
+                                    <div>
+                                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Worksheet</p>
+                                        <p class="panel-copy">
+                                            ${isReturnMode
+                                                ? "Only Return Qty is editable in return mode. All sale pricing, discounts, and tax fields stay read-only."
+                                                : isVoidMode
+                                                    ? "All worksheet values are read-only in void mode so the posted sale can be reviewed before reversal."
+                                                    : "Use line discount, CGST, and SGST at product level, then finish with invoice-level discount and any order tax below."}
+                                        </p>
+                                    </div>
+                                    <div class="search-wrap">
+                                        <span class="search-icon">${icons.search}</span>
+                                        <input
+                                            id="retail-worksheet-search"
+                                            class="input toolbar-search"
+                                            type="search"
+                                            placeholder="Search product, category, or stock"
+                                            value="${featureState.worksheetSearchTerm}">
+                                    </div>
+                                </div>
+                                <div class="ag-shell">
+                                    <div id="retail-worksheet-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <div class="panel-title-wrap">
+                                    <span class="panel-icon panel-icon-alt">${icons.payment}</span>
+                                    <div>
+                                        <h3>Invoice Adjustments</h3>
+                                        <p class="panel-copy">Shape the final invoice in a compact finance bar: discount first, then tax, then settlement totals.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="retail-finance-bar">
+                                    <section class="retail-finance-section">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Discounting</p>
+                                            <p class="panel-copy">Choose the discount method and apply either a percentage or a fixed invoice amount.</p>
+                                        </div>
+                                        <div class="retail-finance-fields retail-finance-fields-discount">
+                                            <div class="field">
+                                                <label for="retail-order-discount-type">Discount Type</label>
+                                                <select id="retail-order-discount-type" class="select" ${financialDisabledAttr}>
+                                                    ${renderDiscountTypeOptions(featureState.saleDraft.orderDiscountType)}
+                                                </select>
+                                            </div>
+                                            <div class="field">
+                                                <label for="retail-order-discount-percentage">Invoice Discount %</label>
+                                                <input
+                                                    id="retail-order-discount-percentage"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderDiscountPercentage}"
+                                                    ${(featureState.saleDraft.orderDiscountType === "Percentage" && canEditFinancials) ? "" : "disabled"}>
+                                            </div>
+                                            <div class="field">
+                                                <label for="retail-order-discount-amount">Invoice Discount Amount</label>
+                                                <input
+                                                    id="retail-order-discount-amount"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderDiscountAmount}"
+                                                    ${(featureState.saleDraft.orderDiscountType === "Fixed" && canEditFinancials) ? "" : "disabled"}>
+                                            </div>
+                                        </div>
+                                        <div class="retail-finance-chip-row">
+                                            <article class="retail-finance-chip">
+                                                <span>Line Discount</span>
+                                                <strong>${formatCurrency(summary.totalLineDiscount)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Invoice Discount</span>
+                                                <strong>${formatCurrency(summary.orderDiscountAmount)}</strong>
+                                            </article>
+                                        </div>
+                                    </section>
+
+                                    <section class="retail-finance-section">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Tax</p>
+                                            <p class="panel-copy">Product-level CGST and SGST flow in from the worksheet. Use invoice tax for any order-level adjustment.</p>
+                                        </div>
+                                        <div class="retail-finance-fields retail-finance-fields-tax">
+                                            <div class="field">
+                                                <label for="retail-order-tax-percentage">Invoice Tax %</label>
+                                                <input
+                                                    id="retail-order-tax-percentage"
+                                                    class="input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value="${featureState.saleDraft.orderTaxPercentage}" ${financialDisabledAttr}>
+                                            </div>
+                                        </div>
+                                        <div class="retail-finance-chip-row">
+                                            <article class="retail-finance-chip">
+                                                <span>CGST</span>
+                                                <strong>${formatCurrency(summary.totalCGST)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>SGST</span>
+                                                <strong>${formatCurrency(summary.totalSGST)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Item Tax</span>
+                                                <strong>${formatCurrency(summary.totalItemLevelTax)}</strong>
+                                            </article>
+                                            <article class="retail-finance-chip">
+                                                <span>Order Tax</span>
+                                                <strong>${formatCurrency(summary.orderLevelTaxAmount)}</strong>
+                                            </article>
+                                        </div>
+                                    </section>
+
+                                    <aside class="retail-finance-totals">
+                                        <div class="retail-finance-section-head">
+                                            <p class="workspace-form-section-kicker">Totals</p>
+                                            <p class="panel-copy">Review the final invoice picture before saving the sale.</p>
+                                        </div>
+                                        <div class="retail-finance-total-list">
+                                            <div class="retail-finance-total-row">
+                                                <span>Subtotal</span>
+                                                <strong>${formatCurrency(summary.itemsSubtotal)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>After Discounts</span>
+                                                <strong>${formatCurrency(summary.finalTaxableAmount)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Total Tax</span>
+                                                <strong>${formatCurrency(summary.totalTax)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Applied Payment</span>
+                                                <strong>${formatCurrency(summary.appliedPayment)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Donations</span>
+                                                <strong>${formatCurrency(displayedDonation)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row retail-finance-total-row-strong">
+                                                <span>Grand Total</span>
+                                                <strong>${formatCurrency(summary.grandTotal)}</strong>
+                                            </div>
+                                            ${(isViewMode || isEditMode || isReturnMode || isVoidMode) ? `
+                                                <div class="retail-finance-total-row retail-finance-total-row-danger">
+                                                    <span>Total Expense</span>
+                                                    <strong>-${formatCurrency(workspaceTotalExpenses)}</strong>
+                                                </div>
+                                            ` : ""}
+                                            ${isReturnMode ? `
+                                                <div class="retail-finance-total-row retail-finance-total-row-danger">
+                                                    <span>Return Value (Est.)</span>
+                                                    <strong>-${formatCurrency(returnDraftSummary.totalAmount)}</strong>
+                                                </div>
+                                                <div class="retail-finance-total-row">
+                                                    <span>Projected Grand Total</span>
+                                                    <strong>${formatCurrency(projectedGrandTotal)}</strong>
+                                                </div>
+                                            ` : ""}
+                                            <div class="retail-finance-total-row">
+                                                <span>Balance Due</span>
+                                                <strong>${formatCurrency(isReturnMode ? projectedBalanceDue : (isViewMode || isEditModeLimited) ? workspaceBalanceDue : summary.balanceDue)}</strong>
+                                            </div>
+                                            <div class="retail-finance-total-row">
+                                                <span>Credit Balance</span>
+                                                <strong>${formatCurrency(displayedCreditBalance)}</strong>
+                                            </div>
+                                        </div>
+                                        ${hasPersistedSaleStatus ? `
+                                            <div class="retail-finance-status-row">
+                                                <span class="summary-label">Payment Status</span>
+                                                <span class="summary-value retail-summary-status">${paymentStatus}</span>
+                                            </div>
+                                        ` : ""}
+                                    </aside>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${isReturnMode ? `
+                        <section class="workspace-form-section retail-return-reason-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Return Details</p>
+                                <p class="panel-copy">Capture the return date and reason after you finalize return quantities and review invoice impact.</p>
+                            </div>
+                            <div class="workspace-form-section-grid">
+                                <div class="field">
+                                    <label for="retail-return-date">Return Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="retail-return-date" class="input" type="date" value="${featureState.returnDraft.returnDate || ""}" required>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="retail-return-reason">Return Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="retail-return-reason" class="textarea" placeholder="State why these products are being returned" required>${featureState.returnDraft.reason || ""}</textarea>
+                                </div>
+                            </div>
+                            <div class="retail-return-preview-row">
+                                <article class="retail-finance-chip">
+                                    <span>Selected Qty</span>
+                                    <strong id="retail-return-selected-qty">${returnDraftSummary.totalQuantity}</strong>
+                                </article>
+                                <article class="retail-finance-chip">
+                                    <span>Estimated Return Value</span>
+                                    <strong id="retail-return-selected-amount">${formatCurrency(returnDraftSummary.totalAmount)}</strong>
+                                </article>
+                            </div>
+                        </section>
+                    ` : ""}
+
+                    <div class="form-actions">
+                        <button id="retail-reset-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : isReturnMode ? "Cancel Return" : isVoidMode ? "Cancel Void" : "Reset"}
+                        </button>
+                        ${isViewMode ? `
+                            <button id="retail-open-returns-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.warning}</span>
+                                Returns
+                            </button>
+                            <button id="retail-open-payments-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.payment}</span>
+                                Payments
+                            </button>
+                            <button id="retail-download-pdf-button" class="button button-primary-alt" type="button">
+                                <span class="button-icon">${icons.download}</span>
+                                Download PDF
+                            </button>
+                        ` : isReturnMode ? `
+                            <button class="button button-primary-alt" type="submit">
+                                <span class="button-icon">${icons.warning}</span>
+                                Process Return
+                            </button>
+                        ` : isVoidMode ? `
+                            <button class="button button-danger-soft" type="submit">
+                                <span class="button-icon">${icons.warning}</span>
+                                Void Sale
+                            </button>
+                        ` : `
+                            <button class="button button-primary-alt" type="submit">
+                                <span class="button-icon">${isEditMode ? icons.edit : icons.plus}</span>
+                                ${isEditMode ? (isEditModeLimited ? "Save Limited Changes" : "Update Retail Sale") : "Save Retail Sale"}
+                            </button>
+                        `}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.retail}</span>
+                    <div>
+                        <h3>Sales History</h3>
+                        <p class="panel-copy">Review direct retail sales across stores, with invoice totals, payments received, and current balances.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span id="retail-history-visible-count" class="status-pill">${filteredHistoryCount} visible</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="toolbar">
+                    <div>
+                        <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
+                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Return History for audit review, Payments for collections, Expense for sale-linked cost adjustments, and More Actions for safeguarded operations like voiding.</p>
+                    </div>
+                    <div class="search-wrap">
+                        <span class="search-icon">${icons.search}</span>
+                        <input
+                            id="retail-sales-search"
+                            class="input toolbar-search"
+                            type="search"
+                            placeholder="Search voucher, customer, store, or status"
+                            value="${featureState.searchTerm}">
+                    </div>
+                </div>
+                <div class="ag-shell">
+                    <div id="retail-sales-grid" class="ag-theme-alpine moneta-grid" style="height: 520px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+        ${renderRetailSaleActionsModal()}
+        ${renderRetailReturnHistoryModal()}
+        ${renderRetailPaymentModal(snapshot)}
+        ${renderRetailExpenseModal(expenseModalSale)}
+    `;
+}
+
+function syncRetailWorksheetGrid() {
+    const snapshot = getState();
+    const gridElement = document.getElementById("retail-worksheet-grid");
+    setRetailWorksheetMode(isRetailReturnMode() ? "return" : "standard");
+    setRetailWorksheetReadOnly(isRetailWorksheetLockedMode());
+    initializeRetailWorksheetGrid(gridElement, rows => {
+        featureState.lineItemDrafts = Object.fromEntries(rows.map(row => [row.productId, {
+            productName: row.productName || "",
+            categoryId: row.categoryId || "",
+            categoryName: row.categoryName || "",
+            quantity: Number(row.quantity) || 0,
+            returnQuantity: Number(row.returnQuantity) || 0,
+            unitPrice: Number(row.unitPrice) || 0,
+            lineDiscountPercentage: Number(row.lineDiscountPercentage) || 0,
+            cgstPercentage: Number(row.cgstPercentage) || 0,
+            sgstPercentage: Number(row.sgstPercentage) || 0,
+            lineTotal: calculateWorksheetLineTotal(row)
+        }]));
+        renderRetailStoreView();
+    });
+    refreshRetailWorksheetGrid(buildRetailWorksheetRows(snapshot));
+    updateRetailWorksheetGridSearch(featureState.worksheetSearchTerm);
+}
+
+function syncRetailSalesGrid() {
+    const gridElement = document.getElementById("retail-sales-grid");
+    initializeRetailSalesGrid(gridElement, count => {
+        featureState.filteredSalesCount = count;
+        const countBadge = document.getElementById("retail-history-visible-count");
+        if (countBadge) {
+            countBadge.textContent = `${count} visible`;
+        }
+    });
+    refreshRetailSalesGrid(getSalesHistoryRows());
+    updateRetailSalesGridSearch(featureState.searchTerm);
+}
+
+function syncRetailExpenseHistoryGrid() {
+    if (!featureState.expenseModalOpen) return;
+
+    const gridElement = document.getElementById("retail-expense-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailExpenseHistoryGrid(gridElement);
+    refreshRetailExpenseHistoryGrid(featureState.expenseHistory);
+
+    const historyCount = document.getElementById("retail-expense-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.expenseHistory.length} expense record(s) linked to this sale.`;
+    }
+}
+
+function syncRetailPaymentHistoryGrid() {
+    if (!featureState.paymentModalOpen) return;
+
+    const gridElement = document.getElementById("retail-payment-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailPaymentHistoryGrid(gridElement);
+    refreshRetailPaymentHistoryGrid(featureState.payments);
+
+    const historyCount = document.getElementById("retail-payment-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.payments.length} payment record(s) linked to this sale.`;
+    }
+}
+
+function syncRetailReturnHistoryGrid() {
+    if (!featureState.returnHistoryModalOpen) return;
+
+    const gridElement = document.getElementById("retail-return-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailReturnHistoryGrid(gridElement);
+    refreshRetailReturnHistoryGrid(featureState.returnHistoryRows);
+
+    const historyCount = document.getElementById("retail-return-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.returnHistoryRows.length} return record(s) linked to this sale.`;
+    }
+}
+
+function ensureRetailSalesListener(snapshot) {
+    if (!snapshot.currentUser || snapshot.currentRoute !== "#/retail-store") {
+        featureState.unsubscribeSales?.();
+        featureState.unsubscribeSales = null;
+        featureState.sales = [];
+        closeRetailSaleActionsModalState();
+        closeRetailPaymentModalState();
+        closeRetailReturnHistoryModalState();
+        closeRetailReturnModalState();
+        closeRetailExpenseModalState();
+        return;
+    }
+
+    if (featureState.unsubscribeSales) return;
+
+    featureState.unsubscribeSales = subscribeToRetailSales(
+        snapshot.currentUser,
+        rows => {
+            featureState.sales = rows;
+
+            if (featureState.workspaceMode === "view" && featureState.viewingSaleId) {
+                const viewingSale = rows.find(entry => entry.id === featureState.viewingSaleId) || null;
+                if (!viewingSale) {
+                    resetRetailWorkspace();
+                    showToast("The sale you were viewing is no longer available.", "warning", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (featureState.workspaceMode === "edit" && featureState.editingSaleId) {
+                const editingSale = rows.find(entry => entry.id === featureState.editingSaleId) || null;
+                if (!editingSale) {
+                    resetRetailWorkspace();
+                    showToast("The sale you were editing is no longer available.", "warning", {
+                        title: "Retail Store"
+                    });
+                } else {
+                    const latestScope = resolveRetailSaleEditScope(editingSale);
+                    if (latestScope === "none") {
+                        resetRetailWorkspace();
+                        showToast("This sale was voided and can no longer be edited.", "warning", {
+                            title: "Retail Store"
+                        });
+                    } else if (latestScope !== featureState.editModeScope) {
+                        loadSaleIntoEditWorkspace(editingSale);
+                        showToast(
+                            latestScope === "limited"
+                                ? "Edit scope changed to Limited because linked payment/expense data was added."
+                                : "Edit scope changed to Full.",
+                            "info",
+                            { title: "Retail Store" }
+                        );
+                    }
+                }
+            }
+
+            if (featureState.workspaceMode === "return" && featureState.returningSaleId) {
+                const returnSale = rows.find(entry => entry.id === featureState.returningSaleId) || null;
+                if (!returnSale || returnSale.saleStatus === "Voided") {
+                    resetRetailWorkspace();
+                    showToast("The selected sale is no longer available for returns.", "warning", {
+                        title: "Retail Store"
+                    });
+                } else if ((Number(returnSale.lineItemCount) || (returnSale.lineItems || []).length || 0) <= 0) {
+                    resetRetailWorkspace();
+                    showToast("All products on this sale were already returned.", "info", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (featureState.workspaceMode === "void" && featureState.voidingSaleId) {
+                const voidingSale = rows.find(entry => entry.id === featureState.voidingSaleId) || null;
+                if (!voidingSale) {
+                    resetRetailWorkspace();
+                    showToast("The selected sale is no longer available for void.", "warning", {
+                        title: "Retail Store"
+                    });
+                } else if (normalizeText(voidingSale.saleStatus || "").toLowerCase() === "voided") {
+                    resetRetailWorkspace();
+                    showToast("This sale was already voided.", "info", {
+                        title: "Retail Store"
+                    });
+                } else if ((Number(voidingSale.returnCount) || 0) > 0 || normalizeText(voidingSale.returnStatus || "Not Returned").toLowerCase() !== "not returned") {
+                    resetRetailWorkspace();
+                    showToast("This sale can no longer be voided because return records were added.", "warning", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (featureState.returnHistoryModalOpen && featureState.returnHistorySaleId) {
+                const returnHistorySale = rows.find(entry => entry.id === featureState.returnHistorySaleId) || null;
+                if (!returnHistorySale) {
+                    closeRetailReturnHistoryModalState();
+                    showToast("The selected sale is no longer available for return history review.", "warning", {
+                        title: "Retail Store"
+                    });
+                }
+            }
+
+            if (getState().currentRoute === "#/retail-store") {
+                renderRetailStoreView();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail sales:", error);
+            showToast("Could not load retail sales history.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function ensureCatalogueItemsListener(snapshot) {
+    const catalogueId = featureState.saleDraft.salesCatalogueId;
+    const shouldListenToCatalogue = featureState.workspaceMode === "create"
+        || (isRetailEditMode() && featureState.editModeScope === "full");
+
+    if (!shouldListenToCatalogue) {
+        clearCatalogueItemsSubscription();
+        return;
+    }
+
+    if (!catalogueId || snapshot.currentRoute !== "#/retail-store") {
+        clearCatalogueItemsSubscription();
+        return;
+    }
+
+    if (featureState.catalogueItemsListenerId === catalogueId && featureState.unsubscribeCatalogueItems) return;
+
+    clearCatalogueItemsSubscription();
+    featureState.catalogueItemsListenerId = catalogueId;
+    featureState.unsubscribeCatalogueItems = subscribeToRetailCatalogueItems(
+        catalogueId,
+        rows => {
+            featureState.selectedCatalogueItems = rows;
+
+            if (getState().currentRoute === "#/retail-store") {
+                renderRetailStoreView();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail catalogue items:", error);
+            showToast("Could not load products for the selected catalogue.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function syncSaleTypeBehavior() {
+    if (featureState.workspaceMode !== "create") return;
+    if (featureState.saleDraft.saleType !== "Sample") return;
+
+    featureState.saleDraft.paymentType = "Pay Later";
+    featureState.saleDraft.paymentMode = "";
+    featureState.saleDraft.amountReceived = "";
+    featureState.saleDraft.transactionRef = "";
+    featureState.saleDraft.paymentNotes = "";
+    featureState.saleDraft.orderDiscountType = "Percentage";
+    featureState.saleDraft.orderDiscountPercentage = "100";
+    featureState.saleDraft.orderDiscountAmount = "";
+}
+
+function consumePendingLeadConversionPackage() {
+    const rawPackage = sessionStorage.getItem(LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY);
+    if (!rawPackage) return null;
+
+    sessionStorage.removeItem(LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY);
+
+    try {
+        const parsed = JSON.parse(rawPackage);
+        if (!parsed || !parsed.leadId || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+            return null;
+        }
+
+        return parsed;
+    } catch (error) {
+        console.error("[Moneta] Invalid lead conversion package:", error);
+        return null;
+    }
+}
+
+function applyPendingLeadConversionPackage() {
+    const conversionPackage = consumePendingLeadConversionPackage();
+    if (!conversionPackage) return;
+
+    resetRetailWorkspace();
+    featureState.workspaceMode = "create";
+    featureState.saleDraft = {
+        ...createDefaultSaleDraft(),
+        customerName: conversionPackage.customerName || "",
+        customerPhone: conversionPackage.customerPhone || "",
+        customerEmail: conversionPackage.customerEmail || "",
+        customerAddress: conversionPackage.customerAddress || "",
+        salesCatalogueId: conversionPackage.catalogueId || "",
+        saleNotes: conversionPackage.leadNotes || "",
+        sourceType: conversionPackage.sourceType || "lead",
+        sourceLeadId: conversionPackage.leadId || "",
+        sourceLeadBusinessId: conversionPackage.businessLeadId || "",
+        sourceLeadCustomerName: conversionPackage.customerName || "",
+        sourceQuoteId: conversionPackage.sourceQuoteId || "",
+        sourceQuoteNumber: conversionPackage.sourceQuoteNumber || "",
+        sourceQuoteStatus: conversionPackage.sourceQuoteStatus || ""
+    };
+    if (conversionPackage.preferredStore && RETAIL_STORES.includes(conversionPackage.preferredStore)) {
+        featureState.saleDraft.store = conversionPackage.preferredStore;
+    }
+    featureState.lineItemDrafts = Object.fromEntries((conversionPackage.items || []).map(item => [item.productId, {
+        productName: item.productName || "",
+        categoryId: item.categoryId || "",
+        categoryName: item.categoryName || "-",
+        quantity: Math.max(0, Math.floor(Number(item.quantity) || 0)),
+        returnQuantity: 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        lineDiscountPercentage: Number(item.lineDiscountPercentage) || 0,
+        cgstPercentage: Number(item.cgstPercentage) || 0,
+        sgstPercentage: Number(item.sgstPercentage) || 0,
+        lineTotal: calculateWorksheetLineTotal(item)
+    }]));
+    featureState.pendingLeadFocus = true;
+
+    const warningCount = Array.isArray(conversionPackage.warnings)
+        ? conversionPackage.warnings.length
+        : 0;
+    showToast(
+        warningCount > 0
+            ? `Lead loaded with ${warningCount} conversion check(s). Review before saving the sale.`
+            : `Lead ${conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
+        warningCount > 0 ? "warning" : "success",
+        { title: "Retail Store" }
+    );
+}
+
+export function renderRetailStoreView() {
+    const snapshot = getState();
+    applyPendingLeadConversionPackage();
+    syncSaleTypeBehavior();
+    ensureRetailSalesListener(snapshot);
+    ensureCatalogueItemsListener(snapshot);
+    renderRetailStoreViewShell(snapshot);
+    syncRetailWorksheetGrid();
+    syncRetailSalesGrid();
+    syncRetailReturnHistoryGrid();
+    syncRetailPaymentHistoryGrid();
+    syncRetailExpenseHistoryGrid();
+    syncRetailPaymentDraftPreview();
+    syncRetailReturnDraftPreview();
+
+    if (featureState.pendingLeadFocus) {
+        featureState.pendingLeadFocus = false;
+        window.requestAnimationFrame(() => {
+            const focusTarget = document.getElementById(featureState.saleDraft.store ? "retail-voucher-number" : "retail-store");
+            focusTarget?.focus();
+            document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+    }
+}
+
+function updateDraftField(field, value) {
+    featureState.saleDraft[field] = value;
+}
+
+function buildSaleDraftFromSale(sale) {
+    return {
+        saleDate: toDateInputValue(sale.saleDate),
+        customerName: sale.customerInfo?.name || "",
+        customerPhone: sale.customerInfo?.phone || "",
+        customerEmail: sale.customerInfo?.email || "",
+        customerAddress: sale.customerInfo?.address || "",
+        manualVoucherNumber: sale.manualVoucherNumber || "",
+        store: sale.store || "",
+        saleType: sale.saleType || "Revenue",
+        salesCatalogueId: sale.salesCatalogueId || "",
+        paymentType: Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) > 0 ? "Pay Now" : "Pay Later",
+        paymentMode: sale.latestPaymentMode || "",
+        amountReceived: Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) > 0
+            ? String(Number(sale.financials?.amountTendered ?? sale.totalAmountPaid) || 0)
+            : "",
+        transactionRef: "",
+        paymentNotes: "",
+        saleNotes: sale.saleNotes || "",
+        orderDiscountType: sale.financials?.orderDiscountType || "Percentage",
+        orderDiscountPercentage: sale.financials?.orderDiscountType === "Percentage"
+            ? String(Number(sale.financials?.orderDiscountValue) || 0)
+            : "",
+        orderDiscountAmount: sale.financials?.orderDiscountType === "Fixed"
+            ? String(Number(sale.financials?.orderDiscountValue) || 0)
+            : "",
+        orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
+        sourceType: sale.sourceType || "",
+        sourceLeadId: sale.sourceLeadId || "",
+        sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
+        sourceLeadCustomerName: sale.sourceLeadCustomerName || "",
+        sourceQuoteId: sale.sourceQuoteId || "",
+        sourceQuoteNumber: sale.sourceQuoteNumber || "",
+        sourceQuoteStatus: sale.sourceQuoteStatus || "",
+        editReason: "",
+        voidReason: ""
+    };
+}
+
+function buildLineItemDraftsFromSale(sale) {
+    return Object.fromEntries((sale.lineItems || []).map(item => [item.productId, {
+        productName: item.productName || "",
+        categoryId: item.categoryId || "",
+        categoryName: item.categoryName || "",
+        quantity: Number(item.quantity) || 0,
+        returnQuantity: 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        lineDiscountPercentage: Number(item.lineDiscountPercentage) || 0,
+        cgstPercentage: Number(item.cgstPercentage) || 0,
+        sgstPercentage: Number(item.sgstPercentage) || 0,
+        lineTotal: Number(item.lineTotal) || 0
+    }]));
+}
+
+function loadSaleIntoViewWorkspace(sale) {
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+    featureState.workspaceMode = "view";
+    featureState.viewingSaleId = sale.id;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = null;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+}
+
+function loadSaleIntoEditWorkspace(sale) {
+    const editScope = resolveRetailSaleEditScope(sale);
+
+    if (editScope === "none") {
+        showToast("Voided retail sales cannot be edited.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+    featureState.workspaceMode = "edit";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = sale.id;
+    featureState.voidingSaleId = null;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = editScope;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+    return true;
+}
+
+function loadSaleIntoReturnWorkspace(sale) {
+    if (!sale?.id) return false;
+
+    if ((sale.saleStatus || "") === "Voided") {
+        showToast("Voided sales cannot accept returns.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    if ((Number(sale.lineItemCount) || (sale.lineItems || []).length || 0) <= 0) {
+        showToast("There are no remaining products on this sale to return.", "warning", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+
+    featureState.workspaceMode = "return";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = null;
+    featureState.returningSaleId = sale.id;
+    featureState.editModeScope = null;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.returnDraft = createDefaultRetailReturnDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+    return true;
+}
+
+function loadSaleIntoVoidWorkspace(sale) {
+    if (!sale?.id) return false;
+
+    if (normalizeText(sale.saleStatus || "").toLowerCase() === "voided") {
+        showToast("This retail sale has already been voided.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    if ((Number(sale.returnCount) || 0) > 0 || normalizeText(sale.returnStatus || "Not Returned").toLowerCase() !== "not returned") {
+        showToast("Sales with posted returns cannot be voided.", "error", {
+            title: "Retail Store"
+        });
+        return false;
+    }
+
+    closeRetailPaymentModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailReturnModalState();
+    closeRetailExpenseModalState();
+
+    featureState.workspaceMode = "void";
+    featureState.viewingSaleId = null;
+    featureState.editingSaleId = null;
+    featureState.voidingSaleId = sale.id;
+    featureState.returningSaleId = null;
+    featureState.editModeScope = null;
+    featureState.saleDraft = buildSaleDraftFromSale(sale);
+    featureState.lineItemDrafts = buildLineItemDraftsFromSale(sale);
+    featureState.saleDraft.voidReason = "";
+    featureState.selectedCatalogueItems = [];
+    clearCatalogueItemsSubscription();
+    return true;
+}
+
+function handleRetailInput(target) {
+    const fieldMap = {
+        "retail-sale-date": "saleDate",
+        "retail-voucher-number": "manualVoucherNumber",
+        "retail-customer-name": "customerName",
+        "retail-customer-phone": "customerPhone",
+        "retail-customer-email": "customerEmail",
+        "retail-customer-address": "customerAddress",
+        "retail-amount-received": "amountReceived",
+        "retail-transaction-ref": "transactionRef",
+        "retail-payment-notes": "paymentNotes",
+        "retail-sale-notes": "saleNotes",
+        "retail-edit-reason": "editReason",
+        "retail-void-reason": "voidReason",
+        "retail-order-discount-percentage": "orderDiscountPercentage",
+        "retail-order-discount-amount": "orderDiscountAmount",
+        "retail-order-tax-percentage": "orderTaxPercentage",
+        "retail-payment-entry-date": "paymentDate",
+        "retail-payment-entry-amount": "amountPaid",
+        "retail-payment-entry-mode": "paymentMode",
+        "retail-payment-entry-reference": "transactionRef",
+        "retail-payment-entry-notes": "notes",
+        "retail-return-date": "returnDate",
+        "retail-return-reason": "reason",
+        "retail-expense-date": "expenseDate",
+        "retail-expense-justification": "justification",
+        "retail-expense-amount": "amount"
+    };
+
+    if (target.id === "retail-sales-search") {
+        featureState.searchTerm = target.value || "";
+        updateRetailSalesGridSearch(featureState.searchTerm);
+        return;
+    }
+
+    if (target.id === "retail-worksheet-search") {
+        featureState.worksheetSearchTerm = target.value || "";
+        updateRetailWorksheetGridSearch(featureState.worksheetSearchTerm);
+        return;
+    }
+
+    if (target.id === "retail-payment-void-reason") {
+        featureState.paymentVoidReason = target.value || "";
+        return;
+    }
+
+    if (target.id.startsWith("retail-return-qty-")) {
+        const productId = target.dataset.productId || target.id.replace("retail-return-qty-", "");
+        if (!productId) return;
+        featureState.lineItemDrafts[productId] = {
+            ...(featureState.lineItemDrafts[productId] || {}),
+            returnQuantity: target.value || ""
+        };
+        syncRetailReturnDraftPreview();
+        return;
+    }
+
+    const field = fieldMap[target.id];
+    if (!field) return;
+
+    if (target.id.startsWith("retail-payment-entry-")) {
+        featureState.paymentDraft[field] = target.value || "";
+        if (target.id === "retail-payment-entry-amount") {
+            syncRetailPaymentDraftPreview();
+        }
+        return;
+    }
+
+    if (target.id.startsWith("retail-expense-")) {
+        featureState.expenseDraft[field] = target.value || "";
+        return;
+    }
+
+    if (target.id.startsWith("retail-return-")) {
+        featureState.returnDraft[field] = target.value || "";
+        return;
+    }
+
+    updateDraftField(field, target.value || "");
+}
+
+function handleRetailChange(target) {
+    switch (target.id) {
+        case "retail-store":
+            updateDraftField("store", target.value || "");
+            applyStoreTaxDefaultsToLineItemDrafts(target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-sale-type":
+            updateDraftField("saleType", target.value || "Revenue");
+            syncSaleTypeBehavior();
+            renderRetailStoreView();
+            return;
+        case "retail-sales-catalogue":
+            updateDraftField("salesCatalogueId", target.value || "");
+            featureState.lineItemDrafts = {};
+            clearCatalogueItemsSubscription();
+            renderRetailStoreView();
+            return;
+        case "retail-payment-type":
+            updateDraftField("paymentType", target.value || "Pay Later");
+            if (target.value !== "Pay Now") {
+                featureState.saleDraft.paymentMode = "";
+                featureState.saleDraft.amountReceived = "";
+                featureState.saleDraft.transactionRef = "";
+                featureState.saleDraft.paymentNotes = "";
+            }
+            renderRetailStoreView();
+            return;
+        case "retail-payment-mode":
+            updateDraftField("paymentMode", target.value || "");
+            return;
+        case "retail-amount-received":
+            updateDraftField("amountReceived", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-order-discount-type":
+            updateDraftField("orderDiscountType", target.value || "Percentage");
+            if (featureState.saleDraft.orderDiscountType === "Fixed") {
+                featureState.saleDraft.orderDiscountPercentage = "";
+            } else {
+                featureState.saleDraft.orderDiscountAmount = "";
+            }
+            renderRetailStoreView();
+            return;
+        case "retail-order-discount-percentage":
+            updateDraftField("orderDiscountPercentage", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-order-discount-amount":
+            updateDraftField("orderDiscountAmount", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-order-tax-percentage":
+            updateDraftField("orderTaxPercentage", target.value || "");
+            renderRetailStoreView();
+            return;
+        case "retail-payment-entry-date":
+            featureState.paymentDraft.paymentDate = target.value || "";
+            return;
+        case "retail-payment-entry-mode":
+            featureState.paymentDraft.paymentMode = target.value || "";
+            return;
+        case "retail-payment-entry-reference":
+            featureState.paymentDraft.transactionRef = target.value || "";
+            return;
+        case "retail-payment-entry-notes":
+            featureState.paymentDraft.notes = target.value || "";
+            return;
+        case "retail-payment-entry-amount":
+            featureState.paymentDraft.amountPaid = target.value || "";
+            syncRetailPaymentDraftPreview();
+            return;
+        case "retail-payment-void-reason":
+            featureState.paymentVoidReason = target.value || "";
+            return;
+        case "retail-expense-date":
+            featureState.expenseDraft.expenseDate = target.value || "";
+            return;
+        case "retail-expense-justification":
+            featureState.expenseDraft.justification = target.value || "";
+            return;
+        case "retail-expense-amount":
+            featureState.expenseDraft.amount = target.value || "";
+            return;
+        case "retail-return-date":
+            featureState.returnDraft.returnDate = target.value || "";
+            return;
+        case "retail-return-reason":
+            featureState.returnDraft.reason = target.value || "";
+            return;
+        case "retail-void-reason":
+            featureState.saleDraft.voidReason = target.value || "";
+            return;
+        default:
+            if (target.id?.startsWith("retail-return-qty-")) {
+                const productId = target.dataset.productId || target.id.replace("retail-return-qty-", "");
+                if (!productId) return;
+                featureState.lineItemDrafts[productId] = {
+                    ...(featureState.lineItemDrafts[productId] || {}),
+                    returnQuantity: target.value || ""
+                };
+                syncRetailReturnDraftPreview();
+            }
+            break;
+    }
+}
+
+async function handleRetailSaleSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const snapshot = getState();
+        const isEditMode = featureState.workspaceMode === "edit";
+        const isReturnMode = featureState.workspaceMode === "return";
+        const isVoidMode = featureState.workspaceMode === "void";
+        const returningSale = isReturnMode
+            ? featureState.sales.find(entry => entry.id === featureState.returningSaleId) || null
+            : null;
+        const voidingSale = isVoidMode
+            ? getVoidWorkspaceSale()
+            : null;
+        const customerName = normalizeText(featureState.saleDraft.customerName) || "-";
+        const selectedStore = normalizeText(featureState.saleDraft.store) || "-";
+        const selectedCatalogueLabel = snapshot.masterData.salesCatalogues
+            ?.find(catalogue => catalogue.id === featureState.saleDraft.salesCatalogueId)?.catalogueName || "-";
+        const editingSale = isEditMode
+            ? featureState.sales.find(entry => entry.id === featureState.editingSaleId) || null
+            : null;
+
+        if (isReturnMode && !returningSale) {
+            throw new Error("The retail sale selected for return could not be found. Refresh and try again.");
+        }
+
+        if (isEditMode && !editingSale) {
+            throw new Error("The retail sale being edited could not be found. Refresh and try again.");
+        }
+
+        if (isVoidMode && !voidingSale) {
+            throw new Error("The retail sale selected for void could not be found. Refresh and try again.");
+        }
+
+        if (isReturnMode) {
+            const draftSummary = calculateRetailReturnDraftSummary(returningSale);
+            const result = await runProgressToastFlow({
+                title: "Processing Product Return",
+                initialMessage: "Reading current sale and return worksheet...",
+                initialProgress: 18,
+                initialStep: "Step 1 of 4",
+                successTitle: "Return Processed",
+                successMessage: "The product return was recorded successfully."
+            }, async ({ update }) => {
+                update("Validating return reason, product quantities, and inventory impact...", 42, "Step 2 of 4");
+                update("Writing return record, restoring stock, and recalculating sale totals...", 78, "Step 3 of 4");
+
+                const result = await addRetailSaleReturn(
+                    returningSale,
+                    {
+                        returnDate: featureState.returnDraft.returnDate,
+                        reason: featureState.returnDraft.reason,
+                        items: draftSummary.selectedItems
+                    },
+                    snapshot.currentUser
+                );
+
+                update("Refreshing retail history and workspace totals...", 95, "Step 4 of 4");
+                resetRetailWorkspace();
+                renderRetailStoreView();
+                return result;
+            });
+
+            showToast("Product return processed.", "success", {
+                title: "Retail Store"
+            });
+            ProgressToast.hide(0);
+            await showSummaryModal({
+                title: "Retail Return Processed",
+                message: "The selected return quantities were posted and inventory was restored.",
+                details: [
+                    { label: "Sale", value: returningSale.saleId || returningSale.manualVoucherNumber || "-" },
+                    { label: "Returned Quantity", value: String(result.summary.returnedQuantity || 0) },
+                    { label: "Return Value", value: formatCurrency(result.summary.returnedAmount || 0) },
+                    { label: "Next Grand Total", value: formatCurrency(result.summary.nextGrandTotal || 0) },
+                    { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue || 0) },
+                    { label: "Credit Balance", value: formatCurrency(result.summary.creditBalance || 0) }
+                ]
+            });
+            return;
+        }
+
+        if (isVoidMode) {
+            const confirmed = await showConfirmationModal({
+                title: "Void Retail Sale",
+                message: `Void sale ${voidingSale.saleId || voidingSale.manualVoucherNumber || voidingSale.id}?`,
+                details: [
+                    { label: "Customer", value: voidingSale.customerInfo?.name || "-" },
+                    { label: "Grand Total", value: formatCurrency(voidingSale.financials?.grandTotal || 0) },
+                    { label: "Amount Paid", value: formatCurrency(voidingSale.totalAmountPaid || 0) },
+                    { label: "Expenses", value: formatCurrency(voidingSale.financials?.totalExpenses || 0) }
+                ],
+                note: "This action cannot be undone. Moneta will reverse active payments and expenses, restore remaining product quantities to inventory, and mark this sale as voided.",
+                confirmText: "Void Sale",
+                tone: "danger"
+            });
+
+            if (!confirmed) return;
+
+            const result = await runProgressToastFlow({
+                title: "Voiding Retail Sale",
+                initialMessage: "Reading sale, linked payments, expenses, and inventory impact...",
+                initialProgress: 18,
+                initialStep: "Step 1 of 5",
+                successTitle: "Retail Sale Voided",
+                successMessage: "The retail sale was voided and reversal entries were posted successfully."
+            }, async ({ update }) => {
+                update("Validating void reason and reversal constraints...", 38, "Step 2 of 5");
+                update("Writing payment and expense reversals, and restoring inventory...", 74, "Step 3 of 5");
+                const result = await voidRetailSale(
+                    voidingSale,
+                    { voidReason: featureState.saleDraft.voidReason },
+                    snapshot.currentUser
+                );
+                update("Refreshing retail history and workspace context...", 90, "Step 4 of 5");
+                resetRetailWorkspace();
+                renderRetailStoreView();
+                update("Void audit trail is now in place.", 96, "Step 5 of 5");
+                return result;
+            });
+
+            showToast("Retail sale voided successfully.", "success", {
+                title: "Retail Store"
+            });
+            ProgressToast.hide(0);
+            await showSummaryModal({
+                title: "Retail Sale Voided",
+                message: "The sale was voided, linked financial entries were reversed, and inventory was restored.",
+                details: [
+                    { label: "Sale", value: voidingSale.saleId || voidingSale.manualVoucherNumber || "-" },
+                    { label: "Payments Voided", value: String(result.voidedPaymentCount || 0) },
+                    { label: "Donations Voided", value: String(result.voidedDonationCount || 0) },
+                    { label: "Expenses Voided", value: String(result.voidedExpenseCount || 0) },
+                    { label: "Stock Qty Restored", value: String(result.reversedQuantity || 0) }
+                ],
+                note: `Payment reversal total: ${formatCurrency(result.voidedPaymentAmount || 0)} | Donation reversal total: ${formatCurrency(result.voidedDonationAmount || 0)} | Expense reversal total: ${formatCurrency(result.voidedExpenseAmount || 0)}`
+            });
+            return;
+        }
+
+        const result = await runProgressToastFlow({
+            title: isEditMode ? "Updating Retail Sale" : "Saving Retail Sale",
+            initialMessage: isEditMode ? "Reading the selected sale and edit workspace..." : "Reading the retail workspace...",
+            initialProgress: 14,
+            initialStep: "Step 1 of 5",
+            successTitle: isEditMode ? "Retail Sale Updated" : "Retail Sale Saved",
+            successMessage: isEditMode
+                ? "The retail sale update was saved successfully."
+                : "The retail sale was saved successfully."
+        }, async ({ update }) => {
+            update(
+                isEditMode
+                    ? "Validating allowed edit scope, customer details, and update payload..."
+                    : "Validating the customer, catalogue, product worksheet, and settlement details...",
+                34,
+                "Step 2 of 5"
+            );
+
+            update(
+                isEditMode
+                    ? "Writing sale updates and applying any inventory deltas..."
+                    : "Writing the sale and payment data to the database...",
+                74,
+                "Step 3 of 5"
+            );
+
+            const result = isEditMode
+                ? await saveRetailSaleUpdate(
+                    editingSale,
+                    {
+                        ...featureState.saleDraft,
+                        editScope: featureState.editModeScope || "limited",
+                        lineItems: buildRetailWorksheetRows(snapshot)
+                    },
+                    snapshot.currentUser,
+                    featureState.selectedCatalogueItems
+                )
+                : await saveRetailSale(
+                    {
+                        ...featureState.saleDraft,
+                        lineItems: buildRetailWorksheetRows(snapshot)
+                    },
+                    snapshot.currentUser,
+                    snapshot.masterData.salesCatalogues,
+                    featureState.selectedCatalogueItems
+                );
+
+            update("Refreshing retail history and inventory-aware worksheet context...", 90, "Step 4 of 5");
+            resetRetailWorkspace();
+            renderRetailStoreView();
+            update("Retail history is up to date.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(isEditMode ? "Retail sale updated." : "Retail sale saved.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: isEditMode ? "Retail Sale Updated" : "Retail Sale Saved",
+            message: isEditMode
+                ? "The sale update was completed successfully with the configured edit safeguards."
+                : "The direct sale has been recorded successfully.",
+            details: [
+                { label: "Customer", value: customerName },
+                { label: "Store", value: selectedStore },
+                { label: "Catalogue", value: selectedCatalogueLabel },
+                ...(normalizeText(featureState.saleDraft.sourceLeadId)
+                    ? [{
+                        label: "Source Lead",
+                        value: featureState.saleDraft.sourceLeadBusinessId || featureState.saleDraft.sourceLeadId
+                    }]
+                    : []),
+                { label: "Payment Status", value: result.summary.paymentStatus },
+                { label: "Grand Total", value: formatCurrency(result.summary.grandTotal) },
+                { label: "Donation", value: formatCurrency(result.summary.donationAmount || 0) },
+                { label: "Edit Scope", value: isEditMode ? (result.summary.editScope || featureState.editModeScope || "limited") : "New Sale" }
+            ]
+        });
+    } catch (error) {
+        const isVoidMode = featureState.workspaceMode === "void";
+        console.error(isVoidMode ? "[Moneta] Retail sale void failed:" : "[Moneta] Retail sale save/update failed:", error);
+        ProgressToast.hide(0);
+        showToast(
+            error?.message || (isVoidMode ? "Could not void the retail sale." : "Could not save the retail sale."),
+            "error",
+            {
+            title: "Retail Store"
+            }
+        );
+    }
+}
+
+function handleRetailReset() {
+    resetRetailWorkspace();
+    renderRetailStoreView();
+}
+
+async function handleRetailSaleView(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    loadSaleIntoViewWorkspace(sale);
+    renderRetailStoreView();
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleRetailSaleEdit(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    if (!loadSaleIntoEditWorkspace(sale)) return;
+
+    renderRetailStoreView();
+    if (featureState.editModeScope === "limited") {
+        showToast("Limited edit mode enabled due to linked payments, expenses, or returns. Only customer details and sale notes can be changed.", "info", {
+            title: "Retail Store"
+        });
+    }
+
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const focusTarget = featureState.editModeScope === "full"
+        ? document.getElementById("retail-voucher-number")
+        : document.getElementById("retail-customer-phone");
+    focusTarget?.focus();
+}
+
+function handleRetailSalePayments(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    openRetailPaymentModal(sale);
+    renderRetailStoreView();
+    document.getElementById("retail-payment-entry-amount")?.focus();
+}
+
+function handleRetailSaleReturn(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    if (!loadSaleIntoReturnWorkspace(sale)) return;
+
+    renderRetailStoreView();
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("retail-return-reason")?.focus();
+}
+
+function handleRetailSaleVoid(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    if (!loadSaleIntoVoidWorkspace(sale)) return;
+
+    renderRetailStoreView();
+    document.getElementById("retail-store-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("retail-void-reason")?.focus();
+}
+
+function handleRetailSaleReturnHistory(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    openRetailReturnHistoryModal(sale);
+    renderRetailStoreView();
+}
+
+function handleRetailSaleMore(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    openRetailSaleActionsModal(sale);
+    renderRetailStoreView();
+}
+
+async function handleRetailSaleCreditNotePdf(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    const rowId = button.dataset.returnRowId || "";
+    let targetReturn = null;
+
+    if (rowId) {
+        targetReturn = featureState.returnHistoryRows.find(entry => entry.id === rowId) || null;
+    }
+
+    try {
+        await runProgressToastFlow({
+            title: "Preparing Credit Note PDF",
+            initialMessage: "Reading return records...",
+            initialProgress: 20,
+            initialStep: "Step 1 of 4",
+            successTitle: "Credit Note Ready",
+            successMessage: "The credit note PDF was generated successfully."
+        }, async ({ update }) => {
+            update("Resolving return entry and audit context...", 46, "Step 2 of 4");
+            if (!targetReturn) {
+                const returns = await getRetailSaleReturns(sale.id);
+                targetReturn = returns[0] || null;
+            }
+
+            if (!targetReturn) {
+                throw new Error("No returns are available for this sale yet.");
+            }
+
+            update("Rendering credit note layout...", 76, "Step 3 of 4");
+            await downloadRetailReturnCreditNotePdf(sale, targetReturn);
+
+            update("Download started successfully.", 96, "Step 4 of 4");
+        });
+
+        showToast("Credit note PDF download started.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+    } catch (error) {
+        console.error("[Moneta] Credit note PDF generation failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not generate the credit note PDF.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
+async function handleRetailPaymentSubmit(event) {
+    event.preventDefault();
+
+    if (featureState.voidingPaymentId) {
+        showToast("Void mode is active. Use Confirm Void Payment or Cancel Void.", "info", {
+            title: "Retail Store"
+        });
+        return;
+    }
+
+    const snapshot = getState();
+    const sale = getPaymentModalSale();
+
+    if (!sale) {
+        showToast("The selected sale could not be found. Reopen the payment modal and try again.", "error", {
+            title: "Retail Store"
+        });
+        closeRetailPaymentModal();
+        return;
+    }
+
+    try {
+        const result = await runProgressToastFlow({
+            title: "Recording Retail Payment",
+            initialMessage: "Reading sale and payment draft details...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Payment Recorded",
+            successMessage: "The retail payment was recorded successfully."
+        }, async ({ update }) => {
+            update("Validating payment date, mode, reference, and outstanding balance...", 42, "Step 2 of 4");
+            update("Writing payment entry and updating sale balance...", 76, "Step 3 of 4");
+            const result = await saveRetailSalePayment(featureState.paymentDraft, sale, snapshot.masterData, snapshot.currentUser);
+            update("Refreshing sales history and payment ledger view...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        featureState.paymentDraft = createDefaultRetailPaymentDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+        featureState.paymentVoidReason = "";
+        featureState.voidingPaymentId = null;
+        renderRetailStoreView();
+
+        showToast("Retail payment recorded.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Retail Payment Recorded",
+            message: "The payment was linked to the sale and the customer balance was updated.",
+            details: [
+                { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+                { label: "Amount Received", value: formatCurrency(result.summary.paymentAmount) },
+                { label: "Applied To Balance", value: formatCurrency(result.summary.appliedAmount || 0) },
+                { label: "Donation", value: formatCurrency(result.summary.donationAmount || 0) },
+                { label: "Payment Status", value: result.summary.nextPaymentStatus || "-" },
+                { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail payment save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not record the retail payment.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
+async function handleRetailPaymentVoid(button) {
+    const paymentId = button.dataset.paymentId || "";
+    const payment = featureState.payments.find(entry => entry.id === paymentId) || null;
+    const isConfirmAction = normalizeText(button.dataset.voidAction || "").toLowerCase() === "confirm";
+
+    if (!payment) {
+        showToast("The selected payment could not be found. Refresh payment history and try again.", "error", {
+            title: "Retail Store"
+        });
+        return;
+    }
+
+    if (!isConfirmAction) {
+        if (featureState.voidingPaymentId !== paymentId) {
+            featureState.voidingPaymentId = paymentId;
+            featureState.paymentVoidReason = "";
+        }
+        renderRetailStoreView();
+        showToast("Void mode opened for this payment. Enter a reason and confirm.", "info", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    if (featureState.voidingPaymentId !== paymentId) {
+        featureState.voidingPaymentId = paymentId;
+        featureState.paymentVoidReason = "";
+        renderRetailStoreView();
+        showToast("Void mode was reset for this payment. Enter a reason and confirm again.", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    const sale = getPaymentModalSale();
+    if (!sale) {
+        showToast("The linked sale could not be found. Reopen payments and try again.", "error", {
+            title: "Retail Store"
+        });
+        return;
+    }
+
+    const reason = normalizeText(featureState.paymentVoidReason);
+    if (!reason) {
+        showToast("Enter a void reason before voiding a payment.", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    if (reason.length < 8) {
+        showToast("Please enter a more descriptive void reason (minimum 8 characters).", "warning", {
+            title: "Retail Store"
+        });
+        document.getElementById("retail-payment-void-reason")?.focus();
+        return;
+    }
+
+    const appliedAmount = Number(payment.amountApplied ?? payment.amountPaid) || 0;
+    const receivedAmount = Number(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid) || 0;
+    const donationAmount = Number(payment.donationAmount) || 0;
+
+    const confirmed = await showConfirmationModal({
+        title: "Void Retail Payment",
+        message: `Void payment ${payment.paymentId || payment.id}?`,
+        details: [
+            { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+            { label: "Amount Applied", value: formatCurrency(appliedAmount) },
+            { label: "Amount Received", value: formatCurrency(receivedAmount) },
+            { label: "Donation", value: formatCurrency(donationAmount) }
+        ],
+        note: "This action cannot be undone. Moneta will void this payment, create a reversal entry, and reopen the sale balance by the applied amount.",
+        confirmText: "Void Payment",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const snapshot = getState();
+        const result = await runProgressToastFlow({
+            title: "Voiding Retail Payment",
+            initialMessage: "Reading payment and linked sale state...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Retail Payment Voided",
+            successMessage: "The payment was voided and reversed successfully."
+        }, async ({ update }) => {
+            update("Validating void reason, eligibility, and sale linkage...", 42, "Step 2 of 4");
+            update("Writing payment void updates and reversal entries...", 76, "Step 3 of 4");
+            const result = await voidRetailSalePayment(payment, reason, sale, snapshot.currentUser);
+            update("Refreshing payment history and sale totals...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        featureState.voidingPaymentId = null;
+        featureState.paymentVoidReason = "";
+        renderRetailStoreView();
+
+        showToast("Retail payment voided successfully.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Retail Payment Voided",
+            message: "The payment was voided, reversal entries were posted, and sale totals were recalculated.",
+            details: [
+                { label: "Payment", value: result.summary.paymentId || payment.paymentId || payment.id || "-" },
+                { label: "Applied Reversed", value: formatCurrency(result.summary.amountApplied || 0) },
+                { label: "Received Reversed", value: formatCurrency(result.summary.amountReceived || 0) },
+                { label: "Donation Reversed", value: formatCurrency(result.summary.donationAmount || 0) },
+                { label: "Next Status", value: result.summary.nextPaymentStatus || "-" },
+                { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue || 0) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail payment void failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not void this retail payment.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
+function handleRetailPaymentVoidCancel() {
+    featureState.voidingPaymentId = null;
+    featureState.paymentVoidReason = "";
+    renderRetailStoreView();
+}
+
+async function handleRetailSalePdf(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    try {
+        await runProgressToastFlow({
+            title: "Preparing PDF Invoice",
+            initialMessage: "Reading the sale record...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "PDF Ready",
+            successMessage: "The invoice PDF was generated successfully."
+        }, async ({ update }) => {
+            update("Loading linked payment details...", 42, "Step 2 of 4");
+            const payments = await getRetailSalePayments(sale.id);
+
+            update("Rendering the invoice layout...", 74, "Step 3 of 4");
+            await downloadRetailSalePdf(sale, payments[0] || null);
+
+            update("Download started successfully.", 96, "Step 4 of 4");
+        });
+
+        showToast("Invoice PDF download started.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+    } catch (error) {
+        console.error("[Moneta] Retail sale PDF generation failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not generate the invoice PDF.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
+function handleRetailSaleExpense(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    openRetailExpenseModal(sale);
+    renderRetailStoreView();
+    document.getElementById("retail-expense-justification")?.focus();
+}
+
+async function handleRetailExpenseSubmit(event) {
+    event.preventDefault();
+
+    const snapshot = getState();
+    const sale = featureState.sales.find(entry => entry.id === featureState.expenseSaleId) || null;
+    if (!sale) {
+        showToast("The selected sale could not be found. Reopen the expense modal and try again.", "error", {
+            title: "Retail Store"
+        });
+        closeRetailExpenseModal();
+        return;
+    }
+
+    try {
+        const result = await runProgressToastFlow({
+            title: "Saving Sale Expense",
+            initialMessage: "Reading the selected retail sale...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Expense Added",
+            successMessage: "The sale expense was recorded successfully."
+        }, async ({ update }) => {
+            update("Validating expense date, justification, and amount...", 42, "Step 2 of 4");
+
+            update("Writing expense entry and updating sale balance...", 76, "Step 3 of 4");
+            const result = await addRetailSaleExpense(sale, featureState.expenseDraft, snapshot.currentUser);
+
+            update("Refreshing sale history and linked expense records...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        closeRetailExpenseModalState();
+        featureState.expenseDraft = createDefaultExpenseDraft(sale.saleDate?.toDate ? sale.saleDate.toDate() : sale.saleDate || new Date());
+        renderRetailStoreView();
+
+        showToast("Sale expense added.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Sale Expense Recorded",
+            message: "The expense has been linked to the sale and financial totals were updated.",
+            details: [
+                { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+                { label: "Expense Amount", value: formatCurrency(result.summary.expenseAmount) },
+                { label: "Total Expenses", value: formatCurrency(result.summary.nextTotalExpenses) },
+                { label: "Balance Due", value: formatCurrency(result.summary.nextBalanceDue) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail expense save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not add the sale expense.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
+function bindRetailStoreDomEvents() {
+    const root = document.getElementById("retail-store-root");
+    if (!root || root.dataset.bound === "true") return;
+
+    root.addEventListener("input", event => {
+        handleRetailInput(event.target);
+    });
+
+    root.addEventListener("change", event => {
+        handleRetailChange(event.target);
+    });
+
+    root.addEventListener("submit", event => {
+        if (event.target.closest("#retail-store-form")) {
+            handleRetailSaleSubmit(event);
+            return;
+        }
+
+        if (event.target.closest("#retail-payment-form")) {
+            handleRetailPaymentSubmit(event);
+            return;
+        }
+
+        if (event.target.closest("#retail-expense-form")) {
+            handleRetailExpenseSubmit(event);
+        }
+    });
+
+    root.addEventListener("click", event => {
+        const targetElement = event.target instanceof Element
+            ? event.target
+            : event.target?.parentElement;
+        if (!targetElement) return;
+
+        const resetButton = targetElement.closest("#retail-reset-button");
+        const moreButton = targetElement.closest(".retail-sale-more-button");
+        const editButton = targetElement.closest(".retail-sale-edit-button");
+        const returnButton = targetElement.closest(".retail-sale-return-button");
+        const returnHistoryButton = targetElement.closest(".retail-sale-return-history-button");
+        const returnNotePdfButton = targetElement.closest(".retail-return-note-pdf-button");
+        const paymentsButton = targetElement.closest(".retail-sale-payments-button");
+        const viewButton = targetElement.closest(".retail-sale-view-button");
+        const expenseButton = targetElement.closest(".retail-sale-expense-button");
+        const pdfButton = targetElement.closest(".retail-sale-pdf-button");
+        const saleActionEditButton = targetElement.closest(".retail-sale-action-edit");
+        const saleActionReturnButton = targetElement.closest(".retail-sale-action-return");
+        const saleActionReturnHistoryButton = targetElement.closest(".retail-sale-action-return-history");
+        const saleActionExpenseButton = targetElement.closest(".retail-sale-action-expense");
+        const saleActionPdfButton = targetElement.closest(".retail-sale-action-pdf");
+        const saleActionCreditNoteButton = targetElement.closest(".retail-sale-action-credit-note");
+        const saleActionVoidButton = targetElement.closest(".retail-sale-action-void");
+        const saleActionsCloseButton = targetElement.closest("#retail-sale-actions-close-button");
+        const saleActionsBackdrop = targetElement.closest("#retail-sale-actions-modal");
+        const viewModeReturnsButton = targetElement.closest("#retail-open-returns-button");
+        const viewModePaymentsButton = targetElement.closest("#retail-open-payments-button");
+        const workspacePdfButton = targetElement.closest("#retail-download-pdf-button");
+        const returnHistoryCloseButton = targetElement.closest("#retail-return-history-close-button");
+        const returnHistoryModalBackdrop = targetElement.closest("#retail-return-history-modal");
+        const paymentCancelButton = targetElement.closest("#retail-payment-cancel-button") || targetElement.closest(".retail-payment-close-trigger");
+        const paymentVoidButton = targetElement.closest(".retail-payment-void-button");
+        const paymentVoidConfirmButton = targetElement.closest("#retail-payment-void-confirm-button");
+        const paymentVoidCancelButton = targetElement.closest("#retail-payment-void-cancel-button");
+        const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
+        const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
+        const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
+
+        if (resetButton) {
+            handleRetailReset();
+            return;
+        }
+
+        if (moreButton) {
+            handleRetailSaleMore(moreButton);
+            return;
+        }
+
+        if (viewButton) {
+            handleRetailSaleView(viewButton);
+            return;
+        }
+
+        if (editButton) {
+            handleRetailSaleEdit(editButton);
+            return;
+        }
+
+        if (returnButton) {
+            handleRetailSaleReturn(returnButton);
+            return;
+        }
+
+        if (returnHistoryButton) {
+            handleRetailSaleReturnHistory(returnHistoryButton);
+            return;
+        }
+
+        if (paymentsButton) {
+            handleRetailSalePayments(paymentsButton);
+            return;
+        }
+
+        if (paymentVoidButton) {
+            handleRetailPaymentVoid(paymentVoidButton);
+            return;
+        }
+
+        if (paymentVoidConfirmButton) {
+            handleRetailPaymentVoid(paymentVoidConfirmButton);
+            return;
+        }
+
+        if (paymentVoidCancelButton) {
+            handleRetailPaymentVoidCancel();
+            return;
+        }
+
+        if (expenseButton) {
+            handleRetailSaleExpense(expenseButton);
+            return;
+        }
+
+        if (pdfButton) {
+            handleRetailSalePdf(pdfButton);
+            return;
+        }
+
+        if (returnNotePdfButton && featureState.returnHistorySaleId) {
+            handleRetailSaleCreditNotePdf({
+                dataset: {
+                    saleId: featureState.returnHistorySaleId,
+                    returnRowId: returnNotePdfButton.dataset.returnRowId || ""
+                }
+            });
+            return;
+        }
+
+        if (saleActionEditButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleEdit(saleActionEditButton);
+            return;
+        }
+
+        if (saleActionReturnButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleReturn(saleActionReturnButton);
+            return;
+        }
+
+        if (saleActionReturnHistoryButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleReturnHistory(saleActionReturnHistoryButton);
+            return;
+        }
+
+        if (saleActionExpenseButton) {
+            closeRetailSaleActionsModalState();
+            handleRetailSaleExpense(saleActionExpenseButton);
+            return;
+        }
+
+        if (saleActionPdfButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSalePdf(saleActionPdfButton);
+            return;
+        }
+
+        if (saleActionCreditNoteButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSaleCreditNotePdf(saleActionCreditNoteButton);
+            return;
+        }
+
+        if (saleActionVoidButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSaleVoid(saleActionVoidButton);
+            return;
+        }
+
+        if (viewModeReturnsButton && featureState.viewingSaleId) {
+            handleRetailSaleReturn({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (viewModePaymentsButton && featureState.viewingSaleId) {
+            handleRetailSalePayments({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (workspacePdfButton && featureState.viewingSaleId) {
+            handleRetailSalePdf({ dataset: { saleId: featureState.viewingSaleId } });
+            return;
+        }
+
+        if (saleActionsCloseButton) {
+            closeRetailSaleActionsModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-sale-actions-modal" && saleActionsBackdrop) {
+            closeRetailSaleActionsModal();
+            return;
+        }
+
+        if (returnHistoryCloseButton) {
+            closeRetailReturnHistoryModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-return-history-modal" && returnHistoryModalBackdrop) {
+            closeRetailReturnHistoryModal();
+            return;
+        }
+
+        if (paymentCancelButton) {
+            closeRetailPaymentModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-payment-modal" && paymentModalBackdrop) {
+            closeRetailPaymentModal();
+            return;
+        }
+
+        if (expenseCancelButton) {
+            closeRetailExpenseModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-expense-modal" && expenseModalBackdrop) {
+            closeRetailExpenseModal();
+        }
+    });
+
+    root.dataset.bound = "true";
+}
+
+export function initializeRetailStoreFeature() {
+    subscribe(snapshot => {
+        ensureRetailSalesListener(snapshot);
+        ensureCatalogueItemsListener(snapshot);
+
+        if (snapshot.currentRoute === "#/retail-store") {
+            renderRetailStoreView();
+            bindRetailStoreDomEvents();
+        }
+    });
+}
