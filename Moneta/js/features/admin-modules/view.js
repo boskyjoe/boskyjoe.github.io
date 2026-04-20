@@ -269,31 +269,6 @@ function getReorderPolicyDraft(snapshot) {
     };
 }
 
-function renderReorderPolicyReferenceCard(title, policy = {}, context = {}) {
-    return `
-        <div class="reports-audit-note">
-            <strong>${title}:</strong> ${buildReorderPolicyScopeSummary(policy, context)}
-        </div>
-        <div class="reports-audit-note">
-            ${buildReorderPolicyExplanation(policy, context)}
-        </div>
-    `;
-}
-
-function renderReorderPolicyExampleCard(title, policy = {}, context = {}, note = "") {
-    return `
-        <div class="reports-audit-note">
-            <strong>${title}:</strong> ${buildReorderPolicyScopeSummary(policy, context)}
-        </div>
-        ${note ? `
-            <div class="reports-audit-note">${note}</div>
-        ` : ""}
-        <div class="reports-audit-note">
-            ${buildReorderPolicyWorkedExample(policy, context)}
-        </div>
-    `;
-}
-
 function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) {
     const scopeType = policyDraft.scopeType || DEFAULT_REORDER_POLICY.scopeType;
 
@@ -320,6 +295,59 @@ function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) 
     return "No active category or global fallback is available right now for this product rule.";
 }
 
+function buildReorderPolicyFlowEntries(effectiveDraft = {}, fallbackChain = [], defaultPreviewPolicy = null) {
+    const entries = [];
+    const seenIds = new Set();
+
+    const addEntry = (title, caption, policy) => {
+        entries.push({ title, caption, policy });
+        if (policy?.id) {
+            seenIds.add(policy.id);
+        }
+    };
+
+    addEntry(
+        effectiveDraft.isSystemDefault ? "Moneta Default Rule" : "Rule You Are Editing",
+        effectiveDraft.isSystemDefault
+            ? "Moneta treats this as the protected global fallback rule."
+            : "Moneta checks this rule first for the context you are editing.",
+        effectiveDraft
+    );
+
+    fallbackChain.forEach(entry => {
+        addEntry(
+            entry.title,
+            "Moneta moves here next only if it cannot use the earlier rule.",
+            entry.policy
+        );
+    });
+
+    if (defaultPreviewPolicy && !effectiveDraft.isSystemDefault && !seenIds.has(defaultPreviewPolicy.id)) {
+        addEntry(
+            "Moneta Default Rule",
+            "This is the final fallback Moneta uses when no narrower active rule takes over.",
+            defaultPreviewPolicy
+        );
+    }
+
+    return entries;
+}
+
+function renderReorderPolicyFlowCards(entries = [], context = {}) {
+    return entries.map((entry, index) => `
+        <article class="report-audit-card">
+            <p class="report-audit-label">Step ${index + 1}</p>
+            <p class="report-audit-value">${entry.title}</p>
+            <p class="panel-copy panel-copy-tight">${buildReorderPolicyScopeSummary(entry.policy, context)}</p>
+            <div class="reports-audit-note">${buildReorderPolicyExplanation(entry.policy, context)}</div>
+            <div class="reports-audit-note"><strong>Why this step exists:</strong> ${entry.caption}</div>
+        </article>
+        ${index < (entries.length - 1) ? `
+            <div class="reports-audit-note" style="margin:0.1rem 0 0.6rem;text-align:center;font-weight:700;">Next fallback step</div>
+        ` : ""}
+    `).join("");
+}
+
 function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editingRecord = null) {
     const context = buildPolicyContext(snapshot);
     const systemDefaultPolicy = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
@@ -339,6 +367,10 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
         snapshot.masterData.reorderPolicies || [],
         editingRecord?.id || ""
     );
+    const flowEntries = buildReorderPolicyFlowEntries(effectiveDraft, fallbackChain, defaultPreviewPolicy);
+    const defaultExampleText = defaultPreviewPolicy
+        ? buildReorderPolicyWorkedExample(defaultPreviewPolicy, context)
+        : "";
 
     return `
         <div class="panel-card">
@@ -346,86 +378,34 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
                 <div class="panel-title-wrap">
                     <span class="panel-icon panel-icon-alt">${icons.reports}</span>
                     <div>
-                        <h3>This Rule In Simple English</h3>
-                        <p class="panel-copy">Use this to confirm the draft rule reads clearly before you save it.</p>
+                        <h3>Moneta Reorder Rule Flow</h3>
+                        <p class="panel-copy">Review the rule chain in order, then use the example panel to understand how Moneta will apply it.</p>
                     </div>
                 </div>
             </div>
             <div class="panel-body">
-                <div class="reports-audit-note">
-                    <strong>Draft Rule:</strong> ${draftScopeSummary}
-                </div>
-                <div class="reports-audit-note">
-                    ${draftExplanation}
-                </div>
-            </div>
-        </div>
-        <div class="panel-card" style="margin-top:1rem;">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
+                <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));align-items:start;">
                     <div>
-                        <h3>Worked Example</h3>
-                        <p class="panel-copy">A simple example using the numbers from this rule.</p>
+                        <div class="reports-audit-note">
+                            <strong>Rule you are editing:</strong> ${draftScopeSummary}
+                        </div>
+                        ${renderReorderPolicyFlowCards(flowEntries, context)}
                     </div>
+                    <article class="report-audit-card">
+                        <p class="report-audit-label">Example</p>
+                        <p class="report-audit-value">How Moneta Uses This Flow</p>
+                        <div class="reports-audit-note"><strong>This rule in simple English:</strong> ${draftExplanation}</div>
+                        <div class="reports-audit-note"><strong>Example using this rule:</strong> ${workedExample}</div>
+                        ${defaultPreviewPolicy && !effectiveDraft.isSystemDefault ? `
+                            <div class="reports-audit-note"><strong>Moneta default rule:</strong> ${buildReorderPolicyScopeSummary(defaultPreviewPolicy, context)}</div>
+                            <div class="reports-audit-note"><strong>Example using the default rule:</strong> ${defaultExampleText}</div>
+                        ` : `
+                            <div class="reports-audit-note"><strong>Moneta default rule:</strong> This draft is the current default rule, so the default example is the same as the draft example.</div>
+                        `}
+                        <div class="reports-audit-note"><strong>How fallback works:</strong> ${precedenceSummary}</div>
+                        <div class="reports-audit-note"><strong>Fallback note:</strong> ${buildReorderPolicyFallbackNotice(effectiveDraft, fallbackChain)}</div>
+                    </article>
                 </div>
-            </div>
-            <div class="panel-body">
-                <div class="reports-audit-note">
-                    <strong>Draft Rule Example:</strong> ${workedExample}
-                </div>
-            </div>
-        </div>
-        <div class="panel-card" style="margin-top:1rem;">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
-                    <div>
-                        <h3>Moneta Default Rule</h3>
-                        <p class="panel-copy">This is the global fallback rule Moneta keeps loaded as reorder master data.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="panel-body">
-                ${defaultPreviewPolicy ? `
-                    ${renderReorderPolicyReferenceCard("Default Rule", defaultPreviewPolicy, context)}
-                    ${renderReorderPolicyExampleCard(
-                        "Default Rule Example",
-                        defaultPreviewPolicy,
-                        context,
-                        isFirstGlobalDraft
-                            ? "This draft will become the first protected Moneta default rule when you save it."
-                            : isSystemDefaultReorderPolicy(editingRecord)
-                            ? "You are editing the Moneta default rule, so this default example matches the current draft."
-                            : ""
-                    )}
-                ` : `
-                    <div class="reports-audit-note">
-                        No Moneta default rule is saved yet. The first global rule you save will become the protected default.
-                    </div>
-                `}
-            </div>
-        </div>
-        <div class="panel-card" style="margin-top:1rem;">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
-                    <div>
-                        <h3>How Moneta Applies This Rule</h3>
-                        <p class="panel-copy">Moneta always prefers the most specific active rule.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="reports-audit-note">
-                    ${precedenceSummary}
-                </div>
-                <div class="reports-audit-note">
-                    <strong>Relevant Fallback Chain:</strong> ${buildReorderPolicyFallbackNotice(effectiveDraft, fallbackChain)}
-                </div>
-                ${fallbackChain.length ? `
-                    ${fallbackChain.map(entry => renderReorderPolicyReferenceCard(entry.title, entry.policy, context)).join("")}
-                ` : ""}
             </div>
         </div>
     `;
@@ -761,8 +741,8 @@ function renderReorderPolicyForm(snapshot) {
                             <div class="panel-title-wrap">
                                 <span class="panel-icon panel-icon-alt">${icons.reports}</span>
                                 <div>
-                                    <h3>Plain-English Rule Preview</h3>
-                                    <p class="panel-copy">This preview helps the admin understand the draft rule, a worked example, and the fallback/default rule chain.</p>
+                                    <h3>Moneta Reorder Rule Flow</h3>
+                                    <p class="panel-copy">This preview shows the rule sequence Moneta will follow and an example of how the fallback flow works.</p>
                                 </div>
                             </div>
                         </div>

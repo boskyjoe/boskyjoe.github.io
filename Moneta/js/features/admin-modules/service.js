@@ -15,6 +15,7 @@ import {
     updateReorderPolicyRecord,
     updateSeasonRecord
 } from "./repository.js";
+import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
@@ -328,6 +329,31 @@ function findExistingPolicy(existingPolicies = [], docId = "") {
     return (existingPolicies || []).find(policy => policy?.id === docId) || null;
 }
 
+function getPolicyUpdatedTime(policy = {}) {
+    const candidates = [policy.updatedOn, policy.createdOn];
+
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (typeof candidate.toDate === "function") {
+            return candidate.toDate().getTime();
+        }
+
+        const parsed = new Date(candidate);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.getTime();
+        }
+    }
+
+    return 0;
+}
+
+function findLatestGlobalPolicy(existingPolicies = []) {
+    return (existingPolicies || [])
+        .filter(policy => normalizeText(policy.scopeType) === "global")
+        .slice()
+        .sort((left, right) => getPolicyUpdatedTime(right) - getPolicyUpdatedTime(left))[0] || null;
+}
+
 function findDuplicatePolicyName(existingPolicies = [], policyName = "", docId = "") {
     return (existingPolicies || []).find(policy =>
         normalizeText(policy.policyName).toLowerCase() === normalizeText(policyName).toLowerCase()
@@ -549,6 +575,35 @@ export async function toggleReorderPolicyStatus(docId, nextValue, user, existing
     }
 
     await setReorderPolicyActiveStatus(docId, nextValue, user);
+}
+
+export async function ensureSystemDefaultReorderPolicy(user, existingPolicies = [], existingCategories = [], existingProducts = []) {
+    if (!user || user.role !== "admin") {
+        return { mode: "skip" };
+    }
+
+    if ((existingPolicies || []).some(policy => isSystemDefaultReorderPolicy(policy))) {
+        return { mode: "existing" };
+    }
+
+    const latestGlobalPolicy = findLatestGlobalPolicy(existingPolicies);
+    if (latestGlobalPolicy) {
+        await updateReorderPolicyRecord(latestGlobalPolicy.id, {
+            isSystemDefault: true,
+            isActive: true
+        }, user);
+        return { mode: "promote", policyId: latestGlobalPolicy.id };
+    }
+
+    const { docId, ...policyData } = validateReorderPolicyPayload(
+        DEFAULT_REORDER_POLICY_SEED,
+        existingPolicies,
+        existingCategories,
+        existingProducts
+    );
+
+    await createReorderPolicyRecord(policyData, user);
+    return { mode: "create", policyId: docId || "" };
 }
 
 export async function getAdminEditRestriction(entity, record) {

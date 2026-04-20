@@ -17,6 +17,8 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
+import { ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
+import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
 
 function initializeFirebase() {
     if (!firebase.apps.length) {
@@ -77,6 +79,39 @@ function initializeDataLifecycle() {
     });
 }
 
+function initializeReorderPolicySeedLifecycle() {
+    let isEnsuring = false;
+
+    subscribe(async snapshot => {
+        if (isEnsuring) return;
+
+        const user = snapshot.currentUser;
+        if (!user || user.role !== "admin" || !snapshot.isMasterDataReady) {
+            return;
+        }
+
+        const hasSystemDefault = (snapshot.masterData.reorderPolicies || []).some(policy => isSystemDefaultReorderPolicy(policy));
+        if (hasSystemDefault) {
+            return;
+        }
+
+        isEnsuring = true;
+
+        try {
+            await ensureSystemDefaultReorderPolicy(
+                user,
+                snapshot.masterData.reorderPolicies,
+                snapshot.masterData.categories,
+                snapshot.masterData.products
+            );
+        } catch (error) {
+            console.error("[Moneta] Failed to ensure the system default reorder policy:", error);
+        } finally {
+            isEnsuring = false;
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initializeFirebase();
     initializeShell();
@@ -98,4 +133,5 @@ document.addEventListener("DOMContentLoaded", () => {
     bindGlobalUiEvents();
     initializeDebugSubscription();
     initializeDataLifecycle();
+    initializeReorderPolicySeedLifecycle();
 });
