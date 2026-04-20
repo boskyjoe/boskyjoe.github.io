@@ -442,6 +442,10 @@ export function validateReorderPolicyPayload(payload, existingPolicies = [], exi
     const shouldBecomeSystemDefault = scopeType === "global" && (!systemDefaultPolicy || systemDefaultPolicy.id === docId);
     const isSystemDefault = isSystemDefaultReorderPolicy(existingRecord) || shouldBecomeSystemDefault;
 
+    if (scopeType === "global" && systemDefaultPolicy && systemDefaultPolicy.id !== docId) {
+        throw new Error("Moneta already has a protected global default rule. Create a category or product override instead.");
+    }
+
     if (scopeType === "category") {
         categoryId = normalizeText(payload.categoryId);
         if (!categoryId) {

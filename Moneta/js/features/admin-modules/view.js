@@ -244,13 +244,16 @@ function renderProductSelectOptions(snapshot, {
 
 function getReorderPolicyDraft(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "reorderPolicies");
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
     const derivedCategoryId = editingRecord?.scopeType === "product"
         ? (editingRecord?.categoryId || inferReorderPolicyCategoryId(snapshot, editingRecord?.productId || ""))
         : (editingRecord?.categoryId || "");
+    const defaultScopeType = editingRecord?.scopeType
+        || (systemDefaultPolicy ? "category" : DEFAULT_REORDER_POLICY.scopeType);
 
     return {
         policyName: editingRecord?.policyName || "",
-        scopeType: editingRecord?.scopeType || DEFAULT_REORDER_POLICY.scopeType,
+        scopeType: defaultScopeType,
         categoryId: derivedCategoryId,
         productId: editingRecord?.productId || "",
         shortWindowDays: editingRecord?.shortWindowDays ?? DEFAULT_REORDER_POLICY.shortWindowDays,
@@ -616,6 +619,7 @@ function renderReorderPolicyForm(snapshot) {
     const draft = getReorderPolicyDraft(snapshot);
     const systemDefaultPolicy = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
     const isSystemDefaultDraft = Boolean(draft.isSystemDefault) || (!editingRecord && draft.scopeType === "global" && !systemDefaultPolicy);
+    const allowGlobalScopeOption = isSystemDefaultDraft || !systemDefaultPolicy;
     const isCategoryScope = draft.scopeType === "category";
     const isProductScope = draft.scopeType === "product";
     const showCategoryField = isCategoryScope || isProductScope;
@@ -644,7 +648,9 @@ function renderReorderPolicyForm(snapshot) {
                         <div class="field">
                             <label for="admin-reorder-policy-scope-type">Scope</label>
                             <select id="admin-reorder-policy-scope-type" class="select" ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule must stay as a global policy.\"" : ""}>
-                                <option value="global" ${draft.scopeType === "global" ? "selected" : ""}>Global Default</option>
+                                ${allowGlobalScopeOption ? `
+                                    <option value="global" ${draft.scopeType === "global" ? "selected" : ""}>Global Default</option>
+                                ` : ""}
                                 <option value="category" ${draft.scopeType === "category" ? "selected" : ""}>Category Override</option>
                                 <option value="product" ${draft.scopeType === "product" ? "selected" : ""}>Product Override</option>
                             </select>
@@ -652,7 +658,9 @@ function renderReorderPolicyForm(snapshot) {
                                 ? "This is the Moneta default rule. It can be updated, but it must remain a global rule."
                                 : (!systemDefaultPolicy && draft.scopeType === "global"
                                     ? "This will become the first protected Moneta default rule."
-                                    : "Choose whether this rule is the global fallback, a category override, or a product override.")}</p>
+                                    : (allowGlobalScopeOption
+                                        ? "Choose whether this rule is the global fallback, a category override, or a product override."
+                                        : "Moneta already has a protected default rule. New rules should be category or product overrides."))}</p>
                         </div>
                         <div class="field" id="admin-reorder-policy-category-field" ${showCategoryField ? "" : "hidden"}>
                             <label for="admin-reorder-policy-category-id">Category</label>
@@ -736,19 +744,8 @@ function renderReorderPolicyForm(snapshot) {
                             <input id="admin-reorder-pack-size" class="input" type="number" min="1" step="1" value="${draft.packSize}">
                         </div>
                     </div>
-                    <div class="panel-card" style="margin-top:1rem;">
-                        <div class="panel-header">
-                            <div class="panel-title-wrap">
-                                <span class="panel-icon panel-icon-alt">${icons.reports}</span>
-                                <div>
-                                    <h3>Moneta Reorder Rule Flow</h3>
-                                    <p class="panel-copy">This preview shows the rule sequence Moneta will follow and an example of how the fallback flow works.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="admin-reorder-policy-explanation" class="panel-body">
-                            ${renderReorderPolicyExplanationPreview(snapshot, draft, editingRecord)}
-                        </div>
+                    <div id="admin-reorder-policy-explanation" style="margin-top:1rem;">
+                        ${renderReorderPolicyExplanationPreview(snapshot, draft, editingRecord)}
                     </div>
                     <div class="form-actions">
                         ${editingRecord ? `
