@@ -1,9 +1,11 @@
+import { getState } from "../../app/store.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
     getMaxReorderPolicyWindowDays,
-    resolvePolicyForProduct
+    resolvePolicyForProduct,
+    resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
@@ -1763,6 +1765,7 @@ function buildReorderRecommendationsReportData({
     truncatedSources = {}
 }) {
     const activePolicies = (reorderPolicies || []).filter(policy => policy?.isActive);
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(activePolicies, { activeOnly: true });
     const detailRows = buildReorderRecommendationRows({
         products,
         categories,
@@ -1803,9 +1806,16 @@ function buildReorderRecommendationsReportData({
                     categoryNameById: buildCategoryNameMap(categories),
                     productNameById: new Map((products || []).map(row => [row.id, row.itemName || ""]))
                 }),
-                isActive: Boolean(policy.isActive)
+                isActive: Boolean(policy.isActive),
+                isSystemDefault: Boolean(policy.isSystemDefault) || policy.id === systemDefaultPolicy?.id
             }))
-            .sort((left, right) => left.scopeSummary.localeCompare(right.scopeSummary) || left.policyName.localeCompare(right.policyName)),
+            .sort((left, right) => {
+                if (Boolean(left.isSystemDefault) !== Boolean(right.isSystemDefault)) {
+                    return left.isSystemDefault ? -1 : 1;
+                }
+
+                return left.scopeSummary.localeCompare(right.scopeSummary) || left.policyName.localeCompare(right.policyName);
+            }),
         detailRows: detailRows.slice(0, 120),
         metadata: {
             truncatedSources,
@@ -1817,8 +1827,9 @@ function buildReorderRecommendationsReportData({
                 consignmentOrders: consignmentOrders.length
             },
             notes: [
-                "Reorder Recommendations is an as-of report that uses the active reorder policy scope hierarchy: product, category, then global.",
-                "Demand is calculated only from the bounded lookback windows required by the active policies."
+                `Reorder Recommendations is an as-of report that uses the active reorder policy scope hierarchy: product, category, then global${systemDefaultPolicy ? ` (${systemDefaultPolicy.policyName || "Moneta Default"})` : ""}.`,
+                "Demand is calculated only from the bounded lookback windows required by the active policies.",
+                "Moneta reuses reorder policy master data already loaded in app state when available, then refreshes from Firestore only when needed."
             ]
         }
     };
@@ -3634,16 +3645,20 @@ export async function getReorderRecommendationsReport(user, { forceRefresh = fal
     }
 
     const startedAt = performance.now();
+    const masterDataPolicies = getState().masterData?.reorderPolicies || [];
+    const shouldReuseMasterDataPolicies = masterDataPolicies.length > 0;
     const [productsResult, categoriesResult, reorderPoliciesResult] = await Promise.all([
         fetchReportWindowedRows(COLLECTIONS.products),
         fetchReportWindowedRows(COLLECTIONS.categories),
-        fetchReportWindowedRows(COLLECTIONS.reorderPolicies)
+        shouldReuseMasterDataPolicies
+            ? Promise.resolve({ rows: masterDataPolicies, truncated: false })
+            : fetchReportWindowedRows(COLLECTIONS.reorderPolicies)
     ]);
     const activePolicies = (reorderPoliciesResult.rows || []).filter(policy => policy?.isActive);
-    const hasActiveGlobalPolicy = activePolicies.some(policy => normalizeText(policy.scopeType) === "global");
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(activePolicies, { activeOnly: true });
 
-    if (!hasActiveGlobalPolicy) {
-        throw new Error("Create at least one active global reorder policy in Admin Modules before using this report.");
+    if (!systemDefaultPolicy) {
+        throw new Error("Create the active Moneta default reorder rule in Admin Modules before using this report.");
     }
 
     const maxLookbackDays = getMaxReorderPolicyWindowDays(activePolicies);

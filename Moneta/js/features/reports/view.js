@@ -1888,7 +1888,7 @@ function renderReorderPolicyOverviewSection(reportData = null) {
                     <tbody>
                         ${rows.length ? rows.map(row => `
                             <tr>
-                                <td>${row.policyName}</td>
+                                <td>${row.policyName}${row.isSystemDefault ? `<br><span class="table-note">Moneta Default Rule</span>` : ""}</td>
                                 <td>${row.scopeSummary}</td>
                                 <td>${row.ruleExplanation}</td>
                             </tr>

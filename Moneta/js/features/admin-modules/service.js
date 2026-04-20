@@ -19,7 +19,9 @@ import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
     DEFAULT_REORDER_POLICY,
+    isSystemDefaultReorderPolicy,
     REORDER_POLICY_SCOPE_TYPES,
+    resolveSystemDefaultPolicy,
     ZERO_DEMAND_BEHAVIORS
 } from "../../shared/reorder-policy.js";
 
@@ -322,6 +324,10 @@ function countActiveGlobalPolicies(policies = [], excludeDocId = "") {
     ).length;
 }
 
+function findExistingPolicy(existingPolicies = [], docId = "") {
+    return (existingPolicies || []).find(policy => policy?.id === docId) || null;
+}
+
 function findDuplicatePolicyName(existingPolicies = [], policyName = "", docId = "") {
     return (existingPolicies || []).find(policy =>
         normalizeText(policy.policyName).toLowerCase() === normalizeText(policyName).toLowerCase()
@@ -348,6 +354,7 @@ function findActiveScopeConflict(existingPolicies = [], candidate = {}, docId = 
 
 export function validateReorderPolicyPayload(payload, existingPolicies = [], existingCategories = [], existingProducts = []) {
     const docId = normalizeText(payload.docId);
+    const existingRecord = findExistingPolicy(existingPolicies, docId);
     const policyName = normalizeText(payload.policyName);
     const scopeType = REORDER_POLICY_SCOPE_TYPES.includes(normalizeText(payload.scopeType))
         ? normalizeText(payload.scopeType)
@@ -398,9 +405,16 @@ export function validateReorderPolicyPayload(payload, existingPolicies = [], exi
         throw new Error(`Policy "${duplicateName.policyName}" already exists.`);
     }
 
+    if (isSystemDefaultReorderPolicy(existingRecord) && scopeType !== "global") {
+        throw new Error("The Moneta default rule must stay as a global policy.");
+    }
+
     let categoryId = "";
     let productId = "";
     const context = buildPolicyContext(existingCategories, existingProducts);
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(existingPolicies, { activeOnly: false });
+    const shouldBecomeSystemDefault = scopeType === "global" && (!systemDefaultPolicy || systemDefaultPolicy.id === docId);
+    const isSystemDefault = isSystemDefaultReorderPolicy(existingRecord) || shouldBecomeSystemDefault;
 
     if (scopeType === "category") {
         categoryId = normalizeText(payload.categoryId);
@@ -455,7 +469,8 @@ export function validateReorderPolicyPayload(payload, existingPolicies = [], exi
         zeroDemandBehavior,
         minimumOrderQty,
         packSize,
-        isActive
+        isActive: isSystemDefault ? true : isActive,
+        isSystemDefault
     };
 
     if (isActive) {
@@ -483,6 +498,10 @@ export async function saveReorderPolicy(payload, user, existingPolicies = [], ex
 
     const { docId, ...policyData } = validateReorderPolicyPayload(payload, existingPolicies, existingCategories, existingProducts);
 
+    if (policyData.isSystemDefault && !policyData.isActive) {
+        throw new Error("The Moneta default rule must stay active.");
+    }
+
     if (policyData.scopeType === "global" && !policyData.isActive && countActiveGlobalPolicies(existingPolicies, docId) === 0) {
         throw new Error("Moneta must always keep one active global reorder policy.");
     }
@@ -493,7 +512,7 @@ export async function saveReorderPolicy(payload, user, existingPolicies = [], ex
     }
 
     if (policyData.scopeType !== "global" && countActiveGlobalPolicies(existingPolicies) === 0) {
-        throw new Error("Create an active global reorder policy before adding narrower overrides.");
+        throw new Error("Create the active Moneta default rule before adding narrower overrides.");
     }
 
     await createReorderPolicyRecord(policyData, user);
@@ -512,6 +531,10 @@ export async function toggleReorderPolicyStatus(docId, nextValue, user, existing
     const record = (existingPolicies || []).find(policy => policy.id === docId) || null;
     if (!record) {
         throw new Error("Reorder policy record could not be found.");
+    }
+
+    if (!nextValue && isSystemDefaultReorderPolicy(record)) {
+        throw new Error("The Moneta default rule can be updated, but it cannot be deactivated.");
     }
 
     if (!nextValue && record.scopeType === "global" && countActiveGlobalPolicies(existingPolicies, docId) === 0) {

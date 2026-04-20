@@ -26,13 +26,22 @@ function seasonWorkflowMarkup(value) {
 }
 
 function actionMarkup(entity, data) {
+    const isProtectedDefault = entity === "reorderPolicies" && data?.isSystemDefault && data?.isActive;
+    const statusClasses = data.isActive ? "grid-action-button-danger" : "grid-action-button-primary";
+
     return `
         <div class="table-actions grid-actions-inline">
             <button class="button grid-action-button grid-action-button-secondary admin-module-edit-button" type="button" data-entity="${entity}" data-record-id="${data.id}">
                 <span class="button-icon">${icons.edit}</span>
                 Edit
             </button>
-            <button class="button grid-action-button ${data.isActive ? "grid-action-button-danger" : "grid-action-button-primary"} admin-module-status-button" type="button" data-entity="${entity}" data-record-id="${data.id}" data-next-status="${data.isActive ? "false" : "true"}">
+            <button
+                class="button grid-action-button ${statusClasses} admin-module-status-button"
+                type="button"
+                data-entity="${entity}"
+                data-record-id="${data.id}"
+                data-next-status="${data.isActive ? "false" : "true"}"
+                ${isProtectedDefault ? "disabled data-disabled-reason=\"The Moneta default rule can be updated, but it cannot be deactivated.\"" : ""}>
                 <span class="button-icon">${data.isActive ? icons.inactive : icons.active}</span>
                 ${data.isActive ? "Deactivate" : "Activate"}
             </button>
@@ -174,6 +183,15 @@ function buildReorderPoliciesColumnDefs() {
     return [
         { field: "policyCode", headerName: "Policy ID", minWidth: 150, flex: 0.85 },
         { field: "policyName", headerName: "Policy Name", minWidth: 220, flex: 1.15 },
+        {
+            field: "isSystemDefault",
+            headerName: "Default",
+            minWidth: 130,
+            flex: 0.75,
+            cellRenderer: params => params.value
+                ? `<span class="grid-status-cell grid-status-pill status-active"><span class="inline-icon">${icons.active}</span>Moneta Default</span>`
+                : `<span class="table-note">-</span>`
+        },
         { field: "scopeSummary", headerName: "Scope", minWidth: 180, flex: 1 },
         {
             field: "leadTimeDays",

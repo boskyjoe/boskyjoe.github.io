@@ -23,7 +23,9 @@ import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
     buildReorderPolicyWorkedExample,
-    resolveReorderPolicyFallbackChain
+    isSystemDefaultReorderPolicy,
+    resolveReorderPolicyFallbackChain,
+    resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
 import {
     getAdminEditRestriction,
@@ -139,7 +141,12 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
     }
 
     if (section === "reorderPolicies") {
-        return (snapshot.masterData.reorderPolicies || []).find(record => record.id === recordId) || null;
+        const resolvedDefault = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
+        const record = (snapshot.masterData.reorderPolicies || []).find(item => item.id === recordId) || null;
+        return record ? {
+            ...record,
+            isSystemDefault: Boolean(record.isSystemDefault) || record.id === resolvedDefault?.id
+        } : null;
     }
 
     return (snapshot.masterData.paymentModes || []).find(record => record.id === recordId) || null;
@@ -159,7 +166,17 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
     }
 
     if (section === "reorderPolicies") {
-        return (snapshot.masterData.reorderPolicies || []).slice().sort((left, right) => {
+        const resolvedDefault = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
+        return (snapshot.masterData.reorderPolicies || [])
+            .map(policy => ({
+                ...policy,
+                isSystemDefault: Boolean(policy.isSystemDefault) || policy.id === resolvedDefault?.id
+            }))
+            .sort((left, right) => {
+            if (Boolean(left.isSystemDefault) !== Boolean(right.isSystemDefault)) {
+                return left.isSystemDefault ? -1 : 1;
+            }
+
             if (Boolean(left.isActive) !== Boolean(right.isActive)) {
                 return left.isActive ? -1 : 1;
             }
@@ -247,7 +264,8 @@ function getReorderPolicyDraft(snapshot) {
         zeroDemandBehavior: editingRecord?.zeroDemandBehavior || DEFAULT_REORDER_POLICY.zeroDemandBehavior,
         minimumOrderQty: editingRecord?.minimumOrderQty ?? DEFAULT_REORDER_POLICY.minimumOrderQty,
         packSize: editingRecord?.packSize ?? DEFAULT_REORDER_POLICY.packSize,
-        isActive: editingRecord?.isActive ?? DEFAULT_REORDER_POLICY.isActive
+        isActive: editingRecord?.isActive ?? DEFAULT_REORDER_POLICY.isActive,
+        isSystemDefault: Boolean(editingRecord?.isSystemDefault)
     };
 }
 
@@ -262,11 +280,27 @@ function renderReorderPolicyReferenceCard(title, policy = {}, context = {}) {
     `;
 }
 
+function renderReorderPolicyExampleCard(title, policy = {}, context = {}, note = "") {
+    return `
+        <div class="reports-audit-note">
+            <strong>${title}:</strong> ${buildReorderPolicyScopeSummary(policy, context)}
+        </div>
+        ${note ? `
+            <div class="reports-audit-note">${note}</div>
+        ` : ""}
+        <div class="reports-audit-note">
+            ${buildReorderPolicyWorkedExample(policy, context)}
+        </div>
+    `;
+}
+
 function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) {
     const scopeType = policyDraft.scopeType || DEFAULT_REORDER_POLICY.scopeType;
 
     if (scopeType === "global") {
-        return "This draft is the global default, so narrower active product or category rules can still override it.";
+        return policyDraft.isSystemDefault
+            ? "This draft is the global default, so narrower active product or category rules can still override it."
+            : "This is a global-level rule draft. Moneta will use the active Moneta default rule as the real global fallback.";
     }
 
     if (scopeType === "category") {
@@ -288,12 +322,20 @@ function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) 
 
 function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editingRecord = null) {
     const context = buildPolicyContext(snapshot);
-    const draftScopeSummary = buildReorderPolicyScopeSummary(policyDraft, context);
-    const draftExplanation = buildReorderPolicyExplanation(policyDraft, context);
-    const workedExample = buildReorderPolicyWorkedExample(policyDraft, context);
-    const precedenceSummary = buildReorderPolicyPrecedenceSummary(policyDraft, context);
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
+    const isFirstGlobalDraft = !editingRecord && policyDraft.scopeType === "global" && !systemDefaultPolicy;
+    const effectiveDraft = (isSystemDefaultReorderPolicy(editingRecord) || isFirstGlobalDraft)
+        ? { ...policyDraft, isSystemDefault: true, isActive: true }
+        : policyDraft;
+    const draftScopeSummary = buildReorderPolicyScopeSummary(effectiveDraft, context);
+    const draftExplanation = buildReorderPolicyExplanation(effectiveDraft, context);
+    const workedExample = buildReorderPolicyWorkedExample(effectiveDraft, context);
+    const precedenceSummary = buildReorderPolicyPrecedenceSummary(effectiveDraft, context);
+    const defaultPreviewPolicy = (isSystemDefaultReorderPolicy(editingRecord) || (!editingRecord && isSystemDefaultReorderPolicy(policyDraft)) || isFirstGlobalDraft)
+        ? { ...systemDefaultPolicy, ...policyDraft, isSystemDefault: true, isActive: true }
+        : systemDefaultPolicy;
     const fallbackChain = resolveReorderPolicyFallbackChain(
-        policyDraft,
+        effectiveDraft,
         snapshot.masterData.reorderPolicies || [],
         editingRecord?.id || ""
     );
@@ -330,8 +372,38 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
             </div>
             <div class="panel-body">
                 <div class="reports-audit-note">
-                    ${workedExample}
+                    <strong>Draft Rule Example:</strong> ${workedExample}
                 </div>
+            </div>
+        </div>
+        <div class="panel-card" style="margin-top:1rem;">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.reports}</span>
+                    <div>
+                        <h3>Moneta Default Rule</h3>
+                        <p class="panel-copy">This is the global fallback rule Moneta keeps loaded as reorder master data.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-body">
+                ${defaultPreviewPolicy ? `
+                    ${renderReorderPolicyReferenceCard("Default Rule", defaultPreviewPolicy, context)}
+                    ${renderReorderPolicyExampleCard(
+                        "Default Rule Example",
+                        defaultPreviewPolicy,
+                        context,
+                        isFirstGlobalDraft
+                            ? "This draft will become the first protected Moneta default rule when you save it."
+                            : isSystemDefaultReorderPolicy(editingRecord)
+                            ? "You are editing the Moneta default rule, so this default example matches the current draft."
+                            : ""
+                    )}
+                ` : `
+                    <div class="reports-audit-note">
+                        No Moneta default rule is saved yet. The first global rule you save will become the protected default.
+                    </div>
+                `}
             </div>
         </div>
         <div class="panel-card" style="margin-top:1rem;">
@@ -349,7 +421,7 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
                     ${precedenceSummary}
                 </div>
                 <div class="reports-audit-note">
-                    <strong>Relevant Fallback Chain:</strong> ${buildReorderPolicyFallbackNotice(policyDraft, fallbackChain)}
+                    <strong>Relevant Fallback Chain:</strong> ${buildReorderPolicyFallbackNotice(effectiveDraft, fallbackChain)}
                 </div>
                 ${fallbackChain.length ? `
                     ${fallbackChain.map(entry => renderReorderPolicyReferenceCard(entry.title, entry.policy, context)).join("")}
@@ -562,6 +634,8 @@ function renderPaymentModeForm(snapshot) {
 function renderReorderPolicyForm(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "reorderPolicies");
     const draft = getReorderPolicyDraft(snapshot);
+    const systemDefaultPolicy = resolveSystemDefaultPolicy(snapshot.masterData.reorderPolicies || [], { activeOnly: false });
+    const isSystemDefaultDraft = Boolean(draft.isSystemDefault) || (!editingRecord && draft.scopeType === "global" && !systemDefaultPolicy);
     const isCategoryScope = draft.scopeType === "category";
     const isProductScope = draft.scopeType === "product";
     const showCategoryField = isCategoryScope || isProductScope;
@@ -589,11 +663,16 @@ function renderReorderPolicyForm(snapshot) {
                         </div>
                         <div class="field">
                             <label for="admin-reorder-policy-scope-type">Scope</label>
-                            <select id="admin-reorder-policy-scope-type" class="select">
+                            <select id="admin-reorder-policy-scope-type" class="select" ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule must stay as a global policy.\"" : ""}>
                                 <option value="global" ${draft.scopeType === "global" ? "selected" : ""}>Global Default</option>
                                 <option value="category" ${draft.scopeType === "category" ? "selected" : ""}>Category Override</option>
                                 <option value="product" ${draft.scopeType === "product" ? "selected" : ""}>Product Override</option>
                             </select>
+                            <p class="panel-copy panel-copy-tight">${isSystemDefaultDraft
+                                ? "This is the Moneta default rule. It can be updated, but it must remain a global rule."
+                                : (!systemDefaultPolicy && draft.scopeType === "global"
+                                    ? "This will become the first protected Moneta default rule."
+                                    : "Choose whether this rule is the global fallback, a category override, or a product override.")}</p>
                         </div>
                         <div class="field" id="admin-reorder-policy-category-field" ${showCategoryField ? "" : "hidden"}>
                             <label for="admin-reorder-policy-category-id">Category</label>
@@ -621,10 +700,13 @@ function renderReorderPolicyForm(snapshot) {
                         </div>
                         <div class="field">
                             <label for="admin-reorder-policy-status">Status</label>
-                            <select id="admin-reorder-policy-status" class="select">
+                            <select id="admin-reorder-policy-status" class="select" ${isSystemDefaultDraft ? "disabled data-disabled-reason=\"The Moneta default rule can be updated, but it cannot be deactivated.\"" : ""}>
                                 <option value="true" ${draft.isActive ? "selected" : ""}>Active</option>
                                 <option value="false" ${!draft.isActive ? "selected" : ""}>Inactive</option>
                             </select>
+                            <p class="panel-copy panel-copy-tight">${isSystemDefaultDraft
+                                ? "The Moneta default rule must stay active."
+                                : "Inactive rules stay visible in Admin Modules but Moneta will not apply them in reports."}</p>
                         </div>
                         <div class="field">
                             <label for="admin-reorder-short-window-days">Short Demand Window (days)</label>
@@ -1000,7 +1082,9 @@ async function handlePaymentModeSubmit(event) {
 function collectReorderPolicyFormDraft() {
     return {
         policyName: document.getElementById("admin-reorder-policy-name")?.value || "",
-        scopeType: document.getElementById("admin-reorder-policy-scope-type")?.value || DEFAULT_REORDER_POLICY.scopeType,
+        scopeType: document.getElementById("admin-reorder-policy-scope-type")?.value
+            || getEditingRecord(getState(), "reorderPolicies")?.scopeType
+            || DEFAULT_REORDER_POLICY.scopeType,
         categoryId: document.getElementById("admin-reorder-policy-category-id")?.value || "",
         productId: document.getElementById("admin-reorder-policy-product-id")?.value || "",
         shortWindowDays: document.getElementById("admin-reorder-short-window-days")?.value || DEFAULT_REORDER_POLICY.shortWindowDays,
@@ -1014,7 +1098,9 @@ function collectReorderPolicyFormDraft() {
         zeroDemandBehavior: document.getElementById("admin-reorder-zero-demand-behavior")?.value || DEFAULT_REORDER_POLICY.zeroDemandBehavior,
         minimumOrderQty: document.getElementById("admin-reorder-min-order-qty")?.value || DEFAULT_REORDER_POLICY.minimumOrderQty,
         packSize: document.getElementById("admin-reorder-pack-size")?.value || DEFAULT_REORDER_POLICY.packSize,
-        isActive: (document.getElementById("admin-reorder-policy-status")?.value || "true") === "true"
+        isActive: (document.getElementById("admin-reorder-policy-status")?.value
+            || (getEditingRecord(getState(), "reorderPolicies")?.isActive ? "true" : "")
+            || "true") === "true"
     };
 }
 

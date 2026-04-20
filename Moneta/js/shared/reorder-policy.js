@@ -62,6 +62,10 @@ function pickLatestPolicy(policies = [], predicate = () => true) {
         .sort((left, right) => getUpdatedTime(right) - getUpdatedTime(left))[0] || null;
 }
 
+function getDefaultPriority(policy = {}) {
+    return policy?.isSystemDefault ? 1 : 0;
+}
+
 export function resolveReorderPolicyTargetLabel(policy = {}, {
     categoryNameById = new Map(),
     productNameById = new Map()
@@ -98,6 +102,29 @@ export function buildReorderPolicyScopeSummary(policy = {}, options = {}) {
     return "Global Default";
 }
 
+export function isSystemDefaultReorderPolicy(policy = {}) {
+    return Boolean(policy?.isSystemDefault) && normalizeText(policy.scopeType) === "global";
+}
+
+export function resolveSystemDefaultPolicy(policies = [], { activeOnly = true } = {}) {
+    const globalPolicies = (policies || []).filter(policy =>
+        normalizeText(policy?.scopeType) === "global"
+        && (!activeOnly || policy?.isActive)
+    );
+
+    const explicitDefault = globalPolicies
+        .filter(policy => isSystemDefaultReorderPolicy(policy))
+        .sort((left, right) => getUpdatedTime(right) - getUpdatedTime(left))[0] || null;
+
+    if (explicitDefault) {
+        return explicitDefault;
+    }
+
+    return globalPolicies
+        .slice()
+        .sort((left, right) => getUpdatedTime(right) - getUpdatedTime(left))[0] || null;
+}
+
 export function buildReorderPolicySimpleExplanation(policy = {}, options = {}) {
     const targetLabel = resolveReorderPolicyTargetLabel(policy, options);
     const {
@@ -114,12 +141,15 @@ export function buildReorderPolicySimpleExplanation(policy = {}, options = {}) {
         packSize,
         zeroDemandBehavior
     } = getNormalizedPolicySettings(policy);
+    const isSystemDefault = isSystemDefaultReorderPolicy(policy);
 
     const scopeLine = scopeType === "category"
         ? `Moneta uses this rule for active products in the ${targetLabel} category when there is no product-specific rule.`
         : scopeType === "product"
             ? `Moneta uses this rule only for ${targetLabel}.`
-            : "Moneta uses this as the default reorder rule unless a category or product rule takes over.";
+            : isSystemDefault
+                ? "Moneta uses this as the default reorder rule unless a category or product rule takes over."
+                : "This is a global-level rule draft. Moneta uses a global rule only when it is the active Moneta default rule.";
 
     const demandLine = `It blends demand using ${shortWindowWeight}% from the last ${shortWindowDays} days and ${longWindowWeight}% from the last ${longWindowDays} days.`;
     const thresholdLine = `It tells the team to reorder when stock drops below ${leadTimeDays + safetyDays} days of cover (${leadTimeDays} lead-time days and ${safetyDays} safety days).`;
@@ -191,6 +221,7 @@ export function buildReorderPolicyWorkedExample(policy = {}, options = {}) {
 export function buildReorderPolicyPrecedenceSummary(policy = {}, options = {}) {
     const targetLabel = resolveReorderPolicyTargetLabel(policy, options);
     const { scopeType } = getNormalizedPolicySettings(policy);
+    const isSystemDefault = isSystemDefaultReorderPolicy(policy);
 
     if (scopeType === "product") {
         return `Moneta checks this product rule first for ${targetLabel}. If it cannot use it, Moneta falls back to the matching category rule, then the active global default.`;
@@ -200,7 +231,9 @@ export function buildReorderPolicyPrecedenceSummary(policy = {}, options = {}) {
         return `Moneta uses this category rule after checking for a product-specific rule. If no product rule applies, Moneta uses this category rule, then falls back to the active global default if needed.`;
     }
 
-    return "This is the global default. Moneta uses it only when there is no active product rule or category rule that is more specific.";
+    return isSystemDefault
+        ? "This is the global default. Moneta uses it only when there is no active product rule or category rule that is more specific."
+        : "This is a global-level rule draft. Moneta will only use a global rule as the fallback when that rule is the active Moneta default.";
 }
 
 export function resolveReorderPolicyFallbackChain(policy = {}, policies = [], excludePolicyId = "") {
@@ -213,7 +246,7 @@ export function resolveReorderPolicyFallbackChain(policy = {}, policies = [], ex
             normalizeText(candidate.scopeType) === "category"
             && normalizeText(candidate.categoryId) === normalizeText(policy.categoryId)
         );
-        const globalFallback = pickLatestPolicy(activePolicies, candidate => normalizeText(candidate.scopeType) === "global");
+        const globalFallback = resolveSystemDefaultPolicy(activePolicies, { activeOnly: true });
 
         if (categoryFallback) {
             entries.push({ key: "category", title: "Category Fallback", policy: categoryFallback });
@@ -227,7 +260,7 @@ export function resolveReorderPolicyFallbackChain(policy = {}, policies = [], ex
     }
 
     if (scopeType === "category") {
-        const globalFallback = pickLatestPolicy(activePolicies, candidate => normalizeText(candidate.scopeType) === "global");
+        const globalFallback = resolveSystemDefaultPolicy(activePolicies, { activeOnly: true });
         if (globalFallback) {
             entries.push({ key: "global", title: "Global Default", policy: globalFallback });
         }
@@ -279,6 +312,8 @@ export function resolvePolicyForProduct(product = {}, policies = []) {
         .sort((left, right) => {
             const specificityDiff = getSpecificityRank(right.scopeType) - getSpecificityRank(left.scopeType);
             if (specificityDiff !== 0) return specificityDiff;
+            const defaultDiff = getDefaultPriority(right) - getDefaultPriority(left);
+            if (defaultDiff !== 0) return defaultDiff;
             return getUpdatedTime(right) - getUpdatedTime(left);
         });
 
