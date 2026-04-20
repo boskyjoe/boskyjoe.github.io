@@ -237,6 +237,42 @@ select {
     min-height: 2.8rem;
 }
 
+.field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.field-label-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+}
+
+.field-help-tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, #f7fbfa 0%, #edf7f4 100%);
+    color: #0f6a5c;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.field-help-tip:focus-visible {
+    outline: 2px solid rgba(15, 106, 92, 0.25);
+    outline-offset: 2px;
+}
+
 .field label {
     font-size: 0.92rem;
     font-weight: 700;
@@ -2475,6 +2511,10 @@ select {
 
     .reorder-policy-setup-grid .panel-copy-tight {
         min-height: 0;
+    }
+
+    .field-label-row {
+        align-items: flex-start;
     }
 
     .purchase-payment-modal-overlay,
