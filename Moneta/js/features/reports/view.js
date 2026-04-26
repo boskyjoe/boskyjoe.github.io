@@ -2058,7 +2058,8 @@ function renderProductPerformanceTopSection(reportData = null) {
                             <th>Category</th>
                             <th class="reports-align-right">Units Sold</th>
                             <th class="reports-align-right">Revenue</th>
-                            <th class="reports-align-right">Retail Units</th>
+                            <th class="reports-align-right">Tasty Treats Units</th>
+                            <th class="reports-align-right">Church Store Units</th>
                             <th class="reports-align-right">Consignment Units</th>
                             <th class="reports-align-right">Revenue Share</th>
                             <th>Last Sold</th>
@@ -2071,14 +2072,15 @@ function renderProductPerformanceTopSection(reportData = null) {
                                 <td>${row.categoryName}</td>
                                 <td class="reports-align-right">${row.unitsSold}</td>
                                 <td class="reports-align-right">${formatAccountingCurrency(row.revenue)}</td>
-                                <td class="reports-align-right">${row.retailUnitsSold}</td>
+                                <td class="reports-align-right">${row.tastyTreatsUnitsSold}</td>
+                                <td class="reports-align-right">${row.churchStoreUnitsSold}</td>
                                 <td class="reports-align-right">${row.consignmentUnitsSold}</td>
                                 <td class="reports-align-right">${formatPercent(totalRevenue > 0 ? ((Number(row.revenue) || 0) / totalRevenue) * 100 : 0)}</td>
                                 <td>${row.lastSoldOn ? formatDateLabel(row.lastSoldOn) : "-"}</td>
                             </tr>
                         `).join("") : `
                             <tr>
-                                <td colspan="8" class="reports-table-empty">No product sales are available for this range.</td>
+                                <td colspan="9" class="reports-table-empty">No product sales are available for this range.</td>
                             </tr>
                         `}
                     </tbody>

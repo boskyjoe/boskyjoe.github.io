@@ -1423,6 +1423,8 @@ function buildProductPerformanceRows({
                     : (resolveInventoryCategoryName(product, categoryNameMap) || "-"),
                 unitsSold: 0,
                 retailUnitsSold: 0,
+                tastyTreatsUnitsSold: 0,
+                churchStoreUnitsSold: 0,
                 consignmentUnitsSold: 0,
                 revenue: 0,
                 retailRevenue: 0,
@@ -1452,6 +1454,13 @@ function buildProductPerformanceRows({
         } else {
             bucket.retailUnitsSold += row.quantitySold;
             bucket.retailRevenue = roundCurrency(bucket.retailRevenue + row.netSales);
+
+            const normalizedChannel = normalizeText(row.channel).toLowerCase();
+            if (normalizedChannel === "tasty treats") {
+                bucket.tastyTreatsUnitsSold += row.quantitySold;
+            } else if (normalizedChannel === "church store") {
+                bucket.churchStoreUnitsSold += row.quantitySold;
+            }
         }
     });
 
