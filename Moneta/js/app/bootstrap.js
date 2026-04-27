@@ -2,6 +2,7 @@ import { firebaseConfig } from "../config/firebase-config.js";
 import { initializeAuth, loginWithGoogle, logout } from "./auth.js";
 import { initializeRouter } from "./router.js";
 import { initializeShell } from "./shell.js";
+import { applyTheme, initializeTheme } from "./theme.js";
 import { detachMasterData, initializeMasterData } from "./master-data.js";
 import { subscribe } from "./store.js";
 import { initializeSuppliersModule } from "../features/suppliers/index.js";
@@ -44,6 +45,12 @@ function bindGlobalUiEvents() {
             } catch (error) {
                 console.error("[Moneta] Logout failed:", error);
             }
+        }
+
+        const themeControl = target.closest("[data-theme-mode-control]");
+        if (themeControl) {
+            const mode = themeControl.getAttribute("data-theme-mode-control");
+            applyTheme(mode, { persist: true, emit: true });
         }
     });
 }
@@ -114,6 +121,7 @@ function initializeReorderPolicySeedLifecycle() {
 
 document.addEventListener("DOMContentLoaded", () => {
     initializeFirebase();
+    initializeTheme();
     initializeShell();
     initializeSuppliersModule();
     initializeProductsModule();

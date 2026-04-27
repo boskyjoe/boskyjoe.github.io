@@ -1,4 +1,5 @@
 import { getState } from "../../app/store.js";
+import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import { navConfig } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
@@ -41,6 +42,8 @@ const featureState = {
     inventoryChartSyncToken: 0,
     financialChartSyncToken: 0
 };
+
+let themeSyncBound = false;
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -139,6 +142,69 @@ function formatSignedCurrency(value) {
     if (amount > 0) return `+${formatCurrency(amount)}`;
     if (amount < 0) return `-${formatCurrency(Math.abs(amount))}`;
     return formatCurrency(0);
+}
+
+function readThemeVariable(name, fallback = "") {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+}
+
+function getChartTheme() {
+    return {
+        text: readThemeVariable("--chart-text", readThemeVariable("--text-muted", "#516173")),
+        grid: readThemeVariable("--chart-grid", "rgba(100, 116, 139, 0.2)"),
+        border: readThemeVariable("--chart-border", "#ffffff"),
+        primary: readThemeVariable("--chart-primary", "#2563eb"),
+        secondary: readThemeVariable("--chart-secondary", "#0f766e"),
+        tertiary: readThemeVariable("--chart-tertiary", "#0ea5e9"),
+        warning: readThemeVariable("--chart-warning", "#f59e0b"),
+        danger: readThemeVariable("--chart-danger", "#dc2626"),
+        neutral: readThemeVariable("--chart-neutral", "#64748b"),
+        success: readThemeVariable("--chart-success", "#16a34a"),
+        storeOrange: readThemeVariable("--chart-store-orange", "#f97316")
+    };
+}
+
+function buildLegendOptions(theme) {
+    return {
+        position: "bottom",
+        labels: {
+            color: theme.text,
+            usePointStyle: true,
+            boxWidth: 8
+        }
+    };
+}
+
+function buildAxisOptions(theme, { precision = null } = {}) {
+    return {
+        beginAtZero: true,
+        ticks: {
+            color: theme.text,
+            ...(precision == null ? {} : { precision })
+        },
+        grid: {
+            color: theme.grid
+        },
+        border: {
+            color: theme.grid
+        }
+    };
+}
+
+function ensureDashboardThemeSync() {
+    if (themeSyncBound) return;
+
+    window.addEventListener(THEME_CHANGE_EVENT, () => {
+        if (!featureState.data && !document.getElementById("dashboard-root")?.innerHTML.trim()) {
+            return;
+        }
+
+        syncDashboardInventoryVisuals();
+        syncDashboardFinancialVisuals();
+    });
+
+    themeSyncBound = true;
 }
 
 function getWindowStart(windowKey) {
@@ -1507,6 +1573,7 @@ async function initializeInventoryCharts(inventory = {}) {
         const chartJs = await ensureChartJsRegistered();
         if (syncToken !== featureState.inventoryChartSyncToken) return;
         const { Chart } = chartJs;
+        const theme = getChartTheme();
 
         if (hasStatusData) {
             featureState.stockStatusChart = new Chart(statusCanvas.getContext("2d"), {
@@ -1515,8 +1582,8 @@ async function initializeInventoryCharts(inventory = {}) {
                     labels: ["Out of Stock", "Low Stock", "Medium", "Healthy"],
                     datasets: [{
                         data: statusData,
-                        backgroundColor: ["#dc2626", "#d97706", "#64748b", "#16a34a"],
-                        borderColor: "#ffffff",
+                        backgroundColor: [theme.danger, theme.warning, theme.neutral, theme.success],
+                        borderColor: theme.border,
                         borderWidth: 2
                     }]
                 },
@@ -1525,11 +1592,7 @@ async function initializeInventoryCharts(inventory = {}) {
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: "bottom",
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
+                            ...buildLegendOptions(theme)
                         }
                     }
                 }
@@ -1544,7 +1607,7 @@ async function initializeInventoryCharts(inventory = {}) {
                     datasets: [{
                         label: "Low Stock SKUs",
                         data: categoryData,
-                        backgroundColor: "#2563eb",
+                        backgroundColor: theme.primary,
                         borderRadius: 8
                     }]
                 },
@@ -1558,9 +1621,17 @@ async function initializeInventoryCharts(inventory = {}) {
                     },
                     scales: {
                         y: {
-                            beginAtZero: true,
+                            ...buildAxisOptions(theme, { precision: 0 })
+                        },
+                        x: {
                             ticks: {
-                                precision: 0
+                                color: theme.text
+                            },
+                            grid: {
+                                display: false
+                            },
+                            border: {
+                                color: theme.grid
                             }
                         }
                     }
@@ -1703,6 +1774,7 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
         const chartJs = await ensureChartJsRegistered();
         if (syncToken !== featureState.financialChartSyncToken) return;
         const { Chart } = chartJs;
+        const theme = getChartTheme();
 
         if (hasSalesFinanceData) {
             featureState.salesFinanceChart = new Chart(salesFinanceCanvas.getContext("2d"), {
@@ -1713,13 +1785,13 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                         {
                             label: "Retail",
                             data: salesFinanceDatasets.retail,
-                            backgroundColor: "#2563eb",
+                            backgroundColor: theme.primary,
                             borderRadius: 6
                         },
                         {
                             label: "Consignment",
                             data: salesFinanceDatasets.consignment,
-                            backgroundColor: "#0f766e",
+                            backgroundColor: theme.secondary,
                             borderRadius: 6
                         }
                     ]
@@ -1729,16 +1801,23 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: "bottom",
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
+                            ...buildLegendOptions(theme)
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            ...buildAxisOptions(theme)
+                        },
+                        x: {
+                            ticks: {
+                                color: theme.text
+                            },
+                            grid: {
+                                display: false
+                            },
+                            border: {
+                                color: theme.grid
+                            }
                         }
                     }
                 }
@@ -1752,8 +1831,8 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     labels: salesStoreLabels,
                     datasets: [{
                         data: salesStoreData,
-                        backgroundColor: ["#f97316", "#0ea5e9"],
-                        borderColor: "#ffffff",
+                        backgroundColor: [theme.storeOrange, theme.tertiary],
+                        borderColor: theme.border,
                         borderWidth: 2
                     }]
                 },
@@ -1762,11 +1841,7 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: "bottom",
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
+                            ...buildLegendOptions(theme)
                         }
                     }
                 }
@@ -1781,7 +1856,7 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     datasets: [{
                         label: "Amount",
                         data: cashFlowData,
-                        backgroundColor: ["#2563eb", "#0ea5e9", "#16a34a", "#dc2626"],
+                        backgroundColor: [theme.primary, theme.tertiary, theme.success, theme.danger],
                         borderRadius: 6
                     }]
                 },
@@ -1795,7 +1870,18 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            ...buildAxisOptions(theme)
+                        },
+                        x: {
+                            ticks: {
+                                color: theme.text
+                            },
+                            grid: {
+                                display: false
+                            },
+                            border: {
+                                color: theme.grid
+                            }
                         }
                     }
                 }
@@ -1809,8 +1895,8 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     labels: leadPipelineLabels,
                     datasets: [{
                         data: leadPipelineData,
-                        backgroundColor: ["#2563eb", "#f59e0b", "#16a34a"],
-                        borderColor: "#ffffff",
+                        backgroundColor: [theme.primary, theme.warning, theme.success],
+                        borderColor: theme.border,
                         borderWidth: 2
                     }]
                 },
@@ -1819,11 +1905,7 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: "bottom",
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
+                            ...buildLegendOptions(theme)
                         }
                     }
                 }
@@ -2056,6 +2138,7 @@ async function loadDashboardData(user, { forceRefresh = false } = {}) {
 export function renderDashboardView(user) {
     const root = document.getElementById("dashboard-root");
     if (!root) return;
+    ensureDashboardThemeSync();
 
     if (!user) {
         cleanupDashboardVisuals();

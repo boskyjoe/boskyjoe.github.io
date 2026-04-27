@@ -1,6 +1,7 @@
 import { navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
+import { getResolvedTheme, getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
 
 function renderSidebarLinks(user) {
@@ -50,7 +51,27 @@ function renderAuthSlot(user) {
     if (!authSlot) return;
 
     authSlot.innerHTML = "";
-    if (!user) return;
+
+    const themeSwitcher = document.createElement("div");
+    themeSwitcher.className = "theme-switch";
+    themeSwitcher.innerHTML = `
+        <div class="theme-switch-head">
+            <span class="theme-switch-kicker">Theme</span>
+            <span class="theme-switch-value" data-theme-mode-label>${getThemeMode()}</span>
+        </div>
+        <div class="theme-switch-group" role="group" aria-label="Choose Moneta theme">
+            <button class="theme-switch-button" type="button" data-theme-mode-control="light" aria-pressed="false">Light</button>
+            <button class="theme-switch-button" type="button" data-theme-mode-control="dark" aria-pressed="false">Dark</button>
+            <button class="theme-switch-button" type="button" data-theme-mode-control="system" aria-pressed="false">System</button>
+        </div>
+        <p class="theme-switch-copy" data-theme-mode-copy>Moneta is currently using ${getResolvedTheme() === "dark" ? "dark" : "light"} surfaces.</p>
+    `;
+    authSlot.appendChild(themeSwitcher);
+
+    if (!user) {
+        syncThemeControlState(authSlot);
+        return;
+    }
 
     const wrapper = document.createElement("div");
     wrapper.className = "auth-card";
@@ -75,6 +96,7 @@ function renderAuthSlot(user) {
 
     wrapper.append(meta, avatar, logoutButton);
     authSlot.appendChild(wrapper);
+    syncThemeControlState(authSlot);
 }
 
 function renderFooter() {
@@ -145,5 +167,9 @@ export function renderShell({ title }) {
 export function initializeShell() {
     document.getElementById("mobile-nav-toggle")?.addEventListener("click", () => {
         document.getElementById("app-sidebar")?.classList.toggle("open");
+    });
+
+    window.addEventListener(THEME_CHANGE_EVENT, () => {
+        syncThemeControlState(document.getElementById("auth-slot") || document);
     });
 }
