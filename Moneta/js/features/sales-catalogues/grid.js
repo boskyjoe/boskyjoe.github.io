@@ -96,6 +96,12 @@ function catalogueActionMarkup(data) {
     `;
 }
 
+function formatSignedCurrency(value) {
+    const numeric = Number(value) || 0;
+    const absolute = formatCurrency(Math.abs(numeric));
+    return `${numeric >= 0 ? "+" : "-"}${absolute}`;
+}
+
 function buildAvailableProductsColumnDefs(categories, selectedProductIds) {
     return [
         { field: "itemName", headerName: "Product", minWidth: 220, flex: 1.35 },
@@ -162,7 +168,7 @@ function buildCatalogueItemsColumnDefs() {
         },
         {
             field: "sellingPrice",
-            headerName: "Selling Price",
+            headerName: "Catalogue Price",
             minWidth: 145,
             flex: 0.9,
             editable: true,
@@ -171,6 +177,47 @@ function buildCatalogueItemsColumnDefs() {
             valueParser: params => {
                 const parsed = Number(String(params.newValue || "").replace(/[^0-9.-]/g, ""));
                 return Number.isFinite(parsed) ? parsed : params.oldValue;
+            }
+        },
+        {
+            field: "currentProductSellingPrice",
+            headerName: "Current Product Price",
+            minWidth: 165,
+            flex: 1,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Price Change",
+            minWidth: 190,
+            flex: 1.05,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => {
+                const data = params.data || {};
+
+                if (data.priceSyncState === "missing-product") {
+                    return `<span class="grid-action-muted">Linked product missing</span>`;
+                }
+
+                const delta = Number((Number(data.currentProductSellingPrice || 0) - Number(data.sellingPrice || 0)).toFixed(2));
+
+                if (Math.abs(delta) < 0.01) {
+                    return `<span class="grid-action-muted">No change</span>`;
+                }
+
+                const toneClass = delta > 0 ? "status-warning" : "status-inactive";
+                const directionLabel = delta > 0 ? "higher" : "lower";
+
+                return `
+                    <div style="display:grid; gap:0.2rem;">
+                        <span class="grid-status-cell grid-status-pill ${toneClass}">
+                            <span class="inline-icon">${icons.warning}</span>
+                            ${formatSignedCurrency(delta)}
+                        </span>
+                        <span class="grid-action-muted">Product is ${directionLabel} than catalogue</span>
+                    </div>
+                `;
             }
         },
         {
