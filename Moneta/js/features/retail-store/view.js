@@ -1458,7 +1458,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <label for="retail-customer-email">Email</label>
                                     <input id="retail-customer-email" class="input" type="email" value="${featureState.saleDraft.customerEmail}" placeholder="Customer email" ${customerDisabledAttr}>
                                 </div>
-                                <div class="field field-full" ${isTastyTreats ? "" : "hidden"}>
+                                <div class="field field-full" ${requiresCustomerAddress ? "" : "hidden"}>
                                     <label for="retail-customer-address">Customer Address <span class="required-mark" aria-hidden="true">*</span></label>
                                     <textarea id="retail-customer-address" class="textarea" ${customerDisabledAttr} placeholder="${requiresCustomerAddress ? `Delivery address for ${featureState.saleDraft.store || "this store"} orders` : "Customer address"}">${featureState.saleDraft.customerAddress}</textarea>
                                 </div>
