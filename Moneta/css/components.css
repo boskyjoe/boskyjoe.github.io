@@ -439,7 +439,8 @@ select {
 }
 
 .status-active,
-.status-inactive {
+.status-inactive,
+.status-warning {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -457,6 +458,11 @@ select {
 .status-inactive {
     background: var(--status-danger-bg);
     color: var(--status-danger-text);
+}
+
+.status-warning {
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
 }
 
 .empty-state {
