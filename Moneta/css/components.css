@@ -232,6 +232,72 @@ select {
     margin-bottom: 0.9rem;
 }
 
+.product-form-sections {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.product-form-section {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.product-form-section + .product-form-section {
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--border);
+}
+
+.product-form-section-head {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.product-form-section-head h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.product-form-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start;
+}
+
+.product-span-6 {
+    grid-column: span 6;
+}
+
+.product-span-5 {
+    grid-column: span 5;
+}
+
+.product-span-4 {
+    grid-column: span 4;
+}
+
+.product-span-3 {
+    grid-column: span 3;
+}
+
+.product-field-with-help .panel-copy-tight {
+    margin-top: 0.35rem;
+    min-height: 2.9rem;
+}
+
+.product-pricing-snapshot-card {
+    margin-top: 1rem;
+}
+
+.product-pricing-snapshot-card .panel-body {
+    padding: 1rem 1.1rem;
+}
+
+.product-pricing-snapshot-copy {
+    display: grid;
+    gap: 0.4rem;
+}
+
 .reorder-policy-setup-grid .panel-copy-tight {
     margin-top: 0.35rem;
     min-height: 2.8rem;
@@ -2590,13 +2656,18 @@ select {
     }
 
     .reorder-policy-setup-grid,
-    .reorder-policy-metric-grid {
+    .reorder-policy-metric-grid,
+    .product-form-grid {
         grid-template-columns: 1fr;
     }
 
     .reorder-policy-span-8,
     .reorder-policy-span-6,
-    .reorder-policy-span-2 {
+    .reorder-policy-span-2,
+    .product-span-6,
+    .product-span-5,
+    .product-span-4,
+    .product-span-3 {
         grid-column: auto;
     }
 
@@ -2606,6 +2677,10 @@ select {
     }
 
     .reorder-policy-setup-grid .panel-copy-tight {
+        min-height: 0;
+    }
+
+    .product-field-with-help .panel-copy-tight {
         min-height: 0;
     }
 
