@@ -7,18 +7,24 @@ import {
     initializeAvailableProductsGrid,
     initializeCatalogueItemsGrid,
     initializeExistingCataloguesGrid,
+    initializeSalesCataloguePriceHistoryGrid,
     refreshAvailableProductsGrid,
     refreshCatalogueItemsGrid,
     refreshExistingCataloguesGrid,
+    refreshSalesCataloguePriceHistoryGrid,
     updateAvailableProductsGridSearch,
     updateCatalogueItemsGridSearch,
     updateExistingCataloguesGridSearch
 } from "./grid.js";
-import { subscribeToSalesCatalogueItems } from "./repository.js";
+import { getSalesCatalogueItemPriceHistory, subscribeToSalesCatalogueItems } from "./repository.js";
 import {
     addProductToSalesCatalogue,
+    countSyncableSalesCatalogueItems,
+    enrichSalesCatalogueItem,
     removeSalesCatalogueItemRecord,
     saveSalesCatalogue,
+    syncChangedSalesCatalogueItems,
+    syncSalesCatalogueItemToProduct,
     toggleSalesCatalogueStatus,
     updateSalesCatalogueItemPrice
 } from "./service.js";
@@ -30,7 +36,9 @@ const featureState = {
     editingCatalogueId: null,
     draftItems: [],
     catalogueItems: [],
-    unsubscribeItems: null
+    unsubscribeItems: null,
+    priceHistoryItem: null,
+    priceHistoryRows: []
 };
 
 function clearCatalogueItemsSubscription() {
@@ -43,6 +51,8 @@ function resetSalesCatalogueWorkspace() {
     clearCatalogueItemsSubscription();
     featureState.editingCatalogueId = null;
     featureState.draftItems = [];
+    featureState.priceHistoryItem = null;
+    featureState.priceHistoryRows = [];
 }
 
 function getEditingCatalogue(snapshot) {
@@ -61,23 +71,18 @@ function resolveSeasonName(snapshot, seasonId) {
     return snapshot.masterData.seasons.find(season => season.id === seasonId)?.seasonName || "-";
 }
 
-function enrichCatalogueItems(snapshot, items) {
+function getEnrichedCatalogueItems(snapshot, items = []) {
     const products = snapshot.masterData.products || [];
     const categories = snapshot.masterData.categories || [];
+    return (items || []).map(item => enrichSalesCatalogueItem(item, products, categories));
+}
 
-    return (items || []).map(item => {
-        const product = products.find(entry => entry.id === item.productId) || null;
-        const resolvedCategoryId = item.categoryId || product?.categoryId || "";
-        const resolvedCategoryName = item.categoryName
-            || categories.find(category => category.id === resolvedCategoryId)?.categoryName
-            || "-";
-
-        return {
-            ...item,
-            categoryId: resolvedCategoryId,
-            categoryName: resolvedCategoryName
-        };
-    });
+function getCatalogueSyncableCount(snapshot, items = []) {
+    return countSyncableSalesCatalogueItems(
+        items,
+        snapshot.masterData.products || [],
+        snapshot.masterData.categories || []
+    );
 }
 
 function renderSeasonOptions(seasons, currentValue) {
@@ -161,6 +166,7 @@ function renderSalesCatalogueForm(snapshot) {
 function renderSalesCatalogueWorkspace(snapshot) {
     const workingItems = getWorkingItems();
     const readyProducts = snapshot.masterData.products?.length || 0;
+    const syncableCount = getCatalogueSyncableCount(snapshot, workingItems);
 
     return `
         <div class="sales-catalogue-workspace">
@@ -214,13 +220,24 @@ function renderSalesCatalogueWorkspace(snapshot) {
                     </div>
                     <div class="toolbar-meta">
                         <span class="status-pill">${workingItems.length} selected products</span>
+                        <span class="status-pill">${syncableCount} need sync</span>
+                        ${workingItems.length > 0 ? `
+                            <button
+                                id="sales-catalogue-sync-all-button"
+                                class="button button-secondary sales-catalogue-sync-all-button"
+                                type="button"
+                                ${syncableCount === 0 ? "disabled data-disabled-reason=\"All catalogue item prices are already aligned with the current product master.\"" : ""}>
+                                <span class="button-icon">${icons.active}</span>
+                                Sync Changed Items
+                            </button>
+                        ` : ""}
                     </div>
                 </div>
                 <div class="panel-body">
                     <div class="toolbar">
                         <div>
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Worksheet</p>
-                            <p class="panel-copy">Edit selling prices inline and remove products as the catalogue takes shape.</p>
+                            <p class="panel-copy">Edit selling prices inline, keep manual overrides when needed, or sync changed items back to the current product price.</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
@@ -234,6 +251,44 @@ function renderSalesCatalogueWorkspace(snapshot) {
                     </div>
                     <div class="ag-shell">
                         <div id="sales-catalogue-items-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSalesCataloguePriceHistoryModal() {
+    const activeItem = featureState.priceHistoryItem;
+    const isOpen = Boolean(activeItem);
+
+    return `
+        <div id="sales-catalogue-price-history-modal" class="purchase-payment-modal-overlay" ${isOpen ? "" : "hidden"} role="dialog" aria-modal="true" aria-labelledby="sales-catalogue-price-history-title">
+            <div class="purchase-payment-modal-card" style="width:min(1180px, 100%);">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.catalogue}</span>
+                        <div>
+                            <h3 id="sales-catalogue-price-history-title">Catalogue Price History</h3>
+                            <p class="panel-copy">${activeItem?.productName || "Catalogue item"} price changes, sync actions, and starting snapshot.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta">
+                        <span class="status-pill">${featureState.priceHistoryRows.length} entries</span>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="purchase-payments-history-header">
+                        <p class="panel-copy">Moneta records manual overrides, item syncs, and original catalogue-item pricing snapshots here.</p>
+                    </div>
+                    <div class="ag-shell purchase-payment-history-shell">
+                        <div id="sales-catalogue-price-history-grid" class="ag-theme-alpine moneta-grid" style="height: 420px; width: 100%;"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="sales-catalogue-price-history-close-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Close
+                        </button>
                     </div>
                 </div>
             </div>
@@ -297,7 +352,7 @@ function syncAvailableProductsGrid(snapshot) {
 
 function syncCatalogueItemsGrid(snapshot) {
     const gridElement = document.getElementById("sales-catalogue-items-grid");
-    const rows = enrichCatalogueItems(snapshot, getWorkingItems())
+    const rows = getEnrichedCatalogueItems(snapshot, getWorkingItems())
         .slice()
         .sort((left, right) => (left.productName || "").localeCompare(right.productName || ""));
 
@@ -331,11 +386,19 @@ export function renderSalesCataloguesView() {
             ${renderSalesCatalogueWorkspace(snapshot)}
             ${renderExistingCatalogues(snapshot)}
         </div>
+        ${renderSalesCataloguePriceHistoryModal()}
     `;
 
     syncAvailableProductsGrid(snapshot);
     syncCatalogueItemsGrid(snapshot);
     syncExistingCataloguesGrid(snapshot);
+    syncSalesCataloguePriceHistoryGrid();
+}
+
+function syncSalesCataloguePriceHistoryGrid() {
+    const gridElement = document.getElementById("sales-catalogue-price-history-grid");
+    initializeSalesCataloguePriceHistoryGrid(gridElement);
+    refreshSalesCataloguePriceHistoryGrid(featureState.priceHistoryRows || []);
 }
 
 function startCatalogueItemsSubscription(catalogueId) {
@@ -454,11 +517,12 @@ async function handleCatalogueItemRemoval(button) {
     }
 
     if (featureState.editingCatalogueId) {
+        const workingItem = getWorkingItems().find(item => item.id === itemId || item.tempId === itemId || item.productId === itemId);
         const confirmed = await showConfirmationModal({
             title: "Remove Catalogue Item",
             message: "Remove this product from the live sales catalogue?",
             details: [
-                { label: "Item", value: featureState.liveItems.find(item => item.id === itemId)?.productName || itemId },
+                { label: "Item", value: workingItem?.productName || itemId },
                 { label: "Action", value: "Remove Item" }
             ],
             note: "This removal affects the live catalogue immediately and should be confirmed carefully.",
@@ -477,7 +541,7 @@ async function handleCatalogueItemRemoval(button) {
                 message: "The product has been removed from the live sales catalogue.",
                 details: [
                     { label: "Catalogue", value: getEditingCatalogue(getState())?.catalogueName || "-" },
-                    { label: "Item", value: featureState.liveItems.find(item => item.id === itemId)?.productName || itemId }
+                    { label: "Item", value: workingItem?.productName || itemId }
                 ]
             });
         } catch (error) {
@@ -502,7 +566,8 @@ async function handleCatalogueItemPriceChange(params) {
                 featureState.editingCatalogueId,
                 params.data.id,
                 nextPrice,
-                getState().currentUser
+                getState().currentUser,
+                params.data
             );
         } catch (error) {
             console.error("[Moneta] Catalogue price update failed:", error);
@@ -529,6 +594,107 @@ async function handleCatalogueItemPriceChange(params) {
             isOverridden: true
         };
     });
+    syncCatalogueItemsGrid(getState());
+}
+
+async function handleCatalogueItemHistory(button) {
+    const itemId = button.dataset.itemId;
+    const activeItem = getWorkingItems().find(item => item.id === itemId);
+
+    if (!featureState.editingCatalogueId || !itemId || !activeItem) {
+        showToast("Price history is available after the catalogue item is saved.", "warning");
+        return;
+    }
+
+    try {
+        featureState.priceHistoryRows = await getSalesCatalogueItemPriceHistory(featureState.editingCatalogueId, itemId);
+        featureState.priceHistoryItem = activeItem;
+        renderSalesCataloguesView();
+    } catch (error) {
+        console.error("[Moneta] Catalogue price history load failed:", error);
+        showToast(error.message || "Could not load catalogue price history.", "error");
+    }
+}
+
+async function handleCatalogueItemSync(button) {
+    const itemId = button.dataset.itemId;
+    const snapshot = getState();
+    const products = snapshot.masterData.products || [];
+    const categories = snapshot.masterData.categories || [];
+    const targetItem = getWorkingItems().find(item => (item.id || item.tempId || item.productId) === itemId);
+
+    if (!targetItem) {
+        showToast("Catalogue item could not be found.", "error");
+        return;
+    }
+
+    try {
+        const syncedItem = await syncSalesCatalogueItemToProduct(
+            featureState.editingCatalogueId,
+            targetItem,
+            products,
+            snapshot.currentUser,
+            categories
+        );
+
+        if (!featureState.editingCatalogueId) {
+            featureState.draftItems = featureState.draftItems.map(item => {
+                const itemKey = item.id || item.tempId || item.productId;
+                return itemKey === itemId ? syncedItem : item;
+            });
+            renderSalesCataloguesView();
+        }
+
+        showToast(`${syncedItem.productName || "Catalogue item"} synced to the latest product price.`, "success");
+    } catch (error) {
+        console.error("[Moneta] Catalogue item sync failed:", error);
+        showToast(error.message || "Could not sync catalogue item.", "error");
+    }
+}
+
+async function handleSyncAllChangedItems() {
+    const snapshot = getState();
+    const products = snapshot.masterData.products || [];
+    const categories = snapshot.masterData.categories || [];
+    const workingItems = getWorkingItems();
+    const syncableCount = getCatalogueSyncableCount(snapshot, workingItems);
+
+    if (syncableCount <= 0) {
+        showToast("All catalogue items are already in sync.", "success");
+        return;
+    }
+
+    try {
+        const result = await syncChangedSalesCatalogueItems(
+            featureState.editingCatalogueId,
+            workingItems,
+            products,
+            snapshot.currentUser,
+            categories
+        );
+
+        if (!featureState.editingCatalogueId) {
+            const syncedMap = new Map(result.syncedItems.map(item => [item.id || item.tempId || item.productId, item]));
+            featureState.draftItems = featureState.draftItems.map(item => {
+                const key = item.id || item.tempId || item.productId;
+                return syncedMap.get(key) || item;
+            });
+            renderSalesCataloguesView();
+        }
+
+        showToast(`${result.syncedCount} catalogue item${result.syncedCount === 1 ? "" : "s"} synced to the latest product prices.`, "success");
+        await showSummaryModal({
+            title: "Catalogue Prices Synced",
+            message: "Moneta updated the selected catalogue items to match the latest product pricing.",
+            details: [
+                { label: "Catalogue", value: getEditingCatalogue(snapshot)?.catalogueName || "Draft Workspace" },
+                { label: "Items Synced", value: String(result.syncedCount) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Sync all catalogue items failed:", error);
+        showToast(error.message || "Could not sync catalogue prices.", "error");
+    }
 }
 
 function handleCatalogueEdit(button) {
@@ -595,6 +761,12 @@ function handleCancelEdit() {
     renderSalesCataloguesView();
 }
 
+function handleClosePriceHistory() {
+    featureState.priceHistoryItem = null;
+    featureState.priceHistoryRows = [];
+    renderSalesCataloguesView();
+}
+
 function handleSearchInput(target) {
     if (target.id === "sales-catalogue-products-search") {
         featureState.availableSearchTerm = target.value || "";
@@ -630,9 +802,14 @@ function bindSalesCatalogueDomEvents() {
         const target = event.target;
         const addButton = target.closest(".sales-catalogue-add-product-button");
         const removeButton = target.closest(".sales-catalogue-remove-item-button");
+        const syncButton = target.closest(".sales-catalogue-sync-item-button");
+        const historyButton = target.closest(".sales-catalogue-history-button");
         const editButton = target.closest(".sales-catalogue-edit-button");
         const statusButton = target.closest(".sales-catalogue-status-button");
         const cancelButton = target.closest("#sales-catalogue-cancel-button");
+        const syncAllButton = target.closest("#sales-catalogue-sync-all-button");
+        const closeHistoryButton = target.closest("#sales-catalogue-price-history-close-button");
+        const historyBackdrop = target.closest("#sales-catalogue-price-history-modal");
 
         if (addButton) {
             handleAddProduct(addButton);
@@ -641,6 +818,16 @@ function bindSalesCatalogueDomEvents() {
 
         if (removeButton) {
             handleCatalogueItemRemoval(removeButton);
+            return;
+        }
+
+        if (syncButton) {
+            handleCatalogueItemSync(syncButton);
+            return;
+        }
+
+        if (historyButton) {
+            handleCatalogueItemHistory(historyButton);
             return;
         }
 
@@ -656,6 +843,21 @@ function bindSalesCatalogueDomEvents() {
 
         if (cancelButton) {
             handleCancelEdit();
+            return;
+        }
+
+        if (syncAllButton) {
+            handleSyncAllChangedItems();
+            return;
+        }
+
+        if (closeHistoryButton) {
+            handleClosePriceHistory();
+            return;
+        }
+
+        if (target.id === "sales-catalogue-price-history-modal" && historyBackdrop) {
+            handleClosePriceHistory();
         }
     });
 

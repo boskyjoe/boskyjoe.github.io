@@ -4,6 +4,7 @@ import {
     deleteSalesCatalogueItem,
     setSalesCatalogueStatus,
     updateSalesCatalogueItem,
+    updateSalesCatalogueItemsBatch,
     updateSalesCatalogueRecord
 } from "./repository.js";
 
@@ -20,17 +21,16 @@ function findCategoryName(categoryId, categories = []) {
     return categories.find(category => category.id === categoryId)?.categoryName || "-";
 }
 
-export function buildSalesCatalogueItemFromProduct(product, categories = []) {
-    if (!product?.id) {
-        throw new Error("Product record could not be found.");
-    }
+function roundCurrency(value) {
+    return Number((Number(value) || 0).toFixed(2));
+}
 
-    const costPrice = normalizeNumber(product.unitPrice, 0);
+function buildCatalogueItemFromProductSnapshot(product, categories = []) {
+    const costPrice = roundCurrency(normalizeNumber(product.unitPrice, 0));
     const marginPercentage = normalizeNumber(product.unitMarginPercentage, 0);
-    const sellingPrice = normalizeNumber(product.sellingPrice, costPrice);
+    const sellingPrice = roundCurrency(normalizeNumber(product.sellingPrice, costPrice));
 
     return {
-        tempId: `draft-${product.id}`,
         productId: product.id,
         itemId: product.itemId || "",
         productName: product.itemName || "Untitled Product",
@@ -40,7 +40,131 @@ export function buildSalesCatalogueItemFromProduct(product, categories = []) {
         costPrice,
         marginPercentage,
         sellingPrice,
+        sourceProductCostPrice: costPrice,
+        sourceProductMarginPercentage: marginPercentage,
+        sourceProductSellingPrice: sellingPrice,
         isOverridden: false
+    };
+}
+
+export function buildSalesCatalogueItemFromProduct(product, categories = []) {
+    if (!product?.id) {
+        throw new Error("Product record could not be found.");
+    }
+
+    return {
+        tempId: `draft-${product.id}`,
+        ...buildCatalogueItemFromProductSnapshot(product, categories)
+    };
+}
+
+function resolveProductForCatalogueItem(item, products = []) {
+    return (products || []).find(product => product.id === item?.productId) || null;
+}
+
+function getSourceProductSnapshot(item = {}) {
+    return {
+        sourceProductCostPrice: roundCurrency(normalizeNumber(item.sourceProductCostPrice, item.costPrice)),
+        sourceProductMarginPercentage: normalizeNumber(item.sourceProductMarginPercentage, item.marginPercentage),
+        sourceProductSellingPrice: roundCurrency(normalizeNumber(item.sourceProductSellingPrice, item.sellingPrice))
+    };
+}
+
+function buildPriceSyncState(item, product) {
+    if (!product) {
+        return {
+            priceSyncState: "missing-product",
+            priceSyncLabel: "Product Missing",
+            canSync: false
+        };
+    }
+
+    const currentCostPrice = roundCurrency(normalizeNumber(product.unitPrice, 0));
+    const currentMarginPercentage = normalizeNumber(product.unitMarginPercentage, 0);
+    const currentSellingPrice = roundCurrency(normalizeNumber(product.sellingPrice, currentCostPrice));
+    const sourceSnapshot = getSourceProductSnapshot(item);
+    const productMoved = currentCostPrice !== sourceSnapshot.sourceProductCostPrice
+        || currentMarginPercentage !== sourceSnapshot.sourceProductMarginPercentage
+        || currentSellingPrice !== sourceSnapshot.sourceProductSellingPrice;
+
+    if (Boolean(item.isOverridden)) {
+        return {
+            priceSyncState: productMoved ? "override-stale" : "override",
+            priceSyncLabel: productMoved ? "Override + Product Changed" : "Manual Override",
+            canSync: true
+        };
+    }
+
+    if (productMoved) {
+        return {
+            priceSyncState: "stale",
+            priceSyncLabel: "Product Price Changed",
+            canSync: true
+        };
+    }
+
+    return {
+        priceSyncState: "in-sync",
+        priceSyncLabel: "In Sync",
+        canSync: false
+    };
+}
+
+export function enrichSalesCatalogueItem(item, products = [], categories = []) {
+    const product = resolveProductForCatalogueItem(item, products);
+    const resolvedCategoryId = item.categoryId || product?.categoryId || "";
+    const resolvedCategoryName = item.categoryName
+        || findCategoryName(resolvedCategoryId, categories)
+        || "-";
+    const sourceSnapshot = getSourceProductSnapshot(item);
+    const syncState = buildPriceSyncState({ ...item, ...sourceSnapshot }, product);
+
+    return {
+        ...item,
+        categoryId: resolvedCategoryId,
+        categoryName: resolvedCategoryName,
+        currentProductCostPrice: roundCurrency(normalizeNumber(product?.unitPrice, sourceSnapshot.sourceProductCostPrice)),
+        currentProductMarginPercentage: normalizeNumber(product?.unitMarginPercentage, sourceSnapshot.sourceProductMarginPercentage),
+        currentProductSellingPrice: roundCurrency(normalizeNumber(product?.sellingPrice, sourceSnapshot.sourceProductSellingPrice)),
+        ...sourceSnapshot,
+        ...syncState
+    };
+}
+
+export function countSyncableSalesCatalogueItems(items = [], products = [], categories = []) {
+    return (items || [])
+        .map(item => enrichSalesCatalogueItem(item, products, categories))
+        .filter(item => item.canSync)
+        .length;
+}
+
+function buildSyncedCatalogueItem(item, product, categories = []) {
+    const snapshot = buildCatalogueItemFromProductSnapshot(product, categories);
+
+    return {
+        ...item,
+        ...snapshot
+    };
+}
+
+function buildSalesCataloguePriceHistoryEntry({
+    actionType,
+    note,
+    previousItem = {},
+    nextItem = {}
+} = {}) {
+    return {
+        actionType: actionType || "price-change",
+        previousSellingPrice: previousItem.sellingPrice ?? null,
+        nextSellingPrice: nextItem.sellingPrice ?? null,
+        previousCostPrice: previousItem.costPrice ?? null,
+        nextCostPrice: nextItem.costPrice ?? null,
+        previousMarginPercentage: previousItem.marginPercentage ?? null,
+        nextMarginPercentage: nextItem.marginPercentage ?? null,
+        sourceProductSellingPrice: nextItem.sourceProductSellingPrice ?? nextItem.sellingPrice ?? null,
+        sourceProductCostPrice: nextItem.sourceProductCostPrice ?? nextItem.costPrice ?? null,
+        sourceProductMarginPercentage: nextItem.sourceProductMarginPercentage ?? nextItem.marginPercentage ?? null,
+        note: note || ""
     };
 }
 
@@ -90,6 +214,9 @@ function validateCatalogueItems(items) {
             costPrice: normalizeNumber(item.costPrice, 0),
             marginPercentage: normalizeNumber(item.marginPercentage, 0),
             sellingPrice,
+            sourceProductCostPrice: normalizeNumber(item.sourceProductCostPrice, item.costPrice),
+            sourceProductMarginPercentage: normalizeNumber(item.sourceProductMarginPercentage, item.marginPercentage),
+            sourceProductSellingPrice: normalizeNumber(item.sourceProductSellingPrice, sellingPrice),
             isOverridden: Boolean(item.isOverridden)
         };
     });
@@ -147,7 +274,7 @@ export async function addProductToSalesCatalogue(catalogueId, product, existingI
     return persistedItem;
 }
 
-export async function updateSalesCatalogueItemPrice(catalogueId, itemId, sellingPrice, user) {
+export async function updateSalesCatalogueItemPrice(catalogueId, itemId, sellingPrice, user, currentItem = null) {
     if (!user) {
         throw new Error("You must be logged in to update catalogue pricing.");
     }
@@ -161,7 +288,107 @@ export async function updateSalesCatalogueItemPrice(catalogueId, itemId, selling
     await updateSalesCatalogueItem(catalogueId, itemId, {
         sellingPrice: normalizedPrice,
         isOverridden: true
-    }, user);
+    }, user, buildSalesCataloguePriceHistoryEntry({
+        actionType: "manual-override",
+        note: "Selling price updated manually from the catalogue worksheet.",
+        previousItem: currentItem || {},
+        nextItem: {
+            ...(currentItem || {}),
+            sellingPrice: normalizedPrice,
+            isOverridden: true
+        }
+    }));
+}
+
+export async function syncSalesCatalogueItemToProduct(catalogueId, item, products = [], user, categories = []) {
+    const product = resolveProductForCatalogueItem(item, products);
+
+    if (!product) {
+        throw new Error("The linked product could not be found.");
+    }
+
+    const syncedItem = buildSyncedCatalogueItem(item, product, categories);
+
+    if (!catalogueId) {
+        return syncedItem;
+    }
+
+    if (!user) {
+        throw new Error("You must be logged in to sync catalogue pricing.");
+    }
+
+    await updateSalesCatalogueItem(catalogueId, item.id, {
+        productName: syncedItem.productName,
+        categoryId: syncedItem.categoryId,
+        categoryName: syncedItem.categoryName,
+        inventoryCount: syncedItem.inventoryCount,
+        costPrice: syncedItem.costPrice,
+        marginPercentage: syncedItem.marginPercentage,
+        sellingPrice: syncedItem.sellingPrice,
+        sourceProductCostPrice: syncedItem.sourceProductCostPrice,
+        sourceProductMarginPercentage: syncedItem.sourceProductMarginPercentage,
+        sourceProductSellingPrice: syncedItem.sourceProductSellingPrice,
+        isOverridden: false
+    }, user, buildSalesCataloguePriceHistoryEntry({
+        actionType: "sync-to-product",
+        note: "Catalogue item pricing synced to the current product master snapshot.",
+        previousItem: item,
+        nextItem: syncedItem
+    }));
+
+    return syncedItem;
+}
+
+export async function syncChangedSalesCatalogueItems(catalogueId, items = [], products = [], user, categories = []) {
+    const syncableItems = (items || [])
+        .map(item => enrichSalesCatalogueItem(item, products, categories))
+        .filter(item => item.canSync);
+
+    if (!syncableItems.length) {
+        return { syncedCount: 0, syncedItems: [] };
+    }
+
+    const syncedItems = syncableItems.map(item => {
+        const product = resolveProductForCatalogueItem(item, products);
+        return buildSyncedCatalogueItem(item, product, categories);
+    });
+
+    if (!catalogueId) {
+        return { syncedCount: syncedItems.length, syncedItems };
+    }
+
+    if (!user) {
+        throw new Error("You must be logged in to sync catalogue pricing.");
+    }
+
+    await updateSalesCatalogueItemsBatch(
+        catalogueId,
+        syncedItems.map(item => ({
+            itemId: item.id,
+            updatedData: {
+                productName: item.productName,
+                categoryId: item.categoryId,
+                categoryName: item.categoryName,
+                inventoryCount: item.inventoryCount,
+                costPrice: item.costPrice,
+                marginPercentage: item.marginPercentage,
+                sellingPrice: item.sellingPrice,
+                sourceProductCostPrice: item.sourceProductCostPrice,
+                sourceProductMarginPercentage: item.sourceProductMarginPercentage,
+                sourceProductSellingPrice: item.sourceProductSellingPrice,
+                isOverridden: false,
+                historyEntry: buildSalesCataloguePriceHistoryEntry({
+                    actionType: "sync-to-product",
+                    note: "Catalogue item pricing synced to the current product master snapshot.",
+                    previousItem: syncableItems.find(entry => entry.id === item.id),
+                    nextItem: item
+                })
+            }
+        })),
+        user
+    );
+
+    return { syncedCount: syncedItems.length, syncedItems };
 }
 
 export async function removeSalesCatalogueItemRecord(catalogueId, itemId) {

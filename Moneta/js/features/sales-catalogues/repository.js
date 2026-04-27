@@ -4,6 +4,14 @@ function getDb() {
     return firebase.firestore();
 }
 
+function getCatalogueItemRef(catalogueId, itemId) {
+    return getDb()
+        .collection(COLLECTIONS.salesCatalogues)
+        .doc(catalogueId)
+        .collection("items")
+        .doc(itemId);
+}
+
 function buildCatalogueCode() {
     const year = new Date().getFullYear();
     return `SC-${year}-${Date.now().toString().slice(-6)}`;
@@ -39,6 +47,21 @@ export async function createSalesCatalogueRecord(catalogueData, itemsData, user)
                 updatedOn: now
             }
         });
+        batch.set(itemRef.collection("priceHistory").doc(), {
+            actionType: "catalogue-created",
+            previousSellingPrice: null,
+            nextSellingPrice: item.sellingPrice,
+            previousCostPrice: null,
+            nextCostPrice: item.costPrice,
+            previousMarginPercentage: null,
+            nextMarginPercentage: item.marginPercentage,
+            sourceProductSellingPrice: item.sourceProductSellingPrice ?? item.sellingPrice,
+            sourceProductCostPrice: item.sourceProductCostPrice ?? item.costPrice,
+            sourceProductMarginPercentage: item.sourceProductMarginPercentage ?? item.marginPercentage,
+            note: "Initial catalogue item price snapshot.",
+            changedBy: user.email,
+            changedOn: now
+        });
     });
 
     await batch.commit();
@@ -61,36 +84,108 @@ export async function setSalesCatalogueStatus(docId, isActive, user) {
 
 export async function addSalesCatalogueItem(catalogueId, itemData, user) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
-
-    return getDb()
+    const itemRef = getDb()
         .collection(COLLECTIONS.salesCatalogues)
         .doc(catalogueId)
         .collection("items")
-        .add({
-            ...itemData,
-            catalogueId,
-            audit: {
-                createdBy: user.email,
-                createdOn: now,
-                updatedBy: user.email,
-                updatedOn: now
-            }
-        });
+        .doc();
+    const batch = getDb().batch();
+
+    batch.set(itemRef, {
+        ...itemData,
+        catalogueId,
+        audit: {
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        }
+    });
+    batch.set(itemRef.collection("priceHistory").doc(), {
+        actionType: "item-added",
+        previousSellingPrice: null,
+        nextSellingPrice: itemData.sellingPrice,
+        previousCostPrice: null,
+        nextCostPrice: itemData.costPrice,
+        previousMarginPercentage: null,
+        nextMarginPercentage: itemData.marginPercentage,
+        sourceProductSellingPrice: itemData.sourceProductSellingPrice ?? itemData.sellingPrice,
+        sourceProductCostPrice: itemData.sourceProductCostPrice ?? itemData.costPrice,
+        sourceProductMarginPercentage: itemData.sourceProductMarginPercentage ?? itemData.marginPercentage,
+        note: "Product added to live sales catalogue.",
+        changedBy: user.email,
+        changedOn: now
+    });
+    await batch.commit();
+    return itemRef;
 }
 
-export async function updateSalesCatalogueItem(catalogueId, itemId, updatedData, user) {
+export async function updateSalesCatalogueItem(catalogueId, itemId, updatedData, user, historyEntry = null) {
     const now = firebase.firestore.FieldValue.serverTimestamp();
+    const itemRef = getCatalogueItemRef(catalogueId, itemId);
+    const batch = getDb().batch();
 
-    return getDb()
-        .collection(COLLECTIONS.salesCatalogues)
-        .doc(catalogueId)
-        .collection("items")
-        .doc(itemId)
-        .update({
-            ...updatedData,
+    batch.update(itemRef, {
+        ...updatedData,
+        "audit.updatedBy": user.email,
+        "audit.updatedOn": now
+    });
+
+    if (historyEntry) {
+        batch.set(itemRef.collection("priceHistory").doc(), {
+            ...historyEntry,
+            changedBy: user.email,
+            changedOn: now
+        });
+    }
+
+    await batch.commit();
+}
+
+export async function updateSalesCatalogueItemsBatch(catalogueId, updates = [], user) {
+    if (!catalogueId || !Array.isArray(updates) || updates.length === 0) {
+        return;
+    }
+
+    const db = getDb();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+
+    updates.forEach(({ itemId, updatedData }) => {
+        if (!itemId || !updatedData) return;
+
+        const docRef = db
+            .collection(COLLECTIONS.salesCatalogues)
+            .doc(catalogueId)
+            .collection("items")
+            .doc(itemId);
+        const { historyEntry, ...itemUpdate } = updatedData;
+
+        batch.update(docRef, {
+            ...itemUpdate,
             "audit.updatedBy": user.email,
             "audit.updatedOn": now
         });
+
+        if (historyEntry) {
+            batch.set(docRef.collection("priceHistory").doc(), {
+                ...historyEntry,
+                changedBy: user.email,
+                changedOn: now
+            });
+        }
+    });
+
+    await batch.commit();
+}
+
+export async function getSalesCatalogueItemPriceHistory(catalogueId, itemId) {
+    const snapshot = await getCatalogueItemRef(catalogueId, itemId)
+        .collection("priceHistory")
+        .orderBy("changedOn", "desc")
+        .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 export async function deleteSalesCatalogueItem(catalogueId, itemId) {

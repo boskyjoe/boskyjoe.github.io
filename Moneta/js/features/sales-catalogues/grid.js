@@ -8,6 +8,8 @@ let catalogueItemsGridApi = null;
 let catalogueItemsGridElement = null;
 let existingCataloguesGridApi = null;
 let existingCataloguesGridElement = null;
+let salesCataloguePriceHistoryGridApi = null;
+let salesCataloguePriceHistoryGridElement = null;
 let itemPriceChangeHandler = null;
 
 const rightAlignedNumberColumn = {
@@ -53,10 +55,29 @@ function addProductActionMarkup(data, selectedProductIds) {
 }
 
 function removeItemActionMarkup(data) {
+    const syncButton = data?.canSync
+        ? `
+            <button class="button grid-action-button grid-action-button-secondary sales-catalogue-sync-item-button" type="button" data-item-id="${data.id || data.tempId}">
+                Sync
+            </button>
+        `
+        : "";
+    const historyButton = data?.id
+        ? `
+            <button class="button grid-action-button grid-action-button-secondary sales-catalogue-history-button" type="button" data-item-id="${data.id}">
+                History
+            </button>
+        `
+        : "";
+
     return `
-        <button class="button grid-action-button grid-action-button-danger sales-catalogue-remove-item-button" type="button" data-item-id="${data.id || data.tempId}">
-            Remove
-        </button>
+        <div class="table-actions grid-actions-inline">
+            ${syncButton}
+            ${historyButton}
+            <button class="button grid-action-button grid-action-button-danger sales-catalogue-remove-item-button" type="button" data-item-id="${data.id || data.tempId}">
+                Remove
+            </button>
+        </div>
     `;
 }
 
@@ -160,9 +181,32 @@ function buildCatalogueItemsColumnDefs() {
             valueFormatter: params => params.value ? "Custom" : "Default"
         },
         {
-            headerName: "Remove",
-            minWidth: 120,
-            flex: 0.75,
+            field: "priceSyncLabel",
+            headerName: "Sync Status",
+            minWidth: 180,
+            flex: 1,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => {
+                const state = params.data?.priceSyncState || "in-sync";
+                const toneClass = state === "in-sync"
+                    ? "status-active"
+                    : state === "missing-product"
+                        ? "status-inactive"
+                        : "status-warning";
+
+                return `
+                    <span class="grid-status-cell grid-status-pill ${toneClass}">
+                        <span class="inline-icon">${state === "in-sync" ? icons.active : icons.warning}</span>
+                        ${params.value || "In Sync"}
+                    </span>
+                `;
+            }
+        },
+        {
+            headerName: "Actions",
+            minWidth: 220,
+            flex: 1.2,
             sortable: false,
             filter: false,
             cellRenderer: params => removeItemActionMarkup(params.data)
@@ -196,6 +240,77 @@ function buildExistingCataloguesColumnDefs() {
             sortable: false,
             filter: false,
             cellRenderer: params => catalogueActionMarkup(params.data)
+        }
+    ];
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function buildSalesCataloguePriceHistoryColumnDefs() {
+    return [
+        { field: "actionType", headerName: "Action", minWidth: 150, flex: 0.9 },
+        {
+            field: "previousSellingPrice",
+            headerName: "Old Sell",
+            minWidth: 120,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => params.value === null || params.value === undefined ? "-" : formatCurrency(params.value || 0)
+        },
+        {
+            field: "nextSellingPrice",
+            headerName: "New Sell",
+            minWidth: 120,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => params.value === null || params.value === undefined ? "-" : formatCurrency(params.value || 0)
+        },
+        {
+            field: "previousCostPrice",
+            headerName: "Old Cost",
+            minWidth: 120,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => params.value === null || params.value === undefined ? "-" : formatCurrency(params.value || 0)
+        },
+        {
+            field: "nextCostPrice",
+            headerName: "New Cost",
+            minWidth: 120,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => params.value === null || params.value === undefined ? "-" : formatCurrency(params.value || 0)
+        },
+        {
+            field: "changedBy",
+            headerName: "Changed By",
+            minWidth: 180,
+            flex: 1
+        },
+        {
+            field: "changedOn",
+            headerName: "Changed On",
+            minWidth: 180,
+            flex: 1,
+            valueFormatter: params => formatDateTime(params.value)
+        },
+        {
+            field: "note",
+            headerName: "Note",
+            minWidth: 220,
+            flex: 1.4
         }
     ];
 }
@@ -320,4 +435,33 @@ export function refreshExistingCataloguesGrid(rows) {
 
 export function updateExistingCataloguesGridSearch(searchTerm) {
     existingCataloguesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeSalesCataloguePriceHistoryGrid(gridElement) {
+    if (!gridElement) return salesCataloguePriceHistoryGridApi;
+
+    if (salesCataloguePriceHistoryGridApi && salesCataloguePriceHistoryGridElement !== gridElement) {
+        salesCataloguePriceHistoryGridApi.destroy();
+        salesCataloguePriceHistoryGridApi = null;
+        salesCataloguePriceHistoryGridElement = null;
+    }
+
+    if (salesCataloguePriceHistoryGridApi) return salesCataloguePriceHistoryGridApi;
+
+    salesCataloguePriceHistoryGridApi = createGrid(gridElement, {
+        columnDefs: buildSalesCataloguePriceHistoryColumnDefs(),
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 25, 50],
+        defaultColDef: buildDefaultColDef()
+    });
+
+    salesCataloguePriceHistoryGridElement = gridElement;
+    return salesCataloguePriceHistoryGridApi;
+}
+
+export function refreshSalesCataloguePriceHistoryGrid(rows) {
+    if (!salesCataloguePriceHistoryGridApi) return;
+    salesCataloguePriceHistoryGridApi.setGridOption("rowData", rows);
 }
