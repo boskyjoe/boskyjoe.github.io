@@ -8,9 +8,9 @@ body {
     min-height: 100%;
     font-family: var(--font-sans);
     background:
-        radial-gradient(circle at top left, rgba(20, 93, 160, 0.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(17, 122, 101, 0.08), transparent 24%),
-        linear-gradient(180deg, #edf4f8 0%, var(--bg-app) 100%);
+        radial-gradient(circle at top left, var(--bg-page-radial-primary), transparent 28%),
+        radial-gradient(circle at top right, var(--bg-page-radial-secondary), transparent 24%),
+        linear-gradient(180deg, var(--bg-app-layer) 0%, var(--bg-app) 100%);
     color: var(--text-main);
 }
 
@@ -54,7 +54,7 @@ select {
 }
 
 .button-secondary {
-    background: var(--bg-panel-soft);
+    background: var(--button-secondary-bg);
     color: var(--text-main);
 }
 
@@ -124,17 +124,17 @@ select {
     justify-content: space-between;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, #eef6f5 0%, #f7fbfb 100%);
+    background: linear-gradient(135deg, var(--panel-header-start) 0%, var(--panel-header-end) 100%);
     border-bottom: 1px solid var(--border);
 }
 
 .panel-header-accent {
-    background: linear-gradient(135deg, #edf5fd 0%, #f8fbfe 100%);
+    background: linear-gradient(135deg, var(--panel-header-accent-start) 0%, var(--panel-header-accent-end) 100%);
 }
 
 .panel-header-danger-soft {
-    background: linear-gradient(135deg, #fff1ef 0%, #fff8f7 100%);
-    border-bottom-color: rgba(192, 72, 72, 0.18);
+    background: linear-gradient(135deg, var(--panel-header-danger-start) 0%, var(--panel-header-danger-end) 100%);
+    border-bottom-color: var(--panel-header-danger-border);
 }
 
 .panel-title-wrap {
@@ -258,9 +258,9 @@ select {
     width: 1.15rem;
     height: 1.15rem;
     border-radius: 999px;
-    border: 1px solid var(--border);
-    background: linear-gradient(180deg, #f7fbfa 0%, #edf7f4 100%);
-    color: #0f6a5c;
+    border: 1px solid var(--field-help-border);
+    background: linear-gradient(180deg, var(--field-help-bg-start) 0%, var(--field-help-bg-end) 100%);
+    color: var(--field-help-text);
     font-size: 0.72rem;
     font-weight: 800;
     line-height: 1;
@@ -269,7 +269,7 @@ select {
 }
 
 .field-help-tip:focus-visible {
-    outline: 2px solid rgba(15, 106, 92, 0.25);
+    outline: 2px solid rgba(var(--accent-rgb), 0.25);
     outline-offset: 2px;
 }
 
@@ -279,7 +279,7 @@ select {
 }
 
 .required-mark {
-    color: #d92d20;
+    color: var(--danger);
     font-weight: 800;
 }
 
@@ -289,7 +289,7 @@ select {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    background: #fff;
+    background: var(--bg-input);
     color: var(--text-main);
     padding: 0.8rem 0.95rem;
     transition: border-color 120ms ease, box-shadow 120ms ease;
@@ -298,7 +298,7 @@ select {
 .input:disabled,
 .textarea:disabled,
 .select:disabled {
-    background: #f3f6f8;
+    background: var(--bg-input-disabled);
     color: var(--text-muted);
     cursor: not-allowed;
 }
@@ -308,7 +308,7 @@ select {
 .select:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(17, 122, 101, 0.12);
+    box-shadow: var(--focus-ring);
 }
 
 .textarea {
@@ -368,7 +368,7 @@ select {
 }
 
 .button-danger-soft {
-    background: #faeaea;
+    background: var(--button-danger-soft-bg);
     color: var(--danger);
 }
 
@@ -384,13 +384,13 @@ select {
 }
 
 .status-active {
-    background: #dff5ef;
-    color: var(--accent-strong);
+    background: var(--status-success-bg);
+    color: var(--status-success-text);
 }
 
 .status-inactive {
-    background: #f5e2e2;
-    color: var(--danger);
+    background: var(--status-danger-bg);
+    color: var(--status-danger-text);
 }
 
 .empty-state {
@@ -455,13 +455,13 @@ select {
 
 .ag-theme-alpine.moneta-grid {
     --ag-font-family: var(--font-sans);
-    --ag-background-color: #ffffff;
-    --ag-header-background-color: #f7fafc;
+    --ag-background-color: var(--ag-background);
+    --ag-header-background-color: var(--ag-header-background);
     --ag-header-foreground-color: var(--text-muted);
     --ag-foreground-color: var(--text-main);
     --ag-border-color: var(--border);
-    --ag-row-border-color: #eef3f6;
-    --ag-selected-row-background-color: #e9f3fb;
+    --ag-row-border-color: var(--ag-row-border);
+    --ag-selected-row-background-color: var(--ag-selected-row);
     --ag-header-height: 48px;
     --ag-row-height: 52px;
 }
@@ -522,17 +522,17 @@ select {
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned {
-    background: #f6f9fb;
-    border-top: 1px solid #d9e5ec;
+    background: var(--ag-pinned-background);
+    border-top: 1px solid var(--ag-pinned-border);
     font-weight: 700;
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell {
-    background: #f6f9fb;
+    background: var(--ag-pinned-background);
 }
 
 .ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
-    background: #f4fbf8;
+    background: var(--ag-row-soft-success);
 }
 
 .consignment-line-change-pill {
@@ -561,11 +561,11 @@ select {
 }
 
 .ag-theme-alpine.moneta-grid .ag-row.consignment-line-added:not(.ag-row-selected) .ag-cell {
-    background: linear-gradient(0deg, rgba(22, 163, 74, 0.08), rgba(22, 163, 74, 0.08));
+    background: linear-gradient(0deg, var(--ag-row-success), var(--ag-row-success));
 }
 
 .ag-theme-alpine.moneta-grid .ag-row.consignment-line-updated:not(.ag-row-selected) .ag-cell {
-    background: linear-gradient(0deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.08));
+    background: linear-gradient(0deg, var(--ag-row-info), var(--ag-row-info));
 }
 
 .section-stack {
@@ -585,9 +585,9 @@ select {
 }
 
 .admin-module-tab {
-    border: 1px solid rgba(59, 86, 107, 0.12);
-    background: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
-    color: #415467;
+    border: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-muted) 100%);
+    color: var(--text-muted);
     border-radius: 999px;
     min-height: 2.55rem;
     padding: 0.48rem 0.95rem;
@@ -605,9 +605,9 @@ select {
 }
 
 .admin-module-tab.active {
-    background: linear-gradient(180deg, #167968 0%, #117a65 100%);
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
     color: var(--text-inverse);
-    border-color: rgba(17, 122, 101, 0.2);
+    border-color: rgba(var(--accent-rgb), 0.2);
 }
 
 .admin-module-tab-count {
@@ -617,7 +617,7 @@ select {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(59, 86, 107, 0.08);
+    background: rgba(var(--accent-alt-rgb), 0.08);
     color: inherit;
     font-size: 0.76rem;
 }
@@ -644,13 +644,13 @@ select {
     padding: 1.15rem 1rem 1rem;
     border: 1px solid var(--border);
     border-radius: 1.15rem;
-    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-subtle) 100%);
+    box-shadow: var(--shadow-soft);
 }
 
 .workspace-form-section-head {
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e6edf5;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .workspace-form-section-kicker {
@@ -659,7 +659,7 @@ select {
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #2f63da;
+    color: var(--accent-alt);
 }
 
 .workspace-form-section-grid {
@@ -680,7 +680,7 @@ select {
 .purchase-status-pill {
     min-height: 1.75rem;
     border: 1px solid transparent;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .purchase-status-pill {
@@ -694,35 +694,35 @@ select {
 }
 
 .purchase-status-paid {
-    background: linear-gradient(180deg, #ebfaf3 0%, #dff5ef 100%);
+    background: linear-gradient(180deg, var(--success-soft) 0%, var(--status-success-bg) 100%);
     color: var(--accent-strong);
-    border-color: rgba(17, 122, 101, 0.16);
+    border-color: rgba(var(--accent-rgb), 0.16);
 }
 
 .purchase-status-partially-paid {
-    background: linear-gradient(180deg, #fff7e8 0%, #fff1d9 100%);
-    color: #9a5a00;
-    border-color: rgba(154, 90, 0, 0.16);
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.18) 0%, rgba(var(--warning-rgb), 0.12) 100%);
+    color: var(--warning);
+    border-color: rgba(var(--warning-rgb), 0.2);
 }
 
 .purchase-status-verified,
 .purchase-status-recorded {
-    background: linear-gradient(180deg, #edf7ff 0%, #dfefff 100%);
-    color: #245f96;
-    border-color: rgba(36, 95, 150, 0.16);
+    background: linear-gradient(180deg, rgba(var(--accent-alt-rgb), 0.18) 0%, rgba(var(--accent-alt-rgb), 0.12) 100%);
+    color: var(--accent-alt);
+    border-color: rgba(var(--accent-alt-rgb), 0.2);
 }
 
 .purchase-status-voided,
 .purchase-status-void-reversal {
-    background: linear-gradient(180deg, #f4f6f8 0%, #e8eef4 100%);
-    color: #4d5a68;
+    background: linear-gradient(180deg, var(--bg-panel-muted) 0%, var(--bg-panel-soft) 100%);
+    color: var(--text-muted);
     border-color: rgba(77, 90, 104, 0.16);
 }
 
 .purchase-status-unpaid {
-    background: linear-gradient(180deg, #faeeee 0%, #f5e2e2 100%);
+    background: linear-gradient(180deg, rgba(var(--danger-rgb), 0.18) 0%, rgba(var(--danger-rgb), 0.12) 100%);
     color: var(--danger);
-    border-color: rgba(177, 44, 44, 0.15);
+    border-color: rgba(var(--danger-rgb), 0.18);
 }
 
 .admin-lifecycle-pill {
@@ -735,24 +735,24 @@ select {
     letter-spacing: 0.01em;
     font-weight: 700;
     border: 1px solid transparent;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .admin-lifecycle-upcoming {
-    background: linear-gradient(180deg, #fff7e8 0%, #fff1d9 100%);
-    color: #9a5a00;
-    border-color: rgba(154, 90, 0, 0.16);
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.18) 0%, rgba(var(--warning-rgb), 0.12) 100%);
+    color: var(--warning);
+    border-color: rgba(var(--warning-rgb), 0.2);
 }
 
 .admin-lifecycle-active {
-    background: linear-gradient(180deg, #ebfaf3 0%, #dff5ef 100%);
+    background: linear-gradient(180deg, var(--success-soft) 0%, var(--status-success-bg) 100%);
     color: var(--accent-strong);
-    border-color: rgba(17, 122, 101, 0.16);
+    border-color: rgba(var(--accent-rgb), 0.16);
 }
 
 .admin-lifecycle-archived {
-    background: linear-gradient(180deg, #f4f6f8 0%, #e8eef4 100%);
-    color: #4d5a68;
+    background: linear-gradient(180deg, var(--bg-panel-muted) 0%, var(--bg-panel-soft) 100%);
+    color: var(--text-muted);
     border-color: rgba(77, 90, 104, 0.16);
 }
 
