@@ -28,6 +28,10 @@ function buildReorderPolicyCode() {
     return `ROP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
 }
 
+function buildPricingPolicyCode() {
+    return `PPP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+}
+
 function buildStoreConfigCode(storeName = "") {
     const normalized = normalizeText(storeName).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     return normalized || `STORE_${Date.now()}`;
@@ -256,6 +260,38 @@ export async function updateReorderPolicyRecord(docId, updatedData, user) {
 
 export async function setReorderPolicyActiveStatus(docId, isActive, user) {
     return updateReorderPolicyRecord(docId, { isActive }, user);
+}
+
+export async function seedPricingPolicyRecords(policies = [], user) {
+    const now = getNow();
+    const batch = getDb().batch();
+
+    (policies || []).forEach(policy => {
+        const docId = normalizeText(policy.docId);
+        if (!docId) return;
+
+        const docRef = getDb().collection(COLLECTIONS.pricingPolicies).doc(docId);
+        batch.set(docRef, {
+            ...policy,
+            policyCode: policy.policyCode || buildPricingPolicyCode(),
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+    });
+
+    return batch.commit();
+}
+
+export async function updatePricingPolicyRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.pricingPolicies).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
 }
 
 export async function seedStoreConfigRecords(storeConfigs = [], user) {

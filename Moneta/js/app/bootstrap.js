@@ -18,8 +18,9 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
-import { ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
+import { ensurePricingPolicySeed, ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
 import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
+import { isSystemDefaultPricingPolicy } from "../shared/pricing-policy.js";
 
 function initializeFirebase() {
     if (!firebase.apps.length) {
@@ -155,6 +156,34 @@ function initializeStoreConfigSeedLifecycle() {
     });
 }
 
+function initializePricingPolicySeedLifecycle() {
+    let isEnsuring = false;
+
+    subscribe(async snapshot => {
+        if (isEnsuring) return;
+
+        const user = snapshot.currentUser;
+        if (!user || user.role !== "admin" || !snapshot.isMasterDataReady) {
+            return;
+        }
+
+        const hasSystemDefault = (snapshot.masterData.pricingPolicies || []).some(policy => isSystemDefaultPricingPolicy(policy));
+        if (hasSystemDefault) {
+            return;
+        }
+
+        isEnsuring = true;
+
+        try {
+            await ensurePricingPolicySeed(user, snapshot.masterData.pricingPolicies);
+        } catch (error) {
+            console.error("[Moneta] Failed to ensure pricing policy seed:", error);
+        } finally {
+            isEnsuring = false;
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initializeFirebase();
     initializeTheme();
@@ -177,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bindGlobalUiEvents();
     initializeDebugSubscription();
     initializeDataLifecycle();
+    initializePricingPolicySeedLifecycle();
     initializeStoreConfigSeedLifecycle();
     initializeReorderPolicySeedLifecycle();
 });

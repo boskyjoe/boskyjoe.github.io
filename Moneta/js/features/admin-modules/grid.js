@@ -7,6 +7,8 @@ let paymentModesGridApi = null;
 let paymentModesGridElement = null;
 let seasonsGridApi = null;
 let seasonsGridElement = null;
+let pricingPoliciesGridApi = null;
+let pricingPoliciesGridElement = null;
 let reorderPoliciesGridApi = null;
 let reorderPoliciesGridElement = null;
 let storeConfigsGridApi = null;
@@ -28,7 +30,7 @@ function seasonWorkflowMarkup(value) {
 }
 
 function actionMarkup(entity, data) {
-    if (entity === "storeConfigs") {
+    if (entity === "storeConfigs" || entity === "pricingPolicies") {
         return `
             <div class="table-actions grid-actions-inline">
                 <button class="button grid-action-button grid-action-button-secondary admin-module-edit-button" type="button" data-entity="${entity}" data-record-id="${data.id}">
@@ -60,6 +62,50 @@ function actionMarkup(entity, data) {
             </button>
         </div>
     `;
+}
+
+function buildPricingPoliciesColumnDefs() {
+    return [
+        { field: "policyName", headerName: "Policy", minWidth: 220, flex: 1.2 },
+        { field: "costingMethod", headerName: "Costing Method", minWidth: 170, flex: 0.95 },
+        { field: "sellingPriceBehavior", headerName: "Selling Price Behavior", minWidth: 210, flex: 1.15 },
+        {
+            field: "defaultTargetMarginPercentage",
+            headerName: "Default Margin",
+            minWidth: 140,
+            flex: 0.8,
+            valueFormatter: params => `${Number(params.value) || 0}%`
+        },
+        {
+            field: "costChangeAlertThresholdPercentage",
+            headerName: "Review Threshold",
+            minWidth: 155,
+            flex: 0.9,
+            valueFormatter: params => `${Number(params.value) || 0}%`
+        },
+        {
+            field: "allowManualCostOverride",
+            headerName: "Manual Override",
+            minWidth: 150,
+            flex: 0.85,
+            valueFormatter: params => params.value ? "Allowed" : "Locked"
+        },
+        {
+            headerName: "Updated",
+            minWidth: 150,
+            flex: 0.9,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 150,
+            flex: 0.8,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("pricingPolicies", params.data)
+        }
+    ];
 }
 
 function formatDate(value) {
@@ -363,6 +409,20 @@ export function refreshReorderPoliciesGrid(rows) {
 
 export function updateReorderPoliciesGridSearch(searchTerm) {
     reorderPoliciesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializePricingPoliciesGrid(gridElement) {
+    pricingPoliciesGridApi = initializeGrid(gridElement, pricingPoliciesGridApi, pricingPoliciesGridElement, buildPricingPoliciesColumnDefs());
+    pricingPoliciesGridElement = gridElement;
+    return pricingPoliciesGridApi;
+}
+
+export function refreshPricingPoliciesGrid(rows) {
+    pricingPoliciesGridApi?.setGridOption("rowData", rows);
+}
+
+export function updatePricingPoliciesGridSearch(searchTerm) {
+    pricingPoliciesGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }
 
 export function initializeStoreConfigsGrid(gridElement) {

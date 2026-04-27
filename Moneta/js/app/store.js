@@ -8,6 +8,7 @@ const state = {
         products: [],
         suppliers: [],
         paymentModes: [],
+        pricingPolicies: [],
         reorderPolicies: [],
         storeConfigs: [],
         salesCatalogues: [],

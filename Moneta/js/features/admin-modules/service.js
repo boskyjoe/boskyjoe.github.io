@@ -1,6 +1,7 @@
 import {
     createCategoryRecord,
     createPaymentModeRecord,
+    seedPricingPolicyRecords,
     createReorderPolicyRecord,
     createSeasonRecord,
     seedStoreConfigRecords,
@@ -13,12 +14,22 @@ import {
     setSeasonActiveStatus,
     updateCategoryRecord,
     updatePaymentModeRecord,
+    updatePricingPolicyRecord,
     updateReorderPolicyRecord,
     updateSeasonRecord,
     updateStoreConfigRecord
 } from "./repository.js";
+import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
+import {
+    buildPricingPolicyExplanation,
+    COSTING_METHODS,
+    DEFAULT_PRICING_POLICY,
+    isSystemDefaultPricingPolicy,
+    resolveSystemDefaultPricingPolicy,
+    SELLING_PRICE_BEHAVIORS
+} from "../../shared/pricing-policy.js";
 import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
@@ -69,6 +80,12 @@ function normalizeBoolean(value, fallback = false) {
     if (value === true || value === "true") return true;
     if (value === false || value === "false") return false;
     return fallback;
+}
+
+function normalizeDecimal(value, fallback = 0, minimum = 0) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(minimum, Number(parsed.toFixed(2)));
 }
 
 function buildNameMap(rows = [], labelField) {
@@ -250,6 +267,97 @@ export async function togglePaymentModeStatus(docId, nextValue, user, paymentMod
     }
 
     await setPaymentModeActiveStatus(docId, nextValue, user);
+}
+
+export function validatePricingPolicyPayload(payload, existingPolicies = []) {
+    const docId = normalizeText(payload.docId);
+    const existingPolicy = (existingPolicies || []).find(policy => policy.id === docId || policy.docId === docId) || null;
+
+    if (!docId || !existingPolicy) {
+        throw new Error("Pricing policy record could not be found.");
+    }
+
+    const policyName = normalizeText(payload.policyName);
+    const costingMethod = COSTING_METHODS.includes(payload.costingMethod)
+        ? payload.costingMethod
+        : DEFAULT_PRICING_POLICY.costingMethod;
+    const sellingPriceBehavior = SELLING_PRICE_BEHAVIORS.includes(payload.sellingPriceBehavior)
+        ? payload.sellingPriceBehavior
+        : DEFAULT_PRICING_POLICY.sellingPriceBehavior;
+    const defaultTargetMarginPercentage = normalizeDecimal(
+        payload.defaultTargetMarginPercentage,
+        DEFAULT_PRICING_POLICY.defaultTargetMarginPercentage,
+        0
+    );
+    const costChangeAlertThresholdPercentage = normalizeDecimal(
+        payload.costChangeAlertThresholdPercentage,
+        DEFAULT_PRICING_POLICY.costChangeAlertThresholdPercentage,
+        0
+    );
+    const allowManualCostOverride = normalizeBoolean(
+        payload.allowManualCostOverride,
+        DEFAULT_PRICING_POLICY.allowManualCostOverride
+    );
+
+    if (!policyName) {
+        throw new Error("Policy name is required.");
+    }
+
+    if (policyName.length > 80) {
+        throw new Error("Policy name must be 80 characters or less.");
+    }
+
+    if (defaultTargetMarginPercentage > 500) {
+        throw new Error("Default target margin must be 500% or less.");
+    }
+
+    if (costChangeAlertThresholdPercentage > 1000) {
+        throw new Error("Cost change alert threshold must be 1000% or less.");
+    }
+
+    const normalized = {
+        docId,
+        policyName,
+        costingMethod,
+        sellingPriceBehavior,
+        defaultTargetMarginPercentage,
+        costChangeAlertThresholdPercentage,
+        allowManualCostOverride,
+        isActive: true,
+        isSystemDefault: true
+    };
+
+    return {
+        ...normalized,
+        explanation: buildPricingPolicyExplanation(normalized)
+    };
+}
+
+export async function savePricingPolicy(payload, user, existingPolicies = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save the pricing policy.");
+    }
+
+    const { docId, ...policyData } = validatePricingPolicyPayload(payload, existingPolicies);
+    await updatePricingPolicyRecord(docId, policyData, user);
+    return { mode: "update" };
+}
+
+export async function ensurePricingPolicySeed(user, existingPolicies = []) {
+    if (!user || user.role !== "admin") {
+        return { mode: "skip" };
+    }
+
+    const existingRows = Array.isArray(existingPolicies) ? existingPolicies : [];
+    const existingDocIds = new Set(existingRows.map(row => normalizeText(row.id || row.docId)).filter(Boolean));
+    const missingSeedRows = [DEFAULT_PRICING_POLICY_SEED].filter(row => !existingDocIds.has(normalizeText(row.docId)));
+
+    if (missingSeedRows.length === 0) {
+        return { mode: "existing" };
+    }
+
+    await seedPricingPolicyRecords(missingSeedRows, user);
+    return { mode: existingRows.length === 0 ? "create" : "repair" };
 }
 
 export function validateSeasonPayload(payload, existingSeasons = []) {
@@ -759,6 +867,13 @@ export async function getAdminEditRestriction(entity, record) {
     }
 
     if (entity === "reorderPolicies") {
+        return {
+            isLocked: false,
+            message: ""
+        };
+    }
+
+    if (entity === "pricingPolicies") {
         return {
             isLocked: false,
             message: ""

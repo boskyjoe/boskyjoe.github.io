@@ -5,6 +5,8 @@ import {
     voidPurchaseInvoicePayment,
     updatePurchaseInvoiceRecord
 } from "./repository.js";
+import { getState } from "../../app/store.js";
+import { syncProductPricingFromPurchases } from "../products/pricing-service.js";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -221,11 +223,21 @@ export async function savePurchaseInvoice(payload, masterData, user) {
     const invoiceData = validatePurchaseInvoicePayload(payload, masterData);
 
     if (docId) {
-        await updatePurchaseInvoiceRecord(docId, invoiceData, user);
+        const result = await updatePurchaseInvoiceRecord(docId, invoiceData, user);
+        await syncProductPricingFromPurchases(result.affectedProductIds, {
+            products: masterData.products,
+            pricingPolicies: masterData.pricingPolicies,
+            user
+        });
         return { mode: "update" };
     }
 
-    await createPurchaseInvoiceRecord(invoiceData, user);
+    const result = await createPurchaseInvoiceRecord(invoiceData, user);
+    await syncProductPricingFromPurchases(result.affectedProductIds, {
+        products: masterData.products,
+        pricingPolicies: masterData.pricingPolicies,
+        user
+    });
     return { mode: "create" };
 }
 
@@ -373,6 +385,11 @@ export async function voidPurchaseInvoice(invoice, reason, user) {
 
     const validatedReason = validatePurchaseInvoiceVoidPayload(invoice, reason);
     const result = await voidPurchaseInvoiceRecord(invoice.id, validatedReason, user);
+    await syncProductPricingFromPurchases(result.affectedProductIds, {
+        products: getState()?.masterData?.products || [],
+        pricingPolicies: getState()?.masterData?.pricingPolicies || [],
+        user
+    });
 
     return {
         reason: validatedReason,

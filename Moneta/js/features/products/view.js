@@ -3,6 +3,10 @@ import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
+import {
+    getNormalizedPricingPolicySettings,
+    resolveSystemDefaultPricingPolicy
+} from "../../shared/pricing-policy.js";
 import { initializeProductsGrid, refreshProductsGrid, updateProductsGridSearch } from "./grid.js";
 import { calculateSellingPrice, saveProduct, toggleProductStatus } from "./service.js";
 
@@ -26,6 +30,26 @@ function renderCategoryOptions(categories, currentValue) {
     `).join("");
 }
 
+function getActivePricingPolicy(snapshot) {
+    return resolveSystemDefaultPricingPolicy(snapshot.masterData.pricingPolicies || [], { activeOnly: true });
+}
+
+function getPricingPolicyLabel(settings = {}) {
+    const costingLabel = settings.costingMethod === "weighted-average"
+        ? "Weighted Average Cost"
+        : settings.costingMethod === "latest-purchase"
+            ? "Latest Purchase Cost"
+            : "Manual Standard Cost";
+
+    const sellingLabel = settings.sellingPriceBehavior === "auto-update-from-margin"
+        ? "Auto Price Updates"
+        : settings.sellingPriceBehavior === "manual"
+            ? "Manual Selling Price"
+            : "Suggested Selling Price";
+
+    return `${costingLabel} • ${sellingLabel}`;
+}
+
 function renderProductsViewShell(snapshot) {
     const root = document.getElementById("products-root");
     if (!root) return;
@@ -34,6 +58,19 @@ function renderProductsViewShell(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const activeCategories = categories.filter(category => category.isActive || category.id === editingProduct?.categoryId);
     const productsCount = snapshot.masterData.products?.length || 0;
+    const pricingPolicy = getActivePricingPolicy(snapshot);
+    const pricingPolicySettings = getNormalizedPricingPolicySettings(pricingPolicy || {});
+    const marginValue = editingProduct?.unitMarginPercentage ?? pricingPolicySettings.defaultTargetMarginPercentage;
+    const standardCostValue = editingProduct?.unitPrice || 0;
+    const recommendedSellingPrice = calculateSellingPrice(standardCostValue, marginValue);
+    const liveSellingPrice = editingProduct?.sellingPrice ?? recommendedSellingPrice;
+    const isManualSellingPrice = pricingPolicySettings.sellingPriceBehavior === "manual";
+    const costOverrideLocked = Boolean(editingProduct) && !pricingPolicySettings.allowManualCostOverride;
+    const priceReviewRequired = Boolean(editingProduct?.pricingMeta?.requiresPriceReview);
+    const priceReviewValue = editingProduct?.pricingMeta?.costChangePercent;
+    const priceReviewCopy = priceReviewRequired
+        ? `Moneta is flagging this product for price review because standard cost moved${priceReviewValue === null ? " from no prior baseline." : ` by ${Math.abs(priceReviewValue)}%.`}`
+        : "Moneta is not currently flagging this product for an additional price review.";
 
     root.innerHTML = `
         <div style="display:grid; gap:1rem;">
@@ -43,12 +80,13 @@ function renderProductsViewShell(snapshot) {
                         <span class="panel-icon panel-icon-alt">${icons.products}</span>
                         <div>
                             <h2>${editingProduct ? "Edit Product" : "Product Catalogue"}</h2>
-                            <p class="panel-copy">Products are the first AG Grid-based feature in Moneta.</p>
+                            <p class="panel-copy">Manage standard cost, target margin, and selling price under the active Moneta pricing policy.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
                         <span class="status-pill">${productsCount} products</span>
                         <span class="status-pill">${activeCategories.length} categories</span>
+                        <span class="status-pill">${getPricingPolicyLabel(pricingPolicySettings)}</span>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -74,16 +112,38 @@ function renderProductsViewShell(snapshot) {
                                 </select>
                             </div>
                             <div class="field">
-                                <label for="product-unit-price">Unit Price</label>
-                                <input id="product-unit-price" class="input" type="number" min="0" step="0.01" value="${editingProduct?.unitPrice || 0}">
+                                <label for="product-unit-price">Standard Cost</label>
+                                <input id="product-unit-price" class="input" type="number" min="0" step="0.01" value="${standardCostValue}" ${costOverrideLocked ? "readonly" : ""}>
+                                <p class="panel-copy panel-copy-tight">${costOverrideLocked
+                                    ? "Manual standard-cost overrides are locked by the active pricing policy. Update purchases to move cost."
+                                    : "Use this as the working standard cost. Moneta can later refresh it from purchase history."}</p>
                             </div>
                             <div class="field">
-                                <label for="product-margin">Margin %</label>
-                                <input id="product-margin" class="input" type="number" min="0" step="0.01" value="${editingProduct?.unitMarginPercentage || 0}">
+                                <label for="product-margin">Target Margin %</label>
+                                <input id="product-margin" class="input" type="number" min="0" step="0.01" value="${marginValue}">
+                                <p class="panel-copy panel-copy-tight">Moneta uses this target margin to calculate the recommended selling price.</p>
                             </div>
                             <div class="field">
-                                <label for="product-selling-price">Selling Price</label>
-                                <input id="product-selling-price" class="input" type="number" value="${calculateSellingPrice(editingProduct?.unitPrice || 0, editingProduct?.unitMarginPercentage || 0)}" readonly>
+                                <label for="product-selling-price">${isManualSellingPrice ? "Live Selling Price" : "Recommended Selling Price"}</label>
+                                <input
+                                    id="product-selling-price"
+                                    class="input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value="${isManualSellingPrice ? liveSellingPrice : recommendedSellingPrice}"
+                                    ${isManualSellingPrice ? "" : "readonly"}
+                                    data-manual-entry="${isManualSellingPrice ? "true" : "false"}">
+                                <p class="panel-copy panel-copy-tight">${isManualSellingPrice
+                                    ? "The active pricing policy leaves selling price manual. Set the live price Moneta should use."
+                                    : "This is Moneta's recommended price from standard cost and target margin."}</p>
+                            </div>
+                            <div class="field">
+                                <label for="product-live-selling-price">Current Live Selling Price</label>
+                                <input id="product-live-selling-price" class="input" type="number" value="${liveSellingPrice}" readonly>
+                                <p class="panel-copy panel-copy-tight">${isManualSellingPrice
+                                    ? "Current live price follows the manual selling price entered above."
+                                    : "When purchase cost changes, Moneta can keep the live selling price steady while surfacing a new recommendation."}</p>
                             </div>
                             <div class="field">
                                 <label for="product-inventory">Opening Stock</label>
@@ -92,6 +152,15 @@ function renderProductsViewShell(snapshot) {
                             <div class="field">
                                 <label for="product-weight">Net Weight (kg)</label>
                                 <input id="product-weight" class="input" type="number" min="0" step="0.01" value="${editingProduct?.netWeightKg || 0}">
+                            </div>
+                        </div>
+                        <div class="panel-card" style="margin-top:1rem;">
+                            <div class="panel-body" style="padding:1rem 1.1rem;">
+                                <div style="display:grid; gap:0.4rem;">
+                                    <strong>Pricing Policy Snapshot</strong>
+                                    <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
+                                    <p class="panel-copy panel-copy-tight">${priceReviewCopy}</p>
+                                </div>
                             </div>
                         </div>
                         <div class="form-actions">
@@ -154,9 +223,18 @@ export function renderProductsView() {
 function updateSellingPricePreview() {
     const unitPrice = document.getElementById("product-unit-price")?.value || 0;
     const margin = document.getElementById("product-margin")?.value || 0;
-    const display = document.getElementById("product-selling-price");
-    if (display) {
-        display.value = calculateSellingPrice(unitPrice, margin);
+    const recommendedValue = calculateSellingPrice(unitPrice, margin);
+    const livePriceDisplay = document.getElementById("product-live-selling-price");
+    const sellingPriceInput = document.getElementById("product-selling-price");
+
+    if (sellingPriceInput && sellingPriceInput.dataset.manualEntry !== "true") {
+        sellingPriceInput.value = recommendedValue;
+    }
+
+    if (livePriceDisplay) {
+        livePriceDisplay.value = sellingPriceInput?.dataset.manualEntry === "true"
+            ? (sellingPriceInput?.value || 0)
+            : recommendedValue;
     }
 }
 
@@ -186,9 +264,10 @@ async function handleProductFormSubmit(event) {
                 itemType: document.getElementById("product-type")?.value,
                 unitPrice: document.getElementById("product-unit-price")?.value,
                 unitMarginPercentage: document.getElementById("product-margin")?.value,
+                sellingPrice: document.getElementById("product-selling-price")?.value,
                 inventoryCount: document.getElementById("product-inventory")?.value,
                 netWeightKg: document.getElementById("product-weight")?.value
-            }, getState().currentUser);
+            }, getState().masterData, getState().currentUser);
 
             update("Refreshing the product catalogue workspace...", 88, "Step 4 of 5");
             featureState.editingProductId = null;
@@ -283,6 +362,10 @@ function bindProductsDomEvents() {
         const target = event.target;
 
         if (target.id === "product-unit-price" || target.id === "product-margin") {
+            updateSellingPricePreview();
+        }
+
+        if (target.id === "product-selling-price" && target.dataset.manualEntry === "true") {
             updateSellingPricePreview();
         }
 

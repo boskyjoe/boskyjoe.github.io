@@ -6,20 +6,29 @@ import { focusFormField } from "../../shared/focus.js";
 import {
     initializeCategoriesGrid,
     initializePaymentModesGrid,
+    initializePricingPoliciesGrid,
     initializeReorderPoliciesGrid,
     initializeSeasonsGrid,
     initializeStoreConfigsGrid,
     refreshCategoriesGrid,
     refreshPaymentModesGrid,
+    refreshPricingPoliciesGrid,
     refreshReorderPoliciesGrid,
     refreshSeasonsGrid,
     refreshStoreConfigsGrid,
     updateCategoriesGridSearch,
     updatePaymentModesGridSearch,
+    updatePricingPoliciesGridSearch,
     updateReorderPoliciesGridSearch,
     updateSeasonsGridSearch,
     updateStoreConfigsGridSearch
 } from "./grid.js";
+import {
+    buildPricingPolicyExplanation,
+    COSTING_METHODS,
+    resolveSystemDefaultPricingPolicy,
+    SELLING_PRICE_BEHAVIORS
+} from "../../shared/pricing-policy.js";
 import {
     DEFAULT_REORDER_POLICY,
     buildReorderPolicyPrecedenceSummary,
@@ -34,6 +43,7 @@ import {
     getAdminEditRestriction,
     saveCategory,
     savePaymentMode,
+    savePricingPolicy,
     saveReorderPolicy,
     saveSeason,
     saveStoreConfig,
@@ -62,6 +72,12 @@ const ADMIN_SECTIONS = {
         icon: icons.payment,
         description: "Manage the transaction methods available across supplier and sales workflows."
     },
+    pricingPolicies: {
+        label: "Pricing Policy",
+        entityLabel: "Pricing Policy",
+        icon: icons.reports,
+        description: "Control how Moneta derives standard cost from purchases and how it recommends or updates selling prices."
+    },
     storeConfigs: {
         label: "Store Config",
         entityLabel: "Store Config",
@@ -84,6 +100,7 @@ const featureState = {
         categories: "",
         seasons: "",
         paymentModes: "",
+        pricingPolicies: "",
         storeConfigs: "",
         reorderPolicies: ""
     },
@@ -91,6 +108,7 @@ const featureState = {
         categories: null,
         seasons: null,
         paymentModes: null,
+        pricingPolicies: null,
         storeConfigs: null,
         reorderPolicies: null
     }
@@ -108,6 +126,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     paymentModes: {
         formId: "admin-payment-mode-form",
         inputSelector: "#admin-payment-mode-name"
+    },
+    pricingPolicies: {
+        formId: "admin-pricing-policy-form",
+        inputSelector: "#admin-pricing-policy-name"
     },
     storeConfigs: {
         formId: "admin-store-config-form",
@@ -182,6 +204,22 @@ function setActiveSection(section) {
 function getEditingRecord(snapshot, section = featureState.activeSection) {
     const recordId = featureState.editingIds[section];
 
+    if (section === "pricingPolicies") {
+        const rows = (snapshot.masterData.pricingPolicies || []).slice().sort((left, right) => {
+            if (Boolean(left.isSystemDefault) !== Boolean(right.isSystemDefault)) {
+                return left.isSystemDefault ? -1 : 1;
+            }
+
+            return 0;
+        });
+
+        if (recordId) {
+            return rows.find(record => record.id === recordId) || null;
+        }
+
+        return rows[0] || null;
+    }
+
     if (section === "storeConfigs") {
         const rows = (snapshot.masterData.storeConfigs || []).slice().sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999));
         if (recordId) {
@@ -243,7 +281,23 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
             }
 
             return (left.policyName || "").localeCompare(right.policyName || "");
-        });
+            });
+    }
+
+    if (section === "pricingPolicies") {
+        const resolvedDefault = resolveSystemDefaultPricingPolicy(snapshot.masterData.pricingPolicies || [], { activeOnly: false });
+        return (snapshot.masterData.pricingPolicies || [])
+            .map(policy => ({
+                ...policy,
+                isSystemDefault: Boolean(policy.isSystemDefault) || policy.id === resolvedDefault?.id
+            }))
+            .sort((left, right) => {
+                if (Boolean(left.isSystemDefault) !== Boolean(right.isSystemDefault)) {
+                    return left.isSystemDefault ? -1 : 1;
+                }
+
+                return (left.policyName || "").localeCompare(right.policyName || "");
+            });
     }
 
     if (section === "storeConfigs") {
@@ -738,6 +792,7 @@ function renderSectionTabs(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const seasons = snapshot.masterData.seasons || [];
     const paymentModes = snapshot.masterData.paymentModes || [];
+    const pricingPolicies = snapshot.masterData.pricingPolicies || [];
     const storeConfigs = snapshot.masterData.storeConfigs || [];
     const reorderPolicies = snapshot.masterData.reorderPolicies || [];
 
@@ -745,6 +800,7 @@ function renderSectionTabs(snapshot) {
         categories: categories.length,
         seasons: seasons.length,
         paymentModes: paymentModes.length,
+        pricingPolicies: pricingPolicies.length,
         storeConfigs: storeConfigs.length,
         reorderPolicies: reorderPolicies.length
     };
@@ -928,6 +984,137 @@ function renderPaymentModeForm(snapshot) {
                         <button class="button button-primary-alt" type="submit">
                             <span class="button-icon">${editingRecord ? icons.edit : icons.plus}</span>
                             ${editingRecord ? "Update Payment Mode" : "Save Payment Mode"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function renderPricingPolicyForm(snapshot) {
+    const editingRecord = getEditingRecord(snapshot, "pricingPolicies");
+
+    if (!editingRecord) {
+        return `
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.reports}</span>
+                        <div>
+                            <h3>Pricing Policy</h3>
+                            <p class="panel-copy">Moneta is waiting for the pricing policy seed to appear in Firestore.</p>
+                        </div>
+                    </div>
+                    <span class="status-pill">Waiting</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const explanation = buildPricingPolicyExplanation(editingRecord);
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.reports}</span>
+                    <div>
+                        <h3>Edit Pricing Policy</h3>
+                        <p class="panel-copy">Set how Moneta derives standard cost from purchases and how it suggests or updates selling prices.</p>
+                    </div>
+                </div>
+                <span class="status-pill">${editingRecord.isSystemDefault ? "System Default" : "Policy"}</span>
+            </div>
+            <div class="panel-body">
+                <form id="admin-pricing-policy-form">
+                    <input id="admin-pricing-policy-doc-id" type="hidden" value="${editingRecord.id || editingRecord.docId || ""}">
+                    <div class="form-grid">
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-name",
+                                label: "Policy Name",
+                                required: true,
+                                tooltip: "This is the label admins will see when reviewing the pricing rule Moneta uses for cost and price calculations."
+                            })}
+                            <input id="admin-pricing-policy-name" class="input" type="text" value="${escapeHtml(editingRecord.policyName || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-costing-method",
+                                label: "Costing Method",
+                                required: true,
+                                tooltip: "This tells Moneta how to set a product's standard cost from purchase history."
+                            })}
+                            <select id="admin-pricing-policy-costing-method" class="select" required>
+                                ${COSTING_METHODS.map(option => `
+                                    <option value="${option}" ${option === editingRecord.costingMethod ? "selected" : ""}>${option}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-selling-behavior",
+                                label: "Selling Price Behavior",
+                                required: true,
+                                tooltip: "This decides whether Moneta only suggests a selling price from margin or automatically updates the live selling price."
+                            })}
+                            <select id="admin-pricing-policy-selling-behavior" class="select" required>
+                                ${SELLING_PRICE_BEHAVIORS.map(option => `
+                                    <option value="${option}" ${option === editingRecord.sellingPriceBehavior ? "selected" : ""}>${option}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-default-margin",
+                                label: "Default Target Margin %",
+                                required: true,
+                                tooltip: "This is the margin Moneta uses when it needs to suggest or auto-calculate selling price from standard cost."
+                            })}
+                            <input id="admin-pricing-policy-default-margin" class="input" type="number" min="0" step="0.01" value="${escapeHtml(editingRecord.defaultTargetMarginPercentage ?? 0)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-cost-threshold",
+                                label: "Cost Change Review Threshold %",
+                                required: true,
+                                tooltip: "If standard cost moves by at least this percentage, Moneta marks the product for price review."
+                            })}
+                            <input id="admin-pricing-policy-cost-threshold" class="input" type="number" min="0" step="0.01" value="${escapeHtml(editingRecord.costChangeAlertThresholdPercentage ?? 0)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-pricing-policy-manual-override",
+                                label: "Manual Cost Override",
+                                required: true,
+                                tooltip: "This controls whether the team is allowed to keep a manual standard cost instead of following purchase-derived cost updates."
+                            })}
+                            <select id="admin-pricing-policy-manual-override" class="select" required>
+                                <option value="true" ${editingRecord.allowManualCostOverride ? "selected" : ""}>Allowed</option>
+                                <option value="false" ${editingRecord.allowManualCostOverride ? "" : "selected"}>Locked</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="panel-card panel-card-soft" style="margin-top:1rem;">
+                        <div class="panel-header">
+                            <div class="panel-title-wrap">
+                                <span class="panel-icon">${icons.assistant}</span>
+                                <div>
+                                    <h3>Plain-English Rule Preview</h3>
+                                    <p class="panel-copy">${escapeHtml(explanation)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="admin-pricing-policy-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reset View
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${icons.edit}</span>
+                            Update Pricing Policy
                         </button>
                     </div>
                 </form>
@@ -1443,6 +1630,10 @@ function renderCurrentForm(snapshot) {
         return renderSeasonForm(snapshot);
     }
 
+    if (featureState.activeSection === "pricingPolicies") {
+        return renderPricingPolicyForm(snapshot);
+    }
+
     if (featureState.activeSection === "reorderPolicies") {
         return renderReorderPolicyForm(snapshot);
     }
@@ -1485,6 +1676,17 @@ function getGridMeta(snapshot) {
             count: rows.length,
             countLabel: "policies",
             directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
+        };
+    }
+
+    if (featureState.activeSection === "pricingPolicies") {
+        const rows = snapshot.masterData.pricingPolicies || [];
+        return {
+            title: "Pricing Policy Directory",
+            copy: "Review the live pricing rule Moneta uses for cost updates, margin guidance, and price review alerts.",
+            count: rows.length,
+            countLabel: "policies",
+            directoryHelp: "Search the pricing policy record and reopen it for editing without leaving the admin workspace."
         };
     }
 
@@ -1572,6 +1774,13 @@ function syncCurrentGrid(snapshot) {
         initializeReorderPoliciesGrid(gridElement);
         refreshReorderPoliciesGrid(rows);
         updateReorderPoliciesGridSearch(featureState.searchTerms.reorderPolicies);
+        return;
+    }
+
+    if (featureState.activeSection === "pricingPolicies") {
+        initializePricingPoliciesGrid(gridElement);
+        refreshPricingPoliciesGrid(rows);
+        updatePricingPoliciesGridSearch(featureState.searchTerms.pricingPolicies);
         return;
     }
 
@@ -1748,6 +1957,57 @@ async function handlePaymentModeSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Payment mode save failed:", error);
+    }
+}
+
+async function handlePricingPolicySubmit(event) {
+    event.preventDefault();
+
+    try {
+        const docId = document.getElementById("admin-pricing-policy-doc-id")?.value;
+        const policyName = document.getElementById("admin-pricing-policy-name")?.value || "-";
+        await runProgressToastFlow({
+            title: "Updating Pricing Policy",
+            initialMessage: "Reading the pricing policy inputs...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Pricing Policy Updated",
+            successMessage: "The pricing policy was updated successfully."
+        }, async ({ update }) => {
+            update("Validating costing, margin, and selling-price rules...", 40, "Step 2 of 5");
+
+            update("Writing pricing policy changes to Firestore...", 72, "Step 3 of 5");
+            await savePricingPolicy({
+                docId,
+                policyName: document.getElementById("admin-pricing-policy-name")?.value,
+                costingMethod: document.getElementById("admin-pricing-policy-costing-method")?.value,
+                sellingPriceBehavior: document.getElementById("admin-pricing-policy-selling-behavior")?.value,
+                defaultTargetMarginPercentage: document.getElementById("admin-pricing-policy-default-margin")?.value,
+                costChangeAlertThresholdPercentage: document.getElementById("admin-pricing-policy-cost-threshold")?.value,
+                allowManualCostOverride: document.getElementById("admin-pricing-policy-manual-override")?.value
+            }, getState().currentUser, getState().masterData.pricingPolicies);
+
+            update("Refreshing the pricing policy workspace...", 88, "Step 4 of 5");
+            renderAdminModulesView();
+            update("Pricing rules are ready for Product Catalogue and Purchases.", 96, "Step 5 of 5");
+        });
+
+        showToast("Pricing policy updated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Pricing Policy Updated",
+            message: "The pricing policy has been saved successfully.",
+            details: [
+                { label: "Policy", value: policyName },
+                { label: "Action", value: "Update" },
+                { label: "Module", value: "Pricing Policy" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Pricing policy save failed:", error);
+        showToast(error.message || "Could not save the pricing policy.", "error");
     }
 }
 
@@ -2024,6 +2284,11 @@ function handleSearchInput(target) {
         return;
     }
 
+    if (featureState.activeSection === "pricingPolicies") {
+        updatePricingPoliciesGridSearch(featureState.searchTerms.pricingPolicies);
+        return;
+    }
+
     if (featureState.activeSection === "storeConfigs") {
         updateStoreConfigsGridSearch(featureState.searchTerms.storeConfigs);
         return;
@@ -2144,6 +2409,11 @@ function bindAdminModulesDomEvents() {
             return;
         }
 
+        if (event.target.id === "admin-pricing-policy-form") {
+            handlePricingPolicySubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-store-config-form") {
             handleStoreConfigSubmit(event);
             return;
@@ -2176,6 +2446,7 @@ function bindAdminModulesDomEvents() {
         const categoryCancelButton = target.closest("#admin-category-cancel-button");
         const seasonCancelButton = target.closest("#admin-season-cancel-button");
         const paymentModeCancelButton = target.closest("#admin-payment-mode-cancel-button");
+        const pricingPolicyCancelButton = target.closest("#admin-pricing-policy-cancel-button");
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
@@ -2207,6 +2478,11 @@ function bindAdminModulesDomEvents() {
 
         if (paymentModeCancelButton) {
             handleCancelEdit("paymentModes");
+            return;
+        }
+
+        if (pricingPolicyCancelButton) {
+            handleCancelEdit("pricingPolicies");
             return;
         }
 

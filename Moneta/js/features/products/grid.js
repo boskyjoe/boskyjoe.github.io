@@ -24,6 +24,17 @@ function statusMarkup(isActive) {
     `;
 }
 
+function priceReviewMarkup(data = {}) {
+    const requiresReview = Boolean(data?.pricingMeta?.requiresPriceReview);
+
+    return `
+        <span class="grid-status-cell grid-status-pill ${requiresReview ? "status-inactive" : "status-active"}">
+            <span class="inline-icon">${requiresReview ? icons.warning : icons.active}</span>
+            ${requiresReview ? "Review Needed" : "Stable"}
+        </span>
+    `;
+}
+
 function actionMarkup(data) {
     return `
         <div class="table-actions grid-actions-inline">
@@ -59,19 +70,44 @@ function buildColumnDefs(categories) {
         { field: "inventoryCount", headerName: "Stock", minWidth: 110, flex: 0.7, ...rightAlignedNumberColumn },
         {
             field: "unitPrice",
-            headerName: "Unit Price",
-            minWidth: 135,
+            headerName: "Standard Cost",
+            minWidth: 145,
             flex: 0.9,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            field: "unitMarginPercentage",
+            headerName: "Target Margin %",
+            minWidth: 145,
+            flex: 0.9,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
             field: "sellingPrice",
-            headerName: "Selling Price",
+            headerName: "Live Selling Price",
             minWidth: 150,
             flex: 1,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "pricingMeta.recommendedSellingPrice",
+            headerName: "Recommended Price",
+            minWidth: 155,
+            flex: 1,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => params.data?.pricingMeta?.recommendedSellingPrice ?? params.data?.sellingPrice ?? 0,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Price Review",
+            minWidth: 150,
+            flex: 1,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => priceReviewMarkup(params.data)
         },
         {
             field: "isActive",

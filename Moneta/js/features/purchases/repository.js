@@ -88,6 +88,11 @@ export async function createPurchaseInvoiceRecord(invoiceData, user) {
                 inventoryCount: firebase.firestore.FieldValue.increment(Number(item.quantity) || 0)
             });
         });
+
+        return {
+            invoiceRef,
+            affectedProductIds: [...new Set((invoiceData.lineItems || []).map(item => item.masterProductId).filter(Boolean))]
+        };
     });
 }
 
@@ -150,6 +155,10 @@ export async function updatePurchaseInvoiceRecord(docId, invoiceData, user) {
             "audit.updatedBy": user.email,
             "audit.updatedOn": now
         });
+
+        return {
+            affectedProductIds: [...inventoryDelta.keys()].filter(Boolean)
+        };
     });
 }
 
@@ -455,7 +464,8 @@ export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) 
             voidedPaymentCount,
             voidedPaymentAmount: roundCurrency(voidedPaymentAmount),
             reversedProductCount: lineItems.length,
-            reversedQuantity
+            reversedQuantity,
+            affectedProductIds: [...new Set(lineItems.map(item => item.masterProductId).filter(Boolean))]
         };
     });
 }

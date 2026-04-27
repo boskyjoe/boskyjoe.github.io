@@ -3,6 +3,13 @@ import {
     setProductFieldStatus,
     updateProductRecord
 } from "./repository.js";
+import { buildProductPricingSnapshot } from "./pricing-service.js";
+import {
+    calculateSellingPriceFromMargin,
+    getNormalizedPricingPolicySettings,
+    resolveSystemDefaultPricingPolicy,
+    roundCurrency
+} from "../../shared/pricing-policy.js";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -19,7 +26,7 @@ export function calculateSellingPrice(unitPrice, unitMarginPercentage) {
     return Number((price * (1 + margin / 100)).toFixed(2));
 }
 
-export function validateProductPayload(payload) {
+export function validateProductPayload(payload, masterData = {}) {
     const itemName = normalizeText(payload.itemName);
     const categoryId = normalizeText(payload.categoryId);
     const itemType = normalizeText(payload.itemType) || "Standard";
@@ -27,30 +34,56 @@ export function validateProductPayload(payload) {
     const unitMarginPercentage = normalizeNumber(payload.unitMarginPercentage);
     const inventoryCount = normalizeNumber(payload.inventoryCount);
     const netWeightKg = normalizeNumber(payload.netWeightKg);
+    const pricingPolicies = masterData.pricingPolicies || [];
+    const currentProducts = masterData.products || [];
+    const currentProduct = currentProducts.find(product => product.id === normalizeText(payload.docId)) || null;
+    const resolvedPolicy = resolveSystemDefaultPricingPolicy(pricingPolicies, { activeOnly: true }) || null;
+    const policySettings = getNormalizedPricingPolicySettings(resolvedPolicy || {});
+    const recommendedSellingPrice = calculateSellingPriceFromMargin(unitPrice, unitMarginPercentage);
+    const manualSellingPrice = roundCurrency(normalizeNumber(payload.sellingPrice, recommendedSellingPrice));
 
     if (!itemName) throw new Error("Product name is required.");
     if (!categoryId) throw new Error("Category is required.");
     if (unitPrice < 0) throw new Error("Unit price cannot be negative.");
     if (unitMarginPercentage < 0) throw new Error("Margin cannot be negative.");
+    if (manualSellingPrice < 0) throw new Error("Selling price cannot be negative.");
+    if (
+        currentProduct
+        && !policySettings.allowManualCostOverride
+        && roundCurrency(currentProduct.unitPrice) !== roundCurrency(unitPrice)
+    ) {
+        throw new Error("Manual standard-cost overrides are locked by the active pricing policy.");
+    }
+
+    const pricingBaseProduct = {
+        ...(currentProduct || {}),
+        unitPrice,
+        unitMarginPercentage,
+        sellingPrice: policySettings.sellingPriceBehavior === "manual"
+            ? manualSellingPrice
+            : recommendedSellingPrice
+    };
+    const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
 
     return {
         itemName,
         categoryId,
         itemType,
-        unitPrice,
+        unitPrice: pricingSnapshot.nextUnitPrice,
         unitMarginPercentage,
-        sellingPrice: calculateSellingPrice(unitPrice, unitMarginPercentage),
+        sellingPrice: pricingSnapshot.nextSellingPrice,
         inventoryCount,
-        netWeightKg
+        netWeightKg,
+        pricingMeta: pricingSnapshot.pricingMeta
     };
 }
 
-export async function saveProduct(payload, user) {
+export async function saveProduct(payload, masterData, user) {
     if (!user) {
         throw new Error("You must be logged in to save a product.");
     }
 
-    const productData = validateProductPayload(payload);
+    const productData = validateProductPayload(payload, masterData);
     const docId = normalizeText(payload.docId);
 
     if (docId) {
