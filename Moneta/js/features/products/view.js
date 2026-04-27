@@ -92,71 +92,97 @@ function renderProductsViewShell(snapshot) {
                 <div class="panel-body">
                     <form id="product-form">
                         <input type="hidden" id="product-doc-id" value="${editingProduct?.id || ""}">
-                        <div class="form-grid">
-                            <div class="field">
-                                <label for="product-name">Product Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                <input id="product-name" class="input" type="text" value="${editingProduct?.itemName || ""}" required>
-                            </div>
-                            <div class="field">
-                                <label for="product-category">Category <span class="required-mark" aria-hidden="true">*</span></label>
-                                <select id="product-category" class="select" required>
-                                    <option value="">Select category</option>
-                                    ${renderCategoryOptions(categories, editingProduct?.categoryId)}
-                                </select>
-                            </div>
-                            <div class="field">
-                                <label for="product-type">Type</label>
-                                <select id="product-type" class="select">
-                                    <option value="Standard" ${editingProduct?.itemType === "Standard" ? "selected" : ""}>Standard</option>
-                                    <option value="Custom" ${editingProduct?.itemType === "Custom" ? "selected" : ""}>Custom</option>
-                                </select>
-                            </div>
-                            <div class="field">
-                                <label for="product-unit-price">Standard Cost</label>
-                                <input id="product-unit-price" class="input" type="number" min="0" step="0.01" value="${standardCostValue}" ${costOverrideLocked ? "readonly" : ""}>
-                                <p class="panel-copy panel-copy-tight">${costOverrideLocked
-                                    ? "Manual standard-cost overrides are locked by the active pricing policy. Update purchases to move cost."
-                                    : "Use this as the working standard cost. Moneta can later refresh it from purchase history."}</p>
-                            </div>
-                            <div class="field">
-                                <label for="product-margin">Target Margin %</label>
-                                <input id="product-margin" class="input" type="number" min="0" step="0.01" value="${marginValue}">
-                                <p class="panel-copy panel-copy-tight">Moneta uses this target margin to calculate the recommended selling price.</p>
-                            </div>
-                            <div class="field">
-                                <label for="product-selling-price">${isManualSellingPrice ? "Live Selling Price" : "Recommended Selling Price"}</label>
-                                <input
-                                    id="product-selling-price"
-                                    class="input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value="${isManualSellingPrice ? liveSellingPrice : recommendedSellingPrice}"
-                                    ${isManualSellingPrice ? "" : "readonly"}
-                                    data-manual-entry="${isManualSellingPrice ? "true" : "false"}">
-                                <p class="panel-copy panel-copy-tight">${isManualSellingPrice
-                                    ? "The active pricing policy leaves selling price manual. Set the live price Moneta should use."
-                                    : "This is Moneta's recommended price from standard cost and target margin."}</p>
-                            </div>
-                            <div class="field">
-                                <label for="product-live-selling-price">Current Live Selling Price</label>
-                                <input id="product-live-selling-price" class="input" type="number" value="${liveSellingPrice}" readonly>
-                                <p class="panel-copy panel-copy-tight">${isManualSellingPrice
-                                    ? "Current live price follows the manual selling price entered above."
-                                    : "When purchase cost changes, Moneta can keep the live selling price steady while surfacing a new recommendation."}</p>
-                            </div>
-                            <div class="field">
-                                <label for="product-inventory">Opening Stock</label>
-                                <input id="product-inventory" class="input" type="number" min="0" step="1" value="${editingProduct?.inventoryCount || 0}">
-                            </div>
-                            <div class="field">
-                                <label for="product-weight">Net Weight (kg)</label>
-                                <input id="product-weight" class="input" type="number" min="0" step="0.01" value="${editingProduct?.netWeightKg || 0}">
-                            </div>
+                        <div class="product-form-sections">
+                            <section class="product-form-section">
+                                <div class="product-form-section-head">
+                                    <h3>Product Setup</h3>
+                                    <p class="panel-copy">Keep the identity fields together so catalogue grouping and pricing stay clean.</p>
+                                </div>
+                                <div class="product-form-grid product-form-grid-identity">
+                                    <div class="field product-span-5">
+                                        <label for="product-name">Product Name <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="product-name" class="input" type="text" value="${editingProduct?.itemName || ""}" required>
+                                    </div>
+                                    <div class="field product-span-4">
+                                        <label for="product-category">Category <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="product-category" class="select" required>
+                                            <option value="">Select category</option>
+                                            ${renderCategoryOptions(categories, editingProduct?.categoryId)}
+                                        </select>
+                                    </div>
+                                    <div class="field product-span-3">
+                                        <label for="product-type">Type</label>
+                                        <select id="product-type" class="select">
+                                            <option value="Standard" ${editingProduct?.itemType === "Standard" ? "selected" : ""}>Standard</option>
+                                            <option value="Custom" ${editingProduct?.itemType === "Custom" ? "selected" : ""}>Custom</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="product-form-section">
+                                <div class="product-form-section-head">
+                                    <h3>Pricing</h3>
+                                    <p class="panel-copy">These values follow the active Moneta pricing policy and show both recommendation and live price behavior.</p>
+                                </div>
+                                <div class="product-form-grid product-form-grid-pricing">
+                                    <div class="field product-span-3 product-field-with-help">
+                                        <label for="product-unit-price">Standard Cost</label>
+                                        <input id="product-unit-price" class="input" type="number" min="0" step="0.01" value="${standardCostValue}" ${costOverrideLocked ? "readonly" : ""}>
+                                        <p class="panel-copy panel-copy-tight">${costOverrideLocked
+                                            ? "Manual standard-cost overrides are locked by the active pricing policy. Update purchases to move cost."
+                                            : "Use this as the working standard cost. Moneta can later refresh it from purchase history."}</p>
+                                    </div>
+                                    <div class="field product-span-3 product-field-with-help">
+                                        <label for="product-margin">Target Margin %</label>
+                                        <input id="product-margin" class="input" type="number" min="0" step="0.01" value="${marginValue}">
+                                        <p class="panel-copy panel-copy-tight">Moneta uses this target margin to calculate the recommended selling price.</p>
+                                    </div>
+                                    <div class="field product-span-3 product-field-with-help">
+                                        <label for="product-selling-price">${isManualSellingPrice ? "Live Selling Price" : "Recommended Selling Price"}</label>
+                                        <input
+                                            id="product-selling-price"
+                                            class="input"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value="${isManualSellingPrice ? liveSellingPrice : recommendedSellingPrice}"
+                                            ${isManualSellingPrice ? "" : "readonly"}
+                                            data-manual-entry="${isManualSellingPrice ? "true" : "false"}">
+                                        <p class="panel-copy panel-copy-tight">${isManualSellingPrice
+                                            ? "The active pricing policy leaves selling price manual. Set the live price Moneta should use."
+                                            : "This is Moneta's recommended price from standard cost and target margin."}</p>
+                                    </div>
+                                    <div class="field product-span-3 product-field-with-help">
+                                        <label for="product-live-selling-price">Current Live Selling Price</label>
+                                        <input id="product-live-selling-price" class="input" type="number" value="${liveSellingPrice}" readonly>
+                                        <p class="panel-copy panel-copy-tight">${isManualSellingPrice
+                                            ? "Current live price follows the manual selling price entered above."
+                                            : "When purchase cost changes, Moneta can keep the live selling price steady while surfacing a new recommendation."}</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="product-form-section">
+                                <div class="product-form-section-head">
+                                    <h3>Inventory Profile</h3>
+                                    <p class="panel-copy">Keep the starting stock and pack profile together so purchasing and reporting stay predictable.</p>
+                                </div>
+                                <div class="product-form-grid product-form-grid-inventory">
+                                    <div class="field product-span-6">
+                                        <label for="product-inventory">Opening Stock</label>
+                                        <input id="product-inventory" class="input" type="number" min="0" step="1" value="${editingProduct?.inventoryCount || 0}">
+                                    </div>
+                                    <div class="field product-span-6">
+                                        <label for="product-weight">Net Weight (kg)</label>
+                                        <input id="product-weight" class="input" type="number" min="0" step="0.01" value="${editingProduct?.netWeightKg || 0}">
+                                    </div>
+                                </div>
+                            </section>
                         </div>
-                        <div class="panel-card" style="margin-top:1rem;">
-                            <div class="panel-body" style="padding:1rem 1.1rem;">
-                                <div style="display:grid; gap:0.4rem;">
+                        <div class="panel-card product-pricing-snapshot-card">
+                            <div class="panel-body">
+                                <div class="product-pricing-snapshot-copy">
                                     <strong>Pricing Policy Snapshot</strong>
                                     <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
                                     <p class="panel-copy panel-copy-tight">${priceReviewCopy}</p>
