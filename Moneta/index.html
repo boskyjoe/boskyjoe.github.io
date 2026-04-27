@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MONETA</title>
+    <script>
+        (() => {
+            const storageKey = "moneta-theme-mode";
+            const validModes = new Set(["light", "dark", "system"]);
+            let savedMode = "system";
+
+            try {
+                const storedMode = window.localStorage.getItem(storageKey);
+                savedMode = validModes.has(storedMode) ? storedMode : "system";
+            } catch (error) {
+                savedMode = "system";
+            }
+
+            const resolvedTheme = savedMode === "system"
+                ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+                : savedMode;
+
+            document.documentElement.dataset.themeMode = savedMode;
+            document.documentElement.dataset.theme = resolvedTheme;
+            document.documentElement.style.colorScheme = resolvedTheme;
+        })();
+    </script>
     <link rel="stylesheet" href="./css/tokens.css">
     <link rel="stylesheet" href="./css/components.css">
     <link rel="stylesheet" href="./css/views.css">
