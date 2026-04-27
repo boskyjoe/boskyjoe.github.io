@@ -115,8 +115,8 @@ function renderProductsViewShell(snapshot) {
                     <div class="panel-title-wrap">
                         <span class="panel-icon">${icons.catalogue}</span>
                         <div>
-                            <h3>AG Grid Catalogue</h3>
-                            <p class="panel-copy">Products now use a denser, more scalable data grid.</p>
+                            <h3>Product Directory</h3>
+                            <p class="panel-copy">Search, review, and manage products across category, pricing, and stock details.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
