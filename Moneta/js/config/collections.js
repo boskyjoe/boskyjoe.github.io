@@ -14,6 +14,7 @@ export const COLLECTIONS = {
     categories: `${BASE_DOC_PATH}/productCategories`,
     paymentModes: `${BASE_DOC_PATH}/paymentModes`,
     reorderPolicies: `${BASE_DOC_PATH}/reorderPolicies`,
+    storeConfigs: `${BASE_DOC_PATH}/storeConfigs`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
     salesCatalogues: `${BASE_DOC_PATH}/salesCatalogues`,
     teams: `${BASE_DOC_PATH}/churchTeams`,

@@ -9,6 +9,8 @@ let seasonsGridApi = null;
 let seasonsGridElement = null;
 let reorderPoliciesGridApi = null;
 let reorderPoliciesGridElement = null;
+let storeConfigsGridApi = null;
+let storeConfigsGridElement = null;
 
 function statusMarkup(isActive) {
     return `
@@ -26,6 +28,17 @@ function seasonWorkflowMarkup(value) {
 }
 
 function actionMarkup(entity, data) {
+    if (entity === "storeConfigs") {
+        return `
+            <div class="table-actions grid-actions-inline">
+                <button class="button grid-action-button grid-action-button-secondary admin-module-edit-button" type="button" data-entity="${entity}" data-record-id="${data.id}">
+                    <span class="button-icon">${icons.edit}</span>
+                    Edit
+                </button>
+            </div>
+        `;
+    }
+
     const isProtectedDefault = entity === "reorderPolicies" && data?.isSystemDefault && data?.isActive;
     const statusClasses = data.isActive ? "grid-action-button-danger" : "grid-action-button-primary";
 
@@ -231,6 +244,46 @@ function buildReorderPoliciesColumnDefs() {
     ];
 }
 
+function buildStoreConfigsColumnDefs() {
+    return [
+        { field: "storeName", headerName: "Store", minWidth: 180, flex: 1 },
+        { field: "companyName", headerName: "Company Name", minWidth: 220, flex: 1.2 },
+        {
+            field: "isDefault",
+            headerName: "Default",
+            minWidth: 120,
+            flex: 0.75,
+            cellRenderer: params => params.value
+                ? `<span class="grid-status-cell grid-status-pill status-active"><span class="inline-icon">${icons.active}</span>Default</span>`
+                : `<span class="table-note">-</span>`
+        },
+        { field: "salePrefix", headerName: "Sale Prefix", minWidth: 120, flex: 0.75 },
+        {
+            field: "requiresCustomerAddress",
+            headerName: "Address Rule",
+            minWidth: 160,
+            flex: 0.95,
+            valueFormatter: params => params.value ? "Address Required" : "Address Optional"
+        },
+        { field: "email", headerName: "Email", minWidth: 220, flex: 1.1 },
+        {
+            headerName: "Updated",
+            minWidth: 150,
+            flex: 0.9,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 150,
+            flex: 0.85,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("storeConfigs", params.data)
+        }
+    ];
+}
+
 function initializeGrid(gridElement, currentApi, currentElement, columnDefs) {
     if (!gridElement) return currentApi;
 
@@ -310,4 +363,18 @@ export function refreshReorderPoliciesGrid(rows) {
 
 export function updateReorderPoliciesGridSearch(searchTerm) {
     reorderPoliciesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeStoreConfigsGrid(gridElement) {
+    storeConfigsGridApi = initializeGrid(gridElement, storeConfigsGridApi, storeConfigsGridElement, buildStoreConfigsColumnDefs());
+    storeConfigsGridElement = gridElement;
+    return storeConfigsGridApi;
+}
+
+export function refreshStoreConfigsGrid(rows) {
+    storeConfigsGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateStoreConfigsGridSearch(searchTerm) {
+    storeConfigsGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }

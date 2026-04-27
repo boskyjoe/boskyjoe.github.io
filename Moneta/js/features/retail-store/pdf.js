@@ -1,6 +1,6 @@
-import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
 import { amountToWords } from "../../shared/utils/amount-words.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { getStoreConfigInvoiceDetails } from "../../shared/store-config.js";
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -470,7 +470,7 @@ function buildInvoiceHtml(data) {
 }
 
 function getStoreDetails(storeName) {
-    return MONETA_STORE_CONFIG[storeName] || MONETA_STORE_CONFIG.default;
+    return getStoreConfigInvoiceDetails(storeName);
 }
 
 function buildPdfData(sale, paymentRecord = null) {

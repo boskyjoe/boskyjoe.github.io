@@ -7,6 +7,7 @@ import {
     resolvePolicyForProduct,
     resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
+import { getRetailStoreNames } from "../../shared/store-config.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -948,7 +949,7 @@ function buildPurchasePayablesReportData({
     };
 }
 
-const RETAIL_STORES = ["Tasty Treats", "Church Store"];
+const RETAIL_STORES = getRetailStoreNames(null, { includeInactive: true });
 const LOW_STOCK_THRESHOLD = 5;
 const MEDIUM_STOCK_THRESHOLD = 20;
 
@@ -1131,7 +1132,7 @@ function buildStoreSalesRows(rows = []) {
 function buildSalesChannelRows(rows = []) {
     const buckets = new Map();
 
-    ["Tasty Treats", "Church Store", "Consignment", "Other"].forEach(channel => {
+    [...RETAIL_STORES, "Consignment", "Other"].forEach(channel => {
         buckets.set(channel, {
             channel,
             transactionCount: 0,
@@ -1301,7 +1302,7 @@ function buildSalesTrendChannelRows(currentRows = [], previousRows = []) {
     const currentByChannel = new Map(buildSalesChannelRows(currentRows).map(row => [row.channel, row]));
     const previousByChannel = new Map(buildSalesChannelRows(previousRows).map(row => [row.channel, row]));
 
-    return ["Tasty Treats", "Church Store", "Consignment"].map(channel => {
+    return [...RETAIL_STORES, "Consignment"].map(channel => {
         const currentRow = currentByChannel.get(channel) || {};
         const previousRow = previousByChannel.get(channel) || {};
         const currentNetSales = roundCurrency(currentRow.netSales);

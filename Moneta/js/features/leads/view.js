@@ -34,9 +34,9 @@ import {
     cancelLeadQuote,
     deleteLead,
     getLeadQuote,
+    getLeadQuoteStores,
     LEAD_LOG_TYPES,
     LEAD_QUOTE_MANUAL_STATUSES,
-    LEAD_QUOTE_STORES,
     LEAD_SOURCES,
     LEAD_STATUSES,
     rejectLeadQuote,
@@ -46,6 +46,8 @@ import {
 } from "./service.js";
 import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 import { downloadLeadQuotePdf } from "./pdf.js";
+import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
+import { getDefaultRetailStoreName } from "../../shared/store-config.js";
 
 const featureState = {
     leads: [],
@@ -291,7 +293,7 @@ function buildQuoteDraftFromRecord(quote = null) {
         sourceQuoteId: quote.sourceQuoteId || quote.supersedesQuoteId || "",
         quoteStatus: quote.quoteStatus || "Draft",
         persistedQuoteStatus: quote.quoteStatus || "Draft",
-        store: quote.store || "Church Store",
+        store: quote.store || getDefaultRetailStoreName(),
         validUntil: formatDateInputValue(quote.validUntil),
         customerName: quote.customerSnapshot?.customerName || "",
         customerPhone: quote.customerSnapshot?.customerPhone || "",
@@ -463,9 +465,10 @@ function renderLogTypeOptions(currentValue = "General Note") {
     `).join("");
 }
 
-function renderQuoteStoreOptions(currentValue = "Church Store") {
-    return LEAD_QUOTE_STORES.map(storeName => `
-        <option value="${storeName}" ${storeName === currentValue ? "selected" : ""}>
+function renderQuoteStoreOptions(currentValue = "") {
+    const resolvedValue = currentValue || getDefaultRetailStoreName();
+    return getLeadQuoteStores().map(storeName => `
+        <option value="${storeName}" ${storeName === resolvedValue ? "selected" : ""}>
             ${storeName}
         </option>
     `).join("");
@@ -492,7 +495,7 @@ function isRetailConvertibleQuote(quote = null) {
     const status = normalizeText(quote.quoteStatus || "");
     const store = normalizeText(quote.store || "");
 
-    if (store === "Consignment") return false;
+    if (store === CONSIGNMENT_STORE_NAME) return false;
     return ["Draft", "Sent", "Accepted"].includes(status);
 }
 
@@ -522,14 +525,14 @@ async function resolveLeadConversionQuoteSource(lead) {
 }
 
 function getQuoteStoreTaxDefaults(storeName = "") {
-    if (storeName === "Consignment") {
+    if (storeName === CONSIGNMENT_STORE_NAME) {
         return {
             cgstPercentage: 0,
             sgstPercentage: 0
         };
     }
 
-    return getRetailStoreTaxDefaults(storeName || "Church Store");
+    return getRetailStoreTaxDefaults(storeName || getDefaultRetailStoreName());
 }
 
 function applyQuoteStoreTaxDefaults(storeName = "") {
@@ -1137,7 +1140,7 @@ function renderLeadQuotesEditorCard(editingLead) {
                             <div class="field">
                                 <label for="lead-quote-store">Sales Channel</label>
                                 <select id="lead-quote-store" class="select" ${isEditable ? "" : "disabled"}>
-                                    ${renderQuoteStoreOptions(quoteDraft.store || "Church Store")}
+                                    ${renderQuoteStoreOptions(quoteDraft.store || getDefaultRetailStoreName())}
                                 </select>
                             </div>
                             <div class="field">
@@ -2443,7 +2446,7 @@ function getQuoteDraftPayload() {
         businessQuoteId: featureState.quoteDraft.businessQuoteId || "",
         sourceQuoteId: featureState.quoteDraft.sourceQuoteId || "",
         quoteStatus: featureState.quoteDraft.quoteStatus || "Draft",
-        store: featureState.quoteDraft.store || "Church Store",
+        store: featureState.quoteDraft.store || getDefaultRetailStoreName(),
         validUntil: featureState.quoteDraft.validUntil || "",
         customerName: featureState.quoteDraft.customerName || "",
         customerPhone: featureState.quoteDraft.customerPhone || "",
@@ -3328,8 +3331,8 @@ function bindLeadsDomEvents() {
         }
 
         if (quoteStoreSelect && featureState.quoteDraft) {
-            updateQuoteDraftField("store", quoteStoreSelect.value || "Church Store");
-            applyQuoteStoreTaxDefaults(featureState.quoteDraft.store || "Church Store");
+            updateQuoteDraftField("store", quoteStoreSelect.value || getDefaultRetailStoreName());
+            applyQuoteStoreTaxDefaults(featureState.quoteDraft.store || getDefaultRetailStoreName());
             renderLeadsView();
             return;
         }

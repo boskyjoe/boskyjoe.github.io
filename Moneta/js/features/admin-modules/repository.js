@@ -28,6 +28,11 @@ function buildReorderPolicyCode() {
     return `ROP-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
 }
 
+function buildStoreConfigCode(storeName = "") {
+    const normalized = normalizeText(storeName).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return normalized || `STORE_${Date.now()}`;
+}
+
 async function queryHasMatch(query) {
     const snapshot = await query.limit(1).get();
     return !snapshot.empty;
@@ -251,4 +256,36 @@ export async function updateReorderPolicyRecord(docId, updatedData, user) {
 
 export async function setReorderPolicyActiveStatus(docId, isActive, user) {
     return updateReorderPolicyRecord(docId, { isActive }, user);
+}
+
+export async function seedStoreConfigRecords(storeConfigs = [], user) {
+    const now = getNow();
+    const batch = getDb().batch();
+
+    (storeConfigs || []).forEach(config => {
+        const docId = normalizeText(config.docId);
+        if (!docId) return;
+
+        const docRef = getDb().collection(COLLECTIONS.storeConfigs).doc(docId);
+        batch.set(docRef, {
+            ...config,
+            storeConfigId: config.storeConfigId || buildStoreConfigCode(config.storeName),
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+    });
+
+    return batch.commit();
+}
+
+export async function updateStoreConfigRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.storeConfigs).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
 }

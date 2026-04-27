@@ -36,7 +36,7 @@ import {
     RETAIL_DISCOUNT_TYPES,
     RETAIL_PAYMENT_TYPES,
     RETAIL_SALE_TYPES,
-    RETAIL_STORES,
+    getRetailStores,
     getRetailStoreTaxDefaults,
     resolveRetailSaleEditScope,
     saveRetailSalePayment,
@@ -45,6 +45,7 @@ import {
     voidRetailSalePayment,
     voidRetailSale
 } from "./service.js";
+import { doesRetailStoreRequireCustomerAddress, getDefaultRetailStoreName } from "../../shared/store-config.js";
 
 const featureState = {
     sales: [],
@@ -95,7 +96,7 @@ function createDefaultSaleDraft() {
         customerEmail: "",
         customerAddress: "",
         manualVoucherNumber: "",
-        store: "",
+        store: getDefaultRetailStoreName(),
         saleType: "Revenue",
         salesCatalogueId: "",
         paymentType: "Pay Later",
@@ -535,7 +536,7 @@ function getSalesHistoryRows() {
 }
 
 function renderStoreOptions(currentValue) {
-    return RETAIL_STORES.map(store => `
+    return getRetailStores({ includeValue: currentValue }).map(store => `
         <option value="${store}" ${store === currentValue ? "selected" : ""}>${store}</option>
     `).join("");
 }
@@ -1252,7 +1253,7 @@ function renderRetailStoreViewShell(snapshot) {
         ?.find(catalogue => catalogue.id === featureState.saleDraft.salesCatalogueId)?.catalogueName || "No catalogue";
     const isPayNow = featureState.saleDraft.paymentType === "Pay Now";
     const isSampleSale = featureState.saleDraft.saleType === "Sample";
-    const isTastyTreats = featureState.saleDraft.store === "Tasty Treats";
+    const requiresCustomerAddress = doesRetailStoreRequireCustomerAddress(featureState.saleDraft.store);
     const isViewMode = featureState.workspaceMode === "view";
     const isEditMode = featureState.workspaceMode === "edit";
     const isReturnMode = featureState.workspaceMode === "return";
@@ -1459,7 +1460,7 @@ function renderRetailStoreViewShell(snapshot) {
                                 </div>
                                 <div class="field field-full" ${isTastyTreats ? "" : "hidden"}>
                                     <label for="retail-customer-address">Customer Address <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <textarea id="retail-customer-address" class="textarea" ${customerDisabledAttr} placeholder="Delivery address for Tasty Treats orders">${featureState.saleDraft.customerAddress}</textarea>
+                                    <textarea id="retail-customer-address" class="textarea" ${customerDisabledAttr} placeholder="${requiresCustomerAddress ? `Delivery address for ${featureState.saleDraft.store || "this store"} orders` : "Customer address"}">${featureState.saleDraft.customerAddress}</textarea>
                                 </div>
                             </div>
                         </section>
@@ -2175,8 +2176,10 @@ function applyPendingLeadConversionPackage() {
         sourceQuoteNumber: conversionPackage.sourceQuoteNumber || "",
         sourceQuoteStatus: conversionPackage.sourceQuoteStatus || ""
     };
-    if (conversionPackage.preferredStore && RETAIL_STORES.includes(conversionPackage.preferredStore)) {
+    if (conversionPackage.preferredStore && getRetailStores().includes(conversionPackage.preferredStore)) {
         featureState.saleDraft.store = conversionPackage.preferredStore;
+    } else if (!featureState.saleDraft.store) {
+        featureState.saleDraft.store = getDefaultRetailStoreName();
     }
     featureState.lineItemDrafts = Object.fromEntries((conversionPackage.items || []).map(item => [item.productId, {
         productName: item.productName || "",

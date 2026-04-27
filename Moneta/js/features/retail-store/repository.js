@@ -1,4 +1,5 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import { getRetailStoreSalePrefix } from "../../shared/store-config.js";
 
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
 const RETAIL_SALE_EXPENSES_SUBCOLLECTION = "expenses";
@@ -15,16 +16,7 @@ function getNow() {
 
 function buildSaleBusinessId(storeName = "") {
     const year = new Date().getFullYear();
-
-    if (storeName === "Church Store") {
-        return `CS-${year}-${Date.now().toString().slice(-6)}`;
-    }
-
-    if (storeName === "Tasty Treats") {
-        return `TT-${year}-${Date.now().toString().slice(-6)}`;
-    }
-
-    return `SALE-${year}-${Date.now().toString().slice(-6)}`;
+    return `${getRetailStoreSalePrefix(storeName)}-${year}-${Date.now().toString().slice(-6)}`;
 }
 
 function buildSalesPaymentId() {

@@ -3,6 +3,7 @@ import {
     createPaymentModeRecord,
     createReorderPolicyRecord,
     createSeasonRecord,
+    seedStoreConfigRecords,
     getCategoryUsageStatus,
     getPaymentModeUsageStatus,
     getSeasonUsageStatus,
@@ -13,9 +14,11 @@ import {
     updateCategoryRecord,
     updatePaymentModeRecord,
     updateReorderPolicyRecord,
-    updateSeasonRecord
+    updateSeasonRecord,
+    updateStoreConfigRecord
 } from "./repository.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
+import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
 import {
     buildReorderPolicyExplanation,
     buildReorderPolicyScopeSummary,
@@ -25,6 +28,7 @@ import {
     resolveSystemDefaultPolicy,
     ZERO_DEMAND_BEHAVIORS
 } from "../../shared/reorder-policy.js";
+import { getStoreConfigByDocId } from "../../shared/store-config.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 
@@ -59,6 +63,12 @@ function normalizeInteger(value, fallback = 0, minimum = 0) {
     const parsed = Math.floor(Number(value));
     if (!Number.isFinite(parsed)) return fallback;
     return Math.max(minimum, parsed);
+}
+
+function normalizeBoolean(value, fallback = false) {
+    if (value === true || value === "true") return true;
+    if (value === false || value === "false") return false;
+    return fallback;
 }
 
 function buildNameMap(rows = [], labelField) {
@@ -610,6 +620,112 @@ export async function ensureSystemDefaultReorderPolicy(user, existingPolicies = 
     return { mode: "create", policyId: docId || "" };
 }
 
+export function validateStoreConfigPayload(payload, existingStoreConfigs = []) {
+    const docId = normalizeText(payload.docId);
+    const existingRecord = getStoreConfigByDocId(docId, existingStoreConfigs);
+
+    if (!docId || !existingRecord) {
+        throw new Error("Store configuration record could not be found.");
+    }
+
+    const companyName = normalizeText(payload.companyName);
+    const addressLine1 = normalizeText(payload.addressLine1);
+    const addressLine2 = normalizeText(payload.addressLine2);
+    const city = normalizeText(payload.city);
+    const state = normalizeText(payload.state);
+    const pincode = normalizeText(payload.pincode);
+    const stateCode = normalizeText(payload.stateCode);
+    const taxId = normalizeText(payload.taxId);
+    const email = normalizeText(payload.email);
+    const salePrefix = normalizeText(payload.salePrefix).toUpperCase();
+    const requiresCustomerAddress = normalizeBoolean(payload.requiresCustomerAddress, Boolean(existingRecord.requiresCustomerAddress));
+    const terms = normalizeText(payload.terms);
+    const bankName = normalizeText(payload.bankName);
+    const branch = normalizeText(payload.branch);
+    const accountNumber = normalizeText(payload.accountNumber);
+    const ifscCode = normalizeText(payload.ifscCode).toUpperCase();
+    const accountHolderName = normalizeText(payload.accountHolderName);
+    const upiQRCodeUrl = normalizeText(payload.upiQRCodeUrl);
+    const cgstRate = Math.max(0, Number(payload.cgstRate) || 0);
+    const sgstRate = Math.max(0, Number(payload.sgstRate) || 0);
+
+    if (!companyName) throw new Error("Company name is required.");
+    if (!addressLine1) throw new Error("Address line 1 is required.");
+    if (!city) throw new Error("City is required.");
+    if (!state) throw new Error("State is required.");
+    if (!pincode) throw new Error("Pincode is required.");
+    if (!stateCode) throw new Error("State code is required.");
+    if (!taxId) throw new Error("Tax / GST text is required.");
+    if (!email) throw new Error("Email is required.");
+    if (!salePrefix) throw new Error("Sale prefix is required.");
+    if (!bankName) throw new Error("Bank name is required.");
+    if (!branch) throw new Error("Branch is required.");
+    if (!accountNumber) throw new Error("Account number is required.");
+    if (!ifscCode) throw new Error("IFSC code is required.");
+    if (!accountHolderName) throw new Error("Account holder name is required.");
+    if (!upiQRCodeUrl) throw new Error("UPI QR code URL is required.");
+    if (!terms) throw new Error("Invoice terms are required.");
+
+    if (companyName.length > 80) throw new Error("Company name must be 80 characters or less.");
+    if (salePrefix.length > 6) throw new Error("Sale prefix must be 6 characters or less.");
+    if (stateCode.length > 4) throw new Error("State code must be 4 characters or less.");
+
+    return {
+        docId,
+        companyName,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        pincode,
+        stateCode,
+        taxId,
+        email,
+        salePrefix,
+        requiresCustomerAddress,
+        terms,
+        taxInfo: {
+            cgstRate,
+            sgstRate
+        },
+        paymentDetails: {
+            bankName,
+            branch,
+            accountNumber,
+            ifscCode,
+            accountHolderName,
+            upiQRCodeUrl
+        }
+    };
+}
+
+export async function saveStoreConfig(payload, user, existingStoreConfigs = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save store configuration.");
+    }
+
+    const { docId, ...storeConfigData } = validateStoreConfigPayload(payload, existingStoreConfigs);
+    await updateStoreConfigRecord(docId, storeConfigData, user);
+    return { mode: "update" };
+}
+
+export async function ensureStoreConfigSeed(user, existingStoreConfigs = []) {
+    if (!user || user.role !== "admin") {
+        return { mode: "skip" };
+    }
+
+    const existingRows = Array.isArray(existingStoreConfigs) ? existingStoreConfigs : [];
+    const existingDocIds = new Set(existingRows.map(row => normalizeText(row.id || row.docId)).filter(Boolean));
+    const missingSeedRows = MONETA_STORE_CONFIG_SEED.filter(row => !existingDocIds.has(normalizeText(row.docId)));
+
+    if (missingSeedRows.length === 0) {
+        return { mode: "existing" };
+    }
+
+    await seedStoreConfigRecords(missingSeedRows, user);
+    return { mode: existingRows.length === 0 ? "create" : "repair" };
+}
+
 export async function getAdminEditRestriction(entity, record) {
     if (!record?.id) {
         return {
@@ -643,6 +759,13 @@ export async function getAdminEditRestriction(entity, record) {
     }
 
     if (entity === "reorderPolicies") {
+        return {
+            isLocked: false,
+            message: ""
+        };
+    }
+
+    if (entity === "storeConfigs") {
         return {
             isLocked: false,
             message: ""

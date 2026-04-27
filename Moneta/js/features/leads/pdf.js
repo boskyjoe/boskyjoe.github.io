@@ -1,6 +1,7 @@
-import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
+import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { amountToWords } from "../../shared/utils/amount-words.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { getDefaultRetailStoreName, getStoreConfigInvoiceDetails, getStoreQuoteTheme } from "../../shared/store-config.js";
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -42,53 +43,15 @@ function roundCurrency(value) {
 }
 
 function getStoreDetails(storeName = "") {
-    if (storeName === "Consignment") {
-        return MONETA_STORE_CONFIG.default || {};
+    if (storeName === CONSIGNMENT_STORE_NAME) {
+        return getStoreConfigInvoiceDetails();
     }
 
-    return MONETA_STORE_CONFIG[storeName] || MONETA_STORE_CONFIG.default || {};
+    return getStoreConfigInvoiceDetails(storeName);
 }
 
 function getQuoteTheme(storeName = "") {
-    switch (normalizeText(storeName)) {
-        case "Tasty Treats":
-            return {
-                accent: "#9a3412",
-                accentSoft: "#fff1e8",
-                accentStrong: "#7c2d12",
-                gradientStart: "#fff7ed",
-                gradientEnd: "#ffedd5",
-                badgeLabel: "Direct Sales",
-                channelLabel: "Tasty Treats",
-                title: "Customer Quote",
-                strapline: "Fresh product quote for direct store sales"
-            };
-        case "Consignment":
-            return {
-                accent: "#7c5a12",
-                accentSoft: "#fff9e6",
-                accentStrong: "#5f460d",
-                gradientStart: "#fffdf2",
-                gradientEnd: "#fef3c7",
-                badgeLabel: "Distributor Channel",
-                channelLabel: "Consignment",
-                title: "Consignment Quote",
-                strapline: "Distributor / reseller channel quote"
-            };
-        case "Church Store":
-        default:
-            return {
-                accent: "#143f66",
-                accentSoft: "#edf4fb",
-                accentStrong: "#0f3556",
-                gradientStart: "#f7fafc",
-                gradientEnd: "#e6eff8",
-                badgeLabel: "Store Quote",
-                channelLabel: "Church Store",
-                title: "Customer Quote",
-                strapline: "Prepared for direct store fulfilment"
-            };
-    }
+    return getStoreQuoteTheme(storeName);
 }
 
 function resolveQuoteDisplayStatus(quote = {}) {
@@ -389,7 +352,7 @@ function buildQuotePdfData(lead = null, quoteInput = null) {
         throw new Error("Quote data is missing.");
     }
 
-    const storeName = normalizeText(quoteInput.store || "Church Store");
+    const storeName = normalizeText(quoteInput.store || getDefaultRetailStoreName());
     const storeDetails = getStoreDetails(storeName);
     const theme = getQuoteTheme(storeName);
     const lineItems = Array.isArray(quoteInput.lineItems) ? quoteInput.lineItems : [];

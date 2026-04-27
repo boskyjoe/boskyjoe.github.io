@@ -8,14 +8,17 @@ import {
     initializePaymentModesGrid,
     initializeReorderPoliciesGrid,
     initializeSeasonsGrid,
+    initializeStoreConfigsGrid,
     refreshCategoriesGrid,
     refreshPaymentModesGrid,
     refreshReorderPoliciesGrid,
     refreshSeasonsGrid,
+    refreshStoreConfigsGrid,
     updateCategoriesGridSearch,
     updatePaymentModesGridSearch,
     updateReorderPoliciesGridSearch,
-    updateSeasonsGridSearch
+    updateSeasonsGridSearch,
+    updateStoreConfigsGridSearch
 } from "./grid.js";
 import {
     DEFAULT_REORDER_POLICY,
@@ -33,6 +36,7 @@ import {
     savePaymentMode,
     saveReorderPolicy,
     saveSeason,
+    saveStoreConfig,
     toggleCategoryStatus,
     togglePaymentModeStatus,
     toggleReorderPolicyStatus,
@@ -58,6 +62,12 @@ const ADMIN_SECTIONS = {
         icon: icons.payment,
         description: "Manage the transaction methods available across supplier and sales workflows."
     },
+    storeConfigs: {
+        label: "Store Config",
+        entityLabel: "Store Config",
+        icon: icons.retail,
+        description: "Maintain the live business profile for each retail store, including invoice, tax, bank, and payment defaults."
+    },
     reorderPolicies: {
         label: "Reorder Policies",
         entityLabel: "Reorder Policy",
@@ -74,12 +84,14 @@ const featureState = {
         categories: "",
         seasons: "",
         paymentModes: "",
+        storeConfigs: "",
         reorderPolicies: ""
     },
     editingIds: {
         categories: null,
         seasons: null,
         paymentModes: null,
+        storeConfigs: null,
         reorderPolicies: null
     }
 };
@@ -96,6 +108,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     paymentModes: {
         formId: "admin-payment-mode-form",
         inputSelector: "#admin-payment-mode-name"
+    },
+    storeConfigs: {
+        formId: "admin-store-config-form",
+        inputSelector: "#admin-store-config-company-name"
     },
     reorderPolicies: {
         formId: "admin-reorder-policy-form",
@@ -165,6 +181,16 @@ function setActiveSection(section) {
 
 function getEditingRecord(snapshot, section = featureState.activeSection) {
     const recordId = featureState.editingIds[section];
+
+    if (section === "storeConfigs") {
+        const rows = (snapshot.masterData.storeConfigs || []).slice().sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999));
+        if (recordId) {
+            return rows.find(record => record.id === recordId) || null;
+        }
+
+        return rows[0] || null;
+    }
+
     if (!recordId) return null;
 
     if (section === "categories") {
@@ -218,6 +244,13 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
 
             return (left.policyName || "").localeCompare(right.policyName || "");
         });
+    }
+
+    if (section === "storeConfigs") {
+        return (snapshot.masterData.storeConfigs || [])
+            .slice()
+            .sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999)
+                || (left.storeName || "").localeCompare(right.storeName || ""));
     }
 
     return (snapshot.masterData.paymentModes || []).slice().sort((left, right) => (left.paymentMode || "").localeCompare(right.paymentMode || ""));
@@ -705,12 +738,14 @@ function renderSectionTabs(snapshot) {
     const categories = snapshot.masterData.categories || [];
     const seasons = snapshot.masterData.seasons || [];
     const paymentModes = snapshot.masterData.paymentModes || [];
+    const storeConfigs = snapshot.masterData.storeConfigs || [];
     const reorderPolicies = snapshot.masterData.reorderPolicies || [];
 
     const counts = {
         categories: categories.length,
         seasons: seasons.length,
         paymentModes: paymentModes.length,
+        storeConfigs: storeConfigs.length,
         reorderPolicies: reorderPolicies.length
     };
 
@@ -893,6 +928,257 @@ function renderPaymentModeForm(snapshot) {
                         <button class="button button-primary-alt" type="submit">
                             <span class="button-icon">${editingRecord ? icons.edit : icons.plus}</span>
                             ${editingRecord ? "Update Payment Mode" : "Save Payment Mode"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function renderStoreConfigForm(snapshot) {
+    const editingRecord = getEditingRecord(snapshot, "storeConfigs");
+
+    if (!editingRecord) {
+        return `
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.retail}</span>
+                        <div>
+                            <h3>Store Configuration</h3>
+                            <p class="panel-copy">Moneta is waiting for the store configuration seed to appear in Firestore.</p>
+                        </div>
+                    </div>
+                    <span class="status-pill">Waiting</span>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.retail}</span>
+                    <div>
+                        <h3>Edit Store Configuration</h3>
+                        <p class="panel-copy">Update the business profile Moneta uses for invoices, tax defaults, bank details, and retail store rules.</p>
+                    </div>
+                </div>
+                <span class="status-pill">${editingRecord.storeName}</span>
+            </div>
+            <div class="panel-body">
+                <form id="admin-store-config-form">
+                    <input id="admin-store-config-doc-id" type="hidden" value="${editingRecord.id || editingRecord.docId || ""}">
+                    <div class="form-grid">
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-store-name",
+                                label: "Store Name",
+                                tooltip: "This is the stable Moneta store key already used by sales, reports, and history. It stays read-only so existing records do not break."
+                            })}
+                            <input id="admin-store-config-store-name" class="input" type="text" value="${escapeHtml(editingRecord.storeName || "")}" readonly>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-store-code",
+                                label: "Store Code",
+                                tooltip: "This is the stable internal store code Moneta uses behind the scenes. It is not meant for day-to-day editing."
+                            })}
+                            <input id="admin-store-config-store-code" class="input" type="text" value="${escapeHtml(editingRecord.storeCode || "")}" readonly>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-company-name",
+                                label: "Company Name",
+                                required: true,
+                                tooltip: "This is the legal or branded business name Moneta prints on invoices, receipts, and store-facing documents."
+                            })}
+                            <input id="admin-store-config-company-name" class="input" type="text" value="${escapeHtml(editingRecord.companyName || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-sale-prefix",
+                                label: "Sale Prefix",
+                                required: true,
+                                tooltip: "Moneta uses this prefix when it generates store sale IDs, for example CS or TT."
+                            })}
+                            <input id="admin-store-config-sale-prefix" class="input" type="text" value="${escapeHtml(editingRecord.salePrefix || "")}" maxlength="6" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-requires-address",
+                                label: "Customer Address Rule",
+                                required: true,
+                                tooltip: "Choose whether Moneta must force a customer address before saving a sale for this store."
+                            })}
+                            <select id="admin-store-config-requires-address" class="select" required>
+                                <option value="false" ${editingRecord.requiresCustomerAddress ? "" : "selected"}>Address Optional</option>
+                                <option value="true" ${editingRecord.requiresCustomerAddress ? "selected" : ""}>Address Required</option>
+                            </select>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-address-line-1",
+                                label: "Address Line 1",
+                                required: true,
+                                tooltip: "This is the primary street or location line Moneta shows on the printed store address."
+                            })}
+                            <input id="admin-store-config-address-line-1" class="input" type="text" value="${escapeHtml(editingRecord.addressLine1 || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-address-line-2",
+                                label: "Address Line 2",
+                                tooltip: "Use this for area, landmark, or second-line location details on the store profile."
+                            })}
+                            <input id="admin-store-config-address-line-2" class="input" type="text" value="${escapeHtml(editingRecord.addressLine2 || "")}">
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-city",
+                                label: "City",
+                                required: true,
+                                tooltip: "Moneta prints this city as part of the store address and invoice location block."
+                            })}
+                            <input id="admin-store-config-city" class="input" type="text" value="${escapeHtml(editingRecord.city || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-state",
+                                label: "State",
+                                required: true,
+                                tooltip: "This is the state name Moneta shows on the store profile and tax-facing invoice header."
+                            })}
+                            <input id="admin-store-config-state" class="input" type="text" value="${escapeHtml(editingRecord.state || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-pincode",
+                                label: "Pincode",
+                                required: true,
+                                tooltip: "Moneta includes the pincode as part of the invoice address and delivery reference details."
+                            })}
+                            <input id="admin-store-config-pincode" class="input" type="text" value="${escapeHtml(editingRecord.pincode || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-state-code",
+                                label: "State Code",
+                                required: true,
+                                tooltip: "This is the numeric GST or state code Moneta shows with the invoice tax identity."
+                            })}
+                            <input id="admin-store-config-state-code" class="input" type="text" value="${escapeHtml(editingRecord.stateCode || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-tax-id",
+                                label: "Tax / GST Text",
+                                required: true,
+                                tooltip: "This is the exact GST or tax identity line Moneta prints on invoices for the store."
+                            })}
+                            <input id="admin-store-config-tax-id" class="input" type="text" value="${escapeHtml(editingRecord.taxId || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-email",
+                                label: "Email",
+                                required: true,
+                                tooltip: "This is the public contact email Moneta shows on store-facing invoices and documents."
+                            })}
+                            <input id="admin-store-config-email" class="input" type="email" value="${escapeHtml(editingRecord.email || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-cgst-rate",
+                                label: "CGST Rate %",
+                                required: true,
+                                tooltip: "Moneta uses this as the default CGST percentage when a retail or quote line inherits tax from the selected store."
+                            })}
+                            <input id="admin-store-config-cgst-rate" class="input" type="number" min="0" step="0.01" value="${escapeHtml(editingRecord.taxInfo?.cgstRate ?? 0)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-sgst-rate",
+                                label: "SGST Rate %",
+                                required: true,
+                                tooltip: "Moneta uses this as the default SGST percentage when a retail or quote line inherits tax from the selected store."
+                            })}
+                            <input id="admin-store-config-sgst-rate" class="input" type="number" min="0" step="0.01" value="${escapeHtml(editingRecord.taxInfo?.sgstRate ?? 0)}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-bank-name",
+                                label: "Bank Name",
+                                required: true,
+                                tooltip: "This bank name appears in the payment block Moneta prints for invoice settlement instructions."
+                            })}
+                            <input id="admin-store-config-bank-name" class="input" type="text" value="${escapeHtml(editingRecord.paymentDetails?.bankName || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-branch",
+                                label: "Branch",
+                                required: true,
+                                tooltip: "This branch detail appears together with bank details when Moneta shows payment instructions."
+                            })}
+                            <input id="admin-store-config-branch" class="input" type="text" value="${escapeHtml(editingRecord.paymentDetails?.branch || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-account-number",
+                                label: "Account Number",
+                                required: true,
+                                tooltip: "This account number is printed in the payment section of the store invoice profile."
+                            })}
+                            <input id="admin-store-config-account-number" class="input" type="text" value="${escapeHtml(editingRecord.paymentDetails?.accountNumber || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-ifsc-code",
+                                label: "IFSC Code",
+                                required: true,
+                                tooltip: "Moneta includes this IFSC code next to the bank details for transfers and payment instructions."
+                            })}
+                            <input id="admin-store-config-ifsc-code" class="input" type="text" value="${escapeHtml(editingRecord.paymentDetails?.ifscCode || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-account-holder-name",
+                                label: "Account Holder Name",
+                                required: true,
+                                tooltip: "This is the bank account holder Moneta prints for the store payment instructions."
+                            })}
+                            <input id="admin-store-config-account-holder-name" class="input" type="text" value="${escapeHtml(editingRecord.paymentDetails?.accountHolderName || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-upi-qr-url",
+                                label: "UPI QR Code URL",
+                                required: true,
+                                tooltip: "This is the image URL Moneta uses when it prints the store UPI QR code on invoices or payment views."
+                            })}
+                            <input id="admin-store-config-upi-qr-url" class="input" type="url" value="${escapeHtml(editingRecord.paymentDetails?.upiQRCodeUrl || "")}" required>
+                        </div>
+                        <div class="field field-full">
+                            ${renderFieldLabel({
+                                forId: "admin-store-config-terms",
+                                label: "Invoice Terms",
+                                required: true,
+                                tooltip: "This is the closing terms or payment note Moneta prints near the footer of store invoices."
+                            })}
+                            <textarea id="admin-store-config-terms" class="textarea" required>${escapeHtml(editingRecord.terms || "")}</textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="admin-store-config-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reset View
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${icons.edit}</span>
+                            Update Store Config
                         </button>
                     </div>
                 </form>
@@ -1161,6 +1447,10 @@ function renderCurrentForm(snapshot) {
         return renderReorderPolicyForm(snapshot);
     }
 
+    if (featureState.activeSection === "storeConfigs") {
+        return renderStoreConfigForm(snapshot);
+    }
+
     return renderPaymentModeForm(snapshot);
 }
 
@@ -1171,7 +1461,8 @@ function getGridMeta(snapshot) {
             title: "Category Directory",
             copy: "Review active and inactive category records, then reopen any row for editing.",
             count: rows.length,
-            countLabel: "categories"
+            countLabel: "categories",
+            directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
         };
     }
 
@@ -1181,7 +1472,8 @@ function getGridMeta(snapshot) {
             title: "Season Directory",
             copy: "Track the full sales season history, including inactive or archived seasonal windows.",
             count: rows.length,
-            countLabel: "seasons"
+            countLabel: "seasons",
+            directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
         };
     }
 
@@ -1191,7 +1483,19 @@ function getGridMeta(snapshot) {
             title: "Reorder Policy Directory",
             copy: "Review the active stock-cover policies, reopen one for editing, or change which rules Moneta can apply in the report.",
             count: rows.length,
-            countLabel: "policies"
+            countLabel: "policies",
+            directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
+        };
+    }
+
+    if (featureState.activeSection === "storeConfigs") {
+        const rows = snapshot.masterData.storeConfigs || [];
+        return {
+            title: "Store Configuration Directory",
+            copy: "Review every store profile Moneta uses for invoices, receipts, tax defaults, and payment details, then open one for editing.",
+            count: rows.length,
+            countLabel: "store profiles",
+            directoryHelp: "Search store profiles and reopen one for editing without leaving the admin workspace."
         };
     }
 
@@ -1200,7 +1504,8 @@ function getGridMeta(snapshot) {
         title: "Payment Mode Directory",
         copy: "Keep transaction methods tidy so operational screens only offer the modes your team wants to use.",
         count: rows.length,
-        countLabel: "payment modes"
+        countLabel: "payment modes",
+        directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
     };
 }
 
@@ -1225,7 +1530,7 @@ function renderCurrentGridCard(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">Directory</p>
-                        <p class="panel-copy">Search records, open one for editing, or change active status without leaving the admin workspace.</p>
+                        <p class="panel-copy">${meta.directoryHelp || "Search records and reopen one for editing."}</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>
@@ -1267,6 +1572,13 @@ function syncCurrentGrid(snapshot) {
         initializeReorderPoliciesGrid(gridElement);
         refreshReorderPoliciesGrid(rows);
         updateReorderPoliciesGridSearch(featureState.searchTerms.reorderPolicies);
+        return;
+    }
+
+    if (featureState.activeSection === "storeConfigs") {
+        initializeStoreConfigsGrid(gridElement);
+        refreshStoreConfigsGrid(rows);
+        updateStoreConfigsGridSearch(featureState.searchTerms.storeConfigs);
         return;
     }
 
@@ -1436,6 +1748,71 @@ async function handlePaymentModeSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Payment mode save failed:", error);
+    }
+}
+
+async function handleStoreConfigSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const docId = document.getElementById("admin-store-config-doc-id")?.value;
+        const storeName = document.getElementById("admin-store-config-store-name")?.value || "-";
+        await runProgressToastFlow({
+            title: "Updating Store Configuration",
+            initialMessage: "Reading the selected store profile...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Store Configuration Updated",
+            successMessage: "The store configuration was updated successfully."
+        }, async ({ update }) => {
+            update("Validating address, tax, bank, and payment defaults...", 40, "Step 2 of 5");
+
+            update("Writing store configuration changes to Firestore...", 72, "Step 3 of 5");
+            await saveStoreConfig({
+                docId,
+                companyName: document.getElementById("admin-store-config-company-name")?.value,
+                addressLine1: document.getElementById("admin-store-config-address-line-1")?.value,
+                addressLine2: document.getElementById("admin-store-config-address-line-2")?.value,
+                city: document.getElementById("admin-store-config-city")?.value,
+                state: document.getElementById("admin-store-config-state")?.value,
+                pincode: document.getElementById("admin-store-config-pincode")?.value,
+                stateCode: document.getElementById("admin-store-config-state-code")?.value,
+                taxId: document.getElementById("admin-store-config-tax-id")?.value,
+                email: document.getElementById("admin-store-config-email")?.value,
+                salePrefix: document.getElementById("admin-store-config-sale-prefix")?.value,
+                requiresCustomerAddress: document.getElementById("admin-store-config-requires-address")?.value,
+                cgstRate: document.getElementById("admin-store-config-cgst-rate")?.value,
+                sgstRate: document.getElementById("admin-store-config-sgst-rate")?.value,
+                bankName: document.getElementById("admin-store-config-bank-name")?.value,
+                branch: document.getElementById("admin-store-config-branch")?.value,
+                accountNumber: document.getElementById("admin-store-config-account-number")?.value,
+                ifscCode: document.getElementById("admin-store-config-ifsc-code")?.value,
+                accountHolderName: document.getElementById("admin-store-config-account-holder-name")?.value,
+                upiQRCodeUrl: document.getElementById("admin-store-config-upi-qr-url")?.value,
+                terms: document.getElementById("admin-store-config-terms")?.value
+            }, getState().currentUser, getState().masterData.storeConfigs);
+
+            update("Refreshing the store profile directory...", 88, "Step 4 of 5");
+            renderAdminModulesView();
+            update("Store defaults are ready across retail, leads, and PDFs.", 96, "Step 5 of 5");
+        });
+
+        showToast("Store configuration updated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Store Configuration Updated",
+            message: "The store profile has been saved successfully.",
+            details: [
+                { label: "Store", value: storeName },
+                { label: "Action", value: "Update" },
+                { label: "Module", value: "Store Config" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Store configuration save failed:", error);
+        showToast(error.message || "Could not save the store configuration.", "error");
     }
 }
 
@@ -1624,7 +2001,7 @@ async function handleReorderPolicySubmit(event) {
 }
 
 function getRecordDisplayName(record = {}) {
-    return record.categoryName || record.seasonName || record.paymentMode || record.policyName || "-";
+    return record.categoryName || record.seasonName || record.paymentMode || record.policyName || record.storeName || "-";
 }
 
 function handleSearchInput(target) {
@@ -1644,6 +2021,11 @@ function handleSearchInput(target) {
 
     if (featureState.activeSection === "reorderPolicies") {
         updateReorderPoliciesGridSearch(featureState.searchTerms.reorderPolicies);
+        return;
+    }
+
+    if (featureState.activeSection === "storeConfigs") {
+        updateStoreConfigsGridSearch(featureState.searchTerms.storeConfigs);
         return;
     }
 
@@ -1762,6 +2144,11 @@ function bindAdminModulesDomEvents() {
             return;
         }
 
+        if (event.target.id === "admin-store-config-form") {
+            handleStoreConfigSubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-reorder-policy-form") {
             handleReorderPolicySubmit(event);
         }
@@ -1789,6 +2176,7 @@ function bindAdminModulesDomEvents() {
         const categoryCancelButton = target.closest("#admin-category-cancel-button");
         const seasonCancelButton = target.closest("#admin-season-cancel-button");
         const paymentModeCancelButton = target.closest("#admin-payment-mode-cancel-button");
+        const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
         if (sectionButton) {
@@ -1819,6 +2207,11 @@ function bindAdminModulesDomEvents() {
 
         if (paymentModeCancelButton) {
             handleCancelEdit("paymentModes");
+            return;
+        }
+
+        if (storeConfigCancelButton) {
+            handleCancelEdit("storeConfigs");
             return;
         }
 

@@ -3,7 +3,7 @@ import { setState, updateMasterData } from "./store.js";
 import { showToast } from "../shared/toast.js";
 
 const unsubscribeFns = [];
-const MASTER_DATA_KEYS = ["categories", "seasons", "products", "suppliers", "paymentModes", "reorderPolicies", "salesCatalogues", "teams"];
+const MASTER_DATA_KEYS = ["categories", "seasons", "products", "suppliers", "paymentModes", "reorderPolicies", "storeConfigs", "salesCatalogues", "teams"];
 const loadedMasterDataKeys = new Set();
 let isInitialized = false;
 
@@ -43,6 +43,7 @@ export function initializeMasterData() {
     listenToCollection(db, "suppliers", COLLECTIONS.suppliers);
     listenToCollection(db, "paymentModes", COLLECTIONS.paymentModes);
     listenToCollection(db, "reorderPolicies", COLLECTIONS.reorderPolicies);
+    listenToCollection(db, "storeConfigs", COLLECTIONS.storeConfigs);
     listenToCollection(db, "salesCatalogues", COLLECTIONS.salesCatalogues);
     listenToCollection(db, "teams", COLLECTIONS.teams);
 

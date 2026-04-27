@@ -18,7 +18,7 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
-import { ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
+import { ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
 import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
 
 function initializeFirebase() {
@@ -128,6 +128,33 @@ function initializeReorderPolicySeedLifecycle() {
     });
 }
 
+function initializeStoreConfigSeedLifecycle() {
+    let isEnsuring = false;
+
+    subscribe(async snapshot => {
+        if (isEnsuring) return;
+
+        const user = snapshot.currentUser;
+        if (!user || user.role !== "admin" || !snapshot.isMasterDataReady) {
+            return;
+        }
+
+        if ((snapshot.masterData.storeConfigs || []).length > 0) {
+            return;
+        }
+
+        isEnsuring = true;
+
+        try {
+            await ensureStoreConfigSeed(user, snapshot.masterData.storeConfigs);
+        } catch (error) {
+            console.error("[Moneta] Failed to ensure store configuration seed:", error);
+        } finally {
+            isEnsuring = false;
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initializeFirebase();
     initializeTheme();
@@ -150,5 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
     bindGlobalUiEvents();
     initializeDebugSubscription();
     initializeDataLifecycle();
+    initializeStoreConfigSeedLifecycle();
     initializeReorderPolicySeedLifecycle();
 });

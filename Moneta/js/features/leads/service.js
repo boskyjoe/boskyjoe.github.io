@@ -10,14 +10,19 @@ import {
     updateLeadQuoteStatusRecord,
     updateLeadRecord
 } from "./repository.js";
-import { getRetailStoreTaxDefaults, RETAIL_STORES } from "../retail-store/service.js";
+import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
+import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
+import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/store-config.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
 export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Revised", "General Note"];
 export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled", "Converted"];
-export const LEAD_QUOTE_STORES = [...RETAIL_STORES, "Consignment"];
 export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Cancelled"];
+
+export function getLeadQuoteStores() {
+    return [...getRetailStoreNames(), CONSIGNMENT_STORE_NAME];
+}
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -70,13 +75,13 @@ function roundCurrency(value) {
 
 function normalizeQuoteStore(value) {
     const text = normalizeText(value);
-    return LEAD_QUOTE_STORES.includes(text) ? text : "Church Store";
+    return getLeadQuoteStores().includes(text) ? text : getDefaultRetailStoreName();
 }
 
 function buildQuoteTaxDefaults(storeName = "") {
     const normalizedStore = normalizeQuoteStore(storeName);
 
-    if (normalizedStore === "Consignment") {
+    if (normalizedStore === CONSIGNMENT_STORE_NAME) {
         return {
             cgstPercentage: 0,
             sgstPercentage: 0
@@ -152,7 +157,7 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         throw new Error("Converted leads are read-only. Create a new enquiry if a replacement quote is needed.");
     }
 
-    const store = normalizeQuoteStore(sourceQuote?.store || "Church Store");
+    const store = normalizeQuoteStore(sourceQuote?.store || getDefaultRetailStoreName());
     const seedItems = sourceQuote?.lineItems?.length
         ? sourceQuote.lineItems
         : normalizeRequestedProducts(lead.requestedProducts || []);

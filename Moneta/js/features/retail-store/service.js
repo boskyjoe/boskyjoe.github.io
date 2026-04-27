@@ -1,4 +1,9 @@
-import { MONETA_STORE_CONFIG } from "../../config/store-config.js";
+import {
+    doesRetailStoreRequireCustomerAddress,
+    getRetailStoreNames,
+    getRetailStoreTaxDefaults as resolveRetailStoreTaxDefaults,
+    isRetailStoreName
+} from "../../shared/store-config.js";
 import {
     addRetailSaleReturnRecord,
     addRetailSaleExpenseRecord,
@@ -9,18 +14,16 @@ import {
     voidRetailSaleRecord
 } from "./repository.js";
 
-export const RETAIL_STORES = ["Church Store", "Tasty Treats"];
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
 export const RETAIL_PAYMENT_TYPES = ["Pay Later", "Pay Now"];
 export const RETAIL_DISCOUNT_TYPES = ["Percentage", "Fixed"];
 
-export function getRetailStoreTaxDefaults(storeName = "") {
-    const taxInfo = MONETA_STORE_CONFIG?.[storeName]?.taxInfo || null;
+export function getRetailStores(options = {}) {
+    return getRetailStoreNames(null, options);
+}
 
-    return {
-        cgstPercentage: Math.max(0, Number(taxInfo?.cgstRate) || 0),
-        sgstPercentage: Math.max(0, Number(taxInfo?.sgstRate) || 0)
-    };
+export function getRetailStoreTaxDefaults(storeName = "") {
+    return resolveRetailStoreTaxDefaults(storeName);
 }
 
 function normalizeText(value) {
@@ -229,7 +232,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
     }
 
     const saleDate = parseRequiredDate(payload.saleDate, "Sale date");
-    const store = RETAIL_STORES.includes(normalizeText(payload.store))
+    const store = isRetailStoreName(normalizeText(payload.store))
         ? normalizeText(payload.store)
         : "";
     const saleType = RETAIL_SALE_TYPES.includes(normalizeText(payload.saleType))
@@ -277,8 +280,8 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
         throw new Error("Customer phone is required.");
     }
 
-    if (store === "Tasty Treats" && !customerAddress) {
-        throw new Error("Customer address is required for Tasty Treats orders.");
+    if (doesRetailStoreRequireCustomerAddress(store) && !customerAddress) {
+        throw new Error(`Customer address is required for ${store} orders.`);
     }
 
     const catalogueHeader = (catalogueHeaders || []).find(catalogue => catalogue.id === salesCatalogueId);
@@ -372,7 +375,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
                 name: customerName,
                 phone: customerPhone,
                 email: customerEmail,
-                address: store === "Tasty Treats" ? customerAddress : ""
+                address: doesRetailStoreRequireCustomerAddress(store) ? customerAddress : ""
             },
             saleNotes,
             lineItems: normalizedLineItems,
@@ -478,8 +481,8 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
         throw new Error("Customer phone is required.");
     }
 
-    if (sale.store === "Tasty Treats" && !customerAddress) {
-        throw new Error("Customer address is required for Tasty Treats orders.");
+    if (doesRetailStoreRequireCustomerAddress(sale.store) && !customerAddress) {
+        throw new Error(`Customer address is required for ${sale.store} orders.`);
     }
 
     const baseUpdate = {
@@ -489,7 +492,7 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
             name: customerName,
             phone: customerPhone,
             email: customerEmail,
-            address: sale.store === "Tasty Treats" ? customerAddress : ""
+            address: doesRetailStoreRequireCustomerAddress(sale.store) ? customerAddress : ""
         },
         saleNotes
     };
