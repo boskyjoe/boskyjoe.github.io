@@ -53,6 +53,15 @@ function bindGlobalUiEvents() {
             applyTheme(mode, { persist: true, emit: true });
         }
     });
+
+    document.addEventListener("change", event => {
+        const target = event.target;
+        if (!(target instanceof HTMLSelectElement)) return;
+
+        if (target.matches("[data-theme-mode-select]")) {
+            applyTheme(target.value, { persist: true, emit: true });
+        }
+    });
 }
 
 function initializeDebugSubscription() {

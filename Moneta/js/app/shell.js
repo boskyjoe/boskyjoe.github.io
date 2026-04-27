@@ -1,7 +1,7 @@
 import { navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
-import { getResolvedTheme, getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
+import { getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
 
 function renderSidebarLinks(user) {
@@ -55,16 +55,20 @@ function renderAuthSlot(user) {
     const themeSwitcher = document.createElement("div");
     themeSwitcher.className = "theme-switch";
     themeSwitcher.innerHTML = `
-        <div class="theme-switch-head">
-            <span class="theme-switch-kicker">Theme</span>
+        <label class="theme-switch-kicker" for="moneta-theme-mode-select">Theme</label>
+        <div class="theme-switch-row">
+            <select
+                class="theme-switch-select"
+                id="moneta-theme-mode-select"
+                data-theme-mode-select
+                aria-label="Choose Moneta theme"
+            >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
             <span class="theme-switch-value" data-theme-mode-label>${getThemeMode()}</span>
         </div>
-        <div class="theme-switch-group" role="group" aria-label="Choose Moneta theme">
-            <button class="theme-switch-button" type="button" data-theme-mode-control="light" aria-pressed="false">Light</button>
-            <button class="theme-switch-button" type="button" data-theme-mode-control="dark" aria-pressed="false">Dark</button>
-            <button class="theme-switch-button" type="button" data-theme-mode-control="system" aria-pressed="false">System</button>
-        </div>
-        <p class="theme-switch-copy" data-theme-mode-copy>Moneta is currently using ${getResolvedTheme() === "dark" ? "dark" : "light"} surfaces.</p>
     `;
     authSlot.appendChild(themeSwitcher);
 

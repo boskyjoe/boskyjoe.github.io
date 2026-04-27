@@ -47,6 +47,14 @@ export function syncThemeControlState(root = document) {
     const activeMode = getThemeMode();
     const resolvedTheme = getResolvedTheme(activeMode);
 
+    root.querySelectorAll("[data-theme-mode-select]").forEach(select => {
+        select.value = activeMode;
+        select.setAttribute(
+            "aria-label",
+            `Choose Moneta theme. Current selection: ${activeMode === THEME_MODE_SYSTEM ? `System (${resolvedTheme === THEME_MODE_DARK ? "Dark" : "Light"})` : activeMode === THEME_MODE_DARK ? "Dark" : "Light"}`
+        );
+    });
+
     root.querySelectorAll("[data-theme-mode-control]").forEach(button => {
         const buttonMode = normalizeThemeMode(button.getAttribute("data-theme-mode-control"));
         const isActive = buttonMode === activeMode;
@@ -56,15 +64,14 @@ export function syncThemeControlState(root = document) {
     });
 
     root.querySelectorAll("[data-theme-mode-label]").forEach(node => {
-        node.textContent = activeMode === THEME_MODE_SYSTEM
-            ? `System (${resolvedTheme === THEME_MODE_DARK ? "Dark" : "Light"})`
-            : activeMode === THEME_MODE_DARK
-                ? "Dark"
-                : "Light";
-    });
-
-    root.querySelectorAll("[data-theme-mode-copy]").forEach(node => {
-        node.textContent = `Moneta is currently using ${resolvedTheme === THEME_MODE_DARK ? "dark" : "light"} surfaces.`;
+        const labelText = resolvedTheme === THEME_MODE_DARK ? "Dark" : "Light";
+        node.textContent = labelText;
+        node.setAttribute(
+            "title",
+            activeMode === THEME_MODE_SYSTEM
+                ? `Following system theme: ${labelText}`
+                : `Using ${labelText} theme`
+        );
     });
 }
 
