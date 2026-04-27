@@ -1030,25 +1030,26 @@
 
 .home-page-shell {
     overflow: hidden;
+    background: var(--bg-panel);
 }
 
 .home-page-hero {
     padding: 3.5rem 2rem 3.25rem;
     text-align: center;
     border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-subtle) 100%);
 }
 
 .home-page-hero h2 {
     margin: 0;
     font-size: clamp(2rem, 4.8vw, 3.5rem);
     line-height: 1.1;
-    color: #111827;
+    color: var(--text-strong);
     letter-spacing: -0.02em;
 }
 
 .home-page-hero h2 span {
-    background: linear-gradient(90deg, #0c7aa1 0%, #5a2bbf 100%);
+    background: linear-gradient(90deg, var(--accent-alt) 0%, var(--accent) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -1057,7 +1058,7 @@
 .home-page-hero p {
     margin: 1rem auto 0;
     max-width: 50rem;
-    color: #4b5563;
+    color: var(--text-muted);
     font-size: 1.45rem;
 }
 
@@ -1068,14 +1069,15 @@
 .home-cta-button {
     min-width: 18rem;
     padding: 0.85rem 1.35rem;
-    background: linear-gradient(180deg, #1c4ed8 0%, #193cb2 100%);
-    color: #fff;
+    background: linear-gradient(180deg, var(--accent-alt) 0%, var(--accent) 100%);
+    color: var(--text-inverse);
     font-weight: 700;
-    box-shadow: 0 10px 28px rgba(28, 78, 216, 0.28);
+    box-shadow: var(--shadow);
 }
 
 .home-page-section {
     padding: 3rem 1.75rem;
+    background: var(--bg-panel);
 }
 
 .home-page-section + .home-page-section {
@@ -1091,13 +1093,13 @@
     margin: 0;
     font-size: clamp(1.7rem, 3.2vw, 2.55rem);
     line-height: 1.15;
-    color: #111827;
+    color: var(--text-strong);
 }
 
 .home-page-section-head p {
     margin: 0.7rem auto 0;
     max-width: 46rem;
-    color: #6b7280;
+    color: var(--text-muted);
 }
 
 .home-workflow-grid {
@@ -1128,39 +1130,39 @@
 }
 
 .home-workflow-icon-blue {
-    background: #e8f0ff;
-    color: #2f6fdb;
+    background: rgba(var(--accent-alt-rgb), 0.14);
+    color: var(--accent-alt);
 }
 
 .home-workflow-icon-violet {
-    background: #f1e9ff;
-    color: #6e37c5;
+    background: rgba(110, 55, 197, 0.14);
+    color: #8d64db;
 }
 
 .home-workflow-icon-green {
-    background: #e7f8ef;
-    color: #1d8a53;
+    background: rgba(var(--accent-rgb), 0.14);
+    color: var(--accent);
 }
 
 .home-workflow-icon-rose {
-    background: #ffe9f1;
-    color: #c03d78;
+    background: rgba(192, 61, 120, 0.14);
+    color: #dd74a5;
 }
 
 .home-workflow-step h4 {
     margin: 0;
     font-size: 1.28rem;
-    color: #111827;
+    color: var(--text-strong);
 }
 
 .home-workflow-step p {
     margin: 0.75rem auto 0;
-    color: #4b5563;
+    color: var(--text-muted);
     max-width: 17rem;
 }
 
 .home-modules-section {
-    background: #fafcfe;
+    background: var(--bg-panel-muted);
 }
 
 .home-modules-grid {
@@ -1170,10 +1172,11 @@
 }
 
 .home-module-card {
-    background: #fff;
-    border: 1px solid #dce6ee;
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-subtle) 100%);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 1rem 1.05rem;
+    box-shadow: var(--shadow-soft);
 }
 
 .home-module-head {
@@ -1186,8 +1189,8 @@
     width: 2.15rem;
     height: 2.15rem;
     border-radius: 10px;
-    background: #f3f8fd;
-    border: 1px solid #d9e5ef;
+    background: var(--bg-panel-soft);
+    border: 1px solid var(--border);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1202,7 +1205,7 @@
 
 .home-module-label {
     margin: 0;
-    color: #5a7188;
+    color: var(--text-soft);
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -1211,19 +1214,19 @@
 .home-module-card h4 {
     margin: 0.2rem 0 0;
     font-size: 1.18rem;
-    color: #111827;
+    color: var(--text-strong);
 }
 
 .home-module-card p {
     margin: 0.66rem 0 0;
-    color: #4b5563;
+    color: var(--text-muted);
     line-height: 1.45;
 }
 
 .home-page-footer-note {
     border-top: 1px solid var(--border);
     padding: 1rem 1.75rem 1.25rem;
-    color: #64748b;
+    color: var(--text-soft);
     text-align: right;
 }
 
