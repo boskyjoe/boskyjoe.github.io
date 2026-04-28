@@ -29,6 +29,7 @@ function buildCatalogueItemFromProductSnapshot(product, categories = []) {
     const costPrice = roundCurrency(normalizeNumber(product.unitPrice, 0));
     const marginPercentage = normalizeNumber(product.unitMarginPercentage, 0);
     const sellingPrice = roundCurrency(normalizeNumber(product.sellingPrice, costPrice));
+    const sourceProductPriceVersion = Math.max(0, normalizeNumber(product.pricingMeta?.priceVersion));
 
     return {
         productId: product.id,
@@ -40,6 +41,7 @@ function buildCatalogueItemFromProductSnapshot(product, categories = []) {
         costPrice,
         marginPercentage,
         sellingPrice,
+        sourceProductPriceVersion,
         sourceProductCostPrice: costPrice,
         sourceProductMarginPercentage: marginPercentage,
         sourceProductSellingPrice: sellingPrice,
@@ -64,6 +66,7 @@ function resolveProductForCatalogueItem(item, products = []) {
 
 function getSourceProductSnapshot(item = {}) {
     return {
+        sourceProductPriceVersion: Math.max(0, normalizeNumber(item.sourceProductPriceVersion)),
         sourceProductCostPrice: roundCurrency(normalizeNumber(item.sourceProductCostPrice, item.costPrice)),
         sourceProductMarginPercentage: normalizeNumber(item.sourceProductMarginPercentage, item.marginPercentage),
         sourceProductSellingPrice: roundCurrency(normalizeNumber(item.sourceProductSellingPrice, item.sellingPrice))
@@ -83,19 +86,21 @@ function buildPriceSyncState(item, product) {
     const currentMarginPercentage = normalizeNumber(product.unitMarginPercentage, 0);
     const currentSellingPrice = roundCurrency(normalizeNumber(product.sellingPrice, currentCostPrice));
     const sourceSnapshot = getSourceProductSnapshot(item);
+    const currentProductPriceVersion = Math.max(0, normalizeNumber(product.pricingMeta?.priceVersion));
     const productMoved = currentCostPrice !== sourceSnapshot.sourceProductCostPrice
         || currentMarginPercentage !== sourceSnapshot.sourceProductMarginPercentage
         || currentSellingPrice !== sourceSnapshot.sourceProductSellingPrice;
+    const hasVersionDrift = currentProductPriceVersion > sourceSnapshot.sourceProductPriceVersion;
 
     if (Boolean(item.isOverridden)) {
         return {
-            priceSyncState: productMoved ? "override-stale" : "override",
-            priceSyncLabel: productMoved ? "Override + Product Changed" : "Manual Override",
-            canSync: true
+            priceSyncState: hasVersionDrift ? "override-stale" : "override",
+            priceSyncLabel: hasVersionDrift ? "Override + Product Changed" : "Manual Override",
+            canSync: hasVersionDrift
         };
     }
 
-    if (productMoved) {
+    if (hasVersionDrift || (sourceSnapshot.sourceProductPriceVersion <= 0 && productMoved)) {
         return {
             priceSyncState: "stale",
             priceSyncLabel: "Product Price Changed",
@@ -126,6 +131,7 @@ export function enrichSalesCatalogueItem(item, products = [], categories = []) {
         currentProductCostPrice: roundCurrency(normalizeNumber(product?.unitPrice, sourceSnapshot.sourceProductCostPrice)),
         currentProductMarginPercentage: normalizeNumber(product?.unitMarginPercentage, sourceSnapshot.sourceProductMarginPercentage),
         currentProductSellingPrice: roundCurrency(normalizeNumber(product?.sellingPrice, sourceSnapshot.sourceProductSellingPrice)),
+        currentProductPriceVersion: Math.max(0, normalizeNumber(product?.pricingMeta?.priceVersion)),
         ...sourceSnapshot,
         ...syncState
     };
@@ -161,6 +167,7 @@ function buildSalesCataloguePriceHistoryEntry({
         nextCostPrice: nextItem.costPrice ?? null,
         previousMarginPercentage: previousItem.marginPercentage ?? null,
         nextMarginPercentage: nextItem.marginPercentage ?? null,
+        sourceProductPriceVersion: nextItem.sourceProductPriceVersion ?? null,
         sourceProductSellingPrice: nextItem.sourceProductSellingPrice ?? nextItem.sellingPrice ?? null,
         sourceProductCostPrice: nextItem.sourceProductCostPrice ?? nextItem.costPrice ?? null,
         sourceProductMarginPercentage: nextItem.sourceProductMarginPercentage ?? nextItem.marginPercentage ?? null,
@@ -214,6 +221,7 @@ function validateCatalogueItems(items) {
             costPrice: normalizeNumber(item.costPrice, 0),
             marginPercentage: normalizeNumber(item.marginPercentage, 0),
             sellingPrice,
+            sourceProductPriceVersion: normalizeNumber(item.sourceProductPriceVersion, 0),
             sourceProductCostPrice: normalizeNumber(item.sourceProductCostPrice, item.costPrice),
             sourceProductMarginPercentage: normalizeNumber(item.sourceProductMarginPercentage, item.marginPercentage),
             sourceProductSellingPrice: normalizeNumber(item.sourceProductSellingPrice, sellingPrice),
@@ -325,6 +333,7 @@ export async function syncSalesCatalogueItemToProduct(catalogueId, item, product
         costPrice: syncedItem.costPrice,
         marginPercentage: syncedItem.marginPercentage,
         sellingPrice: syncedItem.sellingPrice,
+        sourceProductPriceVersion: syncedItem.sourceProductPriceVersion,
         sourceProductCostPrice: syncedItem.sourceProductCostPrice,
         sourceProductMarginPercentage: syncedItem.sourceProductMarginPercentage,
         sourceProductSellingPrice: syncedItem.sourceProductSellingPrice,
@@ -373,6 +382,7 @@ export async function syncChangedSalesCatalogueItems(catalogueId, items = [], pr
                 costPrice: item.costPrice,
                 marginPercentage: item.marginPercentage,
                 sellingPrice: item.sellingPrice,
+                sourceProductPriceVersion: item.sourceProductPriceVersion,
                 sourceProductCostPrice: item.sourceProductCostPrice,
                 sourceProductMarginPercentage: item.sourceProductMarginPercentage,
                 sourceProductSellingPrice: item.sourceProductSellingPrice,

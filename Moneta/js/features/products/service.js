@@ -64,6 +64,7 @@ export function validateProductPayload(payload, masterData = {}) {
             : recommendedSellingPrice
     };
     const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
+    const existingPricingMeta = currentProduct?.pricingMeta || {};
 
     return {
         itemName,
@@ -74,7 +75,12 @@ export function validateProductPayload(payload, masterData = {}) {
         sellingPrice: pricingSnapshot.nextSellingPrice,
         inventoryCount,
         netWeightKg,
-        pricingMeta: pricingSnapshot.pricingMeta
+        pricingMeta: {
+            ...pricingSnapshot.pricingMeta,
+            priceVersion: Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)),
+            lastPolicyDrivenUpdateAt: existingPricingMeta.lastPolicyDrivenUpdateAt || null,
+            lastPolicyDrivenUpdateReason: existingPricingMeta.lastPolicyDrivenUpdateReason || null
+        }
     };
 }
 

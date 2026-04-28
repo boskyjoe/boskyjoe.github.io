@@ -191,12 +191,29 @@ export async function syncProductPricingFromPurchases(
         const historyRows = getActivePurchaseHistoryRows(purchaseInvoices, productId);
         const purchaseSummary = computePurchaseCostSummary(historyRows);
         const pricingSnapshot = buildProductPricingSnapshot(product, pricingPolicies, purchaseSummary);
+        const previousPricingMeta = product.pricingMeta || {};
+        const previousVersion = Math.max(0, normalizeNumber(previousPricingMeta.priceVersion));
+        const previousRecommendedSellingPrice = roundCurrency(previousPricingMeta.recommendedSellingPrice);
+        const policyDrivenChanged = pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
+            || pricingSnapshot.nextSellingPrice !== roundCurrency(product.sellingPrice)
+            || pricingSnapshot.pricingMeta.recommendedSellingPrice !== previousRecommendedSellingPrice;
+        const nextPriceVersion = policyDrivenChanged ? previousVersion + 1 : previousVersion;
+        const nextPricingMeta = {
+            ...pricingSnapshot.pricingMeta,
+            priceVersion: nextPriceVersion,
+            lastPolicyDrivenUpdateAt: policyDrivenChanged
+                ? new Date().toISOString()
+                : (previousPricingMeta.lastPolicyDrivenUpdateAt || null),
+            lastPolicyDrivenUpdateReason: policyDrivenChanged
+                ? "purchase-history-sync"
+                : (previousPricingMeta.lastPolicyDrivenUpdateReason || null)
+        };
         const docRef = getDb().collection(COLLECTIONS.products).doc(productId);
 
         batch.update(docRef, {
             unitPrice: pricingSnapshot.nextUnitPrice,
             sellingPrice: pricingSnapshot.nextSellingPrice,
-            pricingMeta: pricingSnapshot.pricingMeta,
+            pricingMeta: nextPricingMeta,
             updatedBy: user.email,
             updateDate: now
         });
