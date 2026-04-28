@@ -188,15 +188,16 @@ function buildCatalogueItemsColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
-            headerName: "Price Change",
+            headerName: "Price Difference",
             minWidth: 190,
             flex: 1.05,
             sortable: false,
             filter: false,
             cellRenderer: params => {
                 const data = params.data || {};
+                const state = data.priceSyncState || "in-sync";
 
-                if (data.priceSyncState === "missing-product") {
+                if (state === "missing-product") {
                     return `<span class="grid-action-muted">Linked product missing</span>`;
                 }
 
@@ -206,8 +207,23 @@ function buildCatalogueItemsColumnDefs() {
                     return `<span class="grid-action-muted">No change</span>`;
                 }
 
+                if (state === "override") {
+                    return `
+                        <div style="display:grid; gap:0.2rem;">
+                            <span class="grid-status-cell grid-status-pill status-active">
+                                <span class="inline-icon">${icons.edit}</span>
+                                ${formatSignedCurrency(-delta)}
+                            </span>
+                            <span class="grid-action-muted">Manual override from product price</span>
+                        </div>
+                    `;
+                }
+
                 const toneClass = delta > 0 ? "status-warning" : "status-inactive";
                 const directionLabel = delta > 0 ? "higher" : "lower";
+                const helperLabel = state === "override-stale"
+                    ? `Product changed and override is now ${directionLabel}`
+                    : `Product is ${directionLabel} than catalogue`;
 
                 return `
                     <div style="display:grid; gap:0.2rem;">
@@ -215,7 +231,7 @@ function buildCatalogueItemsColumnDefs() {
                             <span class="inline-icon">${icons.warning}</span>
                             ${formatSignedCurrency(delta)}
                         </span>
-                        <span class="grid-action-muted">Product is ${directionLabel} than catalogue</span>
+                        <span class="grid-action-muted">${helperLabel}</span>
                     </div>
                 `;
             }
