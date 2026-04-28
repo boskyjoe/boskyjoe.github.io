@@ -188,9 +188,9 @@ function buildCatalogueItemsColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
-            headerName: "Price Difference",
+            headerName: "Product Change",
             minWidth: 190,
-            flex: 1.05,
+            flex: 1.15,
             sortable: false,
             filter: false,
             cellRenderer: params => {
@@ -201,29 +201,23 @@ function buildCatalogueItemsColumnDefs() {
                     return `<span class="grid-action-muted">Linked product missing</span>`;
                 }
 
-                const delta = Number((Number(data.currentProductSellingPrice || 0) - Number(data.sellingPrice || 0)).toFixed(2));
+                const sourcePrice = Number(data.sourceProductSellingPrice || data.sellingPrice || 0);
+                const currentPrice = Number(data.currentProductSellingPrice || sourcePrice);
+                const delta = Number((currentPrice - sourcePrice).toFixed(2));
 
                 if (Math.abs(delta) < 0.01) {
-                    return `<span class="grid-action-muted">No change</span>`;
-                }
-
-                if (state === "override") {
                     return `
                         <div style="display:grid; gap:0.2rem;">
-                            <span class="grid-status-cell grid-status-pill status-active">
-                                <span class="inline-icon">${icons.edit}</span>
-                                ${formatSignedCurrency(-delta)}
-                            </span>
-                            <span class="grid-action-muted">Manual override from product price</span>
+                            <span class="grid-action-muted">No product change</span>
+                            <span class="grid-action-muted">${state === "override" ? "Manual override only" : "Stored source still matches product master"}</span>
                         </div>
                     `;
                 }
 
                 const toneClass = delta > 0 ? "status-warning" : "status-inactive";
-                const directionLabel = delta > 0 ? "higher" : "lower";
                 const helperLabel = state === "override-stale"
-                    ? `Product changed and override is now ${directionLabel}`
-                    : `Product is ${directionLabel} than catalogue`;
+                    ? `Product moved from ${formatCurrency(sourcePrice)} to ${formatCurrency(currentPrice)} and the catalogue still has a manual override`
+                    : `Product moved from ${formatCurrency(sourcePrice)} to ${formatCurrency(currentPrice)}`;
 
                 return `
                     <div style="display:grid; gap:0.2rem;">
