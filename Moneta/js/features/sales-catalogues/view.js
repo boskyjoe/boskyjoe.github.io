@@ -199,8 +199,8 @@ function renderSalesCatalogueWorkspace(snapshot) {
                                 value="${featureState.availableSearchTerm}">
                         </div>
                     </div>
-                    <div class="ag-shell">
-                        <div id="sales-catalogue-products-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
+                    <div class="ag-shell sales-catalogue-grid-shell">
+                        <div id="sales-catalogue-products-grid" class="ag-theme-alpine moneta-grid" style="height: 500px; width: 100%;"></div>
                     </div>
                 </div>
             </div>
@@ -231,6 +231,23 @@ function renderSalesCatalogueWorkspace(snapshot) {
                                 Sync Changed Items
                             </button>
                         ` : ""}
+                        <details class="catalogue-pricing-guide-popover">
+                            <summary>How Pricing Works</summary>
+                            <div class="catalogue-pricing-guide-popover-card">
+                                <div class="catalogue-pricing-guide-item">
+                                    <strong>Sync Status</strong>
+                                    <p class="panel-copy panel-copy-tight">Tells you whether this row already matches the latest product pricing or needs syncing.</p>
+                                </div>
+                                <div class="catalogue-pricing-guide-item">
+                                    <strong>Product Change</strong>
+                                    <p class="panel-copy panel-copy-tight">Shows whether the product's own master price has changed since this item was added or last synced.</p>
+                                </div>
+                                <div class="catalogue-pricing-guide-item">
+                                    <strong>Price Source</strong>
+                                    <p class="panel-copy panel-copy-tight">Shows whether the row is still using the product default price or a manual catalogue override.</p>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -249,25 +266,8 @@ function renderSalesCatalogueWorkspace(snapshot) {
                                 value="${featureState.itemsSearchTerm}">
                         </div>
                     </div>
-                    <div class="catalogue-pricing-guide">
-                        <p class="section-kicker" style="margin-bottom: 0.35rem;">How Pricing Works</p>
-                        <div class="catalogue-pricing-guide-grid">
-                            <div class="catalogue-pricing-guide-item">
-                                <strong>Sync Status</strong>
-                                <p class="panel-copy panel-copy-tight">Tells you whether this row already matches the latest product pricing or needs syncing.</p>
-                            </div>
-                            <div class="catalogue-pricing-guide-item">
-                                <strong>Product Change</strong>
-                                <p class="panel-copy panel-copy-tight">Shows whether the product's own master price has changed since this item was added or last synced.</p>
-                            </div>
-                            <div class="catalogue-pricing-guide-item">
-                                <strong>Price Source</strong>
-                                <p class="panel-copy panel-copy-tight">Shows whether the row is still using the product default price or a manual catalogue override.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="ag-shell">
-                        <div id="sales-catalogue-items-grid" class="ag-theme-alpine moneta-grid" style="height: 560px; width: 100%;"></div>
+                    <div class="ag-shell sales-catalogue-grid-shell">
+                        <div id="sales-catalogue-items-grid" class="ag-theme-alpine moneta-grid" style="height: 500px; width: 100%;"></div>
                     </div>
                 </div>
             </div>
