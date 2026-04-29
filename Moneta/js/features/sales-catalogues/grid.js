@@ -151,6 +151,7 @@ function buildCatalogueItemsColumnDefs() {
         {
             field: "priceSyncLabel",
             headerName: "Sync Status",
+            headerTooltip: "Shows whether this catalogue item is already aligned with the latest product pricing or needs syncing.",
             minWidth: 180,
             flex: 1,
             sortable: false,
@@ -173,6 +174,7 @@ function buildCatalogueItemsColumnDefs() {
         },
         {
             headerName: "Product Change",
+            headerTooltip: "Shows whether the product's own master price has changed since this catalogue item was added or last synced.",
             minWidth: 190,
             flex: 1.15,
             sortable: false,
@@ -256,6 +258,7 @@ function buildCatalogueItemsColumnDefs() {
         {
             colId: "priceSource",
             headerName: "Price Source",
+            headerTooltip: "Shows whether this row is still using the product default price or a manual override set in the catalogue.",
             minWidth: 145,
             flex: 1,
             cellDataType: false,
