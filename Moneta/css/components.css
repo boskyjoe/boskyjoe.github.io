@@ -486,6 +486,25 @@ select {
     flex-wrap: wrap;
 }
 
+.sales-catalogue-header-chip {
+    min-height: 2rem;
+    padding: 0.38rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.sales-catalogue-header-chip .button-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.sales-catalogue-header-chip-wrap {
+    flex: 0 0 auto;
+}
+
 .toolbar-search {
     min-width: min(100%, 320px);
 }
@@ -1574,13 +1593,14 @@ select {
 .catalogue-pricing-guide-popover summary {
     list-style: none;
     cursor: pointer;
-    padding: 0.62rem 0.95rem;
+    padding: 0.38rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--bg-panel-soft);
     color: var(--text-main);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
+    line-height: 1;
     white-space: nowrap;
     transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
