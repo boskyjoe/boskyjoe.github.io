@@ -148,6 +148,29 @@ function buildAvailableProductsColumnDefs(categories, selectedProductIds) {
 
 function buildCatalogueItemsColumnDefs() {
     return [
+        {
+            field: "priceSyncLabel",
+            headerName: "Sync Status",
+            minWidth: 180,
+            flex: 1,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => {
+                const state = params.data?.priceSyncState || "in-sync";
+                const toneClass = state === "in-sync"
+                    ? "status-active"
+                    : state === "missing-product"
+                        ? "status-inactive"
+                        : "status-warning";
+
+                return `
+                    <span class="grid-status-cell grid-status-pill ${toneClass}">
+                        <span class="inline-icon">${state === "in-sync" ? icons.active : icons.warning}</span>
+                        ${params.value || "In Sync"}
+                    </span>
+                `;
+            }
+        },
         { field: "productName", headerName: "Product", minWidth: 220, flex: 1.3 },
         { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
         {
@@ -232,33 +255,10 @@ function buildCatalogueItemsColumnDefs() {
         },
         {
             field: "isOverridden",
-            headerName: "Source",
+            headerName: "Price Source",
             minWidth: 120,
-            flex: 0.7,
-            valueFormatter: params => params.value ? "Custom" : "Default"
-        },
-        {
-            field: "priceSyncLabel",
-            headerName: "Sync Status",
-            minWidth: 180,
-            flex: 1,
-            sortable: false,
-            filter: false,
-            cellRenderer: params => {
-                const state = params.data?.priceSyncState || "in-sync";
-                const toneClass = state === "in-sync"
-                    ? "status-active"
-                    : state === "missing-product"
-                        ? "status-inactive"
-                        : "status-warning";
-
-                return `
-                    <span class="grid-status-cell grid-status-pill ${toneClass}">
-                        <span class="inline-icon">${state === "in-sync" ? icons.active : icons.warning}</span>
-                        ${params.value || "In Sync"}
-                    </span>
-                `;
-            }
+            flex: 0.9,
+            valueFormatter: params => params.value ? "Manual Override" : "Product Default"
         },
         {
             headerName: "Actions",
