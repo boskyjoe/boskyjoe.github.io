@@ -254,11 +254,12 @@ function buildCatalogueItemsColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
-            field: "isOverridden",
+            colId: "priceSource",
             headerName: "Price Source",
-            minWidth: 120,
-            flex: 0.9,
-            valueFormatter: params => params.value ? "Manual Override" : "Product Default"
+            minWidth: 145,
+            flex: 1,
+            cellDataType: false,
+            valueGetter: params => params.data?.isOverridden ? "Manual Override" : "Product Default"
         },
         {
             headerName: "Actions",
