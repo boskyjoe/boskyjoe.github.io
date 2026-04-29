@@ -224,14 +224,14 @@ function renderSalesCatalogueWorkspace(snapshot) {
                         ${workingItems.length > 0 ? `
                             <button
                                 id="sales-catalogue-sync-all-button"
-                                class="button button-secondary sales-catalogue-sync-all-button"
+                                class="button button-secondary sales-catalogue-sync-all-button sales-catalogue-header-chip"
                                 type="button"
                                 ${syncableCount === 0 ? "disabled data-disabled-reason=\"All catalogue item prices are already aligned with the current product master.\"" : ""}>
                                 <span class="button-icon">${icons.active}</span>
                                 Sync Changed Items
                             </button>
                         ` : ""}
-                        <details class="catalogue-pricing-guide-popover">
+                        <details class="catalogue-pricing-guide-popover sales-catalogue-header-chip-wrap">
                             <summary>How Pricing Works</summary>
                             <div class="catalogue-pricing-guide-popover-card">
                                 <div class="catalogue-pricing-guide-item">
