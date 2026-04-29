@@ -65,7 +65,7 @@ function removeItemActionMarkup(data) {
     const historyButton = data?.id
         ? `
             <button class="button grid-action-button grid-action-button-secondary sales-catalogue-history-button" type="button" data-item-id="${data.id}">
-                History
+                Pricing History
             </button>
         `
         : "";
@@ -171,45 +171,6 @@ function buildCatalogueItemsColumnDefs() {
                 `;
             }
         },
-        { field: "productName", headerName: "Product", minWidth: 220, flex: 1.3 },
-        { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
-        {
-            field: "costPrice",
-            headerName: "Cost",
-            minWidth: 130,
-            flex: 0.8,
-            ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
-        },
-        {
-            field: "marginPercentage",
-            headerName: "Margin %",
-            minWidth: 130,
-            flex: 0.75,
-            ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
-        },
-        {
-            field: "sellingPrice",
-            headerName: "Catalogue Price",
-            minWidth: 145,
-            flex: 0.9,
-            editable: true,
-            ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0),
-            valueParser: params => {
-                const parsed = Number(String(params.newValue || "").replace(/[^0-9.-]/g, ""));
-                return Number.isFinite(parsed) ? parsed : params.oldValue;
-            }
-        },
-        {
-            field: "currentProductSellingPrice",
-            headerName: "Current Product Price",
-            minWidth: 165,
-            flex: 1,
-            ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
-        },
         {
             headerName: "Product Change",
             minWidth: 190,
@@ -252,6 +213,45 @@ function buildCatalogueItemsColumnDefs() {
                     </div>
                 `;
             }
+        },
+        { field: "productName", headerName: "Product", minWidth: 220, flex: 1.3 },
+        { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.9 },
+        {
+            field: "costPrice",
+            headerName: "Cost",
+            minWidth: 130,
+            flex: 0.8,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            field: "marginPercentage",
+            headerName: "Margin %",
+            minWidth: 130,
+            flex: 0.75,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+        },
+        {
+            field: "sellingPrice",
+            headerName: "Catalogue Price",
+            minWidth: 145,
+            flex: 0.9,
+            editable: true,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0),
+            valueParser: params => {
+                const parsed = Number(String(params.newValue || "").replace(/[^0-9.-]/g, ""));
+                return Number.isFinite(parsed) ? parsed : params.oldValue;
+            }
+        },
+        {
+            field: "currentProductSellingPrice",
+            headerName: "Current Product Price",
+            minWidth: 165,
+            flex: 1,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
             field: "isOverridden",
