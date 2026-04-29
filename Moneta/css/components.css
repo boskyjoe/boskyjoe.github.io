@@ -768,6 +768,17 @@ select {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
 }
 
+.sales-catalogue-workspace .panel-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.sales-catalogue-workspace .panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 .workspace-form-sections {
     display: grid;
     gap: 1rem;
@@ -1544,6 +1555,63 @@ select {
 
 .panel-copy-tight {
     margin-top: 1rem;
+}
+
+.catalogue-pricing-guide-item {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.catalogue-pricing-guide-item strong {
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+.catalogue-pricing-guide-popover {
+    position: relative;
+}
+
+.catalogue-pricing-guide-popover summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.62rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-panel-soft);
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.catalogue-pricing-guide-popover summary::-webkit-details-marker {
+    display: none;
+}
+
+.catalogue-pricing-guide-popover[open] summary,
+.catalogue-pricing-guide-popover summary:hover {
+    border-color: rgba(var(--accent-rgb), 0.28);
+    background: var(--bg-panel);
+}
+
+.catalogue-pricing-guide-popover-card {
+    position: absolute;
+    top: calc(100% + 0.65rem);
+    right: 0;
+    z-index: 8;
+    width: min(420px, 82vw);
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-soft) 100%);
+    box-shadow: var(--shadow);
+}
+
+.sales-catalogue-grid-shell {
+    min-height: 500px;
 }
 
 .purchase-payments-history-header {
@@ -2688,6 +2756,20 @@ select {
 
     .product-field-with-help .panel-copy-tight {
         min-height: 0;
+    }
+
+    .catalogue-pricing-guide-popover {
+        width: 100%;
+    }
+
+    .catalogue-pricing-guide-popover summary {
+        width: 100%;
+        text-align: center;
+    }
+
+    .catalogue-pricing-guide-popover-card {
+        width: min(100vw - 2rem, 420px);
+        right: 0;
     }
 
     .field-label-row {
