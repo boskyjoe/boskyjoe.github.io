@@ -165,12 +165,51 @@
     min-width: 0;
 }
 
+.sidebar-tree-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+}
+
+.sidebar-tree-badge {
+    min-width: 1.45rem;
+    height: 1.45rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.sidebar-tree-toggle.active .sidebar-tree-badge,
+.sidebar-tree-toggle:hover .sidebar-tree-badge {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
 .sidebar-tree-caret {
-    width: 0.8rem;
-    height: 0.8rem;
+    width: 1.15rem;
+    height: 1.15rem;
+    padding: 0.18rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
     color: currentColor;
     opacity: 0.9;
-    transition: transform 160ms ease;
+    transition: transform 160ms ease, background 120ms ease;
+}
+
+.sidebar-tree-toggle.active .sidebar-tree-caret,
+.sidebar-tree-toggle:hover .sidebar-tree-caret {
+    background: rgba(255, 255, 255, 0.14);
 }
 
 .sidebar-tree.expanded .sidebar-tree-caret {
