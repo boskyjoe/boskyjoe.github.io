@@ -52,21 +52,27 @@ export async function getSalesCatalogueItemsForProduct(productId, activeCatalogu
     const normalizedProductId = normalizeText(productId);
     if (!normalizedProductId) return [];
 
-    const snapshot = await getDb()
-        .collectionGroup("items")
-        .where("productId", "==", normalizedProductId)
-        .get();
+    const catalogueIds = [...new Set((activeCatalogueIds || []).map(id => normalizeText(id)).filter(Boolean))];
+    if (!catalogueIds.length) return [];
 
-    const allowedCatalogueIds = new Set((activeCatalogueIds || []).map(id => normalizeText(id)).filter(Boolean));
-
-    return snapshot.docs
-        .map(doc => {
-            const parentCatalogueId = doc.ref.parent.parent?.id || "";
-            return {
-                id: doc.id,
-                catalogueId: parentCatalogueId,
-                ...doc.data()
-            };
+    const snapshots = await Promise.all(
+        catalogueIds.map(catalogueId => {
+            return getDb()
+                .collection(COLLECTIONS.salesCatalogues)
+                .doc(catalogueId)
+                .collection("items")
+                .where("productId", "==", normalizedProductId)
+                .get();
         })
-        .filter(row => row.catalogueId && (!allowedCatalogueIds.size || allowedCatalogueIds.has(normalizeText(row.catalogueId))));
+    );
+
+    return snapshots.flatMap((snapshot, index) => {
+        const catalogueId = catalogueIds[index] || "";
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            catalogueId,
+            ...doc.data()
+        }));
+    });
 }
