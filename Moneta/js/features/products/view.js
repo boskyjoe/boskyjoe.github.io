@@ -15,6 +15,44 @@ const featureState = {
     editingProductId: null
 };
 
+function getSaveIntentLabel(intent = "save") {
+    if (intent === "approve-price-change") {
+        return "Save, Approve Price Change";
+    }
+
+    if (intent === "approve-and-sync-catalogues") {
+        return "Save, Approve, and Sync Catalogues";
+    }
+
+    return "Save Product";
+}
+
+function getSaveIntentProgressCopy(docId, intent = "save") {
+    const isCreateMode = !docId;
+
+    if (intent === "approve-price-change") {
+        return {
+            title: "Saving and Approving Product Price",
+            successTitle: "Product Saved and Approved",
+            successMessage: "The product update and price approval were completed successfully."
+        };
+    }
+
+    if (intent === "approve-and-sync-catalogues") {
+        return {
+            title: "Saving, Approving, and Syncing Catalogues",
+            successTitle: "Product Saved, Approved, and Synced",
+            successMessage: "The product update, price approval, and Sales Catalogue sync were completed successfully."
+        };
+    }
+
+    return {
+        title: isCreateMode ? "Adding New Product" : "Saving Product",
+        successTitle: isCreateMode ? "Product Added" : "Product Saved",
+        successMessage: isCreateMode ? "The product was added successfully." : "The product was saved successfully."
+    };
+}
+
 function getEditingProduct(snapshot) {
     if (!featureState.editingProductId) return null;
     return (snapshot.masterData.products || []).find(product => product.id === featureState.editingProductId) || null;
@@ -66,6 +104,8 @@ function renderProductsViewShell(snapshot) {
     const liveSellingPrice = editingProduct?.sellingPrice ?? recommendedSellingPrice;
     const isManualSellingPrice = pricingPolicySettings.sellingPriceBehavior === "manual";
     const costOverrideLocked = Boolean(editingProduct) && !pricingPolicySettings.allowManualCostOverride;
+    const isAdminUser = snapshot.currentUser?.role === "admin";
+    const showAdminFastTrackActions = isAdminUser && Boolean(editingProduct);
     const priceReviewRequired = Boolean(editingProduct?.pricingMeta?.requiresPriceReview);
     const priceReviewValue = editingProduct?.pricingMeta?.costChangePercent;
     const priceReviewCopy = priceReviewRequired
@@ -186,6 +226,11 @@ function renderProductsViewShell(snapshot) {
                                     <strong>Pricing Policy Snapshot</strong>
                                     <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
                                     <p class="panel-copy panel-copy-tight">${priceReviewCopy}</p>
+                                    ${showAdminFastTrackActions ? `
+                                        <p class="panel-copy panel-copy-tight">
+                                            Standard save already creates a price review when pricing impact exists. Use the admin approval actions below only when you want to fast-track the pricing decision immediately.
+                                        </p>
+                                    ` : ""}
                                 </div>
                             </div>
                         </div>
@@ -196,10 +241,20 @@ function renderProductsViewShell(snapshot) {
                                     Cancel
                                 </button>
                             ` : ""}
-                            <button class="button button-primary-alt" type="submit">
+                            <button class="button button-primary-alt" type="submit" name="product-save-intent" value="save">
                                 <span class="button-icon">${editingProduct ? icons.edit : icons.plus}</span>
-                                ${editingProduct ? "Update Product" : "Add Product"}
+                                ${editingProduct ? "Save Product" : "Add Product"}
                             </button>
+                            ${showAdminFastTrackActions ? `
+                                <button class="button button-secondary" type="submit" name="product-save-intent" value="approve-price-change">
+                                    <span class="button-icon">${icons.active}</span>
+                                    Save, Approve Price Change
+                                </button>
+                                <button class="button button-secondary" type="submit" name="product-save-intent" value="approve-and-sync-catalogues">
+                                    <span class="button-icon">${icons.catalogue}</span>
+                                    Save, Approve, and Sync Catalogues
+                                </button>
+                            ` : ""}
                         </div>
                     </form>
                 </div>
@@ -271,13 +326,15 @@ async function handleProductFormSubmit(event) {
         const docId = document.getElementById("product-doc-id")?.value;
         const productName = document.getElementById("product-name")?.value || "-";
         const categoryLabel = document.getElementById("product-category")?.selectedOptions?.[0]?.textContent || "-";
+        const saveIntent = event.submitter?.value || "save";
+        const progressCopy = getSaveIntentProgressCopy(docId, saveIntent);
         const result = await runProgressToastFlow({
-            title: docId ? "Updating Product" : "Adding New Product",
+            title: progressCopy.title,
             initialMessage: "Reading product form inputs...",
             initialProgress: 16,
             initialStep: "Step 1 of 5",
-            successTitle: docId ? "Product Updated" : "Product Added",
-            successMessage: docId ? "The product was updated successfully." : "The product was added successfully."
+            successTitle: progressCopy.successTitle,
+            successMessage: progressCopy.successMessage
         }, async ({ update }) => {
             update("Validating category, pricing, and inventory data...", 36, "Step 2 of 5");
 
@@ -293,30 +350,99 @@ async function handleProductFormSubmit(event) {
                 sellingPrice: document.getElementById("product-selling-price")?.value,
                 inventoryCount: document.getElementById("product-inventory")?.value,
                 netWeightKg: document.getElementById("product-weight")?.value
-            }, getState().masterData, getState().currentUser);
+            }, getState().masterData, getState().currentUser, {
+                postSaveAction: saveIntent
+            });
 
-            update("Refreshing the product catalogue workspace...", 88, "Step 4 of 5");
+            update(
+                saveIntent === "approve-and-sync-catalogues"
+                    ? "Refreshing product and Sales Catalogue views..."
+                    : "Refreshing the product catalogue workspace...",
+                88,
+                "Step 4 of 5"
+            );
             featureState.editingProductId = null;
             renderProductsView();
-            update("Product catalogue is up to date.", 96, "Step 5 of 5");
+            update(
+                saveIntent === "approve-price-change"
+                    ? "Pricing approval is complete."
+                    : saveIntent === "approve-and-sync-catalogues"
+                        ? "Pricing approval and catalogue sync are complete."
+                        : "Product catalogue is up to date.",
+                96,
+                "Step 5 of 5"
+            );
             return result;
         });
 
-        showToast(result.mode === "create" ? "Product created." : "Product updated.", "success", {
+        showToast(
+            result.mode === "create"
+                ? "Product created."
+                : result.pricingAction === "approve-price-change"
+                    ? "Product saved and price approved."
+                    : result.pricingAction === "approve-and-sync-catalogues"
+                        ? "Product saved, price approved, and catalogues synced."
+                        : "Product saved.",
+            "success",
+            {
             title: "Product Catalogue"
-        });
+            }
+        );
         ProgressToast.hide(0);
+
+        const summaryDetails = [
+            { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+            { label: "Product", value: productName },
+            { label: "Category", value: categoryLabel },
+            { label: "Pricing Action", value: getSaveIntentLabel(result.pricingAction || saveIntent) }
+        ];
+
+        if (result.reviewOutcome?.status === "pending") {
+            summaryDetails.push({ label: "Price Review", value: "Pending review created" });
+        }
+
+        if (result.pricingAction === "save-only-no-review") {
+            summaryDetails.push({ label: "Price Review", value: "No review needed after save" });
+        }
+
+        if (result.approvalResult) {
+            summaryDetails.push({
+                label: "Approved Price",
+                value: `₹${Number(result.approvalResult.approvedSellingPrice || 0).toFixed(2)}`
+            });
+            summaryDetails.push({
+                label: "Catalogue Sync",
+                value: saveIntent === "approve-and-sync-catalogues"
+                    ? `Synced ${result.approvalResult.syncResult?.syncedCount || 0} items`
+                    : "Skipped"
+            });
+        }
+
         await showSummaryModal({
-            title: result.mode === "create" ? "Product Added" : "Product Updated",
+            title: result.mode === "create"
+                ? "Product Added"
+                : result.pricingAction === "approve-price-change"
+                    ? "Product Saved and Price Approved"
+                    : result.pricingAction === "approve-and-sync-catalogues"
+                        ? "Product Saved, Approved, and Synced"
+                        : "Product Saved",
             message: "The product record has been saved successfully.",
-            details: [
-                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
-                { label: "Product", value: productName },
-                { label: "Category", value: categoryLabel }
-            ]
+            details: summaryDetails
         });
     } catch (error) {
         console.error("[Moneta] Product save failed:", error);
+        if (error.productSaved) {
+            featureState.editingProductId = null;
+            renderProductsView();
+            showToast("Product was saved, but the fast-track pricing action could not be completed. The review remains pending.", "warning", {
+                title: "Product Catalogue"
+            });
+            return;
+        }
+
+        showToast(error.message || "Could not save the product.", "error", {
+            title: "Product Catalogue"
+        });
     }
 }
 

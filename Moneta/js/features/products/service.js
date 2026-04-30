@@ -10,6 +10,7 @@ import {
     resolveSystemDefaultPricingPolicy,
     roundCurrency
 } from "../../shared/pricing-policy.js";
+import { approveProductPriceChangeReview } from "../admin-modules/service.js";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -24,6 +25,22 @@ export function calculateSellingPrice(unitPrice, unitMarginPercentage) {
     const price = normalizeNumber(unitPrice);
     const margin = normalizeNumber(unitMarginPercentage);
     return Number((price * (1 + margin / 100)).toFixed(2));
+}
+
+function buildApprovedProductSnapshot(docId, currentProduct = {}, persistedProductData = {}, reviewOutcome = {}) {
+    return {
+        id: docId,
+        ...(currentProduct || {}),
+        ...persistedProductData,
+        pricingMeta: {
+            ...(currentProduct?.pricingMeta || {}),
+            ...(persistedProductData?.pricingMeta || {}),
+            activePriceReviewId: reviewOutcome.reviewId || persistedProductData?.pricingMeta?.activePriceReviewId || null,
+            reviewStatus: reviewOutcome.status === "pending"
+                ? "pending"
+                : persistedProductData?.pricingMeta?.reviewStatus || currentProduct?.pricingMeta?.reviewStatus || "none"
+        }
+    };
 }
 
 export function validateProductPayload(payload, masterData = {}) {
@@ -106,9 +123,15 @@ export function validateProductPayload(payload, masterData = {}) {
     };
 }
 
-export async function saveProduct(payload, masterData, user) {
+export async function saveProduct(payload, masterData, user, options = {}) {
     if (!user) {
         throw new Error("You must be logged in to save a product.");
+    }
+
+    const postSaveAction = normalizeText(options.postSaveAction || "save");
+    const isFastTrackAction = postSaveAction === "approve-price-change" || postSaveAction === "approve-and-sync-catalogues";
+    if (isFastTrackAction && user.role !== "admin") {
+        throw new Error("Only admins can approve product price changes from Product Catalogue.");
     }
 
     const productData = validateProductPayload(payload, masterData);
@@ -117,7 +140,7 @@ export async function saveProduct(payload, masterData, user) {
 
     if (docId) {
         await updateProductRecord(docId, persistedProductData, user);
-        await syncProductPriceChangeReviewState({
+        const reviewOutcome = await syncProductPriceChangeReviewState({
             id: docId,
             ...(_reviewMeta.currentProduct || {}),
             ...persistedProductData
@@ -127,11 +150,45 @@ export async function saveProduct(payload, masterData, user) {
             sourceType: _reviewMeta.sourceType,
             skipReview: _reviewMeta.skipReview
         });
-        return { mode: "update" };
+
+        if (isFastTrackAction && reviewOutcome.status === "pending" && reviewOutcome.reviewId && reviewOutcome.review) {
+            try {
+                const approvalResult = await approveProductPriceChangeReview(
+                    reviewOutcome.reviewId,
+                    { syncActiveSalesCatalogues: postSaveAction === "approve-and-sync-catalogues" },
+                    user,
+                    {
+                        products: [buildApprovedProductSnapshot(docId, _reviewMeta.currentProduct, persistedProductData, reviewOutcome)],
+                        productPriceChangeReviews: [reviewOutcome.review],
+                        salesCatalogues: masterData.salesCatalogues || [],
+                        categories: masterData.categories || []
+                    }
+                );
+
+                return {
+                    mode: "update",
+                    docId,
+                    reviewOutcome,
+                    pricingAction: postSaveAction,
+                    approvalResult
+                };
+            } catch (error) {
+                error.productSaved = true;
+                error.reviewOutcome = reviewOutcome;
+                throw error;
+            }
+        }
+
+        return {
+            mode: "update",
+            docId,
+            reviewOutcome,
+            pricingAction: isFastTrackAction ? "save-only-no-review" : "save"
+        };
     }
 
-    await createProductRecord(persistedProductData, user);
-    return { mode: "create" };
+    const createdRef = await createProductRecord(persistedProductData, user);
+    return { mode: "create", docId: createdRef.id, reviewOutcome: { reviewId: null, status: "skipped", review: null }, pricingAction: "save" };
 }
 
 export async function toggleProductStatus(docId, field, nextValue, user) {

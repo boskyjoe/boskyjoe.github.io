@@ -211,7 +211,7 @@ export async function syncProductPriceChangeReviewState(
 ) {
     const productId = normalizeText(product?.id);
     if (!productId || !user?.email) {
-        return { reviewId: null, status: "skipped" };
+        return { reviewId: null, status: "skipped", review: null };
     }
 
     const pricingMeta = product.pricingMeta || {};
@@ -240,7 +240,7 @@ export async function syncProductPriceChangeReviewState(
             updateDate: now
         });
 
-        return { reviewId: null, status: "cleared" };
+        return { reviewId: null, status: "cleared", review: null };
     }
 
     const affectedSummary = await buildAffectedSalesCatalogueSummary(productId, salesCatalogues);
@@ -271,7 +271,14 @@ export async function syncProductPriceChangeReviewState(
         updateDate: now
     });
 
-    return { reviewId, status: "pending" };
+    return {
+        reviewId,
+        status: "pending",
+        review: {
+            id: reviewId,
+            ...reviewPayload
+        }
+    };
 }
 
 export async function syncProductPricingFromPurchases(
