@@ -108,6 +108,7 @@ const ADMIN_SECTIONS = {
 };
 
 const SEASON_STATUS_OPTIONS = ["Upcoming", "Active", "Archived"];
+const NO_SELECTION = "__none__";
 
 const featureState = {
     activeSection: "categories",
@@ -236,6 +237,10 @@ function clearEditingState(section = featureState.activeSection) {
     featureState.editingIds[section] = null;
 }
 
+function clearReviewSelection(section = "productPriceChangeReviews") {
+    featureState.editingIds[section] = NO_SELECTION;
+}
+
 function setActiveSection(section) {
     if (!ADMIN_SECTIONS[section]) return;
     featureState.activeSection = section;
@@ -275,6 +280,10 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
 
     if (section === "productPriceChangeReviews") {
         const rows = getSectionRows(snapshot, section);
+        if (recordId === NO_SELECTION) {
+            return null;
+        }
+
         if (recordId) {
             return rows.find(record => record.id === recordId) || null;
         }
@@ -1836,6 +1845,10 @@ function renderProductPriceChangeReviewForm(snapshot) {
                 </div>
                 <div class="form-actions">
                     ${isPending ? `
+                        <button id="admin-product-price-review-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Cancel
+                        </button>
                         <button id="admin-product-price-review-reject-button" class="button button-secondary" type="button" data-review-id="${review.id}">
                             <span class="button-icon">${icons.inactive}</span>
                             Reject Recommendation
@@ -2746,7 +2759,11 @@ async function handleRejectProductPriceReview(button) {
 }
 
 function handleCancelEdit(section) {
-    clearEditingState(section);
+    if (section === "productPriceChangeReviews") {
+        clearReviewSelection(section);
+    } else {
+        clearEditingState(section);
+    }
     renderAdminModulesView();
 }
 
