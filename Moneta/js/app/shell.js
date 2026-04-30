@@ -50,7 +50,7 @@ function renderSidebarTree(item, user, currentHash, currentRoute) {
     const isActive = isTreeActive(item, currentHash, currentRoute);
     const savedExpandedState = sidebarTreeState[item.key];
     const isExpanded = typeof savedExpandedState === "boolean"
-        ? (isActive ? true : savedExpandedState)
+        ? savedExpandedState
         : isActive;
     sidebarTreeState[item.key] = isExpanded;
 
