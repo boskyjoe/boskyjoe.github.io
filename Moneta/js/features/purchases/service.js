@@ -224,22 +224,44 @@ export async function savePurchaseInvoice(payload, masterData, user) {
 
     if (docId) {
         const result = await updatePurchaseInvoiceRecord(docId, invoiceData, user);
+
+        try {
+            await syncProductPricingFromPurchases(result.affectedProductIds, {
+                products: masterData.products,
+                pricingPolicies: masterData.pricingPolicies,
+                salesCatalogues: masterData.salesCatalogues,
+                user
+            });
+        } catch (error) {
+            console.error("[Moneta] Purchase pricing sync failed after invoice update:", {
+                affectedProductIds: result.affectedProductIds,
+                userRole: user.role || "unknown",
+                error
+            });
+            throw error;
+        }
+
+        return { mode: "update" };
+    }
+
+    const result = await createPurchaseInvoiceRecord(invoiceData, user);
+
+    try {
         await syncProductPricingFromPurchases(result.affectedProductIds, {
             products: masterData.products,
             pricingPolicies: masterData.pricingPolicies,
             salesCatalogues: masterData.salesCatalogues,
             user
         });
-        return { mode: "update" };
+    } catch (error) {
+        console.error("[Moneta] Purchase pricing sync failed after invoice create:", {
+            affectedProductIds: result.affectedProductIds,
+            userRole: user.role || "unknown",
+            error
+        });
+        throw error;
     }
 
-    const result = await createPurchaseInvoiceRecord(invoiceData, user);
-    await syncProductPricingFromPurchases(result.affectedProductIds, {
-        products: masterData.products,
-        pricingPolicies: masterData.pricingPolicies,
-        salesCatalogues: masterData.salesCatalogues,
-        user
-    });
     return { mode: "create" };
 }
 
