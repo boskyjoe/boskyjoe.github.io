@@ -117,7 +117,6 @@ export function validateProductPayload(payload, masterData = {}) {
         _reviewMeta: {
             currentProduct,
             liveSellingPriceChanged,
-            skipReview: hasCurrentProduct && liveSellingPriceChanged,
             sourceType: "manual-product-update"
         }
     };
@@ -147,8 +146,7 @@ export async function saveProduct(payload, masterData, user, options = {}) {
         }, {
             salesCatalogues: masterData.salesCatalogues || [],
             user,
-            sourceType: _reviewMeta.sourceType,
-            skipReview: _reviewMeta.skipReview
+            sourceType: _reviewMeta.sourceType
         });
 
         if (isFastTrackAction && reviewOutcome.status === "pending" && reviewOutcome.reviewId && reviewOutcome.review) {
