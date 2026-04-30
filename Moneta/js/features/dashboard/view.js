@@ -1,7 +1,7 @@
 import { getState } from "../../app/store.js";
 import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
-import { navConfig } from "../../config/nav-config.js";
+import { findNavRouteItem } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
@@ -339,7 +339,7 @@ function writeDashboardCache(user, rangeKey, data, loadedAt) {
 }
 
 function roleCanAccess(route, role) {
-    const navItem = navConfig.find(item => item.type === "link" && item.route === route);
+    const navItem = findNavRouteItem(route);
     if (!navItem) return false;
     return navItem.roles.includes(role);
 }

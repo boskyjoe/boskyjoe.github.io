@@ -3,7 +3,7 @@ import { getState, setState } from "./store.js";
 import { renderShell } from "./shell.js";
 import { renderDashboardView } from "../features/dashboard/view.js";
 import { showReportsPage } from "../features/reports/index.js";
-import { navConfig } from "../config/nav-config.js";
+import { findNavRouteItem } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
 import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
@@ -47,7 +47,7 @@ function hasRouteAccess(route, user) {
     if (route === LOGIN_ROUTE || route === DEFAULT_AUTH_ROUTE) return true;
     if (!user) return false;
 
-    const navItem = navConfig.find(item => item.type !== "heading" && item.route === route);
+    const navItem = findNavRouteItem(route);
     if (!navItem) return route === DEFAULT_AUTH_ROUTE;
 
     return navItem.roles.includes(user.role);
@@ -98,7 +98,8 @@ export function navigateTo(route) {
 
 export function resolveRoute() {
     const snapshot = getState();
-    const incomingRoute = normalizeRoute(window.location.hash);
+    const requestedHash = window.location.hash || DEFAULT_AUTH_ROUTE;
+    const incomingRoute = normalizeRoute(requestedHash);
     const user = snapshot.currentUser;
 
     let route = !user
@@ -107,7 +108,7 @@ export function resolveRoute() {
             ? DEFAULT_AUTH_ROUTE
             : incomingRoute;
 
-    if (!hasRouteAccess(route, user)) {
+    if (!hasRouteAccess(requestedHash, user)) {
         route = DEFAULT_AUTH_ROUTE;
     }
 

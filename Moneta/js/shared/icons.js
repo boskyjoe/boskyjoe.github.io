@@ -103,6 +103,11 @@ export const icons = {
             <path d="M18 6 6 18"></path>
         </svg>
     `,
+    chevronDown: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"></path>
+        </svg>
+    `,
     catalogue: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3z"></path>

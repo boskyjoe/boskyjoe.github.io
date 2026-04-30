@@ -1,13 +1,117 @@
-import { navConfig } from "../config/nav-config.js";
+import { canAccessNavItem, navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
 import { getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
 
+const sidebarTreeState = {};
+
+function getRouteBase(route = "") {
+    return String(route).split("?")[0];
+}
+
+function isTreeChildActive(currentHash, currentRoute, childRoute) {
+    const routeBase = getRouteBase(childRoute);
+    if (currentHash === "#/admin-modules" && childRoute === "#/admin-modules?section=categories") {
+        return true;
+    }
+
+    if (childRoute.includes("?")) {
+        return currentHash === childRoute;
+    }
+
+    return currentRoute === routeBase;
+}
+
+function isTreeActive(item, currentHash, currentRoute) {
+    if (currentRoute === "#/admin-modules" && getRouteBase(currentHash) === "#/admin-modules") {
+        return true;
+    }
+
+    return (item.groups || []).some(group =>
+        (group.items || []).some(child => isTreeChildActive(currentHash, currentRoute, child.route))
+    );
+}
+
+function renderSidebarTree(item, user, currentHash, currentRoute) {
+    const visibleGroups = (item.groups || [])
+        .map(group => ({
+            ...group,
+            items: (group.items || []).filter(child => canAccessNavItem(child, user.role))
+        }))
+        .filter(group => group.items.length > 0);
+
+    if (!visibleGroups.length) {
+        return null;
+    }
+
+    const tree = document.createElement("div");
+    const isActive = isTreeActive(item, currentHash, currentRoute);
+    const savedExpandedState = sidebarTreeState[item.key];
+    const isExpanded = typeof savedExpandedState === "boolean"
+        ? (isActive ? true : savedExpandedState)
+        : isActive;
+    sidebarTreeState[item.key] = isExpanded;
+
+    tree.className = `sidebar-tree${isActive ? " active" : ""}${isExpanded ? " expanded" : ""}`;
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = `sidebar-tree-toggle${isActive ? " active" : ""}`;
+    toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    toggle.innerHTML = `
+        <span class="sidebar-tree-toggle-main">
+            <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.settings}</span>
+            <span class="nav-label">${item.label}</span>
+        </span>
+        <span class="sidebar-tree-caret" aria-hidden="true">${icons.chevronDown}</span>
+    `;
+    toggle.addEventListener("click", () => {
+        sidebarTreeState[item.key] = !sidebarTreeState[item.key];
+        renderShell({ title: document.getElementById("view-title")?.textContent || "Moneta" });
+    });
+
+    const panel = document.createElement("div");
+    panel.className = "sidebar-tree-panel";
+
+    visibleGroups.forEach(group => {
+        const groupBlock = document.createElement("div");
+        groupBlock.className = "sidebar-tree-group";
+
+        const groupHeading = document.createElement("div");
+        groupHeading.className = "sidebar-tree-group-label";
+        groupHeading.textContent = group.label;
+        groupBlock.appendChild(groupHeading);
+
+        group.items.forEach(child => {
+            const link = document.createElement("a");
+            const active = isTreeChildActive(currentHash, currentRoute, child.route);
+            link.href = child.route;
+            link.className = `sidebar-sublink${active ? " active" : ""}`;
+            link.innerHTML = `
+                <span class="nav-icon ${child.iconClass || ""}">${child.icon || icons.settings}</span>
+                <span class="nav-label">${child.label}</span>
+            `;
+            link.addEventListener("click", event => {
+                event.preventDefault();
+                navigateTo(child.route);
+                document.getElementById("app-sidebar")?.classList.remove("open");
+            });
+            groupBlock.appendChild(link);
+        });
+
+        panel.appendChild(groupBlock);
+    });
+
+    tree.append(toggle, panel);
+    return tree;
+}
+
 function renderSidebarLinks(user) {
     const nav = document.createElement("nav");
     nav.className = "sidebar-nav";
     const { currentRoute } = getState();
+    const currentHash = window.location.hash || currentRoute;
 
     const visibleNavItems = user
         ? navConfig.filter(item => {
@@ -15,7 +119,11 @@ function renderSidebarLinks(user) {
                 return !item.roles || item.roles.includes(user.role);
             }
 
-            return item.enabled !== false && (!item.roles || item.roles.includes(user.role));
+            if (item.type === "tree") {
+                return canAccessNavItem(item, user.role);
+            }
+
+            return canAccessNavItem(item, user.role);
         })
         : navConfig.filter(item => item.type === "link" && item.route === "#/home" && item.enabled !== false);
 
@@ -25,6 +133,14 @@ function renderSidebarLinks(user) {
             heading.className = "sidebar-heading";
             heading.textContent = item.label;
             nav.appendChild(heading);
+            return;
+        }
+
+        if (item.type === "tree") {
+            const tree = renderSidebarTree(item, user, currentHash, currentRoute);
+            if (tree) {
+                nav.appendChild(tree);
+            }
             return;
         }
 

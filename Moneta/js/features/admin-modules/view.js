@@ -163,6 +163,25 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     }
 };
 
+function getAdminSectionFromHash() {
+    const hash = window.location.hash || "";
+    const [route, queryString = ""] = hash.split("?");
+    if (route !== "#/admin-modules") {
+        return null;
+    }
+
+    const params = new URLSearchParams(queryString);
+    const section = params.get("section") || "categories";
+    return ADMIN_SECTIONS[section] ? section : "categories";
+}
+
+function syncActiveSectionFromHash() {
+    const section = getAdminSectionFromHash();
+    if (section) {
+        setActiveSection(section);
+    }
+}
+
 function toDateInputValue(value) {
     if (!value) return "";
 
@@ -871,43 +890,6 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
     `;
 }
 
-function renderSectionTabs(snapshot) {
-    const categories = snapshot.masterData.categories || [];
-    const seasons = snapshot.masterData.seasons || [];
-    const paymentModes = snapshot.masterData.paymentModes || [];
-    const pricingPolicies = snapshot.masterData.pricingPolicies || [];
-    const productPriceChangeReviews = snapshot.masterData.productPriceChangeReviews || [];
-    const storeConfigs = snapshot.masterData.storeConfigs || [];
-    const reorderPolicies = snapshot.masterData.reorderPolicies || [];
-
-    const counts = {
-        categories: categories.length,
-        seasons: seasons.length,
-        paymentModes: paymentModes.length,
-        pricingPolicies: pricingPolicies.length,
-        productPriceChangeReviews: productPriceChangeReviews.filter(review => normalizeText(review.status || "pending") === "pending").length,
-        storeConfigs: storeConfigs.length,
-        reorderPolicies: reorderPolicies.length
-    };
-
-    return `
-        <div class="admin-module-switcher" role="tablist" aria-label="Admin modules">
-            ${Object.entries(ADMIN_SECTIONS).map(([key, config]) => `
-                <button
-                    class="admin-module-tab${featureState.activeSection === key ? " active" : ""}"
-                    type="button"
-                    role="tab"
-                    aria-selected="${featureState.activeSection === key ? "true" : "false"}"
-                    data-admin-section="${key}">
-                    <span class="button-icon">${config.icon}</span>
-                    <span>${config.label}</span>
-                    <span class="admin-module-tab-count">${counts[key]}</span>
-                </button>
-            `).join("")}
-        </div>
-    `;
-}
-
 function renderHeader(snapshot) {
     const config = getActiveSectionConfig();
     const rows = getSectionRows(snapshot);
@@ -921,17 +903,14 @@ function renderHeader(snapshot) {
                 <div class="panel-title-wrap">
                     <span class="panel-icon panel-icon-alt">${icons.settings}</span>
                     <div>
-                        <h2>Admin Modules</h2>
-                        <p class="panel-copy">${config.description}</p>
+                        <h2>${config.label}</h2>
+                        <p class="panel-copy">Admin Modules · ${config.description}</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
                     <span class="status-pill">${rows.length} records</span>
                     <span class="status-pill">${activeCount} ${featureState.activeSection === "productPriceChangeReviews" ? "pending" : "active"}</span>
                 </div>
-            </div>
-            <div class="panel-body">
-                ${renderSectionTabs(snapshot)}
             </div>
         </div>
     `;
@@ -2071,6 +2050,8 @@ export function renderAdminModulesView() {
     const root = document.getElementById("admin-modules-root");
     if (!root) return;
 
+    syncActiveSectionFromHash();
+
     const snapshot = getState();
     root.innerHTML = `
         <div class="admin-module-shell">
@@ -2818,7 +2799,6 @@ function bindAdminModulesDomEvents() {
 
     root.addEventListener("click", event => {
         const target = event.target;
-        const sectionButton = target.closest("[data-admin-section]");
         const editButton = target.closest(".admin-module-edit-button");
         const statusButton = target.closest(".admin-module-status-button");
         const categoryCancelButton = target.closest("#admin-category-cancel-button");
@@ -2830,12 +2810,6 @@ function bindAdminModulesDomEvents() {
         const productPriceReviewCancelButton = target.closest("#admin-product-price-review-cancel-button");
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
-
-        if (sectionButton) {
-            setActiveSection(sectionButton.dataset.adminSection);
-            renderAdminModulesView();
-            return;
-        }
 
         if (editButton) {
             handleEditRecord(editButton);

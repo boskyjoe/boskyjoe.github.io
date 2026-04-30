@@ -1,5 +1,9 @@
 import { icons } from "../shared/icons.js";
 
+function routeBase(route = "") {
+    return String(route).split("?")[0];
+}
+
 export const navConfig = [
     {
         type: "link",
@@ -135,21 +139,146 @@ export const navConfig = [
         enabled: true
     },
     {
-        type: "link",
-        route: "#/admin-modules",
+        type: "tree",
+        key: "admin-modules",
         label: "Admin Modules",
         icon: icons.settings,
         iconClass: "nav-icon-cyan",
         roles: ["admin"],
-        enabled: true
-    },
-    {
-        type: "link",
-        route: "#/user-management",
-        label: "User Management",
-        icon: icons.users,
-        iconClass: "nav-icon-amber",
-        roles: ["admin"],
-        enabled: true
+        enabled: true,
+        groups: [
+            {
+                label: "Catalogue Setup",
+                items: [
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=categories",
+                        label: "Product Categories",
+                        icon: icons.products,
+                        iconClass: "nav-icon-violet",
+                        roles: ["admin"],
+                        enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=seasons",
+                        label: "Sales Seasons",
+                        icon: icons.catalogue,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
+                    }
+                ]
+            },
+            {
+                label: "Pricing & Inventory Rules",
+                items: [
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=pricingPolicies",
+                        label: "Pricing Policy",
+                        icon: icons.reports,
+                        iconClass: "nav-icon-orange",
+                        roles: ["admin"],
+                        enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=productPriceChangeReviews",
+                        label: "Price Reviews",
+                        icon: icons.warning,
+                        iconClass: "nav-icon-amber",
+                        roles: ["admin"],
+                        enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=reorderPolicies",
+                        label: "Reorder Policies",
+                        icon: icons.reports,
+                        iconClass: "nav-icon-orange",
+                        roles: ["admin"],
+                        enabled: true
+                    }
+                ]
+            },
+            {
+                label: "Store Operations",
+                items: [
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=paymentModes",
+                        label: "Payment Modes",
+                        icon: icons.payment,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=storeConfigs",
+                        label: "Store Config",
+                        icon: icons.retail,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
+                    }
+                ]
+            },
+            {
+                label: "Security & Access",
+                items: [
+                    {
+                        type: "link",
+                        route: "#/user-management",
+                        label: "User Management",
+                        icon: icons.users,
+                        iconClass: "nav-icon-amber",
+                        roles: ["admin"],
+                        enabled: true
+                    }
+                ]
+            }
+        ]
     }
 ];
+
+export function canAccessNavItem(item, role) {
+    return item?.enabled !== false && (!item?.roles || item.roles.includes(role));
+}
+
+export function flattenNavRoutes(items = navConfig) {
+    return items.flatMap(item => {
+        if (item.type === "tree") {
+            return (item.groups || []).flatMap(group =>
+                (group.items || [])
+            );
+        }
+
+        return item.type === "link" ? [item] : [];
+    });
+}
+
+export function findNavRouteItem(route, items = navConfig) {
+    const requestedRoute = String(route || "");
+    const requestedBaseRoute = routeBase(route);
+
+    for (const item of items) {
+        if (item.type === "tree") {
+            for (const group of item.groups || []) {
+                for (const child of group.items || []) {
+                    if (child.route === requestedRoute || routeBase(child.route) === requestedBaseRoute) {
+                        return child;
+                    }
+                }
+            }
+            continue;
+        }
+
+        if (item.type === "link" && (item.route === requestedRoute || routeBase(item.route) === requestedBaseRoute)) {
+            return item;
+        }
+    }
+
+    return null;
+}
