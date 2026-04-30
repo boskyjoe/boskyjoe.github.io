@@ -122,6 +122,124 @@
     color: #ffffff;
 }
 
+.sidebar-tree {
+    display: grid;
+    gap: 0.18rem;
+    margin: 0.1rem 0;
+}
+
+.sidebar-tree-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    border: 0;
+    border-radius: 8px;
+    padding: 0.62rem 0.72rem;
+    background: transparent;
+    color: var(--shell-link-color);
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+}
+
+.sidebar-tree-toggle:hover {
+    background: var(--shell-link-hover-bg);
+    color: var(--text-inverse);
+    transform: translateX(1px);
+}
+
+.sidebar-tree-toggle.active {
+    background: linear-gradient(90deg, var(--shell-link-active-start) 0%, rgba(255, 255, 255, 0.02) 100%);
+    color: var(--text-inverse);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-tree-toggle-main {
+    display: flex;
+    align-items: center;
+    gap: 0.58rem;
+    min-width: 0;
+}
+
+.sidebar-tree-caret {
+    width: 0.8rem;
+    height: 0.8rem;
+    color: currentColor;
+    opacity: 0.9;
+    transition: transform 160ms ease;
+}
+
+.sidebar-tree.expanded .sidebar-tree-caret {
+    transform: rotate(0deg);
+}
+
+.sidebar-tree:not(.expanded) .sidebar-tree-caret {
+    transform: rotate(-90deg);
+}
+
+.sidebar-tree-panel {
+    display: none;
+    margin-left: 1.22rem;
+    padding: 0.2rem 0 0.15rem 0.62rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 0.55rem;
+}
+
+.sidebar-tree.expanded .sidebar-tree-panel {
+    display: grid;
+}
+
+.sidebar-tree-group {
+    display: grid;
+    gap: 0.14rem;
+}
+
+.sidebar-tree-group-label {
+    padding: 0.22rem 0.18rem 0.18rem;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.sidebar-sublink {
+    display: flex;
+    align-items: center;
+    gap: 0.52rem;
+    min-height: 2rem;
+    padding: 0.44rem 0.52rem;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.76);
+    text-decoration: none;
+    transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.sidebar-sublink:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-inverse);
+    transform: translateX(1px);
+}
+
+.sidebar-sublink.active {
+    background: rgba(255, 255, 255, 0.11);
+    color: var(--text-inverse);
+}
+
+.sidebar-sublink .nav-icon {
+    width: 0.82rem;
+    height: 0.82rem;
+}
+
+.sidebar-sublink .nav-label {
+    font-size: 0.84rem;
+    line-height: 1.2;
+}
+
 .nav-icon-cyan {
     color: var(--shell-icon-cyan);
 }
