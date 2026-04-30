@@ -190,6 +190,26 @@ export async function getSalesCatalogueItemPriceHistory(catalogueId, itemId) {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+export async function getSalesCatalogueItemsByProduct(productId, activeCatalogueIds = []) {
+    const normalizedProductId = String(productId || "").trim();
+    if (!normalizedProductId) return [];
+
+    const snapshot = await getDb()
+        .collectionGroup("items")
+        .where("productId", "==", normalizedProductId)
+        .get();
+
+    const allowedCatalogueIds = new Set((activeCatalogueIds || []).map(id => String(id || "").trim()).filter(Boolean));
+
+    return snapshot.docs
+        .map(doc => ({
+            id: doc.id,
+            catalogueId: doc.ref.parent.parent?.id || "",
+            ...doc.data()
+        }))
+        .filter(row => row.catalogueId && (!allowedCatalogueIds.size || allowedCatalogueIds.has(String(row.catalogueId).trim())));
+}
+
 export async function deleteSalesCatalogueItem(catalogueId, itemId) {
     return getDb()
         .collection(COLLECTIONS.salesCatalogues)

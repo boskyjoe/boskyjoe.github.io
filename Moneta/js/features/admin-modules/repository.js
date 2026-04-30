@@ -37,6 +37,10 @@ function buildStoreConfigCode(storeName = "") {
     return normalized || `STORE_${Date.now()}`;
 }
 
+function buildProductPriceChangeReviewCode() {
+    return `PPR-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+}
+
 async function queryHasMatch(query) {
     const snapshot = await query.limit(1).get();
     return !snapshot.empty;
@@ -292,6 +296,38 @@ export async function updatePricingPolicyRecord(docId, updatedData, user) {
         updatedBy: user.email,
         updatedOn: now
     });
+}
+
+export async function createProductPriceChangeReviewRecord(reviewData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.productPriceChangeReviews).add({
+        ...reviewData,
+        reviewCode: reviewData.reviewCode || buildProductPriceChangeReviewCode(),
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function updateProductPriceChangeReviewRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.productPriceChangeReviews).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function getProductPriceChangeReviewRecord(docId) {
+    if (!normalizeText(docId)) return null;
+
+    const snapshot = await getDb().collection(COLLECTIONS.productPriceChangeReviews).doc(docId).get();
+    if (!snapshot.exists) return null;
+
+    return { id: snapshot.id, ...snapshot.data() };
 }
 
 export async function seedStoreConfigRecords(storeConfigs = [], user) {

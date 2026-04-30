@@ -227,6 +227,7 @@ export async function savePurchaseInvoice(payload, masterData, user) {
         await syncProductPricingFromPurchases(result.affectedProductIds, {
             products: masterData.products,
             pricingPolicies: masterData.pricingPolicies,
+            salesCatalogues: masterData.salesCatalogues,
             user
         });
         return { mode: "update" };
@@ -236,6 +237,7 @@ export async function savePurchaseInvoice(payload, masterData, user) {
     await syncProductPricingFromPurchases(result.affectedProductIds, {
         products: masterData.products,
         pricingPolicies: masterData.pricingPolicies,
+        salesCatalogues: masterData.salesCatalogues,
         user
     });
     return { mode: "create" };
@@ -388,6 +390,7 @@ export async function voidPurchaseInvoice(invoice, reason, user) {
     await syncProductPricingFromPurchases(result.affectedProductIds, {
         products: getState()?.masterData?.products || [],
         pricingPolicies: getState()?.masterData?.pricingPolicies || [],
+        salesCatalogues: getState()?.masterData?.salesCatalogues || [],
         user
     });
 

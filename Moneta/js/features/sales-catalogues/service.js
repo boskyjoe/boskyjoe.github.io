@@ -2,6 +2,7 @@ import {
     addSalesCatalogueItem,
     createSalesCatalogueRecord,
     deleteSalesCatalogueItem,
+    getSalesCatalogueItemsByProduct,
     setSalesCatalogueStatus,
     updateSalesCatalogueItem,
     updateSalesCatalogueItemsBatch,
@@ -399,6 +400,69 @@ export async function syncChangedSalesCatalogueItems(catalogueId, items = [], pr
     );
 
     return { syncedCount: syncedItems.length, syncedItems };
+}
+
+export async function syncSalesCatalogueItemsForApprovedProduct(product, salesCatalogueHeaders = [], user, categories = []) {
+    if (!product?.id) {
+        throw new Error("Product record could not be found.");
+    }
+
+    if (!user) {
+        throw new Error("You must be logged in to sync catalogue pricing.");
+    }
+
+    const activeCatalogues = (salesCatalogueHeaders || []).filter(row => row?.isActive !== false);
+    const activeCatalogueIds = activeCatalogues.map(row => row.id).filter(Boolean);
+    const activeItems = await getSalesCatalogueItemsByProduct(product.id, activeCatalogueIds);
+
+    if (!activeItems.length) {
+        return { syncedCount: 0, syncedCatalogueCount: 0 };
+    }
+
+    const syncedItemById = new Map(
+        activeItems.map(item => [item.id, buildSyncedCatalogueItem(item, product, categories)])
+    );
+    const updatesByCatalogue = new Map();
+
+    activeItems.forEach(item => {
+        if (!updatesByCatalogue.has(item.catalogueId)) {
+            updatesByCatalogue.set(item.catalogueId, []);
+        }
+
+        const nextItem = syncedItemById.get(item.id);
+        updatesByCatalogue.get(item.catalogueId).push({
+            itemId: item.id,
+            updatedData: {
+                productName: nextItem.productName,
+                categoryId: nextItem.categoryId,
+                categoryName: nextItem.categoryName,
+                inventoryCount: nextItem.inventoryCount,
+                costPrice: nextItem.costPrice,
+                marginPercentage: nextItem.marginPercentage,
+                sellingPrice: nextItem.sellingPrice,
+                sourceProductPriceVersion: nextItem.sourceProductPriceVersion,
+                sourceProductCostPrice: nextItem.sourceProductCostPrice,
+                sourceProductMarginPercentage: nextItem.sourceProductMarginPercentage,
+                sourceProductSellingPrice: nextItem.sourceProductSellingPrice,
+                isOverridden: false,
+                historyEntry: buildSalesCataloguePriceHistoryEntry({
+                    actionType: "sync-after-price-review-approval",
+                    note: "Catalogue item pricing synced after product price review approval.",
+                    previousItem: item,
+                    nextItem
+                })
+            }
+        });
+    });
+
+    for (const [catalogueId, updates] of updatesByCatalogue.entries()) {
+        await updateSalesCatalogueItemsBatch(catalogueId, updates, user);
+    }
+
+    return {
+        syncedCount: activeItems.length,
+        syncedCatalogueCount: updatesByCatalogue.size
+    };
 }
 
 export async function removeSalesCatalogueItemRecord(catalogueId, itemId) {

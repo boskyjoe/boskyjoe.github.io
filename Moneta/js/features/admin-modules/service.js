@@ -1,8 +1,9 @@
 import {
     createCategoryRecord,
     createPaymentModeRecord,
-    seedPricingPolicyRecords,
     createReorderPolicyRecord,
+    getProductPriceChangeReviewRecord,
+    seedPricingPolicyRecords,
     createSeasonRecord,
     seedStoreConfigRecords,
     getCategoryUsageStatus,
@@ -14,14 +15,17 @@ import {
     setSeasonActiveStatus,
     updateCategoryRecord,
     updatePaymentModeRecord,
+    updateProductPriceChangeReviewRecord,
     updatePricingPolicyRecord,
     updateReorderPolicyRecord,
     updateSeasonRecord,
     updateStoreConfigRecord
 } from "./repository.js";
+import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
+import { COLLECTIONS } from "../../config/collections.js";
 import {
     buildPricingPolicyExplanation,
     COSTING_METHODS,
@@ -45,6 +49,10 @@ const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function getDb() {
+    return firebase.firestore();
 }
 
 function findDuplicate(records, field, value, docId) {
@@ -832,6 +840,139 @@ export async function ensureStoreConfigSeed(user, existingStoreConfigs = []) {
 
     await seedStoreConfigRecords(missingSeedRows, user);
     return { mode: existingRows.length === 0 ? "create" : "repair" };
+}
+
+async function getProductRecord(productId, masterData = {}) {
+    const fromState = (masterData.products || []).find(product => normalizeText(product.id) === normalizeText(productId)) || null;
+    if (fromState) return fromState;
+
+    const snapshot = await getDb().collection(COLLECTIONS.products).doc(productId).get();
+    if (!snapshot.exists) return null;
+    return { id: snapshot.id, ...snapshot.data() };
+}
+
+async function getPriceReviewRecord(reviewId, masterData = {}) {
+    const fromState = (masterData.productPriceChangeReviews || []).find(review => normalizeText(review.id) === normalizeText(reviewId)) || null;
+    return fromState || await getProductPriceChangeReviewRecord(reviewId);
+}
+
+export async function approveProductPriceChangeReview(reviewId, { syncActiveSalesCatalogues = false } = {}, user, masterData = {}) {
+    if (!user) {
+        throw new Error("You must be logged in to approve a product price review.");
+    }
+
+    const review = await getPriceReviewRecord(reviewId, masterData);
+    if (!review) {
+        throw new Error("Price review record could not be found.");
+    }
+
+    if (normalizeText(review.status || "pending") !== "pending") {
+        throw new Error("This price review is no longer pending.");
+    }
+
+    const product = await getProductRecord(review.productId, masterData);
+    if (!product) {
+        throw new Error("The linked product could not be found.");
+    }
+
+    if (normalizeText(product.pricingMeta?.activePriceReviewId) !== normalizeText(review.id)) {
+        throw new Error("This review is no longer the active pricing decision for the product.");
+    }
+
+    const currentPriceVersion = normalizeInteger(product.pricingMeta?.priceVersion, 0, 0);
+    const currentSellingPrice = normalizeDecimal(product.sellingPrice, 0, 0);
+    const approvedSellingPrice = normalizeDecimal(review.recommendedSellingPrice, currentSellingPrice, 0);
+    const liveSellingPriceChanged = roundCurrency(currentSellingPrice) !== roundCurrency(approvedSellingPrice);
+    const nextPricingMeta = {
+        ...(product.pricingMeta || {}),
+        requiresPriceReview: false,
+        activePriceReviewId: null,
+        reviewStatus: "approved",
+        priceVersion: liveSellingPriceChanged ? currentPriceVersion + 1 : currentPriceVersion
+    };
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    await getDb().collection(COLLECTIONS.products).doc(product.id).update({
+        sellingPrice: approvedSellingPrice,
+        pricingMeta: nextPricingMeta,
+        updatedBy: user.email,
+        updateDate: now
+    });
+
+    let syncResult = { syncedCount: 0, syncedCatalogueCount: 0 };
+    if (syncActiveSalesCatalogues && liveSellingPriceChanged) {
+        syncResult = await syncSalesCatalogueItemsForApprovedProduct({
+            ...product,
+            sellingPrice: approvedSellingPrice,
+            pricingMeta: nextPricingMeta
+        }, masterData.salesCatalogues || [], user, masterData.categories || []);
+    }
+
+    await updateProductPriceChangeReviewRecord(review.id, {
+        status: "approved",
+        approvedSellingPrice,
+        syncActiveSalesCatalogues: Boolean(syncActiveSalesCatalogues),
+        syncedCatalogueCount: syncResult.syncedCatalogueCount || 0,
+        syncedCatalogueItemCount: syncResult.syncedCount || 0,
+        resolvedBy: user.email,
+        resolvedOn: now,
+        resolutionNote: syncActiveSalesCatalogues
+            ? "Approved and synced active Sales Catalogue items."
+            : "Approved without syncing Sales Catalogue items."
+    }, user);
+
+    return {
+        approvedSellingPrice,
+        syncResult,
+        liveSellingPriceChanged
+    };
+}
+
+export async function rejectProductPriceChangeReview(reviewId, user, masterData = {}) {
+    if (!user) {
+        throw new Error("You must be logged in to reject a product price review.");
+    }
+
+    const review = await getPriceReviewRecord(reviewId, masterData);
+    if (!review) {
+        throw new Error("Price review record could not be found.");
+    }
+
+    if (normalizeText(review.status || "pending") !== "pending") {
+        throw new Error("This price review is no longer pending.");
+    }
+
+    const product = await getProductRecord(review.productId, masterData);
+    if (!product) {
+        throw new Error("The linked product could not be found.");
+    }
+
+    if (normalizeText(product.pricingMeta?.activePriceReviewId) !== normalizeText(review.id)) {
+        throw new Error("This review is no longer the active pricing decision for the product.");
+    }
+
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    await getDb().collection(COLLECTIONS.products).doc(product.id).update({
+        pricingMeta: {
+            ...(product.pricingMeta || {}),
+            requiresPriceReview: false,
+            activePriceReviewId: null,
+            reviewStatus: "rejected"
+        },
+        updatedBy: user.email,
+        updateDate: now
+    });
+
+    await updateProductPriceChangeReviewRecord(review.id, {
+        status: "rejected",
+        resolvedBy: user.email,
+        resolvedOn: now,
+        resolutionNote: "Rejected. Moneta kept the current live selling price unchanged."
+    }, user);
+
+    return {
+        keptSellingPrice: roundCurrency(product.sellingPrice)
+    };
 }
 
 export async function getAdminEditRestriction(entity, record) {

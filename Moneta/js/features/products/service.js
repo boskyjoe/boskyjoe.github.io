@@ -3,7 +3,7 @@ import {
     setProductFieldStatus,
     updateProductRecord
 } from "./repository.js";
-import { buildProductPricingSnapshot } from "./pricing-service.js";
+import { buildProductPricingSnapshot, syncProductPriceChangeReviewState } from "./pricing-service.js";
 import {
     calculateSellingPriceFromMargin,
     getNormalizedPricingPolicySettings,
@@ -55,16 +55,28 @@ export function validateProductPayload(payload, masterData = {}) {
         throw new Error("Manual standard-cost overrides are locked by the active pricing policy.");
     }
 
+    const hasCurrentProduct = Boolean(currentProduct);
+    const preservedSellingPrice = hasCurrentProduct
+        ? roundCurrency(normalizeNumber(currentProduct?.sellingPrice, recommendedSellingPrice))
+        : recommendedSellingPrice;
+    const effectiveLiveSellingPrice = policySettings.sellingPriceBehavior === "manual"
+        ? manualSellingPrice
+        : policySettings.sellingPriceBehavior === "auto-update-from-margin"
+            ? recommendedSellingPrice
+            : preservedSellingPrice;
+
     const pricingBaseProduct = {
         ...(currentProduct || {}),
         unitPrice,
         unitMarginPercentage,
-        sellingPrice: policySettings.sellingPriceBehavior === "manual"
-            ? manualSellingPrice
-            : recommendedSellingPrice
+        sellingPrice: effectiveLiveSellingPrice
     };
     const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
     const existingPricingMeta = currentProduct?.pricingMeta || {};
+    const nextSellingPrice = pricingSnapshot.nextSellingPrice;
+    const liveSellingPriceChanged = hasCurrentProduct
+        ? roundCurrency(currentProduct?.sellingPrice) !== nextSellingPrice
+        : nextSellingPrice > 0;
 
     return {
         itemName,
@@ -77,9 +89,19 @@ export function validateProductPayload(payload, masterData = {}) {
         netWeightKg,
         pricingMeta: {
             ...pricingSnapshot.pricingMeta,
-            priceVersion: Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)),
+            priceVersion: liveSellingPriceChanged
+                ? Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)) + 1
+                : Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)),
+            activePriceReviewId: existingPricingMeta.activePriceReviewId || null,
+            reviewStatus: existingPricingMeta.reviewStatus || "none",
             lastPolicyDrivenUpdateAt: existingPricingMeta.lastPolicyDrivenUpdateAt || null,
             lastPolicyDrivenUpdateReason: existingPricingMeta.lastPolicyDrivenUpdateReason || null
+        },
+        _reviewMeta: {
+            currentProduct,
+            liveSellingPriceChanged,
+            skipReview: hasCurrentProduct && liveSellingPriceChanged,
+            sourceType: "manual-product-update"
         }
     };
 }
@@ -91,13 +113,24 @@ export async function saveProduct(payload, masterData, user) {
 
     const productData = validateProductPayload(payload, masterData);
     const docId = normalizeText(payload.docId);
+    const { _reviewMeta = {}, ...persistedProductData } = productData;
 
     if (docId) {
-        await updateProductRecord(docId, productData, user);
+        await updateProductRecord(docId, persistedProductData, user);
+        await syncProductPriceChangeReviewState({
+            id: docId,
+            ...(_reviewMeta.currentProduct || {}),
+            ...persistedProductData
+        }, {
+            salesCatalogues: masterData.salesCatalogues || [],
+            user,
+            sourceType: _reviewMeta.sourceType,
+            skipReview: _reviewMeta.skipReview
+        });
         return { mode: "update" };
     }
 
-    await createProductRecord(productData, user);
+    await createProductRecord(persistedProductData, user);
     return { mode: "create" };
 }
 

@@ -9,6 +9,7 @@ const state = {
         suppliers: [],
         paymentModes: [],
         pricingPolicies: [],
+        productPriceChangeReviews: [],
         reorderPolicies: [],
         storeConfigs: [],
         salesCatalogues: [],

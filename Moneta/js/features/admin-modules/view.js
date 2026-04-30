@@ -1,5 +1,5 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
@@ -7,18 +7,21 @@ import {
     initializeCategoriesGrid,
     initializePaymentModesGrid,
     initializePricingPoliciesGrid,
+    initializeProductPriceChangeReviewsGrid,
     initializeReorderPoliciesGrid,
     initializeSeasonsGrid,
     initializeStoreConfigsGrid,
     refreshCategoriesGrid,
     refreshPaymentModesGrid,
     refreshPricingPoliciesGrid,
+    refreshProductPriceChangeReviewsGrid,
     refreshReorderPoliciesGrid,
     refreshSeasonsGrid,
     refreshStoreConfigsGrid,
     updateCategoriesGridSearch,
     updatePaymentModesGridSearch,
     updatePricingPoliciesGridSearch,
+    updateProductPriceChangeReviewsGridSearch,
     updateReorderPoliciesGridSearch,
     updateSeasonsGridSearch,
     updateStoreConfigsGridSearch
@@ -40,7 +43,9 @@ import {
     resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
 import {
+    approveProductPriceChangeReview,
     getAdminEditRestriction,
+    rejectProductPriceChangeReview,
     saveCategory,
     savePaymentMode,
     savePricingPolicy,
@@ -78,6 +83,12 @@ const ADMIN_SECTIONS = {
         icon: icons.reports,
         description: "Control how Moneta derives standard cost from purchases and how it recommends or updates selling prices."
     },
+    productPriceChangeReviews: {
+        label: "Price Reviews",
+        entityLabel: "Price Review",
+        icon: icons.warning,
+        description: "Review suggested product price changes, approve or reject them, and decide whether active Sales Catalogue items should sync."
+    },
     storeConfigs: {
         label: "Store Config",
         entityLabel: "Store Config",
@@ -101,6 +112,7 @@ const featureState = {
         seasons: "",
         paymentModes: "",
         pricingPolicies: "",
+        productPriceChangeReviews: "",
         storeConfigs: "",
         reorderPolicies: ""
     },
@@ -109,6 +121,7 @@ const featureState = {
         seasons: null,
         paymentModes: null,
         pricingPolicies: null,
+        productPriceChangeReviews: null,
         storeConfigs: null,
         reorderPolicies: null
     }
@@ -131,6 +144,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
         formId: "admin-pricing-policy-form",
         inputSelector: "#admin-pricing-policy-name"
     },
+    productPriceChangeReviews: {
+        formId: null,
+        inputSelector: "#admin-product-price-review-approve-button"
+    },
     storeConfigs: {
         formId: "admin-store-config-form",
         inputSelector: "#admin-store-config-company-name"
@@ -151,6 +168,25 @@ function toDateInputValue(value) {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+}
+
+function formatCurrency(value) {
+    return `₹${Number(value || 0).toFixed(2)}`;
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
 }
 
 function escapeHtml(value = "") {
@@ -222,6 +258,15 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
 
     if (section === "storeConfigs") {
         const rows = (snapshot.masterData.storeConfigs || []).slice().sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999));
+        if (recordId) {
+            return rows.find(record => record.id === recordId) || null;
+        }
+
+        return rows[0] || null;
+    }
+
+    if (section === "productPriceChangeReviews") {
+        const rows = getSectionRows(snapshot, section);
         if (recordId) {
             return rows.find(record => record.id === recordId) || null;
         }
@@ -305,6 +350,22 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
             .slice()
             .sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999)
                 || (left.storeName || "").localeCompare(right.storeName || ""));
+    }
+
+    if (section === "productPriceChangeReviews") {
+        return (snapshot.masterData.productPriceChangeReviews || [])
+            .slice()
+            .sort((left, right) => {
+                const leftPending = normalizeText(left.status || "pending") === "pending";
+                const rightPending = normalizeText(right.status || "pending") === "pending";
+                if (leftPending !== rightPending) {
+                    return leftPending ? -1 : 1;
+                }
+
+                const leftDate = left.updatedOn?.toDate ? left.updatedOn.toDate() : new Date(left.updatedOn || left.createdOn || 0);
+                const rightDate = right.updatedOn?.toDate ? right.updatedOn.toDate() : new Date(right.updatedOn || right.createdOn || 0);
+                return rightDate - leftDate;
+            });
     }
 
     return (snapshot.masterData.paymentModes || []).slice().sort((left, right) => (left.paymentMode || "").localeCompare(right.paymentMode || ""));
@@ -793,6 +854,7 @@ function renderSectionTabs(snapshot) {
     const seasons = snapshot.masterData.seasons || [];
     const paymentModes = snapshot.masterData.paymentModes || [];
     const pricingPolicies = snapshot.masterData.pricingPolicies || [];
+    const productPriceChangeReviews = snapshot.masterData.productPriceChangeReviews || [];
     const storeConfigs = snapshot.masterData.storeConfigs || [];
     const reorderPolicies = snapshot.masterData.reorderPolicies || [];
 
@@ -801,6 +863,7 @@ function renderSectionTabs(snapshot) {
         seasons: seasons.length,
         paymentModes: paymentModes.length,
         pricingPolicies: pricingPolicies.length,
+        productPriceChangeReviews: productPriceChangeReviews.filter(review => normalizeText(review.status || "pending") === "pending").length,
         storeConfigs: storeConfigs.length,
         reorderPolicies: reorderPolicies.length
     };
@@ -826,7 +889,9 @@ function renderSectionTabs(snapshot) {
 function renderHeader(snapshot) {
     const config = getActiveSectionConfig();
     const rows = getSectionRows(snapshot);
-    const activeCount = rows.filter(row => row.isActive).length;
+    const activeCount = featureState.activeSection === "productPriceChangeReviews"
+        ? rows.filter(row => normalizeText(row.status || "pending") === "pending").length
+        : rows.filter(row => row.isActive).length;
 
     return `
         <div class="panel-card">
@@ -840,7 +905,7 @@ function renderHeader(snapshot) {
                 </div>
                 <div class="toolbar-meta">
                     <span class="status-pill">${rows.length} records</span>
-                    <span class="status-pill">${activeCount} active</span>
+                    <span class="status-pill">${activeCount} ${featureState.activeSection === "productPriceChangeReviews" ? "pending" : "active"}</span>
                 </div>
             </div>
             <div class="panel-body">
@@ -1621,6 +1686,150 @@ function renderReorderPolicyForm(snapshot) {
     `;
 }
 
+function renderProductPriceChangeReviewForm(snapshot) {
+    const review = getEditingRecord(snapshot, "productPriceChangeReviews");
+
+    if (!review) {
+        return `
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.warning}</span>
+                        <div>
+                            <h3>Product Price Change Review</h3>
+                            <p class="panel-copy">Moneta will list pending product pricing decisions here when cost movement needs approval.</p>
+                        </div>
+                    </div>
+                    <span class="status-pill">Waiting</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const statusCopy = normalizeText(review.status || "pending");
+    const isPending = statusCopy === "pending";
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.warning}</span>
+                    <div>
+                        <h3>${isPending ? "Review Product Price Change" : "Price Review Record"}</h3>
+                        <p class="panel-copy">Approve or reject the suggested selling-price change, then decide whether Moneta should sync any active Sales Catalogue items linked to this product.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">${escapeHtml(review.reviewCode || "Price Review")}</span>
+                    <span class="status-pill">${escapeHtml(statusCopy || "pending")}</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="workspace-form-sections">
+                    <section class="workspace-form-section">
+                        <div class="workspace-form-section-head">
+                            <p class="workspace-form-section-kicker">Product</p>
+                            <h3>${escapeHtml(review.productName || "Product")}</h3>
+                            <p class="panel-copy">Item ID: ${escapeHtml(review.itemId || "-")}</p>
+                        </div>
+                        <div class="workspace-form-section-grid">
+                            <div>
+                                <p class="section-kicker">Current Live Price</p>
+                                <p><strong>${formatCurrency(review.currentSellingPrice)}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Recommended Price</p>
+                                <p><strong>${formatCurrency(review.recommendedSellingPrice)}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Previous Standard Cost</p>
+                                <p><strong>${formatCurrency(review.previousStandardCost)}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">New Standard Cost</p>
+                                <p><strong>${formatCurrency(review.nextStandardCost)}</strong></p>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="workspace-form-section">
+                        <div class="workspace-form-section-head">
+                            <p class="workspace-form-section-kicker">Impact</p>
+                            <h3>Decision Context</h3>
+                            <p class="panel-copy">Use this summary to decide whether the suggested live product price should be accepted now.</p>
+                        </div>
+                        <div class="workspace-form-section-grid">
+                            <div>
+                                <p class="section-kicker">Cost Change</p>
+                                <p><strong>${review.costChangePercent === null || review.costChangePercent === undefined ? "-" : `${review.costChangePercent > 0 ? "+" : ""}${Number(review.costChangePercent).toFixed(2)}%`}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Triggered By</p>
+                                <p><strong>${escapeHtml(review.sourceType || "-")}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Active Sales Catalogues</p>
+                                <p><strong>${Number(review.affectedSalesCatalogueCount || 0)}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Active Catalogue Items</p>
+                                <p><strong>${Number(review.affectedSalesCatalogueItemCount || 0)}</strong></p>
+                            </div>
+                        </div>
+                        <p class="panel-copy panel-copy-tight">${(review.affectedSalesCatalogueNames || []).length
+                            ? `Affected active catalogues: ${escapeHtml(review.affectedSalesCatalogueNames.join(", "))}.`
+                            : "This product is not currently used in any active Sales Catalogue."}</p>
+                    </section>
+                    <section class="workspace-form-section">
+                        <div class="workspace-form-section-head">
+                            <p class="workspace-form-section-kicker">Audit</p>
+                            <h3>Review Trail</h3>
+                            <p class="panel-copy">Keep pricing governance visible so approvals and rejections can be traced later.</p>
+                        </div>
+                        <div class="workspace-form-section-grid">
+                            <div>
+                                <p class="section-kicker">Created By</p>
+                                <p><strong>${escapeHtml(review.createdBy || "-")}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Created On</p>
+                                <p><strong>${formatDateTime(review.createdOn)}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Resolved By</p>
+                                <p><strong>${escapeHtml(review.resolvedBy || "-")}</strong></p>
+                            </div>
+                            <div>
+                                <p class="section-kicker">Resolved On</p>
+                                <p><strong>${formatDateTime(review.resolvedOn)}</strong></p>
+                            </div>
+                        </div>
+                        <p class="panel-copy panel-copy-tight">${escapeHtml(review.resolutionNote || (isPending
+                            ? "This review is still pending an admin decision."
+                            : "This review has already been resolved."))}</p>
+                    </section>
+                </div>
+                <div class="form-actions">
+                    ${isPending ? `
+                        <button id="admin-product-price-review-reject-button" class="button button-secondary" type="button" data-review-id="${review.id}">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reject Recommendation
+                        </button>
+                        <button id="admin-product-price-review-approve-button" class="button button-primary-alt" type="button" data-review-id="${review.id}">
+                            <span class="button-icon">${icons.active}</span>
+                            Approve Price Change
+                        </button>
+                    ` : `
+                        <button id="admin-product-price-review-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Clear Selection
+                        </button>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderCurrentForm(snapshot) {
     if (featureState.activeSection === "categories") {
         return renderCategoryForm(snapshot);
@@ -1632,6 +1841,10 @@ function renderCurrentForm(snapshot) {
 
     if (featureState.activeSection === "pricingPolicies") {
         return renderPricingPolicyForm(snapshot);
+    }
+
+    if (featureState.activeSection === "productPriceChangeReviews") {
+        return renderProductPriceChangeReviewForm(snapshot);
     }
 
     if (featureState.activeSection === "reorderPolicies") {
@@ -1687,6 +1900,18 @@ function getGridMeta(snapshot) {
             count: rows.length,
             countLabel: "policies",
             directoryHelp: "Search the pricing policy record and reopen it for editing without leaving the admin workspace."
+        };
+    }
+
+    if (featureState.activeSection === "productPriceChangeReviews") {
+        const rows = snapshot.masterData.productPriceChangeReviews || [];
+        const pendingCount = rows.filter(review => normalizeText(review.status || "pending") === "pending").length;
+        return {
+            title: "Product Price Review Queue",
+            copy: "Review recommended product price changes, approve or reject them, and decide whether active Sales Catalogue items should sync right away.",
+            count: pendingCount,
+            countLabel: "pending reviews",
+            directoryHelp: "Search review records, open one for decision, and keep pricing governance separate from day-to-day Product Catalogue editing."
         };
     }
 
@@ -1781,6 +2006,13 @@ function syncCurrentGrid(snapshot) {
         initializePricingPoliciesGrid(gridElement);
         refreshPricingPoliciesGrid(rows);
         updatePricingPoliciesGridSearch(featureState.searchTerms.pricingPolicies);
+        return;
+    }
+
+    if (featureState.activeSection === "productPriceChangeReviews") {
+        initializeProductPriceChangeReviewsGrid(gridElement);
+        refreshProductPriceChangeReviewsGrid(rows);
+        updateProductPriceChangeReviewsGridSearch(featureState.searchTerms.productPriceChangeReviews);
         return;
     }
 
@@ -2261,7 +2493,7 @@ async function handleReorderPolicySubmit(event) {
 }
 
 function getRecordDisplayName(record = {}) {
-    return record.categoryName || record.seasonName || record.paymentMode || record.policyName || record.storeName || "-";
+    return record.categoryName || record.seasonName || record.paymentMode || record.policyName || record.productName || record.storeName || "-";
 }
 
 function handleSearchInput(target) {
@@ -2286,6 +2518,11 @@ function handleSearchInput(target) {
 
     if (featureState.activeSection === "pricingPolicies") {
         updatePricingPoliciesGridSearch(featureState.searchTerms.pricingPolicies);
+        return;
+    }
+
+    if (featureState.activeSection === "productPriceChangeReviews") {
+        updateProductPriceChangeReviewsGridSearch(featureState.searchTerms.productPriceChangeReviews);
         return;
     }
 
@@ -2384,6 +2621,104 @@ async function handleStatusToggle(button) {
     }
 }
 
+async function handleApproveProductPriceReview(button) {
+    const reviewId = button.dataset.reviewId;
+    const snapshot = getState();
+    const review = getEditingRecord(snapshot, "productPriceChangeReviews");
+
+    if (!reviewId || !review) {
+        showToast("Price review could not be found.", "error");
+        return;
+    }
+
+    const affectedCatalogueCount = Number(review.affectedSalesCatalogueCount || 0);
+    const choice = await showChoiceModal({
+        title: "Approve Product Price Change",
+        message: `Approve the suggested live price for ${review.productName || "this product"}?`,
+        details: [
+            { label: "Current Live Price", value: formatCurrency(review.currentSellingPrice) },
+            { label: "Recommended Price", value: formatCurrency(review.recommendedSellingPrice) },
+            { label: "Active Sales Catalogues", value: String(affectedCatalogueCount) }
+        ],
+        note: affectedCatalogueCount > 0
+            ? "Choose whether Moneta should also sync active Sales Catalogue items that still use the older product price."
+            : "This product is not currently used in any active Sales Catalogue.",
+        choices: [
+            ...(affectedCatalogueCount > 0 ? [{ value: "approve-and-sync", label: `Approve + Sync ${affectedCatalogueCount} Active Catalogue${affectedCatalogueCount === 1 ? "" : "s"}`, variant: "primary" }] : []),
+            { value: "approve-only", label: "Approve Product Only", variant: "secondary" },
+            { value: "cancel", label: "Cancel", variant: "secondary" }
+        ]
+    });
+
+    if (!choice || choice === "cancel") return;
+
+    try {
+        const result = await approveProductPriceChangeReview(
+            reviewId,
+            { syncActiveSalesCatalogues: choice === "approve-and-sync" },
+            snapshot.currentUser,
+            snapshot.masterData
+        );
+        renderAdminModulesView();
+        showToast("Product price review approved.", "success", { title: "Admin Modules" });
+        await showSummaryModal({
+            title: "Product Price Change Approved",
+            message: "Moneta applied the approved live product price successfully.",
+            details: [
+                { label: "Product", value: review.productName || "-" },
+                { label: "Approved Price", value: formatCurrency(result.approvedSellingPrice) },
+                { label: "Sales Catalogue Sync", value: choice === "approve-and-sync" ? `Synced ${result.syncResult.syncedCount || 0} items` : "Skipped" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Product price approval failed:", error);
+        showToast(error.message || "Could not approve the product price change.", "error");
+    }
+}
+
+async function handleRejectProductPriceReview(button) {
+    const reviewId = button.dataset.reviewId;
+    const snapshot = getState();
+    const review = getEditingRecord(snapshot, "productPriceChangeReviews");
+
+    if (!reviewId || !review) {
+        showToast("Price review could not be found.", "error");
+        return;
+    }
+
+    const confirmed = await showConfirmationModal({
+        title: "Reject Product Price Change",
+        message: `Reject the suggested price update for ${review.productName || "this product"}?`,
+        details: [
+            { label: "Current Live Price", value: formatCurrency(review.currentSellingPrice) },
+            { label: "Recommended Price", value: formatCurrency(review.recommendedSellingPrice) }
+        ],
+        note: "Rejecting will keep the current live product selling price unchanged and close this review.",
+        confirmText: "Reject Recommendation",
+        cancelText: "Cancel",
+        tone: "danger"
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const result = await rejectProductPriceChangeReview(reviewId, snapshot.currentUser, snapshot.masterData);
+        renderAdminModulesView();
+        showToast("Product price review rejected.", "success", { title: "Admin Modules" });
+        await showSummaryModal({
+            title: "Product Price Change Rejected",
+            message: "Moneta kept the current live product selling price unchanged.",
+            details: [
+                { label: "Product", value: review.productName || "-" },
+                { label: "Kept Price", value: formatCurrency(result.keptSellingPrice) }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Product price rejection failed:", error);
+        showToast(error.message || "Could not reject the product price change.", "error");
+    }
+}
+
 function handleCancelEdit(section) {
     clearEditingState(section);
     renderAdminModulesView();
@@ -2447,6 +2782,9 @@ function bindAdminModulesDomEvents() {
         const seasonCancelButton = target.closest("#admin-season-cancel-button");
         const paymentModeCancelButton = target.closest("#admin-payment-mode-cancel-button");
         const pricingPolicyCancelButton = target.closest("#admin-pricing-policy-cancel-button");
+        const productPriceReviewApproveButton = target.closest("#admin-product-price-review-approve-button");
+        const productPriceReviewRejectButton = target.closest("#admin-product-price-review-reject-button");
+        const productPriceReviewCancelButton = target.closest("#admin-product-price-review-cancel-button");
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
@@ -2483,6 +2821,21 @@ function bindAdminModulesDomEvents() {
 
         if (pricingPolicyCancelButton) {
             handleCancelEdit("pricingPolicies");
+            return;
+        }
+
+        if (productPriceReviewApproveButton) {
+            handleApproveProductPriceReview(productPriceReviewApproveButton);
+            return;
+        }
+
+        if (productPriceReviewRejectButton) {
+            handleRejectProductPriceReview(productPriceReviewRejectButton);
+            return;
+        }
+
+        if (productPriceReviewCancelButton) {
+            handleCancelEdit("productPriceChangeReviews");
             return;
         }
 

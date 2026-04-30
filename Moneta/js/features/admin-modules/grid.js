@@ -9,6 +9,8 @@ let seasonsGridApi = null;
 let seasonsGridElement = null;
 let pricingPoliciesGridApi = null;
 let pricingPoliciesGridElement = null;
+let productPriceChangeReviewsGridApi = null;
+let productPriceChangeReviewsGridElement = null;
 let reorderPoliciesGridApi = null;
 let reorderPoliciesGridElement = null;
 let storeConfigsGridApi = null;
@@ -30,6 +32,17 @@ function seasonWorkflowMarkup(value) {
 }
 
 function actionMarkup(entity, data) {
+    if (entity === "productPriceChangeReviews") {
+        return `
+            <div class="table-actions grid-actions-inline">
+                <button class="button grid-action-button grid-action-button-secondary admin-module-edit-button" type="button" data-entity="${entity}" data-record-id="${data.id}">
+                    <span class="button-icon">${icons.edit}</span>
+                    Review
+                </button>
+            </div>
+        `;
+    }
+
     if (entity === "storeConfigs" || entity === "pricingPolicies") {
         return `
             <div class="table-actions grid-actions-inline">
@@ -61,6 +74,30 @@ function actionMarkup(entity, data) {
                 ${data.isActive ? "Deactivate" : "Activate"}
             </button>
         </div>
+    `;
+}
+
+function reviewStatusMarkup(value) {
+    const normalized = String(value || "pending").trim().toLowerCase();
+    const toneClass = normalized === "approved"
+        ? "status-active"
+        : normalized === "rejected" || normalized === "cancelled"
+            ? "status-inactive"
+            : "status-warning";
+    const icon = normalized === "approved" ? icons.active : normalized === "pending" ? icons.warning : icons.inactive;
+    const label = normalized === "approved"
+        ? "Approved"
+        : normalized === "rejected"
+            ? "Rejected"
+            : normalized === "cancelled"
+                ? "Cancelled"
+                : "Pending";
+
+    return `
+        <span class="grid-status-cell grid-status-pill ${toneClass}">
+            <span class="inline-icon">${icon}</span>
+            ${label}
+        </span>
     `;
 }
 
@@ -104,6 +141,65 @@ function buildPricingPoliciesColumnDefs() {
             sortable: false,
             filter: false,
             cellRenderer: params => actionMarkup("pricingPolicies", params.data)
+        }
+    ];
+}
+
+function buildProductPriceChangeReviewsColumnDefs() {
+    return [
+        { field: "reviewCode", headerName: "Review ID", minWidth: 145, flex: 0.85 },
+        { field: "productName", headerName: "Product", minWidth: 220, flex: 1.2 },
+        {
+            field: "costChangePercent",
+            headerName: "Cost Change",
+            minWidth: 130,
+            flex: 0.8,
+            valueFormatter: params => {
+                const value = Number(params.value);
+                return Number.isFinite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(2)}%` : "-";
+            }
+        },
+        {
+            field: "currentSellingPrice",
+            headerName: "Current Live Price",
+            minWidth: 150,
+            flex: 0.9,
+            valueFormatter: params => `₹${Number(params.value || 0).toFixed(2)}`
+        },
+        {
+            field: "recommendedSellingPrice",
+            headerName: "Recommended Price",
+            minWidth: 155,
+            flex: 0.95,
+            valueFormatter: params => `₹${Number(params.value || 0).toFixed(2)}`
+        },
+        {
+            field: "affectedSalesCatalogueCount",
+            headerName: "Active Catalogues",
+            minWidth: 145,
+            flex: 0.8
+        },
+        {
+            field: "status",
+            headerName: "Review Status",
+            minWidth: 150,
+            flex: 0.85,
+            cellRenderer: params => reviewStatusMarkup(params.value)
+        },
+        {
+            headerName: "Updated",
+            minWidth: 145,
+            flex: 0.85,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 150,
+            flex: 0.75,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("productPriceChangeReviews", params.data)
         }
     ];
 }
@@ -423,6 +519,25 @@ export function refreshPricingPoliciesGrid(rows) {
 
 export function updatePricingPoliciesGridSearch(searchTerm) {
     pricingPoliciesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeProductPriceChangeReviewsGrid(gridElement) {
+    productPriceChangeReviewsGridApi = initializeGrid(
+        gridElement,
+        productPriceChangeReviewsGridApi,
+        productPriceChangeReviewsGridElement,
+        buildProductPriceChangeReviewsColumnDefs()
+    );
+    productPriceChangeReviewsGridElement = gridElement;
+    return productPriceChangeReviewsGridApi;
+}
+
+export function refreshProductPriceChangeReviewsGrid(rows) {
+    productPriceChangeReviewsGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateProductPriceChangeReviewsGridSearch(searchTerm) {
+    productPriceChangeReviewsGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }
 
 export function initializeStoreConfigsGrid(gridElement) {

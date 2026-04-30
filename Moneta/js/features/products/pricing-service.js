@@ -1,5 +1,11 @@
 import { COLLECTIONS } from "../../config/collections.js";
 import {
+    createProductPriceChangeReviewRecord,
+    getProductPriceChangeReviewRecord,
+    getSalesCatalogueItemsForProduct,
+    updateProductPriceChangeReviewRecord
+} from "./price-review-repository.js";
+import {
     calculateCostChangePercent,
     calculateSellingPriceFromMargin,
     DEFAULT_PRICING_POLICY,
@@ -145,11 +151,135 @@ export function buildProductPricingSnapshot(product = {}, pricingPolicies = [], 
     return buildPricingMeta(product, pricingPolicy, resolvedPurchaseSummary);
 }
 
+function buildPriceReviewCandidate(product = {}) {
+    const pricingMeta = product.pricingMeta || {};
+    const currentSellingPrice = roundCurrency(product.sellingPrice);
+    const recommendedSellingPrice = roundCurrency(pricingMeta.recommendedSellingPrice);
+
+    return Boolean(pricingMeta.requiresPriceReview)
+        && recommendedSellingPrice > 0
+        && Math.abs(recommendedSellingPrice - currentSellingPrice) >= 0.01;
+}
+
+async function buildAffectedSalesCatalogueSummary(productId, salesCatalogueHeaders = []) {
+    const activeCatalogueHeaders = (salesCatalogueHeaders || []).filter(row => row?.isActive !== false);
+    const activeCatalogueIds = activeCatalogueHeaders.map(row => normalizeText(row.id)).filter(Boolean);
+    const catalogueItems = await getSalesCatalogueItemsForProduct(productId, activeCatalogueIds);
+    const catalogueNameById = new Map(activeCatalogueHeaders.map(row => [normalizeText(row.id), normalizeText(row.catalogueName)]));
+    const affectedCatalogueIds = [...new Set(catalogueItems.map(row => normalizeText(row.catalogueId)).filter(Boolean))];
+
+    return {
+        affectedCatalogueIds,
+        affectedCatalogueNames: affectedCatalogueIds.map(id => catalogueNameById.get(id) || id),
+        affectedCatalogueCount: affectedCatalogueIds.length,
+        affectedCatalogueItemCount: catalogueItems.length
+    };
+}
+
+function buildProductPriceChangeReviewPayload(product = {}, affectedSummary = {}, sourceType = "") {
+    const pricingMeta = product.pricingMeta || {};
+
+    return {
+        productId: product.id,
+        itemId: product.itemId || "",
+        productName: product.itemName || "Untitled Product",
+        categoryId: product.categoryId || "",
+        previousStandardCost: roundCurrency(pricingMeta.previousStandardCost),
+        nextStandardCost: roundCurrency(pricingMeta.standardCost ?? product.unitPrice),
+        previousSellingPrice: roundCurrency(product.sellingPrice),
+        recommendedSellingPrice: roundCurrency(pricingMeta.recommendedSellingPrice),
+        currentSellingPrice: roundCurrency(product.sellingPrice),
+        targetMarginPercentage: normalizeNumber(product.unitMarginPercentage),
+        costChangePercent: pricingMeta.costChangePercent ?? null,
+        sourceType: normalizeText(sourceType || pricingMeta.lastPolicyDrivenUpdateReason || "product-update"),
+        status: "pending",
+        affectedSalesCatalogueCount: affectedSummary.affectedCatalogueCount || 0,
+        affectedSalesCatalogueItemCount: affectedSummary.affectedCatalogueItemCount || 0,
+        affectedSalesCatalogueIds: affectedSummary.affectedCatalogueIds || [],
+        affectedSalesCatalogueNames: affectedSummary.affectedCatalogueNames || []
+    };
+}
+
+export async function syncProductPriceChangeReviewState(
+    product,
+    {
+        salesCatalogues = [],
+        user = null,
+        sourceType = "",
+        skipReview = false
+    } = {}
+) {
+    const productId = normalizeText(product?.id);
+    if (!productId || !user?.email) {
+        return { reviewId: null, status: "skipped" };
+    }
+
+    const pricingMeta = product.pricingMeta || {};
+    const currentReviewId = normalizeText(pricingMeta.activePriceReviewId);
+    const docRef = getDb().collection(COLLECTIONS.products).doc(productId);
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const reviewNeeded = !skipReview && buildPriceReviewCandidate(product);
+
+    if (!reviewNeeded) {
+        if (currentReviewId) {
+            await updateProductPriceChangeReviewRecord(currentReviewId, {
+                status: "cancelled",
+                resolvedBy: user.email,
+                resolvedOn: now,
+                resolutionNote: "Review was cleared because the product no longer needs a pricing decision."
+            }, user);
+        }
+
+        await docRef.update({
+            pricingMeta: {
+                ...pricingMeta,
+                activePriceReviewId: null,
+                reviewStatus: "none"
+            },
+            updatedBy: user.email,
+            updateDate: now
+        });
+
+        return { reviewId: null, status: "cleared" };
+    }
+
+    const affectedSummary = await buildAffectedSalesCatalogueSummary(productId, salesCatalogues);
+    const reviewPayload = buildProductPriceChangeReviewPayload(product, affectedSummary, sourceType);
+
+    let reviewId = currentReviewId;
+    if (reviewId) {
+        const existingReview = await getProductPriceChangeReviewRecord(reviewId);
+        if (existingReview && normalizeText(existingReview.status) === "pending") {
+            await updateProductPriceChangeReviewRecord(reviewId, reviewPayload, user);
+        } else {
+            reviewId = "";
+        }
+    }
+
+    if (!reviewId) {
+        const createdRef = await createProductPriceChangeReviewRecord(reviewPayload, user);
+        reviewId = createdRef.id;
+    }
+
+    await docRef.update({
+        pricingMeta: {
+            ...pricingMeta,
+            activePriceReviewId: reviewId,
+            reviewStatus: "pending"
+        },
+        updatedBy: user.email,
+        updateDate: now
+    });
+
+    return { reviewId, status: "pending" };
+}
+
 export async function syncProductPricingFromPurchases(
     productIds = [],
     {
         products = [],
         pricingPolicies = [],
+        salesCatalogues = [],
         user = null
     } = {}
 ) {
@@ -186,6 +316,8 @@ export async function syncProductPricingFromPurchases(
     const now = firebase.firestore.FieldValue.serverTimestamp();
     let updatedCount = 0;
 
+    const reviewSyncProducts = [];
+
     targetProducts.forEach(product => {
         const productId = normalizeText(product.id);
         const historyRows = getActivePurchaseHistoryRows(purchaseInvoices, productId);
@@ -193,35 +325,50 @@ export async function syncProductPricingFromPurchases(
         const pricingSnapshot = buildProductPricingSnapshot(product, pricingPolicies, purchaseSummary);
         const previousPricingMeta = product.pricingMeta || {};
         const previousVersion = Math.max(0, normalizeNumber(previousPricingMeta.priceVersion));
-        const previousRecommendedSellingPrice = roundCurrency(previousPricingMeta.recommendedSellingPrice);
-        const policyDrivenChanged = pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
-            || pricingSnapshot.nextSellingPrice !== roundCurrency(product.sellingPrice)
-            || pricingSnapshot.pricingMeta.recommendedSellingPrice !== previousRecommendedSellingPrice;
-        const nextPriceVersion = policyDrivenChanged ? previousVersion + 1 : previousVersion;
+        const liveSellingPriceChanged = pricingSnapshot.nextSellingPrice !== roundCurrency(product.sellingPrice);
+        const nextPriceVersion = liveSellingPriceChanged ? previousVersion + 1 : previousVersion;
         const nextPricingMeta = {
             ...pricingSnapshot.pricingMeta,
             priceVersion: nextPriceVersion,
-            lastPolicyDrivenUpdateAt: policyDrivenChanged
+            activePriceReviewId: previousPricingMeta.activePriceReviewId || null,
+            reviewStatus: previousPricingMeta.reviewStatus || "none",
+            lastPolicyDrivenUpdateAt: (pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
+                || pricingSnapshot.pricingMeta.recommendedSellingPrice !== roundCurrency(previousPricingMeta.recommendedSellingPrice))
                 ? new Date().toISOString()
                 : (previousPricingMeta.lastPolicyDrivenUpdateAt || null),
-            lastPolicyDrivenUpdateReason: policyDrivenChanged
+            lastPolicyDrivenUpdateReason: (pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
+                || pricingSnapshot.pricingMeta.recommendedSellingPrice !== roundCurrency(previousPricingMeta.recommendedSellingPrice))
                 ? "purchase-history-sync"
                 : (previousPricingMeta.lastPolicyDrivenUpdateReason || null)
         };
         const docRef = getDb().collection(COLLECTIONS.products).doc(productId);
-
-        batch.update(docRef, {
+        const updatedProduct = {
+            ...product,
             unitPrice: pricingSnapshot.nextUnitPrice,
             sellingPrice: pricingSnapshot.nextSellingPrice,
-            pricingMeta: nextPricingMeta,
+            pricingMeta: nextPricingMeta
+        };
+
+        batch.update(docRef, {
+            unitPrice: updatedProduct.unitPrice,
+            sellingPrice: updatedProduct.sellingPrice,
+            pricingMeta: updatedProduct.pricingMeta,
             updatedBy: user.email,
             updateDate: now
         });
+        reviewSyncProducts.push(updatedProduct);
         updatedCount += 1;
     });
 
     if (updatedCount > 0) {
         await batch.commit();
+        for (const product of reviewSyncProducts) {
+            await syncProductPriceChangeReviewState(product, {
+                salesCatalogues,
+                user,
+                sourceType: "purchase-history-sync"
+            });
+        }
     }
 
     return {
