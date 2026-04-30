@@ -804,6 +804,13 @@ select {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.price-review-sections {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+}
+
 .workspace-form-section {
     display: grid;
     gap: 1rem;
@@ -832,6 +839,46 @@ select {
     display: grid;
     gap: 0.95rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.price-review-section {
+    align-content: start;
+    height: 100%;
+}
+
+.price-review-metrics-grid,
+.price-review-audit-grid {
+    display: grid;
+    gap: 0.95rem 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+
+.price-review-metric {
+    display: grid;
+    gap: 0.32rem;
+    align-content: start;
+    min-height: 5.35rem;
+}
+
+.price-review-metric .section-kicker {
+    min-height: 2.2rem;
+    display: flex;
+    align-items: flex-end;
+}
+
+.price-review-metric p {
+    margin: 0;
+}
+
+.price-review-metric strong {
+    display: block;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.price-review-audit-grid .price-review-metric {
+    min-height: 4.9rem;
 }
 
 .grid-status-cell {
@@ -2811,7 +2858,10 @@ select {
     .purchase-adjustments-grid,
     .sales-catalogue-workspace,
     .workspace-form-sections,
+    .price-review-sections,
     .workspace-form-section-grid,
+    .price-review-metrics-grid,
+    .price-review-audit-grid,
     .retail-finance-bar,
     .retail-finance-fields-discount,
     .retail-finance-fields-tax,
