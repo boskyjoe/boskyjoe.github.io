@@ -58,6 +58,10 @@ import {
     toggleSeasonStatus
 } from "./service.js";
 
+function normalizeText(value) {
+    return (value || "").trim();
+}
+
 const ADMIN_SECTIONS = {
     categories: {
         label: "Product Categories",
