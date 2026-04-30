@@ -310,7 +310,18 @@ export async function syncProductPricingFromPurchases(
         return { updatedCount: 0, affectedProductIds: normalizedProductIds };
     }
 
-    const purchaseSnapshot = await getDb().collection(COLLECTIONS.purchaseInvoices).get();
+    let purchaseSnapshot;
+    try {
+        purchaseSnapshot = await getDb().collection(COLLECTIONS.purchaseInvoices).get();
+    } catch (error) {
+        console.error("[Moneta] Failed to read purchase history for pricing sync:", {
+            affectedProductIds: normalizedProductIds,
+            userRole: user.role || "unknown",
+            error
+        });
+        throw error;
+    }
+
     const purchaseInvoices = purchaseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const batch = getDb().batch();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -361,13 +372,32 @@ export async function syncProductPricingFromPurchases(
     });
 
     if (updatedCount > 0) {
-        await batch.commit();
-        for (const product of reviewSyncProducts) {
-            await syncProductPriceChangeReviewState(product, {
-                salesCatalogues,
-                user,
-                sourceType: "purchase-history-sync"
+        try {
+            await batch.commit();
+        } catch (error) {
+            console.error("[Moneta] Failed to update product pricing from purchases:", {
+                affectedProductIds: normalizedProductIds,
+                userRole: user.role || "unknown",
+                error
             });
+            throw error;
+        }
+
+        for (const product of reviewSyncProducts) {
+            try {
+                await syncProductPriceChangeReviewState(product, {
+                    salesCatalogues,
+                    user,
+                    sourceType: "purchase-history-sync"
+                });
+            } catch (error) {
+                console.error("[Moneta] Failed to sync product price change review state:", {
+                    productId: product.id,
+                    userRole: user.role || "unknown",
+                    error
+                });
+                throw error;
+            }
         }
     }
 
