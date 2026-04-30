@@ -58,9 +58,15 @@ export function syncThemeControlState(root = document) {
     root.querySelectorAll("[data-theme-mode-control]").forEach(button => {
         const buttonMode = normalizeThemeMode(button.getAttribute("data-theme-mode-control"));
         const isActive = buttonMode === activeMode;
+        const label = buttonMode === THEME_MODE_SYSTEM
+            ? `System (${resolvedTheme === THEME_MODE_DARK ? "Dark" : "Light"})`
+            : buttonMode === THEME_MODE_DARK
+                ? "Dark"
+                : "Light";
 
         button.classList.toggle("is-active", isActive);
         button.setAttribute("aria-pressed", String(isActive));
+        button.setAttribute("title", isActive ? `${label} theme selected` : `Switch to ${label} theme`);
     });
 
     root.querySelectorAll("[data-theme-mode-label]").forEach(node => {

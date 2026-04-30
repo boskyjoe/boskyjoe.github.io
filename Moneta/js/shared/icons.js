@@ -115,6 +115,17 @@ export const icons = {
             <circle cx="12" cy="12" r="2.8"></circle>
         </svg>
     `,
+    sun: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+        </svg>
+    `,
+    moon: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15.5 3.8a7.9 7.9 0 1 0 4.7 14.5A8.7 8.7 0 0 1 15.5 3.8z"></path>
+        </svg>
+    `,
     users: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 5 18.5V20"></path>

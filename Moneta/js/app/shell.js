@@ -55,19 +55,37 @@ function renderAuthSlot(user) {
     const themeSwitcher = document.createElement("div");
     themeSwitcher.className = "theme-switch";
     themeSwitcher.innerHTML = `
-        <label class="theme-switch-kicker" for="moneta-theme-mode-select">Theme</label>
         <div class="theme-switch-row">
-            <select
-                class="theme-switch-select"
-                id="moneta-theme-mode-select"
-                data-theme-mode-select
-                aria-label="Choose Moneta theme"
-            >
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-            </select>
-            <span class="theme-switch-value" data-theme-mode-label>${getThemeMode()}</span>
+            <div class="theme-switch-label">
+                <span class="theme-switch-label-icon">${icons.settings}</span>
+                <span class="theme-switch-label-text">Theme</span>
+            </div>
+            <div class="theme-switch-segmented" role="group" aria-label="Choose Moneta theme">
+                <button
+                    class="theme-switch-button"
+                    type="button"
+                    data-theme-mode-control="light"
+                    aria-label="Use light theme"
+                    title="Light theme">
+                    <span class="theme-switch-button-icon">${icons.sun}</span>
+                </button>
+                <button
+                    class="theme-switch-button"
+                    type="button"
+                    data-theme-mode-control="dark"
+                    aria-label="Use dark theme"
+                    title="Dark theme">
+                    <span class="theme-switch-button-icon">${icons.moon}</span>
+                </button>
+                <button
+                    class="theme-switch-button"
+                    type="button"
+                    data-theme-mode-control="system"
+                    aria-label="Follow system theme"
+                    title="System theme">
+                    <span class="theme-switch-button-icon">${icons.settings}</span>
+                </button>
+            </div>
         </div>
     `;
     authSlot.appendChild(themeSwitcher);
