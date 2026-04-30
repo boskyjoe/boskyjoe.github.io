@@ -40,6 +40,7 @@ function renderSidebarTree(item, user, currentHash, currentRoute) {
             items: (group.items || []).filter(child => canAccessNavItem(child, user.role))
         }))
         .filter(group => group.items.length > 0);
+    const visibleChildCount = visibleGroups.reduce((count, group) => count + group.items.length, 0);
 
     if (!visibleGroups.length) {
         return null;
@@ -64,7 +65,10 @@ function renderSidebarTree(item, user, currentHash, currentRoute) {
             <span class="nav-icon ${item.iconClass || ""}">${item.icon || icons.settings}</span>
             <span class="nav-label">${item.label}</span>
         </span>
-        <span class="sidebar-tree-caret" aria-hidden="true">${icons.chevronDown}</span>
+        <span class="sidebar-tree-meta">
+            <span class="sidebar-tree-badge" aria-label="${visibleChildCount} admin sections">${visibleChildCount}</span>
+            <span class="sidebar-tree-caret" aria-hidden="true">${icons.chevronDown}</span>
+        </span>
     `;
     toggle.addEventListener("click", () => {
         sidebarTreeState[item.key] = !sidebarTreeState[item.key];
