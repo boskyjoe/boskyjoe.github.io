@@ -241,6 +241,10 @@ function setActiveSection(section) {
     featureState.activeSection = section;
 }
 
+function getPendingProductPriceReviews(rows = []) {
+    return (rows || []).filter(record => normalizeText(record.status || "pending") === "pending");
+}
+
 function getEditingRecord(snapshot, section = featureState.activeSection) {
     const recordId = featureState.editingIds[section];
 
@@ -275,7 +279,12 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
             return rows.find(record => record.id === recordId) || null;
         }
 
-        return rows[0] || null;
+        const pendingRows = getPendingProductPriceReviews(rows);
+        if (pendingRows.length === 1) {
+            return pendingRows[0];
+        }
+
+        return null;
     }
 
     if (!recordId) return null;
@@ -1692,6 +1701,8 @@ function renderReorderPolicyForm(snapshot) {
 
 function renderProductPriceChangeReviewForm(snapshot) {
     const review = getEditingRecord(snapshot, "productPriceChangeReviews");
+    const rows = getSectionRows(snapshot, "productPriceChangeReviews");
+    const pendingRows = getPendingProductPriceReviews(rows);
 
     if (!review) {
         return `
@@ -1701,10 +1712,21 @@ function renderProductPriceChangeReviewForm(snapshot) {
                         <span class="panel-icon">${icons.warning}</span>
                         <div>
                             <h3>Product Price Change Review</h3>
-                            <p class="panel-copy">Moneta will list pending product pricing decisions here when cost movement needs approval.</p>
+                            <p class="panel-copy">${rows.length
+                                ? (pendingRows.length === 1
+                                    ? "Moneta found one pending review and can open it automatically."
+                                    : "Select a price review from the queue below to inspect the cost change, recommendation, and Sales Catalogue impact.")
+                                : "Moneta will list pending product pricing decisions here when cost movement needs approval."}</p>
                         </div>
                     </div>
-                    <span class="status-pill">Waiting</span>
+                    <span class="status-pill">${rows.length ? `${pendingRows.length} pending` : "Waiting"}</span>
+                </div>
+                <div class="panel-body">
+                    <div class="empty-state">
+                        ${rows.length
+                            ? "Choose a review from the queue to continue."
+                            : "No product price reviews are waiting right now."}
+                    </div>
                 </div>
             </div>
         `;
@@ -1729,52 +1751,52 @@ function renderProductPriceChangeReviewForm(snapshot) {
                 </div>
             </div>
             <div class="panel-body">
-                <div class="workspace-form-sections">
-                    <section class="workspace-form-section">
+                <div class="price-review-sections">
+                    <section class="workspace-form-section price-review-section">
                         <div class="workspace-form-section-head">
                             <p class="workspace-form-section-kicker">Product</p>
                             <h3>${escapeHtml(review.productName || "Product")}</h3>
                             <p class="panel-copy">Item ID: ${escapeHtml(review.itemId || "-")}</p>
                         </div>
-                        <div class="workspace-form-section-grid">
-                            <div>
+                        <div class="price-review-metrics-grid">
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Current Live Price</p>
                                 <p><strong>${formatCurrency(review.currentSellingPrice)}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Recommended Price</p>
                                 <p><strong>${formatCurrency(review.recommendedSellingPrice)}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Previous Standard Cost</p>
                                 <p><strong>${formatCurrency(review.previousStandardCost)}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">New Standard Cost</p>
                                 <p><strong>${formatCurrency(review.nextStandardCost)}</strong></p>
                             </div>
                         </div>
                     </section>
-                    <section class="workspace-form-section">
+                    <section class="workspace-form-section price-review-section">
                         <div class="workspace-form-section-head">
                             <p class="workspace-form-section-kicker">Impact</p>
                             <h3>Decision Context</h3>
                             <p class="panel-copy">Use this summary to decide whether the suggested live product price should be accepted now.</p>
                         </div>
-                        <div class="workspace-form-section-grid">
-                            <div>
+                        <div class="price-review-metrics-grid">
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Cost Change</p>
                                 <p><strong>${review.costChangePercent === null || review.costChangePercent === undefined ? "-" : `${review.costChangePercent > 0 ? "+" : ""}${Number(review.costChangePercent).toFixed(2)}%`}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Triggered By</p>
                                 <p><strong>${escapeHtml(review.sourceType || "-")}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Active Sales Catalogues</p>
                                 <p><strong>${Number(review.affectedSalesCatalogueCount || 0)}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Active Catalogue Items</p>
                                 <p><strong>${Number(review.affectedSalesCatalogueItemCount || 0)}</strong></p>
                             </div>
@@ -1783,26 +1805,26 @@ function renderProductPriceChangeReviewForm(snapshot) {
                             ? `Affected active catalogues: ${escapeHtml(review.affectedSalesCatalogueNames.join(", "))}.`
                             : "This product is not currently used in any active Sales Catalogue."}</p>
                     </section>
-                    <section class="workspace-form-section">
+                    <section class="workspace-form-section price-review-section">
                         <div class="workspace-form-section-head">
                             <p class="workspace-form-section-kicker">Audit</p>
                             <h3>Review Trail</h3>
                             <p class="panel-copy">Keep pricing governance visible so approvals and rejections can be traced later.</p>
                         </div>
-                        <div class="workspace-form-section-grid">
-                            <div>
+                        <div class="price-review-audit-grid">
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Created By</p>
                                 <p><strong>${escapeHtml(review.createdBy || "-")}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Created On</p>
                                 <p><strong>${formatDateTime(review.createdOn)}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Resolved By</p>
                                 <p><strong>${escapeHtml(review.resolvedBy || "-")}</strong></p>
                             </div>
-                            <div>
+                            <div class="price-review-metric">
                                 <p class="section-kicker">Resolved On</p>
                                 <p><strong>${formatDateTime(review.resolvedOn)}</strong></p>
                             </div>
