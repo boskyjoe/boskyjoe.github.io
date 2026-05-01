@@ -303,10 +303,9 @@ export function validatePricingPolicyPayload(payload, existingPolicies = []) {
         DEFAULT_PRICING_POLICY.costChangeAlertThresholdPercentage,
         0
     );
-    const allowManualCostOverride = normalizeBoolean(
-        payload.allowManualCostOverride,
-        DEFAULT_PRICING_POLICY.allowManualCostOverride
-    );
+    const allowManualCostOverride = existingPolicy.allowManualCostOverride !== undefined
+        ? Boolean(existingPolicy.allowManualCostOverride)
+        : DEFAULT_PRICING_POLICY.allowManualCostOverride;
 
     if (!policyName) {
         throw new Error("Policy name is required.");
@@ -901,7 +900,7 @@ export async function approveProductPriceChangeReview(reviewId, { syncActiveSale
     });
 
     let syncResult = { syncedCount: 0, syncedCatalogueCount: 0 };
-    if (syncActiveSalesCatalogues && liveSellingPriceChanged) {
+    if (syncActiveSalesCatalogues) {
         syncResult = await syncSalesCatalogueItemsForApprovedProduct({
             ...product,
             sellingPrice: approvedSellingPrice,

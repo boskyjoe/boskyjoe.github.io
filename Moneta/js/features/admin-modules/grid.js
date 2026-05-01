@@ -121,13 +121,6 @@ function buildPricingPoliciesColumnDefs() {
             valueFormatter: params => `${Number(params.value) || 0}%`
         },
         {
-            field: "allowManualCostOverride",
-            headerName: "Manual Override",
-            minWidth: 150,
-            flex: 0.85,
-            valueFormatter: params => params.value ? "Allowed" : "Locked"
-        },
-        {
             headerName: "Updated",
             minWidth: 150,
             flex: 0.9,

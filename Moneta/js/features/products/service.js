@@ -11,6 +11,7 @@ import {
     roundCurrency
 } from "../../shared/pricing-policy.js";
 import { approveProductPriceChangeReview } from "../admin-modules/service.js";
+import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -24,6 +25,23 @@ function normalizeNumber(value, fallback = 0) {
 function isPurchaseDrivenCostingMethod(policySettings = {}) {
     return policySettings.costingMethod === "weighted-average"
         || policySettings.costingMethod === "latest-purchase";
+}
+
+function isCustomProductType(itemType = "") {
+    return normalizeText(itemType).toLowerCase() === "custom";
+}
+
+function hasPurchaseHistory(product = {}) {
+    const pricingMeta = product?.pricingMeta || {};
+
+    return Math.max(
+        0,
+        normalizeNumber(pricingMeta.purchaseEntryCount ?? pricingMeta.totalPurchasedUnits)
+    ) > 0;
+}
+
+function canSyncSalesCatalogues(user = null) {
+    return ["admin", "inventory_manager", "sales_staff", "team_lead"].includes(normalizeText(user?.role));
 }
 
 function getPolicyDerivedStandardCost(product = {}, policySettings = {}) {
@@ -43,30 +61,6 @@ function getPolicyDerivedStandardCost(product = {}, policySettings = {}) {
     }
 
     return existingStandardCost;
-}
-
-function inferStandardCostSource(currentProduct = null, policySettings = {}) {
-    if (policySettings.costingMethod === "manual-standard-cost") {
-        return "manual-standard-cost";
-    }
-
-    const storedSource = normalizeText(currentProduct?.pricingMeta?.standardCostSource);
-    if (storedSource === "manual-override" && policySettings.allowManualCostOverride) {
-        return "manual-override";
-    }
-
-    if (!policySettings.allowManualCostOverride) {
-        return "policy-default";
-    }
-
-    if (!currentProduct) {
-        return "policy-default";
-    }
-
-    const policyDerivedCost = getPolicyDerivedStandardCost(currentProduct, policySettings);
-    return roundCurrency(currentProduct.unitPrice) !== policyDerivedCost
-        ? "manual-override"
-        : "policy-default";
 }
 
 function resolveReviewBaselineStandardCost(currentProduct = null) {
@@ -109,6 +103,7 @@ export function validateProductPayload(payload, masterData = {}) {
     const itemName = normalizeText(payload.itemName);
     const categoryId = normalizeText(payload.categoryId);
     const itemType = normalizeText(payload.itemType) || "Standard";
+    const customProduct = isCustomProductType(itemType);
     const unitPrice = normalizeNumber(payload.unitPrice);
     const unitMarginPercentage = normalizeNumber(payload.unitMarginPercentage);
     const inventoryCount = normalizeNumber(payload.inventoryCount);
@@ -119,16 +114,10 @@ export function validateProductPayload(payload, masterData = {}) {
     const resolvedPolicy = resolveSystemDefaultPricingPolicy(pricingPolicies, { activeOnly: true }) || null;
     const policySettings = getNormalizedPricingPolicySettings(resolvedPolicy || {});
     const isPurchaseDriven = isPurchaseDrivenCostingMethod(policySettings);
-    const requestedStandardCostSource = normalizeText(payload.standardCostSource);
-    const standardCostSource = policySettings.costingMethod === "manual-standard-cost"
-        ? "manual-standard-cost"
-        : requestedStandardCostSource === "manual-override" && policySettings.allowManualCostOverride
-            ? "manual-override"
-            : inferStandardCostSource(currentProduct, policySettings) === "manual-override"
-                && policySettings.allowManualCostOverride
-                && !requestedStandardCostSource
-                ? "manual-override"
-                : "policy-default";
+    const standardCostLocked = Boolean(currentProduct)
+        && !customProduct
+        && isPurchaseDriven
+        && hasPurchaseHistory(currentProduct);
     const recommendedSellingPrice = calculateSellingPriceFromMargin(unitPrice, unitMarginPercentage);
     const manualSellingPrice = roundCurrency(normalizeNumber(payload.sellingPrice, recommendedSellingPrice));
     const policyDerivedCost = currentProduct
@@ -140,42 +129,31 @@ export function validateProductPayload(payload, masterData = {}) {
     if (unitPrice < 0) throw new Error("Unit price cannot be negative.");
     if (unitMarginPercentage < 0) throw new Error("Margin cannot be negative.");
     if (manualSellingPrice < 0) throw new Error("Selling price cannot be negative.");
-    if (
-        currentProduct
-        && isPurchaseDriven
-        && standardCostSource !== "manual-override"
-        && roundCurrency(policyDerivedCost) !== roundCurrency(unitPrice)
-    ) {
+    if (standardCostLocked && roundCurrency(policyDerivedCost) !== roundCurrency(unitPrice)) {
         throw new Error("Standard cost is controlled by the active pricing policy.");
-    }
-    if (
-        currentProduct
-        && isPurchaseDriven
-        && requestedStandardCostSource === "manual-override"
-        && !policySettings.allowManualCostOverride
-    ) {
-        throw new Error("Manual standard-cost overrides are locked by the active pricing policy.");
     }
 
     const hasCurrentProduct = Boolean(currentProduct);
     const preservedSellingPrice = hasCurrentProduct
         ? roundCurrency(normalizeNumber(currentProduct?.sellingPrice, recommendedSellingPrice))
         : recommendedSellingPrice;
-    const effectiveLiveSellingPrice = policySettings.sellingPriceBehavior === "manual"
+    const effectiveLiveSellingPrice = customProduct
         ? manualSellingPrice
-        : policySettings.sellingPriceBehavior === "auto-update-from-margin"
-            ? recommendedSellingPrice
-            : preservedSellingPrice;
+        : policySettings.sellingPriceBehavior === "manual"
+            ? manualSellingPrice
+            : policySettings.sellingPriceBehavior === "auto-update-from-margin"
+                ? recommendedSellingPrice
+                : preservedSellingPrice;
 
     const pricingBaseProduct = {
         ...(currentProduct || {}),
+        itemType,
         unitPrice,
         unitMarginPercentage,
         sellingPrice: effectiveLiveSellingPrice,
         pricingMeta: {
             ...(currentProduct?.pricingMeta || {}),
-            previousStandardCost: resolveReviewBaselineStandardCost(currentProduct),
-            standardCostSource
+            previousStandardCost: resolveReviewBaselineStandardCost(currentProduct)
         }
     };
     const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
@@ -196,7 +174,6 @@ export function validateProductPayload(payload, masterData = {}) {
         netWeightKg,
         pricingMeta: {
             ...pricingSnapshot.pricingMeta,
-            standardCostSource: pricingSnapshot.pricingMeta.standardCostSource || standardCostSource,
             priceVersion: liveSellingPriceChanged
                 ? Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)) + 1
                 : Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)),
@@ -208,7 +185,8 @@ export function validateProductPayload(payload, masterData = {}) {
         _reviewMeta: {
             currentProduct,
             liveSellingPriceChanged,
-            sourceType: "manual-product-update"
+            sourceType: "manual-product-update",
+            skipReview: customProduct
         }
     };
 }
@@ -219,9 +197,13 @@ export async function saveProduct(payload, masterData, user, options = {}) {
     }
 
     const postSaveAction = normalizeText(options.postSaveAction || "save");
-    const isFastTrackAction = postSaveAction === "approve-price-change" || postSaveAction === "approve-and-sync-catalogues";
-    if (isFastTrackAction && user.role !== "admin") {
+    const isApprovalAction = postSaveAction === "approve-price-change" || postSaveAction === "approve-and-sync-catalogues";
+    const wantsCatalogueSync = postSaveAction === "sync-catalogues" || postSaveAction === "approve-and-sync-catalogues";
+    if (isApprovalAction && user.role !== "admin") {
         throw new Error("Only admins can approve product price changes from Product Catalogue.");
+    }
+    if (wantsCatalogueSync && !canSyncSalesCatalogues(user)) {
+        throw new Error("You do not have permission to sync Sales Catalogue pricing from Product Catalogue.");
     }
 
     const productData = validateProductPayload(payload, masterData);
@@ -237,10 +219,11 @@ export async function saveProduct(payload, masterData, user, options = {}) {
         }, {
             salesCatalogues: masterData.salesCatalogues || [],
             user,
-            sourceType: _reviewMeta.sourceType
+            sourceType: _reviewMeta.sourceType,
+            skipReview: Boolean(_reviewMeta.skipReview)
         });
 
-        if (isFastTrackAction && reviewOutcome.status === "pending" && reviewOutcome.reviewId && reviewOutcome.review) {
+        if (isApprovalAction && reviewOutcome.status === "pending" && reviewOutcome.reviewId && reviewOutcome.review) {
             try {
                 const approvalResult = await approveProductPriceChangeReview(
                     reviewOutcome.reviewId,
@@ -268,11 +251,33 @@ export async function saveProduct(payload, masterData, user, options = {}) {
             }
         }
 
+        if (wantsCatalogueSync && reviewOutcome.status === "pending" && !_reviewMeta.skipReview) {
+            const syncGuardError = new Error("This standard product was saved, but Sales Catalogue sync still requires price approval.");
+            syncGuardError.productSaved = true;
+            syncGuardError.reviewOutcome = reviewOutcome;
+            throw syncGuardError;
+        }
+
+        let syncResult = null;
+        if (wantsCatalogueSync) {
+            syncResult = await syncSalesCatalogueItemsForApprovedProduct(
+                buildApprovedProductSnapshot(docId, _reviewMeta.currentProduct, persistedProductData, reviewOutcome),
+                masterData.salesCatalogues || [],
+                user,
+                masterData.categories || []
+            );
+        }
+
         return {
             mode: "update",
             docId,
             reviewOutcome,
-            pricingAction: isFastTrackAction ? "save-only-no-review" : "save"
+            pricingAction: wantsCatalogueSync
+                ? "sync-catalogues"
+                : isApprovalAction
+                    ? "save-only-no-review"
+                    : "save",
+            syncResult
         };
     }
 

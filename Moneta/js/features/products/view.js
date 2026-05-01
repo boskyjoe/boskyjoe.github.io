@@ -25,6 +25,10 @@ function getSaveIntentLabel(intent = "save") {
         return "Save, Approve, and Sync Catalogues";
     }
 
+    if (intent === "sync-catalogues") {
+        return "Save and Sync Catalogues";
+    }
+
     return "Save Product";
 }
 
@@ -44,6 +48,14 @@ function getSaveIntentProgressCopy(docId, intent = "save") {
             title: "Saving, Approving, and Syncing Catalogues",
             successTitle: "Product Saved, Approved, and Synced",
             successMessage: "The product update, price approval, and Sales Catalogue sync were completed successfully."
+        };
+    }
+
+    if (intent === "sync-catalogues") {
+        return {
+            title: "Saving and Syncing Catalogues",
+            successTitle: "Product Saved and Synced",
+            successMessage: "The product update and Sales Catalogue sync were completed successfully."
         };
     }
 
@@ -101,6 +113,25 @@ function getCostingMethodLabel(settings = {}) {
     return "Manual Standard Cost";
 }
 
+function isCustomProductType(itemType = "") {
+    return (itemType || "").trim().toLowerCase() === "custom";
+}
+
+function getPurchaseHistoryCount(product = {}) {
+    const pricingMeta = product?.pricingMeta || {};
+    const countCandidate = Number(pricingMeta.purchaseEntryCount ?? pricingMeta.totalPurchasedUnits);
+    return Number.isFinite(countCandidate) ? Math.max(0, countCandidate) : 0;
+}
+
+function hasPurchaseHistory(product = {}) {
+    return getPurchaseHistoryCount(product) > 0;
+}
+
+function isPurchaseDrivenCostingMethod(settings = {}) {
+    return settings.costingMethod === "weighted-average"
+        || settings.costingMethod === "latest-purchase";
+}
+
 function getPolicyDerivedStandardCost(product = {}, settings = {}) {
     const pricingMeta = product?.pricingMeta || {};
     const fallbackCost = roundCurrency(product?.unitPrice);
@@ -120,46 +151,92 @@ function getPolicyDerivedStandardCost(product = {}, settings = {}) {
     return fallbackCost;
 }
 
-function inferStandardCostSource(product = {}, settings = {}) {
-    if (settings.costingMethod === "manual-standard-cost") {
-        return "manual-standard-cost";
-    }
-
-    const storedSource = product?.pricingMeta?.standardCostSource;
-    if (storedSource === "manual-override" && settings.allowManualCostOverride) {
-        return "manual-override";
-    }
-
-    if (!settings.allowManualCostOverride) {
-        return "policy-default";
-    }
-
-    const policyDerivedCost = getPolicyDerivedStandardCost(product, settings);
-    return roundCurrency(product?.unitPrice) !== policyDerivedCost
-        ? "manual-override"
-        : "policy-default";
+function isStandardCostLocked({ itemType = "Standard", settings = {}, product = null } = {}) {
+    return !isCustomProductType(itemType)
+        && Boolean(product)
+        && isPurchaseDrivenCostingMethod(settings)
+        && hasPurchaseHistory(product);
 }
 
-function getStandardCostHelpCopy(settings = {}, source = "policy-default", policyDerivedCost = 0) {
+function getStandardCostHelpCopy({
+    itemType = "Standard",
+    settings = {},
+    hasHistory = false,
+    policyDerivedCost = 0
+} = {}) {
     const costingLabel = getCostingMethodLabel(settings);
     const formattedPolicyCost = `₹${roundCurrency(policyDerivedCost).toFixed(2)}`;
 
+    if (isCustomProductType(itemType)) {
+        return "Custom products keep standard cost manual. Purchase-driven pricing policy does not overwrite this field.";
+    }
+
     if (settings.costingMethod === "manual-standard-cost") {
-        return "Standard cost is fully manual under the active pricing policy.";
+        return "The active pricing policy leaves standard cost manual for standard products.";
     }
 
-    if (source === "manual-override") {
-        return `Manual override is active. Moneta will keep this entered standard cost until you switch back to ${costingLabel}.`;
+    if (hasHistory) {
+        return `Locked by pricing policy: ${costingLabel} now drives standard cost because this standard product already has purchase history. Current policy cost: ${formattedPolicyCost}.`;
     }
 
-    if (!settings.allowManualCostOverride) {
-        return `Locked by pricing policy: ${costingLabel} controls standard cost for this product. Current policy cost: ${formattedPolicyCost}.`;
-    }
-
-    return `Controlled by pricing policy: ${costingLabel} is currently supplying the standard cost. Current policy cost: ${formattedPolicyCost}. Switch Cost Source to Manual Override if you need an exception.`;
+    return `Editable during setup. Once the first valid purchase is posted, Moneta will switch this standard product to ${costingLabel}.`;
 }
 
-function setStandardCostReadOnlyState(input, isReadOnly) {
+function getRecommendedSellingPriceHelpCopy({ itemType = "Standard", settings = {} } = {}) {
+    if (isCustomProductType(itemType)) {
+        return "Moneta keeps this recommendation in sync with standard cost and target margin, even when you choose a different live selling price.";
+    }
+
+    if (settings.sellingPriceBehavior === "manual") {
+        return "This recommendation is still calculated from standard cost and target margin, but the active pricing policy leaves the live price manual.";
+    }
+
+    if (settings.sellingPriceBehavior === "auto-update-from-margin") {
+        return "The active pricing policy uses this recommendation as the live selling price automatically.";
+    }
+
+    return "This is Moneta's recommended price from standard cost and target margin.";
+}
+
+function getLiveSellingPriceHelpCopy({ itemType = "Standard", settings = {} } = {}) {
+    if (isCustomProductType(itemType)) {
+        return "Custom products can override the live selling price manually. Use Save and Sync Catalogues when you want active catalogue items updated to this live price.";
+    }
+
+    if (settings.sellingPriceBehavior === "manual") {
+        return "The active pricing policy leaves the live selling price manual for this standard product.";
+    }
+
+    if (settings.sellingPriceBehavior === "auto-update-from-margin") {
+        return "The active pricing policy keeps the live selling price aligned to the recommendation.";
+    }
+
+    return "Moneta keeps the live selling price steady until an approved price decision changes it.";
+}
+
+function getPriceReviewCopy({
+    itemType = "Standard",
+    reviewRequired = false,
+    reviewValue = null,
+    hasHistory = false,
+    isPurchaseDriven = false
+} = {}) {
+    if (isCustomProductType(itemType)) {
+        return "Custom products stay outside the purchase-driven price-review workflow. Manage the live selling price directly here, then sync active Sales Catalogue items when needed.";
+    }
+
+    if (reviewRequired) {
+        return `Moneta is flagging this product for price review because standard cost moved${reviewValue === null ? " from no prior baseline." : ` by ${Math.abs(reviewValue)}%.`}`;
+    }
+
+    if (hasHistory && isPurchaseDriven) {
+        return "Moneta is not currently flagging this product for an additional price review.";
+    }
+
+    return "This standard product is still using setup cost because it does not yet have purchase history.";
+}
+
+function setInputReadOnlyState(input, isReadOnly) {
     if (!input) return;
 
     if (isReadOnly) {
@@ -175,62 +252,94 @@ function setStandardCostReadOnlyState(input, isReadOnly) {
     }
 }
 
-function syncStandardCostSourceControl() {
-    const costSourceSelect = document.getElementById("product-cost-source");
+function syncProductPricingFormState() {
+    const productTypeSelect = document.getElementById("product-type");
     const standardCostInput = document.getElementById("product-unit-price");
     const standardCostHelp = document.getElementById("product-unit-price-help");
+    const recommendedPriceHelp = document.getElementById("product-recommended-price-help");
+    const liveSellingPriceInput = document.getElementById("product-live-selling-price");
+    const liveSellingPriceHelp = document.getElementById("product-live-selling-price-help");
+    const snapshotNote = document.getElementById("product-pricing-snapshot-note");
+    const priceReviewCopy = document.getElementById("product-price-review-copy");
 
-    if (!costSourceSelect || !standardCostInput || !standardCostHelp) {
+    if (!productTypeSelect || !standardCostInput || !standardCostHelp || !recommendedPriceHelp || !liveSellingPriceInput || !liveSellingPriceHelp) {
         return;
     }
 
-    const allowManualOverride = costSourceSelect.dataset.allowManualOverride === "true";
-    const isManualOverride = allowManualOverride && costSourceSelect.value === "manual-override";
-    const manualCost = standardCostInput.dataset.manualCost || standardCostInput.value || 0;
+    const itemType = productTypeSelect.value || "Standard";
+    const settings = {
+        costingMethod: standardCostInput.dataset.costingMethod,
+        sellingPriceBehavior: liveSellingPriceInput.dataset.sellingBehavior
+    };
+    const historyCount = Number(standardCostInput.dataset.purchaseHistoryCount || 0);
+    const historyActive = Number.isFinite(historyCount) && historyCount > 0;
     const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
+    const customProduct = isCustomProductType(itemType);
+    const costLocked = !customProduct
+        && isPurchaseDrivenCostingMethod(settings)
+        && historyActive;
+    const livePriceEditable = customProduct || settings.sellingPriceBehavior === "manual";
+    const livePriceSyncMode = customProduct
+        ? "preserve"
+        : settings.sellingPriceBehavior === "auto-update-from-margin"
+            ? "recommended"
+            : "preserve";
 
-    if (isManualOverride) {
-        setStandardCostReadOnlyState(standardCostInput, false);
-        standardCostInput.value = manualCost;
-        requestAnimationFrame(() => {
-            standardCostInput.focus();
-            if (typeof standardCostInput.select === "function") {
-                standardCostInput.select();
-            }
-        });
-    } else {
-        setStandardCostReadOnlyState(standardCostInput, true);
+    if (costLocked) {
         standardCostInput.value = policyCost;
     }
 
-    standardCostHelp.textContent = getStandardCostHelpCopy(
-        {
-            costingMethod: costSourceSelect.dataset.costingMethod,
-            allowManualCostOverride: allowManualOverride
-        },
-        isManualOverride ? "manual-override" : "policy-default",
-        policyCost
-    );
+    setInputReadOnlyState(standardCostInput, costLocked);
+    setInputReadOnlyState(liveSellingPriceInput, !livePriceEditable);
+    liveSellingPriceInput.dataset.syncMode = livePriceSyncMode;
+    liveSellingPriceInput.dataset.editable = livePriceEditable ? "true" : "false";
+
+    standardCostHelp.textContent = getStandardCostHelpCopy({
+        itemType,
+        settings,
+        hasHistory: historyActive,
+        policyDerivedCost: policyCost
+    });
+    recommendedPriceHelp.textContent = getRecommendedSellingPriceHelpCopy({ itemType, settings });
+    liveSellingPriceHelp.textContent = getLiveSellingPriceHelpCopy({ itemType, settings });
+
+    if (snapshotNote) {
+        if (customProduct) {
+            snapshotNote.textContent = "Custom products stay manually managed. Purchase sync does not overwrite standard cost, but active Sales Catalogue items can still be synced from the saved live price.";
+        } else if (settings.costingMethod === "manual-standard-cost") {
+            snapshotNote.textContent = "This standard product stays manually costed because the active pricing policy uses Manual Standard Cost.";
+        } else if (historyActive) {
+            snapshotNote.textContent = `This standard product is now purchase-driven. ${getCostingMethodLabel(settings)} controls standard cost because purchase history already exists.`;
+        } else {
+            snapshotNote.textContent = `This standard product is still in setup mode. The first valid purchase will hand standard-cost control to ${getCostingMethodLabel(settings)}.`;
+        }
+    }
+
+    if (priceReviewCopy) {
+        priceReviewCopy.textContent = getPriceReviewCopy({
+            itemType,
+            reviewRequired: priceReviewCopy.dataset.reviewRequired === "true",
+            reviewValue: priceReviewCopy.dataset.reviewValue === "" ? null : Number(priceReviewCopy.dataset.reviewValue),
+            hasHistory: historyActive,
+            isPurchaseDriven: isPurchaseDrivenCostingMethod(settings)
+        });
+    }
 
     updateSellingPricePreview();
 }
 
 function bindProductPricingFieldInteractions() {
-    const costSourceSelect = document.getElementById("product-cost-source");
+    const productTypeSelect = document.getElementById("product-type");
     const standardCostInput = document.getElementById("product-unit-price");
     const marginInput = document.getElementById("product-margin");
-    const sellingPriceInput = document.getElementById("product-selling-price");
+    const liveSellingPriceInput = document.getElementById("product-live-selling-price");
 
-    if (costSourceSelect) {
-        costSourceSelect.onchange = () => syncStandardCostSourceControl();
-        costSourceSelect.oninput = () => syncStandardCostSourceControl();
+    if (productTypeSelect) {
+        productTypeSelect.onchange = () => syncProductPricingFormState();
     }
 
     if (standardCostInput) {
         standardCostInput.oninput = () => {
-            if (!standardCostInput.readOnly) {
-                standardCostInput.dataset.manualCost = standardCostInput.value || "0";
-            }
             updateSellingPricePreview();
         };
     }
@@ -239,8 +348,11 @@ function bindProductPricingFieldInteractions() {
         marginInput.oninput = () => updateSellingPricePreview();
     }
 
-    if (sellingPriceInput && sellingPriceInput.dataset.manualEntry === "true") {
-        sellingPriceInput.oninput = () => updateSellingPricePreview();
+    if (liveSellingPriceInput) {
+        liveSellingPriceInput.oninput = () => {
+            liveSellingPriceInput.dataset.touched = "true";
+            updateSellingPricePreview();
+        };
     }
 }
 
@@ -254,34 +366,40 @@ function renderProductsViewShell(snapshot) {
     const productsCount = snapshot.masterData.products?.length || 0;
     const pricingPolicy = getActivePricingPolicy(snapshot);
     const pricingPolicySettings = getNormalizedPricingPolicySettings(pricingPolicy || {});
-    const isPurchaseDrivenCosting = pricingPolicySettings.costingMethod === "weighted-average"
-        || pricingPolicySettings.costingMethod === "latest-purchase";
-    const standardCostSource = editingProduct
-        ? inferStandardCostSource(editingProduct, pricingPolicySettings)
-        : pricingPolicySettings.costingMethod === "manual-standard-cost"
-            ? "manual-standard-cost"
-            : "policy-default";
+    const selectedItemType = editingProduct?.itemType || "Standard";
+    const customProduct = isCustomProductType(selectedItemType);
+    const purchaseHistoryActive = hasPurchaseHistory(editingProduct);
+    const isPurchaseDrivenCosting = isPurchaseDrivenCostingMethod(pricingPolicySettings);
     const policyDerivedStandardCost = editingProduct
         ? getPolicyDerivedStandardCost(editingProduct, pricingPolicySettings)
         : 0;
     const marginValue = editingProduct?.unitMarginPercentage ?? pricingPolicySettings.defaultTargetMarginPercentage;
     const standardCostValue = editingProduct?.unitPrice || 0;
-    const displayedStandardCost = editingProduct && isPurchaseDrivenCosting && standardCostSource !== "manual-override"
+    const costLocked = isStandardCostLocked({
+        itemType: selectedItemType,
+        settings: pricingPolicySettings,
+        product: editingProduct
+    });
+    const displayedStandardCost = costLocked
         ? policyDerivedStandardCost
         : standardCostValue;
     const recommendedSellingPrice = calculateSellingPrice(displayedStandardCost, marginValue);
     const liveSellingPrice = editingProduct?.sellingPrice ?? recommendedSellingPrice;
-    const isManualSellingPrice = pricingPolicySettings.sellingPriceBehavior === "manual";
-    const costOverrideLocked = Boolean(editingProduct)
-        && isPurchaseDrivenCosting
-        && standardCostSource !== "manual-override";
+    const liveSellingPriceEditable = customProduct || pricingPolicySettings.sellingPriceBehavior === "manual";
     const isAdminUser = snapshot.currentUser?.role === "admin";
-    const showAdminFastTrackActions = isAdminUser && Boolean(editingProduct);
+    const showCatalogueSyncAction = Boolean(editingProduct)
+        && customProduct
+        && ["admin", "inventory_manager", "sales_staff", "team_lead"].includes(snapshot.currentUser?.role);
+    const showAdminFastTrackActions = isAdminUser && Boolean(editingProduct) && !customProduct;
     const priceReviewRequired = Boolean(editingProduct?.pricingMeta?.requiresPriceReview);
     const priceReviewValue = editingProduct?.pricingMeta?.costChangePercent;
-    const priceReviewCopy = priceReviewRequired
-        ? `Moneta is flagging this product for price review because standard cost moved${priceReviewValue === null ? " from no prior baseline." : ` by ${Math.abs(priceReviewValue)}%.`}`
-        : "Moneta is not currently flagging this product for an additional price review.";
+    const priceReviewCopy = getPriceReviewCopy({
+        itemType: selectedItemType,
+        reviewRequired: priceReviewRequired,
+        reviewValue: priceReviewValue,
+        hasHistory: purchaseHistoryActive,
+        isPurchaseDriven: isPurchaseDrivenCosting
+    });
 
     root.innerHTML = `
         <div style="display:grid; gap:1rem;">
@@ -330,26 +448,10 @@ function renderProductsViewShell(snapshot) {
                             <section class="product-form-section">
                                 <div class="product-form-section-head">
                                     <h3>Pricing</h3>
-                                    <p class="panel-copy">These values follow the active Moneta pricing policy and show both recommendation and live price behavior.</p>
+                                    <p class="panel-copy">Standard products move from setup cost to purchase-driven costing after real purchases arrive. Custom products keep manual cost and live price control.</p>
                                 </div>
                                 <div class="product-form-grid product-form-grid-pricing">
                                     <div class="field product-span-3 product-field-with-help">
-                                        ${editingProduct && isPurchaseDrivenCosting ? `
-                                            <label for="product-cost-source">Cost Source</label>
-                                            <select
-                                                id="product-cost-source"
-                                                class="select"
-                                                data-costing-method="${pricingPolicySettings.costingMethod}"
-                                                data-allow-manual-override="${pricingPolicySettings.allowManualCostOverride ? "true" : "false"}"
-                                                ${pricingPolicySettings.allowManualCostOverride ? "" : "disabled"}>
-                                                <option value="policy-default" ${standardCostSource !== "manual-override" ? "selected" : ""}>
-                                                    Use ${getCostingMethodLabel(pricingPolicySettings)}
-                                                </option>
-                                                <option value="manual-override" ${standardCostSource === "manual-override" ? "selected" : ""} ${pricingPolicySettings.allowManualCostOverride ? "" : "disabled"}>
-                                                    Manual Override
-                                                </option>
-                                            </select>
-                                        ` : ""}
                                         <label for="product-unit-price">Standard Cost</label>
                                         <input
                                             id="product-unit-price"
@@ -359,11 +461,17 @@ function renderProductsViewShell(snapshot) {
                                             step="0.01"
                                             value="${displayedStandardCost}"
                                             data-policy-cost="${policyDerivedStandardCost}"
-                                            data-manual-cost="${standardCostValue}"
-                                            ${costOverrideLocked ? "readonly" : ""}>
+                                            data-purchase-history-count="${getPurchaseHistoryCount(editingProduct)}"
+                                            data-costing-method="${pricingPolicySettings.costingMethod}"
+                                            ${costLocked ? "readonly" : ""}>
                                         <p id="product-unit-price-help" class="panel-copy panel-copy-tight">${editingProduct
-                                            ? getStandardCostHelpCopy(pricingPolicySettings, standardCostSource, policyDerivedStandardCost)
-                                            : "Use this as the starting standard cost. Moneta can later refresh it from purchase history if the policy requires it."}</p>
+                                            ? getStandardCostHelpCopy({
+                                                itemType: selectedItemType,
+                                                settings: pricingPolicySettings,
+                                                hasHistory: purchaseHistoryActive,
+                                                policyDerivedCost: policyDerivedStandardCost
+                                            })
+                                            : "Use this as the opening standard cost. For standard products, Moneta will switch to purchase-driven costing after the first valid purchase."}</p>
                                     </div>
                                     <div class="field product-span-3 product-field-with-help">
                                         <label for="product-margin">Target Margin %</label>
@@ -371,26 +479,36 @@ function renderProductsViewShell(snapshot) {
                                         <p class="panel-copy panel-copy-tight">Moneta uses this target margin to calculate the recommended selling price.</p>
                                     </div>
                                     <div class="field product-span-3 product-field-with-help">
-                                        <label for="product-selling-price">${isManualSellingPrice ? "Live Selling Price" : "Recommended Selling Price"}</label>
+                                        <label for="product-recommended-selling-price">Recommended Selling Price</label>
                                         <input
-                                            id="product-selling-price"
+                                            id="product-recommended-selling-price"
                                             class="input"
                                             type="number"
                                             min="0"
                                             step="0.01"
-                                            value="${isManualSellingPrice ? liveSellingPrice : recommendedSellingPrice}"
-                                            ${isManualSellingPrice ? "" : "readonly"}
-                                            data-manual-entry="${isManualSellingPrice ? "true" : "false"}">
-                                        <p class="panel-copy panel-copy-tight">${isManualSellingPrice
-                                            ? "The active pricing policy leaves selling price manual. Set the live price Moneta should use."
-                                            : "This is Moneta's recommended price from standard cost and target margin."}</p>
+                                            value="${recommendedSellingPrice}"
+                                            readonly>
+                                        <p id="product-recommended-price-help" class="panel-copy panel-copy-tight">${getRecommendedSellingPriceHelpCopy({
+                                            itemType: selectedItemType,
+                                            settings: pricingPolicySettings
+                                        })}</p>
                                     </div>
                                     <div class="field product-span-3 product-field-with-help">
-                                        <label for="product-live-selling-price">Current Live Selling Price</label>
-                                        <input id="product-live-selling-price" class="input" type="number" value="${liveSellingPrice}" readonly>
-                                        <p class="panel-copy panel-copy-tight">${isManualSellingPrice
-                                            ? "Current live price follows the manual selling price entered above."
-                                            : "When purchase cost changes, Moneta can keep the live selling price steady while surfacing a new recommendation."}</p>
+                                        <label for="product-live-selling-price">Live Selling Price</label>
+                                        <input
+                                            id="product-live-selling-price"
+                                            class="input"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value="${liveSellingPrice}"
+                                            data-selling-behavior="${pricingPolicySettings.sellingPriceBehavior}"
+                                            data-sync-mode="${!customProduct && pricingPolicySettings.sellingPriceBehavior === "auto-update-from-margin" ? "recommended" : "preserve"}"
+                                            ${liveSellingPriceEditable ? "" : "readonly"}>
+                                        <p id="product-live-selling-price-help" class="panel-copy panel-copy-tight">${getLiveSellingPriceHelpCopy({
+                                            itemType: selectedItemType,
+                                            settings: pricingPolicySettings
+                                        })}</p>
                                     </div>
                                 </div>
                             </section>
@@ -417,14 +535,18 @@ function renderProductsViewShell(snapshot) {
                                 <div class="product-pricing-snapshot-copy">
                                     <strong>Pricing Policy Snapshot</strong>
                                     <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
-                                    ${editingProduct && isPurchaseDrivenCosting ? `
-                                        <p class="panel-copy panel-copy-tight">
-                                            Cost source: ${standardCostSource === "manual-override"
-                                                ? "Manual Override"
-                                                : getCostingMethodLabel(pricingPolicySettings)}.
-                                        </p>
-                                    ` : ""}
-                                    <p class="panel-copy panel-copy-tight">${priceReviewCopy}</p>
+                                    <p id="product-pricing-snapshot-note" class="panel-copy panel-copy-tight">${customProduct
+                                        ? "Custom products stay manually managed. Purchase sync does not overwrite standard cost, but active Sales Catalogue items can still be synced from the saved live price."
+                                        : pricingPolicySettings.costingMethod === "manual-standard-cost"
+                                            ? "This standard product stays manually costed because the active pricing policy uses Manual Standard Cost."
+                                            : purchaseHistoryActive
+                                                ? `This standard product is now purchase-driven. ${getCostingMethodLabel(pricingPolicySettings)} controls standard cost because purchase history already exists.`
+                                                : `This standard product is still in setup mode. The first valid purchase will hand standard-cost control to ${getCostingMethodLabel(pricingPolicySettings)}.`}</p>
+                                    <p
+                                        id="product-price-review-copy"
+                                        class="panel-copy panel-copy-tight"
+                                        data-review-required="${priceReviewRequired ? "true" : "false"}"
+                                        data-review-value="${priceReviewValue ?? ""}">${priceReviewCopy}</p>
                                     ${showAdminFastTrackActions ? `
                                         <p class="panel-copy panel-copy-tight">
                                             Standard save already creates a price review when pricing impact exists. Use the admin approval actions below only when you want to fast-track the pricing decision immediately.
@@ -444,6 +566,12 @@ function renderProductsViewShell(snapshot) {
                                 <span class="button-icon">${editingProduct ? icons.edit : icons.plus}</span>
                                 ${editingProduct ? "Save Product" : "Add Product"}
                             </button>
+                            ${showCatalogueSyncAction ? `
+                                <button class="button button-secondary" type="submit" name="product-save-intent" value="sync-catalogues">
+                                    <span class="button-icon">${icons.catalogue}</span>
+                                    Save and Sync Catalogues
+                                </button>
+                            ` : ""}
                             ${showAdminFastTrackActions ? `
                                 <button class="button button-secondary" type="submit" name="product-save-intent" value="approve-price-change">
                                     <span class="button-icon">${icons.active}</span>
@@ -497,7 +625,7 @@ function syncProductsGrid(snapshot) {
 export function renderProductsView() {
     const snapshot = getState();
     renderProductsViewShell(snapshot);
-    syncStandardCostSourceControl();
+    syncProductPricingFormState();
     bindProductPricingFieldInteractions();
     syncProductsGrid(snapshot);
 }
@@ -506,17 +634,15 @@ function updateSellingPricePreview() {
     const unitPrice = document.getElementById("product-unit-price")?.value || 0;
     const margin = document.getElementById("product-margin")?.value || 0;
     const recommendedValue = calculateSellingPrice(unitPrice, margin);
-    const livePriceDisplay = document.getElementById("product-live-selling-price");
-    const sellingPriceInput = document.getElementById("product-selling-price");
+    const recommendedPriceInput = document.getElementById("product-recommended-selling-price");
+    const livePriceInput = document.getElementById("product-live-selling-price");
 
-    if (sellingPriceInput && sellingPriceInput.dataset.manualEntry !== "true") {
-        sellingPriceInput.value = recommendedValue;
+    if (recommendedPriceInput) {
+        recommendedPriceInput.value = recommendedValue;
     }
 
-    if (livePriceDisplay) {
-        livePriceDisplay.value = sellingPriceInput?.dataset.manualEntry === "true"
-            ? (sellingPriceInput?.value || 0)
-            : recommendedValue;
+    if (livePriceInput && livePriceInput.dataset.syncMode === "recommended" && livePriceInput.readOnly) {
+        livePriceInput.value = recommendedValue;
     }
 }
 
@@ -546,10 +672,9 @@ async function handleProductFormSubmit(event) {
                 itemName: document.getElementById("product-name")?.value,
                 categoryId: document.getElementById("product-category")?.value,
                 itemType: document.getElementById("product-type")?.value,
-                standardCostSource: document.getElementById("product-cost-source")?.value,
                 unitPrice: document.getElementById("product-unit-price")?.value,
                 unitMarginPercentage: document.getElementById("product-margin")?.value,
-                sellingPrice: document.getElementById("product-selling-price")?.value,
+                sellingPrice: document.getElementById("product-live-selling-price")?.value,
                 inventoryCount: document.getElementById("product-inventory")?.value,
                 netWeightKg: document.getElementById("product-weight")?.value
             }, getState().masterData, getState().currentUser, {
@@ -557,7 +682,7 @@ async function handleProductFormSubmit(event) {
             });
 
             update(
-                saveIntent === "approve-and-sync-catalogues"
+                saveIntent === "approve-and-sync-catalogues" || saveIntent === "sync-catalogues"
                     ? "Refreshing product and Sales Catalogue views..."
                     : "Refreshing the product catalogue workspace...",
                 88,
@@ -570,6 +695,8 @@ async function handleProductFormSubmit(event) {
                     ? "Pricing approval is complete."
                     : saveIntent === "approve-and-sync-catalogues"
                         ? "Pricing approval and catalogue sync are complete."
+                        : saveIntent === "sync-catalogues"
+                            ? "Product save and catalogue sync are complete."
                         : "Product catalogue is up to date.",
                 96,
                 "Step 5 of 5"
@@ -584,6 +711,8 @@ async function handleProductFormSubmit(event) {
                     ? "Product saved and price approved."
                     : result.pricingAction === "approve-and-sync-catalogues"
                         ? "Product saved, price approved, and catalogues synced."
+                        : result.pricingAction === "sync-catalogues"
+                            ? "Product saved and catalogues synced."
                         : "Product saved.",
             "success",
             {
@@ -620,6 +749,13 @@ async function handleProductFormSubmit(event) {
             });
         }
 
+        if (result.syncResult) {
+            summaryDetails.push({
+                label: "Catalogue Sync",
+                value: `Synced ${result.syncResult.syncedCount || 0} items`
+            });
+        }
+
         await showSummaryModal({
             title: result.mode === "create"
                 ? "Product Added"
@@ -627,6 +763,8 @@ async function handleProductFormSubmit(event) {
                     ? "Product Saved and Price Approved"
                     : result.pricingAction === "approve-and-sync-catalogues"
                         ? "Product Saved, Approved, and Synced"
+                        : result.pricingAction === "sync-catalogues"
+                            ? "Product Saved and Synced"
                         : "Product Saved",
             message: "The product record has been saved successfully.",
             details: summaryDetails
@@ -636,7 +774,7 @@ async function handleProductFormSubmit(event) {
         if (error.productSaved) {
             featureState.editingProductId = null;
             renderProductsView();
-            showToast("Product was saved, but the fast-track pricing action could not be completed. The review remains pending.", "warning", {
+            showToast(error.message || "Product was saved, but the requested follow-up action could not be completed.", "warning", {
                 title: "Product Catalogue"
             });
             return;
@@ -715,19 +853,17 @@ function bindProductsDomEvents() {
     root.addEventListener("input", event => {
         const target = event.target;
 
-        if (target.id === "product-cost-source") {
-            syncStandardCostSourceControl();
+        if (target.id === "product-type") {
+            syncProductPricingFormState();
             return;
         }
 
         if (target.id === "product-unit-price" || target.id === "product-margin") {
-            if (target.id === "product-unit-price" && !target.readOnly) {
-                target.dataset.manualCost = target.value || "0";
-            }
             updateSellingPricePreview();
         }
 
-        if (target.id === "product-selling-price" && target.dataset.manualEntry === "true") {
+        if (target.id === "product-live-selling-price" && target.dataset.editable === "true") {
+            target.dataset.touched = "true";
             updateSellingPricePreview();
         }
 
@@ -740,8 +876,8 @@ function bindProductsDomEvents() {
     root.addEventListener("change", event => {
         const target = event.target;
 
-        if (target.id === "product-cost-source") {
-            syncStandardCostSourceControl();
+        if (target.id === "product-type") {
+            syncProductPricingFormState();
         }
     });
 

@@ -1149,18 +1149,6 @@ function renderPricingPolicyForm(snapshot) {
                             })}
                             <input id="admin-pricing-policy-cost-threshold" class="input" type="number" min="0" step="0.01" value="${escapeHtml(editingRecord.costChangeAlertThresholdPercentage ?? 0)}" required>
                         </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-pricing-policy-manual-override",
-                                label: "Manual Cost Override",
-                                required: true,
-                                tooltip: "This controls whether the team is allowed to keep a manual standard cost instead of following purchase-derived cost updates."
-                            })}
-                            <select id="admin-pricing-policy-manual-override" class="select" required>
-                                <option value="true" ${editingRecord.allowManualCostOverride ? "selected" : ""}>Allowed</option>
-                                <option value="false" ${editingRecord.allowManualCostOverride ? "" : "selected"}>Locked</option>
-                            </select>
-                        </div>
                     </div>
                     <div class="panel-card panel-card-soft" style="margin-top:1rem;">
                         <div class="panel-header">
@@ -2235,8 +2223,7 @@ async function handlePricingPolicySubmit(event) {
                 costingMethod: document.getElementById("admin-pricing-policy-costing-method")?.value,
                 sellingPriceBehavior: document.getElementById("admin-pricing-policy-selling-behavior")?.value,
                 defaultTargetMarginPercentage: document.getElementById("admin-pricing-policy-default-margin")?.value,
-                costChangeAlertThresholdPercentage: document.getElementById("admin-pricing-policy-cost-threshold")?.value,
-                allowManualCostOverride: document.getElementById("admin-pricing-policy-manual-override")?.value
+                costChangeAlertThresholdPercentage: document.getElementById("admin-pricing-policy-cost-threshold")?.value
             }, getState().currentUser, getState().masterData.pricingPolicies);
 
             update("Refreshing the pricing policy workspace...", 88, "Step 4 of 5");

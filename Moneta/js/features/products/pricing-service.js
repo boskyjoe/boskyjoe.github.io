@@ -27,6 +27,24 @@ function normalizeNumber(value, fallback = 0) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isCustomProduct(product = {}) {
+    return normalizeText(product?.itemType).toLowerCase() === "custom";
+}
+
+function isPurchaseDrivenCostingMethod(policySettings = DEFAULT_PRICING_POLICY) {
+    return policySettings.costingMethod === "latest-purchase"
+        || policySettings.costingMethod === "weighted-average";
+}
+
+function hasPurchaseHistory(purchaseSummary = {}) {
+    return Math.max(
+        0,
+        normalizeNumber(
+            purchaseSummary.purchaseEntryCount ?? purchaseSummary.totalPurchasedUnits
+        )
+    ) > 0;
+}
+
 function toTimestampMillis(value) {
     if (!value) return 0;
     if (typeof value.toMillis === "function") return value.toMillis();
@@ -79,9 +97,9 @@ function computePurchaseCostSummary(historyRows = []) {
 
 function resolveStandardCost(product = {}, policySettings = DEFAULT_PRICING_POLICY, purchaseSummary = {}) {
     const existingStandardCost = roundCurrency(product.unitPrice);
-    const standardCostSource = normalizeText(product?.pricingMeta?.standardCostSource);
+    const purchaseHistoryDriven = isPurchaseDrivenCostingMethod(policySettings) && hasPurchaseHistory(purchaseSummary);
 
-    if (policySettings.allowManualCostOverride && standardCostSource === "manual-override") {
+    if (isCustomProduct(product) || !purchaseHistoryDriven) {
         return existingStandardCost;
     }
 
@@ -109,26 +127,34 @@ function normalizePurchaseSummary(source = {}) {
 
 function buildPricingMeta(product = {}, policy = null, purchaseSummary = {}) {
     const policySettings = getNormalizedPricingPolicySettings(policy || DEFAULT_PRICING_POLICY);
+    const customProduct = isCustomProduct(product);
+    const purchaseHistoryDriven = !customProduct
+        && isPurchaseDrivenCostingMethod(policySettings)
+        && hasPurchaseHistory(purchaseSummary);
     const previousStandardCost = roundCurrency(product?.pricingMeta?.previousStandardCost ?? product.unitPrice);
     const standardCost = resolveStandardCost(product, policySettings, purchaseSummary);
-    const requestedStandardCostSource = normalizeText(product?.pricingMeta?.standardCostSource);
-    const standardCostSource = policySettings.costingMethod === "manual-standard-cost"
+    const standardCostSource = customProduct
+        ? "custom-manual"
+        : policySettings.costingMethod === "manual-standard-cost"
         ? "manual-standard-cost"
-        : requestedStandardCostSource === "manual-override" && policySettings.allowManualCostOverride
-            ? "manual-override"
-            : "policy-default";
+        : purchaseHistoryDriven
+            ? "purchase-history"
+            : "setup-manual";
     const targetMarginPercentage = normalizeNumber(
         product.unitMarginPercentage,
         policySettings.defaultTargetMarginPercentage
     );
     const recommendedSellingPrice = calculateSellingPriceFromMargin(standardCost, targetMarginPercentage);
     const costChangePercent = calculateCostChangePercent(standardCost, previousStandardCost);
-    const requiresPriceReview = costChangePercent === null
+    const reviewThresholdReached = costChangePercent === null
         ? standardCost > 0 && previousStandardCost <= 0
         : Math.abs(costChangePercent) >= policySettings.costChangeAlertThresholdPercentage;
-    const effectiveSellingPrice = policySettings.sellingPriceBehavior === "auto-update-from-margin"
-        ? recommendedSellingPrice
-        : roundCurrency(product.sellingPrice || calculateSellingPriceFromMargin(previousStandardCost, targetMarginPercentage));
+    const requiresPriceReview = customProduct ? false : reviewThresholdReached;
+    const effectiveSellingPrice = customProduct
+        ? roundCurrency(product.sellingPrice || recommendedSellingPrice)
+        : policySettings.sellingPriceBehavior === "auto-update-from-margin"
+            ? recommendedSellingPrice
+            : roundCurrency(product.sellingPrice || calculateSellingPriceFromMargin(previousStandardCost, targetMarginPercentage));
 
     return {
         nextUnitPrice: standardCost,
@@ -144,6 +170,12 @@ function buildPricingMeta(product = {}, policy = null, purchaseSummary = {}) {
             latestPurchaseDate: purchaseSummary.latestPurchaseDate || null,
             purchaseEntryCount: purchaseSummary.purchaseEntryCount || 0,
             totalPurchasedUnits: purchaseSummary.totalUnits || 0,
+            pricingControlMode: customProduct
+                ? "custom-manual"
+                : purchaseHistoryDriven
+                    ? "purchase-driven"
+                    : "setup-manual",
+            standardCostLocked: purchaseHistoryDriven,
             previousStandardCost,
             standardCost,
             standardCostSource,
@@ -351,6 +383,7 @@ export async function syncProductPricingFromPurchases(
 
     targetProducts.forEach(product => {
         const productId = normalizeText(product.id);
+        const customProduct = isCustomProduct(product);
         const historyRows = getActivePurchaseHistoryRows(purchaseInvoices, productId);
         const purchaseSummary = computePurchaseCostSummary(historyRows);
         const pricingSnapshot = buildProductPricingSnapshot(product, pricingPolicies, purchaseSummary);
@@ -358,17 +391,19 @@ export async function syncProductPricingFromPurchases(
         const previousVersion = Math.max(0, normalizeNumber(previousPricingMeta.priceVersion));
         const liveSellingPriceChanged = pricingSnapshot.nextSellingPrice !== roundCurrency(product.sellingPrice);
         const nextPriceVersion = liveSellingPriceChanged ? previousVersion + 1 : previousVersion;
+        const policyDrivenChange = !customProduct && (
+            pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
+            || pricingSnapshot.pricingMeta.recommendedSellingPrice !== roundCurrency(previousPricingMeta.recommendedSellingPrice)
+        );
         const nextPricingMeta = {
             ...pricingSnapshot.pricingMeta,
             priceVersion: nextPriceVersion,
             activePriceReviewId: previousPricingMeta.activePriceReviewId || null,
             reviewStatus: previousPricingMeta.reviewStatus || "none",
-            lastPolicyDrivenUpdateAt: (pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
-                || pricingSnapshot.pricingMeta.recommendedSellingPrice !== roundCurrency(previousPricingMeta.recommendedSellingPrice))
+            lastPolicyDrivenUpdateAt: policyDrivenChange
                 ? new Date().toISOString()
                 : (previousPricingMeta.lastPolicyDrivenUpdateAt || null),
-            lastPolicyDrivenUpdateReason: (pricingSnapshot.nextUnitPrice !== roundCurrency(product.unitPrice)
-                || pricingSnapshot.pricingMeta.recommendedSellingPrice !== roundCurrency(previousPricingMeta.recommendedSellingPrice))
+            lastPolicyDrivenUpdateReason: policyDrivenChange
                 ? "purchase-history-sync"
                 : (previousPricingMeta.lastPolicyDrivenUpdateReason || null)
         };
@@ -408,7 +443,8 @@ export async function syncProductPricingFromPurchases(
                 await syncProductPriceChangeReviewState(product, {
                     salesCatalogues,
                     user,
-                    sourceType: "purchase-history-sync"
+                    sourceType: "purchase-history-sync",
+                    skipReview: isCustomProduct(product)
                 });
             } catch (error) {
                 console.error("[Moneta] Failed to sync product price change review state:", {
