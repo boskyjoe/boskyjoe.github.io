@@ -369,6 +369,21 @@ select {
     cursor: not-allowed;
 }
 
+.input[readonly],
+.textarea[readonly] {
+    background: var(--bg-input-disabled);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    border-style: dashed;
+    box-shadow: inset 0 0 0 1px rgba(127, 141, 163, 0.08);
+}
+
+.input[readonly]:focus,
+.textarea[readonly]:focus {
+    border-color: var(--border);
+    box-shadow: inset 0 0 0 1px rgba(127, 141, 163, 0.08);
+}
+
 .input:focus,
 .textarea:focus,
 .select:focus {
