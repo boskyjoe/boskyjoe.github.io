@@ -95,8 +95,7 @@ export function buildPricingPolicyExplanation(policy = {}) {
         costingMethod,
         sellingPriceBehavior,
         defaultTargetMarginPercentage,
-        costChangeAlertThresholdPercentage,
-        allowManualCostOverride
+        costChangeAlertThresholdPercentage
     } = getNormalizedPricingPolicySettings(policy);
 
     const costingLine = costingMethod === "weighted-average"
@@ -115,9 +114,7 @@ export function buildPricingPolicyExplanation(policy = {}) {
         ? `Moneta flags products for price review when standard cost moves by ${costChangeAlertThresholdPercentage}% or more.`
         : "Moneta does not raise a separate cost-change review threshold.";
 
-    const overrideLine = allowManualCostOverride
-        ? "Manual standard-cost overrides are allowed when the team needs an exception."
-        : "Manual standard-cost overrides are blocked so purchase history stays in control.";
+    const productTypeLine = "Standard products begin with setup cost, then follow purchase history once activity exists. Custom products stay manually managed.";
 
-    return [costingLine, sellingLine, alertLine, overrideLine].join(" ");
+    return [costingLine, sellingLine, alertLine, productTypeLine].join(" ");
 }
