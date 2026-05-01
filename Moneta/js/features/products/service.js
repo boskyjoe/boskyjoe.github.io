@@ -21,6 +21,54 @@ function normalizeNumber(value, fallback = 0) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isPurchaseDrivenCostingMethod(policySettings = {}) {
+    return policySettings.costingMethod === "weighted-average"
+        || policySettings.costingMethod === "latest-purchase";
+}
+
+function getPolicyDerivedStandardCost(product = {}, policySettings = {}) {
+    const pricingMeta = product?.pricingMeta || {};
+    const existingStandardCost = roundCurrency(product?.unitPrice);
+
+    if (policySettings.costingMethod === "latest-purchase") {
+        return roundCurrency(pricingMeta.latestPurchasePrice) > 0
+            ? roundCurrency(pricingMeta.latestPurchasePrice)
+            : existingStandardCost;
+    }
+
+    if (policySettings.costingMethod === "weighted-average") {
+        return roundCurrency(pricingMeta.weightedAverageCost) > 0
+            ? roundCurrency(pricingMeta.weightedAverageCost)
+            : existingStandardCost;
+    }
+
+    return existingStandardCost;
+}
+
+function inferStandardCostSource(currentProduct = null, policySettings = {}) {
+    if (policySettings.costingMethod === "manual-standard-cost") {
+        return "manual-standard-cost";
+    }
+
+    const storedSource = normalizeText(currentProduct?.pricingMeta?.standardCostSource);
+    if (storedSource === "manual-override" && policySettings.allowManualCostOverride) {
+        return "manual-override";
+    }
+
+    if (!policySettings.allowManualCostOverride) {
+        return "policy-default";
+    }
+
+    if (!currentProduct) {
+        return "policy-default";
+    }
+
+    const policyDerivedCost = getPolicyDerivedStandardCost(currentProduct, policySettings);
+    return roundCurrency(currentProduct.unitPrice) !== policyDerivedCost
+        ? "manual-override"
+        : "policy-default";
+}
+
 export function calculateSellingPrice(unitPrice, unitMarginPercentage) {
     const price = normalizeNumber(unitPrice);
     const margin = normalizeNumber(unitMarginPercentage);
@@ -56,8 +104,22 @@ export function validateProductPayload(payload, masterData = {}) {
     const currentProduct = currentProducts.find(product => product.id === normalizeText(payload.docId)) || null;
     const resolvedPolicy = resolveSystemDefaultPricingPolicy(pricingPolicies, { activeOnly: true }) || null;
     const policySettings = getNormalizedPricingPolicySettings(resolvedPolicy || {});
+    const isPurchaseDriven = isPurchaseDrivenCostingMethod(policySettings);
+    const requestedStandardCostSource = normalizeText(payload.standardCostSource);
+    const standardCostSource = policySettings.costingMethod === "manual-standard-cost"
+        ? "manual-standard-cost"
+        : requestedStandardCostSource === "manual-override" && policySettings.allowManualCostOverride
+            ? "manual-override"
+            : inferStandardCostSource(currentProduct, policySettings) === "manual-override"
+                && policySettings.allowManualCostOverride
+                && !requestedStandardCostSource
+                ? "manual-override"
+                : "policy-default";
     const recommendedSellingPrice = calculateSellingPriceFromMargin(unitPrice, unitMarginPercentage);
     const manualSellingPrice = roundCurrency(normalizeNumber(payload.sellingPrice, recommendedSellingPrice));
+    const policyDerivedCost = currentProduct
+        ? getPolicyDerivedStandardCost(currentProduct, policySettings)
+        : roundCurrency(unitPrice);
 
     if (!itemName) throw new Error("Product name is required.");
     if (!categoryId) throw new Error("Category is required.");
@@ -66,8 +128,17 @@ export function validateProductPayload(payload, masterData = {}) {
     if (manualSellingPrice < 0) throw new Error("Selling price cannot be negative.");
     if (
         currentProduct
+        && isPurchaseDriven
+        && standardCostSource !== "manual-override"
+        && roundCurrency(policyDerivedCost) !== roundCurrency(unitPrice)
+    ) {
+        throw new Error("Standard cost is controlled by the active pricing policy.");
+    }
+    if (
+        currentProduct
+        && isPurchaseDriven
+        && requestedStandardCostSource === "manual-override"
         && !policySettings.allowManualCostOverride
-        && roundCurrency(currentProduct.unitPrice) !== roundCurrency(unitPrice)
     ) {
         throw new Error("Manual standard-cost overrides are locked by the active pricing policy.");
     }
@@ -86,7 +157,12 @@ export function validateProductPayload(payload, masterData = {}) {
         ...(currentProduct || {}),
         unitPrice,
         unitMarginPercentage,
-        sellingPrice: effectiveLiveSellingPrice
+        sellingPrice: effectiveLiveSellingPrice,
+        pricingMeta: {
+            ...(currentProduct?.pricingMeta || {}),
+            previousStandardCost: roundCurrency(currentProduct?.pricingMeta?.standardCost ?? currentProduct?.unitPrice),
+            standardCostSource
+        }
     };
     const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
     const existingPricingMeta = currentProduct?.pricingMeta || {};
@@ -106,6 +182,7 @@ export function validateProductPayload(payload, masterData = {}) {
         netWeightKg,
         pricingMeta: {
             ...pricingSnapshot.pricingMeta,
+            standardCostSource: pricingSnapshot.pricingMeta.standardCostSource || standardCostSource,
             priceVersion: liveSellingPriceChanged
                 ? Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)) + 1
                 : Math.max(0, normalizeNumber(existingPricingMeta.priceVersion)),
