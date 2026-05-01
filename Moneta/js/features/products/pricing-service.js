@@ -245,6 +245,7 @@ export async function syncProductPriceChangeReviewState(
         await docRef.update({
             pricingMeta: {
                 ...pricingMeta,
+                requiresPriceReview: false,
                 activePriceReviewId: null,
                 reviewStatus: "none"
             },

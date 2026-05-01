@@ -69,6 +69,20 @@ function inferStandardCostSource(currentProduct = null, policySettings = {}) {
         : "policy-default";
 }
 
+function resolveReviewBaselineStandardCost(currentProduct = null) {
+    if (!currentProduct) return 0;
+
+    const pricingMeta = currentProduct.pricingMeta || {};
+    const hasPendingReview = normalizeText(pricingMeta.reviewStatus) === "pending"
+        && normalizeText(pricingMeta.activePriceReviewId);
+
+    if (hasPendingReview) {
+        return roundCurrency(pricingMeta.previousStandardCost ?? currentProduct.unitPrice);
+    }
+
+    return roundCurrency(pricingMeta.standardCost ?? currentProduct.unitPrice);
+}
+
 export function calculateSellingPrice(unitPrice, unitMarginPercentage) {
     const price = normalizeNumber(unitPrice);
     const margin = normalizeNumber(unitMarginPercentage);
@@ -160,7 +174,7 @@ export function validateProductPayload(payload, masterData = {}) {
         sellingPrice: effectiveLiveSellingPrice,
         pricingMeta: {
             ...(currentProduct?.pricingMeta || {}),
-            previousStandardCost: roundCurrency(currentProduct?.pricingMeta?.standardCost ?? currentProduct?.unitPrice),
+            previousStandardCost: resolveReviewBaselineStandardCost(currentProduct),
             standardCostSource
         }
     };
