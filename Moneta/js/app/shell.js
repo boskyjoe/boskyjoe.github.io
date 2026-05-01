@@ -1,10 +1,82 @@
-import { canAccessNavItem, navConfig } from "../config/nav-config.js";
+import { canAccessNavItem, findNavRouteItem, flattenNavRoutes, navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
 import { getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
+import { showToast } from "../shared/toast.js";
 
 const sidebarTreeState = {};
+const SHELL_PRIMARY_ROUTE_ORDER = [
+    "#/dashboard",
+    "#/retail-store",
+    "#/purchases",
+    "#/products",
+    "#/sales-catalogues",
+    "#/leads",
+    "#/suppliers",
+    "#/reports",
+    "#/simple-consignment",
+    "#/admin-modules",
+    "#/user-management"
+];
+const SHELL_QUICK_ACTION_ORDER = [
+    "#/retail-store",
+    "#/purchases",
+    "#/products",
+    "#/sales-catalogues",
+    "#/leads",
+    "#/reports"
+];
+const SHELL_SEARCH_TARGETS = {
+    "#/dashboard": {
+        selector: "#dashboard-inventory-search",
+        placeholder: "Search inventory in this workspace"
+    },
+    "#/leads": {
+        selector: "#leads-grid-search",
+        placeholder: "Search leads in this workspace"
+    },
+    "#/retail-store": {
+        selector: "#retail-sales-search",
+        placeholder: "Search retail sales in this workspace"
+    },
+    "#/simple-consignment": {
+        selector: "#simple-consignment-orders-search",
+        placeholder: "Search consignment orders in this workspace"
+    },
+    "#/suppliers": {
+        selector: "#supplier-search",
+        placeholder: "Search suppliers in this workspace"
+    },
+    "#/products": {
+        selector: "#products-grid-search",
+        placeholder: "Search products in this workspace"
+    },
+    "#/sales-catalogues": {
+        selector: "#sales-catalogues-grid-search",
+        placeholder: "Search catalogues in this workspace"
+    },
+    "#/admin-modules": {
+        selector: "#admin-module-grid-search",
+        placeholder: "Search admin records in this workspace"
+    },
+    "#/purchases": {
+        selector: "#purchase-search",
+        placeholder: "Search purchase history in this workspace"
+    },
+    "#/user-management": {
+        selector: "#users-grid-search",
+        placeholder: "Search users in this workspace"
+    }
+};
+const SHELL_ACTION_LABELS = {
+    "#/retail-store": "Retail Sale",
+    "#/purchases": "New Purchase",
+    "#/products": "Products",
+    "#/sales-catalogues": "Catalogues",
+    "#/leads": "Leads",
+    "#/reports": "Reports"
+};
 
 function getRouteBase(route = "") {
     return String(route).split("?")[0];
@@ -166,6 +238,186 @@ function renderSidebarLinks(user) {
     return nav;
 }
 
+function formatRoleLabel(role = "guest") {
+    return String(role)
+        .split("_")
+        .map(token => token ? `${token[0].toUpperCase()}${token.slice(1)}` : "")
+        .join(" ");
+}
+
+function getAccessibleRouteItem(route, user) {
+    if (!user) return null;
+    const item = findNavRouteItem(route);
+    return item && canAccessNavItem(item, user.role) ? item : null;
+}
+
+function getPrimaryShellRoutes(user) {
+    return SHELL_PRIMARY_ROUTE_ORDER
+        .map(route => getAccessibleRouteItem(route, user))
+        .filter(Boolean);
+}
+
+function getQuickShellRoutes(user, currentRoute) {
+    return SHELL_QUICK_ACTION_ORDER
+        .map(route => getAccessibleRouteItem(route, user))
+        .filter(item => item && getRouteBase(item.route) !== getRouteBase(currentRoute))
+        .slice(0, 3);
+}
+
+function getShellSearchMeta(currentRoute) {
+    return SHELL_SEARCH_TARGETS[currentRoute] || {
+        selector: "",
+        placeholder: "Jump to a workspace"
+    };
+}
+
+function getMatchingRouteForQuery(query, user) {
+    const normalizedQuery = String(query || "").trim().toLowerCase();
+    if (!normalizedQuery || !user) return null;
+
+    const accessibleRoutes = flattenNavRoutes()
+        .filter(item => canAccessNavItem(item, user.role));
+
+    return accessibleRoutes.find(item => item.label.toLowerCase() === normalizedQuery)
+        || accessibleRoutes.find(item => item.label.toLowerCase().includes(normalizedQuery));
+}
+
+function renderHeaderUtilities(user) {
+    const slot = document.getElementById("header-utility-slot");
+    if (!slot) return;
+
+    slot.innerHTML = "";
+    slot.hidden = !user;
+
+    if (!user) {
+        return;
+    }
+
+    slot.hidden = false;
+
+    const { currentRoute } = getState();
+    const searchMeta = getShellSearchMeta(currentRoute);
+    const quickRoutes = getQuickShellRoutes(user, currentRoute);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "header-utility-bar";
+    wrapper.innerHTML = `
+        <form id="shell-search-form" class="shell-search" role="search">
+            <span class="shell-search-icon">${icons.search}</span>
+            <input
+                id="shell-search-input"
+                class="shell-search-input"
+                type="search"
+                placeholder="${searchMeta.placeholder}"
+                autocomplete="off"
+                aria-label="${searchMeta.placeholder}">
+        </form>
+        <div class="shell-quick-actions">
+            ${quickRoutes.map(item => `
+                <button
+                    class="shell-quick-action"
+                    type="button"
+                    data-shell-route="${item.route}"
+                    title="Open ${item.label}">
+                    <span class="button-icon">${item.icon || icons.plus}</span>
+                    <span>${SHELL_ACTION_LABELS[item.route] || item.label}</span>
+                </button>
+            `).join("")}
+        </div>
+    `;
+
+    wrapper.querySelector("#shell-search-form")?.addEventListener("submit", event => {
+        event.preventDefault();
+
+        const query = wrapper.querySelector("#shell-search-input")?.value?.trim();
+        if (!query) return;
+
+        const liveSearchTarget = searchMeta.selector ? document.querySelector(searchMeta.selector) : null;
+        if (liveSearchTarget instanceof HTMLInputElement || liveSearchTarget instanceof HTMLTextAreaElement) {
+            liveSearchTarget.value = query;
+            liveSearchTarget.dispatchEvent(new Event("input", { bubbles: true }));
+            liveSearchTarget.focus();
+            liveSearchTarget.select?.();
+            return;
+        }
+
+        const matchedRoute = getMatchingRouteForQuery(query, user);
+        if (matchedRoute?.route) {
+            navigateTo(matchedRoute.route);
+            return;
+        }
+
+        showToast(
+            searchMeta.selector
+                ? "Search is not ready in this workspace yet."
+                : "No matching workspace was found.",
+            "info",
+            { title: "Moneta Search" }
+        );
+    });
+
+    wrapper.querySelectorAll("[data-shell-route]").forEach(button => {
+        button.addEventListener("click", () => {
+            navigateTo(button.getAttribute("data-shell-route"));
+        });
+    });
+
+    slot.appendChild(wrapper);
+}
+
+function renderCommandBar(user) {
+    const root = document.getElementById("app-command-bar");
+    if (!root) return;
+
+    root.innerHTML = "";
+
+    if (!user) {
+        root.hidden = true;
+        return;
+    }
+
+    const { currentRoute } = getState();
+    const searchMeta = getShellSearchMeta(currentRoute);
+    const primaryRoutes = getPrimaryShellRoutes(user);
+    const currentThemeMode = getThemeMode();
+    const isSearchReady = Boolean(searchMeta.selector);
+
+    root.hidden = false;
+    root.innerHTML = `
+        <div class="command-bar-shell">
+            <div class="command-bar-primary">
+                <span class="command-bar-kicker">Workspace</span>
+                <div class="command-bar-tabs" role="tablist" aria-label="Primary Moneta workspaces">
+                    ${primaryRoutes.map(item => {
+                        const active = getRouteBase(item.route) === getRouteBase(currentRoute);
+                        return `
+                            <button
+                                class="command-bar-tab${active ? " is-active" : ""}"
+                                type="button"
+                                data-shell-route="${item.route}"
+                                aria-pressed="${active ? "true" : "false"}">
+                                <span class="button-icon">${item.icon || icons.dashboard}</span>
+                                <span>${item.label}</span>
+                            </button>
+                        `;
+                    }).join("")}
+                </div>
+            </div>
+            <div class="command-bar-meta">
+                <span class="command-bar-chip">${isSearchReady ? "Page Search Ready" : "Jump Mode"}</span>
+                <span class="command-bar-chip">Role: ${formatRoleLabel(user.role)}</span>
+                <span class="command-bar-chip">Theme: ${formatRoleLabel(currentThemeMode)}</span>
+            </div>
+        </div>
+    `;
+
+    root.querySelectorAll("[data-shell-route]").forEach(button => {
+        button.addEventListener("click", () => {
+            navigateTo(button.getAttribute("data-shell-route"));
+        });
+    });
+}
+
 function renderAuthSlot(user) {
     const authSlot = document.getElementById("auth-slot");
     if (!authSlot) return;
@@ -302,7 +554,9 @@ export function renderShell({ title }) {
         titleNode.textContent = title;
     }
 
+    renderHeaderUtilities(currentUser);
     renderAuthSlot(currentUser);
+    renderCommandBar(currentUser);
     renderFooter();
 }
 
