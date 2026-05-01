@@ -184,7 +184,7 @@ function syncStandardCostSourceControl() {
         return;
     }
 
-    const allowManualOverride = costSourceSelect.dataset.allowManualCostOverride === "true";
+    const allowManualOverride = costSourceSelect.dataset.allowManualOverride === "true";
     const isManualOverride = allowManualOverride && costSourceSelect.value === "manual-override";
     const manualCost = standardCostInput.dataset.manualCost || standardCostInput.value || 0;
     const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
