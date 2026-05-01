@@ -193,21 +193,29 @@ export async function getSalesCatalogueItemPriceHistory(catalogueId, itemId) {
 export async function getSalesCatalogueItemsByProduct(productId, activeCatalogueIds = []) {
     const normalizedProductId = String(productId || "").trim();
     if (!normalizedProductId) return [];
+    const catalogueIds = [...new Set((activeCatalogueIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+    if (!catalogueIds.length) return [];
 
-    const snapshot = await getDb()
-        .collectionGroup("items")
-        .where("productId", "==", normalizedProductId)
-        .get();
+    const snapshots = await Promise.all(
+        catalogueIds.map(catalogueId => {
+            return getDb()
+                .collection(COLLECTIONS.salesCatalogues)
+                .doc(catalogueId)
+                .collection("items")
+                .where("productId", "==", normalizedProductId)
+                .get();
+        })
+    );
 
-    const allowedCatalogueIds = new Set((activeCatalogueIds || []).map(id => String(id || "").trim()).filter(Boolean));
+    return snapshots.flatMap((snapshot, index) => {
+        const catalogueId = catalogueIds[index] || "";
 
-    return snapshot.docs
-        .map(doc => ({
+        return snapshot.docs.map(doc => ({
             id: doc.id,
-            catalogueId: doc.ref.parent.parent?.id || "",
+            catalogueId,
             ...doc.data()
-        }))
-        .filter(row => row.catalogueId && (!allowedCatalogueIds.size || allowedCatalogueIds.has(String(row.catalogueId).trim())));
+        }));
+    });
 }
 
 export async function deleteSalesCatalogueItem(catalogueId, itemId) {
