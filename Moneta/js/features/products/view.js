@@ -159,6 +159,22 @@ function getStandardCostHelpCopy(settings = {}, source = "policy-default", polic
     return `Controlled by pricing policy: ${costingLabel} is currently supplying the standard cost. Current policy cost: ${formattedPolicyCost}. Switch Cost Source to Manual Override if you need an exception.`;
 }
 
+function setStandardCostReadOnlyState(input, isReadOnly) {
+    if (!input) return;
+
+    if (isReadOnly) {
+        input.setAttribute("readonly", "readonly");
+        input.setAttribute("aria-readonly", "true");
+        input.dataset.lockState = "locked";
+        input.readOnly = true;
+    } else {
+        input.removeAttribute("readonly");
+        input.setAttribute("aria-readonly", "false");
+        input.dataset.lockState = "editable";
+        input.readOnly = false;
+    }
+}
+
 function syncStandardCostSourceControl() {
     const costSourceSelect = document.getElementById("product-cost-source");
     const standardCostInput = document.getElementById("product-unit-price");
@@ -174,8 +190,7 @@ function syncStandardCostSourceControl() {
     const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
 
     if (isManualOverride) {
-        standardCostInput.removeAttribute("readonly");
-        standardCostInput.readOnly = false;
+        setStandardCostReadOnlyState(standardCostInput, false);
         standardCostInput.value = manualCost;
         requestAnimationFrame(() => {
             standardCostInput.focus();
@@ -184,8 +199,7 @@ function syncStandardCostSourceControl() {
             }
         });
     } else {
-        standardCostInput.setAttribute("readonly", "readonly");
-        standardCostInput.readOnly = true;
+        setStandardCostReadOnlyState(standardCostInput, true);
         standardCostInput.value = policyCost;
     }
 
@@ -199,6 +213,35 @@ function syncStandardCostSourceControl() {
     );
 
     updateSellingPricePreview();
+}
+
+function bindProductPricingFieldInteractions() {
+    const costSourceSelect = document.getElementById("product-cost-source");
+    const standardCostInput = document.getElementById("product-unit-price");
+    const marginInput = document.getElementById("product-margin");
+    const sellingPriceInput = document.getElementById("product-selling-price");
+
+    if (costSourceSelect) {
+        costSourceSelect.onchange = () => syncStandardCostSourceControl();
+        costSourceSelect.oninput = () => syncStandardCostSourceControl();
+    }
+
+    if (standardCostInput) {
+        standardCostInput.oninput = () => {
+            if (!standardCostInput.readOnly) {
+                standardCostInput.dataset.manualCost = standardCostInput.value || "0";
+            }
+            updateSellingPricePreview();
+        };
+    }
+
+    if (marginInput) {
+        marginInput.oninput = () => updateSellingPricePreview();
+    }
+
+    if (sellingPriceInput && sellingPriceInput.dataset.manualEntry === "true") {
+        sellingPriceInput.oninput = () => updateSellingPricePreview();
+    }
 }
 
 function renderProductsViewShell(snapshot) {
@@ -455,6 +498,7 @@ export function renderProductsView() {
     const snapshot = getState();
     renderProductsViewShell(snapshot);
     syncStandardCostSourceControl();
+    bindProductPricingFieldInteractions();
     syncProductsGrid(snapshot);
 }
 
