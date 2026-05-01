@@ -1405,14 +1405,14 @@ function renderRetailStoreViewShell(snapshot) {
                         <h2>${isViewMode ? "View Retail Sale" : isEditMode ? "Edit Retail Sale" : isReturnMode ? "Return Retail Sale" : isVoidMode ? "Void Retail Sale" : "Retail Store"}</h2>
                         <p class="panel-copy">
                             ${isViewMode
-                                ? "Review the full retail sale exactly as it was posted, including customer, settlement, product tax, and totals."
+                                ? "Review the posted retail sale exactly as saved."
                                 : isEditMode
-                                    ? "Edit the selected retail sale with strict safeguards based on linked payments and expenses."
+                                    ? "Edit the selected retail sale with safeguards around linked payments and expenses."
                                     : isReturnMode
-                                        ? "Process a product return from this posted sale using a controlled, read-only workspace with explicit return quantities."
+                                        ? "Process a return from this posted sale using a controlled, read-only workspace."
                                         : isVoidMode
-                                            ? "Review the posted sale in read-only mode, enter a mandatory void reason, and complete a controlled reversal flow."
-                                            : "Process direct store sales using active sales catalogues, worksheet-based product selection, and optional immediate payment capture."}
+                                            ? "Review the posted sale, enter a void reason, and complete the reversal flow."
+                                            : "Process direct store sales from active catalogues with optional immediate payment capture."}
                         </p>
                     </div>
                 </div>
@@ -1435,7 +1435,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Customer Info</p>
-                                <p class="panel-copy">Capture the sale date, customer identity, and the contact details needed for follow-up.</p>
+                                <p class="panel-copy">Capture sale date, customer details, and follow-up contacts.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field">
@@ -1468,7 +1468,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Sale Context</p>
-                                <p class="panel-copy">Choose the store and catalogue that define which products, prices, and rules apply to this sale.</p>
+                                <p class="panel-copy">Choose the store and catalogue that drive products and pricing.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field">
@@ -1502,7 +1502,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Settlement</p>
-                                <p class="panel-copy">Choose whether to invoice the customer or capture payment immediately as part of the sale.</p>
+                                <p class="panel-copy">Choose invoice or pay-now settlement.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field">
@@ -1532,7 +1532,7 @@ function renderRetailStoreViewShell(snapshot) {
                                 </div>
                             </div>
                             ${isEditMode ? `
-                                <p class="panel-copy panel-copy-tight">Settlement fields are locked during edit. Use the <strong>Payments</strong> action in Sales History to record customer payments.</p>
+                                <p class="panel-copy panel-copy-tight">Settlement stays locked during edit. Use <strong>Payments</strong> from Sales History to record collections.</p>
                             ` : ""}
                         </section>
                     </div>
@@ -1540,7 +1540,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section retail-edit-reason-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Edit Audit</p>
-                                <p class="panel-copy">Capture why this sale is being edited. The reason is stored on the sale for audit history.</p>
+                                <p class="panel-copy">Record why this sale is being edited.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field field-full">
@@ -1554,7 +1554,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section purchase-void-mode-reason">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Void Details</p>
-                                <p class="panel-copy">Enter a clear reason for voiding this sale. This reason is stored in the audit trail.</p>
+                                <p class="panel-copy">Record why this sale is being voided.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field field-full">
@@ -1577,7 +1577,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                 ? "Review sold products and set Return Qty for each line item you need to bring back into stock."
                                                 : isVoidMode
                                                     ? "Review the posted product list that will be reversed from this sale. Product data is locked in void mode for audit safety."
-                                                    : "Search the selected catalogue, then set Qty greater than zero to include products in this sale. Pricing comes directly from the active catalogue, and each line carries CGST and SGST."}
+                                                : "Search the selected catalogue and set Qty above zero to include products in the sale."}
                                         </p>
                                     </div>
                                 </div>
@@ -1595,7 +1595,7 @@ function renderRetailStoreViewShell(snapshot) {
                                                 ? "Only Return Qty is editable in return mode. All sale pricing, discounts, and tax fields stay read-only."
                                                 : isVoidMode
                                                     ? "All worksheet values are read-only in void mode so the posted sale can be reviewed before reversal."
-                                                    : "Use line discount, CGST, and SGST at product level, then finish with invoice-level discount and any order tax below."}
+                                                : "Use line discount and tax at item level, then finish with invoice-level adjustments below."}
                                         </p>
                                     </div>
                                     <div class="search-wrap">
@@ -1620,7 +1620,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <span class="panel-icon panel-icon-alt">${icons.payment}</span>
                                     <div>
                                         <h3>Invoice Adjustments</h3>
-                                        <p class="panel-copy">Shape the final invoice in a compact finance bar: discount first, then tax, then settlement totals.</p>
+                                        <p class="panel-copy">Review discount, tax, and final totals in one compact finance bar.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1629,7 +1629,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <section class="retail-finance-section">
                                         <div class="retail-finance-section-head">
                                             <p class="workspace-form-section-kicker">Discounting</p>
-                                            <p class="panel-copy">Choose the discount method and apply either a percentage or a fixed invoice amount.</p>
+                                            <p class="panel-copy">Choose a percentage or fixed invoice discount.</p>
                                         </div>
                                         <div class="retail-finance-fields retail-finance-fields-discount">
                                             <div class="field">
@@ -1677,7 +1677,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <section class="retail-finance-section">
                                         <div class="retail-finance-section-head">
                                             <p class="workspace-form-section-kicker">Tax</p>
-                                            <p class="panel-copy">Product-level CGST and SGST flow in from the worksheet. Use invoice tax for any order-level adjustment.</p>
+                                            <p class="panel-copy">Item tax flows in from the worksheet. Use invoice tax for any order-level adjustment.</p>
                                         </div>
                                         <div class="retail-finance-fields retail-finance-fields-tax">
                                             <div class="field">
@@ -1714,7 +1714,7 @@ function renderRetailStoreViewShell(snapshot) {
                                     <aside class="retail-finance-totals">
                                         <div class="retail-finance-section-head">
                                             <p class="workspace-form-section-kicker">Totals</p>
-                                            <p class="panel-copy">Review the final invoice picture before saving the sale.</p>
+                                            <p class="panel-copy">Review the final invoice picture before saving.</p>
                                         </div>
                                         <div class="retail-finance-total-list">
                                             <div class="retail-finance-total-row">
@@ -1782,7 +1782,7 @@ function renderRetailStoreViewShell(snapshot) {
                         <section class="workspace-form-section retail-return-reason-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Return Details</p>
-                                <p class="panel-copy">Capture the return date and reason after you finalize return quantities and review invoice impact.</p>
+                                <p class="panel-copy">Capture return date and reason after you finalize return quantities.</p>
                             </div>
                             <div class="workspace-form-section-grid">
                                 <div class="field">
@@ -1852,7 +1852,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <span class="panel-icon">${icons.retail}</span>
                     <div>
                         <h3>Sales History</h3>
-                        <p class="panel-copy">Review direct retail sales across stores, with invoice totals, payments received, and current balances.</p>
+                        <p class="panel-copy">Review direct retail sales across stores with totals, payments, and balances.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -1863,7 +1863,7 @@ function renderRetailStoreViewShell(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Use Edit for controlled sale updates, Return for product reversals, Return History for audit review, Payments for collections, Expense for sale-linked cost adjustments, and More Actions for safeguarded operations like voiding.</p>
+                        <p class="panel-copy">Use Edit, Return, Payments, Expense, and More Actions to manage each sale safely.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>

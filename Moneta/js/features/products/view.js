@@ -409,7 +409,7 @@ function renderProductsViewShell(snapshot) {
                         <span class="panel-icon panel-icon-alt">${icons.products}</span>
                         <div>
                             <h2>${editingProduct ? "Edit Product" : "Product Catalogue"}</h2>
-                            <p class="panel-copy">Manage standard cost, target margin, and selling price under the active Moneta pricing policy.</p>
+                            <p class="panel-copy">Manage cost, margin, and live pricing under the active policy.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
@@ -448,7 +448,7 @@ function renderProductsViewShell(snapshot) {
                             <section class="product-form-section">
                                 <div class="product-form-section-head">
                                     <h3>Pricing</h3>
-                                    <p class="panel-copy">Standard products move from setup cost to purchase-driven costing after real purchases arrive. Custom products keep manual cost and live price control.</p>
+                                    <p class="panel-copy">Standard products switch to purchase-driven cost after purchase history exists. Custom products stay manually managed.</p>
                                 </div>
                                 <div class="product-form-grid product-form-grid-pricing">
                                     <div class="field product-span-3 product-field-with-help">
@@ -476,7 +476,7 @@ function renderProductsViewShell(snapshot) {
                                     <div class="field product-span-3 product-field-with-help">
                                         <label for="product-margin">Target Margin %</label>
                                         <input id="product-margin" class="input" type="number" min="0" step="0.01" value="${marginValue}">
-                                        <p class="panel-copy panel-copy-tight">Moneta uses this target margin to calculate the recommended selling price.</p>
+                                        <p class="panel-copy panel-copy-tight">Used to calculate the recommended selling price.</p>
                                     </div>
                                     <div class="field product-span-3 product-field-with-help">
                                         <label for="product-recommended-selling-price">Recommended Selling Price</label>
@@ -516,7 +516,7 @@ function renderProductsViewShell(snapshot) {
                             <section class="product-form-section">
                                 <div class="product-form-section-head">
                                     <h3>Inventory Profile</h3>
-                                    <p class="panel-copy">Keep the starting stock and pack profile together so purchasing and reporting stay predictable.</p>
+                                    <p class="panel-copy">Set opening stock and weight for purchasing and reporting.</p>
                                 </div>
                                 <div class="product-form-grid product-form-grid-inventory">
                                     <div class="field product-span-6">
@@ -533,7 +533,7 @@ function renderProductsViewShell(snapshot) {
                         <div class="panel-card product-pricing-snapshot-card">
                             <div class="panel-body">
                                 <div class="product-pricing-snapshot-copy">
-                                    <strong>Pricing Policy Snapshot</strong>
+                                    <strong>Pricing Snapshot</strong>
                                     <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
                                     <p id="product-pricing-snapshot-note" class="panel-copy panel-copy-tight">${customProduct
                                         ? "Custom products stay manually managed. Purchase sync does not overwrite standard cost, but active Sales Catalogue items can still be synced from the saved live price."
@@ -549,7 +549,7 @@ function renderProductsViewShell(snapshot) {
                                         data-review-value="${priceReviewValue ?? ""}">${priceReviewCopy}</p>
                                     ${showAdminFastTrackActions ? `
                                         <p class="panel-copy panel-copy-tight">
-                                            Standard save already creates a price review when pricing impact exists. Use the admin approval actions below only when you want to fast-track the pricing decision immediately.
+                                            Standard save already creates a review when pricing impact exists. Use these actions only to fast-track the decision.
                                         </p>
                                     ` : ""}
                                 </div>
@@ -593,7 +593,7 @@ function renderProductsViewShell(snapshot) {
                         <span class="panel-icon">${icons.catalogue}</span>
                         <div>
                             <h3>Product Directory</h3>
-                            <p class="panel-copy">Search, review, and manage products across category, pricing, and stock details.</p>
+                            <p class="panel-copy">Search and reopen products by category, pricing, or stock.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">

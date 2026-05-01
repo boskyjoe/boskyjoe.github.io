@@ -108,9 +108,7 @@ function renderSalesCatalogueForm(snapshot) {
                     <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
                     <div>
                         <h2>${editingCatalogue ? "Edit Sales Catalogue" : "Sales Catalogue"}</h2>
-                        <p class="panel-copy">
-                            Build season-based selling catalogues from the live product master, with editable catalogue pricing.
-                        </p>
+                        <p class="panel-copy">Build seasonal catalogues from the live product master.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -176,7 +174,7 @@ function renderSalesCatalogueWorkspace(snapshot) {
                         <span class="panel-icon">${icons.products}</span>
                         <div>
                             <h3>Available Products</h3>
-                            <p class="panel-copy">Search the active product catalogue and add products into the sales worksheet.</p>
+                            <p class="panel-copy">Search the product master and add items to the worksheet.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
@@ -187,7 +185,7 @@ function renderSalesCatalogueWorkspace(snapshot) {
                     <div class="toolbar">
                         <div>
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Source</p>
-                            <p class="panel-copy">The add action disables automatically once a product is already in the workspace.</p>
+                            <p class="panel-copy">Products already in the worksheet cannot be added again.</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
@@ -213,8 +211,8 @@ function renderSalesCatalogueWorkspace(snapshot) {
                             <h3>Catalogue Items</h3>
                             <p class="panel-copy">
                                 ${featureState.editingCatalogueId
-                                    ? "You are editing the live catalogue items. Selling price edits save directly to Firestore."
-                                    : "Build the draft catalogue here before saving the parent record."}
+                                    ? "Live catalogue pricing edits save directly."
+                                    : "Build the worksheet before saving the catalogue."}
                             </p>
                         </div>
                     </div>
@@ -236,15 +234,15 @@ function renderSalesCatalogueWorkspace(snapshot) {
                             <div class="catalogue-pricing-guide-popover-card">
                                 <div class="catalogue-pricing-guide-item">
                                     <strong>Sync Status</strong>
-                                    <p class="panel-copy panel-copy-tight">Tells you whether this row already matches the latest product pricing or needs syncing.</p>
+                                    <p class="panel-copy panel-copy-tight">Shows whether the row already matches the latest product price.</p>
                                 </div>
                                 <div class="catalogue-pricing-guide-item">
                                     <strong>Product Change</strong>
-                                    <p class="panel-copy panel-copy-tight">Shows whether the product's own master price has changed since this item was added or last synced.</p>
+                                    <p class="panel-copy panel-copy-tight">Shows whether the product price changed since the last item sync.</p>
                                 </div>
                                 <div class="catalogue-pricing-guide-item">
                                     <strong>Price Source</strong>
-                                    <p class="panel-copy panel-copy-tight">Shows whether the row is still using the product default price or a manual catalogue override.</p>
+                                    <p class="panel-copy panel-copy-tight">Shows whether the row follows product pricing or a manual override.</p>
                                 </div>
                             </div>
                         </details>
@@ -254,7 +252,7 @@ function renderSalesCatalogueWorkspace(snapshot) {
                     <div class="toolbar">
                         <div>
                             <p class="section-kicker" style="margin-bottom: 0.25rem;">Worksheet</p>
-                            <p class="panel-copy">Edit selling prices inline, keep manual overrides when needed, or sync changed items back to the current product price.</p>
+                            <p class="panel-copy">Edit prices inline, keep manual overrides when needed, or sync rows back to the product price.</p>
                         </div>
                         <div class="search-wrap">
                             <span class="search-icon">${icons.search}</span>
@@ -287,7 +285,7 @@ function renderSalesCataloguePriceHistoryModal() {
                         <span class="panel-icon">${icons.catalogue}</span>
                         <div>
                             <h3 id="sales-catalogue-price-history-title">Catalogue Price History</h3>
-                            <p class="panel-copy">${activeItem?.productName || "Catalogue item"} price changes, sync actions, and starting snapshot.</p>
+                            <p class="panel-copy">${activeItem?.productName || "Catalogue item"} price changes and sync history.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
@@ -296,7 +294,7 @@ function renderSalesCataloguePriceHistoryModal() {
                 </div>
                 <div class="panel-body">
                     <div class="purchase-payments-history-header">
-                        <p class="panel-copy">Moneta records manual overrides, item syncs, and original catalogue-item pricing snapshots here.</p>
+                        <p class="panel-copy">This log keeps manual overrides, syncs, and opening price snapshots.</p>
                     </div>
                     <div class="ag-shell purchase-payment-history-shell">
                         <div id="sales-catalogue-price-history-grid" class="ag-theme-alpine moneta-grid" style="height: 420px; width: 100%;"></div>
@@ -323,7 +321,7 @@ function renderExistingCatalogues(snapshot) {
                     <span class="panel-icon">${icons.catalogue}</span>
                     <div>
                         <h3>Existing Catalogues</h3>
-                        <p class="panel-copy">Manage active and inactive catalogue headers and reopen them for price maintenance.</p>
+                        <p class="panel-copy">Review active and inactive catalogues and reopen them for pricing work.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -334,7 +332,7 @@ function renderExistingCatalogues(snapshot) {
                 <div class="toolbar">
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
-                        <p class="panel-copy">Inactive catalogues remain visible here so they can be reviewed or reactivated.</p>
+                        <p class="panel-copy">Inactive catalogues stay visible here for review or reactivation.</p>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>

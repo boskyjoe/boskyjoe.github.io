@@ -1691,8 +1691,8 @@ function renderProductPriceChangeReviewForm(snapshot) {
                             <p class="panel-copy">${rows.length
                                 ? (pendingRows.length === 1
                                     ? "Moneta found one pending review and can open it automatically."
-                                    : "Select a price review from the queue below to inspect the cost change, recommendation, and Sales Catalogue impact.")
-                                : "Moneta will list pending product pricing decisions here when cost movement needs approval."}</p>
+                                    : "Select a review from the queue below to inspect the cost change, recommendation, and catalogue impact.")
+                                : "Pending product pricing decisions appear here when cost movement needs approval."}</p>
                         </div>
                     </div>
                     <span class="status-pill">${rows.length ? `${pendingRows.length} pending` : "Waiting"}</span>
@@ -1718,7 +1718,7 @@ function renderProductPriceChangeReviewForm(snapshot) {
                     <span class="panel-icon">${icons.warning}</span>
                     <div>
                         <h3>${isPending ? "Review Product Price Change" : "Price Review Record"}</h3>
-                        <p class="panel-copy">Approve or reject the suggested selling-price change, then decide whether Moneta should sync any active Sales Catalogue items linked to this product.</p>
+                        <p class="panel-copy">Approve or reject the suggested selling-price change and decide whether linked catalogue items should sync.</p>
                     </div>
                 </div>
                 <div class="toolbar-meta">
@@ -1757,7 +1757,7 @@ function renderProductPriceChangeReviewForm(snapshot) {
                         <div class="workspace-form-section-head">
                             <p class="workspace-form-section-kicker">Impact</p>
                             <h3>Decision Context</h3>
-                            <p class="panel-copy">Use this summary to decide whether the suggested live product price should be accepted now.</p>
+                            <p class="panel-copy">Use this summary to decide whether the live product price should change now.</p>
                         </div>
                         <div class="price-review-metrics-grid">
                             <div class="price-review-metric">
@@ -1785,7 +1785,7 @@ function renderProductPriceChangeReviewForm(snapshot) {
                         <div class="workspace-form-section-head">
                             <p class="workspace-form-section-kicker">Audit</p>
                             <h3>Review Trail</h3>
-                            <p class="panel-copy">Keep pricing governance visible so approvals and rejections can be traced later.</p>
+                            <p class="panel-copy">Keep approvals and rejections visible for later audit.</p>
                         </div>
                         <div class="price-review-audit-grid">
                             <div class="price-review-metric">
@@ -1869,7 +1869,7 @@ function getGridMeta(snapshot) {
         const rows = snapshot.masterData.categories || [];
         return {
             title: "Category Directory",
-            copy: "Review active and inactive category records, then reopen any row for editing.",
+            copy: "Review active and inactive category records and reopen any row for editing.",
             count: rows.length,
             countLabel: "categories",
             directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
@@ -1880,7 +1880,7 @@ function getGridMeta(snapshot) {
         const rows = snapshot.masterData.seasons || [];
         return {
             title: "Season Directory",
-            copy: "Track the full sales season history, including inactive or archived seasonal windows.",
+            copy: "Track current and archived sales seasons.",
             count: rows.length,
             countLabel: "seasons",
             directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
@@ -1891,7 +1891,7 @@ function getGridMeta(snapshot) {
         const rows = snapshot.masterData.reorderPolicies || [];
         return {
             title: "Reorder Policy Directory",
-            copy: "Review the active stock-cover policies, reopen one for editing, or change which rules Moneta can apply in the report.",
+            copy: "Review stock-cover policies, reopen one for editing, or change which rules Moneta can apply.",
             count: rows.length,
             countLabel: "policies",
             directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
@@ -1902,7 +1902,7 @@ function getGridMeta(snapshot) {
         const rows = snapshot.masterData.pricingPolicies || [];
         return {
             title: "Pricing Policy Directory",
-            copy: "Review the live pricing rule Moneta uses for cost updates, margin guidance, and price review alerts.",
+            copy: "Review the live pricing rule Moneta uses for cost updates, margin guidance, and review alerts.",
             count: rows.length,
             countLabel: "policies",
             directoryHelp: "Search the pricing policy record and reopen it for editing without leaving the admin workspace."
@@ -1914,7 +1914,7 @@ function getGridMeta(snapshot) {
         const pendingCount = rows.filter(review => normalizeText(review.status || "pending") === "pending").length;
         return {
             title: "Product Price Review Queue",
-            copy: "Review recommended product price changes, approve or reject them, and decide whether active Sales Catalogue items should sync right away.",
+            copy: "Review recommended product price changes and decide whether active catalogue items should sync right away.",
             count: pendingCount,
             countLabel: "pending reviews",
             directoryHelp: "Search review records, open one for decision, and keep pricing governance separate from day-to-day Product Catalogue editing."
@@ -1925,7 +1925,7 @@ function getGridMeta(snapshot) {
         const rows = snapshot.masterData.storeConfigs || [];
         return {
             title: "Store Configuration Directory",
-            copy: "Review every store profile Moneta uses for invoices, receipts, tax defaults, and payment details, then open one for editing.",
+            copy: "Review every store profile Moneta uses for invoices, receipts, tax defaults, and payment details.",
             count: rows.length,
             countLabel: "store profiles",
             directoryHelp: "Search store profiles and reopen one for editing without leaving the admin workspace."
@@ -1935,7 +1935,7 @@ function getGridMeta(snapshot) {
     const rows = snapshot.masterData.paymentModes || [];
     return {
         title: "Payment Mode Directory",
-        copy: "Keep transaction methods tidy so operational screens only offer the modes your team wants to use.",
+        copy: "Keep transaction methods tidy so operational screens only show approved modes.",
         count: rows.length,
         countLabel: "payment modes",
         directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."

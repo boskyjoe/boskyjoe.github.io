@@ -418,8 +418,8 @@ function renderPaymentModal(snapshot) {
         ? "Void Supplier Payment"
         : "Record Supplier Payment";
     const modalCopy = isPaymentVoidMode
-        ? "Review the selected posted payment, provide a void reason, and confirm to post the reversal."
-        : "Use a focused payment modal for the transaction, with live invoice context and AG Grid history below the entry form.";
+        ? "Review the posted payment, add a void reason, and confirm the reversal."
+        : "Record a supplier payment and review the invoice history below.";
     const balancePreviewValue = isPaymentVoidMode ? balanceAfterVoid : remainingBalance;
 
     return `
@@ -516,10 +516,10 @@ function renderPaymentModal(snapshot) {
                                 </div>
 
                                 ${!isPaymentVoidMode && balanceDue <= 0 ? `
-                                    <p class="panel-copy panel-copy-tight">This invoice is already fully paid. You can still review the payment history below.</p>
+                                    <p class="panel-copy panel-copy-tight">This invoice is already fully paid. History remains available below.</p>
                                 ` : ""}
                                 ${!isPaymentVoidMode && balanceDue > 0 && paymentModes.length === 0 ? `
-                                    <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording supplier payments.</p>
+                                    <p class="panel-copy panel-copy-tight">Add an active payment mode before recording payments.</p>
                                 ` : ""}
 
                                 <div class="form-actions">
@@ -554,7 +554,7 @@ function renderPaymentModal(snapshot) {
                             <div class="purchase-payments-history-header">
                                 <div>
                                     <p class="section-kicker">Payment History</p>
-                                    <p class="panel-copy">Every recorded supplier payment for ${paymentInvoice.invoiceName || paymentInvoice.invoiceId || "this invoice"}.</p>
+                                    <p class="panel-copy">Recorded payments for ${paymentInvoice.invoiceName || paymentInvoice.invoiceId || "this invoice"}.</p>
                                 </div>
                             </div>
                             <div class="ag-shell purchase-payment-history-shell">
@@ -601,15 +601,15 @@ function renderPurchasesViewShell(snapshot) {
             ? "Edit Purchase Invoice"
             : "Purchase Invoices";
     const formModeCopy = isVoidMode
-        ? "Review the full invoice below before voiding it. All invoice details are locked, and only the void reason can be entered."
-        : "Use this module to capture supplier purchase invoices, update inventory, and track invoice payment progress in one place.";
+        ? "Review the posted invoice, enter a void reason, and confirm the reversal."
+        : "Capture supplier invoices, inventory updates, and payment progress.";
     const disableInvoiceFields = isVoidMode ? "disabled" : "";
     const disableSearch = isVoidMode ? "disabled" : "";
     const voidPreview = isVoidMode ? `
         <div class="purchase-void-mode-banner">
             <div>
                 <p class="section-kicker">Void Mode</p>
-                <p class="panel-copy">This action will void the invoice, reverse any active linked payments, and roll the product quantities back out of inventory.</p>
+                <p class="panel-copy">This reverses linked payments and rolls posted stock back out of inventory.</p>
             </div>
             <div class="toolbar-meta">
                 <span class="status-pill">${workspaceInvoice?.invoiceId || workspaceInvoice?.invoiceName || "-"}</span>
@@ -624,7 +624,7 @@ function renderPurchasesViewShell(snapshot) {
                 <label for="purchase-invoice-void-reason">Void Reason <span class="required-mark" aria-hidden="true">*</span></label>
                 <textarea id="purchase-invoice-void-reason" class="textarea purchase-void-reason-textarea" placeholder="Explain why this invoice is being voided" required>${featureState.invoiceVoidReason}</textarea>
             </div>
-            <p class="panel-copy panel-copy-tight">This action cannot be undone. Moneta will keep the invoice in history as voided and preserve the full reversal trail.</p>
+            <p class="panel-copy panel-copy-tight">This cannot be undone. Moneta keeps the invoice in history with its reversal trail.</p>
         </div>
     ` : "";
 
@@ -678,7 +678,7 @@ function renderPurchasesViewShell(snapshot) {
                                         <h3>Product List</h3>
                                         <p class="panel-copy">${isVoidMode
                                             ? "Review the locked product list exactly as it was posted on this invoice."
-                                            : "Search the full active product list and set Qty above 0 to make a product part of the invoice."}</p>
+                                            : "Search active products and set Qty above 0 to add them to the invoice."}</p>
                                     </div>
                                 </div>
                                 <div class="toolbar-meta">
@@ -700,7 +700,7 @@ function renderPurchasesViewShell(snapshot) {
                             <div class="purchase-adjustments-header">
                                 <div>
                                     <p class="section-kicker" style="margin-bottom: 0.25rem;">Invoice Adjustments</p>
-                                    <p class="panel-copy">Invoice-level discount and tax are applied after the product level items are calculated.</p>
+                                    <p class="panel-copy">Invoice-level discount and tax apply after item totals.</p>
                                 </div>
                             </div>
                             <div class="purchase-adjustments-grid">
@@ -748,7 +748,7 @@ function renderPurchasesViewShell(snapshot) {
                         ${isVoidMode ? voidReasonSection : ""}
                         ${canSaveInvoice || isVoidMode ? "" : `
                             <p class="panel-copy" style="margin-top: 1rem;">
-                                You need at least one active supplier and one active product before creating purchase invoices.
+                                Add at least one active supplier and one active product before creating purchase invoices.
                             </p>
                         `}
 
@@ -781,7 +781,7 @@ function renderPurchasesViewShell(snapshot) {
                         <span class="panel-icon">${icons.catalogue}</span>
                         <div>
                             <h3>Invoice History</h3>
-                            <p class="panel-copy">Live purchase invoice records from the shared Firestore purchase ledger.</p>
+                            <p class="panel-copy">Review saved purchase invoices and reopen one when needed.</p>
                         </div>
                     </div>
                     <div class="toolbar-meta">
