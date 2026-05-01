@@ -42,6 +42,15 @@
     --sidebar-width: 248px;
     --content-max: 1520px;
     --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+    --font-size-support: 0.83rem;
+    --font-size-support-compact: 0.78rem;
+    --font-size-pill: 0.74rem;
+    --font-size-pill-compact: 0.7rem;
+    --line-height-support: 1.42;
+    --pill-min-height: 1.6rem;
+    --pill-padding-y: 0.24rem;
+    --pill-padding-x: 0.62rem;
+    --pill-gap: 0.32rem;
 
     --shell-sidebar-start: #202835;
     --shell-sidebar-end: #1d2632;

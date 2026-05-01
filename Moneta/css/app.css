@@ -173,16 +173,16 @@
 }
 
 .sidebar-tree-badge {
-    min-width: 1.45rem;
-    height: 1.45rem;
-    padding: 0 0.35rem;
+    min-width: 1.32rem;
+    height: 1.32rem;
+    padding: 0 0.3rem;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.86);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 800;
     line-height: 1;
 }
