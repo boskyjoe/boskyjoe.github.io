@@ -174,9 +174,11 @@ function syncStandardCostSourceControl() {
     const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
 
     if (isManualOverride) {
+        standardCostInput.removeAttribute("readonly");
         standardCostInput.readOnly = false;
         standardCostInput.value = manualCost;
     } else {
+        standardCostInput.setAttribute("readonly", "readonly");
         standardCostInput.readOnly = true;
         standardCostInput.value = policyCost;
     }
@@ -254,10 +256,6 @@ function renderProductsViewShell(snapshot) {
                         <input type="hidden" id="product-doc-id" value="${editingProduct?.id || ""}">
                         <div class="product-form-sections">
                             <section class="product-form-section">
-                                <div class="product-form-section-head">
-                                    <h3>Product Setup</h3>
-                                    <p class="panel-copy">Keep the identity fields together so catalogue grouping and pricing stay clean.</p>
-                                </div>
                                 <div class="product-form-grid product-form-grid-identity">
                                     <div class="field product-span-5">
                                         <label for="product-name">Product Name <span class="required-mark" aria-hidden="true">*</span></label>
