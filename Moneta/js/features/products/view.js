@@ -5,6 +5,7 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import {
     getNormalizedPricingPolicySettings,
+    roundCurrency,
     resolveSystemDefaultPricingPolicy
 } from "../../shared/pricing-policy.js";
 import { initializeProductsGrid, refreshProductsGrid, updateProductsGridSearch } from "./grid.js";
@@ -88,6 +89,110 @@ function getPricingPolicyLabel(settings = {}) {
     return `${costingLabel} • ${sellingLabel}`;
 }
 
+function getCostingMethodLabel(settings = {}) {
+    if (settings.costingMethod === "weighted-average") {
+        return "Weighted Average purchase cost";
+    }
+
+    if (settings.costingMethod === "latest-purchase") {
+        return "Latest Purchase cost";
+    }
+
+    return "Manual Standard Cost";
+}
+
+function getPolicyDerivedStandardCost(product = {}, settings = {}) {
+    const pricingMeta = product?.pricingMeta || {};
+    const fallbackCost = roundCurrency(product?.unitPrice);
+
+    if (settings.costingMethod === "weighted-average") {
+        return roundCurrency(pricingMeta.weightedAverageCost) > 0
+            ? roundCurrency(pricingMeta.weightedAverageCost)
+            : fallbackCost;
+    }
+
+    if (settings.costingMethod === "latest-purchase") {
+        return roundCurrency(pricingMeta.latestPurchasePrice) > 0
+            ? roundCurrency(pricingMeta.latestPurchasePrice)
+            : fallbackCost;
+    }
+
+    return fallbackCost;
+}
+
+function inferStandardCostSource(product = {}, settings = {}) {
+    if (settings.costingMethod === "manual-standard-cost") {
+        return "manual-standard-cost";
+    }
+
+    const storedSource = product?.pricingMeta?.standardCostSource;
+    if (storedSource === "manual-override" && settings.allowManualCostOverride) {
+        return "manual-override";
+    }
+
+    if (!settings.allowManualCostOverride) {
+        return "policy-default";
+    }
+
+    const policyDerivedCost = getPolicyDerivedStandardCost(product, settings);
+    return roundCurrency(product?.unitPrice) !== policyDerivedCost
+        ? "manual-override"
+        : "policy-default";
+}
+
+function getStandardCostHelpCopy(settings = {}, source = "policy-default", policyDerivedCost = 0) {
+    const costingLabel = getCostingMethodLabel(settings);
+    const formattedPolicyCost = `₹${roundCurrency(policyDerivedCost).toFixed(2)}`;
+
+    if (settings.costingMethod === "manual-standard-cost") {
+        return "Standard cost is fully manual under the active pricing policy.";
+    }
+
+    if (source === "manual-override") {
+        return `Manual override is active. Moneta will keep this entered standard cost until you switch back to ${costingLabel}.`;
+    }
+
+    if (!settings.allowManualCostOverride) {
+        return `Locked by pricing policy: ${costingLabel} controls standard cost for this product. Current policy cost: ${formattedPolicyCost}.`;
+    }
+
+    return `Controlled by pricing policy: ${costingLabel} is currently supplying the standard cost. Current policy cost: ${formattedPolicyCost}. Switch Cost Source to Manual Override if you need an exception.`;
+}
+
+function syncStandardCostSourceControl() {
+    const costSourceSelect = document.getElementById("product-cost-source");
+    const standardCostInput = document.getElementById("product-unit-price");
+    const standardCostHelp = document.getElementById("product-unit-price-help");
+
+    if (!costSourceSelect || !standardCostInput || !standardCostHelp) {
+        return;
+    }
+
+    const allowManualOverride = costSourceSelect.dataset.allowManualCostOverride === "true";
+    const isManualOverride = allowManualOverride && costSourceSelect.value === "manual-override";
+    const manualCost = standardCostInput.dataset.manualCost || standardCostInput.value || 0;
+    const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
+
+    if (isManualOverride) {
+        standardCostInput.readOnly = false;
+        standardCostInput.value = manualCost;
+    } else {
+        standardCostInput.readOnly = true;
+        standardCostInput.value = policyCost;
+    }
+
+    standardCostHelp.textContent = getStandardCostHelpCopy(
+        {
+            costingMethod: costSourceSelect.dataset.costingMethod,
+            allowManualCostOverride: allowManualOverride
+        },
+        isManualOverride ? "manual-override" : "policy-default",
+        policyCost
+    );
+
+    updateSellingPricePreview();
+}
+
 function renderProductsViewShell(snapshot) {
     const root = document.getElementById("products-root");
     if (!root) return;
@@ -98,12 +203,27 @@ function renderProductsViewShell(snapshot) {
     const productsCount = snapshot.masterData.products?.length || 0;
     const pricingPolicy = getActivePricingPolicy(snapshot);
     const pricingPolicySettings = getNormalizedPricingPolicySettings(pricingPolicy || {});
+    const isPurchaseDrivenCosting = pricingPolicySettings.costingMethod === "weighted-average"
+        || pricingPolicySettings.costingMethod === "latest-purchase";
+    const standardCostSource = editingProduct
+        ? inferStandardCostSource(editingProduct, pricingPolicySettings)
+        : pricingPolicySettings.costingMethod === "manual-standard-cost"
+            ? "manual-standard-cost"
+            : "policy-default";
+    const policyDerivedStandardCost = editingProduct
+        ? getPolicyDerivedStandardCost(editingProduct, pricingPolicySettings)
+        : 0;
     const marginValue = editingProduct?.unitMarginPercentage ?? pricingPolicySettings.defaultTargetMarginPercentage;
     const standardCostValue = editingProduct?.unitPrice || 0;
-    const recommendedSellingPrice = calculateSellingPrice(standardCostValue, marginValue);
+    const displayedStandardCost = editingProduct && isPurchaseDrivenCosting && standardCostSource !== "manual-override"
+        ? policyDerivedStandardCost
+        : standardCostValue;
+    const recommendedSellingPrice = calculateSellingPrice(displayedStandardCost, marginValue);
     const liveSellingPrice = editingProduct?.sellingPrice ?? recommendedSellingPrice;
     const isManualSellingPrice = pricingPolicySettings.sellingPriceBehavior === "manual";
-    const costOverrideLocked = Boolean(editingProduct) && !pricingPolicySettings.allowManualCostOverride;
+    const costOverrideLocked = Boolean(editingProduct)
+        && isPurchaseDrivenCosting
+        && standardCostSource !== "manual-override";
     const isAdminUser = snapshot.currentUser?.role === "admin";
     const showAdminFastTrackActions = isAdminUser && Boolean(editingProduct);
     const priceReviewRequired = Boolean(editingProduct?.pricingMeta?.requiresPriceReview);
@@ -167,11 +287,36 @@ function renderProductsViewShell(snapshot) {
                                 </div>
                                 <div class="product-form-grid product-form-grid-pricing">
                                     <div class="field product-span-3 product-field-with-help">
+                                        ${editingProduct && isPurchaseDrivenCosting ? `
+                                            <label for="product-cost-source">Cost Source</label>
+                                            <select
+                                                id="product-cost-source"
+                                                class="select"
+                                                data-costing-method="${pricingPolicySettings.costingMethod}"
+                                                data-allow-manual-override="${pricingPolicySettings.allowManualCostOverride ? "true" : "false"}"
+                                                ${pricingPolicySettings.allowManualCostOverride ? "" : "disabled"}>
+                                                <option value="policy-default" ${standardCostSource !== "manual-override" ? "selected" : ""}>
+                                                    Use ${getCostingMethodLabel(pricingPolicySettings)}
+                                                </option>
+                                                <option value="manual-override" ${standardCostSource === "manual-override" ? "selected" : ""} ${pricingPolicySettings.allowManualCostOverride ? "" : "disabled"}>
+                                                    Manual Override
+                                                </option>
+                                            </select>
+                                        ` : ""}
                                         <label for="product-unit-price">Standard Cost</label>
-                                        <input id="product-unit-price" class="input" type="number" min="0" step="0.01" value="${standardCostValue}" ${costOverrideLocked ? "readonly" : ""}>
-                                        <p class="panel-copy panel-copy-tight">${costOverrideLocked
-                                            ? "Manual standard-cost overrides are locked by the active pricing policy. Update purchases to move cost."
-                                            : "Use this as the working standard cost. Moneta can later refresh it from purchase history."}</p>
+                                        <input
+                                            id="product-unit-price"
+                                            class="input"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value="${displayedStandardCost}"
+                                            data-policy-cost="${policyDerivedStandardCost}"
+                                            data-manual-cost="${standardCostValue}"
+                                            ${costOverrideLocked ? "readonly" : ""}>
+                                        <p id="product-unit-price-help" class="panel-copy panel-copy-tight">${editingProduct
+                                            ? getStandardCostHelpCopy(pricingPolicySettings, standardCostSource, policyDerivedStandardCost)
+                                            : "Use this as the starting standard cost. Moneta can later refresh it from purchase history if the policy requires it."}</p>
                                     </div>
                                     <div class="field product-span-3 product-field-with-help">
                                         <label for="product-margin">Target Margin %</label>
@@ -225,6 +370,13 @@ function renderProductsViewShell(snapshot) {
                                 <div class="product-pricing-snapshot-copy">
                                     <strong>Pricing Policy Snapshot</strong>
                                     <p class="panel-copy panel-copy-tight">Active policy: ${getPricingPolicyLabel(pricingPolicySettings)}.</p>
+                                    ${editingProduct && isPurchaseDrivenCosting ? `
+                                        <p class="panel-copy panel-copy-tight">
+                                            Cost source: ${standardCostSource === "manual-override"
+                                                ? "Manual Override"
+                                                : getCostingMethodLabel(pricingPolicySettings)}.
+                                        </p>
+                                    ` : ""}
                                     <p class="panel-copy panel-copy-tight">${priceReviewCopy}</p>
                                     ${showAdminFastTrackActions ? `
                                         <p class="panel-copy panel-copy-tight">
@@ -298,6 +450,7 @@ function syncProductsGrid(snapshot) {
 export function renderProductsView() {
     const snapshot = getState();
     renderProductsViewShell(snapshot);
+    syncStandardCostSourceControl();
     syncProductsGrid(snapshot);
 }
 
@@ -345,6 +498,7 @@ async function handleProductFormSubmit(event) {
                 itemName: document.getElementById("product-name")?.value,
                 categoryId: document.getElementById("product-category")?.value,
                 itemType: document.getElementById("product-type")?.value,
+                standardCostSource: document.getElementById("product-cost-source")?.value,
                 unitPrice: document.getElementById("product-unit-price")?.value,
                 unitMarginPercentage: document.getElementById("product-margin")?.value,
                 sellingPrice: document.getElementById("product-selling-price")?.value,
@@ -514,6 +668,9 @@ function bindProductsDomEvents() {
         const target = event.target;
 
         if (target.id === "product-unit-price" || target.id === "product-margin") {
+            if (target.id === "product-unit-price" && !target.readOnly) {
+                target.dataset.manualCost = target.value || "0";
+            }
             updateSellingPricePreview();
         }
 
@@ -524,6 +681,14 @@ function bindProductsDomEvents() {
         if (target.id === "products-grid-search") {
             featureState.searchTerm = target.value || "";
             updateProductsGridSearch(featureState.searchTerm);
+        }
+    });
+
+    root.addEventListener("change", event => {
+        const target = event.target;
+
+        if (target.id === "product-cost-source") {
+            syncStandardCostSourceControl();
         }
     });
 

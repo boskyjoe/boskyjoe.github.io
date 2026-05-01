@@ -79,6 +79,11 @@ function computePurchaseCostSummary(historyRows = []) {
 
 function resolveStandardCost(product = {}, policySettings = DEFAULT_PRICING_POLICY, purchaseSummary = {}) {
     const existingStandardCost = roundCurrency(product.unitPrice);
+    const standardCostSource = normalizeText(product?.pricingMeta?.standardCostSource);
+
+    if (policySettings.allowManualCostOverride && standardCostSource === "manual-override") {
+        return existingStandardCost;
+    }
 
     if (policySettings.costingMethod === "latest-purchase") {
         return purchaseSummary.latestPurchasePrice > 0 ? purchaseSummary.latestPurchasePrice : existingStandardCost;
@@ -104,8 +109,14 @@ function normalizePurchaseSummary(source = {}) {
 
 function buildPricingMeta(product = {}, policy = null, purchaseSummary = {}) {
     const policySettings = getNormalizedPricingPolicySettings(policy || DEFAULT_PRICING_POLICY);
-    const previousStandardCost = roundCurrency(product.unitPrice);
+    const previousStandardCost = roundCurrency(product?.pricingMeta?.previousStandardCost ?? product.unitPrice);
     const standardCost = resolveStandardCost(product, policySettings, purchaseSummary);
+    const requestedStandardCostSource = normalizeText(product?.pricingMeta?.standardCostSource);
+    const standardCostSource = policySettings.costingMethod === "manual-standard-cost"
+        ? "manual-standard-cost"
+        : requestedStandardCostSource === "manual-override" && policySettings.allowManualCostOverride
+            ? "manual-override"
+            : "policy-default";
     const targetMarginPercentage = normalizeNumber(
         product.unitMarginPercentage,
         policySettings.defaultTargetMarginPercentage
@@ -135,6 +146,7 @@ function buildPricingMeta(product = {}, policy = null, purchaseSummary = {}) {
             totalPurchasedUnits: purchaseSummary.totalUnits || 0,
             previousStandardCost,
             standardCost,
+            standardCostSource,
             costChangePercent,
             recommendedSellingPrice,
             requiresPriceReview
