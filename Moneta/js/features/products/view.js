@@ -189,6 +189,16 @@ function syncStandardCostSourceControl() {
     const manualCost = standardCostInput.dataset.manualCost || standardCostInput.value || 0;
     const policyCost = standardCostInput.dataset.policyCost || standardCostInput.value || 0;
 
+    console.debug("[Moneta][Products] syncStandardCostSourceControl:start", {
+        selectedCostSource: costSourceSelect.value,
+        allowManualOverride,
+        isManualOverride,
+        manualCost,
+        policyCost,
+        readonlyAttributeBefore: standardCostInput.getAttribute("readonly"),
+        readOnlyPropertyBefore: standardCostInput.readOnly
+    });
+
     if (isManualOverride) {
         setStandardCostReadOnlyState(standardCostInput, false);
         standardCostInput.value = manualCost;
@@ -202,6 +212,15 @@ function syncStandardCostSourceControl() {
         setStandardCostReadOnlyState(standardCostInput, true);
         standardCostInput.value = policyCost;
     }
+
+    console.debug("[Moneta][Products] syncStandardCostSourceControl:end", {
+        selectedCostSource: costSourceSelect.value,
+        isManualOverride,
+        readonlyAttributeAfter: standardCostInput.getAttribute("readonly"),
+        readOnlyPropertyAfter: standardCostInput.readOnly,
+        currentValue: standardCostInput.value,
+        datasetLockState: standardCostInput.dataset.lockState || null
+    });
 
     standardCostHelp.textContent = getStandardCostHelpCopy(
         {
@@ -222,8 +241,18 @@ function bindProductPricingFieldInteractions() {
     const sellingPriceInput = document.getElementById("product-selling-price");
 
     if (costSourceSelect) {
-        costSourceSelect.onchange = () => syncStandardCostSourceControl();
-        costSourceSelect.oninput = () => syncStandardCostSourceControl();
+        costSourceSelect.onchange = event => {
+            console.debug("[Moneta][Products] Cost Source onchange", {
+                value: event.target.value
+            });
+            syncStandardCostSourceControl();
+        };
+        costSourceSelect.oninput = event => {
+            console.debug("[Moneta][Products] Cost Source oninput", {
+                value: event.target.value
+            });
+            syncStandardCostSourceControl();
+        };
     }
 
     if (standardCostInput) {
@@ -282,6 +311,19 @@ function renderProductsViewShell(snapshot) {
     const priceReviewCopy = priceReviewRequired
         ? `Moneta is flagging this product for price review because standard cost moved${priceReviewValue === null ? " from no prior baseline." : ` by ${Math.abs(priceReviewValue)}%.`}`
         : "Moneta is not currently flagging this product for an additional price review.";
+
+    if (editingProduct) {
+        console.debug("[Moneta][Products] render edit pricing state", {
+            productId: editingProduct.id,
+            costingMethod: pricingPolicySettings.costingMethod,
+            allowManualCostOverride: pricingPolicySettings.allowManualCostOverride,
+            standardCostSource,
+            policyDerivedStandardCost,
+            standardCostValue,
+            displayedStandardCost,
+            costOverrideLocked
+        });
+    }
 
     root.innerHTML = `
         <div style="display:grid; gap:1rem;">
