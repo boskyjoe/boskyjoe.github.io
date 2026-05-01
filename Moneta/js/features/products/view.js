@@ -177,6 +177,12 @@ function syncStandardCostSourceControl() {
         standardCostInput.removeAttribute("readonly");
         standardCostInput.readOnly = false;
         standardCostInput.value = manualCost;
+        requestAnimationFrame(() => {
+            standardCostInput.focus();
+            if (typeof standardCostInput.select === "function") {
+                standardCostInput.select();
+            }
+        });
     } else {
         standardCostInput.setAttribute("readonly", "readonly");
         standardCostInput.readOnly = true;
@@ -664,6 +670,11 @@ function bindProductsDomEvents() {
 
     root.addEventListener("input", event => {
         const target = event.target;
+
+        if (target.id === "product-cost-source") {
+            syncStandardCostSourceControl();
+            return;
+        }
 
         if (target.id === "product-unit-price" || target.id === "product-margin") {
             if (target.id === "product-unit-price" && !target.readOnly) {
