@@ -394,7 +394,6 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 0.72rem;
     min-width: 0;
     padding: 0.62rem 0.72rem;
     border: 1px solid var(--shell-toolbar-border);
@@ -405,7 +404,8 @@
 }
 
 .shell-search {
-    flex: 1 1 22rem;
+    flex: 1 1 auto;
+    width: 100%;
     min-width: 0;
     display: flex;
     align-items: center;
@@ -450,48 +450,6 @@
 
 .shell-search-input:focus {
     outline: none;
-}
-
-.shell-quick-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.48rem;
-    overflow-x: auto;
-    padding-bottom: 0.06rem;
-    scrollbar-width: none;
-}
-
-.shell-quick-actions::-webkit-scrollbar {
-    display: none;
-}
-
-.shell-quick-action {
-    appearance: none;
-    border: 1px solid var(--shell-quick-action-border);
-    background: var(--shell-quick-action-bg);
-    color: var(--text-main);
-    min-height: 2.56rem;
-    padding: 0 0.82rem;
-    border-radius: 0.92rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font: inherit;
-    font-weight: 700;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease, color 140ms ease;
-}
-
-.shell-quick-action:hover {
-    background: var(--shell-quick-action-hover-bg);
-    border-color: rgba(var(--accent-alt-rgb), 0.18);
-    transform: translateY(-1px);
-}
-
-.shell-quick-action:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
 }
 
 .auth-slot {
@@ -819,18 +777,6 @@
     .auth-slot {
         width: 100%;
         justify-content: stretch;
-    }
-
-    .header-utility-bar {
-        flex-wrap: wrap;
-    }
-
-    .shell-search {
-        flex-basis: 100%;
-    }
-
-    .shell-quick-actions {
-        width: 100%;
     }
 
     .app-content {

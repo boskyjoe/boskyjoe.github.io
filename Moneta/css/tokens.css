@@ -81,9 +81,6 @@
     --shell-search-bg: rgba(244, 247, 250, 0.92);
     --shell-search-border: rgba(206, 217, 228, 0.9);
     --shell-search-placeholder: #7b8a9a;
-    --shell-quick-action-bg: #ffffff;
-    --shell-quick-action-border: #d8e3ec;
-    --shell-quick-action-hover-bg: #f4f8fb;
     --auth-card-bg: rgba(255, 255, 255, 0.82);
     --auth-card-border: var(--border);
     --footer-start: #202835;
@@ -303,9 +300,6 @@
     --shell-search-bg: rgba(19, 32, 49, 0.92);
     --shell-search-border: rgba(255, 255, 255, 0.08);
     --shell-search-placeholder: rgba(232, 242, 250, 0.45);
-    --shell-quick-action-bg: rgba(255, 255, 255, 0.03);
-    --shell-quick-action-border: rgba(255, 255, 255, 0.08);
-    --shell-quick-action-hover-bg: rgba(255, 255, 255, 0.07);
     --auth-card-bg: rgba(15, 23, 34, 0.88);
     --auth-card-border: rgba(255, 255, 255, 0.08);
     --footer-start: #0a1320;
