@@ -6,14 +6,6 @@ import { icons } from "../shared/icons.js";
 import { showToast } from "../shared/toast.js";
 
 const sidebarTreeState = {};
-const SHELL_QUICK_ACTION_ORDER = [
-    "#/retail-store",
-    "#/purchases",
-    "#/products",
-    "#/sales-catalogues",
-    "#/leads",
-    "#/reports"
-];
 const SHELL_SEARCH_TARGETS = {
     "#/dashboard": {
         selector: "#dashboard-inventory-search",
@@ -56,15 +48,6 @@ const SHELL_SEARCH_TARGETS = {
         placeholder: "Search users in this workspace"
     }
 };
-const SHELL_ACTION_LABELS = {
-    "#/retail-store": "Retail Sale",
-    "#/purchases": "New Purchase",
-    "#/products": "Products",
-    "#/sales-catalogues": "Catalogues",
-    "#/leads": "Leads",
-    "#/reports": "Reports"
-};
-
 function getRouteBase(route = "") {
     return String(route).split("?")[0];
 }
@@ -225,19 +208,6 @@ function renderSidebarLinks(user) {
     return nav;
 }
 
-function getQuickShellRoutes(user, currentRoute) {
-    return flattenNavRoutes()
-        .filter(item => canAccessNavItem(item, user.role))
-        .filter(item => SHELL_QUICK_ACTION_ORDER.includes(getRouteBase(item.route)))
-        .filter(item => item && getRouteBase(item.route) !== getRouteBase(currentRoute))
-        .sort(
-            (left, right) =>
-                SHELL_QUICK_ACTION_ORDER.indexOf(getRouteBase(left.route))
-                - SHELL_QUICK_ACTION_ORDER.indexOf(getRouteBase(right.route))
-        )
-        .slice(0, 3);
-}
-
 function getShellSearchMeta(currentRoute) {
     return SHELL_SEARCH_TARGETS[currentRoute] || {
         selector: "",
@@ -271,8 +241,6 @@ function renderHeaderUtilities(user) {
 
     const { currentRoute } = getState();
     const searchMeta = getShellSearchMeta(currentRoute);
-    const quickRoutes = getQuickShellRoutes(user, currentRoute);
-
     const wrapper = document.createElement("div");
     wrapper.className = "header-utility-bar";
     wrapper.innerHTML = `
@@ -286,18 +254,6 @@ function renderHeaderUtilities(user) {
                 autocomplete="off"
                 aria-label="${searchMeta.placeholder}">
         </form>
-        <div class="shell-quick-actions">
-            ${quickRoutes.map(item => `
-                <button
-                    class="shell-quick-action"
-                    type="button"
-                    data-shell-route="${item.route}"
-                    title="Open ${item.label}">
-                    <span class="button-icon">${item.icon || icons.plus}</span>
-                    <span>${SHELL_ACTION_LABELS[item.route] || item.label}</span>
-                </button>
-            `).join("")}
-        </div>
     `;
 
     wrapper.querySelector("#shell-search-form")?.addEventListener("submit", event => {
@@ -328,12 +284,6 @@ function renderHeaderUtilities(user) {
             "info",
             { title: "Moneta Search" }
         );
-    });
-
-    wrapper.querySelectorAll("[data-shell-route]").forEach(button => {
-        button.addEventListener("click", () => {
-            navigateTo(button.getAttribute("data-shell-route"));
-        });
     });
 
     slot.appendChild(wrapper);
