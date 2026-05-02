@@ -1,24 +1,11 @@
-import { canAccessNavItem, findNavRouteItem, flattenNavRoutes, navConfig } from "../config/nav-config.js";
+import { canAccessNavItem, flattenNavRoutes, navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
 import { getState } from "./store.js";
-import { getThemeMode, syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
+import { syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
 import { showToast } from "../shared/toast.js";
 
 const sidebarTreeState = {};
-const SHELL_PRIMARY_ROUTE_ORDER = [
-    "#/dashboard",
-    "#/retail-store",
-    "#/purchases",
-    "#/products",
-    "#/sales-catalogues",
-    "#/leads",
-    "#/suppliers",
-    "#/reports",
-    "#/simple-consignment",
-    "#/admin-modules",
-    "#/user-management"
-];
 const SHELL_QUICK_ACTION_ORDER = [
     "#/retail-store",
     "#/purchases",
@@ -238,29 +225,16 @@ function renderSidebarLinks(user) {
     return nav;
 }
 
-function formatRoleLabel(role = "guest") {
-    return String(role)
-        .split("_")
-        .map(token => token ? `${token[0].toUpperCase()}${token.slice(1)}` : "")
-        .join(" ");
-}
-
-function getAccessibleRouteItem(route, user) {
-    if (!user) return null;
-    const item = findNavRouteItem(route);
-    return item && canAccessNavItem(item, user.role) ? item : null;
-}
-
-function getPrimaryShellRoutes(user) {
-    return SHELL_PRIMARY_ROUTE_ORDER
-        .map(route => getAccessibleRouteItem(route, user))
-        .filter(Boolean);
-}
-
 function getQuickShellRoutes(user, currentRoute) {
-    return SHELL_QUICK_ACTION_ORDER
-        .map(route => getAccessibleRouteItem(route, user))
+    return flattenNavRoutes()
+        .filter(item => canAccessNavItem(item, user.role))
+        .filter(item => SHELL_QUICK_ACTION_ORDER.includes(getRouteBase(item.route)))
         .filter(item => item && getRouteBase(item.route) !== getRouteBase(currentRoute))
+        .sort(
+            (left, right) =>
+                SHELL_QUICK_ACTION_ORDER.indexOf(getRouteBase(left.route))
+                - SHELL_QUICK_ACTION_ORDER.indexOf(getRouteBase(right.route))
+        )
         .slice(0, 3);
 }
 
@@ -363,59 +337,6 @@ function renderHeaderUtilities(user) {
     });
 
     slot.appendChild(wrapper);
-}
-
-function renderCommandBar(user) {
-    const root = document.getElementById("app-command-bar");
-    if (!root) return;
-
-    root.innerHTML = "";
-
-    if (!user) {
-        root.hidden = true;
-        return;
-    }
-
-    const { currentRoute } = getState();
-    const searchMeta = getShellSearchMeta(currentRoute);
-    const primaryRoutes = getPrimaryShellRoutes(user);
-    const currentThemeMode = getThemeMode();
-    const isSearchReady = Boolean(searchMeta.selector);
-
-    root.hidden = false;
-    root.innerHTML = `
-        <div class="command-bar-shell">
-            <div class="command-bar-primary">
-                <span class="command-bar-kicker">Workspace</span>
-                <div class="command-bar-tabs" role="tablist" aria-label="Primary Moneta workspaces">
-                    ${primaryRoutes.map(item => {
-                        const active = getRouteBase(item.route) === getRouteBase(currentRoute);
-                        return `
-                            <button
-                                class="command-bar-tab${active ? " is-active" : ""}"
-                                type="button"
-                                data-shell-route="${item.route}"
-                                aria-pressed="${active ? "true" : "false"}">
-                                <span class="button-icon">${item.icon || icons.dashboard}</span>
-                                <span>${item.label}</span>
-                            </button>
-                        `;
-                    }).join("")}
-                </div>
-            </div>
-            <div class="command-bar-meta">
-                <span class="command-bar-chip">${isSearchReady ? "Page Search Ready" : "Jump Mode"}</span>
-                <span class="command-bar-chip">Role: ${formatRoleLabel(user.role)}</span>
-                <span class="command-bar-chip">Theme: ${formatRoleLabel(currentThemeMode)}</span>
-            </div>
-        </div>
-    `;
-
-    root.querySelectorAll("[data-shell-route]").forEach(button => {
-        button.addEventListener("click", () => {
-            navigateTo(button.getAttribute("data-shell-route"));
-        });
-    });
 }
 
 function renderAuthSlot(user) {
@@ -556,7 +477,6 @@ export function renderShell({ title }) {
 
     renderHeaderUtilities(currentUser);
     renderAuthSlot(currentUser);
-    renderCommandBar(currentUser);
     renderFooter();
 }
 
