@@ -4,6 +4,7 @@ import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import { findNavRouteItem } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
+import { buildImmediateActionItems } from "../../shared/action-center.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
@@ -12,7 +13,6 @@ const MAX_DOCS_PER_COLLECTION = 240;
 const LOW_STOCK_THRESHOLD = 5;
 const MEDIUM_STOCK_THRESHOLD = 20;
 const INVENTORY_TARGET_STOCK = 24;
-const PRICE_REVIEW_ROUTE = "#/admin-modules?section=productPriceChangeReviews";
 const WINDOW_OPTIONS = [
     { key: "today", label: "Today" },
     { key: "7d", label: "Last 7 Days" },
@@ -49,6 +49,15 @@ let themeSyncBound = false;
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function escapeHtml(value = "") {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
 }
 
 function roundCurrency(value) {
@@ -371,38 +380,6 @@ function getDashboardProfile(user) {
     };
 }
 
-function getPendingPriceReviews(rows = []) {
-    return (rows || []).filter(review => normalizeText(review.status || "pending") === "pending");
-}
-
-function buildImmediateActionItems(user, masterData = {}) {
-    const role = user?.role || "guest";
-    const items = [];
-    const pendingPriceReviews = getPendingPriceReviews(masterData.productPriceChangeReviews || []);
-
-    if (pendingPriceReviews.length > 0 && roleCanAccess(PRICE_REVIEW_ROUTE, role)) {
-        const previewNames = pendingPriceReviews
-            .map(review => normalizeText(review.productName))
-            .filter(Boolean)
-            .slice(0, 3);
-        const previewLabel = previewNames.length
-            ? `Waiting on ${previewNames.join(", ")}${pendingPriceReviews.length > previewNames.length ? ", and more." : "."}`
-            : "Open the queue to approve or reject the recommended selling-price changes.";
-
-        items.push({
-            key: "price-reviews",
-            title: "Price Reviews Pending",
-            count: pendingPriceReviews.length,
-            copy: previewLabel,
-            actionLabel: "Open Price Reviews",
-            route: PRICE_REVIEW_ROUTE,
-            tone: "warning"
-        });
-    }
-
-    return items;
-}
-
 function renderImmediateActionSection(items = []) {
     if (!items.length) return "";
 
@@ -425,11 +402,11 @@ function renderImmediateActionSection(items = []) {
                         type="button"
                         data-dashboard-action-route="${item.route}">
                         <div class="dashboard-action-head">
-                            <p class="dashboard-action-title">${item.title}</p>
+                            <p class="dashboard-action-title">${escapeHtml(item.title)}</p>
                             <span class="dashboard-action-count">${item.count}</span>
                         </div>
-                        <p class="dashboard-action-copy">${item.copy}</p>
-                        <span class="dashboard-action-link">${item.actionLabel}</span>
+                        <p class="dashboard-action-copy">${escapeHtml(item.copy)}</p>
+                        <span class="dashboard-action-link">${escapeHtml(item.actionLabel)}</span>
                     </button>
                 `).join("")}
             </div>
