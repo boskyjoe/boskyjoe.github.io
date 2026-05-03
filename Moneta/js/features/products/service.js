@@ -166,7 +166,9 @@ export function validateProductPayload(payload, masterData = {}) {
         sellingPrice: effectiveLiveSellingPrice,
         pricingMeta: {
             ...(currentProduct?.pricingMeta || {}),
-            previousStandardCost: resolveReviewBaselineStandardCost(currentProduct)
+            previousStandardCost: currentProduct
+                ? resolveReviewBaselineStandardCost(currentProduct)
+                : roundCurrency(unitPrice)
         }
     };
     const pricingSnapshot = buildProductPricingSnapshot(pricingBaseProduct, pricingPolicies);
