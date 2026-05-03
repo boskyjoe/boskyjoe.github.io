@@ -159,6 +159,9 @@ async function showPurchaseInvoiceSaveSummary(result, {
             message,
             details,
             note,
+            noteTone: "danger",
+            noteIcon: icons.warning,
+            noteTitle: "Action Required",
             choices: [
                 { label: "Open Price Reviews", value: "open-price-reviews", variant: "primary" },
                 { label: "Done", value: "done", variant: "secondary" }
@@ -175,7 +178,10 @@ async function showPurchaseInvoiceSaveSummary(result, {
         title: result.mode === "create" ? "Purchase Invoice Saved" : "Purchase Invoice Updated",
         message,
         details,
-        note
+        note,
+        noteTone: pendingCount > 0 ? "danger" : "warning",
+        noteIcon: pendingCount > 0 ? icons.warning : "",
+        noteTitle: pendingCount > 0 ? "Action Required" : ""
     });
 }
 
