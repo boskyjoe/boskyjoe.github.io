@@ -361,6 +361,7 @@ function renderProductsViewShell(snapshot) {
     if (!root) return;
 
     const editingProduct = getEditingProduct(snapshot);
+    const identityLocked = Boolean(editingProduct);
     const categories = snapshot.masterData.categories || [];
     const activeCategories = categories.filter(category => category.isActive || category.id === editingProduct?.categoryId);
     const productsCount = snapshot.masterData.products?.length || 0;
@@ -426,23 +427,38 @@ function renderProductsViewShell(snapshot) {
                                 <div class="product-form-grid product-form-grid-identity">
                                     <div class="field product-span-5">
                                         <label for="product-name">Product Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="product-name" class="input" type="text" value="${editingProduct?.itemName || ""}" required>
+                                        <input
+                                            id="product-name"
+                                            class="input"
+                                            type="text"
+                                            value="${editingProduct?.itemName || ""}"
+                                            ${identityLocked ? "readonly aria-readonly=\"true\"" : ""}
+                                            required>
                                     </div>
                                     <div class="field product-span-4">
                                         <label for="product-category">Category <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="product-category" class="select" required>
+                                        <select id="product-category" class="select" ${identityLocked ? "disabled" : ""} required>
                                             <option value="">Select category</option>
                                             ${renderCategoryOptions(categories, editingProduct?.categoryId)}
                                         </select>
                                     </div>
                                     <div class="field product-span-3">
                                         <label for="product-type">Type</label>
-                                        <select id="product-type" class="select">
+                                        <select id="product-type" class="select" ${identityLocked ? "disabled" : ""}>
                                             <option value="Standard" ${editingProduct?.itemType === "Standard" ? "selected" : ""}>Standard</option>
                                             <option value="Custom" ${editingProduct?.itemType === "Custom" ? "selected" : ""}>Custom</option>
                                         </select>
                                     </div>
                                 </div>
+                                ${identityLocked ? `
+                                    <p class="panel-copy panel-copy-tight">
+                                        Product Name, Category, and Type are locked after setup because downstream records store these identity values and Type controls pricing behavior.
+                                    </p>
+                                ` : `
+                                    <p class="panel-copy panel-copy-tight">
+                                        Set Product Name, Category, and Type carefully during setup. These identity fields lock after the product is created.
+                                    </p>
+                                `}
                             </section>
 
                             <section class="product-form-section">
@@ -791,7 +807,7 @@ function handleProductEdit(target) {
     renderProductsView();
     focusFormField({
         formId: "product-form",
-        inputSelector: "#product-name"
+        inputSelector: "#product-margin"
     });
 }
 

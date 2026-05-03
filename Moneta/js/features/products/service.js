@@ -129,6 +129,19 @@ export function validateProductPayload(payload, masterData = {}) {
     if (unitPrice < 0) throw new Error("Unit price cannot be negative.");
     if (unitMarginPercentage < 0) throw new Error("Margin cannot be negative.");
     if (manualSellingPrice < 0) throw new Error("Selling price cannot be negative.");
+    if (currentProduct) {
+        if (normalizeText(currentProduct.itemName) !== itemName) {
+            throw new Error("Product name cannot be changed after setup.");
+        }
+
+        if (normalizeText(currentProduct.categoryId) !== categoryId) {
+            throw new Error("Product category cannot be changed after setup.");
+        }
+
+        if (normalizeText(currentProduct.itemType || "Standard") !== itemType) {
+            throw new Error("Product type cannot be changed after setup.");
+        }
+    }
     if (standardCostLocked && roundCurrency(policyDerivedCost) !== roundCurrency(unitPrice)) {
         throw new Error("Standard cost is controlled by the active pricing policy.");
     }
