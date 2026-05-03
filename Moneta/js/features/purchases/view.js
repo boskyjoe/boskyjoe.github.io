@@ -1,9 +1,10 @@
 import { getState, subscribe } from "../../app/store.js";
-import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
+import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { navigateTo } from "../../app/router.js";
 import {
     subscribeToInvoicePayments,
     subscribeToPurchaseInvoices
@@ -46,6 +47,8 @@ const featureState = {
     filteredInvoiceCount: 0
 };
 
+const PRICE_REVIEW_ROUTE = "#/admin-modules?section=productPriceChangeReviews";
+
 function createDefaultPaymentDraft(invoice = null, options = {}) {
     const { prefillAmount = true } = options;
     const balanceDue = Number(invoice?.balanceDue ?? invoice?.invoiceTotal) || 0;
@@ -70,6 +73,110 @@ function normalizeNumber(value, fallback = 0) {
 
 function roundCurrency(value) {
     return Number((Number(value) || 0).toFixed(2));
+}
+
+function canOpenPriceReviews(user) {
+    return ["admin", "inventory_manager"].includes(user?.role || "");
+}
+
+function formatProductListPreview(products = [], limit = 3) {
+    const uniqueNames = [...new Set((products || []).map(name => normalizeText(name)).filter(Boolean))];
+    if (!uniqueNames.length) return "";
+    if (uniqueNames.length <= limit) return uniqueNames.join(", ");
+    return `${uniqueNames.slice(0, limit).join(", ")}, and ${uniqueNames.length - limit} more`;
+}
+
+function buildPurchasePriceReviewFollowUp(priceReviewSummary = {}) {
+    const pendingCount = Number(priceReviewSummary.pendingCount) || 0;
+    const createdCount = Number(priceReviewSummary.createdCount) || 0;
+    const refreshedCount = Number(priceReviewSummary.refreshedCount) || 0;
+    const clearedCount = Number(priceReviewSummary.clearedCount) || 0;
+
+    if (pendingCount > 0) {
+        const names = formatProductListPreview(
+            createdCount > 0 ? priceReviewSummary.createdProducts : priceReviewSummary.pendingProducts
+        );
+        const lead = createdCount > 0
+            ? `${createdCount} product${createdCount === 1 ? "" : "s"} now require price review`
+            : `${pendingCount} product${pendingCount === 1 ? "" : "s"} still require price review after this purchase sync`;
+        return names ? `${lead}: ${names}.` : `${lead}.`;
+    }
+
+    if (clearedCount > 0) {
+        return `${clearedCount} product${clearedCount === 1 ? "" : "s"} no longer need price review after this purchase sync.`;
+    }
+
+    if (refreshedCount > 0) {
+        return `${refreshedCount} pending price review${refreshedCount === 1 ? "" : "s"} were refreshed with the latest purchase-driven costs.`;
+    }
+
+    return "";
+}
+
+async function showPurchaseInvoiceSaveSummary(result, {
+    supplierName,
+    invoiceName,
+    activeItemCount,
+    user
+} = {}) {
+    const priceReviewSummary = result?.priceReviewSummary || {};
+    const pendingCount = Number(priceReviewSummary.pendingCount) || 0;
+    const createdCount = Number(priceReviewSummary.createdCount) || 0;
+    const refreshedCount = Number(priceReviewSummary.refreshedCount) || 0;
+    const clearedCount = Number(priceReviewSummary.clearedCount) || 0;
+    const details = [
+        { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+        { label: "Supplier", value: supplierName },
+        { label: "Invoice Name", value: invoiceName },
+        { label: "Active Items", value: String(activeItemCount) }
+    ];
+
+    if (pendingCount > 0) {
+        details.push({
+            label: createdCount > 0 ? "Price Reviews Triggered" : "Price Reviews Pending",
+            value: String(createdCount > 0 ? createdCount : pendingCount)
+        });
+    }
+
+    if (refreshedCount > 0) {
+        details.push({ label: "Pending Reviews Refreshed", value: String(refreshedCount) });
+    }
+
+    if (clearedCount > 0) {
+        details.push({ label: "Reviews Cleared", value: String(clearedCount) });
+    }
+
+    const message = pendingCount > 0
+        ? (createdCount > 0
+            ? "The supplier invoice was processed successfully and pricing follow-up is now required."
+            : "The supplier invoice was processed successfully and pricing follow-up is still required.")
+        : "The supplier invoice has been processed successfully.";
+    const note = buildPurchasePriceReviewFollowUp(priceReviewSummary);
+
+    if (pendingCount > 0 && canOpenPriceReviews(user)) {
+        const choice = await showChoiceModal({
+            title: result.mode === "create" ? "Purchase Invoice Saved" : "Purchase Invoice Updated",
+            message,
+            details,
+            note,
+            choices: [
+                { label: "Open Price Reviews", value: "open-price-reviews", variant: "primary" },
+                { label: "Done", value: "done", variant: "secondary" }
+            ]
+        });
+
+        if (choice === "open-price-reviews") {
+            navigateTo(PRICE_REVIEW_ROUTE);
+        }
+        return;
+    }
+
+    await showSummaryModal({
+        title: result.mode === "create" ? "Purchase Invoice Saved" : "Purchase Invoice Updated",
+        message,
+        details,
+        note
+    });
 }
 
 function toDateInputValue(value) {
@@ -858,15 +965,11 @@ async function handlePurchaseFormSubmit(event) {
             title: "Stock Purchase"
         });
         ProgressToast.hide(0);
-        await showSummaryModal({
-            title: result.mode === "create" ? "Purchase Invoice Saved" : "Purchase Invoice Updated",
-            message: "The supplier invoice has been processed successfully.",
-            details: [
-                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
-                { label: "Supplier", value: supplierName },
-                { label: "Invoice Name", value: invoiceName },
-                { label: "Active Items", value: String(activeItemCount) }
-            ]
+        await showPurchaseInvoiceSaveSummary(result, {
+            supplierName,
+            invoiceName,
+            activeItemCount,
+            user: getState().currentUser
         });
     } catch (error) {
         console.error("[Moneta] Purchase invoice save failed:", error);

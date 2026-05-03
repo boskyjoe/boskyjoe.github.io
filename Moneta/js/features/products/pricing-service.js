@@ -255,7 +255,7 @@ export async function syncProductPriceChangeReviewState(
 ) {
     const productId = normalizeText(product?.id);
     if (!productId || !user?.email) {
-        return { reviewId: null, status: "skipped", review: null };
+        return { reviewId: null, status: "skipped", transition: "skipped", review: null };
     }
 
     const pricingMeta = product.pricingMeta || {};
@@ -285,13 +285,19 @@ export async function syncProductPriceChangeReviewState(
             updateDate: now
         });
 
-        return { reviewId: null, status: "cleared", review: null };
+        return {
+            reviewId: null,
+            status: currentReviewId ? "cleared" : "skipped",
+            transition: currentReviewId ? "cleared" : "skipped",
+            review: null
+        };
     }
 
     const affectedSummary = await buildAffectedSalesCatalogueSummary(productId, salesCatalogues);
     const reviewPayload = buildProductPriceChangeReviewPayload(product, affectedSummary, sourceType);
 
     let reviewId = currentReviewId;
+    let transition = "updated";
     if (reviewId) {
         const existingReview = await getProductPriceChangeReviewRecord(reviewId);
         if (existingReview && normalizeText(existingReview.status) === "pending") {
@@ -304,6 +310,7 @@ export async function syncProductPriceChangeReviewState(
     if (!reviewId) {
         const createdRef = await createProductPriceChangeReviewRecord(reviewPayload, user);
         reviewId = createdRef.id;
+        transition = "created";
     }
 
     await docRef.update({
@@ -319,6 +326,7 @@ export async function syncProductPriceChangeReviewState(
     return {
         reviewId,
         status: "pending",
+        transition,
         review: {
             id: reviewId,
             ...reviewPayload
@@ -380,6 +388,7 @@ export async function syncProductPricingFromPurchases(
     let updatedCount = 0;
 
     const reviewSyncProducts = [];
+    const reviewOutcomes = [];
 
     targetProducts.forEach(product => {
         const productId = normalizeText(product.id);
@@ -440,11 +449,16 @@ export async function syncProductPricingFromPurchases(
 
         for (const product of reviewSyncProducts) {
             try {
-                await syncProductPriceChangeReviewState(product, {
+                const reviewOutcome = await syncProductPriceChangeReviewState(product, {
                     salesCatalogues,
                     user,
                     sourceType: "purchase-history-sync",
                     skipReview: isCustomProduct(product)
+                });
+                reviewOutcomes.push({
+                    productId: product.id,
+                    productName: product.itemName || product.productName || "Untitled Product",
+                    ...reviewOutcome
                 });
             } catch (error) {
                 console.error("[Moneta] Failed to sync product price change review state:", {
@@ -457,8 +471,23 @@ export async function syncProductPricingFromPurchases(
         }
     }
 
+    const pendingReviewProducts = reviewOutcomes.filter(outcome => outcome.status === "pending");
+    const createdReviewProducts = reviewOutcomes.filter(outcome => outcome.transition === "created");
+    const refreshedReviewProducts = reviewOutcomes.filter(outcome => outcome.transition === "updated");
+    const clearedReviewProducts = reviewOutcomes.filter(outcome => outcome.transition === "cleared");
+
     return {
         updatedCount,
-        affectedProductIds: normalizedProductIds
+        affectedProductIds: normalizedProductIds,
+        priceReviewSummary: {
+            pendingCount: pendingReviewProducts.length,
+            createdCount: createdReviewProducts.length,
+            refreshedCount: refreshedReviewProducts.length,
+            clearedCount: clearedReviewProducts.length,
+            pendingProducts: pendingReviewProducts.map(outcome => outcome.productName),
+            createdProducts: createdReviewProducts.map(outcome => outcome.productName),
+            refreshedProducts: refreshedReviewProducts.map(outcome => outcome.productName),
+            clearedProducts: clearedReviewProducts.map(outcome => outcome.productName)
+        }
     };
 }

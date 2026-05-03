@@ -1,4 +1,5 @@
 import { getState } from "../../app/store.js";
+import { navigateTo } from "../../app/router.js";
 import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import { findNavRouteItem } from "../../config/nav-config.js";
@@ -11,6 +12,7 @@ const MAX_DOCS_PER_COLLECTION = 240;
 const LOW_STOCK_THRESHOLD = 5;
 const MEDIUM_STOCK_THRESHOLD = 20;
 const INVENTORY_TARGET_STOCK = 24;
+const PRICE_REVIEW_ROUTE = "#/admin-modules?section=productPriceChangeReviews";
 const WINDOW_OPTIONS = [
     { key: "today", label: "Today" },
     { key: "7d", label: "Last 7 Days" },
@@ -367,6 +369,72 @@ function getDashboardProfile(user) {
         canCashFlow: canFinance || role === "inventory_manager",
         scopeToOwnData
     };
+}
+
+function getPendingPriceReviews(rows = []) {
+    return (rows || []).filter(review => normalizeText(review.status || "pending") === "pending");
+}
+
+function buildImmediateActionItems(user, masterData = {}) {
+    const role = user?.role || "guest";
+    const items = [];
+    const pendingPriceReviews = getPendingPriceReviews(masterData.productPriceChangeReviews || []);
+
+    if (pendingPriceReviews.length > 0 && roleCanAccess(PRICE_REVIEW_ROUTE, role)) {
+        const previewNames = pendingPriceReviews
+            .map(review => normalizeText(review.productName))
+            .filter(Boolean)
+            .slice(0, 3);
+        const previewLabel = previewNames.length
+            ? `Waiting on ${previewNames.join(", ")}${pendingPriceReviews.length > previewNames.length ? ", and more." : "."}`
+            : "Open the queue to approve or reject the recommended selling-price changes.";
+
+        items.push({
+            key: "price-reviews",
+            title: "Price Reviews Pending",
+            count: pendingPriceReviews.length,
+            copy: previewLabel,
+            actionLabel: "Open Price Reviews",
+            route: PRICE_REVIEW_ROUTE,
+            tone: "warning"
+        });
+    }
+
+    return items;
+}
+
+function renderImmediateActionSection(items = []) {
+    if (!items.length) return "";
+
+    return `
+        <section class="panel-card dashboard-section-card dashboard-action-section">
+            <div class="dashboard-section-head">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.warning}</span>
+                    <div>
+                        <h3>Immediate Action Required</h3>
+                        <p class="panel-copy">These items need attention now based on your current Moneta role.</p>
+                    </div>
+                </div>
+                <span class="dashboard-section-badge">${items.length} open</span>
+            </div>
+            <div class="dashboard-action-grid">
+                ${items.map(item => `
+                    <button
+                        class="dashboard-action-tile tone-${item.tone || "warning"}"
+                        type="button"
+                        data-dashboard-action-route="${item.route}">
+                        <div class="dashboard-action-head">
+                            <p class="dashboard-action-title">${item.title}</p>
+                            <span class="dashboard-action-count">${item.count}</span>
+                        </div>
+                        <p class="dashboard-action-copy">${item.copy}</p>
+                        <span class="dashboard-action-link">${item.actionLabel}</span>
+                    </button>
+                `).join("")}
+            </div>
+        </section>
+    `;
 }
 
 function sortRowsByDateDesc(rows = [], dateField) {
@@ -1087,6 +1155,7 @@ function renderDashboardMarkup(user) {
     const profile = dashboard?.profile || getDashboardProfile(user);
     const categories = getState().masterData.categories || [];
     const products = getState().masterData.products || [];
+    const actionItems = buildImmediateActionItems(user, getState().masterData);
     const metrics = dashboard?.metrics || {
         leads: computeLeadSummary([]),
         retail: computeRetailSummary([]),
@@ -1140,6 +1209,8 @@ function renderDashboardMarkup(user) {
                     </div>
                 ` : ""}
             </section>
+
+            ${renderImmediateActionSection(actionItems)}
 
             <section class="dashboard-kpi-grid">
                 ${renderPrimaryCards(primaryCards)}
@@ -2002,6 +2073,14 @@ function syncDashboardFinancialVisuals() {
 function bindDashboardEvents(user) {
     const root = document.getElementById("dashboard-root");
     if (!root) return;
+
+    root.querySelectorAll("[data-dashboard-action-route]").forEach(button => {
+        button.addEventListener("click", () => {
+            const route = button.getAttribute("data-dashboard-action-route");
+            if (!route) return;
+            navigateTo(route);
+        });
+    });
 
     root.querySelectorAll("[data-dashboard-window]").forEach(button => {
         button.addEventListener("click", () => {

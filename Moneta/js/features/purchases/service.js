@@ -224,9 +224,10 @@ export async function savePurchaseInvoice(payload, masterData, user) {
 
     if (docId) {
         const result = await updatePurchaseInvoiceRecord(docId, invoiceData, user);
+        let pricingSyncResult = { updatedCount: 0, affectedProductIds: result.affectedProductIds, priceReviewSummary: null };
 
         try {
-            await syncProductPricingFromPurchases(result.affectedProductIds, {
+            pricingSyncResult = await syncProductPricingFromPurchases(result.affectedProductIds, {
                 products: masterData.products,
                 pricingPolicies: masterData.pricingPolicies,
                 salesCatalogues: masterData.salesCatalogues,
@@ -241,13 +242,14 @@ export async function savePurchaseInvoice(payload, masterData, user) {
             throw error;
         }
 
-        return { mode: "update" };
+        return { mode: "update", priceReviewSummary: pricingSyncResult.priceReviewSummary || null };
     }
 
     const result = await createPurchaseInvoiceRecord(invoiceData, user);
+    let pricingSyncResult = { updatedCount: 0, affectedProductIds: result.affectedProductIds, priceReviewSummary: null };
 
     try {
-        await syncProductPricingFromPurchases(result.affectedProductIds, {
+        pricingSyncResult = await syncProductPricingFromPurchases(result.affectedProductIds, {
             products: masterData.products,
             pricingPolicies: masterData.pricingPolicies,
             salesCatalogues: masterData.salesCatalogues,
@@ -262,7 +264,7 @@ export async function savePurchaseInvoice(payload, masterData, user) {
         throw error;
     }
 
-    return { mode: "create" };
+    return { mode: "create", priceReviewSummary: pricingSyncResult.priceReviewSummary || null };
 }
 
 export function validatePurchasePaymentPayload(payload, invoice, masterData) {
