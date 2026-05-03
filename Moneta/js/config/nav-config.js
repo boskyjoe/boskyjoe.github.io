@@ -188,7 +188,7 @@ export const navConfig = [
                         label: "Price Reviews",
                         icon: icons.warning,
                         iconClass: "nav-icon-amber",
-                        roles: ["admin"],
+                        roles: ["admin", "inventory_manager"],
                         enabled: true
                     },
                     {
