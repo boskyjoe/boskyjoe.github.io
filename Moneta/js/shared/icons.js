@@ -97,6 +97,12 @@ export const icons = {
             <circle cx="12" cy="16.8" r="1" fill="currentColor"></circle>
         </svg>
     `,
+    bell: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 16.5h12l-1.2-1.8a5.5 5.5 0 0 1-.8-2.9V10a4 4 0 1 0-8 0v1.8a5.5 5.5 0 0 1-.8 2.9z"></path>
+            <path d="M10 18.5a2 2 0 0 0 4 0"></path>
+        </svg>
+    `,
     close: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 6l12 12"></path>
