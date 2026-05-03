@@ -1,3 +1,5 @@
+import { icons } from "./icons.js";
+
 let pendingResolver = null;
 
 function escapeHtml(value) {
@@ -24,11 +26,33 @@ function renderDetails(details = []) {
     `;
 }
 
+function renderNote({ note = "", noteTone = "warning", noteIcon = "", noteTitle = "" } = {}) {
+    if (!note) return "";
+
+    const noteClasses = ["modal-note"];
+    if (noteTone) {
+        noteClasses.push(`tone-${escapeHtml(noteTone)}`);
+    }
+
+    return `
+        <div class="${noteClasses.join(" ")}">
+            ${noteIcon ? `<span class="modal-note-icon" aria-hidden="true">${noteIcon}</span>` : ""}
+            <div class="modal-note-copy">
+                ${noteTitle ? `<strong class="modal-note-title">${escapeHtml(noteTitle)}</strong>` : ""}
+                <span>${escapeHtml(note)}</span>
+            </div>
+        </div>
+    `;
+}
+
 function renderModal({
     title,
     message = "",
     details = [],
     note = "",
+    noteTone = "warning",
+    noteIcon = "",
+    noteTitle = "",
     confirmText = "OK",
     cancelText = "Cancel",
     showCancel = false,
@@ -53,7 +77,7 @@ function renderModal({
             <div class="modal-body">
                 ${message ? `<p class="modal-message">${escapeHtml(message)}</p>` : ""}
                 ${renderDetails(details)}
-                ${note ? `<p class="modal-note">${escapeHtml(note)}</p>` : ""}
+                ${renderNote({ note, noteTone, noteIcon, noteTitle })}
             </div>
             <div class="modal-actions">
                 ${choices.length
@@ -112,12 +136,24 @@ export function showModal(options) {
     });
 }
 
-export function showSummaryModal({ title, message, details = [], note = "", confirmText = "OK" }) {
+export function showSummaryModal({
+    title,
+    message,
+    details = [],
+    note = "",
+    noteTone = "warning",
+    noteIcon = "",
+    noteTitle = "",
+    confirmText = "OK"
+}) {
     return showModal({
         title,
         message,
         details,
         note,
+        noteTone,
+        noteIcon,
+        noteTitle,
         confirmText,
         showCancel: false,
         tone: "success",
@@ -130,6 +166,9 @@ export function showConfirmationModal({
     message,
     details = [],
     note = "",
+    noteTone = "warning",
+    noteIcon = "",
+    noteTitle = "",
     confirmText = "Confirm",
     cancelText = "Cancel",
     tone = "danger"
@@ -139,6 +178,9 @@ export function showConfirmationModal({
         message,
         details,
         note,
+        noteTone,
+        noteIcon,
+        noteTitle,
         confirmText,
         cancelText,
         showCancel: true,
@@ -147,12 +189,24 @@ export function showConfirmationModal({
     });
 }
 
-export function showChoiceModal({ title, message = "", details = [], note = "", choices = [] }) {
+export function showChoiceModal({
+    title,
+    message = "",
+    details = [],
+    note = "",
+    noteTone = "warning",
+    noteIcon = "",
+    noteTitle = "",
+    choices = []
+}) {
     return showModal({
         title,
         message,
         details,
         note,
+        noteTone,
+        noteIcon,
+        noteTitle,
         choices,
         showCancel: false,
         tone: "default"
