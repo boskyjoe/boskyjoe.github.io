@@ -394,6 +394,7 @@
     width: 100%;
     display: flex;
     align-items: center;
+    gap: 0.68rem;
     min-width: 0;
     padding: 0.62rem 0.72rem;
     border: 1px solid var(--shell-toolbar-border);
@@ -450,6 +451,164 @@
 
 .shell-search-input:focus {
     outline: none;
+}
+
+.shell-action-wrap {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.shell-action-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.72rem;
+    padding: 0 0.78rem;
+    border: 1px solid var(--shell-search-border);
+    border-radius: 999px;
+    background: var(--shell-search-bg);
+    color: var(--text-main);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.shell-action-trigger:hover,
+.shell-action-trigger:focus-visible,
+.shell-action-wrap.is-open .shell-action-trigger {
+    border-color: rgba(var(--warning-rgb), 0.38);
+    box-shadow: 0 0 0 4px rgba(var(--warning-rgb), 0.1);
+    outline: none;
+}
+
+.shell-action-trigger-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--warning);
+}
+
+.shell-action-trigger-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.shell-action-trigger-count {
+    min-width: 1.6rem;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(var(--warning-rgb), 0.14);
+    color: var(--warning);
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.shell-action-panel {
+    position: absolute;
+    top: calc(100% + 0.7rem);
+    right: 0;
+    width: min(360px, calc(100vw - 2rem));
+    display: grid;
+    gap: 0.8rem;
+    padding: 0.92rem;
+    border: 1px solid var(--shell-toolbar-border);
+    border-radius: 1rem;
+    background: var(--bg-overlay-soft);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(16px);
+    z-index: 40;
+}
+
+.shell-action-panel[hidden] {
+    display: none;
+}
+
+.shell-action-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.shell-action-panel-kicker {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.shell-action-panel-title {
+    margin: 0.18rem 0 0;
+    color: var(--text-strong);
+    font-size: 0.96rem;
+    font-weight: 800;
+}
+
+.shell-action-panel-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.shell-action-item {
+    display: grid;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.82rem 0.86rem;
+    border: 1px solid var(--dashboard-list-warning-border);
+    border-radius: 0.9rem;
+    background: var(--dashboard-list-warning-bg);
+    text-align: left;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.shell-action-item:hover,
+.shell-action-item:focus-visible {
+    border-color: var(--dashboard-kpi-warning-border);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    outline: none;
+}
+
+.shell-action-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+
+.shell-action-item-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.shell-action-item-count {
+    min-width: 1.55rem;
+    padding: 0.15rem 0.42rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--text-main);
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.shell-action-item-copy {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.42;
+}
+
+.shell-action-item-link {
+    color: var(--warning);
+    font-size: 0.73rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .auth-slot {
@@ -808,7 +967,19 @@
     }
 
     .header-utility-bar {
+        flex-wrap: wrap;
         padding: 0.62rem;
+    }
+
+    .shell-action-wrap,
+    .shell-action-trigger {
+        width: 100%;
+    }
+
+    .shell-action-panel {
+        left: 0;
+        right: 0;
+        width: 100%;
     }
 
     .auth-slot {
