@@ -1,11 +1,24 @@
 import { canAccessNavItem, flattenNavRoutes, navConfig } from "../config/nav-config.js";
 import { navigateTo } from "./router.js";
-import { getState } from "./store.js";
+import { getState, subscribe } from "./store.js";
 import { syncThemeControlState, THEME_CHANGE_EVENT } from "./theme.js";
 import { icons } from "../shared/icons.js";
+import { buildImmediateActionItems, getImmediateActionCount } from "../shared/action-center.js";
 import { showToast } from "../shared/toast.js";
 
 const sidebarTreeState = {};
+const shellUiState = {
+    actionPanelOpen: false
+};
+
+function escapeHtml(value = "") {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+}
 const SHELL_SEARCH_TARGETS = {
     "#/dashboard": {
         selector: "#dashboard-inventory-search",
@@ -230,6 +243,7 @@ function renderHeaderUtilities(user) {
     const slot = document.getElementById("header-utility-slot");
     if (!slot) return;
 
+    const previousQuery = slot.querySelector("#shell-search-input")?.value || "";
     slot.innerHTML = "";
     slot.hidden = !user;
 
@@ -241,6 +255,11 @@ function renderHeaderUtilities(user) {
 
     const { currentRoute } = getState();
     const searchMeta = getShellSearchMeta(currentRoute);
+    const actionItems = buildImmediateActionItems(user, getState().masterData);
+    const actionCount = getImmediateActionCount(actionItems);
+    if (actionCount <= 0) {
+        shellUiState.actionPanelOpen = false;
+    }
     const wrapper = document.createElement("div");
     wrapper.className = "header-utility-bar";
     wrapper.innerHTML = `
@@ -254,7 +273,51 @@ function renderHeaderUtilities(user) {
                 autocomplete="off"
                 aria-label="${searchMeta.placeholder}">
         </form>
+        ${actionCount > 0 ? `
+            <div class="shell-action-wrap${shellUiState.actionPanelOpen ? " is-open" : ""}">
+                <button
+                    id="shell-action-trigger"
+                    class="shell-action-trigger"
+                    type="button"
+                    aria-label="${actionCount} action${actionCount === 1 ? "" : "s"} required"
+                    aria-expanded="${shellUiState.actionPanelOpen ? "true" : "false"}"
+                    aria-controls="shell-action-panel">
+                    <span class="shell-action-trigger-icon">${icons.bell}</span>
+                    <span class="shell-action-trigger-label">Action Required</span>
+                    <span class="shell-action-trigger-count">${actionCount}</span>
+                </button>
+                <div id="shell-action-panel" class="shell-action-panel" ${shellUiState.actionPanelOpen ? "" : "hidden"}>
+                    <div class="shell-action-panel-head">
+                        <div>
+                            <p class="shell-action-panel-kicker">Pending Work</p>
+                            <p class="shell-action-panel-title">Action Required</p>
+                        </div>
+                        <span class="status-pill">${actionCount} open</span>
+                    </div>
+                    <div class="shell-action-panel-list">
+                        ${actionItems.slice(0, 5).map(item => `
+                            <button
+                                class="shell-action-item tone-${item.tone || "warning"}"
+                                type="button"
+                                data-shell-action-route="${item.route}">
+                                <div class="shell-action-item-head">
+                                    <span class="shell-action-item-title">${escapeHtml(item.title)}</span>
+                                    <span class="shell-action-item-count">${item.count}</span>
+                                </div>
+                                <span class="shell-action-item-copy">${escapeHtml(item.copy)}</span>
+                                <span class="shell-action-item-link">${escapeHtml(item.actionLabel)}</span>
+                            </button>
+                        `).join("")}
+                    </div>
+                </div>
+            </div>
+        ` : ""}
     `;
+
+    const searchInput = wrapper.querySelector("#shell-search-input");
+    if (searchInput) {
+        searchInput.value = previousQuery;
+    }
 
     wrapper.querySelector("#shell-search-form")?.addEventListener("submit", event => {
         event.preventDefault();
@@ -284,6 +347,22 @@ function renderHeaderUtilities(user) {
             "info",
             { title: "Moneta Search" }
         );
+    });
+
+    wrapper.querySelector("#shell-action-trigger")?.addEventListener("click", event => {
+        event.preventDefault();
+        shellUiState.actionPanelOpen = !shellUiState.actionPanelOpen;
+        renderHeaderUtilities(user);
+    });
+
+    wrapper.querySelectorAll("[data-shell-action-route]").forEach(button => {
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            const route = button.getAttribute("data-shell-action-route");
+            if (!route) return;
+            shellUiState.actionPanelOpen = false;
+            navigateTo(route);
+        });
     });
 
     slot.appendChild(wrapper);
@@ -435,7 +514,40 @@ export function initializeShell() {
         document.getElementById("app-sidebar")?.classList.toggle("open");
     });
 
+    document.addEventListener("click", event => {
+        if (!shellUiState.actionPanelOpen) return;
+        if (event.target.closest(".shell-action-wrap")) return;
+        shellUiState.actionPanelOpen = false;
+        renderHeaderUtilities(getState().currentUser);
+    });
+
     window.addEventListener(THEME_CHANGE_EVENT, () => {
         syncThemeControlState(document.getElementById("auth-slot") || document);
+    });
+
+    let lastShellSignature = "";
+    let lastRoute = "";
+    subscribe(snapshot => {
+        if (snapshot.currentRoute !== lastRoute) {
+            shellUiState.actionPanelOpen = false;
+            lastRoute = snapshot.currentRoute;
+        }
+
+        const actionItems = buildImmediateActionItems(snapshot.currentUser, snapshot.masterData);
+        const signature = JSON.stringify({
+            route: snapshot.currentRoute,
+            userId: snapshot.currentUser?.uid || "",
+            role: snapshot.currentUser?.role || "",
+            actions: actionItems.map(item => ({
+                key: item.key,
+                count: item.count,
+                copy: item.copy,
+                route: item.route
+            }))
+        });
+
+        if (signature === lastShellSignature) return;
+        lastShellSignature = signature;
+        renderShell({ title: document.getElementById("view-title")?.textContent || "Moneta" });
     });
 }
