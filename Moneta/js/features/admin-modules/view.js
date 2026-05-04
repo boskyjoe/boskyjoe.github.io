@@ -378,9 +378,13 @@ function getOnlineCatalogueVisibleSourceItems(draft = getOnlineCatalogueDraft())
     const selectedCatalogueId = normalizeText(onlineCatalogueState.catalogueFilterId);
     const query = normalizeText(featureState.searchTerms.onlineCatalogues).toLowerCase();
 
+    if (!selectedCatalogueId) {
+        return [];
+    }
+
     return getOnlineCatalogueSourceItems().filter(item => {
         const sourceCatalogueId = normalizeText(item.sourceCatalogueId || item.catalogueId);
-        if (selectedCatalogueId && sourceCatalogueId !== selectedCatalogueId) {
+        if (sourceCatalogueId !== selectedCatalogueId) {
             return false;
         }
 
@@ -505,9 +509,11 @@ function refreshOnlineCatalogueDraftIndicators() {
     const selectedSummary = document.getElementById("admin-online-catalogue-selected-summary");
 
     if (status) {
-        status.textContent = visibleItems.length
-            ? `${visibleItems.length} source item${visibleItems.length === 1 ? "" : "s"} from ${selectedCatalogueLabel} · ${selectedCount} selected`
-            : "No Sales Catalogue items match the current filter.";
+        status.textContent = !selectedCatalogueId
+            ? "Choose a Sales Catalogue to load source items."
+            : visibleItems.length
+                ? `${visibleItems.length} source item${visibleItems.length === 1 ? "" : "s"} from ${selectedCatalogueLabel} · ${selectedCount} selected`
+                : "No Sales Catalogue items match the current filter.";
     }
 
     if (selectedPill) {
@@ -1255,6 +1261,7 @@ function renderOnlineCatalogueForm(snapshot) {
     const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
     const missingSelections = getOnlineCatalogueMissingSelections(draft);
     const lastUpdatedLabel = draft.updatedOn ? formatDateTime(draft.updatedOn) : "Not saved yet";
+    const hasSelectedCatalogue = Boolean(normalizeText(onlineCatalogueState.catalogueFilterId));
 
     return `
         <div class="panel-card">
@@ -1334,10 +1341,16 @@ function renderOnlineCatalogueForm(snapshot) {
                                         id="admin-online-catalogue-source-search"
                                         class="input toolbar-search"
                                         type="search"
-                                        placeholder="Search source items"
-                                        value="${escapeHtml(featureState.searchTerms.onlineCatalogues)}">
+                                        placeholder="${hasSelectedCatalogue ? "Search source items" : "Select a Sales Catalogue first"}"
+                                        value="${escapeHtml(featureState.searchTerms.onlineCatalogues)}"
+                                        ${hasSelectedCatalogue ? "" : "disabled"}>
                                 </div>
                             </div>
+                            ${!hasSelectedCatalogue ? `
+                                <div class="reports-audit-note">
+                                    <strong>Next step:</strong> choose a Sales Catalogue first, then Moneta will load its products into the grid for selection.
+                                </div>
+                            ` : ""}
                             ${missingSelections.length ? `
                                 <div class="modal-note tone-danger">
                                     <span class="modal-note-icon">${icons.warning}</span>
