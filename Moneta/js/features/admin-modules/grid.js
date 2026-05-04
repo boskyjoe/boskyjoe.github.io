@@ -20,6 +20,11 @@ let onlineCatalogueSourceGridElement = null;
 let onlineCatalogueSelectionChangeHandler = null;
 let isSyncingOnlineCatalogueSelection = false;
 
+const rightAlignedNumberColumn = {
+    cellClass: "ag-right-aligned-cell",
+    headerClass: "ag-right-aligned-header"
+};
+
 function statusMarkup(isActive) {
     return `
         <span class="grid-status-cell grid-status-pill ${isActive ? "status-active" : "status-inactive"}">
