@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moneta Pickup Requests Portal</title>
+    <meta
+      name="description"
+      content="Preview the Moneta public pickup requests portal."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/pickup-portal.css" />
+  </head>
+  <body>
+    <div class="portal-shell">
+      <header class="portal-header">
+        <div class="brand-block">
+          <p class="eyebrow">Moneta Public Portal Preview</p>
+          <h1>Pickup Requests</h1>
+          <p class="brand-copy">
+            A portable storefront layer for church pickup requests, powered by a
+            published catalogue snapshot.
+          </p>
+        </div>
+
+        <div class="header-status">
+          <span class="status-pill">Preview Only</span>
+          <p id="publish-meta" class="status-copy">Loading catalogue snapshot...</p>
+        </div>
+      </header>
+
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Request Flow</p>
+          <h2>Customers can request items now and collect after staff confirmation.</h2>
+          <p id="pickup-notice" class="hero-note">
+            The catalogue snapshot will load here once available.
+          </p>
+
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <span class="metric-label">Pickup Location</span>
+              <strong id="pickup-location">Loading...</strong>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Contact</span>
+              <strong id="contact-phone">Loading...</strong>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Lead Time</span>
+              <strong id="lead-time">Loading...</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-callout">
+          <p class="eyebrow">Phase 1 Scope</p>
+          <ul class="callout-list">
+            <li>Published catalogue snapshot only</li>
+            <li>No real-time inventory promise</li>
+            <li>Request captured for later staff conversion</li>
+            <li>Local preview summary instead of live submission</li>
+          </ul>
+        </div>
+      </section>
+
+      <main class="portal-main">
+        <section class="catalogue-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Online Catalogue</p>
+              <h3>Browse public pickup items</h3>
+            </div>
+            <p id="catalogue-status" class="panel-meta">Loading items...</p>
+          </div>
+
+          <div class="catalogue-toolbar">
+            <label class="search-field" for="catalogue-search">
+              <span>Search catalogue</span>
+              <input
+                id="catalogue-search"
+                name="catalogue-search"
+                type="search"
+                placeholder="Search by item name or description"
+                autocomplete="off"
+              />
+            </label>
+
+            <div id="category-filters" class="category-filters" aria-label="Filter by category"></div>
+          </div>
+
+          <div id="catalogue-grid" class="catalogue-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="request-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Pickup Request</p>
+              <h3>Build a request preview</h3>
+            </div>
+            <p class="panel-meta">No data is sent yet in this scaffold.</p>
+          </div>
+
+          <section class="cart-panel">
+            <div class="cart-header">
+              <h4>Selected items</h4>
+              <button id="clear-cart-button" class="secondary-button" type="button">
+                Clear
+              </button>
+            </div>
+            <div id="cart-items" class="cart-items"></div>
+            <div class="cart-summary">
+              <span>Estimated Total</span>
+              <strong id="cart-total">KES 0</strong>
+            </div>
+          </section>
+
+          <form id="pickup-request-form" class="request-form">
+            <label>
+              <span>Full Name</span>
+              <input name="customerName" type="text" placeholder="Enter customer name" required />
+            </label>
+
+            <label>
+              <span>Phone Number</span>
+              <input name="customerPhone" type="tel" placeholder="07xx xxx xxx" required />
+            </label>
+
+            <label>
+              <span>Requested Pickup Date</span>
+              <input name="pickupDate" type="date" required />
+            </label>
+
+            <label>
+              <span>Requested Pickup Time</span>
+              <input name="pickupTime" type="time" required />
+            </label>
+
+            <label>
+              <span>Notes</span>
+              <textarea
+                name="notes"
+                rows="4"
+                placeholder="Optional pickup notes or special request context"
+              ></textarea>
+            </label>
+
+            <button id="review-request-button" class="primary-button" type="submit">
+              Review Request
+            </button>
+          </form>
+        </aside>
+      </main>
+    </div>
+
+    <div id="request-preview-modal" class="modal-shell hidden" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Preview Only</p>
+            <h3 id="modal-title">Pickup request summary</h3>
+          </div>
+          <button id="close-modal-button" class="icon-button" type="button" aria-label="Close preview">
+            ×
+          </button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+        <div class="modal-actions">
+          <button id="close-modal-footer-button" class="secondary-button" type="button">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/pickup-portal.js"></script>
+  </body>
+</html>
