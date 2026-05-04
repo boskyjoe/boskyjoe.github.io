@@ -1,91 +1,35 @@
 {
-  "catalogueId": "pickup-preview",
+  "catalogueId": "pickupPortal",
   "catalogueName": "Church Pickup Requests",
   "currency": "INR",
-  "publishedAt": "2026-05-04T09:00:00.000Z",
+  "publishedAt": "2026-05-04T23:28:18.851Z",
+  "generatedAt": "2026-05-04T23:28:18.851Z",
+  "version": 2,
   "pickupNotice": "Submit a pickup request and wait for confirmation from the church store team before collection.",
   "pickupLocation": "Church Resource Centre",
-  "contactPhone": "+254 700 123 456",
+  "contactPhone": "24242334",
   "requestLeadTimeHours": 24,
   "categories": [
     {
-      "id": "baked-goods",
-      "name": "Baked Goods"
-    },
-    {
-      "id": "books-resources",
-      "name": "Books & Resources"
-    },
-    {
-      "id": "gift-items",
-      "name": "Gift Items"
+      "id": "XmPVxsnTU3TxbMxd4jbd",
+      "name": "Dates & Carrot - Cake"
     }
   ],
   "items": [
     {
-      "id": "dates-carrot-cake-250g",
-      "productId": "prod-dates-carrot-cake-250g",
+      "id": "TVcy8QbGMQOxLmGUTP0n__tUPMrnoiBeBI3XRd0iFu",
+      "sourceCatalogueId": "TVcy8QbGMQOxLmGUTP0n",
+      "sourceCatalogueName": "2026 Christmas - Sales",
+      "sourceCatalogueItemId": "tUPMrnoiBeBI3XRd0iFu",
+      "productId": "wDu2v1zVzAqW1gNO69L3",
+      "itemId": "ITEM-1777795780315",
       "name": "Dates & Carrot Cake (250 grams)",
-      "categoryId": "baked-goods",
-      "description": "Moist carrot loaf with natural date sweetness for pickup-day treats.",
-      "price": 650,
-      "unitLabel": "per pack",
-      "imageLabel": "Cake",
-      "isAvailable": true
-    },
-    {
-      "id": "banana-tea-loaf",
-      "productId": "prod-banana-tea-loaf",
-      "name": "Banana Tea Loaf",
-      "categoryId": "baked-goods",
-      "description": "Soft family loaf prepared for fellowship and home visits.",
-      "price": 520,
-      "unitLabel": "per loaf",
-      "imageLabel": "Loaf",
-      "isAvailable": true
-    },
-    {
-      "id": "prayer-journal",
-      "productId": "prod-prayer-journal",
-      "name": "Prayer Journal",
-      "categoryId": "books-resources",
-      "description": "A guided notebook for weekly devotion, prayer points, and testimony tracking.",
-      "price": 850,
+      "categoryId": "XmPVxsnTU3TxbMxd4jbd",
+      "categoryName": "Dates & Carrot - Cake",
+      "description": "",
+      "price": 1268.56,
       "unitLabel": "each",
-      "imageLabel": "Journal",
-      "isAvailable": true
-    },
-    {
-      "id": "family-devotional-guide",
-      "productId": "prod-family-devotional-guide",
-      "name": "Family Devotional Guide",
-      "categoryId": "books-resources",
-      "description": "Thirty-day resource for home fellowship and children’s reflection prompts.",
-      "price": 1100,
-      "unitLabel": "each",
-      "imageLabel": "Guide",
-      "isAvailable": true
-    },
-    {
-      "id": "church-mug",
-      "productId": "prod-church-mug",
-      "name": "Church Mug",
-      "categoryId": "gift-items",
-      "description": "Branded ceramic mug for appreciation gifts and conference welcome packs.",
-      "price": 780,
-      "unitLabel": "each",
-      "imageLabel": "Mug",
-      "isAvailable": true
-    },
-    {
-      "id": "bookmark-pack",
-      "productId": "prod-bookmark-pack",
-      "name": "Scripture Bookmark Pack",
-      "categoryId": "gift-items",
-      "description": "Set of five printed bookmarks with memory verses and encouragement lines.",
-      "price": 260,
-      "unitLabel": "per pack",
-      "imageLabel": "Pack",
+      "imageLabel": "D&",
       "isAvailable": true
     }
   ]
