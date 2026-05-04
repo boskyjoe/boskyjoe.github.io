@@ -44,9 +44,16 @@ import {
 } from "../../shared/reorder-policy.js";
 import {
     approveProductPriceChangeReview,
+    buildOnlineCatalogueItemKey,
+    buildOnlineCatalogueJsonSnapshot,
+    DEFAULT_ONLINE_CATALOGUE_CONFIG,
     getAdminEditRestriction,
+    loadOnlineCatalogueWorkspace,
+    normalizeOnlineCatalogueConfig,
+    ONLINE_CATALOGUE_DOC_ID,
     rejectProductPriceChangeReview,
     saveCategory,
+    saveOnlineCatalogueWorkspace,
     savePaymentMode,
     savePricingPolicy,
     saveReorderPolicy,
@@ -93,6 +100,12 @@ const ADMIN_SECTIONS = {
         icon: icons.warning,
         description: "Review suggested product price changes, approve or reject them, and decide whether active Sales Catalogue items should sync."
     },
+    onlineCatalogues: {
+        label: "Online Catalogue",
+        entityLabel: "Online Catalogue",
+        icon: icons.catalogue,
+        description: "Curate a public pickup-portal snapshot from Sales Catalogue items and generate a downloadable catalogue.json file for manual publish."
+    },
     storeConfigs: {
         label: "Store Config",
         entityLabel: "Store Config",
@@ -118,6 +131,7 @@ const featureState = {
         paymentModes: "",
         pricingPolicies: "",
         productPriceChangeReviews: "",
+        onlineCatalogues: "",
         storeConfigs: "",
         reorderPolicies: ""
     },
@@ -127,9 +141,22 @@ const featureState = {
         paymentModes: null,
         pricingPolicies: null,
         productPriceChangeReviews: null,
+        onlineCatalogues: null,
         storeConfigs: null,
         reorderPolicies: null
     }
+};
+
+const onlineCatalogueState = {
+    status: "idle",
+    errorMessage: "",
+    config: normalizeOnlineCatalogueConfig(DEFAULT_ONLINE_CATALOGUE_CONFIG),
+    formDraft: normalizeOnlineCatalogueConfig(DEFAULT_ONLINE_CATALOGUE_CONFIG),
+    sourceItems: [],
+    generatedJsonText: "",
+    generatedFileName: "catalogue.json",
+    generatedMeta: null,
+    loadingPromise: null
 };
 
 const ADMIN_FORM_FOCUS_TARGETS = {
@@ -152,6 +179,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     productPriceChangeReviews: {
         formId: null,
         inputSelector: "#admin-product-price-review-approve-button"
+    },
+    onlineCatalogues: {
+        formId: "admin-online-catalogue-form",
+        inputSelector: "#admin-online-catalogue-name"
     },
     storeConfigs: {
         formId: "admin-store-config-form",
@@ -265,11 +296,192 @@ function setActiveSection(section) {
     featureState.activeSection = section;
 }
 
+function formatOnlineCatalogueCurrency(value, currency = "KES") {
+    const normalizedCurrency = normalizeText(currency || "KES").toUpperCase();
+    const numericValue = Number(value || 0);
+    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-KE";
+
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency: normalizedCurrency,
+            maximumFractionDigits: 0
+        }).format(numericValue);
+    } catch (error) {
+        return `${normalizedCurrency} ${numericValue.toFixed(2)}`;
+    }
+}
+
+function getOnlineCatalogueDraft() {
+    return normalizeOnlineCatalogueConfig(
+        onlineCatalogueState.formDraft
+        || onlineCatalogueState.config
+        || DEFAULT_ONLINE_CATALOGUE_CONFIG
+    );
+}
+
+function getOnlineCatalogueSourceItems() {
+    return (onlineCatalogueState.sourceItems || []).slice();
+}
+
+function getOnlineCatalogueSelectedKeySet(draft = getOnlineCatalogueDraft()) {
+    return new Set((draft.selectedItems || []).map(item => buildOnlineCatalogueItemKey(item)).filter(Boolean));
+}
+
+function getOnlineCatalogueVisibleSourceItems(draft = getOnlineCatalogueDraft()) {
+    const query = normalizeText(featureState.searchTerms.onlineCatalogues).toLowerCase();
+
+    return getOnlineCatalogueSourceItems().filter(item => {
+        if (!query) return true;
+
+        const haystack = [
+            item.productName,
+            item.categoryName,
+            item.sourceCatalogueName,
+            item.itemId
+        ]
+            .map(value => normalizeText(value).toLowerCase())
+            .join(" ");
+
+        return haystack.includes(query);
+    });
+}
+
+function getOnlineCatalogueSelectedSourceRows(draft = getOnlineCatalogueDraft()) {
+    const sourceMap = new Map(getOnlineCatalogueSourceItems().map(item => [buildOnlineCatalogueItemKey(item), item]));
+    return (draft.selectedItems || [])
+        .map(item => sourceMap.get(buildOnlineCatalogueItemKey(item)))
+        .filter(Boolean);
+}
+
+function getOnlineCatalogueMissingSelections(draft = getOnlineCatalogueDraft()) {
+    const sourceMap = new Map(getOnlineCatalogueSourceItems().map(item => [buildOnlineCatalogueItemKey(item), item]));
+    return (draft.selectedItems || []).filter(item => !sourceMap.has(buildOnlineCatalogueItemKey(item)));
+}
+
+function collectOnlineCatalogueDraftFromDom() {
+    const form = document.getElementById("admin-online-catalogue-form");
+    if (!form) {
+        return getOnlineCatalogueDraft();
+    }
+
+    const formData = new FormData(form);
+    const selectedItems = Array.from(
+        form.querySelectorAll("input[name=\"onlineCatalogueSelection\"]:checked")
+    ).map((input, index) => ({
+        sourceCatalogueId: input.dataset.sourceCatalogueId || "",
+        sourceCatalogueItemId: input.dataset.sourceCatalogueItemId || "",
+        sortOrder: index + 1
+    }));
+
+    onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig({
+        id: ONLINE_CATALOGUE_DOC_ID,
+        catalogueCode: onlineCatalogueState.config?.catalogueCode || "",
+        version: onlineCatalogueState.config?.version || DEFAULT_ONLINE_CATALOGUE_CONFIG.version,
+        createdBy: onlineCatalogueState.config?.createdBy || "",
+        createdOn: onlineCatalogueState.config?.createdOn || null,
+        updatedBy: onlineCatalogueState.config?.updatedBy || "",
+        updatedOn: onlineCatalogueState.config?.updatedOn || null,
+        catalogueName: formData.get("catalogueName"),
+        currency: formData.get("currency"),
+        pickupNotice: formData.get("pickupNotice"),
+        pickupLocation: formData.get("pickupLocation"),
+        contactPhone: formData.get("contactPhone"),
+        requestLeadTimeHours: formData.get("requestLeadTimeHours"),
+        selectedItems
+    });
+
+    return onlineCatalogueState.formDraft;
+}
+
+function refreshOnlineCatalogueSourceList() {
+    const container = document.getElementById("admin-online-catalogue-source-list");
+    if (!container) return;
+    const draft = collectOnlineCatalogueDraftFromDom();
+    const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
+    container.innerHTML = renderOnlineCatalogueSourceListMarkup(draft, visibleItems);
+    refreshOnlineCatalogueDraftIndicators();
+}
+
+function refreshOnlineCatalogueDraftIndicators() {
+    const draft = getOnlineCatalogueDraft();
+    const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
+    const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
+    const selectedCount = selectedRows.length;
+    const status = document.getElementById("admin-online-catalogue-source-status");
+    const selectedPill = document.getElementById("admin-online-catalogue-selected-pill");
+    const selectedSummary = document.getElementById("admin-online-catalogue-selected-summary");
+
+    if (status) {
+        status.textContent = visibleItems.length
+            ? `${visibleItems.length} matching source item${visibleItems.length === 1 ? "" : "s"} · ${selectedCount} selected`
+            : "No Sales Catalogue items match the current filter.";
+    }
+
+    if (selectedPill) {
+        selectedPill.textContent = `${selectedCount} selected`;
+    }
+
+    if (selectedSummary) {
+        selectedSummary.innerHTML = `<strong>Selected right now:</strong> ${selectedRows.length
+            ? escapeHtml(selectedRows.map(row => row.productName || "Untitled Product").join(", "))
+            : "No Sales Catalogue items selected yet."}`;
+    }
+}
+
+function downloadTextFile(fileName, text) {
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+}
+
+async function ensureOnlineCatalogueWorkspaceLoaded(snapshot, { force = false } = {}) {
+    if (onlineCatalogueState.loadingPromise && !force) {
+        return onlineCatalogueState.loadingPromise;
+    }
+
+    if (onlineCatalogueState.status === "ready" && !force) {
+        return null;
+    }
+
+    onlineCatalogueState.status = "loading";
+    onlineCatalogueState.errorMessage = "";
+
+    onlineCatalogueState.loadingPromise = loadOnlineCatalogueWorkspace(snapshot.masterData || {})
+        .then(({ config, sourceItems }) => {
+            onlineCatalogueState.config = normalizeOnlineCatalogueConfig(config);
+            onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig(config);
+            onlineCatalogueState.sourceItems = sourceItems || [];
+            onlineCatalogueState.status = "ready";
+        })
+        .catch(error => {
+            console.error("[Moneta] Online catalogue workspace load failed:", error);
+            onlineCatalogueState.status = "error";
+            onlineCatalogueState.errorMessage = error.message || "Could not load the online catalogue workspace.";
+        })
+        .finally(() => {
+            onlineCatalogueState.loadingPromise = null;
+            renderAdminModulesView();
+        });
+
+    return onlineCatalogueState.loadingPromise;
+}
+
 function getPendingProductPriceReviews(rows = []) {
     return (rows || []).filter(record => normalizeText(record.status || "pending") === "pending");
 }
 
 function getEditingRecord(snapshot, section = featureState.activeSection) {
+    if (section === "onlineCatalogues") {
+        return getOnlineCatalogueDraft();
+    }
+
     const recordId = featureState.editingIds[section];
 
     if (section === "pricingPolicies") {
@@ -338,6 +550,10 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
 }
 
 function getSectionRows(snapshot, section = featureState.activeSection) {
+    if (section === "onlineCatalogues") {
+        return getOnlineCatalogueSourceItems();
+    }
+
     if (section === "categories") {
         return (snapshot.masterData.categories || []).slice().sort((left, right) => (left.categoryName || "").localeCompare(right.categoryName || ""));
     }
@@ -893,9 +1109,17 @@ function renderReorderPolicyExplanationPreview(snapshot, policyDraft = {}, editi
 function renderHeader(snapshot) {
     const config = getActiveSectionConfig();
     const rows = getSectionRows(snapshot);
-    const activeCount = featureState.activeSection === "productPriceChangeReviews"
-        ? rows.filter(row => normalizeText(row.status || "pending") === "pending").length
-        : rows.filter(row => row.isActive).length;
+    const activeCount = featureState.activeSection === "onlineCatalogues"
+        ? getOnlineCatalogueDraft().selectedItems.length
+        : featureState.activeSection === "productPriceChangeReviews"
+            ? rows.filter(row => normalizeText(row.status || "pending") === "pending").length
+            : rows.filter(row => row.isActive).length;
+    const recordLabel = featureState.activeSection === "onlineCatalogues"
+        ? `${rows.length} source items`
+        : `${rows.length} records`;
+    const activeLabel = featureState.activeSection === "onlineCatalogues"
+        ? `${activeCount} selected`
+        : `${activeCount} ${featureState.activeSection === "productPriceChangeReviews" ? "pending" : "active"}`;
 
     return `
         <div class="panel-card">
@@ -908,9 +1132,224 @@ function renderHeader(snapshot) {
                     </div>
                 </div>
                 <div class="toolbar-meta">
-                    <span class="status-pill">${rows.length} records</span>
-                    <span class="status-pill">${activeCount} ${featureState.activeSection === "productPriceChangeReviews" ? "pending" : "active"}</span>
+                    <span class="status-pill">${recordLabel}</span>
+                    <span class="status-pill">${activeLabel}</span>
                 </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderOnlineCatalogueSourceListMarkup(draft = getOnlineCatalogueDraft(), visibleItems = getOnlineCatalogueVisibleSourceItems(draft)) {
+    const selectedKeys = getOnlineCatalogueSelectedKeySet(draft);
+
+    if (onlineCatalogueState.status === "loading") {
+        return `<div class="empty-state">Loading Sales Catalogue items for online publishing...</div>`;
+    }
+
+    if (onlineCatalogueState.status === "error") {
+        return `<div class="empty-state">${escapeHtml(onlineCatalogueState.errorMessage || "Could not load source catalogue items.")}</div>`;
+    }
+
+    if (!visibleItems.length) {
+        return `<div class="empty-state">No Sales Catalogue items match the current filter.</div>`;
+    }
+
+    return visibleItems.map(item => {
+        const key = buildOnlineCatalogueItemKey(item);
+        const isChecked = selectedKeys.has(key);
+        return `
+            <label class="online-catalogue-source-row">
+                <input
+                    class="online-catalogue-source-checkbox"
+                    type="checkbox"
+                    name="onlineCatalogueSelection"
+                    value="${escapeHtml(key)}"
+                    data-source-catalogue-id="${escapeHtml(item.sourceCatalogueId || item.catalogueId || "")}"
+                    data-source-catalogue-item-id="${escapeHtml(item.id || "")}"
+                    ${isChecked ? "checked" : ""}>
+                <div class="online-catalogue-source-copy">
+                    <div class="online-catalogue-source-head">
+                        <strong>${escapeHtml(item.productName || "Untitled Product")}</strong>
+                        <span class="status-pill">${formatOnlineCatalogueCurrency(item.sellingPrice, draft.currency)}</span>
+                    </div>
+                    <p class="panel-copy panel-copy-tight">
+                        ${escapeHtml(item.sourceCatalogueName || "Sales Catalogue")} · ${escapeHtml(item.categoryName || "Uncategorized")} · Product ID ${escapeHtml(item.productId || "-")}
+                    </p>
+                </div>
+            </label>
+        `;
+    }).join("");
+}
+
+function renderOnlineCatalogueForm(snapshot) {
+    const draft = getOnlineCatalogueDraft();
+    const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
+    const selectedCount = draft.selectedItems.length;
+    const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
+    const missingSelections = getOnlineCatalogueMissingSelections(draft);
+    const lastUpdatedLabel = draft.updatedOn ? formatDateTime(draft.updatedOn) : "Not saved yet";
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.catalogue}</span>
+                    <div>
+                        <h3>Curate Pickup Portal Catalogue</h3>
+                        <p class="panel-copy">Choose which Sales Catalogue items should appear in the public pickup portal, then generate a full <code>catalogue.json</code> snapshot for manual publish.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">Version ${draft.version || 1}</span>
+                    <span id="admin-online-catalogue-selected-pill" class="status-pill">${selectedCount} selected</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <form id="admin-online-catalogue-form">
+                    <div class="workspace-form-sections">
+                        <section class="workspace-form-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Snapshot Setup</p>
+                                <h3>Portal Metadata</h3>
+                                <p class="panel-copy">These values become the public JSON metadata that the pickup portal reads.</p>
+                            </div>
+                            <div class="workspace-form-section-grid online-catalogue-meta-grid">
+                                <div class="field field-wide">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-name", label: "Online Catalogue Name", required: true, tooltip: "This becomes the public catalogue name inside catalogue.json." })}
+                                    <input id="admin-online-catalogue-name" class="input" name="catalogueName" type="text" value="${escapeHtml(draft.catalogueName)}" placeholder="Church Pickup Requests" required>
+                                </div>
+                                <div class="field">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-currency", label: "Currency", required: true, tooltip: "Used for the published JSON snapshot and pickup portal price display." })}
+                                    <input id="admin-online-catalogue-currency" class="input" name="currency" type="text" value="${escapeHtml(draft.currency)}" maxlength="6" placeholder="KES" required>
+                                </div>
+                                <div class="field">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-lead-time", label: "Request Lead Time (Hours)", required: true, tooltip: "Tells customers how much lead time they should expect before pickup." })}
+                                    <input id="admin-online-catalogue-lead-time" class="input" name="requestLeadTimeHours" type="number" min="0" step="1" value="${Number(draft.requestLeadTimeHours || 0)}" required>
+                                </div>
+                                <div class="field field-wide">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-location", label: "Pickup Location", required: true, tooltip: "Shown to customers as the collection point." })}
+                                    <input id="admin-online-catalogue-location" class="input" name="pickupLocation" type="text" value="${escapeHtml(draft.pickupLocation)}" placeholder="Church Resource Centre" required>
+                                </div>
+                                <div class="field field-wide">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-phone", label: "Contact Phone", required: true, tooltip: "Public contact line for pickup questions." })}
+                                    <input id="admin-online-catalogue-phone" class="input" name="contactPhone" type="text" value="${escapeHtml(draft.contactPhone)}" placeholder="+254 700 123 456" required>
+                                </div>
+                                <div class="field field-wide">
+                                    ${renderFieldLabel({ forId: "admin-online-catalogue-notice", label: "Pickup Notice", required: true, tooltip: "Public notice shown on the pickup portal hero section." })}
+                                    <textarea id="admin-online-catalogue-notice" class="input" name="pickupNotice" rows="3" placeholder="Submit a pickup request and wait for confirmation..." required>${escapeHtml(draft.pickupNotice)}</textarea>
+                                </div>
+                            </div>
+                            <div class="reports-audit-note">
+                                <strong>Last saved:</strong> ${escapeHtml(lastUpdatedLabel)} · <strong>Saved by:</strong> ${escapeHtml(draft.updatedBy || "Not saved yet")}
+                            </div>
+                        </section>
+
+                        <section class="workspace-form-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Source Selection</p>
+                                <h3>Sales Catalogue Items</h3>
+                                <p class="panel-copy">Pick the exact Sales Catalogue items that should be published to the public pickup portal snapshot.</p>
+                            </div>
+                            <div class="toolbar online-catalogue-toolbar">
+                                <div>
+                                    <p class="section-kicker" style="margin-bottom: 0.25rem;">Selection Status</p>
+                                    <p id="admin-online-catalogue-source-status" class="panel-copy">${visibleItems.length} matching source item${visibleItems.length === 1 ? "" : "s"} · ${selectedCount} selected</p>
+                                </div>
+                                <div class="search-wrap">
+                                    <span class="search-icon">${icons.search}</span>
+                                    <input
+                                        id="admin-online-catalogue-source-search"
+                                        class="input toolbar-search"
+                                        type="search"
+                                        placeholder="Search source items"
+                                        value="${escapeHtml(featureState.searchTerms.onlineCatalogues)}">
+                                </div>
+                            </div>
+                            ${missingSelections.length ? `
+                                <div class="modal-note tone-danger">
+                                    <span class="modal-note-icon">${icons.warning}</span>
+                                    <span class="modal-note-copy">
+                                        <span class="modal-note-title">Selection Needs Review</span>
+                                        <span>${missingSelections.length} previously selected item${missingSelections.length === 1 ? "" : "s"} can no longer be resolved from the current Sales Catalogue data. Save the curation again before generating JSON.</span>
+                                    </span>
+                                </div>
+                            ` : ""}
+                            <div id="admin-online-catalogue-source-list" class="online-catalogue-source-list">
+                                ${renderOnlineCatalogueSourceListMarkup(draft, visibleItems)}
+                            </div>
+                            <div id="admin-online-catalogue-selected-summary" class="reports-audit-note">
+                                <strong>Selected right now:</strong> ${selectedRows.length
+                                    ? escapeHtml(selectedRows.map(row => row.productName || "Untitled Product").join(", "))
+                                    : "No Sales Catalogue items selected yet."}
+                            </div>
+                        </section>
+                    </div>
+                    <div class="form-actions">
+                        <button id="admin-online-catalogue-reset-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reset to Saved
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${icons.download}</span>
+                            Save + Generate JSON
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function renderOnlineCataloguePreviewCard() {
+    const draft = getOnlineCatalogueDraft();
+    const generatedText = onlineCatalogueState.generatedJsonText || "";
+    const generatedMeta = onlineCatalogueState.generatedMeta || null;
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${icons.download}</span>
+                    <div>
+                        <h3>Generated JSON Snapshot</h3>
+                        <p class="panel-copy">Phase 1 ends with a downloadable <code>catalogue.json</code> file that an admin can publish to GitHub manually.</p>
+                    </div>
+                </div>
+                <div class="toolbar-meta">
+                    <span class="status-pill">${draft.selectedItems.length} items selected</span>
+                    <span class="status-pill">Version ${draft.version || 1}</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="toolbar online-catalogue-toolbar">
+                    <div>
+                        <p class="section-kicker" style="margin-bottom: 0.25rem;">Download Target</p>
+                        <p class="panel-copy">Replace <code>pickup-portal/data/catalogue.json</code> on GitHub with the generated file.</p>
+                    </div>
+                    <button
+                        id="admin-online-catalogue-download-button"
+                        class="button button-secondary"
+                        type="button"
+                        ${generatedText ? "" : "disabled data-disabled-reason=\"Generate the JSON snapshot first.\""}>
+                        <span class="button-icon">${icons.download}</span>
+                        Download catalogue.json
+                    </button>
+                </div>
+                ${generatedMeta ? `
+                    <div class="reports-audit-note">
+                        <strong>Generated:</strong> ${escapeHtml(generatedMeta.generatedAt || "-")} ·
+                        <strong>File:</strong> ${escapeHtml(generatedMeta.fileName || "catalogue.json")} ·
+                        <strong>Items:</strong> ${Number(generatedMeta.itemCount || 0)}
+                    </div>
+                ` : ""}
+                ${generatedText ? `
+                    <pre class="online-catalogue-json-preview">${escapeHtml(generatedText)}</pre>
+                ` : `
+                    <div class="empty-state">
+                        Save the curated Online Catalogue to generate the latest JSON snapshot for the pickup portal.
+                    </div>
+                `}
             </div>
         </div>
     `;
@@ -1837,6 +2276,10 @@ function renderProductPriceChangeReviewForm(snapshot) {
 }
 
 function renderCurrentForm(snapshot) {
+    if (featureState.activeSection === "onlineCatalogues") {
+        return renderOnlineCatalogueForm(snapshot);
+    }
+
     if (featureState.activeSection === "categories") {
         return renderCategoryForm(snapshot);
     }
@@ -1865,6 +2308,18 @@ function renderCurrentForm(snapshot) {
 }
 
 function getGridMeta(snapshot) {
+    if (featureState.activeSection === "onlineCatalogues") {
+        const rows = getOnlineCatalogueSourceItems();
+        const draft = getOnlineCatalogueDraft();
+        return {
+            title: "Online Catalogue Snapshot",
+            copy: "Generate a full pickup-portal JSON snapshot from the curated Sales Catalogue selection.",
+            count: draft.selectedItems.length,
+            countLabel: "selected items",
+            directoryHelp: `${rows.length} Sales Catalogue source item${rows.length === 1 ? "" : "s"} are currently available for public curation.`
+        };
+    }
+
     if (featureState.activeSection === "categories") {
         const rows = snapshot.masterData.categories || [];
         return {
@@ -1943,6 +2398,10 @@ function getGridMeta(snapshot) {
 }
 
 function renderCurrentGridCard(snapshot) {
+    if (featureState.activeSection === "onlineCatalogues") {
+        return renderOnlineCataloguePreviewCard();
+    }
+
     const meta = getGridMeta(snapshot);
 
     return `
@@ -1984,6 +2443,10 @@ function renderCurrentGridCard(snapshot) {
 }
 
 function syncCurrentGrid(snapshot) {
+    if (featureState.activeSection === "onlineCatalogues") {
+        return;
+    }
+
     const gridElement = document.getElementById("admin-module-grid");
     const rows = getSectionRows(snapshot);
 
@@ -2050,6 +2513,10 @@ export function renderAdminModulesView() {
     `;
 
     syncCurrentGrid(snapshot);
+
+    if (featureState.activeSection === "onlineCatalogues" && onlineCatalogueState.status === "idle") {
+        ensureOnlineCatalogueWorkspaceLoaded(snapshot);
+    }
 }
 
 async function handleCategorySubmit(event) {
@@ -2499,11 +2966,83 @@ async function handleReorderPolicySubmit(event) {
     }
 }
 
+async function handleOnlineCatalogueSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const draft = collectOnlineCatalogueDraftFromDom();
+        const result = await runProgressToastFlow({
+            title: "Saving Online Catalogue",
+            initialMessage: "Reading the curated public catalogue draft...",
+            initialProgress: 16,
+            initialStep: "Step 1 of 5",
+            successTitle: "Online Catalogue Ready",
+            successMessage: "The online catalogue draft was saved and a JSON snapshot was generated."
+        }, async ({ update }) => {
+            update("Validating public metadata and selected Sales Catalogue items...", 36, "Step 2 of 5");
+
+            const saveResult = await saveOnlineCatalogueWorkspace(
+                draft,
+                getState().currentUser,
+                getState().masterData,
+                onlineCatalogueState.config
+            );
+
+            update("Building the public pickup-portal JSON snapshot...", 68, "Step 3 of 5");
+
+            const generated = buildOnlineCatalogueJsonSnapshot(saveResult.config, onlineCatalogueState.sourceItems);
+            onlineCatalogueState.config = normalizeOnlineCatalogueConfig(saveResult.config);
+            onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig(saveResult.config);
+            onlineCatalogueState.generatedJsonText = JSON.stringify(generated.payload, null, 2);
+            onlineCatalogueState.generatedFileName = generated.fileName;
+            onlineCatalogueState.generatedMeta = {
+                fileName: generated.fileName,
+                itemCount: generated.payload.items.length,
+                generatedAt: generated.payload.generatedAt
+            };
+
+            update("Refreshing the Online Catalogue workspace...", 88, "Step 4 of 5");
+            renderAdminModulesView();
+            update("JSON snapshot is ready for manual GitHub publish.", 96, "Step 5 of 5");
+
+            return {
+                mode: saveResult.mode,
+                generated
+            };
+        });
+
+        showToast("Online catalogue snapshot generated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Online Catalogue Ready",
+            message: "Moneta saved the curated public catalogue and generated a fresh pickup-portal JSON snapshot.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : result.mode === "update" ? "Update" : "No Change" },
+                { label: "Selected Items", value: String(result.generated.payload.items.length) },
+                { label: "JSON File", value: result.generated.fileName },
+                { label: "Version", value: String(result.generated.payload.version) }
+            ],
+            note: "Phase 1 is manual publish: download the generated catalogue.json and replace the file in pickup-portal/data/ on GitHub."
+        });
+    } catch (error) {
+        console.error("[Moneta] Online catalogue save failed:", error);
+        showToast(error.message || "Could not save and generate the online catalogue.", "error");
+    }
+}
+
 function getRecordDisplayName(record = {}) {
     return record.categoryName || record.seasonName || record.paymentMode || record.policyName || record.productName || record.storeName || "-";
 }
 
 function handleSearchInput(target) {
+    if (target.id === "admin-online-catalogue-source-search") {
+        featureState.searchTerms.onlineCatalogues = target.value || "";
+        refreshOnlineCatalogueSourceList();
+        return;
+    }
+
     if (target.id !== "admin-module-grid-search") return;
 
     featureState.searchTerms[featureState.activeSection] = target.value || "";
@@ -2740,6 +3279,11 @@ function bindAdminModulesDomEvents() {
     if (!root || root.dataset.bound === "true") return;
 
     root.addEventListener("submit", event => {
+        if (event.target.id === "admin-online-catalogue-form") {
+            handleOnlineCatalogueSubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-category-form") {
             handleCategorySubmit(event);
             return;
@@ -2773,12 +3317,22 @@ function bindAdminModulesDomEvents() {
     root.addEventListener("input", event => {
         handleSearchInput(event.target);
 
+        if (event.target.closest("#admin-online-catalogue-form")) {
+            collectOnlineCatalogueDraftFromDom();
+            refreshOnlineCatalogueDraftIndicators();
+        }
+
         if (event.target.closest("#admin-reorder-policy-form")) {
             refreshReorderPolicyExplanationUi();
         }
     });
 
     root.addEventListener("change", event => {
+        if (event.target.closest("#admin-online-catalogue-form")) {
+            collectOnlineCatalogueDraftFromDom();
+            refreshOnlineCatalogueDraftIndicators();
+        }
+
         if (event.target.closest("#admin-reorder-policy-form")) {
             refreshReorderPolicyExplanationUi();
         }
@@ -2792,6 +3346,8 @@ function bindAdminModulesDomEvents() {
         const seasonCancelButton = target.closest("#admin-season-cancel-button");
         const paymentModeCancelButton = target.closest("#admin-payment-mode-cancel-button");
         const pricingPolicyCancelButton = target.closest("#admin-pricing-policy-cancel-button");
+        const onlineCatalogueResetButton = target.closest("#admin-online-catalogue-reset-button");
+        const onlineCatalogueDownloadButton = target.closest("#admin-online-catalogue-download-button");
         const productPriceReviewApproveButton = target.closest("#admin-product-price-review-approve-button");
         const productPriceReviewRejectButton = target.closest("#admin-product-price-review-reject-button");
         const productPriceReviewCancelButton = target.closest("#admin-product-price-review-cancel-button");
@@ -2825,6 +3381,25 @@ function bindAdminModulesDomEvents() {
 
         if (pricingPolicyCancelButton) {
             handleCancelEdit("pricingPolicies");
+            return;
+        }
+
+        if (onlineCatalogueResetButton) {
+            onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig(onlineCatalogueState.config || DEFAULT_ONLINE_CATALOGUE_CONFIG);
+            renderAdminModulesView();
+            return;
+        }
+
+        if (onlineCatalogueDownloadButton) {
+            if (!onlineCatalogueState.generatedJsonText) {
+                showToast("Generate the JSON snapshot first.", "warning");
+                return;
+            }
+
+            downloadTextFile(onlineCatalogueState.generatedFileName || "catalogue.json", onlineCatalogueState.generatedJsonText);
+            showToast("catalogue.json downloaded.", "success", {
+                title: "Admin Modules"
+            });
             return;
         }
 

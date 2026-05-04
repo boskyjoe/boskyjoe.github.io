@@ -2,9 +2,12 @@ import {
     createCategoryRecord,
     createPaymentModeRecord,
     createReorderPolicyRecord,
+    getOnlineCatalogueRecord,
+    getSalesCatalogueItemsForCatalogueHeaders,
     getProductPriceChangeReviewRecord,
     seedPricingPolicyRecords,
     createSeasonRecord,
+    saveOnlineCatalogueRecord,
     seedStoreConfigRecords,
     getCategoryUsageStatus,
     getPaymentModeUsageStatus,
@@ -47,9 +50,26 @@ import {
 import { getStoreConfigByDocId } from "../../shared/store-config.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
+export const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
+export const DEFAULT_ONLINE_CATALOGUE_CONFIG = {
+    id: ONLINE_CATALOGUE_DOC_ID,
+    catalogueName: "Church Pickup Requests",
+    currency: "KES",
+    pickupNotice: "Submit a pickup request and wait for confirmation from the church store team before collection.",
+    pickupLocation: "Church Resource Centre",
+    contactPhone: "",
+    requestLeadTimeHours: 24,
+    version: 1,
+    selectedItems: []
+};
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function normalizeUpperText(value, fallback = "") {
+    const normalized = normalizeText(value).toUpperCase();
+    return normalized || fallback;
 }
 
 function getDb() {
@@ -95,6 +115,225 @@ function normalizeDecimal(value, fallback = 0, minimum = 0) {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.max(minimum, Number(parsed.toFixed(2)));
+}
+
+export function buildOnlineCatalogueItemKey(entry = {}) {
+    const sourceCatalogueId = normalizeText(entry.sourceCatalogueId || entry.catalogueId);
+    const sourceCatalogueItemId = normalizeText(entry.sourceCatalogueItemId || entry.id);
+    return sourceCatalogueId && sourceCatalogueItemId
+        ? `${sourceCatalogueId}::${sourceCatalogueItemId}`
+        : "";
+}
+
+function buildOnlineCatalogueImageLabel(name = "") {
+    const words = normalizeText(name).split(/\s+/).filter(Boolean);
+    if (!words.length) return "Item";
+    return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join("");
+}
+
+function normalizeOnlineCatalogueSelectionEntries(items = []) {
+    const seenKeys = new Set();
+
+    return (items || [])
+        .map((item, index) => {
+            const sourceCatalogueId = normalizeText(item.sourceCatalogueId || item.catalogueId);
+            const sourceCatalogueItemId = normalizeText(item.sourceCatalogueItemId || item.id);
+            const key = buildOnlineCatalogueItemKey({ sourceCatalogueId, sourceCatalogueItemId });
+
+            if (!key || seenKeys.has(key)) {
+                return null;
+            }
+
+            seenKeys.add(key);
+
+            return {
+                sourceCatalogueId,
+                sourceCatalogueItemId,
+                sortOrder: normalizeInteger(item.sortOrder, index + 1, 1)
+            };
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.sortOrder - right.sortOrder || buildOnlineCatalogueItemKey(left).localeCompare(buildOnlineCatalogueItemKey(right)));
+}
+
+function normalizeOnlineCatalogueComparableConfig(record = {}) {
+    return {
+        catalogueName: normalizeText(record.catalogueName),
+        currency: normalizeUpperText(record.currency, DEFAULT_ONLINE_CATALOGUE_CONFIG.currency),
+        pickupNotice: normalizeText(record.pickupNotice),
+        pickupLocation: normalizeText(record.pickupLocation),
+        contactPhone: normalizeText(record.contactPhone),
+        requestLeadTimeHours: normalizeInteger(record.requestLeadTimeHours, DEFAULT_ONLINE_CATALOGUE_CONFIG.requestLeadTimeHours, 0),
+        selectedItems: normalizeOnlineCatalogueSelectionEntries(record.selectedItems)
+    };
+}
+
+export function normalizeOnlineCatalogueConfig(record = {}) {
+    const normalized = normalizeOnlineCatalogueComparableConfig(record);
+
+    return {
+        ...DEFAULT_ONLINE_CATALOGUE_CONFIG,
+        ...normalized,
+        id: normalizeText(record.id || record.docId || ONLINE_CATALOGUE_DOC_ID) || ONLINE_CATALOGUE_DOC_ID,
+        catalogueCode: normalizeText(record.catalogueCode),
+        version: Math.max(1, normalizeInteger(record.version, DEFAULT_ONLINE_CATALOGUE_CONFIG.version, 1)),
+        createdBy: normalizeText(record.createdBy),
+        createdOn: record.createdOn || null,
+        updatedBy: normalizeText(record.updatedBy),
+        updatedOn: record.updatedOn || null
+    };
+}
+
+function validateOnlineCataloguePayload(payload = {}) {
+    const normalized = normalizeOnlineCatalogueComparableConfig(payload);
+
+    if (!normalized.catalogueName) {
+        throw new Error("Online catalogue name is required.");
+    }
+
+    if (!normalized.pickupNotice) {
+        throw new Error("Pickup notice is required.");
+    }
+
+    if (!normalized.pickupLocation) {
+        throw new Error("Pickup location is required.");
+    }
+
+    if (!normalized.contactPhone) {
+        throw new Error("Contact phone is required.");
+    }
+
+    if (!normalized.selectedItems.length) {
+        throw new Error("Select at least one Sales Catalogue item for the online catalogue.");
+    }
+
+    return normalized;
+}
+
+export async function loadOnlineCatalogueWorkspace(masterData = {}) {
+    const existingRecord = await getOnlineCatalogueRecord(ONLINE_CATALOGUE_DOC_ID);
+    const config = existingRecord
+        ? normalizeOnlineCatalogueConfig(existingRecord)
+        : { ...DEFAULT_ONLINE_CATALOGUE_CONFIG };
+
+    const selectedCatalogueIds = new Set((config.selectedItems || []).map(item => item.sourceCatalogueId).filter(Boolean));
+    const headersToFetch = (masterData.salesCatalogues || [])
+        .filter(header => header?.isActive || selectedCatalogueIds.has(normalizeText(header?.id)))
+        .map(header => ({
+            id: normalizeText(header.id),
+            catalogueName: normalizeText(header.catalogueName || header.catalogueId || "Sales Catalogue"),
+            isActive: header.isActive !== false
+        }))
+        .filter(header => header.id);
+
+    const sourceItems = await getSalesCatalogueItemsForCatalogueHeaders(headersToFetch);
+
+    return {
+        config,
+        sourceItems: (sourceItems || []).slice().sort((left, right) => {
+            const catalogueCompare = normalizeText(left.sourceCatalogueName).localeCompare(normalizeText(right.sourceCatalogueName));
+            if (catalogueCompare !== 0) return catalogueCompare;
+            return normalizeText(left.productName).localeCompare(normalizeText(right.productName));
+        })
+    };
+}
+
+export async function saveOnlineCatalogueWorkspace(payload, user, masterData = {}, existingConfig = null) {
+    if (!user) {
+        throw new Error("You must be logged in to save the online catalogue.");
+    }
+
+    const normalized = validateOnlineCataloguePayload(payload);
+    const currentConfig = existingConfig ? normalizeOnlineCatalogueConfig(existingConfig) : normalizeOnlineCatalogueConfig(await getOnlineCatalogueRecord(ONLINE_CATALOGUE_DOC_ID) || {});
+    const currentComparable = normalizeOnlineCatalogueComparableConfig(currentConfig);
+    const hasChanges = JSON.stringify(normalized) !== JSON.stringify(currentComparable);
+
+    if (!hasChanges && currentConfig?.updatedOn) {
+        return {
+            mode: "noop",
+            config: currentConfig
+        };
+    }
+
+    const savedConfig = normalizeOnlineCatalogueConfig(await saveOnlineCatalogueRecord(
+        ONLINE_CATALOGUE_DOC_ID,
+        {
+            ...normalized,
+            version: hasChanges
+                ? Math.max(1, normalizeInteger(currentConfig.version, 1, 1) + 1)
+                : Math.max(1, normalizeInteger(currentConfig.version, 1, 1)),
+            sourceType: "sales-catalogue",
+            portalType: "pickup-requests"
+        },
+        user,
+        currentConfig?.updatedOn ? currentConfig : null
+    ));
+
+    return {
+        mode: currentConfig?.updatedOn ? "update" : "create",
+        config: savedConfig
+    };
+}
+
+export function buildOnlineCatalogueJsonSnapshot(config = {}, sourceItems = []) {
+    const normalizedConfig = normalizeOnlineCatalogueConfig(config);
+    const sourceMap = new Map((sourceItems || []).map(item => [buildOnlineCatalogueItemKey(item), item]));
+    const missingItems = normalizedConfig.selectedItems.filter(item => !sourceMap.has(buildOnlineCatalogueItemKey(item)));
+
+    if (missingItems.length) {
+        throw new Error("Some saved online catalogue selections no longer exist in Sales Catalogue. Review the selection and save again before generating JSON.");
+    }
+
+    const selectedRows = normalizedConfig.selectedItems
+        .map(selection => sourceMap.get(buildOnlineCatalogueItemKey(selection)))
+        .filter(Boolean);
+
+    const categories = Array.from(new Map(
+        selectedRows.map(row => [
+            normalizeText(row.categoryId || "uncategorized"),
+            {
+                id: normalizeText(row.categoryId || "uncategorized"),
+                name: normalizeText(row.categoryName || "Uncategorized")
+            }
+        ])
+    ).values()).sort((left, right) => left.name.localeCompare(right.name));
+
+    const generatedAt = new Date().toISOString();
+
+    const items = selectedRows.map((row, index) => ({
+        id: `${normalizeText(row.sourceCatalogueId || row.catalogueId)}__${normalizeText(row.id)}`,
+        sourceCatalogueId: normalizeText(row.sourceCatalogueId || row.catalogueId),
+        sourceCatalogueName: normalizeText(row.sourceCatalogueName || "Sales Catalogue"),
+        sourceCatalogueItemId: normalizeText(row.id),
+        productId: normalizeText(row.productId),
+        itemId: normalizeText(row.itemId),
+        name: normalizeText(row.productName || "Untitled Product"),
+        categoryId: normalizeText(row.categoryId || "uncategorized"),
+        categoryName: normalizeText(row.categoryName || "Uncategorized"),
+        description: "",
+        price: roundCurrency(normalizeDecimal(row.sellingPrice, 0, 0)),
+        unitLabel: "each",
+        imageLabel: buildOnlineCatalogueImageLabel(row.productName || row.itemId || `Item ${index + 1}`),
+        isAvailable: true
+    }));
+
+    return {
+        fileName: "catalogue.json",
+        payload: {
+            catalogueId: normalizedConfig.id || ONLINE_CATALOGUE_DOC_ID,
+            catalogueName: normalizedConfig.catalogueName,
+            currency: normalizedConfig.currency,
+            publishedAt: generatedAt,
+            generatedAt,
+            version: Math.max(1, normalizeInteger(normalizedConfig.version, 1, 1)),
+            pickupNotice: normalizedConfig.pickupNotice,
+            pickupLocation: normalizedConfig.pickupLocation,
+            contactPhone: normalizedConfig.contactPhone,
+            requestLeadTimeHours: normalizedConfig.requestLeadTimeHours,
+            categories,
+            items
+        }
+    };
 }
 
 function buildNameMap(rows = [], labelField) {

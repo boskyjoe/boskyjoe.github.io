@@ -41,6 +41,11 @@ function buildProductPriceChangeReviewCode() {
     return `PPR-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
 }
 
+function buildOnlineCatalogueCode(docId = "") {
+    const normalized = normalizeText(docId).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return `ONC-${normalized || Date.now()}`;
+}
+
 async function queryHasMatch(query) {
     const snapshot = await query.limit(1).get();
     return !snapshot.empty;
@@ -318,6 +323,85 @@ export async function updateProductPriceChangeReviewRecord(docId, updatedData, u
         ...updatedData,
         updatedBy: user.email,
         updatedOn: now
+    });
+}
+
+export async function getOnlineCatalogueRecord(docId) {
+    const normalizedDocId = normalizeText(docId);
+    if (!normalizedDocId) return null;
+
+    const snapshot = await getDb().collection(COLLECTIONS.onlineCatalogues).doc(normalizedDocId).get();
+    if (!snapshot.exists) {
+        return null;
+    }
+
+    return { id: snapshot.id, ...snapshot.data() };
+}
+
+export async function saveOnlineCatalogueRecord(docId, onlineCatalogueData, user, existingRecord = null) {
+    const normalizedDocId = normalizeText(docId);
+    if (!normalizedDocId) {
+        throw new Error("Online catalogue record could not be resolved.");
+    }
+
+    const now = getNow();
+    const nowLocal = new Date();
+    const docRef = getDb().collection(COLLECTIONS.onlineCatalogues).doc(normalizedDocId);
+    const currentRecord = existingRecord || await getOnlineCatalogueRecord(normalizedDocId);
+
+    await docRef.set({
+        ...onlineCatalogueData,
+        catalogueCode: currentRecord?.catalogueCode || buildOnlineCatalogueCode(normalizedDocId),
+        createdBy: currentRecord?.createdBy || user.email,
+        createdOn: currentRecord?.createdOn || now,
+        updatedBy: user.email,
+        updatedOn: now
+    }, { merge: true });
+
+    return {
+        id: normalizedDocId,
+        ...(currentRecord || {}),
+        ...onlineCatalogueData,
+        catalogueCode: currentRecord?.catalogueCode || buildOnlineCatalogueCode(normalizedDocId),
+        createdBy: currentRecord?.createdBy || user.email,
+        createdOn: currentRecord?.createdOn || nowLocal,
+        updatedBy: user.email,
+        updatedOn: nowLocal
+    };
+}
+
+export async function getSalesCatalogueItemsForCatalogueHeaders(catalogueHeaders = []) {
+    const headers = (catalogueHeaders || [])
+        .filter(header => normalizeText(header?.id))
+        .map(header => ({
+            id: normalizeText(header.id),
+            catalogueName: normalizeText(header.catalogueName || header.catalogueId || "Sales Catalogue"),
+            isActive: header.isActive !== false
+        }));
+
+    if (!headers.length) {
+        return [];
+    }
+
+    const snapshots = await Promise.all(
+        headers.map(header => {
+            return getDb()
+                .collection(COLLECTIONS.salesCatalogues)
+                .doc(header.id)
+                .collection("items")
+                .get();
+        })
+    );
+
+    return snapshots.flatMap((snapshot, index) => {
+        const header = headers[index];
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            sourceCatalogueId: header.id,
+            sourceCatalogueName: header.catalogueName,
+            sourceCatalogueIsActive: header.isActive,
+            ...doc.data()
+        }));
     });
 }
 
