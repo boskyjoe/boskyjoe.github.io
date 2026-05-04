@@ -54,7 +54,7 @@ export const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
 export const DEFAULT_ONLINE_CATALOGUE_CONFIG = {
     id: ONLINE_CATALOGUE_DOC_ID,
     catalogueName: "Church Pickup Requests",
-    currency: "KES",
+    currency: "INR",
     pickupNotice: "Submit a pickup request and wait for confirmation from the church store team before collection.",
     pickupLocation: "Church Resource Centre",
     contactPhone: "",

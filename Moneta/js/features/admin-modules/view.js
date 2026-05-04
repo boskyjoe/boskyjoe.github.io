@@ -296,8 +296,8 @@ function setActiveSection(section) {
     featureState.activeSection = section;
 }
 
-function formatOnlineCatalogueCurrency(value, currency = "KES") {
-    const normalizedCurrency = normalizeText(currency || "KES").toUpperCase();
+function formatOnlineCatalogueCurrency(value, currency = "INR") {
+    const normalizedCurrency = normalizeText(currency || "INR").toUpperCase();
     const numericValue = Number(value || 0);
     const locale = normalizedCurrency === "INR" ? "en-IN" : "en-KE";
 
@@ -1221,7 +1221,7 @@ function renderOnlineCatalogueForm(snapshot) {
                                 </div>
                                 <div class="field">
                                     ${renderFieldLabel({ forId: "admin-online-catalogue-currency", label: "Currency", required: true, tooltip: "Used for the published JSON snapshot and pickup portal price display." })}
-                                    <input id="admin-online-catalogue-currency" class="input" name="currency" type="text" value="${escapeHtml(draft.currency)}" maxlength="6" placeholder="KES" required>
+                                    <input id="admin-online-catalogue-currency" class="input" name="currency" type="text" value="${escapeHtml(draft.currency)}" maxlength="6" placeholder="INR" required>
                                 </div>
                                 <div class="field">
                                     ${renderFieldLabel({ forId: "admin-online-catalogue-lead-time", label: "Request Lead Time (Hours)", required: true, tooltip: "Tells customers how much lead time they should expect before pickup." })}
