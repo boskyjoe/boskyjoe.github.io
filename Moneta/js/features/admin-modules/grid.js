@@ -15,6 +15,10 @@ let reorderPoliciesGridApi = null;
 let reorderPoliciesGridElement = null;
 let storeConfigsGridApi = null;
 let storeConfigsGridElement = null;
+let onlineCatalogueSourceGridApi = null;
+let onlineCatalogueSourceGridElement = null;
+let onlineCatalogueSelectionChangeHandler = null;
+let isSyncingOnlineCatalogueSelection = false;
 
 function statusMarkup(isActive) {
     return `
@@ -208,6 +212,22 @@ function formatDate(value) {
         month: "short",
         year: "numeric"
     });
+}
+
+function formatOnlineCatalogueCurrency(value, currency = "INR") {
+    const normalizedCurrency = String(currency || "INR").trim().toUpperCase() || "INR";
+    const numericValue = Number(value || 0);
+    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-US";
+
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency: normalizedCurrency,
+            maximumFractionDigits: 0
+        }).format(numericValue);
+    } catch (error) {
+        return `${normalizedCurrency} ${numericValue.toFixed(2)}`;
+    }
 }
 
 function getUpdatedDate(row) {
@@ -419,6 +439,31 @@ function buildStoreConfigsColumnDefs() {
     ];
 }
 
+function buildOnlineCatalogueSourceColumnDefs() {
+    return [
+        {
+            field: "productName",
+            headerName: "Product",
+            minWidth: 220,
+            flex: 1.35
+        },
+        { field: "categoryName", headerName: "Category", minWidth: 160, flex: 0.95 },
+        { field: "sourceCatalogueName", headerName: "Sales Catalogue", minWidth: 190, flex: 1.05 },
+        { field: "itemId", headerName: "Item ID", minWidth: 130, flex: 0.8 },
+        {
+            field: "sellingPrice",
+            headerName: "Published Price",
+            minWidth: 150,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueFormatter: params => formatOnlineCatalogueCurrency(
+                params.value,
+                params.data?.gridCurrency || "INR"
+            )
+        }
+    ];
+}
+
 function initializeGrid(gridElement, currentApi, currentElement, columnDefs) {
     if (!gridElement) return currentApi;
 
@@ -545,4 +590,64 @@ export function refreshStoreConfigsGrid(rows) {
 
 export function updateStoreConfigsGridSearch(searchTerm) {
     storeConfigsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeOnlineCatalogueSourceGrid(gridElement, onSelectionChanged) {
+    if (!gridElement) return onlineCatalogueSourceGridApi;
+
+    if (onlineCatalogueSourceGridApi && onlineCatalogueSourceGridElement !== gridElement) {
+        onlineCatalogueSourceGridApi.destroy();
+        onlineCatalogueSourceGridApi = null;
+        onlineCatalogueSourceGridElement = null;
+    }
+
+    onlineCatalogueSelectionChangeHandler = onSelectionChanged || null;
+
+    if (onlineCatalogueSourceGridApi) {
+        return onlineCatalogueSourceGridApi;
+    }
+
+    onlineCatalogueSourceGridApi = createGrid(gridElement, {
+        columnDefs: buildOnlineCatalogueSourceColumnDefs(),
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 15,
+        paginationPageSizeSelector: [15, 30, 60],
+        defaultColDef: buildDefaultColDef(),
+        rowSelection: {
+            mode: "multiRow",
+            checkboxes: true,
+            headerCheckbox: true,
+            selectAll: "filtered",
+            enableClickSelection: true
+        },
+        getRowId: params => params.data.selectionKey,
+        onSelectionChanged: () => {
+            if (isSyncingOnlineCatalogueSelection) {
+                return;
+            }
+
+            onlineCatalogueSelectionChangeHandler?.(onlineCatalogueSourceGridApi.getSelectedRows());
+        }
+    });
+
+    onlineCatalogueSourceGridElement = gridElement;
+    return onlineCatalogueSourceGridApi;
+}
+
+export function refreshOnlineCatalogueSourceGrid(rows, {
+    selectedKeys = new Set()
+} = {}) {
+    if (!onlineCatalogueSourceGridApi) return;
+
+    isSyncingOnlineCatalogueSelection = true;
+    onlineCatalogueSourceGridApi.setGridOption("rowData", rows || []);
+    onlineCatalogueSourceGridApi.forEachNode(node => {
+        node.setSelected(selectedKeys.has(node.data?.selectionKey));
+    });
+    isSyncingOnlineCatalogueSelection = false;
+}
+
+export function getOnlineCatalogueSelectedGridRows() {
+    return onlineCatalogueSourceGridApi?.getSelectedRows() || [];
 }

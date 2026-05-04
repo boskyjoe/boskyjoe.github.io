@@ -5,6 +5,7 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import {
     initializeCategoriesGrid,
+    initializeOnlineCatalogueSourceGrid,
     initializePaymentModesGrid,
     initializePricingPoliciesGrid,
     initializeProductPriceChangeReviewsGrid,
@@ -12,12 +13,14 @@ import {
     initializeSeasonsGrid,
     initializeStoreConfigsGrid,
     refreshCategoriesGrid,
+    refreshOnlineCatalogueSourceGrid,
     refreshPaymentModesGrid,
     refreshPricingPoliciesGrid,
     refreshProductPriceChangeReviewsGrid,
     refreshReorderPoliciesGrid,
     refreshSeasonsGrid,
     refreshStoreConfigsGrid,
+    getOnlineCatalogueSelectedGridRows,
     updateCategoriesGridSearch,
     updatePaymentModesGridSearch,
     updatePricingPoliciesGridSearch,
@@ -153,6 +156,7 @@ const onlineCatalogueState = {
     config: normalizeOnlineCatalogueConfig(DEFAULT_ONLINE_CATALOGUE_CONFIG),
     formDraft: normalizeOnlineCatalogueConfig(DEFAULT_ONLINE_CATALOGUE_CONFIG),
     sourceItems: [],
+    catalogueFilterId: "",
     generatedJsonText: "",
     generatedFileName: "catalogue.json",
     generatedMeta: null,
@@ -299,7 +303,7 @@ function setActiveSection(section) {
 function formatOnlineCatalogueCurrency(value, currency = "INR") {
     const normalizedCurrency = normalizeText(currency || "INR").toUpperCase();
     const numericValue = Number(value || 0);
-    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-KE";
+    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-US";
 
     try {
         return new Intl.NumberFormat(locale, {
@@ -328,10 +332,58 @@ function getOnlineCatalogueSelectedKeySet(draft = getOnlineCatalogueDraft()) {
     return new Set((draft.selectedItems || []).map(item => buildOnlineCatalogueItemKey(item)).filter(Boolean));
 }
 
+function getOnlineCatalogueSourceCatalogueOptions(snapshot = getState(), draft = getOnlineCatalogueDraft()) {
+    const options = new Map();
+    const selectedSourceCatalogueIds = new Set((draft.selectedItems || []).map(item => normalizeText(item.sourceCatalogueId)).filter(Boolean));
+
+    (snapshot.masterData?.salesCatalogues || []).forEach(catalogue => {
+        const id = normalizeText(catalogue?.id);
+        if (!id) return;
+
+        if (catalogue?.isActive !== false || selectedSourceCatalogueIds.has(id)) {
+            options.set(id, {
+                id,
+                name: normalizeText(catalogue?.catalogueName || catalogue?.catalogueId || "Sales Catalogue")
+            });
+        }
+    });
+
+    getOnlineCatalogueSourceItems().forEach(item => {
+        const id = normalizeText(item.sourceCatalogueId || item.catalogueId);
+        if (!id) return;
+
+        if (!options.has(id)) {
+            options.set(id, {
+                id,
+                name: normalizeText(item.sourceCatalogueName || "Sales Catalogue")
+            });
+        }
+    });
+
+    return Array.from(options.values()).sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function ensureOnlineCatalogueCatalogueFilterState(snapshot = getState(), draft = getOnlineCatalogueDraft()) {
+    const options = getOnlineCatalogueSourceCatalogueOptions(snapshot, draft);
+    const selectedCatalogueId = normalizeText(onlineCatalogueState.catalogueFilterId);
+
+    if (selectedCatalogueId && !options.some(option => option.id === selectedCatalogueId)) {
+        onlineCatalogueState.catalogueFilterId = "";
+    }
+
+    return options;
+}
+
 function getOnlineCatalogueVisibleSourceItems(draft = getOnlineCatalogueDraft()) {
+    const selectedCatalogueId = normalizeText(onlineCatalogueState.catalogueFilterId);
     const query = normalizeText(featureState.searchTerms.onlineCatalogues).toLowerCase();
 
     return getOnlineCatalogueSourceItems().filter(item => {
+        const sourceCatalogueId = normalizeText(item.sourceCatalogueId || item.catalogueId);
+        if (selectedCatalogueId && sourceCatalogueId !== selectedCatalogueId) {
+            return false;
+        }
+
         if (!query) return true;
 
         const haystack = [
@@ -359,6 +411,27 @@ function getOnlineCatalogueMissingSelections(draft = getOnlineCatalogueDraft()) 
     return (draft.selectedItems || []).filter(item => !sourceMap.has(buildOnlineCatalogueItemKey(item)));
 }
 
+function getOnlineCatalogueSelectionEntriesFromGrid(selectedRows = getOnlineCatalogueSelectedGridRows()) {
+    if (!document.getElementById("admin-online-catalogue-source-grid")) {
+        return (getOnlineCatalogueDraft().selectedItems || []).slice();
+    }
+
+    const selectedKeys = new Set(selectedRows.map(row => normalizeText(row.selectionKey)).filter(Boolean));
+    const visibleKeys = new Set(getOnlineCatalogueVisibleSourceItems().map(item => buildOnlineCatalogueItemKey(item)));
+    const preservedHiddenKeys = (getOnlineCatalogueDraft().selectedItems || [])
+        .map(item => buildOnlineCatalogueItemKey(item))
+        .filter(key => key && !visibleKeys.has(key));
+    const mergedSelectedKeys = new Set([...preservedHiddenKeys, ...selectedKeys]);
+
+    return getOnlineCatalogueSourceItems()
+        .filter(item => mergedSelectedKeys.has(buildOnlineCatalogueItemKey(item)))
+        .map((item, index) => ({
+            sourceCatalogueId: item.sourceCatalogueId || item.catalogueId || "",
+            sourceCatalogueItemId: item.id || "",
+            sortOrder: index + 1
+        }));
+}
+
 function collectOnlineCatalogueDraftFromDom() {
     const form = document.getElementById("admin-online-catalogue-form");
     if (!form) {
@@ -366,13 +439,7 @@ function collectOnlineCatalogueDraftFromDom() {
     }
 
     const formData = new FormData(form);
-    const selectedItems = Array.from(
-        form.querySelectorAll("input[name=\"onlineCatalogueSelection\"]:checked")
-    ).map((input, index) => ({
-        sourceCatalogueId: input.dataset.sourceCatalogueId || "",
-        sourceCatalogueItemId: input.dataset.sourceCatalogueItemId || "",
-        sortOrder: index + 1
-    }));
+    const selectedItems = getOnlineCatalogueSelectionEntriesFromGrid();
 
     onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig({
         id: ONLINE_CATALOGUE_DOC_ID,
@@ -394,12 +461,33 @@ function collectOnlineCatalogueDraftFromDom() {
     return onlineCatalogueState.formDraft;
 }
 
-function refreshOnlineCatalogueSourceList() {
-    const container = document.getElementById("admin-online-catalogue-source-list");
-    if (!container) return;
+function buildOnlineCatalogueSelectedSummaryText(selectedRows = []) {
+    if (!selectedRows.length) {
+        return "No Sales Catalogue items selected yet.";
+    }
+
+    const names = selectedRows
+        .map(row => normalizeText(row.productName || "Untitled Product"))
+        .filter(Boolean);
+
+    if (names.length <= 4) {
+        return names.join(", ");
+    }
+
+    return `${names.slice(0, 4).join(", ")} + ${names.length - 4} more`;
+}
+
+function refreshOnlineCatalogueSourceWorkspace() {
     const draft = collectOnlineCatalogueDraftFromDom();
-    const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
-    container.innerHTML = renderOnlineCatalogueSourceListMarkup(draft, visibleItems);
+    const visibleItems = getOnlineCatalogueVisibleSourceItems(draft).map(item => ({
+        ...item,
+        selectionKey: buildOnlineCatalogueItemKey(item),
+        gridCurrency: draft.currency
+    }));
+
+    refreshOnlineCatalogueSourceGrid(visibleItems, {
+        selectedKeys: getOnlineCatalogueSelectedKeySet(draft)
+    });
     refreshOnlineCatalogueDraftIndicators();
 }
 
@@ -408,13 +496,17 @@ function refreshOnlineCatalogueDraftIndicators() {
     const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
     const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
     const selectedCount = selectedRows.length;
+    const selectedCatalogueId = normalizeText(onlineCatalogueState.catalogueFilterId);
+    const selectedCatalogueLabel = selectedCatalogueId
+        ? (getOnlineCatalogueSourceCatalogueOptions(getState(), draft).find(option => option.id === selectedCatalogueId)?.name || "Selected Catalogue")
+        : "All Sales Catalogues";
     const status = document.getElementById("admin-online-catalogue-source-status");
     const selectedPill = document.getElementById("admin-online-catalogue-selected-pill");
     const selectedSummary = document.getElementById("admin-online-catalogue-selected-summary");
 
     if (status) {
         status.textContent = visibleItems.length
-            ? `${visibleItems.length} matching source item${visibleItems.length === 1 ? "" : "s"} · ${selectedCount} selected`
+            ? `${visibleItems.length} source item${visibleItems.length === 1 ? "" : "s"} from ${selectedCatalogueLabel} · ${selectedCount} selected`
             : "No Sales Catalogue items match the current filter.";
     }
 
@@ -423,9 +515,7 @@ function refreshOnlineCatalogueDraftIndicators() {
     }
 
     if (selectedSummary) {
-        selectedSummary.innerHTML = `<strong>Selected right now:</strong> ${selectedRows.length
-            ? escapeHtml(selectedRows.map(row => row.productName || "Untitled Product").join(", "))
-            : "No Sales Catalogue items selected yet."}`;
+        selectedSummary.innerHTML = `<strong>Selected right now:</strong> ${escapeHtml(buildOnlineCatalogueSelectedSummaryText(selectedRows))}`;
     }
 }
 
@@ -1140,50 +1230,26 @@ function renderHeader(snapshot) {
     `;
 }
 
-function renderOnlineCatalogueSourceListMarkup(draft = getOnlineCatalogueDraft(), visibleItems = getOnlineCatalogueVisibleSourceItems(draft)) {
-    const selectedKeys = getOnlineCatalogueSelectedKeySet(draft);
-
-    if (onlineCatalogueState.status === "loading") {
-        return `<div class="empty-state">Loading Sales Catalogue items for online publishing...</div>`;
+function renderOnlineCatalogueSourceCatalogueOptions(snapshot, draft = getOnlineCatalogueDraft()) {
+    const options = ensureOnlineCatalogueCatalogueFilterState(snapshot, draft);
+    let selectedCatalogueId = normalizeText(onlineCatalogueState.catalogueFilterId);
+    if (selectedCatalogueId && !options.some(option => option.id === selectedCatalogueId)) {
+        selectedCatalogueId = "";
     }
 
-    if (onlineCatalogueState.status === "error") {
-        return `<div class="empty-state">${escapeHtml(onlineCatalogueState.errorMessage || "Could not load source catalogue items.")}</div>`;
-    }
-
-    if (!visibleItems.length) {
-        return `<div class="empty-state">No Sales Catalogue items match the current filter.</div>`;
-    }
-
-    return visibleItems.map(item => {
-        const key = buildOnlineCatalogueItemKey(item);
-        const isChecked = selectedKeys.has(key);
-        return `
-            <label class="online-catalogue-source-row">
-                <input
-                    class="online-catalogue-source-checkbox"
-                    type="checkbox"
-                    name="onlineCatalogueSelection"
-                    value="${escapeHtml(key)}"
-                    data-source-catalogue-id="${escapeHtml(item.sourceCatalogueId || item.catalogueId || "")}"
-                    data-source-catalogue-item-id="${escapeHtml(item.id || "")}"
-                    ${isChecked ? "checked" : ""}>
-                <div class="online-catalogue-source-copy">
-                    <div class="online-catalogue-source-head">
-                        <strong>${escapeHtml(item.productName || "Untitled Product")}</strong>
-                        <span class="status-pill">${formatOnlineCatalogueCurrency(item.sellingPrice, draft.currency)}</span>
-                    </div>
-                    <p class="panel-copy panel-copy-tight">
-                        ${escapeHtml(item.sourceCatalogueName || "Sales Catalogue")} · ${escapeHtml(item.categoryName || "Uncategorized")} · Product ID ${escapeHtml(item.productId || "-")}
-                    </p>
-                </div>
-            </label>
-        `;
-    }).join("");
+    return [
+        `<option value="">All Sales Catalogues</option>`,
+        ...options.map(option => `
+            <option value="${escapeHtml(option.id)}" ${option.id === selectedCatalogueId ? "selected" : ""}>
+                ${escapeHtml(option.name)}
+            </option>
+        `)
+    ].join("");
 }
 
 function renderOnlineCatalogueForm(snapshot) {
     const draft = getOnlineCatalogueDraft();
+    ensureOnlineCatalogueCatalogueFilterState(snapshot, draft);
     const visibleItems = getOnlineCatalogueVisibleSourceItems(draft);
     const selectedCount = draft.selectedItems.length;
     const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
@@ -1207,7 +1273,7 @@ function renderOnlineCatalogueForm(snapshot) {
             </div>
             <div class="panel-body">
                 <form id="admin-online-catalogue-form">
-                    <div class="workspace-form-sections">
+                    <div class="online-catalogue-workspace">
                         <section class="workspace-form-section">
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Snapshot Setup</p>
@@ -1233,7 +1299,7 @@ function renderOnlineCatalogueForm(snapshot) {
                                 </div>
                                 <div class="field field-wide">
                                     ${renderFieldLabel({ forId: "admin-online-catalogue-phone", label: "Contact Phone", required: true, tooltip: "Public contact line for pickup questions." })}
-                                    <input id="admin-online-catalogue-phone" class="input" name="contactPhone" type="text" value="${escapeHtml(draft.contactPhone)}" placeholder="+254 700 123 456" required>
+                                    <input id="admin-online-catalogue-phone" class="input" name="contactPhone" type="text" value="${escapeHtml(draft.contactPhone)}" placeholder="+91 98765 43210" required>
                                 </div>
                                 <div class="field field-wide">
                                     ${renderFieldLabel({ forId: "admin-online-catalogue-notice", label: "Pickup Notice", required: true, tooltip: "Public notice shown on the pickup portal hero section." })}
@@ -1249,13 +1315,19 @@ function renderOnlineCatalogueForm(snapshot) {
                             <div class="workspace-form-section-head">
                                 <p class="workspace-form-section-kicker">Source Selection</p>
                                 <h3>Sales Catalogue Items</h3>
-                                <p class="panel-copy">Pick the exact Sales Catalogue items that should be published to the public pickup portal snapshot.</p>
+                                <p class="panel-copy">Filter by Sales Catalogue, then use the grid to select the exact items that should be published to the public pickup portal snapshot.</p>
                             </div>
-                            <div class="toolbar online-catalogue-toolbar">
-                                <div>
+                            <div class="online-catalogue-toolbar-grid">
+                                <div class="online-catalogue-toolbar-copy">
                                     <p class="section-kicker" style="margin-bottom: 0.25rem;">Selection Status</p>
                                     <p id="admin-online-catalogue-source-status" class="panel-copy">${visibleItems.length} matching source item${visibleItems.length === 1 ? "" : "s"} · ${selectedCount} selected</p>
                                 </div>
+                                <label class="field online-catalogue-toolbar-field">
+                                    <span class="section-kicker">Sales Catalogue</span>
+                                    <select id="admin-online-catalogue-source-catalogue-filter" class="input">
+                                        ${renderOnlineCatalogueSourceCatalogueOptions(snapshot, draft)}
+                                    </select>
+                                </label>
                                 <div class="search-wrap">
                                     <span class="search-icon">${icons.search}</span>
                                     <input
@@ -1275,13 +1347,23 @@ function renderOnlineCatalogueForm(snapshot) {
                                     </span>
                                 </div>
                             ` : ""}
-                            <div id="admin-online-catalogue-source-list" class="online-catalogue-source-list">
-                                ${renderOnlineCatalogueSourceListMarkup(draft, visibleItems)}
+                            ${onlineCatalogueState.status === "loading" ? `
+                                <div class="reports-audit-note">Loading Sales Catalogue items for online publishing...</div>
+                            ` : ""}
+                            ${onlineCatalogueState.status === "error" ? `
+                                <div class="modal-note tone-danger">
+                                    <span class="modal-note-icon">${icons.warning}</span>
+                                    <span class="modal-note-copy">
+                                        <span class="modal-note-title">Source Catalogue Load Failed</span>
+                                        <span>${escapeHtml(onlineCatalogueState.errorMessage || "Could not load source catalogue items.")}</span>
+                                    </span>
+                                </div>
+                            ` : ""}
+                            <div class="ag-shell sales-catalogue-grid-shell online-catalogue-grid-shell">
+                                <div id="admin-online-catalogue-source-grid" class="ag-theme-alpine moneta-grid" style="height: 100%; width: 100%;"></div>
                             </div>
                             <div id="admin-online-catalogue-selected-summary" class="reports-audit-note">
-                                <strong>Selected right now:</strong> ${selectedRows.length
-                                    ? escapeHtml(selectedRows.map(row => row.productName || "Untitled Product").join(", "))
-                                    : "No Sales Catalogue items selected yet."}
+                                <strong>Selected right now:</strong> ${escapeHtml(buildOnlineCatalogueSelectedSummaryText(selectedRows))}
                             </div>
                         </section>
                     </div>
@@ -2442,8 +2524,30 @@ function renderCurrentGridCard(snapshot) {
     `;
 }
 
+function handleOnlineCatalogueGridSelectionChanged(selectedRows = []) {
+    const currentDraft = getOnlineCatalogueDraft();
+    onlineCatalogueState.formDraft = normalizeOnlineCatalogueConfig({
+        ...currentDraft,
+        selectedItems: getOnlineCatalogueSelectionEntriesFromGrid(selectedRows)
+    });
+    refreshOnlineCatalogueDraftIndicators();
+}
+
 function syncCurrentGrid(snapshot) {
     if (featureState.activeSection === "onlineCatalogues") {
+        const gridElement = document.getElementById("admin-online-catalogue-source-grid");
+        const draft = getOnlineCatalogueDraft();
+        const visibleItems = getOnlineCatalogueVisibleSourceItems(draft).map(item => ({
+            ...item,
+            selectionKey: buildOnlineCatalogueItemKey(item),
+            gridCurrency: draft.currency
+        }));
+
+        initializeOnlineCatalogueSourceGrid(gridElement, handleOnlineCatalogueGridSelectionChanged);
+        refreshOnlineCatalogueSourceGrid(visibleItems, {
+            selectedKeys: getOnlineCatalogueSelectedKeySet(draft)
+        });
+        refreshOnlineCatalogueDraftIndicators();
         return;
     }
 
@@ -3039,7 +3143,6 @@ function getRecordDisplayName(record = {}) {
 function handleSearchInput(target) {
     if (target.id === "admin-online-catalogue-source-search") {
         featureState.searchTerms.onlineCatalogues = target.value || "";
-        refreshOnlineCatalogueSourceList();
         return;
     }
 
@@ -3318,8 +3421,8 @@ function bindAdminModulesDomEvents() {
         handleSearchInput(event.target);
 
         if (event.target.closest("#admin-online-catalogue-form")) {
-            collectOnlineCatalogueDraftFromDom();
-            refreshOnlineCatalogueDraftIndicators();
+            refreshOnlineCatalogueSourceWorkspace();
+            return;
         }
 
         if (event.target.closest("#admin-reorder-policy-form")) {
@@ -3328,9 +3431,13 @@ function bindAdminModulesDomEvents() {
     });
 
     root.addEventListener("change", event => {
+        if (event.target.id === "admin-online-catalogue-source-catalogue-filter") {
+            onlineCatalogueState.catalogueFilterId = event.target.value || "";
+        }
+
         if (event.target.closest("#admin-online-catalogue-form")) {
-            collectOnlineCatalogueDraftFromDom();
-            refreshOnlineCatalogueDraftIndicators();
+            refreshOnlineCatalogueSourceWorkspace();
+            return;
         }
 
         if (event.target.closest("#admin-reorder-policy-form")) {
