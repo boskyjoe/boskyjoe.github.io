@@ -207,6 +207,15 @@ export const navConfig = [
                 items: [
                     {
                         type: "link",
+                        route: "#/admin-modules?section=onlineCatalogues",
+                        label: "Online Catalogue",
+                        icon: icons.catalogue,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin", "inventory_manager"],
+                        enabled: true
+                    },
+                    {
+                        type: "link",
                         route: "#/admin-modules?section=paymentModes",
                         label: "Payment Modes",
                         icon: icons.payment,
