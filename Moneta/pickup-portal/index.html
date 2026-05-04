@@ -6,41 +6,82 @@
     <title>Moneta Pickup Requests Portal</title>
     <meta
       name="description"
-      content="Preview the Moneta public pickup requests portal."
+      content="A storefront-style preview for the Moneta pickup requests portal."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/pickup-portal.css" />
   </head>
   <body>
     <div class="portal-shell">
-      <header class="portal-header">
-        <div class="brand-block">
-          <p class="eyebrow">Moneta Public Portal Preview</p>
-          <h1>Pickup Requests</h1>
-          <p class="brand-copy">
-            A portable storefront layer for church pickup requests, powered by a
-            published catalogue snapshot.
+      <div class="utility-bar">
+        <div class="utility-copy">
+          <span class="utility-pill">Preview only</span>
+          <p>
+            Customers can browse the published pickup catalogue, build a request,
+            and wait for staff confirmation before collection.
           </p>
         </div>
+        <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
+      </div>
 
-        <div class="header-status">
-          <span class="status-pill">Preview Only</span>
-          <p id="publish-meta" class="status-copy">Loading catalogue snapshot...</p>
+      <header class="storefront-header">
+        <div class="brand-lockup">
+          <div class="brand-mark">MP</div>
+          <div>
+            <p class="eyebrow">Moneta Pickup Portal</p>
+            <h1 id="storefront-title">Church Pickup Requests</h1>
+            <p class="brand-copy">
+              A storefront-style public catalogue powered by a published Moneta
+              snapshot.
+            </p>
+          </div>
         </div>
+
+        <label class="header-search" for="catalogue-search">
+          <span class="search-label">Search the catalogue</span>
+          <div class="search-input-wrap">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input
+              id="catalogue-search"
+              name="catalogue-search"
+              type="search"
+              placeholder="Search by item name or description"
+              autocomplete="off"
+            />
+          </div>
+        </label>
+
+        <button id="jump-to-request-button" class="cart-chip" type="button">
+          <span class="cart-chip-label">Request Cart</span>
+          <strong id="header-cart-count">0 items</strong>
+          <span id="header-cart-total">₹0</span>
+        </button>
       </header>
 
-      <section class="hero-panel">
-        <div class="hero-copy">
-          <p class="eyebrow">Request Flow</p>
-          <h2>Customers can request items now and collect after staff confirmation.</h2>
+      <section class="hero-showcase">
+        <div class="hero-primary">
+          <p class="eyebrow">Pickup ordering layer</p>
+          <h2>
+            Request curated church store items online and collect after staff
+            confirmation.
+          </h2>
           <p id="pickup-notice" class="hero-note">
             The catalogue snapshot will load here once available.
           </p>
+
+          <div class="hero-actions">
+            <button id="browse-catalogue-button" class="primary-button" type="button">
+              Browse Catalogue
+            </button>
+            <button id="hero-jump-request-button" class="secondary-button" type="button">
+              Open Request Cart
+            </button>
+          </div>
 
           <div class="hero-metrics">
             <div class="metric-card">
@@ -55,56 +96,98 @@
               <span class="metric-label">Lead Time</span>
               <strong id="lead-time">Loading...</strong>
             </div>
+            <div class="metric-card">
+              <span class="metric-label">Published</span>
+              <strong id="published-at">Loading...</strong>
+            </div>
           </div>
         </div>
 
-        <div class="hero-callout">
-          <p class="eyebrow">Phase 1 Scope</p>
-          <ul class="callout-list">
-            <li>Published catalogue snapshot only</li>
-            <li>No real-time inventory promise</li>
-            <li>Request captured for later staff conversion</li>
-            <li>Local preview summary instead of live submission</li>
-          </ul>
+        <div class="hero-side">
+          <section class="hero-side-card">
+            <div class="hero-side-head">
+              <div>
+                <p class="eyebrow">Featured</p>
+                <h3>Popular pickup picks</h3>
+              </div>
+              <span id="featured-count" class="inline-meta">0 items</span>
+            </div>
+            <div id="featured-strip" class="featured-strip"></div>
+          </section>
+
+          <section class="hero-side-card">
+            <p class="eyebrow">How it works</p>
+            <ol class="flow-list">
+              <li>Browse the published catalogue.</li>
+              <li>Add items to your request cart.</li>
+              <li>Share pickup preferences and contact details.</li>
+              <li>Wait for staff confirmation before collection.</li>
+            </ol>
+          </section>
         </div>
       </section>
 
-      <main class="portal-main">
-        <section class="catalogue-panel">
-          <div class="panel-header">
+      <main class="marketplace-shell">
+        <aside class="catalogue-sidebar">
+          <section class="sidebar-card">
+            <p class="eyebrow">Browse</p>
+            <h3>Shop by category</h3>
+            <div id="category-sidebar" class="category-sidebar"></div>
+          </section>
+
+          <section class="sidebar-card">
+            <p class="eyebrow">Request rules</p>
+            <ul class="policy-list">
+              <li>Submitting a request does not reserve stock yet.</li>
+              <li>Staff confirms availability before pickup.</li>
+              <li>Pricing shown here is the published catalogue snapshot.</li>
+              <li>Final fulfilment happens later inside Moneta.</li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="catalogue-results-panel" id="catalogue-results">
+          <div class="results-toolbar">
             <div>
-              <p class="eyebrow">Online Catalogue</p>
-              <h3>Browse public pickup items</h3>
+              <p class="eyebrow">Published items</p>
+              <h3>Available for pickup request</h3>
+              <p id="catalogue-status" class="panel-meta">Loading items...</p>
             </div>
-            <p id="catalogue-status" class="panel-meta">Loading items...</p>
-          </div>
 
-          <div class="catalogue-toolbar">
-            <label class="search-field" for="catalogue-search">
-              <span>Search catalogue</span>
-              <input
-                id="catalogue-search"
-                name="catalogue-search"
-                type="search"
-                placeholder="Search by item name or description"
-                autocomplete="off"
-              />
+            <label class="sort-field" for="catalogue-sort">
+              <span>Sort</span>
+              <select id="catalogue-sort">
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+              </select>
             </label>
-
-            <div id="category-filters" class="category-filters" aria-label="Filter by category"></div>
           </div>
 
+          <div id="active-filters" class="active-filters"></div>
           <div id="catalogue-grid" class="catalogue-grid" aria-live="polite"></div>
         </section>
 
-        <aside class="request-panel">
-          <div class="panel-header">
+        <aside class="request-panel" id="request-panel">
+          <div class="request-panel-head">
             <div>
-              <p class="eyebrow">Pickup Request</p>
-              <h3>Build a request preview</h3>
+              <p class="eyebrow">Pickup request</p>
+              <h3>Your request cart</h3>
             </div>
-            <p class="panel-meta">No data is sent yet in this scaffold.</p>
+            <p class="panel-meta">Preview only. No data is sent yet.</p>
           </div>
+
+          <section class="cart-summary-banner">
+            <div>
+              <span class="metric-label">Request Total</span>
+              <strong id="cart-total">₹0</strong>
+            </div>
+            <div>
+              <span class="metric-label">Selected Lines</span>
+              <strong id="cart-count">0</strong>
+            </div>
+          </section>
 
           <section class="cart-panel">
             <div class="cart-header">
@@ -114,41 +197,49 @@
               </button>
             </div>
             <div id="cart-items" class="cart-items"></div>
-            <div class="cart-summary">
-              <span>Estimated Total</span>
-              <strong id="cart-total">INR 0</strong>
-            </div>
           </section>
 
           <form id="pickup-request-form" class="request-form">
-            <label>
-              <span>Full Name</span>
-              <input name="customerName" type="text" placeholder="Enter customer name" required />
-            </label>
+            <div class="request-form-grid">
+              <label>
+                <span>Full Name</span>
+                <input
+                  name="customerName"
+                  type="text"
+                  placeholder="Enter customer name"
+                  required
+                />
+              </label>
 
-            <label>
-              <span>Phone Number</span>
-              <input name="customerPhone" type="tel" placeholder="07xx xxx xxx" required />
-            </label>
+              <label>
+                <span>Phone Number</span>
+                <input
+                  name="customerPhone"
+                  type="tel"
+                  placeholder="+91 98765 43210"
+                  required
+                />
+              </label>
 
-            <label>
-              <span>Requested Pickup Date</span>
-              <input name="pickupDate" type="date" required />
-            </label>
+              <label>
+                <span>Requested Pickup Date</span>
+                <input name="pickupDate" type="date" required />
+              </label>
 
-            <label>
-              <span>Requested Pickup Time</span>
-              <input name="pickupTime" type="time" required />
-            </label>
+              <label>
+                <span>Requested Pickup Time</span>
+                <input name="pickupTime" type="time" required />
+              </label>
 
-            <label>
-              <span>Notes</span>
-              <textarea
-                name="notes"
-                rows="4"
-                placeholder="Optional pickup notes or special request context"
-              ></textarea>
-            </label>
+              <label class="request-form-wide">
+                <span>Notes</span>
+                <textarea
+                  name="notes"
+                  rows="4"
+                  placeholder="Optional pickup notes or special request context"
+                ></textarea>
+              </label>
+            </div>
 
             <button id="review-request-button" class="primary-button" type="submit">
               Review Request
@@ -156,6 +247,21 @@
           </form>
         </aside>
       </main>
+    </div>
+
+    <div id="product-preview-modal" class="modal-shell hidden" aria-hidden="true">
+      <div class="modal-card product-modal-card" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Catalogue item</p>
+            <h3 id="product-modal-title">Item details</h3>
+          </div>
+          <button id="close-product-modal-button" class="icon-button" type="button" aria-label="Close item preview">
+            ×
+          </button>
+        </div>
+        <div id="product-modal-body" class="modal-body"></div>
+      </div>
     </div>
 
     <div id="request-preview-modal" class="modal-shell hidden" aria-hidden="true">
