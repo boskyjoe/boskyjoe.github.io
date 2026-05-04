@@ -1,7 +1,7 @@
 {
   "catalogueId": "pickup-preview",
   "catalogueName": "Church Pickup Requests",
-  "currency": "KES",
+  "currency": "INR",
   "publishedAt": "2026-05-04T09:00:00.000Z",
   "pickupNotice": "Submit a pickup request and wait for confirmation from the church store team before collection.",
   "pickupLocation": "Church Resource Centre",

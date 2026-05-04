@@ -1,7 +1,7 @@
 const fallbackCatalogue = {
   catalogueId: "pickup-preview",
   catalogueName: "Church Pickup Requests",
-  currency: "KES",
+  currency: "INR",
   publishedAt: "2026-05-04T09:00:00.000Z",
   pickupNotice:
     "Submit a pickup request and wait for confirmation from the church store team before collection.",
@@ -471,7 +471,7 @@ function closePreviewModal() {
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
-    currency: state.catalogue?.currency || "KES",
+    currency: state.catalogue?.currency || "INR",
     maximumFractionDigits: 0
   }).format(Number(value || 0));
 }

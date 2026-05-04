@@ -26,10 +26,10 @@ This folder is the first standalone scaffold for the public `Pickup Requests` po
 - no data is posted to Firestore, Google Sheets, or any backend yet
 
 ## Intended next evolution
-1. Add an `Online Catalogue` admin module in Moneta.
-2. Let `admin` and `inventory_manager` curate which Sales Catalogue items are public.
-3. Publish a generated JSON snapshot into `pickup-portal/data/catalogue.json`.
-4. Later move or deploy this folder to the church website hosting target.
+1. Use `Admin Modules -> Online Catalogue` in Moneta to curate which Sales Catalogue items are public.
+2. Generate and download the JSON snapshot from Moneta.
+3. Replace `pickup-portal/data/catalogue.json` with that generated file for phase 1 manual publish.
+4. Later replace the manual publish step with a controlled hosting/publish target.
 
 ## Preview notes
 - Best tested on static hosting because browser `fetch(...)` behavior is more predictable there.
