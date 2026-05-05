@@ -155,6 +155,12 @@ input[type="search"]::-webkit-search-results-decoration {
   gap: 8px;
 }
 
+.google-signin-slot {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
 .auth-button {
   min-height: 38px;
   padding: 0 14px;
@@ -170,6 +176,11 @@ input[type="search"]::-webkit-search-results-decoration {
 .auth-state-badge[data-state="signed-in"] {
   background: rgba(6, 125, 98, 0.18);
   color: #b8f3e3;
+}
+
+.auth-state-badge[data-state="loading"] {
+  background: rgba(248, 203, 91, 0.18);
+  color: #ffe8a3;
 }
 
 .auth-state-badge[data-state="unavailable"] {

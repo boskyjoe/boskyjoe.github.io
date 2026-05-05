@@ -15,20 +15,10 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/pickup-portal.css" />
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-      window.pickupPortalFirebaseConfig = {
-        apiKey: "AIzaSyBAt_2gMhSPPSBi0zApb7z05ODZjMceDOk",
-        authDomain: "trinitycart-9e055.firebaseapp.com",
-        projectId: "trinitycart-9e055",
-        storageBucket: "trinitycart-9e055.appspot.com",
-        messagingSenderId: "450216949740",
-        appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
-        measurementId: "G-57JRDMJB14"
-      };
-
       window.pickupPortalConfig = {
+        googleClientId: "",
         intakeEndpointUrl:
           "https://script.google.com/macros/s/AKfycbzd-UgNwcnnpKnAoFGL-OjO9Y0aG5-u-W9UG3uFdtDCZ5zudM-G52ts6UXZgIBIVzI/exec"
       };
@@ -54,9 +44,7 @@
               </p>
             </div>
             <div class="auth-buttons">
-              <button id="google-signin-button" class="secondary-button auth-button" type="button">
-                Sign in with Google
-              </button>
+              <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
               <button id="google-signout-button" class="secondary-button auth-button hidden" type="button">
                 Sign out
               </button>

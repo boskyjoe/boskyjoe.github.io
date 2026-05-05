@@ -106,7 +106,9 @@ const canUseSamplePreview =
   window.location.protocol === "file:" ||
   new URLSearchParams(window.location.search).get("preview") === "sample";
 
+const googleClientId = String(window.pickupPortalConfig?.googleClientId || "").trim();
 const intakeEndpointUrl = String(window.pickupPortalConfig?.intakeEndpointUrl || "").trim();
+const portalUserStorageKey = "monetaPickupPortalGoogleUser";
 
 const state = {
   catalogue: null,
@@ -120,7 +122,8 @@ const state = {
   activeItemId: "",
   currentUser: null,
   authStatus: "loading",
-  isSubmittingRequest: false
+  isSubmittingRequest: false,
+  authInitialized: false
 };
 
 const elements = {
@@ -192,6 +195,7 @@ const elements = {
 
 async function initializePortal() {
   bindEvents();
+  hydrateStoredUser();
   initializeAuthIntegration();
   await loadCatalogue();
   render();
@@ -204,21 +208,47 @@ if (document.readyState === "loading") {
 }
 
 function initializeAuthIntegration() {
-  if (!window.firebase || !window.pickupPortalFirebaseConfig) {
+  if (!googleClientId) {
+    state.currentUser = null;
+    clearStoredUser();
     state.authStatus = "unavailable";
+    renderAuthState("Google sign-in is not configured for this portal yet.");
+    return;
+  }
+
+  if (!window.google?.accounts?.id) {
+    state.authStatus = "loading";
+    renderAuthState("Loading Google sign-in...");
+    window.onGoogleLibraryLoad = () => {
+      initializeAuthIntegration();
+    };
+    return;
+  }
+
+  if (state.authInitialized) {
     renderAuthState();
     return;
   }
 
-  if (!firebase.apps.length) {
-    firebase.initializeApp(window.pickupPortalFirebaseConfig);
-  }
+  google.accounts.id.initialize({
+    client_id: googleClientId,
+    callback: handleGoogleCredentialResponse,
+    auto_select: false,
+    cancel_on_tap_outside: true,
+    ux_mode: "popup"
+  });
+  google.accounts.id.renderButton(elements.googleSignInButton, {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    text: "signin_with",
+    shape: "pill",
+    logo_alignment: "left"
+  });
 
   state.authStatus = "ready";
-  firebase.auth().onAuthStateChanged((user) => {
-    state.currentUser = user || null;
-    renderAuthState();
-  });
+  state.authInitialized = true;
+  renderAuthState();
 }
 
 function bindEvents() {
@@ -307,28 +337,17 @@ function bindEvents() {
     renderCart();
   });
 
-  elements.googleSignInButton?.addEventListener("click", async () => {
-    if (!window.firebase) return;
-
+  elements.googleSignOutButton?.addEventListener("click", () => {
     try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-      await firebase.auth().signInWithPopup(provider);
-    } catch (error) {
-      console.error("[Pickup Portal] Google sign-in failed:", error);
-      state.authStatus = "ready";
-      renderAuthState(error.message || "Could not complete Google sign-in.");
-    }
-  });
-
-  elements.googleSignOutButton?.addEventListener("click", async () => {
-    if (!window.firebase) return;
-
-    try {
-      await firebase.auth().signOut();
+      if (window.google?.accounts?.id) {
+        google.accounts.id.disableAutoSelect();
+      }
+      state.currentUser = null;
+      clearStoredUser();
+      renderAuthState();
     } catch (error) {
       console.error("[Pickup Portal] Google sign-out failed:", error);
-      renderAuthState(error.message || "Could not sign out.");
+      renderAuthState("Could not sign out of the pickup portal session.");
     }
   });
 
@@ -391,20 +410,25 @@ function renderAuthState(messageOverride = "") {
   const user = state.currentUser;
   const signedIn = Boolean(user?.email);
   const unavailable = state.authStatus === "unavailable";
+  const loading = state.authStatus === "loading";
 
   elements.authStateBadge.textContent = unavailable
     ? "Sign-In Unavailable"
+    : loading
+      ? "Loading Sign-In"
     : signedIn
       ? "Signed In"
       : "Google Sign-In";
   elements.authStateBadge.dataset.state = unavailable
     ? "unavailable"
+    : loading
+      ? "loading"
     : signedIn
       ? "signed-in"
       : "ready";
 
   if (signedIn) {
-    elements.authMessage.textContent = `${user.email} will be attached to this pickup request preview.`;
+    elements.authMessage.textContent = `${user.email} will be attached to this pickup request.`;
     elements.googleSignInButton.classList.add("hidden");
     elements.googleSignOutButton.classList.remove("hidden");
     elements.headerAccountName.textContent = user.displayName || user.email;
@@ -413,17 +437,23 @@ function renderAuthState(messageOverride = "") {
     elements.authMessage.textContent = messageOverride;
     elements.googleSignInButton.classList.toggle("hidden", unavailable);
     elements.googleSignOutButton.classList.add("hidden");
-    elements.headerAccountName.textContent = unavailable ? "Manual email entry" : "Guest shopper";
+    elements.headerAccountName.textContent = unavailable ? "Portal sign-in unavailable" : "Guest shopper";
     elements.headerAccountSubtitle.textContent = unavailable
-      ? "Google sign-in unavailable here"
+      ? "Add a Google client ID to enable sign-in"
       : "Sign in to attach your email";
   } else if (unavailable) {
     elements.authMessage.textContent =
-      "Google sign-in is unavailable in this preview. You can still enter an email manually.";
+      "Google sign-in is not configured for this portal yet.";
     elements.googleSignInButton.classList.add("hidden");
     elements.googleSignOutButton.classList.add("hidden");
-    elements.headerAccountName.textContent = "Manual email entry";
-    elements.headerAccountSubtitle.textContent = "Google sign-in unavailable here";
+    elements.headerAccountName.textContent = "Portal sign-in unavailable";
+    elements.headerAccountSubtitle.textContent = "Add a Google client ID to enable sign-in";
+  } else if (loading) {
+    elements.authMessage.textContent = "Loading Google sign-in...";
+    elements.googleSignInButton.classList.remove("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
+    elements.headerAccountName.textContent = "Guest shopper";
+    elements.headerAccountSubtitle.textContent = "Preparing Google sign-in";
   } else {
     elements.authMessage.textContent =
       "Sign in with Google so Moneta can capture your email on the pickup request.";
@@ -462,9 +492,95 @@ function syncRequestIdentityFields() {
     elements.customerEmail.readOnly = true;
     elements.customerEmailHint.textContent =
       state.authStatus === "unavailable"
-        ? "Google sign-in is unavailable here, so checkout cannot capture email yet."
+        ? "Google sign-in is not configured for this portal yet."
+        : state.authStatus === "loading"
+          ? "Google sign-in is still loading."
         : "Sign in with Google to continue checkout with the shopper email.";
   }
+}
+
+function handleGoogleCredentialResponse(response) {
+  try {
+    const payload = decodeJwtPayload(response?.credential || "");
+    if (!payload?.email) {
+      throw new Error("Google sign-in did not return an email address.");
+    }
+
+    state.currentUser = {
+      id: payload.sub || "",
+      email: payload.email || "",
+      emailVerified: Boolean(payload.email_verified),
+      displayName: payload.name || payload.given_name || payload.email || "",
+      givenName: payload.given_name || "",
+      familyName: payload.family_name || "",
+      picture: payload.picture || "",
+      credential: response.credential || "",
+      selectBy: response.select_by || ""
+    };
+
+    persistCurrentUser();
+    renderAuthState();
+  } catch (error) {
+    console.error("[Pickup Portal] Google sign-in failed:", error);
+    state.currentUser = null;
+    clearStoredUser();
+    renderAuthState(error.message || "Could not complete Google sign-in.");
+  }
+}
+
+function hydrateStoredUser() {
+  try {
+    const raw = window.sessionStorage.getItem(portalUserStorageKey);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed?.email) {
+      state.currentUser = parsed;
+    }
+  } catch (error) {
+    console.warn("[Pickup Portal] Could not restore stored Google session.", error);
+  }
+}
+
+function persistCurrentUser() {
+  if (!state.currentUser?.email) return;
+
+  try {
+    window.sessionStorage.setItem(
+      portalUserStorageKey,
+      JSON.stringify({
+        id: state.currentUser.id || "",
+        email: state.currentUser.email || "",
+        emailVerified: Boolean(state.currentUser.emailVerified),
+        displayName: state.currentUser.displayName || "",
+        givenName: state.currentUser.givenName || "",
+        familyName: state.currentUser.familyName || "",
+        picture: state.currentUser.picture || ""
+      })
+    );
+  } catch (error) {
+    console.warn("[Pickup Portal] Could not persist Google session.", error);
+  }
+}
+
+function clearStoredUser() {
+  try {
+    window.sessionStorage.removeItem(portalUserStorageKey);
+  } catch (error) {
+    console.warn("[Pickup Portal] Could not clear stored Google session.", error);
+  }
+}
+
+function decodeJwtPayload(token) {
+  const parts = String(token || "").split(".");
+  if (parts.length < 2) {
+    throw new Error("Google credential was not a valid ID token.");
+  }
+
+  const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4 || 4)) % 4), "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 
 async function loadCatalogue() {
