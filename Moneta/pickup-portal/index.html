@@ -15,6 +15,19 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/pickup-portal.css" />
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script>
+      window.pickupPortalFirebaseConfig = {
+        apiKey: "AIzaSyBAt_2gMhSPPSBi0zApb7z05ODZjMceDOk",
+        authDomain: "trinitycart-9e055.firebaseapp.com",
+        projectId: "trinitycart-9e055",
+        storageBucket: "trinitycart-9e055.appspot.com",
+        messagingSenderId: "450216949740",
+        appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
+        measurementId: "G-57JRDMJB14"
+      };
+    </script>
   </head>
   <body>
     <div class="portal-shell">
@@ -26,42 +39,85 @@
             and wait for staff confirmation before collection.
           </p>
         </div>
-        <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
+        <div class="utility-actions">
+          <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
+          <section id="auth-panel" class="auth-panel" aria-live="polite">
+            <div class="auth-copy">
+              <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
+              <p id="auth-message" class="utility-meta">
+                Sign in with Google so Moneta can capture your email on the pickup request.
+              </p>
+            </div>
+            <div class="auth-buttons">
+              <button id="google-signin-button" class="secondary-button auth-button" type="button">
+                Sign in with Google
+              </button>
+              <button id="google-signout-button" class="secondary-button auth-button hidden" type="button">
+                Sign out
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
 
       <header class="storefront-header">
-        <div class="brand-lockup">
-          <div class="brand-mark">MP</div>
-          <div>
-            <p class="eyebrow">Moneta Pickup Portal</p>
-            <h1 id="storefront-title">Church Pickup Requests</h1>
-            <p class="brand-copy">
-              A storefront-style public catalogue powered by a published Moneta
-              snapshot.
-            </p>
+        <section class="pickup-anchor">
+          <span class="header-meta-label">Pickup from</span>
+          <strong id="header-pickup-location">Church Resource Centre</strong>
+          <span id="header-lead-time-copy" class="header-meta-copy">Ready after confirmation</span>
+        </section>
+
+        <div class="header-search-shell">
+          <div class="brand-lockup">
+            <div class="brand-mark">MP</div>
+            <div>
+              <p class="eyebrow">Moneta Pickup Portal</p>
+              <h1 id="storefront-title">Church Pickup Requests</h1>
+              <p class="brand-copy">
+                A storefront-style public catalogue powered by a published Moneta
+                snapshot.
+              </p>
+            </div>
           </div>
+
+          <label class="header-search" for="catalogue-search">
+            <span class="search-label">Search published items</span>
+            <div class="search-input-wrap">
+              <span class="search-prefix">All</span>
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input
+                id="catalogue-search"
+                name="catalogue-search"
+                type="search"
+                placeholder="Search by item name or description"
+                autocomplete="off"
+              />
+            </div>
+          </label>
         </div>
 
-        <label class="header-search" for="catalogue-search">
-          <span class="search-label">Search the catalogue</span>
-          <div class="search-input-wrap">
-            <span class="search-icon" aria-hidden="true">⌕</span>
-            <input
-              id="catalogue-search"
-              name="catalogue-search"
-              type="search"
-              placeholder="Search by item name or description"
-              autocomplete="off"
-            />
+        <section class="header-account-zone">
+          <div class="header-account-copy">
+            <span class="header-meta-label">Account</span>
+            <strong id="header-account-name">Guest shopper</strong>
+            <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
           </div>
-        </label>
 
-        <button id="jump-to-request-button" class="cart-chip" type="button">
-          <span class="cart-chip-label">Request Cart</span>
-          <strong id="header-cart-count">0 items</strong>
-          <span id="header-cart-total">₹0</span>
-        </button>
+          <button id="jump-to-request-button" class="cart-chip" type="button">
+            <span class="cart-chip-label">Request Cart</span>
+            <strong id="header-cart-count">0 items</strong>
+            <span id="header-cart-total">₹0</span>
+          </button>
+        </section>
       </header>
+
+      <nav class="department-bar" aria-label="Published departments">
+        <div class="department-bar-label">
+          <span class="header-meta-label">Departments</span>
+          <strong>Published catalogue</strong>
+        </div>
+        <div id="category-rail" class="category-rail"></div>
+      </nav>
 
       <section class="hero-showcase">
         <div class="hero-primary">
@@ -204,11 +260,27 @@
               <label>
                 <span>Full Name</span>
                 <input
+                  id="customer-name"
                   name="customerName"
                   type="text"
                   placeholder="Enter customer name"
                   required
                 />
+              </label>
+
+              <label>
+                <span>Email Address</span>
+                <input
+                  id="customer-email"
+                  name="customerEmail"
+                  type="email"
+                  placeholder="Sign in with Google or enter email"
+                  autocomplete="email"
+                  required
+                />
+                <small id="customer-email-hint" class="field-hint">
+                  Google sign-in will fill this automatically when available.
+                </small>
               </label>
 
               <label>

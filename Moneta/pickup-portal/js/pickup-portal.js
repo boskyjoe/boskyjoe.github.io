@@ -88,6 +88,24 @@ const fallbackCatalogue = {
   ]
 };
 
+const emptyCatalogue = {
+  catalogueId: "pickup-unavailable",
+  catalogueName: "Church Pickup Requests",
+  currency: "INR",
+  publishedAt: "",
+  pickupNotice:
+    "The published pickup catalogue is unavailable right now. Please ask the church store team to republish the latest catalogue snapshot.",
+  pickupLocation: "Not published",
+  contactPhone: "Not published",
+  requestLeadTimeHours: 0,
+  categories: [],
+  items: []
+};
+
+const canUseSamplePreview =
+  window.location.protocol === "file:" ||
+  new URLSearchParams(window.location.search).get("preview") === "sample";
+
 const state = {
   catalogue: null,
   query: "",
@@ -95,12 +113,16 @@ const state = {
   sort: "featured",
   cart: new Map(),
   source: "loading",
-  activeItemId: ""
+  sourceError: "",
+  activeItemId: "",
+  currentUser: null,
+  authStatus: "loading"
 };
 
 const elements = {
   storefrontTitle: document.querySelector("#storefront-title"),
   categorySidebar: document.querySelector("#category-sidebar"),
+  categoryRail: document.querySelector("#category-rail"),
   featuredStrip: document.querySelector("#featured-strip"),
   featuredCount: document.querySelector("#featured-count"),
   catalogueGrid: document.querySelector("#catalogue-grid"),
@@ -116,11 +138,22 @@ const elements = {
   clearCartButton: document.querySelector("#clear-cart-button"),
   pickupNotice: document.querySelector("#pickup-notice"),
   pickupLocation: document.querySelector("#pickup-location"),
+  headerPickupLocation: document.querySelector("#header-pickup-location"),
+  headerLeadTimeCopy: document.querySelector("#header-lead-time-copy"),
+  headerAccountName: document.querySelector("#header-account-name"),
+  headerAccountSubtitle: document.querySelector("#header-account-subtitle"),
   contactPhone: document.querySelector("#contact-phone"),
   leadTime: document.querySelector("#lead-time"),
   publishedAt: document.querySelector("#published-at"),
   publishMeta: document.querySelector("#publish-meta"),
+  authStateBadge: document.querySelector("#auth-state-badge"),
+  authMessage: document.querySelector("#auth-message"),
+  googleSignInButton: document.querySelector("#google-signin-button"),
+  googleSignOutButton: document.querySelector("#google-signout-button"),
   requestForm: document.querySelector("#pickup-request-form"),
+  customerName: document.querySelector("#customer-name"),
+  customerEmail: document.querySelector("#customer-email"),
+  customerEmailHint: document.querySelector("#customer-email-hint"),
   reviewRequestButton: document.querySelector("#review-request-button"),
   requestPanel: document.querySelector("#request-panel"),
   browseCatalogueButton: document.querySelector("#browse-catalogue-button"),
@@ -138,6 +171,7 @@ const elements = {
 
 async function initializePortal() {
   bindEvents();
+  initializeAuthIntegration();
   await loadCatalogue();
   render();
 }
@@ -146,6 +180,24 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializePortal, { once: true });
 } else {
   void initializePortal();
+}
+
+function initializeAuthIntegration() {
+  if (!window.firebase || !window.pickupPortalFirebaseConfig) {
+    state.authStatus = "unavailable";
+    renderAuthState();
+    return;
+  }
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(window.pickupPortalFirebaseConfig);
+  }
+
+  state.authStatus = "ready";
+  firebase.auth().onAuthStateChanged((user) => {
+    state.currentUser = user || null;
+    renderAuthState();
+  });
 }
 
 function bindEvents() {
@@ -160,6 +212,13 @@ function bindEvents() {
   });
 
   elements.categorySidebar.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-category-id]");
+    if (!button) return;
+    state.categoryId = button.dataset.categoryId;
+    renderCatalogueWorkspace();
+  });
+
+  elements.categoryRail.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-category-id]");
     if (!button) return;
     state.categoryId = button.dataset.categoryId;
@@ -222,6 +281,31 @@ function bindEvents() {
     renderCart();
   });
 
+  elements.googleSignInButton?.addEventListener("click", async () => {
+    if (!window.firebase) return;
+
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      await firebase.auth().signInWithPopup(provider);
+    } catch (error) {
+      console.error("[Pickup Portal] Google sign-in failed:", error);
+      state.authStatus = "ready";
+      renderAuthState(error.message || "Could not complete Google sign-in.");
+    }
+  });
+
+  elements.googleSignOutButton?.addEventListener("click", async () => {
+    if (!window.firebase) return;
+
+    try {
+      await firebase.auth().signOut();
+    } catch (error) {
+      console.error("[Pickup Portal] Google sign-out failed:", error);
+      renderAuthState(error.message || "Could not sign out.");
+    }
+  });
+
   elements.requestForm.addEventListener("submit", (event) => {
     event.preventDefault();
     openRequestPreviewModal();
@@ -255,6 +339,85 @@ function bindEvents() {
   });
 }
 
+function renderAuthState(messageOverride = "") {
+  const user = state.currentUser;
+  const signedIn = Boolean(user?.email);
+  const unavailable = state.authStatus === "unavailable";
+
+  elements.authStateBadge.textContent = unavailable
+    ? "Sign-In Unavailable"
+    : signedIn
+      ? "Signed In"
+      : "Google Sign-In";
+  elements.authStateBadge.dataset.state = unavailable
+    ? "unavailable"
+    : signedIn
+      ? "signed-in"
+      : "ready";
+
+  if (signedIn) {
+    elements.authMessage.textContent = `${user.email} will be attached to this pickup request preview.`;
+    elements.googleSignInButton.classList.add("hidden");
+    elements.googleSignOutButton.classList.remove("hidden");
+    elements.headerAccountName.textContent = user.displayName || user.email;
+    elements.headerAccountSubtitle.textContent = user.email;
+  } else if (messageOverride) {
+    elements.authMessage.textContent = messageOverride;
+    elements.googleSignInButton.classList.toggle("hidden", unavailable);
+    elements.googleSignOutButton.classList.add("hidden");
+    elements.headerAccountName.textContent = unavailable ? "Manual email entry" : "Guest shopper";
+    elements.headerAccountSubtitle.textContent = unavailable
+      ? "Google sign-in unavailable here"
+      : "Sign in to attach your email";
+  } else if (unavailable) {
+    elements.authMessage.textContent =
+      "Google sign-in is unavailable in this preview. You can still enter an email manually.";
+    elements.googleSignInButton.classList.add("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
+    elements.headerAccountName.textContent = "Manual email entry";
+    elements.headerAccountSubtitle.textContent = "Google sign-in unavailable here";
+  } else {
+    elements.authMessage.textContent =
+      "Sign in with Google so Moneta can capture your email on the pickup request.";
+    elements.googleSignInButton.classList.remove("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
+    elements.headerAccountName.textContent = "Guest shopper";
+    elements.headerAccountSubtitle.textContent = "Sign in to attach your email";
+  }
+
+  syncRequestIdentityFields();
+}
+
+function syncRequestIdentityFields() {
+  const user = state.currentUser;
+
+  if (user?.displayName) {
+    elements.customerName.value = user.displayName;
+    elements.customerName.dataset.identitySource = "google";
+  } else if (elements.customerName.dataset.identitySource === "google") {
+    elements.customerName.value = "";
+    delete elements.customerName.dataset.identitySource;
+  }
+
+  if (user?.email) {
+    elements.customerEmail.value = user.email;
+    elements.customerEmail.readOnly = true;
+    elements.customerEmail.dataset.identitySource = "google";
+    elements.customerEmailHint.textContent = "Captured from Google sign-in for the pickup request.";
+  } else {
+    if (elements.customerEmail.dataset.identitySource === "google") {
+      elements.customerEmail.value = "";
+      delete elements.customerEmail.dataset.identitySource;
+    }
+
+    elements.customerEmail.readOnly = false;
+    elements.customerEmailHint.textContent =
+      state.authStatus === "unavailable"
+        ? "Google sign-in is unavailable here, so enter the shopper email manually."
+        : "Sign in with Google to fill this automatically, or enter the email manually.";
+  }
+}
+
 async function loadCatalogue() {
   try {
     const response = await fetch("./data/catalogue.json", { cache: "no-store" });
@@ -264,10 +427,20 @@ async function loadCatalogue() {
 
     state.catalogue = prepareCatalogue(await response.json());
     state.source = "published-json";
+    state.sourceError = "";
   } catch (error) {
-    console.warn("[Pickup Portal] Using fallback catalogue preview.", error);
-    state.catalogue = prepareCatalogue(fallbackCatalogue);
-    state.source = "embedded-fallback";
+    if (canUseSamplePreview) {
+      console.warn("[Pickup Portal] Using fallback catalogue preview.", error);
+      state.catalogue = prepareCatalogue(fallbackCatalogue);
+      state.source = "embedded-fallback";
+      state.sourceError = error.message || "Could not load published catalogue JSON.";
+      return;
+    }
+
+    console.error("[Pickup Portal] Published catalogue JSON failed to load.", error);
+    state.catalogue = prepareCatalogue(emptyCatalogue);
+    state.source = "load-error";
+    state.sourceError = error.message || "Could not load published catalogue JSON.";
   }
 }
 
@@ -298,14 +471,24 @@ function renderHeader() {
 
   document.title = `${catalogue.catalogueName || "Pickup Requests"} · Moneta`;
   elements.storefrontTitle.textContent = catalogue.catalogueName || "Church Pickup Requests";
-  elements.pickupNotice.textContent = catalogue.pickupNotice || "Pickup notice not configured.";
+  elements.pickupNotice.textContent =
+    state.source === "load-error"
+      ? "The published pickup catalogue could not be loaded. Confirm that pickup-portal/data/catalogue.json has been published to this site."
+      : catalogue.pickupNotice || "Pickup notice not configured.";
   elements.pickupLocation.textContent = catalogue.pickupLocation || "Not set";
+  elements.headerPickupLocation.textContent = catalogue.pickupLocation || "Not set";
   elements.contactPhone.textContent = catalogue.contactPhone || "Not set";
   elements.leadTime.textContent = `${catalogue.requestLeadTimeHours || 0} hours`;
+  elements.headerLeadTimeCopy.textContent =
+    catalogue.requestLeadTimeHours
+      ? `Ready in about ${catalogue.requestLeadTimeHours} hours`
+      : "Ready after confirmation";
   elements.publishedAt.textContent = publishedLabel;
   elements.publishMeta.textContent =
     state.source === "published-json"
       ? `Published JSON loaded · ${publishedLabel}`
+      : state.source === "load-error"
+        ? `Published JSON unavailable · ${state.sourceError || "Check that data/catalogue.json exists on the site."}`
       : `Fallback preview loaded · ${publishedLabel}`;
 }
 
@@ -373,6 +556,19 @@ function renderCategorySidebar() {
       </button>
     `)
     .join("");
+
+  elements.categoryRail.innerHTML = categoryButtons
+    .map((category) => `
+      <button
+        class="category-rail-button${state.categoryId === category.id ? " active" : ""}"
+        type="button"
+        data-category-id="${escapeHtml(category.id)}"
+      >
+        <span>${escapeHtml(category.name)}</span>
+        <strong>${category.count}</strong>
+      </button>
+    `)
+    .join("");
 }
 
 function renderActiveFilters() {
@@ -402,6 +598,17 @@ function renderActiveFilters() {
 function renderCatalogue() {
   const items = getFilteredItems();
   const totalItems = (state.catalogue?.items || []).filter((item) => item.isAvailable !== false).length;
+
+  if (state.source === "load-error") {
+    elements.catalogueStatus.textContent =
+      "Published catalogue unavailable. Republish pickup-portal/data/catalogue.json and refresh this page.";
+    elements.catalogueGrid.innerHTML = `
+      <div class="empty-state">
+        <p>No published items are available because the portal could not load its catalogue snapshot.</p>
+      </div>
+    `;
+    return;
+  }
 
   elements.catalogueStatus.textContent =
     items.length === totalItems && state.categoryId === "all" && !state.query
@@ -695,6 +902,10 @@ function openRequestPreviewModal() {
       <section class="summary-card">
         <span class="metric-label">Phone</span>
         <strong>${escapeHtml(formData.get("customerPhone") || "Not provided")}</strong>
+      </section>
+      <section class="summary-card">
+        <span class="metric-label">Email</span>
+        <strong>${escapeHtml(formData.get("customerEmail") || "Not provided")}</strong>
       </section>
       <section class="summary-card">
         <span class="metric-label">Requested Pickup Date</span>
