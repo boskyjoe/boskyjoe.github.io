@@ -112,6 +112,7 @@ const state = {
   categoryId: "all",
   sort: "featured",
   cart: new Map(),
+  currentPage: "storefront",
   source: "loading",
   sourceError: "",
   activeItemId: "",
@@ -154,12 +155,28 @@ const elements = {
   customerName: document.querySelector("#customer-name"),
   customerEmail: document.querySelector("#customer-email"),
   customerEmailHint: document.querySelector("#customer-email-hint"),
+  customerPhone: document.querySelector("#customer-phone"),
+  customerAddressLine1: document.querySelector("#customer-address-line1"),
+  customerAddressLine2: document.querySelector("#customer-address-line2"),
+  pickupDate: document.querySelector("#pickup-date"),
+  pickupTime: document.querySelector("#pickup-time"),
+  customerNotes: document.querySelector("#customer-notes"),
   reviewRequestButton: document.querySelector("#review-request-button"),
-  requestPanel: document.querySelector("#request-panel"),
   browseCatalogueButton: document.querySelector("#browse-catalogue-button"),
   heroJumpRequestButton: document.querySelector("#hero-jump-request-button"),
   jumpToRequestButton: document.querySelector("#jump-to-request-button"),
   resultsPanel: document.querySelector("#catalogue-results"),
+  heroShowcase: document.querySelector("#hero-showcase"),
+  storefrontPage: document.querySelector("#storefront-page"),
+  cartPage: document.querySelector("#cart-page"),
+  checkoutPage: document.querySelector("#checkout-page"),
+  cartContinueShoppingButton: document.querySelector("#cart-continue-shopping-button"),
+  checkoutContinueShoppingButton: document.querySelector("#checkout-continue-shopping-button"),
+  checkoutBackToCartButton: document.querySelector("#checkout-back-to-cart-button"),
+  checkoutButton: document.querySelector("#checkout-button"),
+  checkoutItems: document.querySelector("#checkout-items"),
+  checkoutTotal: document.querySelector("#checkout-total"),
+  checkoutCount: document.querySelector("#checkout-count"),
   modalShell: document.querySelector("#request-preview-modal"),
   modalBody: document.querySelector("#modal-body"),
   closeModalButton: document.querySelector("#close-modal-button"),
@@ -203,11 +220,13 @@ function initializeAuthIntegration() {
 function bindEvents() {
   elements.catalogueSearch.addEventListener("input", (event) => {
     state.query = event.target.value.trim().toLowerCase();
+    setCurrentPage("storefront");
     renderCatalogueWorkspace();
   });
 
   elements.catalogueSort.addEventListener("change", (event) => {
     state.sort = event.target.value || "featured";
+    setCurrentPage("storefront");
     renderCatalogueWorkspace();
   });
 
@@ -215,6 +234,7 @@ function bindEvents() {
     const button = event.target.closest("button[data-category-id]");
     if (!button) return;
     state.categoryId = button.dataset.categoryId;
+    setCurrentPage("storefront");
     renderCatalogueWorkspace();
   });
 
@@ -222,6 +242,7 @@ function bindEvents() {
     const button = event.target.closest("button[data-category-id]");
     if (!button) return;
     state.categoryId = button.dataset.categoryId;
+    setCurrentPage("storefront");
     renderCatalogueWorkspace();
   });
 
@@ -250,6 +271,7 @@ function bindEvents() {
       elements.catalogueSearch.value = "";
     }
 
+    setCurrentPage("storefront");
     renderCatalogueWorkspace();
   });
 
@@ -312,15 +334,37 @@ function bindEvents() {
   });
 
   elements.browseCatalogueButton.addEventListener("click", () => {
+    setCurrentPage("storefront");
     elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   elements.heroJumpRequestButton.addEventListener("click", () => {
-    elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    setCurrentPage("cart");
   });
 
   elements.jumpToRequestButton.addEventListener("click", () => {
-    elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    setCurrentPage("cart");
+  });
+
+  elements.cartContinueShoppingButton.addEventListener("click", () => {
+    setCurrentPage("storefront");
+  });
+
+  elements.checkoutContinueShoppingButton.addEventListener("click", () => {
+    setCurrentPage("storefront");
+  });
+
+  elements.checkoutBackToCartButton.addEventListener("click", () => {
+    setCurrentPage("cart");
+  });
+
+  elements.checkoutButton.addEventListener("click", () => {
+    if (!state.cart.size) {
+      setCurrentPage("storefront");
+      return;
+    }
+
+    setCurrentPage("checkout");
   });
 
   elements.closeModalButton.addEventListener("click", closeRequestPreviewModal);
@@ -386,6 +430,7 @@ function renderAuthState(messageOverride = "") {
   }
 
   syncRequestIdentityFields();
+  renderCart();
 }
 
 function syncRequestIdentityFields() {
@@ -410,11 +455,11 @@ function syncRequestIdentityFields() {
       delete elements.customerEmail.dataset.identitySource;
     }
 
-    elements.customerEmail.readOnly = false;
+    elements.customerEmail.readOnly = true;
     elements.customerEmailHint.textContent =
       state.authStatus === "unavailable"
-        ? "Google sign-in is unavailable here, so enter the shopper email manually."
-        : "Sign in with Google to fill this automatically, or enter the email manually.";
+        ? "Google sign-in is unavailable here, so checkout cannot capture email yet."
+        : "Sign in with Google to continue checkout with the shopper email.";
   }
 }
 
@@ -458,7 +503,33 @@ function prepareCatalogue(catalogue = {}) {
   };
 }
 
+function setCurrentPage(page) {
+  state.currentPage = page;
+  renderPages();
+
+  const target =
+    page === "cart"
+      ? elements.cartPage
+      : page === "checkout"
+        ? elements.checkoutPage
+        : elements.resultsPanel;
+
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderPages() {
+  const isStorefront = state.currentPage === "storefront";
+  const isCart = state.currentPage === "cart";
+  const isCheckout = state.currentPage === "checkout";
+
+  elements.heroShowcase.classList.toggle("commerce-page-hidden", !isStorefront);
+  elements.storefrontPage.classList.toggle("commerce-page-hidden", !isStorefront);
+  elements.cartPage.classList.toggle("commerce-page-hidden", !isCart);
+  elements.checkoutPage.classList.toggle("commerce-page-hidden", !isCheckout);
+}
+
 function render() {
+  renderPages();
   renderHeader();
   renderFeatured();
   renderCatalogueWorkspace();
@@ -663,24 +734,32 @@ function renderCart() {
   const cartEntries = getCartEntries();
   const cartLineCount = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const cartTotal = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
+  const hasSignedInEmail = Boolean(state.currentUser?.email);
 
   elements.cartCount.textContent = String(cartLineCount);
   elements.cartTotal.textContent = formatCurrency(cartTotal);
+  elements.checkoutCount.textContent = String(cartLineCount);
+  elements.checkoutTotal.textContent = formatCurrency(cartTotal);
   elements.headerCartCount.textContent = `${cartLineCount} item${cartLineCount === 1 ? "" : "s"}`;
   elements.headerCartTotal.textContent = formatCurrency(cartTotal);
 
   if (!cartEntries.length) {
     elements.cartItems.innerHTML = `
       <p class="cart-empty">
-        Add published items from the catalogue to build a pickup request preview.
+        Add published items from the catalogue to build your shopping cart.
       </p>
     `;
+    elements.checkoutItems.innerHTML = `
+      <p class="cart-empty">
+        Your checkout summary will appear here after you add items to the cart.
+      </p>
+    `;
+    elements.checkoutButton.disabled = true;
     elements.reviewRequestButton.disabled = true;
     return;
   }
 
-  elements.reviewRequestButton.disabled = false;
-  elements.cartItems.innerHTML = cartEntries
+  const cartMarkup = cartEntries
     .map(({ item, quantity, total }) => `
       <article class="cart-item">
         <div class="cart-item-head">
@@ -703,6 +782,11 @@ function renderCart() {
       </article>
     `)
     .join("");
+
+  elements.cartItems.innerHTML = cartMarkup;
+  elements.checkoutItems.innerHTML = cartMarkup;
+  elements.checkoutButton.disabled = false;
+  elements.reviewRequestButton.disabled = !hasSignedInEmail;
 }
 
 function getFilteredItems() {
@@ -844,7 +928,7 @@ function openProductModal(itemId) {
 
         <div class="product-modal-actions">
           <button class="primary-button" type="button" data-product-modal-add="${escapeHtml(item.id)}">
-            Add to Request
+            Add to Cart
           </button>
           <button class="secondary-button" type="button" data-product-modal-close="true">
             Close
@@ -859,7 +943,6 @@ function openProductModal(itemId) {
     ?.addEventListener("click", (event) => {
       addToCart(event.currentTarget.dataset.productModalAdd);
       closeProductModal();
-      elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
   elements.productModalBody
@@ -879,9 +962,14 @@ function closeProductModal() {
 function openRequestPreviewModal() {
   const cartEntries = getCartEntries();
   if (!cartEntries.length) return;
+  if (!state.currentUser?.email) return;
 
   const formData = new FormData(elements.requestForm);
   const total = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
+  const addressParts = [
+    formData.get("customerAddressLine1"),
+    formData.get("customerAddressLine2")
+  ].filter(Boolean);
   const requestLines = cartEntries
     .map(
       ({ item, quantity, total: lineTotal }) =>
@@ -914,6 +1002,10 @@ function openRequestPreviewModal() {
       <section class="summary-card">
         <span class="metric-label">Requested Pickup Time</span>
         <strong>${escapeHtml(formData.get("pickupTime") || "Not provided")}</strong>
+      </section>
+      <section class="summary-card">
+        <span class="metric-label">Address</span>
+        <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
       </section>
     </div>
 
