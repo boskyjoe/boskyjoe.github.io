@@ -135,7 +135,6 @@ const elements = {
   cartTotal: document.querySelector("#cart-total"),
   cartCount: document.querySelector("#cart-count"),
   headerCartCount: document.querySelector("#header-cart-count"),
-  headerCartTotal: document.querySelector("#header-cart-total"),
   clearCartButton: document.querySelector("#clear-cart-button"),
   pickupNotice: document.querySelector("#pickup-notice"),
   pickupLocation: document.querySelector("#pickup-location"),
@@ -740,8 +739,7 @@ function renderCart() {
   elements.cartTotal.textContent = formatCurrency(cartTotal);
   elements.checkoutCount.textContent = String(cartLineCount);
   elements.checkoutTotal.textContent = formatCurrency(cartTotal);
-  elements.headerCartCount.textContent = `${cartLineCount} item${cartLineCount === 1 ? "" : "s"}`;
-  elements.headerCartTotal.textContent = formatCurrency(cartTotal);
+  elements.headerCartCount.textContent = cartLineCount > 99 ? "99+" : String(cartLineCount);
 
   if (!cartEntries.length) {
     elements.cartItems.innerHTML = `

@@ -285,11 +285,20 @@ input[type="search"]::-webkit-search-results-decoration {
 .header-account-copy {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .pickup-anchor strong,
 .header-account-copy strong {
   font-size: 1rem;
+}
+
+.header-account-copy strong,
+.header-account-subtitle,
+#header-account-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-search {
@@ -383,52 +392,59 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .cart-chip {
-  min-height: 58px;
-  padding: 10px 14px;
+  position: relative;
+  min-height: 52px;
+  padding: 10px 12px 10px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  gap: 8px;
+  border: 1px solid transparent;
   border-radius: var(--portal-radius-sm);
-  background: var(--portal-accent);
-  color: #0f1111;
-  box-shadow: inset 0 -1px 0 rgba(15, 17, 17, 0.08);
+  background: transparent;
+  color: #ffffff;
+  box-shadow: none;
 }
 
 .cart-chip:hover {
-  background: var(--portal-accent-strong);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .cart-chip-label {
-  font-size: 0.72rem;
+  font-size: 0.96rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .cart-chip-icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: inline-grid;
   place-items: center;
 }
 
 .cart-chip-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: block;
 }
 
-.cart-chip-copy {
-  display: grid;
-  gap: 1px;
-  justify-items: start;
-  text-align: left;
-}
-
-.cart-chip strong,
-.cart-chip > span:last-child {
-  font-weight: 800;
+.cart-chip-count {
+  position: absolute;
+  top: 4px;
+  left: 24px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--portal-accent);
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .department-bar {
