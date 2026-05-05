@@ -27,16 +27,21 @@
         appId: "1:450216949740:web:375d45d553bfd2a541f2c9",
         measurementId: "G-57JRDMJB14"
       };
+
+      window.pickupPortalConfig = {
+        intakeEndpointUrl:
+          "https://script.google.com/macros/s/AKfycbzKY-fmA2zVqDnXotkpbtxW5ixTtXU3Ryfoy3bkznyV9otBQ45cBEO7EZ8O_KIrPFo/exec"
+      };
     </script>
   </head>
   <body>
     <div class="portal-shell">
       <div class="utility-bar">
         <div class="utility-copy">
-          <span class="utility-pill">Preview only</span>
+          <span class="utility-pill">Request Intake</span>
           <p>
-            Customers can browse the published pickup catalogue, build a request,
-            and wait for staff confirmation before collection.
+            Customers can browse the published pickup catalogue, send a pickup
+            request, and wait for staff confirmation before collection.
           </p>
         </div>
         <div class="utility-actions">
@@ -383,7 +388,7 @@
                 Continue shopping
               </button>
               <button id="review-request-button" class="primary-button" type="submit">
-                Review Pickup Request
+                Submit Pickup Request
               </button>
             </div>
           </form>
@@ -394,7 +399,7 @@
                 <p class="eyebrow">Request summary</p>
                 <h3>Before you submit</h3>
               </div>
-              <p class="panel-meta">Preview only. No data is sent yet.</p>
+              <p class="panel-meta">Checkout sends this request to the church store intake.</p>
             </div>
             <section class="cart-summary-banner">
               <div>
@@ -436,7 +441,7 @@
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Preview Only</p>
+            <p id="modal-eyebrow" class="eyebrow">Pickup request</p>
             <h3 id="modal-title">Pickup request summary</h3>
           </div>
           <button id="close-modal-button" class="icon-button" type="button" aria-label="Close preview">

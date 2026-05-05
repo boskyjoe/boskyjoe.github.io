@@ -106,6 +106,8 @@ const canUseSamplePreview =
   window.location.protocol === "file:" ||
   new URLSearchParams(window.location.search).get("preview") === "sample";
 
+const intakeEndpointUrl = String(window.pickupPortalConfig?.intakeEndpointUrl || "").trim();
+
 const state = {
   catalogue: null,
   query: "",
@@ -117,7 +119,8 @@ const state = {
   sourceError: "",
   activeItemId: "",
   currentUser: null,
-  authStatus: "loading"
+  authStatus: "loading",
+  isSubmittingRequest: false
 };
 
 const elements = {
@@ -176,6 +179,8 @@ const elements = {
   checkoutItems: document.querySelector("#checkout-items"),
   checkoutTotal: document.querySelector("#checkout-total"),
   checkoutCount: document.querySelector("#checkout-count"),
+  modalEyebrow: document.querySelector("#modal-eyebrow"),
+  modalTitle: document.querySelector("#modal-title"),
   modalShell: document.querySelector("#request-preview-modal"),
   modalBody: document.querySelector("#modal-body"),
   closeModalButton: document.querySelector("#close-modal-button"),
@@ -327,9 +332,9 @@ function bindEvents() {
     }
   });
 
-  elements.requestForm.addEventListener("submit", (event) => {
+  elements.requestForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    openRequestPreviewModal();
+    await submitPickupRequest();
   });
 
   elements.browseCatalogueButton.addEventListener("click", () => {
@@ -734,12 +739,16 @@ function renderCart() {
   const cartLineCount = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const cartTotal = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
   const hasSignedInEmail = Boolean(state.currentUser?.email);
+  const canSubmitRequest = Boolean(cartEntries.length && hasSignedInEmail && intakeEndpointUrl && !state.isSubmittingRequest);
 
   elements.cartCount.textContent = String(cartLineCount);
   elements.cartTotal.textContent = formatCurrency(cartTotal);
   elements.checkoutCount.textContent = String(cartLineCount);
   elements.checkoutTotal.textContent = formatCurrency(cartTotal);
   elements.headerCartCount.textContent = cartLineCount > 99 ? "99+" : String(cartLineCount);
+  elements.reviewRequestButton.textContent = state.isSubmittingRequest
+    ? "Submitting..."
+    : "Submit Pickup Request";
 
   if (!cartEntries.length) {
     elements.cartItems.innerHTML = `
@@ -784,7 +793,7 @@ function renderCart() {
   elements.cartItems.innerHTML = cartMarkup;
   elements.checkoutItems.innerHTML = cartMarkup;
   elements.checkoutButton.disabled = false;
-  elements.reviewRequestButton.disabled = !hasSignedInEmail;
+  elements.reviewRequestButton.disabled = !canSubmitRequest;
 }
 
 function getFilteredItems() {
@@ -957,6 +966,180 @@ function closeProductModal() {
   elements.productModalShell.setAttribute("aria-hidden", "true");
 }
 
+async function submitPickupRequest() {
+  const cartEntries = getCartEntries();
+  if (!cartEntries.length) return;
+
+  if (!state.currentUser?.email) {
+    openStatusModal({
+      eyebrow: "Google sign-in required",
+      title: "Sign in before checkout",
+      body: `
+        <p class="inline-note">
+          Checkout uses the signed-in Google account email for the pickup request. Please sign in and try again.
+        </p>
+      `
+    });
+    return;
+  }
+
+  if (!intakeEndpointUrl) {
+    openStatusModal({
+      eyebrow: "Configuration needed",
+      title: "Pickup intake endpoint not configured",
+      body: `
+        <p class="inline-note">
+          Add <code>window.pickupPortalConfig.intakeEndpointUrl</code> in <code>pickup-portal/index.html</code> so checkout can send requests to Apps Script.
+        </p>
+      `
+    });
+    return;
+  }
+
+  if (!elements.requestForm.reportValidity()) {
+    return;
+  }
+
+  const formData = new FormData(elements.requestForm);
+  const total = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
+  const body = buildIntakeSubmission(formData, cartEntries, total);
+
+  state.isSubmittingRequest = true;
+  renderCart();
+
+  try {
+    await fetch(intakeEndpointUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body
+    });
+
+    const addressParts = [
+      formData.get("customerAddressLine1"),
+      formData.get("customerAddressLine2")
+    ].filter(Boolean);
+    const requestLines = cartEntries
+      .map(
+        ({ item, quantity, total: lineTotal }) =>
+          `<li>${escapeHtml(item.name)} · Qty ${quantity} · ${formatCurrency(lineTotal)}</li>`
+      )
+      .join("");
+
+    state.cart.clear();
+    elements.requestForm.reset();
+    syncRequestIdentityFields();
+    setCurrentPage("storefront");
+
+    openStatusModal({
+      eyebrow: "Request sent",
+      title: "Pickup request submitted",
+      body: `
+        <p class="inline-note">
+          Your request was sent to the church store intake. Staff will confirm availability before pickup.
+        </p>
+
+        <div class="summary-grid">
+          <section class="summary-card">
+            <span class="metric-label">Customer</span>
+            <strong>${escapeHtml(formData.get("customerName") || "Not provided")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Email</span>
+            <strong>${escapeHtml(formData.get("customerEmail") || "Not provided")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Phone</span>
+            <strong>${escapeHtml(formData.get("customerPhone") || "Not provided")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Requested Pickup Date</span>
+            <strong>${escapeHtml(formData.get("pickupDate") || "Not provided")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Requested Pickup Time</span>
+            <strong>${escapeHtml(formData.get("pickupTime") || "Not provided")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Address</span>
+            <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
+          </section>
+        </div>
+
+        <section class="summary-lines">
+          <span class="metric-label">Requested Items</span>
+          <ul>${requestLines}</ul>
+        </section>
+
+        <div class="summary-grid">
+          <section class="summary-card">
+            <span class="metric-label">Estimated Total</span>
+            <strong>${formatCurrency(total)}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Pickup Location</span>
+            <strong>${escapeHtml(state.catalogue?.pickupLocation || "Not provided")}</strong>
+          </section>
+        </div>
+      `
+    });
+  } catch (error) {
+    console.error("[Pickup Portal] Request submission failed:", error);
+    openStatusModal({
+      eyebrow: "Submission failed",
+      title: "Could not send pickup request",
+      body: `
+        <p class="inline-note">
+          The portal could not reach the pickup intake service. Please try again, or contact the church store team if this keeps happening.
+        </p>
+      `
+    });
+  } finally {
+    state.isSubmittingRequest = false;
+    renderCart();
+  }
+}
+
+function buildIntakeSubmission(formData, cartEntries, total) {
+  const lineItems = cartEntries.map(({ item, quantity, total: lineTotal }) => ({
+    catalogueItemId: item.id,
+    productId: item.productId || "",
+    name: item.name,
+    quantity,
+    price: Number(item.price || 0),
+    lineTotal,
+    categoryId: item.categoryId || "",
+    unitLabel: item.unitLabel || "each"
+  }));
+
+  return new URLSearchParams({
+    customerName: String(formData.get("customerName") || ""),
+    customerEmail: String(formData.get("customerEmail") || ""),
+    customerPhone: String(formData.get("customerPhone") || ""),
+    addressLine1: String(formData.get("customerAddressLine1") || ""),
+    addressLine2: String(formData.get("customerAddressLine2") || ""),
+    pickupDate: String(formData.get("pickupDate") || ""),
+    pickupTime: String(formData.get("pickupTime") || ""),
+    notes: String(formData.get("notes") || ""),
+    itemsJson: JSON.stringify(lineItems),
+    subtotal: String(total),
+    itemCount: String(cartEntries.reduce((sum, entry) => sum + entry.quantity, 0)),
+    currency: String(state.catalogue?.currency || "INR"),
+    catalogueId: String(state.catalogue?.catalogueId || ""),
+    catalogueName: String(state.catalogue?.catalogueName || ""),
+    cataloguePublishedAt: String(state.catalogue?.publishedAt || ""),
+    pickupLocation: String(state.catalogue?.pickupLocation || ""),
+    source: "moneta-pickup-portal"
+  });
+}
+
+function openStatusModal({ eyebrow, title, body }) {
+  elements.modalEyebrow.textContent = eyebrow;
+  elements.modalTitle.textContent = title;
+  elements.modalBody.innerHTML = body;
+  elements.modalShell.classList.remove("hidden");
+  elements.modalShell.setAttribute("aria-hidden", "false");
+}
+
 function openRequestPreviewModal() {
   const cartEntries = getCartEntries();
   if (!cartEntries.length) return;
@@ -975,62 +1158,59 @@ function openRequestPreviewModal() {
     )
     .join("");
 
-  elements.modalBody.innerHTML = `
-    <p class="inline-note">
-      This storefront is still a preview. It does not submit to Moneta, Google Sheets, or any live intake service yet.
-    </p>
+  openStatusModal({
+    eyebrow: "Pickup request",
+    title: "Pickup request summary",
+    body: `
+      <div class="summary-grid">
+        <section class="summary-card">
+          <span class="metric-label">Customer</span>
+          <strong>${escapeHtml(formData.get("customerName") || "Not provided")}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Phone</span>
+          <strong>${escapeHtml(formData.get("customerPhone") || "Not provided")}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Email</span>
+          <strong>${escapeHtml(formData.get("customerEmail") || "Not provided")}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Requested Pickup Date</span>
+          <strong>${escapeHtml(formData.get("pickupDate") || "Not provided")}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Requested Pickup Time</span>
+          <strong>${escapeHtml(formData.get("pickupTime") || "Not provided")}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Address</span>
+          <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
+        </section>
+      </div>
 
-    <div class="summary-grid">
-      <section class="summary-card">
-        <span class="metric-label">Customer</span>
-        <strong>${escapeHtml(formData.get("customerName") || "Not provided")}</strong>
+      <section class="summary-lines">
+        <span class="metric-label">Selected Items</span>
+        <ul>${requestLines}</ul>
       </section>
-      <section class="summary-card">
-        <span class="metric-label">Phone</span>
-        <strong>${escapeHtml(formData.get("customerPhone") || "Not provided")}</strong>
-      </section>
-      <section class="summary-card">
-        <span class="metric-label">Email</span>
-        <strong>${escapeHtml(formData.get("customerEmail") || "Not provided")}</strong>
-      </section>
-      <section class="summary-card">
-        <span class="metric-label">Requested Pickup Date</span>
-        <strong>${escapeHtml(formData.get("pickupDate") || "Not provided")}</strong>
-      </section>
-      <section class="summary-card">
-        <span class="metric-label">Requested Pickup Time</span>
-        <strong>${escapeHtml(formData.get("pickupTime") || "Not provided")}</strong>
-      </section>
-      <section class="summary-card">
-        <span class="metric-label">Address</span>
-        <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
-      </section>
-    </div>
 
-    <section class="summary-lines">
-      <span class="metric-label">Selected Items</span>
-      <ul>${requestLines}</ul>
-    </section>
+      <div class="summary-grid">
+        <section class="summary-card">
+          <span class="metric-label">Estimated Total</span>
+          <strong>${formatCurrency(total)}</strong>
+        </section>
+        <section class="summary-card">
+          <span class="metric-label">Pickup Location</span>
+          <strong>${escapeHtml(state.catalogue?.pickupLocation || "Not provided")}</strong>
+        </section>
+      </div>
 
-    <div class="summary-grid">
       <section class="summary-card">
-        <span class="metric-label">Estimated Total</span>
-        <strong>${formatCurrency(total)}</strong>
+        <span class="metric-label">Notes</span>
+        <strong>${escapeHtml(formData.get("notes") || "No notes provided")}</strong>
       </section>
-      <section class="summary-card">
-        <span class="metric-label">Pickup Location</span>
-        <strong>${escapeHtml(state.catalogue?.pickupLocation || "Not provided")}</strong>
-      </section>
-    </div>
-
-    <section class="summary-card">
-      <span class="metric-label">Notes</span>
-      <strong>${escapeHtml(formData.get("notes") || "No notes provided")}</strong>
-    </section>
-  `;
-
-  elements.modalShell.classList.remove("hidden");
-  elements.modalShell.setAttribute("aria-hidden", "false");
+    `
+  });
 }
 
 function closeRequestPreviewModal() {
