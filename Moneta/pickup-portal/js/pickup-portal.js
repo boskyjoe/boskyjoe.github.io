@@ -165,6 +165,9 @@ const elements = {
   customerAddressLine2: document.querySelector("#customer-address-line2"),
   pickupDate: document.querySelector("#pickup-date"),
   pickupTime: document.querySelector("#pickup-time"),
+  pickupTimeHour: document.querySelector("#pickup-time-hour"),
+  pickupTimeMinute: document.querySelector("#pickup-time-minute"),
+  pickupTimeMeridiem: document.querySelector("#pickup-time-meridiem"),
   customerNotes: document.querySelector("#customer-notes"),
   reviewRequestButton: document.querySelector("#review-request-button"),
   browseCatalogueButton: document.querySelector("#browse-catalogue-button"),
@@ -198,6 +201,7 @@ async function initializePortal() {
   hydrateStoredUser();
   initializeAuthIntegration();
   await loadCatalogue();
+  syncPickupTimeField();
   render();
 }
 
@@ -349,6 +353,10 @@ function bindEvents() {
       console.error("[Pickup Portal] Google sign-out failed:", error);
       renderAuthState("Could not sign out of the pickup portal session.");
     }
+  });
+
+  [elements.pickupTimeHour, elements.pickupTimeMinute, elements.pickupTimeMeridiem].forEach((control) => {
+    control?.addEventListener("change", syncPickupTimeField);
   });
 
   elements.requestForm.addEventListener("submit", async (event) => {
@@ -1085,6 +1093,7 @@ function closeProductModal() {
 async function submitPickupRequest() {
   const cartEntries = getCartEntries();
   if (!cartEntries.length) return;
+  syncPickupTimeField();
 
   if (!state.currentUser?.email) {
     openStatusModal({
@@ -1143,6 +1152,7 @@ async function submitPickupRequest() {
 
     state.cart.clear();
     elements.requestForm.reset();
+    syncPickupTimeField();
     syncRequestIdentityFields();
     setCurrentPage("storefront");
 
@@ -1246,6 +1256,19 @@ function buildIntakeSubmission(formData, cartEntries, total) {
     pickupLocation: String(state.catalogue?.pickupLocation || ""),
     source: "moneta-pickup-portal"
   });
+}
+
+function syncPickupTimeField() {
+  const hour = String(elements.pickupTimeHour?.value || "").trim();
+  const minute = String(elements.pickupTimeMinute?.value || "").trim();
+  const meridiem = String(elements.pickupTimeMeridiem?.value || "").trim();
+
+  if (!hour || !minute || !meridiem) {
+    elements.pickupTime.value = "";
+    return;
+  }
+
+  elements.pickupTime.value = `${hour}:${minute} ${meridiem}`;
 }
 
 function openStatusModal({ eyebrow, title, body }) {

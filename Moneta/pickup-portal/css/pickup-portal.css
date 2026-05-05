@@ -371,6 +371,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .search-input-wrap input,
 .sort-field select,
 .request-form input,
+.request-form select,
 .request-form textarea {
   width: 100%;
   border-radius: var(--portal-radius-sm);
@@ -382,7 +383,8 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .search-input-wrap input,
 .sort-field select,
-.request-form input {
+.request-form input,
+.request-form select {
   min-height: 46px;
   padding: 0 44px 0 82px;
 }
@@ -396,6 +398,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .search-input-wrap input:focus,
 .sort-field select:focus,
 .request-form input:focus,
+.request-form select:focus,
 .request-form textarea:focus {
   outline: none;
   border-color: var(--portal-accent-strong);
@@ -1168,6 +1171,16 @@ button:disabled {
 
 .request-form-wide {
   grid-column: 1 / -1;
+}
+
+.time-picker-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+}
+
+.time-picker-grid select {
+  padding: 0 14px;
 }
 
 #customer-email[readonly] {
