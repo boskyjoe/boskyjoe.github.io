@@ -6,21 +6,12 @@ const fallbackCatalogue = {
   pickupNotice:
     "Submit a pickup request and wait for confirmation from the church store team before collection.",
   pickupLocation: "Church Resource Centre",
-  contactPhone: "+254 700 123 456",
+  contactPhone: "+91 98765 43210",
   requestLeadTimeHours: 24,
   categories: [
-    {
-      id: "baked-goods",
-      name: "Baked Goods"
-    },
-    {
-      id: "books-resources",
-      name: "Books & Resources"
-    },
-    {
-      id: "gift-items",
-      name: "Gift Items"
-    }
+    { id: "baked-goods", name: "Baked Goods" },
+    { id: "books-resources", name: "Books & Resources" },
+    { id: "gift-items", name: "Gift Items" }
   ],
   items: [
     {
@@ -32,6 +23,8 @@ const fallbackCatalogue = {
       price: 650,
       unitLabel: "per pack",
       imageLabel: "Cake",
+      badge: "Fresh Bake",
+      featured: true,
       isAvailable: true
     },
     {
@@ -43,6 +36,7 @@ const fallbackCatalogue = {
       price: 520,
       unitLabel: "per loaf",
       imageLabel: "Loaf",
+      featured: true,
       isAvailable: true
     },
     {
@@ -54,6 +48,8 @@ const fallbackCatalogue = {
       price: 850,
       unitLabel: "each",
       imageLabel: "Journal",
+      badge: "Popular",
+      featured: true,
       isAvailable: true
     },
     {
@@ -61,7 +57,7 @@ const fallbackCatalogue = {
       productId: "prod-family-devotional-guide",
       name: "Family Devotional Guide",
       categoryId: "books-resources",
-      description: "Thirty-day resource for home fellowship and children’s reflection prompts.",
+      description: "Thirty-day resource for home fellowship and children's reflection prompts.",
       price: 1100,
       unitLabel: "each",
       imageLabel: "Guide",
@@ -96,66 +92,111 @@ const state = {
   catalogue: null,
   query: "",
   categoryId: "all",
+  sort: "featured",
   cart: new Map(),
-  source: "loading"
+  source: "loading",
+  activeItemId: ""
 };
 
 const elements = {
-  categoryFilters: document.querySelector("#category-filters"),
+  storefrontTitle: document.querySelector("#storefront-title"),
+  categorySidebar: document.querySelector("#category-sidebar"),
+  featuredStrip: document.querySelector("#featured-strip"),
+  featuredCount: document.querySelector("#featured-count"),
   catalogueGrid: document.querySelector("#catalogue-grid"),
   catalogueSearch: document.querySelector("#catalogue-search"),
   catalogueStatus: document.querySelector("#catalogue-status"),
+  catalogueSort: document.querySelector("#catalogue-sort"),
+  activeFilters: document.querySelector("#active-filters"),
   cartItems: document.querySelector("#cart-items"),
   cartTotal: document.querySelector("#cart-total"),
+  cartCount: document.querySelector("#cart-count"),
+  headerCartCount: document.querySelector("#header-cart-count"),
+  headerCartTotal: document.querySelector("#header-cart-total"),
   clearCartButton: document.querySelector("#clear-cart-button"),
   pickupNotice: document.querySelector("#pickup-notice"),
   pickupLocation: document.querySelector("#pickup-location"),
   contactPhone: document.querySelector("#contact-phone"),
   leadTime: document.querySelector("#lead-time"),
+  publishedAt: document.querySelector("#published-at"),
   publishMeta: document.querySelector("#publish-meta"),
   requestForm: document.querySelector("#pickup-request-form"),
   reviewRequestButton: document.querySelector("#review-request-button"),
+  requestPanel: document.querySelector("#request-panel"),
+  browseCatalogueButton: document.querySelector("#browse-catalogue-button"),
+  heroJumpRequestButton: document.querySelector("#hero-jump-request-button"),
+  jumpToRequestButton: document.querySelector("#jump-to-request-button"),
+  resultsPanel: document.querySelector("#catalogue-results"),
   modalShell: document.querySelector("#request-preview-modal"),
   modalBody: document.querySelector("#modal-body"),
   closeModalButton: document.querySelector("#close-modal-button"),
-  closeModalFooterButton: document.querySelector("#close-modal-footer-button")
+  closeModalFooterButton: document.querySelector("#close-modal-footer-button"),
+  productModalShell: document.querySelector("#product-preview-modal"),
+  productModalBody: document.querySelector("#product-modal-body"),
+  closeProductModalButton: document.querySelector("#close-product-modal-button")
 };
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function initializePortal() {
   bindEvents();
   await loadCatalogue();
   render();
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializePortal, { once: true });
+} else {
+  void initializePortal();
+}
 
 function bindEvents() {
   elements.catalogueSearch.addEventListener("input", (event) => {
     state.query = event.target.value.trim().toLowerCase();
-    renderCatalogue();
+    renderCatalogueWorkspace();
   });
 
-  elements.categoryFilters.addEventListener("click", (event) => {
+  elements.catalogueSort.addEventListener("change", (event) => {
+    state.sort = event.target.value || "featured";
+    renderCatalogueWorkspace();
+  });
+
+  elements.categorySidebar.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-category-id]");
-    if (!button) {
-      return;
-    }
+    if (!button) return;
     state.categoryId = button.dataset.categoryId;
-    renderCatalogue();
-    renderFilters();
+    renderCatalogueWorkspace();
+  });
+
+  elements.featuredStrip.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action][data-item-id]");
+    if (!button) return;
+    handleItemAction(button.dataset.action, button.dataset.itemId);
   });
 
   elements.catalogueGrid.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-item-id]");
-    if (!button) {
-      return;
+    const button = event.target.closest("button[data-action][data-item-id]");
+    if (!button) return;
+    handleItemAction(button.dataset.action, button.dataset.itemId);
+  });
+
+  elements.activeFilters.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-clear]");
+    if (!button) return;
+
+    if (button.dataset.clear === "category") {
+      state.categoryId = "all";
     }
-    addToCart(button.dataset.itemId);
+
+    if (button.dataset.clear === "query") {
+      state.query = "";
+      elements.catalogueSearch.value = "";
+    }
+
+    renderCatalogueWorkspace();
   });
 
   elements.cartItems.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-cart-action]");
-    if (!button) {
-      return;
-    }
+    if (!button) return;
 
     const itemId = button.dataset.itemId;
     const action = button.dataset.cartAction;
@@ -183,15 +224,33 @@ function bindEvents() {
 
   elements.requestForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    openPreviewModal();
+    openRequestPreviewModal();
   });
 
-  elements.closeModalButton.addEventListener("click", closePreviewModal);
-  elements.closeModalFooterButton.addEventListener("click", closePreviewModal);
+  elements.browseCatalogueButton.addEventListener("click", () => {
+    elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
+  elements.heroJumpRequestButton.addEventListener("click", () => {
+    elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  elements.jumpToRequestButton.addEventListener("click", () => {
+    elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  elements.closeModalButton.addEventListener("click", closeRequestPreviewModal);
+  elements.closeModalFooterButton.addEventListener("click", closeRequestPreviewModal);
   elements.modalShell.addEventListener("click", (event) => {
     if (event.target === elements.modalShell) {
-      closePreviewModal();
+      closeRequestPreviewModal();
+    }
+  });
+
+  elements.closeProductModalButton.addEventListener("click", closeProductModal);
+  elements.productModalShell.addEventListener("click", (event) => {
+    if (event.target === elements.productModalShell) {
+      closeProductModal();
     }
   });
 }
@@ -203,83 +262,156 @@ async function loadCatalogue() {
       throw new Error(`Catalogue request failed with ${response.status}`);
     }
 
-    state.catalogue = await response.json();
+    state.catalogue = prepareCatalogue(await response.json());
     state.source = "published-json";
   } catch (error) {
     console.warn("[Pickup Portal] Using fallback catalogue preview.", error);
-    state.catalogue = fallbackCatalogue;
+    state.catalogue = prepareCatalogue(fallbackCatalogue);
     state.source = "embedded-fallback";
   }
 }
 
+function prepareCatalogue(catalogue = {}) {
+  const categories = Array.isArray(catalogue.categories) ? catalogue.categories : [];
+  const items = Array.isArray(catalogue.items) ? catalogue.items : [];
+
+  return {
+    ...catalogue,
+    categories,
+    items: items.map((item, index) => ({
+      ...item,
+      __position: index
+    }))
+  };
+}
+
 function render() {
   renderHeader();
-  renderFilters();
-  renderCatalogue();
+  renderFeatured();
+  renderCatalogueWorkspace();
   renderCart();
 }
 
 function renderHeader() {
-  const { pickupNotice, pickupLocation, contactPhone, requestLeadTimeHours, publishedAt } =
-    state.catalogue;
+  const catalogue = state.catalogue || fallbackCatalogue;
+  const publishedLabel = formatDateTime(catalogue.publishedAt);
 
-  elements.pickupNotice.textContent = pickupNotice;
-  elements.pickupLocation.textContent = pickupLocation || "Not set";
-  elements.contactPhone.textContent = contactPhone || "Not set";
-  elements.leadTime.textContent = `${requestLeadTimeHours || 0} hours`;
-
-  const publishedLabel = publishedAt
-    ? new Date(publishedAt).toLocaleString([], {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      })
-    : "Unknown";
-
+  document.title = `${catalogue.catalogueName || "Pickup Requests"} · Moneta`;
+  elements.storefrontTitle.textContent = catalogue.catalogueName || "Church Pickup Requests";
+  elements.pickupNotice.textContent = catalogue.pickupNotice || "Pickup notice not configured.";
+  elements.pickupLocation.textContent = catalogue.pickupLocation || "Not set";
+  elements.contactPhone.textContent = catalogue.contactPhone || "Not set";
+  elements.leadTime.textContent = `${catalogue.requestLeadTimeHours || 0} hours`;
+  elements.publishedAt.textContent = publishedLabel;
   elements.publishMeta.textContent =
     state.source === "published-json"
       ? `Published JSON loaded · ${publishedLabel}`
       : `Fallback preview loaded · ${publishedLabel}`;
 }
 
-function renderFilters() {
-  const categories = state.catalogue.categories || [];
-  const buttons = [
-    renderFilterButton("all", "All Items"),
-    ...categories.map((category) => renderFilterButton(category.id, category.name))
-  ];
+function renderFeatured() {
+  const featuredItems = getFeaturedItems();
+  elements.featuredCount.textContent = `${featuredItems.length} items`;
 
-  elements.categoryFilters.innerHTML = buttons.join("");
+  if (!featuredItems.length) {
+    elements.featuredStrip.innerHTML = `<p class="panel-meta">No featured items available yet.</p>`;
+    return;
+  }
+
+  elements.featuredStrip.innerHTML = featuredItems
+    .map((item) => `
+      <article class="featured-card">
+        <div class="featured-card-copy">
+          <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
+          <div class="featured-card-name">${escapeHtml(item.name)}</div>
+          <div class="featured-card-meta">${escapeHtml(item.unitLabel || "each")} · ${formatCurrency(item.price)}</div>
+        </div>
+        <div class="featured-card-actions">
+          <button class="product-details-button featured-card-view" type="button" data-action="details" data-item-id="${escapeHtml(item.id)}">
+            View
+          </button>
+          <button class="featured-card-button" type="button" data-action="add" data-item-id="${escapeHtml(item.id)}">
+            Add
+          </button>
+        </div>
+      </article>
+    `)
+    .join("");
 }
 
-function renderFilterButton(categoryId, label) {
-  const activeClass = state.categoryId === categoryId ? " active" : "";
-  return `
-    <button
-      class="category-filter${activeClass}"
-      type="button"
-      data-category-id="${escapeHtml(categoryId)}"
-    >
-      ${escapeHtml(label)}
-    </button>
-  `;
+function renderCatalogueWorkspace() {
+  renderCategorySidebar();
+  renderActiveFilters();
+  renderCatalogue();
+}
+
+function renderCategorySidebar() {
+  const categories = state.catalogue?.categories || [];
+  const counts = getCategoryCounts();
+  const categoryButtons = [
+    {
+      id: "all",
+      name: "All Items",
+      count: state.catalogue?.items.filter((item) => item.isAvailable !== false).length || 0
+    },
+    ...categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      count: counts.get(category.id) || 0
+    }))
+  ];
+
+  elements.categorySidebar.innerHTML = categoryButtons
+    .map((category) => `
+      <button
+        class="category-button${state.categoryId === category.id ? " active" : ""}"
+        type="button"
+        data-category-id="${escapeHtml(category.id)}"
+      >
+        <span>${escapeHtml(category.name)}</span>
+        <span class="category-button-count">${category.count}</span>
+      </button>
+    `)
+    .join("");
+}
+
+function renderActiveFilters() {
+  const chips = [];
+
+  if (state.categoryId !== "all") {
+    chips.push(`
+      <div class="active-filter-chip">
+        Category: ${escapeHtml(getCategoryName(state.categoryId))}
+        <button type="button" data-clear="category" aria-label="Clear category filter">×</button>
+      </div>
+    `);
+  }
+
+  if (state.query) {
+    chips.push(`
+      <div class="active-filter-chip">
+        Search: ${escapeHtml(state.query)}
+        <button type="button" data-clear="query" aria-label="Clear search filter">×</button>
+      </div>
+    `);
+  }
+
+  elements.activeFilters.innerHTML = chips.join("");
 }
 
 function renderCatalogue() {
   const items = getFilteredItems();
-  const totalItems = state.catalogue.items.length;
+  const totalItems = (state.catalogue?.items || []).filter((item) => item.isAvailable !== false).length;
 
   elements.catalogueStatus.textContent =
-    items.length === totalItems
-      ? `${totalItems} published items available for preview`
-      : `${items.length} of ${totalItems} items match the current filter`;
+    items.length === totalItems && state.categoryId === "all" && !state.query
+      ? `${totalItems} published items are ready for pickup request preview`
+      : `${items.length} of ${totalItems} published items match the current browse state`;
 
   if (!items.length) {
     elements.catalogueGrid.innerHTML = `
       <div class="empty-state">
-        <p>No published items match this search yet.</p>
+        <p>No published items match this search yet. Try another category or clear the current query.</p>
       </div>
     `;
     return;
@@ -289,18 +421,31 @@ function renderCatalogue() {
     .map((item) => {
       return `
         <article class="product-card">
+          <div class="product-card-top">
+            <span class="status-badge">${escapeHtml(item.badge || "Pickup Request")}</span>
+            <span class="request-note-badge">Manual confirmation</span>
+          </div>
           <div class="product-media">${escapeHtml(item.imageLabel || item.name.slice(0, 1))}</div>
-          <div>
+          <div class="product-copy">
+            <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
             <h4>${escapeHtml(item.name)}</h4>
             <p class="product-description">${escapeHtml(item.description || "No description yet.")}</p>
           </div>
-          <div class="product-meta">
-            <span>${escapeHtml(item.unitLabel || "each")}</span>
-            <strong class="price-tag">${formatCurrency(item.price)}</strong>
+          <div class="product-pricing">
+            <div class="price-block">
+              <strong class="price-tag">${formatCurrency(item.price)}</strong>
+              <span class="unit-copy">${escapeHtml(item.unitLabel || "each")}</span>
+            </div>
+            <span class="inline-meta">Ready after confirmation</span>
           </div>
-          <button type="button" data-item-id="${escapeHtml(item.id)}">
-            Add to Request
-          </button>
+          <div class="product-actions">
+            <button class="product-details-button" type="button" data-action="details" data-item-id="${escapeHtml(item.id)}">
+              View details
+            </button>
+            <button type="button" data-action="add" data-item-id="${escapeHtml(item.id)}">
+              Add
+            </button>
+          </div>
         </article>
       `;
     })
@@ -309,63 +454,119 @@ function renderCatalogue() {
 
 function renderCart() {
   const cartEntries = getCartEntries();
+  const cartLineCount = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+  const cartTotal = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
+
+  elements.cartCount.textContent = String(cartLineCount);
+  elements.cartTotal.textContent = formatCurrency(cartTotal);
+  elements.headerCartCount.textContent = `${cartLineCount} item${cartLineCount === 1 ? "" : "s"}`;
+  elements.headerCartTotal.textContent = formatCurrency(cartTotal);
 
   if (!cartEntries.length) {
     elements.cartItems.innerHTML = `
       <p class="cart-empty">
-        Add published items from the left to build a pickup request preview.
+        Add published items from the catalogue to build a pickup request preview.
       </p>
     `;
-    elements.cartTotal.textContent = formatCurrency(0);
     elements.reviewRequestButton.disabled = true;
     return;
   }
 
   elements.reviewRequestButton.disabled = false;
   elements.cartItems.innerHTML = cartEntries
-    .map(({ item, quantity, total }) => {
-      return `
-        <article class="cart-item">
-          <div class="cart-item-row">
-            <div>
-              <div class="cart-item-name">${escapeHtml(item.name)}</div>
-              <div class="cart-item-meta">${escapeHtml(item.unitLabel || "each")} · ${formatCurrency(item.price)}</div>
-            </div>
-            <button type="button" class="icon-button" data-cart-action="remove" data-item-id="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name)}">
-              ×
-            </button>
+    .map(({ item, quantity, total }) => `
+      <article class="cart-item">
+        <div class="cart-item-head">
+          <div>
+            <div class="cart-item-name">${escapeHtml(item.name)}</div>
+            <div class="cart-item-meta">${escapeHtml(item.unitLabel || "each")} · ${formatCurrency(item.price)}</div>
           </div>
-          <div class="cart-item-row">
-            <div class="qty-controls">
-              <button type="button" data-cart-action="decrease" data-item-id="${escapeHtml(item.id)}" aria-label="Decrease quantity">−</button>
-              <strong>${quantity}</strong>
-              <button type="button" data-cart-action="increase" data-item-id="${escapeHtml(item.id)}" aria-label="Increase quantity">+</button>
-            </div>
-            <strong>${formatCurrency(total)}</strong>
+          <button type="button" class="icon-button" data-cart-action="remove" data-item-id="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name)}">
+            ×
+          </button>
+        </div>
+        <div class="cart-item-tail">
+          <div class="qty-controls">
+            <button type="button" data-cart-action="decrease" data-item-id="${escapeHtml(item.id)}" aria-label="Decrease quantity">−</button>
+            <strong>${quantity}</strong>
+            <button type="button" data-cart-action="increase" data-item-id="${escapeHtml(item.id)}" aria-label="Increase quantity">+</button>
           </div>
-        </article>
-      `;
-    })
+          <strong>${formatCurrency(total)}</strong>
+        </div>
+      </article>
+    `)
     .join("");
-
-  elements.cartTotal.textContent = formatCurrency(
-    cartEntries.reduce((sum, entry) => sum + entry.total, 0)
-  );
 }
 
 function getFilteredItems() {
-  const query = state.query;
-  return state.catalogue.items.filter((item) => {
-    const matchesCategory =
-      state.categoryId === "all" || item.categoryId === state.categoryId;
-    const searchHaystack = `${item.name} ${item.description || ""}`.toLowerCase();
-    const matchesQuery = !query || searchHaystack.includes(query);
-    return matchesCategory && matchesQuery && item.isAvailable !== false;
+  const items = (state.catalogue?.items || []).filter((item) => item.isAvailable !== false);
+
+  const filtered = items.filter((item) => {
+    const matchesCategory = state.categoryId === "all" || item.categoryId === state.categoryId;
+    const haystack = `${item.name} ${item.description || ""}`.toLowerCase();
+    const matchesQuery = !state.query || haystack.includes(state.query);
+    return matchesCategory && matchesQuery;
   });
+
+  return filtered.sort((left, right) => compareItems(left, right));
+}
+
+function compareItems(left, right) {
+  if (state.sort === "price-asc") {
+    return Number(left.price || 0) - Number(right.price || 0);
+  }
+
+  if (state.sort === "price-desc") {
+    return Number(right.price || 0) - Number(left.price || 0);
+  }
+
+  if (state.sort === "name-asc") {
+    return String(left.name || "").localeCompare(String(right.name || ""));
+  }
+
+  const leftFeatured = Boolean(left.featured);
+  const rightFeatured = Boolean(right.featured);
+  if (leftFeatured !== rightFeatured) {
+    return leftFeatured ? -1 : 1;
+  }
+
+  return Number(left.__position || 0) - Number(right.__position || 0);
+}
+
+function getFeaturedItems() {
+  const availableItems = (state.catalogue?.items || []).filter((item) => item.isAvailable !== false);
+  const featured = availableItems.filter((item) => item.featured);
+  return (featured.length ? featured : availableItems).slice(0, 3);
+}
+
+function getCategoryCounts() {
+  return (state.catalogue?.items || []).reduce((counts, item) => {
+    if (item.isAvailable === false) {
+      return counts;
+    }
+
+    counts.set(item.categoryId, (counts.get(item.categoryId) || 0) + 1);
+    return counts;
+  }, new Map());
+}
+
+function getCategoryName(categoryId) {
+  return state.catalogue?.categories?.find((category) => category.id === categoryId)?.name || "Uncategorized";
 }
 
 function getItemById(itemId) {
-  return state.catalogue.items.find((item) => item.id === itemId) || null;
+  return state.catalogue?.items?.find((item) => item.id === itemId) || null;
+}
+
+function handleItemAction(action, itemId) {
+  if (action === "add") {
+    addToCart(itemId);
+    return;
+  }
+
+  if (action === "details") {
+    openProductModal(itemId);
+  }
 }
 
 function addToCart(itemId) {
@@ -391,24 +592,86 @@ function getCartEntries() {
   return Array.from(state.cart.entries())
     .map(([itemId, quantity]) => {
       const item = getItemById(itemId);
-      if (!item) {
-        return null;
-      }
+      if (!item) return null;
 
       return {
         item,
         quantity,
-        total: item.price * quantity
+        total: Number(item.price || 0) * quantity
       };
     })
     .filter(Boolean);
 }
 
-function openPreviewModal() {
+function openProductModal(itemId) {
+  const item = getItemById(itemId);
+  if (!item) return;
+
+  state.activeItemId = itemId;
+  elements.productModalBody.innerHTML = `
+    <div class="product-modal-layout">
+      <div class="product-modal-media">${escapeHtml(item.imageLabel || item.name.slice(0, 1))}</div>
+      <div class="product-modal-copy">
+        <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
+        <h4>${escapeHtml(item.name)}</h4>
+        <p>${escapeHtml(item.description || "No description yet.")}</p>
+
+        <div class="product-modal-metrics">
+          <section class="summary-card">
+            <span class="metric-label">Published Price</span>
+            <strong>${formatCurrency(item.price)}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Unit</span>
+            <strong>${escapeHtml(item.unitLabel || "each")}</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Pickup Flow</span>
+            <strong>Request first</strong>
+          </section>
+          <section class="summary-card">
+            <span class="metric-label">Fulfilment</span>
+            <strong>After staff confirmation</strong>
+          </section>
+        </div>
+
+        <div class="product-modal-actions">
+          <button class="primary-button" type="button" data-product-modal-add="${escapeHtml(item.id)}">
+            Add to Request
+          </button>
+          <button class="secondary-button" type="button" data-product-modal-close="true">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  elements.productModalBody
+    .querySelector("[data-product-modal-add]")
+    ?.addEventListener("click", (event) => {
+      addToCart(event.currentTarget.dataset.productModalAdd);
+      closeProductModal();
+      elements.requestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+  elements.productModalBody
+    .querySelector("[data-product-modal-close]")
+    ?.addEventListener("click", closeProductModal);
+
+  elements.productModalShell.classList.remove("hidden");
+  elements.productModalShell.setAttribute("aria-hidden", "false");
+}
+
+function closeProductModal() {
+  state.activeItemId = "";
+  elements.productModalShell.classList.add("hidden");
+  elements.productModalShell.setAttribute("aria-hidden", "true");
+}
+
+function openRequestPreviewModal() {
   const cartEntries = getCartEntries();
-  if (!cartEntries.length) {
-    return;
-  }
+  if (!cartEntries.length) return;
 
   const formData = new FormData(elements.requestForm);
   const total = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
@@ -421,7 +684,7 @@ function openPreviewModal() {
 
   elements.modalBody.innerHTML = `
     <p class="inline-note">
-      This scaffold does not submit to Moneta or an external intake service yet. It only previews the public request experience.
+      This storefront is still a preview. It does not submit to Moneta, Google Sheets, or any live intake service yet.
     </p>
 
     <div class="summary-grid">
@@ -448,10 +711,16 @@ function openPreviewModal() {
       <ul>${requestLines}</ul>
     </section>
 
-    <section class="summary-card">
-      <span class="metric-label">Estimated Total</span>
-      <strong>${formatCurrency(total)}</strong>
-    </section>
+    <div class="summary-grid">
+      <section class="summary-card">
+        <span class="metric-label">Estimated Total</span>
+        <strong>${formatCurrency(total)}</strong>
+      </section>
+      <section class="summary-card">
+        <span class="metric-label">Pickup Location</span>
+        <strong>${escapeHtml(state.catalogue?.pickupLocation || "Not provided")}</strong>
+      </section>
+    </div>
 
     <section class="summary-card">
       <span class="metric-label">Notes</span>
@@ -463,17 +732,36 @@ function openPreviewModal() {
   elements.modalShell.setAttribute("aria-hidden", "false");
 }
 
-function closePreviewModal() {
+function closeRequestPreviewModal() {
   elements.modalShell.classList.add("hidden");
   elements.modalShell.setAttribute("aria-hidden", "true");
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-KE", {
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: state.catalogue?.currency || "INR",
     maximumFractionDigits: 0
   }).format(Number(value || 0));
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function escapeHtml(value) {

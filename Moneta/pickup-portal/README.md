@@ -9,11 +9,11 @@ This folder is the first standalone scaffold for the public `Pickup Requests` po
 
 ## Current contents
 - `index.html`
-  - static portal shell for browsing published items and previewing a pickup request
+  - storefront-style static portal shell for browsing published items and previewing a pickup request
 - `css/pickup-portal.css`
-  - self-contained styling for the public portal
+  - self-contained storefront styling for the public portal
 - `js/pickup-portal.js`
-  - client-side rendering, search/filtering, cart preview, and request-summary modal
+  - client-side rendering, category browsing, storefront search/sort, cart preview, item-detail modal, and request-summary modal
 - `data/catalogue.json`
   - placeholder published catalogue snapshot that the portal reads first
 - `assets/`
@@ -22,6 +22,12 @@ This folder is the first standalone scaffold for the public `Pickup Requests` po
 ## Important current behavior
 - the portal tries to load `./data/catalogue.json`
 - if that file is unavailable, it falls back to embedded sample data so the page still previews cleanly
+- the current UI now behaves more like a compact e-commerce storefront:
+  - large catalogue search in the header
+  - category rail
+  - featured pickup picks
+  - product-detail modal
+  - sticky request cart
 - the request form is preview-only for now
 - no data is posted to Firestore, Google Sheets, or any backend yet
 
