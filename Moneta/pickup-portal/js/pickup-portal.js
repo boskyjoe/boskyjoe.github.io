@@ -127,6 +127,7 @@ const state = {
 };
 
 const elements = {
+  portalShell: document.querySelector(".portal-shell"),
   storefrontTitle: document.querySelector("#storefront-title"),
   categorySidebar: document.querySelector("#category-sidebar"),
   categoryRail: document.querySelector("#category-rail"),
@@ -184,6 +185,7 @@ const elements = {
   checkoutItems: document.querySelector("#checkout-items"),
   checkoutTotal: document.querySelector("#checkout-total"),
   checkoutCount: document.querySelector("#checkout-count"),
+  submissionOverlay: document.querySelector("#submission-overlay"),
   modalEyebrow: document.querySelector("#modal-eyebrow"),
   modalTitle: document.querySelector("#modal-title"),
   modalShell: document.querySelector("#request-preview-modal"),
@@ -255,6 +257,8 @@ function initializeAuthIntegration() {
 }
 
 function bindEvents() {
+  window.addEventListener("beforeunload", handleBeforeUnload);
+
   elements.catalogueSearch.addEventListener("input", (event) => {
     state.query = event.target.value.trim().toLowerCase();
     setCurrentPage("storefront");
@@ -863,6 +867,7 @@ function renderCart() {
   const cartTotal = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
   const hasSignedInEmail = Boolean(state.currentUser?.email);
   const canSubmitRequest = Boolean(cartEntries.length && hasSignedInEmail && intakeEndpointUrl && !state.isSubmittingRequest);
+  const actionsLocked = state.isSubmittingRequest;
 
   elements.cartCount.textContent = String(cartLineCount);
   elements.cartTotal.textContent = formatCurrency(cartTotal);
@@ -872,6 +877,13 @@ function renderCart() {
   elements.reviewRequestButton.textContent = state.isSubmittingRequest
     ? "Submitting..."
     : "Submit Pickup Request";
+  elements.clearCartButton.disabled = !cartEntries.length || actionsLocked;
+  elements.checkoutContinueShoppingButton.disabled = actionsLocked;
+  elements.checkoutBackToCartButton.disabled = actionsLocked;
+  elements.cartContinueShoppingButton.disabled = actionsLocked;
+  elements.jumpToRequestButton.disabled = actionsLocked;
+  elements.heroJumpRequestButton.disabled = actionsLocked;
+  elements.browseCatalogueButton.disabled = actionsLocked;
 
   if (!cartEntries.length) {
     elements.cartItems.innerHTML = `
@@ -915,8 +927,37 @@ function renderCart() {
 
   elements.cartItems.innerHTML = cartMarkup;
   elements.checkoutItems.innerHTML = cartMarkup;
-  elements.checkoutButton.disabled = false;
+  elements.checkoutButton.disabled = actionsLocked;
   elements.reviewRequestButton.disabled = !canSubmitRequest;
+}
+
+function handleBeforeUnload(event) {
+  if (!state.isSubmittingRequest) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = "";
+}
+
+function setSubmittingState(isSubmitting) {
+  state.isSubmittingRequest = Boolean(isSubmitting);
+
+  if (elements.portalShell) {
+    elements.portalShell.setAttribute("aria-busy", state.isSubmittingRequest ? "true" : "false");
+    if (state.isSubmittingRequest) {
+      elements.portalShell.setAttribute("inert", "");
+    } else {
+      elements.portalShell.removeAttribute("inert");
+    }
+  }
+
+  if (elements.submissionOverlay) {
+    elements.submissionOverlay.classList.toggle("hidden", !state.isSubmittingRequest);
+    elements.submissionOverlay.setAttribute("aria-hidden", state.isSubmittingRequest ? "false" : "true");
+  }
+
+  document.body.classList.toggle("submission-lock", state.isSubmittingRequest);
 }
 
 function getFilteredItems() {
@@ -1090,6 +1131,8 @@ function closeProductModal() {
 }
 
 async function submitPickupRequest() {
+  if (state.isSubmittingRequest) return;
+
   const cartEntries = getCartEntries();
   if (!cartEntries.length) return;
   syncPickupTimeField();
@@ -1128,7 +1171,7 @@ async function submitPickupRequest() {
   const total = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
   const body = buildIntakeSubmission(formData, cartEntries, total);
 
-  state.isSubmittingRequest = true;
+  setSubmittingState(true);
   renderCart();
 
   try {
@@ -1216,7 +1259,7 @@ async function submitPickupRequest() {
       `
     });
   } finally {
-    state.isSubmittingRequest = false;
+    setSubmittingState(false);
     renderCart();
   }
 }
