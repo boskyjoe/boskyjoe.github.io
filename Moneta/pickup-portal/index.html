@@ -26,97 +26,132 @@
   </head>
   <body>
     <div class="portal-shell">
-      <div class="utility-bar">
-        <div class="utility-copy">
-          <span class="utility-pill">Request Intake</span>
-          <p>
-            Customers can browse the published pickup catalogue, send a pickup
-            request, and wait for staff confirmation before collection.
-          </p>
+      <header class="storefront-shell">
+        <div class="storefront-topbar">
+          <div class="utility-copy">
+            <span class="utility-pill">Request Intake</span>
+            <p>
+              Customers can browse the published pickup catalogue, send a pickup
+              request, and wait for staff confirmation before collection.
+            </p>
+          </div>
+          <div class="utility-actions">
+            <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
+            <section id="auth-panel" class="auth-panel" aria-live="polite">
+              <div class="auth-copy">
+                <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
+                <p id="auth-message" class="utility-meta">
+                  Sign in with Google so Moneta can capture your email on the pickup request.
+                </p>
+              </div>
+              <div class="auth-buttons">
+                <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
+                <button id="google-signout-button" class="secondary-button auth-button hidden" type="button">
+                  Sign out
+                </button>
+              </div>
+            </section>
+          </div>
         </div>
-        <div class="utility-actions">
-          <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
-          <section id="auth-panel" class="auth-panel" aria-live="polite">
-            <div class="auth-copy">
-              <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
-              <p id="auth-message" class="utility-meta">
-                Sign in with Google so Moneta can capture your email on the pickup request.
-              </p>
-            </div>
-            <div class="auth-buttons">
-              <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
-              <button id="google-signout-button" class="secondary-button auth-button hidden" type="button">
-                Sign out
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
 
-      <header class="storefront-header">
-        <section class="pickup-anchor">
+        <div class="storefront-main">
+          <section class="pickup-anchor">
           <span class="header-meta-label">Pickup from</span>
           <strong id="header-pickup-location">Church Resource Centre</strong>
           <span id="header-lead-time-copy" class="header-meta-copy">Ready after confirmation</span>
-        </section>
+          </section>
 
-        <div class="header-search-shell">
-          <div class="brand-lockup">
-            <div class="brand-mark">MP</div>
-            <div>
-              <p class="eyebrow">Moneta Pickup Portal</p>
-              <h1 id="storefront-title">Church Pickup Requests</h1>
-              <p class="brand-copy">
-                A storefront-style public catalogue powered by a published Moneta
-                snapshot.
-              </p>
+          <div class="header-search-shell">
+            <div class="brand-lockup">
+              <div class="brand-mark" aria-hidden="true">
+                <svg class="brand-mark-svg" viewBox="0 0 64 64" focusable="false">
+                  <defs>
+                    <linearGradient id="brand-mark-bg" x1="10%" y1="8%" x2="88%" y2="92%">
+                      <stop offset="0%" stop-color="#405271"></stop>
+                      <stop offset="100%" stop-color="#1d2733"></stop>
+                    </linearGradient>
+                    <linearGradient id="brand-mark-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ffffff"></stop>
+                      <stop offset="100%" stop-color="#e6edf7"></stop>
+                    </linearGradient>
+                    <linearGradient id="brand-mark-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#ffd36c"></stop>
+                      <stop offset="100%" stop-color="#ff9900"></stop>
+                    </linearGradient>
+                  </defs>
+                  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#brand-mark-bg)"></rect>
+                  <path
+                    d="M14 46V18l10 14 10-14v28"
+                    fill="none"
+                    stroke="url(#brand-mark-stroke)"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="5"
+                  ></path>
+                  <path
+                    d="M40 46V18h8.5c5.8 0 9.5 3.7 9.5 8.9s-3.7 8.8-9.5 8.8H40"
+                    fill="none"
+                    stroke="url(#brand-mark-accent)"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="5"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h1 id="storefront-title">Church Pickup Requests</h1>
+                <p class="brand-copy">
+                  A storefront-style public catalogue powered by a published Moneta
+                  snapshot.
+                </p>
+              </div>
             </div>
+            
+            <label class="header-search" for="catalogue-search">
+              <span class="search-label">Search published items</span>
+              <div class="search-input-wrap">
+                <span class="search-prefix">All</span>
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input
+                  id="catalogue-search"
+                  name="catalogue-search"
+                  type="search"
+                  placeholder="Search by item name or description"
+                  autocomplete="off"
+                />
+              </div>
+            </label>
           </div>
 
-          <label class="header-search" for="catalogue-search">
-            <span class="search-label">Search published items</span>
-            <div class="search-input-wrap">
-              <span class="search-prefix">All</span>
-              <span class="search-icon" aria-hidden="true">⌕</span>
-              <input
-                id="catalogue-search"
-                name="catalogue-search"
-                type="search"
-                placeholder="Search by item name or description"
-                autocomplete="off"
-              />
+          <section class="header-account-zone">
+            <div class="header-account-copy">
+              <span class="header-meta-label">Account</span>
+              <strong id="header-account-name">Guest shopper</strong>
+              <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
             </div>
-          </label>
+
+            <button id="jump-to-request-button" class="cart-chip" type="button">
+              <span id="header-cart-count" class="cart-chip-count">0</span>
+              <span class="cart-chip-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path d="M3 4h2l1.1 2.4L8 14h9.6l2.2-6.8H7.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+                  <circle cx="10" cy="19" r="1.6" fill="currentColor"></circle>
+                  <circle cx="17" cy="19" r="1.6" fill="currentColor"></circle>
+                </svg>
+              </span>
+              <span class="cart-chip-label">Cart</span>
+            </button>
+          </section>
         </div>
 
-        <section class="header-account-zone">
-          <div class="header-account-copy">
-            <span class="header-meta-label">Account</span>
-            <strong id="header-account-name">Guest shopper</strong>
-            <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
+        <nav class="department-bar" aria-label="Published departments">
+          <div class="department-bar-label">
+            <span class="header-meta-label">Departments</span>
+            <strong>Published catalogue</strong>
           </div>
-
-          <button id="jump-to-request-button" class="cart-chip" type="button">
-            <span id="header-cart-count" class="cart-chip-count">0</span>
-            <span class="cart-chip-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                <path d="M3 4h2l1.1 2.4L8 14h9.6l2.2-6.8H7.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
-                <circle cx="10" cy="19" r="1.6" fill="currentColor"></circle>
-                <circle cx="17" cy="19" r="1.6" fill="currentColor"></circle>
-              </svg>
-            </span>
-            <span class="cart-chip-label">Cart</span>
-          </button>
-        </section>
+          <div id="category-rail" class="category-rail"></div>
+        </nav>
       </header>
-
-      <nav class="department-bar" aria-label="Published departments">
-        <div class="department-bar-label">
-          <span class="header-meta-label">Departments</span>
-          <strong>Published catalogue</strong>
-        </div>
-        <div id="category-rail" class="category-rail"></div>
-      </nav>
 
       <section id="hero-showcase" class="hero-showcase">
         <div class="hero-primary">
