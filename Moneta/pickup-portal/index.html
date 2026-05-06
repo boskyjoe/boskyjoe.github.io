@@ -292,7 +292,7 @@
           <form id="pickup-request-form" class="commerce-panel request-form checkout-form">
             <div class="checkout-form-grid">
               <label>
-                <span>Full Name</span>
+                <span>Full Name <span class="required-mark" aria-hidden="true">*</span></span>
                 <input
                   id="customer-name"
                   name="customerName"
@@ -303,7 +303,7 @@
               </label>
 
               <label>
-                <span>Email Address</span>
+                <span>Email Address <span class="required-mark" aria-hidden="true">*</span></span>
                 <input
                   id="customer-email"
                   name="customerEmail"
@@ -319,7 +319,7 @@
               </label>
 
               <label>
-                <span>Phone Number</span>
+                <span>Phone Number <span class="required-mark" aria-hidden="true">*</span></span>
                 <input
                   id="customer-phone"
                   name="customerPhone"
@@ -329,34 +329,24 @@
                 />
               </label>
 
-              <label>
-                <span>Street Address</span>
-                <input
-                  id="customer-address-line1"
-                  name="customerAddressLine1"
-                  type="text"
-                  placeholder="House / street / area"
+              <label class="request-form-wide">
+                <span>Address <span class="required-mark" aria-hidden="true">*</span></span>
+                <textarea
+                  id="customer-address"
+                  name="customerAddress"
+                  rows="3"
+                  placeholder="House / street / area / landmark"
                   required
-                />
+                ></textarea>
               </label>
 
               <label>
-                <span>Address Line 2</span>
-                <input
-                  id="customer-address-line2"
-                  name="customerAddressLine2"
-                  type="text"
-                  placeholder="Apartment, landmark, ministry group"
-                />
-              </label>
-
-              <label>
-                <span>Requested Pickup Date</span>
+                <span>Requested Pickup Date <span class="required-mark" aria-hidden="true">*</span></span>
                 <input id="pickup-date" name="pickupDate" type="date" required />
               </label>
 
               <label>
-                <span>Requested Pickup Time</span>
+                <span>Requested Pickup Time <span class="required-mark" aria-hidden="true">*</span></span>
                 <input id="pickup-time" name="pickupTime" type="hidden" />
                 <div class="time-picker-grid">
                   <select id="pickup-time-hour" required aria-label="Pickup hour">

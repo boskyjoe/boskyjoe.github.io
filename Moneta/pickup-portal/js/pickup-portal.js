@@ -161,8 +161,7 @@ const elements = {
   customerEmail: document.querySelector("#customer-email"),
   customerEmailHint: document.querySelector("#customer-email-hint"),
   customerPhone: document.querySelector("#customer-phone"),
-  customerAddressLine1: document.querySelector("#customer-address-line1"),
-  customerAddressLine2: document.querySelector("#customer-address-line2"),
+  customerAddress: document.querySelector("#customer-address"),
   pickupDate: document.querySelector("#pickup-date"),
   pickupTime: document.querySelector("#pickup-time"),
   pickupTimeHour: document.querySelector("#pickup-time-hour"),
@@ -1139,10 +1138,7 @@ async function submitPickupRequest() {
       body
     });
 
-    const addressParts = [
-      formData.get("customerAddressLine1"),
-      formData.get("customerAddressLine2")
-    ].filter(Boolean);
+    const addressText = String(formData.get("customerAddress") || "").trim();
     const requestLines = cartEntries
       .map(
         ({ item, quantity, total: lineTotal }) =>
@@ -1187,7 +1183,7 @@ async function submitPickupRequest() {
           </section>
           <section class="summary-card">
             <span class="metric-label">Address</span>
-            <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
+            <strong>${escapeHtml(addressText || "Not provided")}</strong>
           </section>
         </div>
 
@@ -1241,8 +1237,8 @@ function buildIntakeSubmission(formData, cartEntries, total) {
     customerName: String(formData.get("customerName") || ""),
     customerEmail: String(formData.get("customerEmail") || ""),
     customerPhone: String(formData.get("customerPhone") || ""),
-    addressLine1: String(formData.get("customerAddressLine1") || ""),
-    addressLine2: String(formData.get("customerAddressLine2") || ""),
+    addressLine1: String(formData.get("customerAddress") || ""),
+    addressLine2: "",
     pickupDate: String(formData.get("pickupDate") || ""),
     pickupTime: String(formData.get("pickupTime") || ""),
     notes: String(formData.get("notes") || ""),
@@ -1286,10 +1282,7 @@ function openRequestPreviewModal() {
 
   const formData = new FormData(elements.requestForm);
   const total = cartEntries.reduce((sum, entry) => sum + entry.total, 0);
-  const addressParts = [
-    formData.get("customerAddressLine1"),
-    formData.get("customerAddressLine2")
-  ].filter(Boolean);
+  const addressText = String(formData.get("customerAddress") || "").trim();
   const requestLines = cartEntries
     .map(
       ({ item, quantity, total: lineTotal }) =>
@@ -1324,7 +1317,7 @@ function openRequestPreviewModal() {
         </section>
         <section class="summary-card">
           <span class="metric-label">Address</span>
-          <strong>${escapeHtml(addressParts.join(", ") || "Not provided")}</strong>
+          <strong>${escapeHtml(addressText || "Not provided")}</strong>
         </section>
       </div>
 
