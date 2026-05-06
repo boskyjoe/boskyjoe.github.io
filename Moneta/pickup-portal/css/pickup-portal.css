@@ -972,7 +972,14 @@ button:disabled {
 }
 
 .request-panel-head {
-  align-items: end;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.request-panel-head .panel-meta {
+  margin: 0;
+  max-width: 30ch;
 }
 
 .cart-summary-banner {
@@ -1037,7 +1044,7 @@ button:disabled {
 }
 
 .checkout-layout {
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1.34fr) minmax(320px, 380px);
 }
 
 .cart-page-items-panel,
@@ -1046,6 +1053,12 @@ button:disabled {
 .checkout-form {
   display: grid;
   gap: 16px;
+}
+
+.checkout-summary-panel {
+  position: sticky;
+  top: 18px;
+  align-self: start;
 }
 
 .cart-page-items .cart-item,
@@ -1064,8 +1077,9 @@ button:disabled {
 
 .checkout-form-grid {
   display: grid;
-  gap: 14px;
+  gap: 18px 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
 }
 
 .checkout-actions {
@@ -1073,6 +1087,7 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  margin-top: 6px;
 }
 
 .cart-items {
@@ -1156,6 +1171,7 @@ button:disabled {
 .request-form label {
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .request-form label span {
@@ -1178,14 +1194,27 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.checkout-time-field {
+  gap: 10px;
+}
+
 .time-picker-grid {
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: center;
 }
 
 .time-picker-grid select {
   padding: 0 14px;
+}
+
+.checkout-summary-panel .cart-panel {
+  gap: 14px;
+}
+
+.checkout-summary-panel .cart-header h4 {
+  margin: 0;
 }
 
 #customer-email[readonly] {
