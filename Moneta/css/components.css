@@ -2909,6 +2909,7 @@ select {
 .portal-request-form-sections {
     display: grid;
     gap: 1rem;
+    grid-template-columns: 1fr;
     min-width: 0;
 }
 
@@ -2919,6 +2920,58 @@ select {
 .portal-request-review-modal-body {
     display: grid;
     gap: 1.25rem;
+}
+
+.portal-request-overview-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+
+.portal-request-display-grid {
+    display: grid;
+    gap: 0.95rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.portal-request-display-field {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+    min-width: 0;
+}
+
+.portal-request-display-label {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.portal-request-display-value {
+    min-height: 3.2rem;
+    padding: 0.82rem 0.95rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, var(--bg-panel-subtle) 0%, var(--bg-panel-muted) 100%);
+    color: var(--text-main);
+    font-size: 1rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.portal-request-display-value-multiline {
+    min-height: 6.5rem;
+    white-space: pre-wrap;
+}
+
+.portal-request-edit-field {
+    min-width: 0;
+}
+
+.portal-request-edit-field .select {
+    min-height: 3.2rem;
 }
 
 .portal-request-form-sections .textarea {
@@ -3072,7 +3125,9 @@ select {
     .purchase-payment-preview,
     .purchase-payment-void-summary,
     .portal-request-summary-grid,
+    .portal-request-overview-grid,
     .portal-request-form-sections,
+    .portal-request-display-grid,
     .retail-expense-summary-grid,
     .retail-return-preview-row,
     .retail-summary-grid,
