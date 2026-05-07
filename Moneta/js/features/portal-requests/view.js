@@ -281,22 +281,33 @@ function renderReviewModal(request) {
                         <input id="portal-request-doc-id" type="hidden" value="${escapeHtml(request.id)}">
                         <div class="workspace-form-sections portal-request-form-sections">
                             <div class="portal-request-overview-grid">
-                                <section class="workspace-form-section">
-                                    <div class="workspace-form-section-head">
-                                        <p class="workspace-form-section-kicker">Customer & Pickup</p>
-                                        <p class="panel-copy">Read-only shopper information captured from the public pickup portal.</p>
-                                    </div>
-                                    <div class="workspace-form-section-grid portal-request-display-grid">
-                                        ${renderPortalDisplayField("Customer Name", request.customerName)}
-                                        ${renderPortalDisplayField("Email", request.customerEmail)}
-                                        ${renderPortalDisplayField("Phone", request.customerPhone)}
-                                        ${renderPortalDisplayField("Pickup Date", request.pickupDate)}
-                                        ${renderPortalDisplayField("Pickup Time", request.pickupTime)}
-                                        ${renderPortalDisplayField("Pickup Location", request.pickupLocation)}
-                                        ${renderPortalDisplayField("Address", getPortalRequestAddress(request), { full: true, multiline: true })}
-                                        ${renderPortalDisplayField("Customer Notes", request.notes, { full: true, multiline: true })}
-                                    </div>
-                                </section>
+                                <div class="portal-request-overview-stack">
+                                    <section class="workspace-form-section portal-request-overview-section">
+                                        <div class="workspace-form-section-head">
+                                            <p class="workspace-form-section-kicker">Customer</p>
+                                            <p class="panel-copy">Core shopper details captured from the public pickup portal.</p>
+                                        </div>
+                                        <div class="workspace-form-section-grid portal-request-display-grid portal-request-display-grid-compact">
+                                            ${renderPortalDisplayField("Customer Name", request.customerName)}
+                                            ${renderPortalDisplayField("Email", request.customerEmail)}
+                                            ${renderPortalDisplayField("Phone", request.customerPhone, { full: true })}
+                                        </div>
+                                    </section>
+
+                                    <section class="workspace-form-section portal-request-overview-section">
+                                        <div class="workspace-form-section-head">
+                                            <p class="workspace-form-section-kicker">Pickup Location</p>
+                                            <p class="panel-copy">Requested pickup timing, location, address, and shopper notes.</p>
+                                        </div>
+                                        <div class="workspace-form-section-grid portal-request-display-grid">
+                                            ${renderPortalDisplayField("Pickup Date", request.pickupDate)}
+                                            ${renderPortalDisplayField("Pickup Time", request.pickupTime)}
+                                            ${renderPortalDisplayField("Pickup Location", request.pickupLocation, { full: true })}
+                                            ${renderPortalDisplayField("Address", getPortalRequestAddress(request), { full: true, multiline: true })}
+                                            ${renderPortalDisplayField("Customer Notes", request.notes, { full: true, multiline: true })}
+                                        </div>
+                                    </section>
+                                </div>
 
                                 <section class="workspace-form-section">
                                     <div class="workspace-form-section-head">
