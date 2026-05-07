@@ -2900,6 +2900,81 @@ select {
     margin-top: 0.5rem;
 }
 
+.portal-request-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.portal-requests-workspace {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+    grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.95fr);
+}
+
+.portal-requests-queue-column,
+.portal-requests-detail-column,
+.portal-request-form-sections {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.portal-request-form-sections .textarea {
+    min-height: 96px;
+}
+
+.portal-requests-grid-shell,
+.portal-request-items-grid-shell {
+    min-height: 0;
+}
+
+.portal-request-status-pill,
+.portal-request-conversion-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.75rem;
+    padding: var(--pill-padding-y) var(--pill-padding-x);
+    border-radius: 999px;
+    font-size: var(--font-size-pill);
+    font-weight: 700;
+    line-height: 1.15;
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    white-space: nowrap;
+}
+
+.portal-request-status-new,
+.portal-request-conversion-converted {
+    background: linear-gradient(180deg, rgba(var(--accent-alt-rgb), 0.18) 0%, rgba(var(--accent-alt-rgb), 0.12) 100%);
+    color: var(--accent-alt);
+    border-color: rgba(var(--accent-alt-rgb), 0.2);
+}
+
+.portal-request-status-accepted,
+.portal-request-status-fulfilled,
+.portal-request-conversion-prepared {
+    background: linear-gradient(180deg, var(--success-soft) 0%, var(--status-success-bg) 100%);
+    color: var(--accent-strong);
+    border-color: rgba(var(--accent-rgb), 0.16);
+}
+
+.portal-request-status-rejected,
+.portal-request-status-cancelled {
+    background: linear-gradient(180deg, rgba(var(--danger-rgb), 0.18) 0%, rgba(var(--danger-rgb), 0.12) 100%);
+    color: var(--danger);
+    border-color: rgba(var(--danger-rgb), 0.18);
+}
+
+.portal-request-status-converted,
+.portal-request-conversion-not-converted {
+    background: linear-gradient(180deg, var(--bg-panel-muted) 0%, var(--bg-panel-soft) 100%);
+    color: var(--text-muted);
+    border-color: rgba(77, 90, 104, 0.16);
+}
+
 @media (max-width: 860px) {
     .form-grid {
         grid-template-columns: 1fr;
@@ -2979,6 +3054,9 @@ select {
     .purchase-payment-meta-grid,
     .purchase-payment-preview,
     .purchase-payment-void-summary,
+    .portal-request-summary-grid,
+    .portal-requests-workspace,
+    .portal-request-form-sections,
     .retail-expense-summary-grid,
     .retail-return-preview-row,
     .retail-summary-grid,
