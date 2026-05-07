@@ -111,7 +111,7 @@ function createDefaultSaleDraft() {
         orderDiscountPercentage: "",
         orderDiscountAmount: "",
         orderTaxPercentage: "",
-        sourceType: "",
+        sourceType: "direct-store",
         sourceLeadId: "",
         sourceLeadBusinessId: "",
         sourceLeadCustomerName: "",
@@ -148,6 +148,30 @@ function createDefaultRetailReturnDraft(defaultDate = new Date()) {
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function normalizeRetailSourceType(value) {
+    return normalizeText(value).toLowerCase();
+}
+
+function isPortalRequestRetailSource(value) {
+    return normalizeRetailSourceType(value) === "portal-request";
+}
+
+function deriveRetailSourceType(value, fallbackContext = {}) {
+    const normalized = normalizeRetailSourceType(value);
+    if (normalized) return normalized;
+    if (normalizeText(fallbackContext.sourceQuoteId)) return "quote";
+    if (normalizeText(fallbackContext.sourceLeadId)) return "lead";
+    return "direct-store";
+}
+
+function getRetailSourceTypeLabel(value, fallbackContext = {}) {
+    const normalized = deriveRetailSourceType(value, fallbackContext);
+    if (normalized === "portal-request") return "Portal Request";
+    if (normalized === "quote") return "Quote";
+    if (normalized === "lead") return "Lead";
+    return "Direct Store";
 }
 
 function buildDisabledActionAttrs(disabled, reason) {
@@ -1304,13 +1328,24 @@ function renderRetailStoreViewShell(snapshot) {
     const paymentStatus = hasPersistedSaleStatus
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
-    const sourceType = normalizeText(featureState.saleDraft.sourceType || workspaceSale?.sourceType || "");
+    const sourceType = deriveRetailSourceType(featureState.saleDraft.sourceType || workspaceSale?.sourceType || "", {
+        sourceLeadId: featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "",
+        sourceQuoteId: featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || ""
+    });
+    const normalizedSourceType = normalizeRetailSourceType(sourceType);
+    const isPortalRequestSource = isPortalRequestRetailSource(sourceType);
     const sourceLeadId = normalizeText(featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "");
     const sourceLeadBusinessId = normalizeText(featureState.saleDraft.sourceLeadBusinessId || workspaceSale?.sourceLeadBusinessId || "");
-    const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId ? `LEAD-${sourceLeadId.slice(-6).toUpperCase()}` : "");
+    const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId
+        ? `${isPortalRequestSource ? "REQ" : "LEAD"}-${sourceLeadId.slice(-6).toUpperCase()}`
+        : "");
     const sourceQuoteId = normalizeText(featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || "");
     const sourceQuoteNumber = normalizeText(featureState.saleDraft.sourceQuoteNumber || workspaceSale?.sourceQuoteNumber || "");
     const sourceQuoteStatus = normalizeText(featureState.saleDraft.sourceQuoteStatus || workspaceSale?.sourceQuoteStatus || "");
+    const sourceBannerKicker = isPortalRequestSource ? "Portal Request Conversion" : "Lead Conversion";
+    const sourceEntityLabel = isPortalRequestSource ? "portal request" : "enquiry";
+    const sourceReferencePillLabel = isPortalRequestSource ? "Request" : "Lead";
+    const sourceTypeLabel = getRetailSourceTypeLabel(sourceType);
     const expenseModalSale = getExpenseModalSale();
     const canEditSaleIdentity = !isViewMode && !isReturnMode && !isVoidMode && (!isEditMode || isEditModeFull);
     const canEditCustomerInfo = !isViewMode && !isReturnMode && !isVoidMode;
@@ -1382,16 +1417,16 @@ function renderRetailStoreViewShell(snapshot) {
     const sourceLeadBanner = sourceLeadId ? `
         <div class="retail-source-lead-banner">
             <div>
-                <p class="section-kicker">Lead Conversion</p>
+                <p class="section-kicker">${sourceBannerKicker}</p>
                 <p class="panel-copy">
-                    This retail sale is linked to enquiry <strong>${sourceLeadDisplayId || sourceLeadId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
+                    This retail sale is linked to ${sourceEntityLabel} <strong>${sourceLeadDisplayId || sourceLeadId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
                 </p>
             </div>
             <div class="toolbar-meta">
                 <span class="status-pill">${sourceLeadDisplayId || sourceLeadId}</span>
                 ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
                 ${sourceQuoteStatus ? `<span class="status-pill">${sourceQuoteStatus}</span>` : ""}
-                ${sourceType ? `<span class="status-pill">Source: ${sourceType === "quote" ? "Quote" : "Lead"}</span>` : ""}
+                ${sourceType ? `<span class="status-pill">Source: ${sourceTypeLabel}</span>` : ""}
             </div>
         </div>
     ` : "";
@@ -1420,7 +1455,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <span class="status-pill">${activeCatalogues} active catalogues</span>
                     <span class="status-pill">${summary.itemCount} active products</span>
                     <span class="status-pill">${featureState.sales.length} sales recorded</span>
-                    ${sourceLeadId ? `<span class="status-pill">Lead: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
+                    ${sourceLeadId ? `<span class="status-pill">${sourceReferencePillLabel}: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
                     ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
                 </div>
             </div>
@@ -1491,6 +1526,10 @@ function renderRetailStoreViewShell(snapshot) {
                                         <option value="">Select catalogue</option>
                                         ${renderSalesCatalogueOptions(snapshot, featureState.saleDraft.salesCatalogueId)}
                                     </select>
+                                </div>
+                                <div class="field">
+                                    <label for="retail-source-type">Source</label>
+                                    <input id="retail-source-type" class="input" type="text" value="${sourceTypeLabel}" readonly>
                                 </div>
                                 <div class="field field-full">
                                     <label for="retail-sale-notes">Sale Notes</label>
@@ -2198,10 +2237,12 @@ function applyPendingLeadConversionPackage() {
     const warningCount = Array.isArray(conversionPackage.warnings)
         ? conversionPackage.warnings.length
         : 0;
+    const sourceLabel = getRetailSourceTypeLabel(conversionPackage.sourceType)
+        .replace("Direct Store", "Lead");
     showToast(
         warningCount > 0
-            ? `Lead loaded with ${warningCount} conversion check(s). Review before saving the sale.`
-            : `Lead ${conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
+            ? `${sourceLabel} loaded with ${warningCount} draft check(s). Review before saving the sale.`
+            : `${sourceLabel} ${conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
         warningCount > 0 ? "warning" : "success",
         { title: "Retail Store" }
     );
@@ -2263,7 +2304,10 @@ function buildSaleDraftFromSale(sale) {
             ? String(Number(sale.financials?.orderDiscountValue) || 0)
             : "",
         orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
-        sourceType: sale.sourceType || "",
+        sourceType: deriveRetailSourceType(sale.sourceType || "", {
+            sourceLeadId: sale.sourceLeadId || "",
+            sourceQuoteId: sale.sourceQuoteId || ""
+        }),
         sourceLeadId: sale.sourceLeadId || "",
         sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
         sourceLeadCustomerName: sale.sourceLeadCustomerName || "",
@@ -2803,7 +2847,7 @@ async function handleRetailSaleSubmit(event) {
                 { label: "Catalogue", value: selectedCatalogueLabel },
                 ...(normalizeText(featureState.saleDraft.sourceLeadId)
                     ? [{
-                        label: "Source Lead",
+                        label: isPortalRequestRetailSource(featureState.saleDraft.sourceType) ? "Source Request" : "Source Lead",
                         value: featureState.saleDraft.sourceLeadBusinessId || featureState.saleDraft.sourceLeadId
                     }]
                     : []),
