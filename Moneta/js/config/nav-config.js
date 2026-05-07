@@ -58,7 +58,16 @@ export const navConfig = [
     {
         type: "heading",
         label: "Direct Sales",
-        roles: ["admin", "sales_staff", "finance"]
+        roles: ["admin", "inventory_manager", "sales_staff", "finance"]
+    },
+    {
+        type: "link",
+        route: "#/portal-requests",
+        label: "Portal Requests",
+        icon: icons.portalRequests,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager", "sales_staff"],
+        enabled: true
     },
     {
         type: "link",
@@ -66,7 +75,7 @@ export const navConfig = [
         label: "Retail Store",
         icon: icons.retail,
         iconClass: "nav-icon-cyan",
-        roles: ["admin", "sales_staff", "finance"],
+        roles: ["admin", "inventory_manager", "sales_staff", "finance"],
         enabled: true
     },
     {

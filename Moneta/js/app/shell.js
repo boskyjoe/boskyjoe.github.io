@@ -28,6 +28,10 @@ const SHELL_SEARCH_TARGETS = {
         selector: "#leads-grid-search",
         placeholder: "Search leads in this workspace"
     },
+    "#/portal-requests": {
+        selector: "#portal-requests-search",
+        placeholder: "Search portal requests in this workspace"
+    },
     "#/retail-store": {
         selector: "#retail-sales-search",
         placeholder: "Search retail sales in this workspace"

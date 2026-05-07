@@ -11,6 +11,7 @@ import { showAdminModulesPage } from "../features/admin-modules/index.js";
 import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
 import { showLeadsPage } from "../features/leads/index.js";
+import { showPortalRequestsPage } from "../features/portal-requests/index.js";
 import { showRetailStorePage } from "../features/retail-store/index.js";
 import { showSimpleConsignmentPage } from "../features/simple-consignment/index.js";
 import { showHomePage } from "../features/home/index.js";
@@ -23,6 +24,7 @@ const ROUTE_TO_VIEW = {
     "#/assistant": "assistant-view",
     "#/reports": "reports-view",
     "#/leads": "leads-view",
+    "#/portal-requests": "portal-requests-view",
     "#/lead-quotes": "lead-quotes-view",
     "#/retail-store": "retail-store-view",
     "#/simple-consignment": "simple-consignment-view",
@@ -71,6 +73,8 @@ function getViewTitle(route) {
             return "Reports";
         case "#/leads":
             return "Leads & Enquiries";
+        case "#/portal-requests":
+            return "Portal Requests";
         case "#/retail-store":
             return "Retail Store";
         case "#/simple-consignment":
@@ -138,6 +142,10 @@ export function resolveRoute() {
 
     if (route === "#/leads") {
         showLeadsPage();
+    }
+
+    if (route === "#/portal-requests") {
+        showPortalRequestsPage();
     }
 
     if (route === "#/retail-store") {
