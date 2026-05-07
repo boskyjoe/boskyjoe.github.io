@@ -150,8 +150,8 @@ const elements = {
   contactPhone: document.querySelector("#contact-phone"),
   leadTime: document.querySelector("#lead-time"),
   publishedAt: document.querySelector("#published-at"),
-  authStateBadge: document.querySelector("#auth-state-badge"),
   googleSignInButton: document.querySelector("#google-signin-button"),
+  googleSignOutButton: document.querySelector("#google-signout-button"),
   requestForm: document.querySelector("#pickup-request-form"),
   customerName: document.querySelector("#customer-name"),
   customerEmail: document.querySelector("#customer-email"),
@@ -348,6 +348,20 @@ function bindEvents() {
     await submitPickupRequest();
   });
 
+  elements.googleSignOutButton?.addEventListener("click", () => {
+    try {
+      if (window.google?.accounts?.id) {
+        google.accounts.id.disableAutoSelect();
+      }
+      state.currentUser = null;
+      clearStoredUser();
+      renderAuthState();
+    } catch (error) {
+      console.error("[Pickup Portal] Google sign-out failed:", error);
+      renderAuthState("Could not sign out of the pickup portal session.");
+    }
+  });
+
   elements.browseCatalogueButton.addEventListener("click", () => {
     setCurrentPage("storefront");
     elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -404,41 +418,31 @@ function renderAuthState(messageOverride = "") {
   const unavailable = state.authStatus === "unavailable";
   const loading = state.authStatus === "loading";
 
-  elements.authStateBadge.textContent = unavailable
-    ? "Sign-In Unavailable"
-    : loading
-      ? "Loading Sign-In"
-    : signedIn
-      ? "Signed In"
-      : "Google Sign-In";
-  elements.authStateBadge.dataset.state = unavailable
-    ? "unavailable"
-    : loading
-      ? "loading"
-    : signedIn
-      ? "signed-in"
-      : "ready";
-
   if (signedIn) {
     elements.googleSignInButton.classList.add("hidden");
+    elements.googleSignOutButton.classList.remove("hidden");
     elements.headerAccountName.textContent = user.displayName || user.email;
     elements.headerAccountSubtitle.textContent = user.email;
   } else if (messageOverride) {
     elements.googleSignInButton.classList.toggle("hidden", unavailable);
+    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = unavailable ? "Portal sign-in unavailable" : "Guest shopper";
     elements.headerAccountSubtitle.textContent = unavailable
       ? messageOverride || "Add a Google client ID to enable sign-in"
       : messageOverride || "Sign in to attach your email";
   } else if (unavailable) {
     elements.googleSignInButton.classList.add("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Portal sign-in unavailable";
     elements.headerAccountSubtitle.textContent = "Add a Google client ID to enable sign-in";
   } else if (loading) {
     elements.googleSignInButton.classList.remove("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Guest shopper";
     elements.headerAccountSubtitle.textContent = "Preparing Google sign-in";
   } else {
     elements.googleSignInButton.classList.remove("hidden");
+    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Guest shopper";
     elements.headerAccountSubtitle.textContent = "Sign in to attach your email";
   }
