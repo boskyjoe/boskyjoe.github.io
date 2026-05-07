@@ -75,7 +75,7 @@ function portalActionMarkup(data) {
             </button>
             <button class="button grid-action-button grid-action-button-primary portal-request-prepare-button" type="button" data-request-id="${data.id}" ${disabledAttrs}>
                 <span class="button-icon">${icons.retail}</span>
-                Prepare
+                Create Retail Draft
             </button>
         </div>
     `;

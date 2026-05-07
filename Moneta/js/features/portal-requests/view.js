@@ -362,7 +362,7 @@ function renderReviewModal(request) {
                                 type="button"
                                 ${prepareGate.allowed ? "" : `disabled title="${escapeHtml(prepareGate.reason)}" data-disabled-reason="${escapeHtml(prepareGate.reason)}"`}>
                                 <span class="button-icon">${icons.retail}</span>
-                                Prepare Retail Sale
+                                Create Retail Draft
                             </button>
                             <button id="portal-request-close-button" class="button button-secondary" type="button">
                                 <span class="button-icon">${icons.close}</span>
@@ -528,17 +528,17 @@ async function handlePrepareRetailConversion(request) {
 
     try {
         const conversionDraft = await runProgressToastFlow({
-            title: "Preparing Retail Conversion",
+            title: "Creating Retail Draft",
             initialMessage: "Reading portal request and requested items...",
             initialProgress: 18,
             initialStep: "Step 1 of 4",
-            successTitle: "Retail Conversion Ready",
+            successTitle: "Retail Draft Ready",
             successMessage: "The portal request is ready to open in Retail Store."
         }, async ({ update }) => {
             update("Validating request status, linked catalogue, and product snapshot...", 42, "Step 2 of 4");
             const conversionDraft = await buildPortalRequestToRetailConversionDraft(request, snapshot.masterData);
             update("Preparing Retail Store line items from current catalogue pricing...", 76, "Step 3 of 4");
-            update("Retail conversion package prepared.", 96, "Step 4 of 4");
+            update("Retail draft package prepared.", 96, "Step 4 of 4");
             return conversionDraft;
         });
 
@@ -551,12 +551,12 @@ async function handlePrepareRetailConversion(request) {
                 }));
 
             const confirmed = await showConfirmationModal({
-                title: "Conversion Checks Found",
+                title: "Retail Draft Checks Found",
                 message: "Some checks need review before opening Retail Store.",
                 details: warningDetails,
                 note: conversionDraft.warnings.length > 5
-                    ? `${conversionDraft.warnings.length - 5} more check(s) were detected. Proceed to continue with conversion and review in Retail Store.`
-                    : "Proceed to continue with conversion and review in Retail Store before saving the sale.",
+                    ? `${conversionDraft.warnings.length - 5} more check(s) were detected. Proceed to continue with the retail draft and review in Retail Store.`
+                    : "Proceed to continue with the retail draft and review in Retail Store before saving the sale.",
                 confirmText: "Proceed",
                 cancelText: "Cancel",
                 tone: "warning"
@@ -564,7 +564,7 @@ async function handlePrepareRetailConversion(request) {
 
             if (!confirmed) {
                 ProgressToast.hide(0);
-                showToast("Retail conversion cancelled.", "info", {
+                showToast("Retail draft creation cancelled.", "info", {
                     title: "Portal Requests"
                 });
                 return;
@@ -595,14 +595,14 @@ async function handlePrepareRetailConversion(request) {
 
         sessionStorage.setItem(RETAIL_CONVERSION_STORAGE_KEY, JSON.stringify(conversionPackage));
         ProgressToast.hide(0);
-        showToast("Portal request loaded. Opening Retail Store workspace...", "success", {
+        showToast("Portal request loaded. Opening Retail Store draft...", "success", {
             title: "Portal Requests"
         });
         window.location.hash = RETAIL_ROUTE;
     } catch (error) {
-        console.error("[Moneta] Portal request retail conversion prep failed:", error);
+        console.error("[Moneta] Portal request retail draft prep failed:", error);
         ProgressToast.hide(0);
-        showToast(error?.message || "Could not prepare this portal request for retail conversion.", "error", {
+        showToast(error?.message || "Could not create this retail draft from the portal request.", "error", {
             title: "Portal Requests"
         });
     }
