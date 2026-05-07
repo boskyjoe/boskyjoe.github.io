@@ -137,8 +137,8 @@ function buildPortalRequestsColumnDefs() {
 
 function buildPortalRequestItemsColumnDefs() {
     return [
-        { field: "name", headerName: "Product", minWidth: 220, flex: 1.3 },
-        { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.95 },
+        { field: "name", headerName: "Product", minWidth: 220, flex: 1.3, tooltipField: "name" },
+        { field: "categoryName", headerName: "Category", minWidth: 150, flex: 0.95, tooltipField: "categoryName" },
         {
             field: "quantity",
             headerName: "Qty",

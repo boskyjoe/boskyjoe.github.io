@@ -10,7 +10,7 @@ import {
     refreshPortalRequestsGrid,
     updatePortalRequestsGridSearch
 } from "./grid.js";
-import { subscribeToPortalRequests } from "./repository.js";
+import { fetchSalesCatalogueItems, subscribeToPortalRequests } from "./repository.js";
 import {
     buildPortalRequestToRetailConversionDraft,
     canPreparePortalRequestForRetail,
@@ -32,6 +32,8 @@ const featureState = {
     searchTerm: "",
     selectedRequestId: "",
     reviewModalOpen: false,
+    catalogueItemLookups: {},
+    loadingCatalogueIds: {},
     unsubscribeRequests: null,
     initialized: false
 };
@@ -77,6 +79,30 @@ function formatDateTime(value) {
     });
 }
 
+function getPortalRequestsIconMarkup() {
+    return icons.portalRequests || icons.catalogue;
+}
+
+function formatPortalDisplayValue(value, fallback = "-") {
+    const text = normalizeText(value);
+    return text || fallback;
+}
+
+function renderPortalDisplayField(label, value, options = {}) {
+    const resolvedValue = formatPortalDisplayValue(value, options.fallback || "-");
+    const fieldClass = options.full ? "portal-request-display-field field-full" : "portal-request-display-field";
+    const valueClass = options.multiline
+        ? "portal-request-display-value portal-request-display-value-multiline"
+        : "portal-request-display-value";
+
+    return `
+        <div class="${fieldClass}">
+            <span class="portal-request-display-label">${escapeHtml(label)}</span>
+            <div class="${valueClass}" title="${escapeHtml(resolvedValue)}">${escapeHtml(resolvedValue)}</div>
+        </div>
+    `;
+}
+
 function ensureSelectedRequest() {
     const hasSelected = featureState.requests.some(request => request.id === featureState.selectedRequestId);
     if (hasSelected) return;
@@ -93,6 +119,7 @@ function openPortalRequestReview(requestId) {
     if (!requestId) return;
     featureState.selectedRequestId = requestId;
     featureState.reviewModalOpen = true;
+    void ensurePortalRequestCatalogueLookup(getSelectedRequest());
     renderPortalRequestsView();
 }
 
@@ -191,9 +218,9 @@ function renderQueueCard() {
 
     return `
         <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.portalRequests}</span>
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                    <span class="panel-icon panel-icon-alt">${getPortalRequestsIconMarkup()}</span>
                     <div>
                         <h2>Portal Request Queue</h2>
                         <p class="panel-copy">Review pickup requests synced from the public portal, track decisions, and prepare them for Retail Store.</p>
@@ -237,7 +264,7 @@ function renderReviewModal(request) {
             <div class="purchase-payment-modal-card portal-request-review-modal-card">
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
-                        <span class="panel-icon panel-icon-alt">${icons.portalRequests}</span>
+                        <span class="panel-icon panel-icon-alt">${getPortalRequestsIconMarkup()}</span>
                         <div>
                             <h3 id="portal-request-review-title">Request Review</h3>
                             <p class="panel-copy">Review the shopper details, update the request state, and prepare a Retail Store handoff when ready.</p>
@@ -253,91 +280,48 @@ function renderReviewModal(request) {
                     <form id="portal-request-form">
                         <input id="portal-request-doc-id" type="hidden" value="${escapeHtml(request.id)}">
                         <div class="workspace-form-sections portal-request-form-sections">
-                            <section class="workspace-form-section">
-                                <div class="workspace-form-section-head">
-                                    <p class="workspace-form-section-kicker">Customer & Pickup</p>
-                                    <p class="panel-copy">Read-only shopper information captured from the public pickup portal.</p>
-                                </div>
-                                <div class="workspace-form-section-grid">
-                                    <div class="field">
-                                        <label>Customer Name</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.customerName || "-")}" readonly>
+                            <div class="portal-request-overview-grid">
+                                <section class="workspace-form-section">
+                                    <div class="workspace-form-section-head">
+                                        <p class="workspace-form-section-kicker">Customer & Pickup</p>
+                                        <p class="panel-copy">Read-only shopper information captured from the public pickup portal.</p>
                                     </div>
-                                    <div class="field">
-                                        <label>Email</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.customerEmail || "-")}" readonly>
+                                    <div class="workspace-form-section-grid portal-request-display-grid">
+                                        ${renderPortalDisplayField("Customer Name", request.customerName)}
+                                        ${renderPortalDisplayField("Email", request.customerEmail)}
+                                        ${renderPortalDisplayField("Phone", request.customerPhone)}
+                                        ${renderPortalDisplayField("Pickup Date", request.pickupDate)}
+                                        ${renderPortalDisplayField("Pickup Time", request.pickupTime)}
+                                        ${renderPortalDisplayField("Pickup Location", request.pickupLocation)}
+                                        ${renderPortalDisplayField("Address", getPortalRequestAddress(request), { full: true, multiline: true })}
+                                        ${renderPortalDisplayField("Customer Notes", request.notes, { full: true, multiline: true })}
                                     </div>
-                                    <div class="field">
-                                        <label>Phone</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.customerPhone || "-")}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Pickup Date</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.pickupDate || "-")}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Pickup Time</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.pickupTime || "-")}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Pickup Location</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.pickupLocation || "-")}" readonly>
-                                    </div>
-                                    <div class="field field-full">
-                                        <label>Address</label>
-                                        <textarea class="textarea" readonly>${escapeHtml(getPortalRequestAddress(request) || "-")}</textarea>
-                                    </div>
-                                    <div class="field field-full">
-                                        <label>Customer Notes</label>
-                                        <textarea class="textarea" readonly>${escapeHtml(request.notes || "-")}</textarea>
-                                    </div>
-                                </div>
-                            </section>
+                                </section>
 
-                            <section class="workspace-form-section">
-                                <div class="workspace-form-section-head">
-                                    <p class="workspace-form-section-kicker">Request Context</p>
-                                    <p class="panel-copy">Track the request state, source metadata, and linked catalogue context.</p>
-                                </div>
-                                <div class="workspace-form-section-grid">
-                                    <div class="field">
-                                        <label>Request ID</label>
-                                        <input class="input" type="text" value="${escapeHtml(getPortalRequestRequestId(request))}" readonly>
+                                <section class="workspace-form-section">
+                                    <div class="workspace-form-section-head">
+                                        <p class="workspace-form-section-kicker">Request Context</p>
+                                        <p class="panel-copy">Track the request state, source metadata, and linked catalogue context.</p>
                                     </div>
-                                    <div class="field">
-                                        <label>Submitted On</label>
-                                        <input class="input" type="text" value="${escapeHtml(formatDateTime(request.submittedAt))}" readonly>
+                                    <div class="workspace-form-section-grid portal-request-display-grid">
+                                        ${renderPortalDisplayField("Request ID", getPortalRequestRequestId(request))}
+                                        ${renderPortalDisplayField("Submitted On", formatDateTime(request.submittedAt))}
+                                        <div class="field portal-request-edit-field">
+                                            <label for="portal-request-status">Current Status</label>
+                                            <select id="portal-request-status" class="select">
+                                                ${PORTAL_REQUEST_STATUSES.map(status => `
+                                                    <option value="${status}" ${status === request.status ? "selected" : ""}>${getPortalRequestStatusLabel(status)}</option>
+                                                `).join("")}
+                                            </select>
+                                        </div>
+                                        ${renderPortalDisplayField("Conversion Status", getPortalRequestConversionStatusLabel(request.conversionStatus))}
+                                        ${renderPortalDisplayField("Catalogue", request.catalogueName || request.catalogueId)}
+                                        ${renderPortalDisplayField("Source", request.source)}
+                                        ${renderPortalDisplayField("Item Count", String(request.itemCount || items.length || 0))}
+                                        ${renderPortalDisplayField("Submitted Total", formatCurrency(request.subtotal || 0))}
                                     </div>
-                                    <div class="field">
-                                        <label>Current Status</label>
-                                        <select id="portal-request-status" class="select">
-                                            ${PORTAL_REQUEST_STATUSES.map(status => `
-                                                <option value="${status}" ${status === request.status ? "selected" : ""}>${getPortalRequestStatusLabel(status)}</option>
-                                            `).join("")}
-                                        </select>
-                                    </div>
-                                    <div class="field">
-                                        <label>Conversion Status</label>
-                                        <input class="input" type="text" value="${escapeHtml(getPortalRequestConversionStatusLabel(request.conversionStatus))}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Catalogue</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.catalogueName || request.catalogueId || "-")}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Source</label>
-                                        <input class="input" type="text" value="${escapeHtml(request.source || "-")}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Item Count</label>
-                                        <input class="input" type="text" value="${escapeHtml(String(request.itemCount || items.length || 0))}" readonly>
-                                    </div>
-                                    <div class="field">
-                                        <label>Submitted Total</label>
-                                        <input class="input" type="text" value="${escapeHtml(formatCurrency(request.subtotal || 0))}" readonly>
-                                    </div>
-                                </div>
-                            </section>
+                                </section>
+                            </div>
 
                             <section class="workspace-form-section">
                                 <div class="workspace-form-section-head">
@@ -424,9 +408,10 @@ function syncPortalRequestItemsGrid() {
     const gridElement = document.getElementById("portal-request-items-grid");
     if (!featureState.reviewModalOpen || !request || !gridElement) return;
 
+    const catalogueLookup = getPortalRequestCatalogueLookup(request);
     const rows = getPortalRequestItems(request).map(item => ({
         name: item.name || item.productName || "Untitled Product",
-        categoryName: item.categoryName || "-",
+        categoryName: resolvePortalRequestItemCategory(item, catalogueLookup),
         quantity: Number(item.quantity) || 0,
         price: Number(item.price) || 0,
         lineTotal: Number(item.lineTotal) || ((Number(item.quantity) || 0) * (Number(item.price) || 0))
@@ -641,6 +626,49 @@ function handlePortalRequestsRootClick(event) {
     const reviewModalBackdrop = target.closest("#portal-request-review-modal");
     if (target.id === "portal-request-review-modal" && reviewModalBackdrop) {
         closePortalRequestReview();
+    }
+}
+
+function getPortalRequestCatalogueLookup(request) {
+    const catalogueId = normalizeText(request?.catalogueId);
+    if (!catalogueId) return null;
+    return featureState.catalogueItemLookups[catalogueId] || null;
+}
+
+function resolvePortalRequestItemCategory(item, catalogueLookup) {
+    const explicit = normalizeText(item.categoryName);
+    if (explicit) return explicit;
+
+    if (!catalogueLookup) return "-";
+
+    const productId = normalizeText(item.productId);
+    const catalogueItemId = normalizeText(item.catalogueItemId);
+    const matchedItem = catalogueLookup.byProductId.get(productId) || catalogueLookup.byItemId.get(catalogueItemId) || null;
+    return normalizeText(matchedItem?.categoryName) || "-";
+}
+
+async function ensurePortalRequestCatalogueLookup(request) {
+    const catalogueId = normalizeText(request?.catalogueId);
+    if (!catalogueId || featureState.catalogueItemLookups[catalogueId] || featureState.loadingCatalogueIds[catalogueId]) {
+        return;
+    }
+
+    featureState.loadingCatalogueIds[catalogueId] = true;
+
+    try {
+        const items = await fetchSalesCatalogueItems(catalogueId);
+        featureState.catalogueItemLookups[catalogueId] = {
+            byProductId: new Map(items.map(item => [normalizeText(item.productId), item])),
+            byItemId: new Map(items.map(item => [normalizeText(item.id), item]))
+        };
+
+        if (getState().currentRoute === "#/portal-requests" && featureState.reviewModalOpen && getSelectedRequest()?.catalogueId === catalogueId) {
+            syncPortalRequestItemsGrid();
+        }
+    } catch (error) {
+        console.error("[Moneta] Failed to load portal request catalogue items:", error);
+    } finally {
+        delete featureState.loadingCatalogueIds[catalogueId];
     }
 }
 
