@@ -2906,19 +2906,19 @@ select {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.portal-requests-workspace {
-    display: grid;
-    gap: 1rem;
-    align-items: start;
-    grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.95fr);
-}
-
-.portal-requests-queue-column,
-.portal-requests-detail-column,
 .portal-request-form-sections {
     display: grid;
     gap: 1rem;
     min-width: 0;
+}
+
+.portal-request-review-modal-card {
+    width: min(1260px, 100%);
+}
+
+.portal-request-review-modal-body {
+    display: grid;
+    gap: 1.25rem;
 }
 
 .portal-request-form-sections .textarea {
@@ -2928,6 +2928,23 @@ select {
 .portal-requests-grid-shell,
 .portal-request-items-grid-shell {
     min-height: 0;
+}
+
+.portal-request-items-panel {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-subtle) 100%);
+}
+
+.portal-request-items-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.9rem;
+    flex-wrap: wrap;
 }
 
 .portal-request-status-pill,
@@ -3055,7 +3072,6 @@ select {
     .purchase-payment-preview,
     .purchase-payment-void-summary,
     .portal-request-summary-grid,
-    .portal-requests-workspace,
     .portal-request-form-sections,
     .retail-expense-summary-grid,
     .retail-return-preview-row,
