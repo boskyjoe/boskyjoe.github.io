@@ -29,46 +29,61 @@
       <header class="storefront-shell">
         <div class="storefront-main">
           <div class="header-search-shell">
-            <div class="brand-lockup">
-              <div class="brand-mark" aria-hidden="true">
-                <svg class="brand-mark-svg" viewBox="0 0 64 64" focusable="false">
-                  <defs>
-                    <linearGradient id="brand-mark-bg" x1="10%" y1="8%" x2="88%" y2="92%">
-                      <stop offset="0%" stop-color="#405271"></stop>
-                      <stop offset="100%" stop-color="#1d2733"></stop>
-                    </linearGradient>
-                    <linearGradient id="brand-mark-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#ffffff"></stop>
-                      <stop offset="100%" stop-color="#e6edf7"></stop>
-                    </linearGradient>
-                    <linearGradient id="brand-mark-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#ffd36c"></stop>
-                      <stop offset="100%" stop-color="#ff9900"></stop>
-                    </linearGradient>
-                  </defs>
-                  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#brand-mark-bg)"></rect>
-                  <path
-                    d="M14 46V18l10 14 10-14v28"
-                    fill="none"
-                    stroke="url(#brand-mark-stroke)"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="5"
-                  ></path>
-                  <path
-                    d="M40 46V18h8.5c5.8 0 9.5 3.7 9.5 8.9s-3.7 8.8-9.5 8.8H40"
-                    fill="none"
-                    stroke="url(#brand-mark-accent)"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="5"
-                  ></path>
-                </svg>
+            <div class="header-top-row">
+              <div class="brand-lockup">
+                <div class="brand-mark" aria-hidden="true">
+                  <svg class="brand-mark-svg" viewBox="0 0 64 64" focusable="false">
+                    <defs>
+                      <linearGradient id="brand-mark-bg" x1="10%" y1="8%" x2="88%" y2="92%">
+                        <stop offset="0%" stop-color="#405271"></stop>
+                        <stop offset="100%" stop-color="#1d2733"></stop>
+                      </linearGradient>
+                      <linearGradient id="brand-mark-stroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffffff"></stop>
+                        <stop offset="100%" stop-color="#e6edf7"></stop>
+                      </linearGradient>
+                      <linearGradient id="brand-mark-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffd36c"></stop>
+                        <stop offset="100%" stop-color="#ff9900"></stop>
+                      </linearGradient>
+                    </defs>
+                    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#brand-mark-bg)"></rect>
+                    <path
+                      d="M14 46V18l10 14 10-14v28"
+                      fill="none"
+                      stroke="url(#brand-mark-stroke)"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="5"
+                    ></path>
+                    <path
+                      d="M40 46V18h8.5c5.8 0 9.5 3.7 9.5 8.9s-3.7 8.8-9.5 8.8H40"
+                      fill="none"
+                      stroke="url(#brand-mark-accent)"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="5"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h1 id="storefront-title">Church Pickup Requests</h1>
+                  <p class="brand-copy">Published catalogue for church pickup requests.</p>
+                </div>
               </div>
-              <div>
-                <h1 id="storefront-title">Church Pickup Requests</h1>
-                <p class="brand-copy">Published catalogue for church pickup requests.</p>
-              </div>
+
+              <section id="auth-panel" class="header-account-zone" aria-live="polite">
+                <div class="header-account-copy">
+                  <strong id="header-account-name">Guest shopper</strong>
+                  <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
+                </div>
+                <div class="header-account-actions">
+                  <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
+                  <button id="google-signout-button" class="header-logout-button hidden" type="button">
+                    Log out
+                  </button>
+                </div>
+              </section>
             </div>
             
             <label class="header-search" for="catalogue-search">
@@ -87,27 +102,17 @@
             </label>
           </div>
 
-          <section id="auth-panel" class="header-account-zone" aria-live="polite">
-            <div class="header-account-copy">
-              <span class="header-meta-label">Account</span>
-              <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
-              <strong id="header-account-name">Guest shopper</strong>
-              <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
-              <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
-            </div>
-
-            <button id="jump-to-request-button" class="cart-chip" type="button">
-              <span id="header-cart-count" class="cart-chip-count">0</span>
-              <span class="cart-chip-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                  <path d="M3 4h2l1.1 2.4L8 14h9.6l2.2-6.8H7.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
-                  <circle cx="10" cy="19" r="1.6" fill="currentColor"></circle>
-                  <circle cx="17" cy="19" r="1.6" fill="currentColor"></circle>
-                </svg>
-              </span>
-              <span class="cart-chip-label">Cart</span>
-            </button>
-          </section>
+          <button id="jump-to-request-button" class="cart-chip" type="button">
+            <span id="header-cart-count" class="cart-chip-count">0</span>
+            <span class="cart-chip-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M3 4h2l1.1 2.4L8 14h9.6l2.2-6.8H7.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+                <circle cx="10" cy="19" r="1.6" fill="currentColor"></circle>
+                <circle cx="17" cy="19" r="1.6" fill="currentColor"></circle>
+              </svg>
+            </span>
+            <span class="cart-chip-label">Cart</span>
+          </button>
         </div>
 
         <nav class="department-bar" aria-label="Published departments">
