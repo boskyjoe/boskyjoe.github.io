@@ -2926,13 +2926,28 @@ select {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    align-items: stretch;
+}
+
+.portal-request-overview-stack {
+    display: grid;
+    gap: 1rem;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+}
+
+.portal-request-overview-section {
+    height: 100%;
 }
 
 .portal-request-display-grid {
     display: grid;
     gap: 0.95rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.portal-request-display-grid-compact {
+    align-content: start;
 }
 
 .portal-request-display-field {
