@@ -330,25 +330,25 @@ function renderReviewModal(request) {
                                         ${renderPortalDisplayField("Submitted Total", formatCurrency(request.subtotal || 0))}
                                     </div>
                                 </section>
-
-                                <section class="workspace-form-section portal-request-review-section">
-                                    <div class="workspace-form-section-head">
-                                        <p class="workspace-form-section-kicker">Review Notes</p>
-                                        <p class="panel-copy">Capture staff notes and update the request state before the retail-draft handoff.</p>
-                                    </div>
-                                    <div class="workspace-form-section-grid portal-request-review-notes-grid">
-                                        <div class="field field-full">
-                                            <label for="portal-request-internal-review-note">Internal Review Note</label>
-                                            <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
-                                        </div>
-                                        <div class="field field-full">
-                                            <label for="portal-request-action-note">Decision Note</label>
-                                            <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
-                                        </div>
-                                    </div>
-                                </section>
                             </div>
                         </div>
+
+                        <section class="workspace-form-section portal-request-review-section portal-request-review-notes-section">
+                            <div class="workspace-form-section-head">
+                                <p class="workspace-form-section-kicker">Review Notes</p>
+                                <p class="panel-copy">Capture staff notes and update the request state before the retail-draft handoff.</p>
+                            </div>
+                            <div class="workspace-form-section-grid portal-request-review-notes-grid portal-request-review-notes-grid-wide">
+                                <div class="field field-full">
+                                    <label for="portal-request-internal-review-note">Internal Review Note</label>
+                                    <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
+                                </div>
+                                <div class="field field-full">
+                                    <label for="portal-request-action-note">Decision Note</label>
+                                    <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
+                                </div>
+                            </div>
+                        </section>
 
                         <section class="portal-request-items-panel">
                             <div class="portal-request-items-panel-head">
