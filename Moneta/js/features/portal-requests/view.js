@@ -83,6 +83,13 @@ function getPortalRequestsIconMarkup() {
     return icons.portalRequests || icons.catalogue;
 }
 
+function getPortalRequestSourceLabel(value) {
+    const normalized = normalizeText(value).toLowerCase();
+    if (!normalized) return "-";
+    if (normalized === "moneta-pickup-portal") return "Public Pickup Portal";
+    return value;
+}
+
 function formatPortalDisplayValue(value, fallback = "-") {
     const text = normalizeText(value);
     return text || fallback;
@@ -279,42 +286,33 @@ function renderReviewModal(request) {
                 <div class="panel-body purchase-payment-modal-body portal-request-review-modal-body">
                     <form id="portal-request-form">
                         <input id="portal-request-doc-id" type="hidden" value="${escapeHtml(request.id)}">
-                        <div class="workspace-form-sections portal-request-form-sections">
-                            <div class="portal-request-overview-grid">
-                                <div class="portal-request-overview-stack">
-                                    <section class="workspace-form-section portal-request-overview-section">
-                                        <div class="workspace-form-section-head">
-                                            <p class="workspace-form-section-kicker">Customer</p>
-                                            <p class="panel-copy">Core shopper details captured from the public pickup portal.</p>
-                                        </div>
-                                        <div class="workspace-form-section-grid portal-request-display-grid portal-request-display-grid-compact">
-                                            ${renderPortalDisplayField("Customer Name", request.customerName)}
-                                            ${renderPortalDisplayField("Email", request.customerEmail)}
-                                            ${renderPortalDisplayField("Phone", request.customerPhone, { full: true })}
-                                        </div>
-                                    </section>
+                        <div class="portal-request-review-layout">
+                            <div class="portal-request-review-main">
+                                <section class="workspace-form-section portal-request-review-section">
+                                    <div class="workspace-form-section-head">
+                                        <p class="workspace-form-section-kicker">Customer & Pickup</p>
+                                        <p class="panel-copy">Shopper details, requested pickup timing, location, address, and request notes from the public portal.</p>
+                                    </div>
+                                    <div class="workspace-form-section-grid portal-request-display-grid portal-request-display-grid-dense">
+                                        ${renderPortalDisplayField("Customer Name", request.customerName)}
+                                        ${renderPortalDisplayField("Email", request.customerEmail)}
+                                        ${renderPortalDisplayField("Phone", request.customerPhone)}
+                                        ${renderPortalDisplayField("Pickup Date", request.pickupDate)}
+                                        ${renderPortalDisplayField("Pickup Time", request.pickupTime)}
+                                        ${renderPortalDisplayField("Pickup Location", request.pickupLocation)}
+                                        ${renderPortalDisplayField("Address", getPortalRequestAddress(request), { full: true, multiline: true })}
+                                        ${renderPortalDisplayField("Customer Notes", request.notes, { full: true, multiline: true })}
+                                    </div>
+                                </section>
+                            </div>
 
-                                    <section class="workspace-form-section portal-request-overview-section">
-                                        <div class="workspace-form-section-head">
-                                            <p class="workspace-form-section-kicker">Pickup Location</p>
-                                            <p class="panel-copy">Requested pickup timing, location, address, and shopper notes.</p>
-                                        </div>
-                                        <div class="workspace-form-section-grid portal-request-display-grid">
-                                            ${renderPortalDisplayField("Pickup Date", request.pickupDate)}
-                                            ${renderPortalDisplayField("Pickup Time", request.pickupTime)}
-                                            ${renderPortalDisplayField("Pickup Location", request.pickupLocation, { full: true })}
-                                            ${renderPortalDisplayField("Address", getPortalRequestAddress(request), { full: true, multiline: true })}
-                                            ${renderPortalDisplayField("Customer Notes", request.notes, { full: true, multiline: true })}
-                                        </div>
-                                    </section>
-                                </div>
-
-                                <section class="workspace-form-section">
+                            <div class="portal-request-review-aside">
+                                <section class="workspace-form-section portal-request-review-section">
                                     <div class="workspace-form-section-head">
                                         <p class="workspace-form-section-kicker">Request Context</p>
-                                        <p class="panel-copy">Track the request state, source metadata, and linked catalogue context.</p>
+                                        <p class="panel-copy">Track the request state, source metadata, linked catalogue context, and submitted totals.</p>
                                     </div>
-                                    <div class="workspace-form-section-grid portal-request-display-grid">
+                                    <div class="workspace-form-section-grid portal-request-display-grid portal-request-context-grid">
                                         ${renderPortalDisplayField("Request ID", getPortalRequestRequestId(request))}
                                         ${renderPortalDisplayField("Submitted On", formatDateTime(request.submittedAt))}
                                         <div class="field portal-request-edit-field">
@@ -326,31 +324,48 @@ function renderReviewModal(request) {
                                             </select>
                                         </div>
                                         ${renderPortalDisplayField("Conversion Status", getPortalRequestConversionStatusLabel(request.conversionStatus))}
-                                        ${renderPortalDisplayField("Catalogue", request.catalogueName || request.catalogueId)}
-                                        ${renderPortalDisplayField("Source", request.source)}
+                                        ${renderPortalDisplayField("Catalogue", request.catalogueName || request.catalogueId, { full: true })}
+                                        ${renderPortalDisplayField("Source", getPortalRequestSourceLabel(request.source), { full: true })}
                                         ${renderPortalDisplayField("Item Count", String(request.itemCount || items.length || 0))}
                                         ${renderPortalDisplayField("Submitted Total", formatCurrency(request.subtotal || 0))}
                                     </div>
                                 </section>
-                            </div>
 
-                            <section class="workspace-form-section">
-                                <div class="workspace-form-section-head">
-                                    <p class="workspace-form-section-kicker">Review Notes</p>
-                                    <p class="panel-copy">Capture staff notes and update the request state before fulfilment prep.</p>
-                                </div>
-                                <div class="workspace-form-section-grid">
-                                    <div class="field field-full">
-                                        <label for="portal-request-internal-review-note">Internal Review Note</label>
-                                        <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
+                                <section class="workspace-form-section portal-request-review-section">
+                                    <div class="workspace-form-section-head">
+                                        <p class="workspace-form-section-kicker">Review Notes</p>
+                                        <p class="panel-copy">Capture staff notes and update the request state before the retail-draft handoff.</p>
                                     </div>
-                                    <div class="field field-full">
-                                        <label for="portal-request-action-note">Decision Note</label>
-                                        <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
+                                    <div class="workspace-form-section-grid portal-request-review-notes-grid">
+                                        <div class="field field-full">
+                                            <label for="portal-request-internal-review-note">Internal Review Note</label>
+                                            <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
+                                        </div>
+                                        <div class="field field-full">
+                                            <label for="portal-request-action-note">Decision Note</label>
+                                            <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
+                                        </div>
                                     </div>
-                                </div>
-                            </section>
+                                </section>
+                            </div>
                         </div>
+
+                        <section class="portal-request-items-panel">
+                            <div class="portal-request-items-panel-head">
+                                <div>
+                                    <p class="workspace-form-section-kicker">Requested Items</p>
+                                    <p class="panel-copy">Snapshot lines received from the public pickup portal before any staff adjustments.</p>
+                                </div>
+                                <div class="toolbar-meta">
+                                    <span class="status-pill">${getPortalRequestItems(request).length} lines</span>
+                                    <span class="status-pill">${formatCurrency(request.subtotal || 0)} total</span>
+                                </div>
+                            </div>
+                            <div class="ag-shell portal-request-items-grid-shell">
+                                <div id="portal-request-items-grid" class="ag-theme-alpine moneta-grid ag-shell-compact" style="height: 320px; width: 100%;"></div>
+                            </div>
+                        </section>
+
                         <div class="form-actions">
                             <button class="button button-primary" type="submit">
                                 <span class="button-icon">${icons.edit}</span>
@@ -370,22 +385,6 @@ function renderReviewModal(request) {
                             </button>
                         </div>
                     </form>
-
-                    <section class="portal-request-items-panel">
-                        <div class="portal-request-items-panel-head">
-                            <div>
-                                <p class="workspace-form-section-kicker">Requested Items</p>
-                                <p class="panel-copy">Snapshot lines received from the public pickup portal before any staff adjustments.</p>
-                            </div>
-                            <div class="toolbar-meta">
-                                <span class="status-pill">${getPortalRequestItems(request).length} lines</span>
-                                <span class="status-pill">${formatCurrency(request.subtotal || 0)} total</span>
-                            </div>
-                        </div>
-                        <div class="ag-shell portal-request-items-grid-shell">
-                            <div id="portal-request-items-grid" class="ag-theme-alpine moneta-grid ag-shell-compact" style="height: 320px; width: 100%;"></div>
-                        </div>
-                    </section>
                 </div>
             </div>
         </div>
