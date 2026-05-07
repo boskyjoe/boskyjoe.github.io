@@ -2975,6 +2975,14 @@ select {
     align-content: start;
 }
 
+.portal-request-review-notes-grid-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.portal-request-review-notes-section .textarea {
+    min-height: 128px;
+}
+
 .portal-request-display-field {
     display: grid;
     gap: 0.35rem;
