@@ -27,40 +27,7 @@
   <body>
     <div class="portal-shell">
       <header class="storefront-shell">
-        <div class="storefront-topbar">
-          <div class="utility-copy">
-            <span class="utility-pill">Request Intake</span>
-            <p>
-              Customers can browse the published pickup catalogue, send a pickup
-              request, and wait for staff confirmation before collection.
-            </p>
-          </div>
-          <div class="utility-actions">
-            <p id="publish-meta" class="utility-meta">Loading catalogue snapshot...</p>
-            <section id="auth-panel" class="auth-panel" aria-live="polite">
-              <div class="auth-copy">
-                <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
-                <p id="auth-message" class="utility-meta">
-                  Sign in with Google so Moneta can capture your email on the pickup request.
-                </p>
-              </div>
-              <div class="auth-buttons">
-                <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
-                <button id="google-signout-button" class="secondary-button auth-button hidden" type="button">
-                  Sign out
-                </button>
-              </div>
-            </section>
-          </div>
-        </div>
-
         <div class="storefront-main">
-          <section class="pickup-anchor">
-          <span class="header-meta-label">Pickup from</span>
-          <strong id="header-pickup-location">Church Resource Centre</strong>
-          <span id="header-lead-time-copy" class="header-meta-copy">Ready after confirmation</span>
-          </section>
-
           <div class="header-search-shell">
             <div class="brand-lockup">
               <div class="brand-mark" aria-hidden="true">
@@ -100,10 +67,7 @@
               </div>
               <div>
                 <h1 id="storefront-title">Church Pickup Requests</h1>
-                <p class="brand-copy">
-                  A storefront-style public catalogue powered by a published Moneta
-                  snapshot.
-                </p>
+                <p class="brand-copy">Published catalogue for church pickup requests.</p>
               </div>
             </div>
             
@@ -123,11 +87,13 @@
             </label>
           </div>
 
-          <section class="header-account-zone">
+          <section id="auth-panel" class="header-account-zone" aria-live="polite">
             <div class="header-account-copy">
               <span class="header-meta-label">Account</span>
+              <span id="auth-state-badge" class="auth-state-badge">Google Sign-In</span>
               <strong id="header-account-name">Guest shopper</strong>
               <span id="header-account-subtitle" class="header-meta-copy">Sign in to attach your email</span>
+              <div id="google-signin-button" class="google-signin-slot" aria-live="polite"></div>
             </div>
 
             <button id="jump-to-request-button" class="cart-chip" type="button">

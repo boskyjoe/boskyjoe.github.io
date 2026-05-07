@@ -145,18 +145,13 @@ const elements = {
   clearCartButton: document.querySelector("#clear-cart-button"),
   pickupNotice: document.querySelector("#pickup-notice"),
   pickupLocation: document.querySelector("#pickup-location"),
-  headerPickupLocation: document.querySelector("#header-pickup-location"),
-  headerLeadTimeCopy: document.querySelector("#header-lead-time-copy"),
   headerAccountName: document.querySelector("#header-account-name"),
   headerAccountSubtitle: document.querySelector("#header-account-subtitle"),
   contactPhone: document.querySelector("#contact-phone"),
   leadTime: document.querySelector("#lead-time"),
   publishedAt: document.querySelector("#published-at"),
-  publishMeta: document.querySelector("#publish-meta"),
   authStateBadge: document.querySelector("#auth-state-badge"),
-  authMessage: document.querySelector("#auth-message"),
   googleSignInButton: document.querySelector("#google-signin-button"),
-  googleSignOutButton: document.querySelector("#google-signout-button"),
   requestForm: document.querySelector("#pickup-request-form"),
   customerName: document.querySelector("#customer-name"),
   customerEmail: document.querySelector("#customer-email"),
@@ -344,20 +339,6 @@ function bindEvents() {
     renderCart();
   });
 
-  elements.googleSignOutButton?.addEventListener("click", () => {
-    try {
-      if (window.google?.accounts?.id) {
-        google.accounts.id.disableAutoSelect();
-      }
-      state.currentUser = null;
-      clearStoredUser();
-      renderAuthState();
-    } catch (error) {
-      console.error("[Pickup Portal] Google sign-out failed:", error);
-      renderAuthState("Could not sign out of the pickup portal session.");
-    }
-  });
-
   [elements.pickupTimeHour, elements.pickupTimeMinute, elements.pickupTimeMeridiem].forEach((control) => {
     control?.addEventListener("change", syncPickupTimeField);
   });
@@ -439,37 +420,25 @@ function renderAuthState(messageOverride = "") {
       : "ready";
 
   if (signedIn) {
-    elements.authMessage.textContent = `${user.email} will be attached to this pickup request.`;
     elements.googleSignInButton.classList.add("hidden");
-    elements.googleSignOutButton.classList.remove("hidden");
     elements.headerAccountName.textContent = user.displayName || user.email;
     elements.headerAccountSubtitle.textContent = user.email;
   } else if (messageOverride) {
-    elements.authMessage.textContent = messageOverride;
     elements.googleSignInButton.classList.toggle("hidden", unavailable);
-    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = unavailable ? "Portal sign-in unavailable" : "Guest shopper";
     elements.headerAccountSubtitle.textContent = unavailable
-      ? "Add a Google client ID to enable sign-in"
-      : "Sign in to attach your email";
+      ? messageOverride || "Add a Google client ID to enable sign-in"
+      : messageOverride || "Sign in to attach your email";
   } else if (unavailable) {
-    elements.authMessage.textContent =
-      "Google sign-in is not configured for this portal yet.";
     elements.googleSignInButton.classList.add("hidden");
-    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Portal sign-in unavailable";
     elements.headerAccountSubtitle.textContent = "Add a Google client ID to enable sign-in";
   } else if (loading) {
-    elements.authMessage.textContent = "Loading Google sign-in...";
     elements.googleSignInButton.classList.remove("hidden");
-    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Guest shopper";
     elements.headerAccountSubtitle.textContent = "Preparing Google sign-in";
   } else {
-    elements.authMessage.textContent =
-      "Sign in with Google so Moneta can capture your email on the pickup request.";
     elements.googleSignInButton.classList.remove("hidden");
-    elements.googleSignOutButton.classList.add("hidden");
     elements.headerAccountName.textContent = "Guest shopper";
     elements.headerAccountSubtitle.textContent = "Sign in to attach your email";
   }
@@ -678,20 +647,9 @@ function renderHeader() {
       ? "The published pickup catalogue could not be loaded. Confirm that pickup-portal/data/catalogue.json has been published to this site."
       : catalogue.pickupNotice || "Pickup notice not configured.";
   elements.pickupLocation.textContent = catalogue.pickupLocation || "Not set";
-  elements.headerPickupLocation.textContent = catalogue.pickupLocation || "Not set";
   elements.contactPhone.textContent = catalogue.contactPhone || "Not set";
   elements.leadTime.textContent = `${catalogue.requestLeadTimeHours || 0} hours`;
-  elements.headerLeadTimeCopy.textContent =
-    catalogue.requestLeadTimeHours
-      ? `Ready in about ${catalogue.requestLeadTimeHours} hours`
-      : "Ready after confirmation";
   elements.publishedAt.textContent = publishedLabel;
-  elements.publishMeta.textContent =
-    state.source === "published-json"
-      ? `Published JSON loaded · ${publishedLabel}`
-      : state.source === "load-error"
-        ? `Published JSON unavailable · ${state.sourceError || "Check that data/catalogue.json exists on the site."}`
-      : `Fallback preview loaded · ${publishedLabel}`;
 }
 
 function renderFeatured() {
