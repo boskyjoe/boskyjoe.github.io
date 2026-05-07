@@ -31,6 +31,7 @@ const featureState = {
     requests: [],
     searchTerm: "",
     selectedRequestId: "",
+    reviewModalOpen: false,
     unsubscribeRequests: null,
     initialized: false
 };
@@ -86,6 +87,19 @@ function ensureSelectedRequest() {
 function getSelectedRequest() {
     ensureSelectedRequest();
     return featureState.requests.find(request => request.id === featureState.selectedRequestId) || null;
+}
+
+function openPortalRequestReview(requestId) {
+    if (!requestId) return;
+    featureState.selectedRequestId = requestId;
+    featureState.reviewModalOpen = true;
+    renderPortalRequestsView();
+}
+
+function closePortalRequestReview() {
+    if (!featureState.reviewModalOpen) return;
+    featureState.reviewModalOpen = false;
+    renderPortalRequestsView();
 }
 
 function shouldListenToPortalRequests(snapshot = getState()) {
@@ -214,193 +228,169 @@ function renderQueueCard() {
     `;
 }
 
-function renderEmptyDetailCard() {
-    return `
-        <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon">${icons.search}</span>
-                    <div>
-                        <h3>Request Review</h3>
-                        <p class="panel-copy">Select a portal request from the queue to review the shopper details and requested items.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="empty-state">
-                    No portal request is selected yet.
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderDetailCard(request) {
+function renderReviewModal(request) {
     const items = getPortalRequestItems(request);
     const prepareGate = canPreparePortalRequestForRetail(request);
 
     return `
-        <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon">${icons.retail}</span>
-                    <div>
-                        <h3>Request Review</h3>
-                        <p class="panel-copy">Review the shopper details, update the request state, and prepare a Retail Store handoff when ready.</p>
+        <div id="portal-request-review-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="portal-request-review-title">
+            <div class="purchase-payment-modal-card portal-request-review-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-alt">${icons.portalRequests}</span>
+                        <div>
+                            <h3 id="portal-request-review-title">Request Review</h3>
+                            <p class="panel-copy">Review the shopper details, update the request state, and prepare a Retail Store handoff when ready.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${escapeHtml(getPortalRequestRequestId(request))}</span>
+                        <span class="status-pill">${escapeHtml(getPortalRequestStatusLabel(request.status))}</span>
+                        <span class="status-pill">${escapeHtml(getPortalRequestConversionStatusLabel(request.conversionStatus))}</span>
                     </div>
                 </div>
-                <div class="toolbar-meta">
-                    <span class="status-pill">${escapeHtml(getPortalRequestRequestId(request))}</span>
-                    <span class="status-pill">${escapeHtml(getPortalRequestStatusLabel(request.status))}</span>
-                    <span class="status-pill">${escapeHtml(getPortalRequestConversionStatusLabel(request.conversionStatus))}</span>
-                </div>
-            </div>
-            <div class="panel-body">
-                <form id="portal-request-form">
-                    <input id="portal-request-doc-id" type="hidden" value="${escapeHtml(request.id)}">
-                    <div class="workspace-form-sections portal-request-form-sections">
-                        <section class="workspace-form-section">
-                            <div class="workspace-form-section-head">
-                                <p class="workspace-form-section-kicker">Customer & Pickup</p>
-                                <p class="panel-copy">Read-only shopper information captured from the public pickup portal.</p>
-                            </div>
-                            <div class="workspace-form-section-grid">
-                                <div class="field">
-                                    <label>Customer Name</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.customerName || "-")}" readonly>
+                <div class="panel-body purchase-payment-modal-body portal-request-review-modal-body">
+                    <form id="portal-request-form">
+                        <input id="portal-request-doc-id" type="hidden" value="${escapeHtml(request.id)}">
+                        <div class="workspace-form-sections portal-request-form-sections">
+                            <section class="workspace-form-section">
+                                <div class="workspace-form-section-head">
+                                    <p class="workspace-form-section-kicker">Customer & Pickup</p>
+                                    <p class="panel-copy">Read-only shopper information captured from the public pickup portal.</p>
                                 </div>
-                                <div class="field">
-                                    <label>Email</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.customerEmail || "-")}" readonly>
+                                <div class="workspace-form-section-grid">
+                                    <div class="field">
+                                        <label>Customer Name</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.customerName || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Email</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.customerEmail || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Phone</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.customerPhone || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Pickup Date</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.pickupDate || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Pickup Time</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.pickupTime || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Pickup Location</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.pickupLocation || "-")}" readonly>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label>Address</label>
+                                        <textarea class="textarea" readonly>${escapeHtml(getPortalRequestAddress(request) || "-")}</textarea>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label>Customer Notes</label>
+                                        <textarea class="textarea" readonly>${escapeHtml(request.notes || "-")}</textarea>
+                                    </div>
                                 </div>
-                                <div class="field">
-                                    <label>Phone</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.customerPhone || "-")}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Pickup Date</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.pickupDate || "-")}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Pickup Time</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.pickupTime || "-")}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Pickup Location</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.pickupLocation || "-")}" readonly>
-                                </div>
-                                <div class="field field-full">
-                                    <label>Address</label>
-                                    <textarea class="textarea" readonly>${escapeHtml(getPortalRequestAddress(request) || "-")}</textarea>
-                                </div>
-                                <div class="field field-full">
-                                    <label>Customer Notes</label>
-                                    <textarea class="textarea" readonly>${escapeHtml(request.notes || "-")}</textarea>
-                                </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <section class="workspace-form-section">
-                            <div class="workspace-form-section-head">
-                                <p class="workspace-form-section-kicker">Request Context</p>
-                                <p class="panel-copy">Track the request state, source metadata, and linked catalogue context.</p>
-                            </div>
-                            <div class="workspace-form-section-grid">
-                                <div class="field">
-                                    <label>Request ID</label>
-                                    <input class="input" type="text" value="${escapeHtml(getPortalRequestRequestId(request))}" readonly>
+                            <section class="workspace-form-section">
+                                <div class="workspace-form-section-head">
+                                    <p class="workspace-form-section-kicker">Request Context</p>
+                                    <p class="panel-copy">Track the request state, source metadata, and linked catalogue context.</p>
                                 </div>
-                                <div class="field">
-                                    <label>Submitted On</label>
-                                    <input class="input" type="text" value="${escapeHtml(formatDateTime(request.submittedAt))}" readonly>
+                                <div class="workspace-form-section-grid">
+                                    <div class="field">
+                                        <label>Request ID</label>
+                                        <input class="input" type="text" value="${escapeHtml(getPortalRequestRequestId(request))}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Submitted On</label>
+                                        <input class="input" type="text" value="${escapeHtml(formatDateTime(request.submittedAt))}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Current Status</label>
+                                        <select id="portal-request-status" class="select">
+                                            ${PORTAL_REQUEST_STATUSES.map(status => `
+                                                <option value="${status}" ${status === request.status ? "selected" : ""}>${getPortalRequestStatusLabel(status)}</option>
+                                            `).join("")}
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label>Conversion Status</label>
+                                        <input class="input" type="text" value="${escapeHtml(getPortalRequestConversionStatusLabel(request.conversionStatus))}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Catalogue</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.catalogueName || request.catalogueId || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Source</label>
+                                        <input class="input" type="text" value="${escapeHtml(request.source || "-")}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Item Count</label>
+                                        <input class="input" type="text" value="${escapeHtml(String(request.itemCount || items.length || 0))}" readonly>
+                                    </div>
+                                    <div class="field">
+                                        <label>Submitted Total</label>
+                                        <input class="input" type="text" value="${escapeHtml(formatCurrency(request.subtotal || 0))}" readonly>
+                                    </div>
                                 </div>
-                                <div class="field">
-                                    <label>Current Status</label>
-                                    <select id="portal-request-status" class="select">
-                                        ${PORTAL_REQUEST_STATUSES.map(status => `
-                                            <option value="${status}" ${status === request.status ? "selected" : ""}>${getPortalRequestStatusLabel(status)}</option>
-                                        `).join("")}
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label>Conversion Status</label>
-                                    <input class="input" type="text" value="${escapeHtml(getPortalRequestConversionStatusLabel(request.conversionStatus))}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Catalogue</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.catalogueName || request.catalogueId || "-")}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Source</label>
-                                    <input class="input" type="text" value="${escapeHtml(request.source || "-")}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Item Count</label>
-                                    <input class="input" type="text" value="${escapeHtml(String(request.itemCount || items.length || 0))}" readonly>
-                                </div>
-                                <div class="field">
-                                    <label>Submitted Total</label>
-                                    <input class="input" type="text" value="${escapeHtml(formatCurrency(request.subtotal || 0))}" readonly>
-                                </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <section class="workspace-form-section">
-                            <div class="workspace-form-section-head">
-                                <p class="workspace-form-section-kicker">Review Notes</p>
-                                <p class="panel-copy">Capture staff notes and update the request state before fulfilment prep.</p>
-                            </div>
-                            <div class="workspace-form-section-grid">
-                                <div class="field field-full">
-                                    <label for="portal-request-internal-review-note">Internal Review Note</label>
-                                    <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
+                            <section class="workspace-form-section">
+                                <div class="workspace-form-section-head">
+                                    <p class="workspace-form-section-kicker">Review Notes</p>
+                                    <p class="panel-copy">Capture staff notes and update the request state before fulfilment prep.</p>
                                 </div>
-                                <div class="field field-full">
-                                    <label for="portal-request-action-note">Decision Note</label>
-                                    <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
+                                <div class="workspace-form-section-grid">
+                                    <div class="field field-full">
+                                        <label for="portal-request-internal-review-note">Internal Review Note</label>
+                                        <textarea id="portal-request-internal-review-note" class="textarea" placeholder="Internal note for the sales team">${escapeHtml(request.internalReviewNote || "")}</textarea>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="portal-request-action-note">Decision Note</label>
+                                        <textarea id="portal-request-action-note" class="textarea" placeholder="Reason for acceptance, rejection, cancellation, or fulfilment">${escapeHtml(request.actionNote || "")}</textarea>
+                                    </div>
                                 </div>
-                            </div>
-                        </section>
-                    </div>
-                    <div class="form-actions">
-                        <button class="button button-primary" type="submit">
-                            <span class="button-icon">${icons.edit}</span>
-                            Save Update
-                        </button>
-                        <button
-                            id="portal-request-prepare-button"
-                            class="button button-secondary"
-                            type="button"
-                            ${prepareGate.allowed ? "" : `disabled title="${escapeHtml(prepareGate.reason)}" data-disabled-reason="${escapeHtml(prepareGate.reason)}"`}>
-                            <span class="button-icon">${icons.retail}</span>
-                            Prepare Retail Sale
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-}
+                            </section>
+                        </div>
+                        <div class="form-actions">
+                            <button class="button button-primary" type="submit">
+                                <span class="button-icon">${icons.edit}</span>
+                                Save Update
+                            </button>
+                            <button
+                                id="portal-request-prepare-button"
+                                class="button button-secondary"
+                                type="button"
+                                ${prepareGate.allowed ? "" : `disabled title="${escapeHtml(prepareGate.reason)}" data-disabled-reason="${escapeHtml(prepareGate.reason)}"`}>
+                                <span class="button-icon">${icons.retail}</span>
+                                Prepare Retail Sale
+                            </button>
+                            <button id="portal-request-close-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.close}</span>
+                                Close
+                            </button>
+                        </div>
+                    </form>
 
-function renderItemsCard(request) {
-    return `
-        <div class="panel-card">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.catalogue}</span>
-                    <div>
-                        <h3>Requested Items</h3>
-                        <p class="panel-copy">Snapshot lines received from the public pickup portal before any staff adjustments.</p>
-                    </div>
-                </div>
-                <div class="toolbar-meta">
-                    <span class="status-pill">${getPortalRequestItems(request).length} lines</span>
-                    <span class="status-pill">${formatCurrency(request.subtotal || 0)} total</span>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="ag-shell portal-request-items-grid-shell">
-                    <div id="portal-request-items-grid" class="ag-theme-alpine moneta-grid ag-shell-compact" style="height: 320px; width: 100%;"></div>
+                    <section class="portal-request-items-panel">
+                        <div class="portal-request-items-panel-head">
+                            <div>
+                                <p class="workspace-form-section-kicker">Requested Items</p>
+                                <p class="panel-copy">Snapshot lines received from the public pickup portal before any staff adjustments.</p>
+                            </div>
+                            <div class="toolbar-meta">
+                                <span class="status-pill">${getPortalRequestItems(request).length} lines</span>
+                                <span class="status-pill">${formatCurrency(request.subtotal || 0)} total</span>
+                            </div>
+                        </div>
+                        <div class="ag-shell portal-request-items-grid-shell">
+                            <div id="portal-request-items-grid" class="ag-theme-alpine moneta-grid ag-shell-compact" style="height: 320px; width: 100%;"></div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -408,19 +398,7 @@ function renderItemsCard(request) {
 }
 
 function renderWorkspace() {
-    const request = getSelectedRequest();
-
-    return `
-        <div class="portal-requests-workspace">
-            <div class="portal-requests-queue-column">
-                ${renderQueueCard()}
-            </div>
-            <div class="portal-requests-detail-column">
-                ${request ? renderDetailCard(request) : renderEmptyDetailCard()}
-                ${request ? renderItemsCard(request) : ""}
-            </div>
-        </div>
-    `;
+    return renderQueueCard();
 }
 
 function bindPortalRequestsRootEvents(root) {
@@ -433,9 +411,8 @@ function bindPortalRequestsRootEvents(root) {
 function syncPortalRequestsGrid() {
     initializePortalRequestsGrid(document.getElementById("portal-requests-grid"), {
         onRowClicked: request => {
-            if (!request?.id || featureState.selectedRequestId === request.id) return;
-            featureState.selectedRequestId = request.id;
-            renderPortalRequestsView();
+            if (!request?.id) return;
+            openPortalRequestReview(request.id);
         }
     });
     refreshPortalRequestsGrid(featureState.requests);
@@ -445,7 +422,7 @@ function syncPortalRequestsGrid() {
 function syncPortalRequestItemsGrid() {
     const request = getSelectedRequest();
     const gridElement = document.getElementById("portal-request-items-grid");
-    if (!request || !gridElement) return;
+    if (!featureState.reviewModalOpen || !request || !gridElement) return;
 
     const rows = getPortalRequestItems(request).map(item => ({
         name: item.name || item.productName || "Untitled Product",
@@ -469,6 +446,7 @@ export function renderPortalRequestsView() {
         <div class="section-stack">
             ${renderSummaryCards()}
             ${renderWorkspace()}
+            ${featureState.reviewModalOpen && getSelectedRequest() ? renderReviewModal(getSelectedRequest()) : ""}
         </div>
     `;
 
@@ -487,6 +465,7 @@ export function renderPortalRequestsView() {
             void handlePrepareRetailConversion(request);
         }
     });
+    root.querySelector("#portal-request-close-button")?.addEventListener("click", closePortalRequestReview);
 }
 
 async function handlePortalRequestSubmit(event) {
@@ -639,8 +618,7 @@ function handlePortalRequestsRootClick(event) {
 
     const reviewButton = target.closest(".portal-request-review-button");
     if (reviewButton) {
-        featureState.selectedRequestId = reviewButton.dataset.requestId || "";
-        renderPortalRequestsView();
+        openPortalRequestReview(reviewButton.dataset.requestId || "");
         return;
     }
 
@@ -657,6 +635,12 @@ function handlePortalRequestsRootClick(event) {
 
         featureState.selectedRequestId = requestId;
         void handlePrepareRetailConversion(request);
+        return;
+    }
+
+    const reviewModalBackdrop = target.closest("#portal-request-review-modal");
+    if (target.id === "portal-request-review-modal" && reviewModalBackdrop) {
+        closePortalRequestReview();
     }
 }
 
