@@ -477,7 +477,7 @@ export function renderPortalRequestsView() {
     root.querySelector("#portal-request-prepare-button")?.addEventListener("click", () => {
         const request = getSelectedRequest();
         if (request) {
-            void handlePrepareRetailConversion(request);
+            void handleGridPrepareRetailConversion(request);
         }
     });
     root.querySelector("#portal-request-close-button")?.addEventListener("click", closePortalRequestReview);
