@@ -17,6 +17,8 @@ export const COLLECTIONS = {
     productPriceChangeReviews: `${BASE_DOC_PATH}/productPriceChangeReviews`,
     onlineCatalogues: `${BASE_DOC_PATH}/onlineCatalogues`,
     portalOrderRequests: `${BASE_DOC_PATH}/portalOrderRequests`,
+    customers: `${BASE_DOC_PATH}/customers`,
+    customerIdentifiers: `${BASE_DOC_PATH}/customerIdentifiers`,
     reorderPolicies: `${BASE_DOC_PATH}/reorderPolicies`,
     storeConfigs: `${BASE_DOC_PATH}/storeConfigs`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
