@@ -18,6 +18,7 @@ import {
     getPortalRequestConversionStatusLabel,
     getPortalRequestItems,
     getPortalRequestRequestId,
+    resolvePortalRequestSalesCatalogueId,
     getPortalRequestStatusLabel,
     markPortalRequestPreparedForRetail,
     PORTAL_REQUEST_STATUSES,
@@ -640,7 +641,7 @@ function handlePortalRequestsRootClick(event) {
 }
 
 function getPortalRequestCatalogueLookup(request) {
-    const catalogueId = normalizeText(request?.catalogueId);
+    const catalogueId = resolvePortalRequestSalesCatalogueId(request);
     if (!catalogueId) return null;
     return featureState.catalogueItemLookups[catalogueId] || null;
 }
@@ -676,7 +677,7 @@ function resolvePortalRequestItemCategory(item, catalogueLookup) {
 }
 
 async function ensurePortalRequestCatalogueLookup(request) {
-    const catalogueId = normalizeText(request?.catalogueId);
+    const catalogueId = resolvePortalRequestSalesCatalogueId(request);
     if (!catalogueId || featureState.catalogueItemLookups[catalogueId] || featureState.loadingCatalogueIds[catalogueId]) {
         return;
     }
@@ -698,7 +699,11 @@ async function ensurePortalRequestCatalogueLookup(request) {
             }))
         };
 
-        if (getState().currentRoute === "#/portal-requests" && featureState.reviewModalOpen && getSelectedRequest()?.catalogueId === catalogueId) {
+        if (
+            getState().currentRoute === "#/portal-requests"
+            && featureState.reviewModalOpen
+            && resolvePortalRequestSalesCatalogueId(getSelectedRequest()) === catalogueId
+        ) {
             syncPortalRequestItemsGrid();
         }
     } catch (error) {

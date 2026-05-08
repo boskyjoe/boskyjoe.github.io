@@ -52,6 +52,31 @@ function resolveSourceCatalogueItemId(item = {}) {
     return composite;
 }
 
+function resolveSourceCatalogueId(item = {}) {
+    const explicit = normalizeText(item.sourceCatalogueId || item.sourceSalesCatalogueId || item.salesCatalogueId);
+    if (explicit) return explicit;
+
+    const composite = normalizeText(item.catalogueItemId);
+    if (composite.includes("__")) {
+        return normalizeText(composite.split("__")[0]);
+    }
+
+    return "";
+}
+
+export function resolvePortalRequestSalesCatalogueId(request = {}) {
+    const explicit = normalizeText(
+        request.sourceCatalogueId
+        || request.sourceSalesCatalogueId
+        || request.salesCatalogueId
+    );
+    if (explicit) return explicit;
+
+    const items = getPortalRequestItems(request);
+    const fromItems = items.map(resolveSourceCatalogueId).find(Boolean);
+    return fromItems || normalizeText(request.catalogueId);
+}
+
 function mapStatusValue(value, allowedValues, fallback) {
     const normalized = normalizeText(value)
         .toLowerCase()
@@ -97,7 +122,7 @@ export function canPreparePortalRequestForRetail(request = {}) {
     const status = normalizePortalRequestStatus(request.status);
     const conversionStatus = normalizePortalRequestConversionStatus(request.conversionStatus);
     const items = getPortalRequestItems(request);
-    const catalogueId = normalizeText(request.catalogueId);
+    const catalogueId = resolvePortalRequestSalesCatalogueId(request);
 
     if (!items.length) {
         return {
@@ -233,7 +258,7 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
         throw new Error(gate.reason);
     }
 
-    const catalogueId = normalizeText(request.catalogueId);
+    const catalogueId = resolvePortalRequestSalesCatalogueId(request);
     const requestItems = getPortalRequestItems(request);
     const catalogueItems = await fetchSalesCatalogueItems(catalogueId);
     const catalogueByProductId = new Map((catalogueItems || []).map(item => [normalizeText(item.productId), item]));
@@ -333,7 +358,7 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
         customerEmail: normalizeText(request.customerEmail),
         customerAddress: getPortalRequestAddress(request),
         catalogueId,
-        catalogueName: normalizeText(request.catalogueName) || selectedCatalogue?.catalogueName || "-",
+        catalogueName: normalizeText(request.sourceCatalogueName || request.catalogueName) || selectedCatalogue?.catalogueName || "-",
         leadNotes: summaryNotes,
         items,
         warnings
