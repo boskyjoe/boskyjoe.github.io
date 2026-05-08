@@ -33,6 +33,15 @@ function buildIdentifierDocId(type, normalizedValue) {
     return `${type}__${encodeURIComponent(normalizedValue)}`;
 }
 
+function buildCustomerMasterId() {
+    const stamp = Date.now();
+    const suffix = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+
+    return `CUST-${stamp}-${suffix}`;
+}
+
 function buildCustomerProfile(profile = {}) {
     return {
         displayName: normalizeText(profile.displayName || profile.customerName || profile.name),
@@ -80,7 +89,7 @@ export async function ensureCustomerMasterRecord(profile = {}, options = {}) {
             throw new Error("This customer matches multiple customer master records. Standardize the phone/email before saving.");
         }
 
-        const targetCustomerId = [...matchedCustomerIds][0] || customersCollection.doc().id;
+        const targetCustomerId = [...matchedCustomerIds][0] || buildCustomerMasterId();
         const targetCustomerRef = customersCollection.doc(targetCustomerId);
         const targetCustomerDoc = existingCustomerRef?.id === targetCustomerId
             ? existingCustomerDoc
