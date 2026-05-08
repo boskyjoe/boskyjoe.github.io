@@ -40,6 +40,18 @@ function parseItemsJson(itemsJson) {
     }
 }
 
+function resolveSourceCatalogueItemId(item = {}) {
+    const explicit = normalizeText(item.sourceCatalogueItemId || item.sourceItemId || item.catalogueSourceItemId);
+    if (explicit) return explicit;
+
+    const composite = normalizeText(item.catalogueItemId);
+    if (composite.includes("__")) {
+        return normalizeText(composite.split("__").pop());
+    }
+
+    return composite;
+}
+
 function mapStatusValue(value, allowedValues, fallback) {
     const normalized = normalizeText(value)
         .toLowerCase()
@@ -226,6 +238,14 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
     const catalogueItems = await fetchSalesCatalogueItems(catalogueId);
     const catalogueByProductId = new Map((catalogueItems || []).map(item => [normalizeText(item.productId), item]));
     const catalogueByItemId = new Map((catalogueItems || []).map(item => [normalizeText(item.id), item]));
+    const catalogueByName = new Map((catalogueItems || []).flatMap(item => {
+        const entries = [];
+        const productName = normalizeText(item.productName);
+        const itemName = normalizeText(item.itemId);
+        if (productName) entries.push([productName.toLowerCase(), item]);
+        if (itemName) entries.push([itemName.toLowerCase(), item]);
+        return entries;
+    }));
     const productMap = new Map((masterData.products || []).map(product => [normalizeText(product.id), product]));
     const catalogueHeaders = masterData.salesCatalogues || [];
     const selectedCatalogue = catalogueHeaders.find(catalogue => catalogue.id === catalogueId) || null;
@@ -236,35 +256,42 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
     requestItems.forEach(requestItem => {
         const productId = normalizeText(requestItem.productId);
         const catalogueItemId = normalizeText(requestItem.catalogueItemId);
-        const catalogueItem = catalogueByProductId.get(productId) || catalogueByItemId.get(catalogueItemId) || null;
+        const sourceCatalogueItemId = resolveSourceCatalogueItemId(requestItem);
+        const requestItemName = normalizeText(requestItem.name).toLowerCase();
+        const catalogueItem = catalogueByProductId.get(productId)
+            || catalogueByItemId.get(sourceCatalogueItemId)
+            || catalogueByItemId.get(catalogueItemId)
+            || catalogueByName.get(requestItemName)
+            || null;
 
         if (!catalogueItem) {
-            warnings.push(`${requestItem.name || productId || catalogueItemId || "Item"}: not found in the linked sales catalogue.`);
+            warnings.push(`${requestItem.name || productId || sourceCatalogueItemId || catalogueItemId || "Item"}: not found in the linked sales catalogue.`);
             return;
         }
 
         const quantity = Math.max(0, Math.floor(normalizeNumber(requestItem.quantity)));
         if (quantity <= 0) return;
 
-        const product = productMap.get(productId) || null;
+        const effectiveProductId = productId || normalizeText(catalogueItem.productId);
+        const product = productMap.get(effectiveProductId) || null;
         const currentPrice = roundCurrency(catalogueItem.sellingPrice || requestItem.price || 0);
         const requestedPrice = roundCurrency(requestItem.price || 0);
 
         if (requestedPrice > 0 && currentPrice !== requestedPrice) {
-            warnings.push(`${requestItem.name || catalogueItem.productName || productId}: price refreshed from ${requestedPrice.toFixed(2)} to ${currentPrice.toFixed(2)}.`);
+            warnings.push(`${requestItem.name || catalogueItem.productName || effectiveProductId}: price refreshed from ${requestedPrice.toFixed(2)} to ${currentPrice.toFixed(2)}.`);
         }
 
         if (product) {
             const currentStock = normalizeNumber(product.inventoryCount);
             if (currentStock < quantity) {
-                warnings.push(`${requestItem.name || catalogueItem.productName || productId}: requested ${quantity}, available stock is ${currentStock}.`);
+                warnings.push(`${requestItem.name || catalogueItem.productName || effectiveProductId}: requested ${quantity}, available stock is ${currentStock}.`);
             }
         } else {
-            warnings.push(`${requestItem.name || catalogueItem.productName || productId}: product is not currently active in Product Catalogue.`);
+            warnings.push(`${requestItem.name || catalogueItem.productName || effectiveProductId}: product is not currently active in Product Catalogue.`);
         }
 
         items.push({
-            productId: productId || normalizeText(catalogueItem.productId),
+            productId: effectiveProductId,
             productName: catalogueItem.productName || requestItem.name || "Untitled Product",
             categoryId: catalogueItem.categoryId || normalizeText(requestItem.categoryId),
             categoryName: catalogueItem.categoryName || normalizeText(requestItem.categoryName) || "-",

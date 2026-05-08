@@ -645,6 +645,18 @@ function getPortalRequestCatalogueLookup(request) {
     return featureState.catalogueItemLookups[catalogueId] || null;
 }
 
+function resolvePortalRequestSourceCatalogueItemId(item = {}) {
+    const explicit = normalizeText(item.sourceCatalogueItemId || item.sourceItemId || item.catalogueSourceItemId);
+    if (explicit) return explicit;
+
+    const composite = normalizeText(item.catalogueItemId);
+    if (composite.includes("__")) {
+        return normalizeText(composite.split("__").pop());
+    }
+
+    return composite;
+}
+
 function resolvePortalRequestItemCategory(item, catalogueLookup) {
     const explicit = normalizeText(item.categoryName);
     if (explicit) return explicit;
@@ -653,7 +665,13 @@ function resolvePortalRequestItemCategory(item, catalogueLookup) {
 
     const productId = normalizeText(item.productId);
     const catalogueItemId = normalizeText(item.catalogueItemId);
-    const matchedItem = catalogueLookup.byProductId.get(productId) || catalogueLookup.byItemId.get(catalogueItemId) || null;
+    const sourceCatalogueItemId = resolvePortalRequestSourceCatalogueItemId(item);
+    const requestItemName = normalizeText(item.name).toLowerCase();
+    const matchedItem = catalogueLookup.byProductId.get(productId)
+        || catalogueLookup.byItemId.get(sourceCatalogueItemId)
+        || catalogueLookup.byItemId.get(catalogueItemId)
+        || catalogueLookup.byName.get(requestItemName)
+        || null;
     return normalizeText(matchedItem?.categoryName) || "-";
 }
 
@@ -669,7 +687,15 @@ async function ensurePortalRequestCatalogueLookup(request) {
         const items = await fetchSalesCatalogueItems(catalogueId);
         featureState.catalogueItemLookups[catalogueId] = {
             byProductId: new Map(items.map(item => [normalizeText(item.productId), item])),
-            byItemId: new Map(items.map(item => [normalizeText(item.id), item]))
+            byItemId: new Map(items.map(item => [normalizeText(item.id), item])),
+            byName: new Map(items.flatMap(item => {
+                const entries = [];
+                const productName = normalizeText(item.productName);
+                const itemName = normalizeText(item.itemId);
+                if (productName) entries.push([productName.toLowerCase(), item]);
+                if (itemName) entries.push([itemName.toLowerCase(), item]);
+                return entries;
+            }))
         };
 
         if (getState().currentRoute === "#/portal-requests" && featureState.reviewModalOpen && getSelectedRequest()?.catalogueId === catalogueId) {
