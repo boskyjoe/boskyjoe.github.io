@@ -2922,6 +2922,11 @@ select {
     gap: 1.25rem;
 }
 
+.portal-request-review-modal-body #portal-request-form {
+    display: grid;
+    gap: 1.25rem;
+}
+
 .portal-request-review-layout {
     display: grid;
     gap: 1rem;
@@ -2981,6 +2986,11 @@ select {
 
 .portal-request-review-notes-section .textarea {
     min-height: 128px;
+}
+
+.portal-request-review-notes-section,
+.portal-request-items-panel {
+    margin-top: 0.15rem;
 }
 
 .portal-request-display-field {
