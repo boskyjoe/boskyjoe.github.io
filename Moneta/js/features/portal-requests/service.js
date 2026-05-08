@@ -351,8 +351,8 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
 
     return {
         sourceType: "portal-request",
-        leadId: request.id,
-        businessLeadId: getPortalRequestRequestId(request),
+        portalRequestId: request.id,
+        portalRequestNumber: getPortalRequestRequestId(request),
         customerName: normalizeText(request.customerName),
         customerPhone: normalizeText(request.customerPhone),
         customerEmail: normalizeText(request.customerEmail),

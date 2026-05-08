@@ -575,8 +575,8 @@ async function handlePrepareRetailConversion(request) {
 
         const conversionPackage = {
             sourceType: conversionDraft.sourceType || "portal-request",
-            leadId: conversionDraft.leadId,
-            businessLeadId: conversionDraft.businessLeadId,
+            portalRequestId: conversionDraft.portalRequestId,
+            portalRequestNumber: conversionDraft.portalRequestNumber,
             sourceQuoteId: "",
             sourceQuoteNumber: "",
             sourceQuoteStatus: "",

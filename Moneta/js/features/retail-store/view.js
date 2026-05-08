@@ -32,6 +32,7 @@ import { downloadRetailReturnCreditNotePdf, downloadRetailSalePdf } from "./pdf.
 import {
     addRetailSaleReturn,
     addRetailSaleExpense,
+    cancelPreparedPortalRetailDraft,
     calculateRetailDraftSummary,
     RETAIL_DISCOUNT_TYPES,
     RETAIL_PAYMENT_TYPES,
@@ -87,6 +88,7 @@ const featureState = {
 };
 
 const LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY = "moneta.pendingLeadRetailConversion";
+const PORTAL_REQUESTS_ROUTE = "#/portal-requests";
 
 function createDefaultSaleDraft() {
     return {
@@ -112,6 +114,8 @@ function createDefaultSaleDraft() {
         orderDiscountAmount: "",
         orderTaxPercentage: "",
         sourceType: "direct-store",
+        sourcePortalRequestId: "",
+        sourcePortalRequestNumber: "",
         sourceLeadId: "",
         sourceLeadBusinessId: "",
         sourceLeadCustomerName: "",
@@ -161,6 +165,7 @@ function isPortalRequestRetailSource(value) {
 function deriveRetailSourceType(value, fallbackContext = {}) {
     const normalized = normalizeRetailSourceType(value);
     if (normalized) return normalized;
+    if (normalizeText(fallbackContext.sourcePortalRequestId)) return "portal-request";
     if (normalizeText(fallbackContext.sourceQuoteId)) return "quote";
     if (normalizeText(fallbackContext.sourceLeadId)) return "lead";
     return "direct-store";
@@ -1329,14 +1334,23 @@ function renderRetailStoreViewShell(snapshot) {
         ? workspaceSale?.paymentStatus || draftPaymentStatus
         : draftPaymentStatus;
     const sourceType = deriveRetailSourceType(featureState.saleDraft.sourceType || workspaceSale?.sourceType || "", {
+        sourcePortalRequestId: featureState.saleDraft.sourcePortalRequestId || workspaceSale?.sourcePortalRequestId || "",
         sourceLeadId: featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "",
         sourceQuoteId: featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || ""
     });
     const normalizedSourceType = normalizeRetailSourceType(sourceType);
     const isPortalRequestSource = isPortalRequestRetailSource(sourceType);
+    const sourcePortalRequestId = normalizeText(featureState.saleDraft.sourcePortalRequestId || workspaceSale?.sourcePortalRequestId || "");
+    const sourcePortalRequestNumber = normalizeText(featureState.saleDraft.sourcePortalRequestNumber || workspaceSale?.sourcePortalRequestNumber || "");
     const sourceLeadId = normalizeText(featureState.saleDraft.sourceLeadId || workspaceSale?.sourceLeadId || "");
     const sourceLeadBusinessId = normalizeText(featureState.saleDraft.sourceLeadBusinessId || workspaceSale?.sourceLeadBusinessId || "");
-    const sourceLeadDisplayId = sourceLeadBusinessId || (sourceLeadId
+    const sourceReferenceId = isPortalRequestSource ? sourcePortalRequestId : sourceLeadId;
+    const sourceReferenceDisplayId = isPortalRequestSource
+        ? (sourcePortalRequestNumber || (sourcePortalRequestId ? `REQ-${sourcePortalRequestId.slice(-6).toUpperCase()}` : ""))
+        : (sourceLeadBusinessId || (sourceLeadId
+            ? `LEAD-${sourceLeadId.slice(-6).toUpperCase()}`
+            : ""));
+    const sourceLeadDisplayId = sourceReferenceDisplayId || (sourceLeadId
         ? `${isPortalRequestSource ? "REQ" : "LEAD"}-${sourceLeadId.slice(-6).toUpperCase()}`
         : "");
     const sourceQuoteId = normalizeText(featureState.saleDraft.sourceQuoteId || workspaceSale?.sourceQuoteId || "");
@@ -1414,16 +1428,16 @@ function renderRetailStoreViewShell(snapshot) {
             </div>
         </div>
     ` : "";
-    const sourceLeadBanner = sourceLeadId ? `
+    const sourceLeadBanner = sourceReferenceId ? `
         <div class="retail-source-lead-banner">
             <div>
                 <p class="section-kicker">${sourceBannerKicker}</p>
                 <p class="panel-copy">
-                    This retail sale is linked to ${sourceEntityLabel} <strong>${sourceLeadDisplayId || sourceLeadId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
+                    This retail sale is linked to ${sourceEntityLabel} <strong>${sourceReferenceDisplayId || sourceReferenceId}</strong>${sourceQuoteNumber ? ` and was prepared from quote <strong>${sourceQuoteNumber}</strong>.` : "."}
                 </p>
             </div>
             <div class="toolbar-meta">
-                <span class="status-pill">${sourceLeadDisplayId || sourceLeadId}</span>
+                <span class="status-pill">${sourceReferenceDisplayId || sourceReferenceId}</span>
                 ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
                 ${sourceQuoteStatus ? `<span class="status-pill">${sourceQuoteStatus}</span>` : ""}
                 ${sourceType ? `<span class="status-pill">Source: ${sourceTypeLabel}</span>` : ""}
@@ -1455,7 +1469,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <span class="status-pill">${activeCatalogues} active catalogues</span>
                     <span class="status-pill">${summary.itemCount} active products</span>
                     <span class="status-pill">${featureState.sales.length} sales recorded</span>
-                    ${sourceLeadId ? `<span class="status-pill">${sourceReferencePillLabel}: ${sourceLeadDisplayId || sourceLeadId}</span>` : ""}
+                    ${sourceReferenceId ? `<span class="status-pill">${sourceReferencePillLabel}: ${sourceReferenceDisplayId || sourceReferenceId}</span>` : ""}
                     ${sourceQuoteNumber ? `<span class="status-pill">Quote: ${sourceQuoteNumber}</span>` : ""}
                 </div>
             </div>
@@ -1849,7 +1863,7 @@ function renderRetailStoreViewShell(snapshot) {
                     <div class="form-actions">
                         <button id="retail-reset-button" class="button button-secondary" type="button">
                             <span class="button-icon">${icons.inactive}</span>
-                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : isReturnMode ? "Cancel Return" : isVoidMode ? "Cancel Void" : "Reset"}
+                            ${isViewMode ? "Close View" : isEditMode ? "Cancel Edit" : isReturnMode ? "Cancel Return" : isVoidMode ? "Cancel Void" : isPortalRequestSource ? "Cancel Draft" : "Reset"}
                         </button>
                         ${isViewMode ? `
                             <button id="retail-open-returns-button" class="button button-secondary" type="button">
@@ -2182,7 +2196,8 @@ function consumePendingLeadConversionPackage() {
 
     try {
         const parsed = JSON.parse(rawPackage);
-        if (!parsed || !parsed.leadId || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+        const hasSourceReference = Boolean(parsed?.leadId || parsed?.portalRequestId);
+        if (!parsed || !hasSourceReference || !Array.isArray(parsed.items) || parsed.items.length === 0) {
             return null;
         }
 
@@ -2208,8 +2223,10 @@ function applyPendingLeadConversionPackage() {
         salesCatalogueId: conversionPackage.catalogueId || "",
         saleNotes: conversionPackage.leadNotes || "",
         sourceType: conversionPackage.sourceType || "lead",
-        sourceLeadId: conversionPackage.leadId || "",
-        sourceLeadBusinessId: conversionPackage.businessLeadId || "",
+        sourcePortalRequestId: conversionPackage.portalRequestId || "",
+        sourcePortalRequestNumber: conversionPackage.portalRequestNumber || "",
+        sourceLeadId: conversionPackage.sourceType === "portal-request" ? "" : (conversionPackage.leadId || ""),
+        sourceLeadBusinessId: conversionPackage.sourceType === "portal-request" ? "" : (conversionPackage.businessLeadId || ""),
         sourceLeadCustomerName: conversionPackage.customerName || "",
         sourceQuoteId: conversionPackage.sourceQuoteId || "",
         sourceQuoteNumber: conversionPackage.sourceQuoteNumber || "",
@@ -2242,7 +2259,7 @@ function applyPendingLeadConversionPackage() {
     showToast(
         warningCount > 0
             ? `${sourceLabel} loaded with ${warningCount} draft check(s). Review before saving the sale.`
-            : `${sourceLabel} ${conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
+            : `${sourceLabel} ${conversionPackage.portalRequestNumber || conversionPackage.businessLeadId || conversionPackage.leadId} loaded into Retail Store.`,
         warningCount > 0 ? "warning" : "success",
         { title: "Retail Store" }
     );
@@ -2305,9 +2322,12 @@ function buildSaleDraftFromSale(sale) {
             : "",
         orderTaxPercentage: String(Number(sale.financials?.orderTaxPercentage) || 0),
         sourceType: deriveRetailSourceType(sale.sourceType || "", {
+            sourcePortalRequestId: sale.sourcePortalRequestId || "",
             sourceLeadId: sale.sourceLeadId || "",
             sourceQuoteId: sale.sourceQuoteId || ""
         }),
+        sourcePortalRequestId: sale.sourcePortalRequestId || "",
+        sourcePortalRequestNumber: sale.sourcePortalRequestNumber || "",
         sourceLeadId: sale.sourceLeadId || "",
         sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
         sourceLeadCustomerName: sale.sourceLeadCustomerName || "",
@@ -2845,10 +2865,12 @@ async function handleRetailSaleSubmit(event) {
                 { label: "Customer", value: customerName },
                 { label: "Store", value: selectedStore },
                 { label: "Catalogue", value: selectedCatalogueLabel },
-                ...(normalizeText(featureState.saleDraft.sourceLeadId)
+                ...((normalizeText(featureState.saleDraft.sourcePortalRequestId) || normalizeText(featureState.saleDraft.sourceLeadId))
                     ? [{
                         label: isPortalRequestRetailSource(featureState.saleDraft.sourceType) ? "Source Request" : "Source Lead",
-                        value: featureState.saleDraft.sourceLeadBusinessId || featureState.saleDraft.sourceLeadId
+                        value: isPortalRequestRetailSource(featureState.saleDraft.sourceType)
+                            ? (featureState.saleDraft.sourcePortalRequestNumber || featureState.saleDraft.sourcePortalRequestId)
+                            : (featureState.saleDraft.sourceLeadBusinessId || featureState.saleDraft.sourceLeadId)
                     }]
                     : []),
                 { label: "Payment Status", value: result.summary.paymentStatus },
@@ -2872,8 +2894,63 @@ async function handleRetailSaleSubmit(event) {
 }
 
 function handleRetailReset() {
-    resetRetailWorkspace();
-    renderRetailStoreView();
+    const currentUser = getState().currentUser;
+    const isPreparedPortalDraft = featureState.workspaceMode === "create"
+        && isPortalRequestRetailSource(featureState.saleDraft.sourceType)
+        && normalizeText(featureState.saleDraft.sourcePortalRequestId);
+
+    if (!isPreparedPortalDraft) {
+        resetRetailWorkspace();
+        renderRetailStoreView();
+        return;
+    }
+
+    void (async () => {
+        const confirmed = await showConfirmationModal({
+            title: "Cancel Retail Draft",
+            message: "This portal-request draft has not been saved yet.",
+            details: [
+                {
+                    label: "Source Request",
+                    value: featureState.saleDraft.sourcePortalRequestNumber || featureState.saleDraft.sourcePortalRequestId
+                }
+            ],
+            note: "Cancelling will release the prepared draft and return the request to the Portal Requests queue.",
+            confirmText: "Cancel Draft",
+            cancelText: "Keep Draft",
+            tone: "warning"
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await runProgressToastFlow({
+                title: "Cancelling Retail Draft",
+                initialMessage: "Releasing the prepared portal request...",
+                initialProgress: 30,
+                initialStep: "Step 1 of 3",
+                successTitle: "Retail Draft Cancelled",
+                successMessage: "The portal request was returned to the queue."
+            }, async ({ update }) => {
+                update("Clearing the prepared portal-request handoff...", 72, "Step 2 of 3");
+                await cancelPreparedPortalRetailDraft(featureState.saleDraft.sourcePortalRequestId, currentUser);
+                update("Refreshing the sales workspace...", 94, "Step 3 of 3");
+            });
+
+            ProgressToast.hide(0);
+            resetRetailWorkspace();
+            window.location.hash = PORTAL_REQUESTS_ROUTE;
+            showToast("Retail draft cancelled. Portal request returned to the queue.", "success", {
+                title: "Retail Store"
+            });
+        } catch (error) {
+            console.error("[Moneta] Retail draft cancel failed:", error);
+            ProgressToast.hide(0);
+            showToast(error?.message || "Could not cancel this retail draft.", "error", {
+                title: "Retail Store"
+            });
+        }
+    })();
 }
 
 async function handleRetailSaleView(button) {

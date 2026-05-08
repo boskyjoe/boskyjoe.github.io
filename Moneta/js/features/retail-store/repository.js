@@ -312,9 +312,14 @@ export async function createRetailSaleRecord(payload, user) {
     const now = getNow();
     const saleRef = db.collection(COLLECTIONS.salesInvoices).doc();
     const productRefs = payload.lineItems.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
+    const sourceType = normalizeText(payload.sourceType);
+    const sourcePortalRequestId = normalizeText(payload.sourcePortalRequestId);
+    const sourcePortalRequestRef = sourceType === "portal-request" && sourcePortalRequestId
+        ? db.collection(COLLECTIONS.portalOrderRequests).doc(sourcePortalRequestId)
+        : null;
     const sourceLeadId = normalizeText(payload.sourceLeadId);
     const sourceQuoteId = normalizeText(payload.sourceQuoteId);
-    const sourceLeadRef = sourceLeadId
+    const sourceLeadRef = sourceType !== "portal-request" && sourceLeadId
         ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
         : null;
     const sourceQuoteRef = sourceLeadRef && sourceQuoteId
@@ -323,12 +328,34 @@ export async function createRetailSaleRecord(payload, user) {
 
     return db.runTransaction(async transaction => {
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        const sourcePortalRequestDoc = sourcePortalRequestRef
+            ? await transaction.get(sourcePortalRequestRef)
+            : null;
         const sourceLeadDoc = sourceLeadRef
             ? await transaction.get(sourceLeadRef)
             : null;
         const sourceQuoteDoc = sourceQuoteRef
             ? await transaction.get(sourceQuoteRef)
             : null;
+
+        if (sourcePortalRequestRef) {
+            if (!sourcePortalRequestDoc?.exists) {
+                throw new Error("The source portal request could not be found. Refresh and try again.");
+            }
+
+            const requestData = sourcePortalRequestDoc.data() || {};
+            const requestStatus = normalizeText(requestData.status || "new").toLowerCase();
+            const conversionStatus = normalizeText(requestData.conversionStatus || "not_converted").toLowerCase();
+            const linkedSaleId = normalizeText(requestData.convertedToSaleId);
+
+            if (["rejected", "cancelled"].includes(requestStatus)) {
+                throw new Error("This portal request is no longer active.");
+            }
+
+            if (conversionStatus === "converted" && linkedSaleId && linkedSaleId !== saleRef.id) {
+                throw new Error("This portal request is already linked to another retail sale.");
+            }
+        }
 
         if (sourceLeadRef) {
             if (!sourceLeadDoc?.exists) {
@@ -398,7 +425,9 @@ export async function createRetailSaleRecord(payload, user) {
             salesSeasonId: payload.salesSeasonId,
             salesSeasonName: payload.salesSeasonName,
             manualVoucherNumber: payload.manualVoucherNumber,
-            sourceType: payload.sourceType || "",
+            sourceType: sourceType || "",
+            sourcePortalRequestId: sourcePortalRequestId || "",
+            sourcePortalRequestNumber: payload.sourcePortalRequestNumber || "",
             sourceLeadId: sourceLeadId || "",
             sourceLeadBusinessId: payload.sourceLeadBusinessId || "",
             sourceLeadCustomerName: payload.sourceLeadCustomerName || "",
@@ -514,6 +543,25 @@ export async function createRetailSaleRecord(payload, user) {
                 convertedStore: payload.store || "",
                 convertedOn: now,
                 convertedBy: user.email,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
+        if (sourcePortalRequestRef) {
+            transaction.update(sourcePortalRequestRef, {
+                status: "fulfilled",
+                conversionStatus: "converted",
+                convertedToSaleId: saleRef.id,
+                convertedToSaleNumber: payload.manualVoucherNumber || "",
+                convertedStore: payload.store || "",
+                convertedOn: now,
+                convertedBy: user.email,
+                convertedSaleStatus: "Active",
+                fulfilledBy: user.email,
+                fulfilledOn: now,
+                lastReviewedBy: user.email,
+                lastReviewedOn: now,
                 updatedBy: user.email,
                 updatedOn: now
             });
@@ -1147,11 +1195,19 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
         });
         const sourceLeadId = normalizeText(sale.sourceLeadId);
         const sourceQuoteId = normalizeText(sale.sourceQuoteId);
-        const sourceLeadRef = sourceLeadId
+        const sourceType = normalizeText(sale.sourceType);
+        const sourcePortalRequestId = normalizeText(sale.sourcePortalRequestId);
+        const sourcePortalRequestRef = sourceType === "portal-request" && sourcePortalRequestId
+            ? db.collection(COLLECTIONS.portalOrderRequests).doc(sourcePortalRequestId)
+            : null;
+        const sourceLeadRef = sourceType !== "portal-request" && sourceLeadId
             ? db.collection(COLLECTIONS.leads).doc(sourceLeadId)
             : null;
         const sourceQuoteRef = sourceLeadRef && sourceQuoteId
             ? sourceLeadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(sourceQuoteId)
+            : null;
+        const sourcePortalRequestDoc = sourcePortalRequestRef
+            ? await transaction.get(sourcePortalRequestRef)
             : null;
         const sourceLeadDoc = sourceLeadRef
             ? await transaction.get(sourceLeadRef)
@@ -1375,6 +1431,20 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             });
         }
 
+        if (sourcePortalRequestRef && sourcePortalRequestDoc?.exists) {
+            transaction.update(sourcePortalRequestRef, {
+                convertedToSaleId: saleId,
+                convertedToSaleNumber: sale.manualVoucherNumber || "",
+                convertedStore: sale.store || "",
+                convertedSaleStatus: "Voided",
+                convertedSaleVoidedOn: now,
+                convertedSaleVoidedBy: user.email,
+                convertedSaleVoidReason: voidReason,
+                updatedBy: user.email,
+                updatedOn: now
+            });
+        }
+
         if (sourceQuoteRef && sourceQuoteDoc?.exists) {
             transaction.update(sourceQuoteRef, {
                 quoteStatus: "Converted",
@@ -1402,6 +1472,36 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             reversedProductCount,
             reversedQuantity
         };
+    });
+}
+
+export async function releasePreparedPortalRequestDraft(portalRequestId, user) {
+    const normalizedRequestId = normalizeText(portalRequestId);
+    if (!normalizedRequestId) return;
+
+    const db = getDb();
+    const now = getNow();
+    const requestRef = db.collection(COLLECTIONS.portalOrderRequests).doc(normalizedRequestId);
+
+    return db.runTransaction(async transaction => {
+        const requestDoc = await transaction.get(requestRef);
+        if (!requestDoc.exists) {
+            throw new Error("The source portal request could not be found.");
+        }
+
+        const requestData = requestDoc.data() || {};
+        const conversionStatus = normalizeText(requestData.conversionStatus || "not_converted").toLowerCase();
+        if (conversionStatus === "converted") {
+            throw new Error("This portal request is already converted into a retail sale.");
+        }
+
+        transaction.update(requestRef, {
+            conversionStatus: "not_converted",
+            draftCancelledBy: user.email,
+            draftCancelledOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
     });
 }
 

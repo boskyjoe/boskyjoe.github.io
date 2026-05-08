@@ -8,6 +8,7 @@ import {
     addRetailSaleReturnRecord,
     addRetailSaleExpenseRecord,
     createRetailSaleRecord,
+    releasePreparedPortalRequestDraft,
     recordRetailSalePayment,
     updateRetailSaleRecord,
     voidRetailSalePaymentRecord,
@@ -243,6 +244,8 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
         : "Pay Later";
     const salesCatalogueId = normalizeText(payload.salesCatalogueId);
     const manualVoucherNumber = normalizeText(payload.manualVoucherNumber);
+    const sourcePortalRequestId = normalizeText(payload.sourcePortalRequestId);
+    const sourcePortalRequestNumber = normalizeText(payload.sourcePortalRequestNumber);
     const sourceLeadId = normalizeText(payload.sourceLeadId);
     const sourceLeadBusinessId = normalizeText(payload.sourceLeadBusinessId);
     const sourceLeadCustomerName = normalizeText(payload.sourceLeadCustomerName);
@@ -365,6 +368,8 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             salesSeasonName: catalogueHeader.seasonName || "-",
             manualVoucherNumber,
             sourceType,
+            sourcePortalRequestId,
+            sourcePortalRequestNumber,
             sourceLeadId,
             sourceLeadBusinessId,
             sourceLeadCustomerName: sourceLeadCustomerName || customerName,
@@ -415,6 +420,14 @@ export async function saveRetailSale(payload, user, catalogueHeaders = [], catal
         salePayload,
         summary
     };
+}
+
+export async function cancelPreparedPortalRetailDraft(portalRequestId, user) {
+    if (!user) {
+        throw new Error("You must be logged in to cancel a prepared retail draft.");
+    }
+
+    return releasePreparedPortalRequestDraft(portalRequestId, user);
 }
 
 function buildEditCatalogueItems(catalogueItems = [], lineItems = []) {
