@@ -81,6 +81,17 @@ function portalActionMarkup(data) {
     `;
 }
 
+function isPortalGridActionClick(event) {
+    const target = event?.target;
+    if (!(target instanceof Element)) return false;
+
+    return Boolean(
+        target.closest(
+            ".portal-request-review-button, .portal-request-prepare-button, .grid-action-button, .table-actions"
+        )
+    );
+}
+
 function buildPortalRequestsColumnDefs() {
     return [
         { field: "requestId", headerName: "Request ID", minWidth: 180, flex: 1 },
@@ -187,6 +198,7 @@ export function initializePortalRequestsGrid(gridElement, handlers = {}) {
         paginationPageSizeSelector: [10, 25, 50, 100],
         getRowId: params => params.data.id,
         onRowClicked: params => {
+            if (isPortalGridActionClick(params.event)) return;
             portalRequestsGridHandlers.onRowClicked?.(params.data);
         },
         defaultColDef: {

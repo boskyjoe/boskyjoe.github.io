@@ -137,6 +137,25 @@ function closePortalRequestReview() {
     renderPortalRequestsView();
 }
 
+async function confirmGridRetailDraftLaunch(request) {
+    if (!request) return false;
+
+    return showConfirmationModal({
+        title: "Create Retail Draft",
+        message: "Moneta will validate this portal request, mark it prepared for retail, and then open Retail Store with a prefilled draft for final handoff.",
+        details: [
+            { label: "Request", value: getPortalRequestRequestId(request) },
+            { label: "Customer", value: request.customerName || "-" },
+            { label: "Pickup", value: [request.pickupDate, request.pickupTime].filter(Boolean).join(" • ") || "-" }
+        ],
+        note: "Select OK to continue to Retail Store. Select Cancel to stay on the Portal Requests queue.",
+        noteTitle: "What Happens Next",
+        confirmText: "OK",
+        cancelText: "Cancel",
+        tone: "default"
+    });
+}
+
 function shouldListenToPortalRequests(snapshot = getState()) {
     return snapshot.currentRoute === "#/portal-requests" && Boolean(snapshot.currentUser);
 }
@@ -608,6 +627,14 @@ async function handlePrepareRetailConversion(request) {
     }
 }
 
+async function handleGridPrepareRetailConversion(request) {
+    const confirmed = await confirmGridRetailDraftLaunch(request);
+    if (!confirmed) return;
+
+    featureState.selectedRequestId = request.id || featureState.selectedRequestId;
+    await handlePrepareRetailConversion(request);
+}
+
 function handlePortalRequestsRootClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -629,8 +656,7 @@ function handlePortalRequestsRootClick(event) {
             return;
         }
 
-        featureState.selectedRequestId = requestId;
-        void handlePrepareRetailConversion(request);
+        void handleGridPrepareRetailConversion(request);
         return;
     }
 
