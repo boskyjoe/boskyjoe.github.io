@@ -434,6 +434,7 @@ export async function createRetailSaleRecord(payload, user) {
             sourceQuoteId: payload.sourceQuoteId || "",
             sourceQuoteNumber: payload.sourceQuoteNumber || "",
             sourceQuoteStatus: payload.sourceQuoteStatus || "",
+            customerId: payload.customerId || "",
             customerInfo: payload.customerInfo,
             saleNotes: payload.saleNotes || "",
             lineItems: payload.lineItems,
@@ -1534,6 +1535,7 @@ export async function updateRetailSaleRecord(saleId, updatePayload, user) {
         }
 
         const baseUpdate = {
+            customerId: normalizeText(updatePayload.customerId || sale.customerId),
             customerInfo: {
                 ...(sale.customerInfo || {}),
                 ...(updatePayload.customerInfo || {})

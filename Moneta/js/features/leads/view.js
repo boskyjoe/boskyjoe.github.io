@@ -2259,6 +2259,7 @@ async function handleLeadSubmit(event) {
             update("Writing enquiry details to the database...", 72, "Step 3 of 5");
             const result = await saveLead({
                 docId,
+                customerId: getEditingLead()?.customerId || "",
                 customerName: document.getElementById("lead-customer-name")?.value,
                 customerPhone: document.getElementById("lead-customer-phone")?.value,
                 customerEmail: document.getElementById("lead-customer-email")?.value,
@@ -2970,6 +2971,7 @@ async function handleLeadConvert(button) {
             sourceType: conversionDraft.sourceType || conversionSource,
             leadId: conversionDraft.leadId,
             businessLeadId: conversionDraft.businessLeadId,
+            customerId: conversionDraft.customerId || "",
             sourceQuoteId: conversionDraft.sourceQuoteId || "",
             sourceQuoteNumber: conversionDraft.sourceQuoteNumber || "",
             sourceQuoteStatus: conversionDraft.sourceQuoteStatus || "",

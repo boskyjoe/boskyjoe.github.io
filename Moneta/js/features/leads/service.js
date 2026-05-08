@@ -13,6 +13,7 @@ import {
 import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/store-config.js";
+import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
@@ -406,6 +407,19 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
     }
 
     const { docId, leadData } = validateLeadPayload(payload, salesCatalogues, seasons);
+    const customerResult = await ensureCustomerMasterRecord({
+        customerId: payload.customerId || "",
+        customerName: leadData.customerName,
+        customerPhone: leadData.customerPhone,
+        customerEmail: leadData.customerEmail,
+        customerAddress: leadData.customerAddress
+    }, {
+        existingCustomerId: payload.customerId || "",
+        sourceType: "lead",
+        userEmail: user.email,
+        activityDate: leadData.enquiryDate || null
+    });
+    leadData.customerId = customerResult.customerId;
 
     if (docId) {
         await updateLeadRecord(docId, leadData, user);
@@ -504,7 +518,20 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
         });
 
         if (shouldSyncLeadCustomer) {
+            const customerResult = await ensureCustomerMasterRecord({
+                customerId: lead.customerId || "",
+                customerName: nextCustomerName,
+                customerPhone: nextCustomerPhone,
+                customerEmail: nextCustomerEmail,
+                customerAddress: nextCustomerAddress
+            }, {
+                existingCustomerId: lead.customerId || "",
+                sourceType: "lead",
+                userEmail: user.email,
+                activityDate: lead.enquiryDate || null
+            });
             await updateLeadRecord(lead.id, {
+                customerId: customerResult.customerId,
                 customerName: nextCustomerName,
                 customerPhone: nextCustomerPhone,
                 customerEmail: nextCustomerEmail,
@@ -521,7 +548,20 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
     });
 
     if (shouldSyncLeadCustomer) {
+        const customerResult = await ensureCustomerMasterRecord({
+            customerId: lead.customerId || "",
+            customerName: nextCustomerName,
+            customerPhone: nextCustomerPhone,
+            customerEmail: nextCustomerEmail,
+            customerAddress: nextCustomerAddress
+        }, {
+            existingCustomerId: lead.customerId || "",
+            sourceType: "lead",
+            userEmail: user.email,
+            activityDate: lead.enquiryDate || null
+        });
         await updateLeadRecord(lead.id, {
+            customerId: customerResult.customerId,
             customerName: nextCustomerName,
             customerPhone: nextCustomerPhone,
             customerEmail: nextCustomerEmail,
@@ -753,6 +793,7 @@ export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
         sourceType: "lead",
         leadId: lead.id,
         businessLeadId: lead.businessLeadId || "",
+        customerId: normalizeText(lead.customerId),
         customerName: normalizeText(lead.customerName),
         customerPhone: normalizeText(lead.customerPhone),
         customerEmail: normalizeText(lead.customerEmail),
@@ -873,6 +914,7 @@ export async function buildLeadQuoteToRetailConversionDraft(lead, quote, masterD
         sourceQuoteStatus: quoteStatus || "Draft",
         leadId: lead.id,
         businessLeadId: lead.businessLeadId || "",
+        customerId: normalizeText(lead.customerId),
         customerName: normalizeText(quote.customerSnapshot?.customerName || lead.customerName),
         customerPhone: normalizeText(quote.customerSnapshot?.customerPhone || lead.customerPhone),
         customerEmail: normalizeText(quote.customerSnapshot?.customerEmail || lead.customerEmail),

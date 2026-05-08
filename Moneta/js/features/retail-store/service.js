@@ -4,6 +4,7 @@ import {
     getRetailStoreTaxDefaults as resolveRetailStoreTaxDefaults,
     isRetailStoreName
 } from "../../shared/store-config.js";
+import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 import {
     addRetailSaleReturnRecord,
     addRetailSaleExpenseRecord,
@@ -253,6 +254,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
     const sourceQuoteId = normalizeText(payload.sourceQuoteId);
     const sourceQuoteNumber = normalizeText(payload.sourceQuoteNumber);
     const sourceQuoteStatus = normalizeText(payload.sourceQuoteStatus);
+    const customerId = normalizeText(payload.customerId);
     const customerName = normalizeText(payload.customerName);
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
@@ -376,6 +378,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             sourceQuoteId,
             sourceQuoteNumber,
             sourceQuoteStatus,
+            customerId,
             customerInfo: {
                 name: customerName,
                 phone: customerPhone,
@@ -413,6 +416,19 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
 
 export async function saveRetailSale(payload, user, catalogueHeaders = [], catalogueItems = []) {
     const { salePayload, summary } = validateRetailSalePayload(payload, user, catalogueHeaders, catalogueItems);
+    const customerResult = await ensureCustomerMasterRecord({
+        customerId: salePayload.customerId || "",
+        customerName: salePayload.customerInfo?.name || "",
+        customerPhone: salePayload.customerInfo?.phone || "",
+        customerEmail: salePayload.customerInfo?.email || "",
+        customerAddress: salePayload.customerInfo?.address || ""
+    }, {
+        existingCustomerId: salePayload.customerId || "",
+        sourceType: "retail-sale",
+        userEmail: user.email,
+        activityDate: salePayload.saleDate || null
+    });
+    salePayload.customerId = customerResult.customerId;
     const docRef = await createRetailSaleRecord(salePayload, user);
 
     return {
@@ -484,6 +500,7 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
     const customerAddress = normalizeText(payload.customerAddress);
+    const customerId = normalizeText(payload.customerId || sale.customerId);
     const saleNotes = normalizeText(payload.saleNotes);
 
     if (!customerName) {
@@ -501,6 +518,7 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
     const baseUpdate = {
         editScope: effectiveScope,
         editReason,
+        customerId,
         customerInfo: {
             name: customerName,
             phone: customerPhone,
@@ -589,6 +607,19 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
 
 export async function saveRetailSaleUpdate(sale, payload, user, catalogueItems = []) {
     const { updatePayload, summary } = validateRetailSaleEditPayload(sale, payload, user, catalogueItems);
+    const customerResult = await ensureCustomerMasterRecord({
+        customerId: updatePayload.customerId || sale.customerId || "",
+        customerName: updatePayload.customerInfo?.name || sale.customerInfo?.name || "",
+        customerPhone: updatePayload.customerInfo?.phone || sale.customerInfo?.phone || "",
+        customerEmail: updatePayload.customerInfo?.email || sale.customerInfo?.email || "",
+        customerAddress: updatePayload.customerInfo?.address || sale.customerInfo?.address || ""
+    }, {
+        existingCustomerId: updatePayload.customerId || sale.customerId || "",
+        sourceType: "retail-sale",
+        userEmail: user.email,
+        activityDate: updatePayload.saleDate || sale.saleDate || null
+    });
+    updatePayload.customerId = customerResult.customerId;
     const result = await updateRetailSaleRecord(sale.id, updatePayload, user);
 
     return {

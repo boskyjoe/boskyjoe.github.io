@@ -647,6 +647,7 @@ async function handlePrepareRetailConversion(request) {
             sourceType: conversionDraft.sourceType || "portal-request",
             portalRequestId: conversionDraft.portalRequestId,
             portalRequestNumber: conversionDraft.portalRequestNumber,
+            customerId: conversionDraft.customerId || "",
             sourceQuoteId: "",
             sourceQuoteNumber: "",
             sourceQuoteStatus: "",

@@ -353,6 +353,7 @@ export async function buildPortalRequestToRetailConversionDraft(request, masterD
         sourceType: "portal-request",
         portalRequestId: request.id,
         portalRequestNumber: getPortalRequestRequestId(request),
+        customerId: normalizeText(request.customerId),
         customerName: normalizeText(request.customerName),
         customerPhone: normalizeText(request.customerPhone),
         customerEmail: normalizeText(request.customerEmail),

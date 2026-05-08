@@ -93,6 +93,7 @@ const PORTAL_REQUESTS_ROUTE = "#/portal-requests";
 function createDefaultSaleDraft() {
     return {
         saleDate: toDateInputValue(new Date()),
+        customerId: "",
         customerName: "",
         customerPhone: "",
         customerEmail: "",
@@ -2216,6 +2217,7 @@ function applyPendingLeadConversionPackage() {
     featureState.workspaceMode = "create";
     featureState.saleDraft = {
         ...createDefaultSaleDraft(),
+        customerId: conversionPackage.customerId || "",
         customerName: conversionPackage.customerName || "",
         customerPhone: conversionPackage.customerPhone || "",
         customerEmail: conversionPackage.customerEmail || "",
@@ -2297,6 +2299,7 @@ function updateDraftField(field, value) {
 function buildSaleDraftFromSale(sale) {
     return {
         saleDate: toDateInputValue(sale.saleDate),
+        customerId: sale.customerId || "",
         customerName: sale.customerInfo?.name || "",
         customerPhone: sale.customerInfo?.phone || "",
         customerEmail: sale.customerInfo?.email || "",
