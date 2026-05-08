@@ -1229,12 +1229,14 @@ async function submitPickupRequest() {
 function buildIntakeSubmission(formData, cartEntries, total) {
   const lineItems = cartEntries.map(({ item, quantity, total: lineTotal }) => ({
     catalogueItemId: item.id,
+    sourceCatalogueItemId: item.sourceCatalogueItemId || item.id,
     productId: item.productId || "",
     name: item.name,
     quantity,
     price: Number(item.price || 0),
     lineTotal,
     categoryId: item.categoryId || "",
+    categoryName: item.categoryName || "",
     unitLabel: item.unitLabel || "each"
   }));
 
