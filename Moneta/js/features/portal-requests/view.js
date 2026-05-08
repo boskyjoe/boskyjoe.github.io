@@ -254,8 +254,8 @@ function renderQueueCard() {
                     </div>
                 </div>
                 <div class="toolbar-meta">
-                    <span class="status-pill">${totalRequests} requests</span>
-                    <span class="status-pill">${newRequests} new</span>
+                    <span id="portal-requests-total-pill" class="status-pill">${totalRequests} requests</span>
+                    <span id="portal-requests-new-pill" class="status-pill">${newRequests} new</span>
                 </div>
             </div>
             <div class="panel-body">
@@ -415,11 +415,66 @@ function renderWorkspace() {
     return renderQueueCard();
 }
 
+function renderPortalRequestsShell() {
+    return `
+        <div class="section-stack">
+            <div id="portal-requests-summary-host">${renderSummaryCards()}</div>
+            ${renderWorkspace()}
+            <div id="portal-request-modal-host"></div>
+        </div>
+    `;
+}
+
 function bindPortalRequestsRootEvents(root) {
     if (!root || root.dataset.portalRequestsBound === "true") return;
 
     root.addEventListener("click", handlePortalRequestsRootClick);
     root.dataset.portalRequestsBound = "true";
+}
+
+function bindPortalRequestsPersistentEvents(root) {
+    const searchInput = root.querySelector("#portal-requests-search");
+    if (searchInput && searchInput.dataset.portalRequestsBound !== "true") {
+        searchInput.addEventListener("input", event => {
+            featureState.searchTerm = event.target.value || "";
+            updatePortalRequestsGridSearch(featureState.searchTerm);
+        });
+        searchInput.dataset.portalRequestsBound = "true";
+    }
+}
+
+function syncPortalRequestsSummaryAndMeta(root) {
+    const summaryHost = root.querySelector("#portal-requests-summary-host");
+    if (summaryHost) {
+        summaryHost.innerHTML = renderSummaryCards();
+    }
+
+    const totalRequests = featureState.requests.length;
+    const newRequests = featureState.requests.filter(request => getPortalRequestStatusLabel(request.status) === "New").length;
+    const totalPill = root.querySelector("#portal-requests-total-pill");
+    const newPill = root.querySelector("#portal-requests-new-pill");
+    const searchInput = root.querySelector("#portal-requests-search");
+
+    if (totalPill) {
+        totalPill.textContent = `${totalRequests} requests`;
+    }
+
+    if (newPill) {
+        newPill.textContent = `${newRequests} new`;
+    }
+
+    if (searchInput && searchInput.value !== featureState.searchTerm) {
+        searchInput.value = featureState.searchTerm;
+    }
+}
+
+function syncPortalRequestReviewModal(root) {
+    const modalHost = root.querySelector("#portal-request-modal-host");
+    if (!modalHost) return;
+
+    const request = getSelectedRequest();
+    const shouldRenderModal = featureState.reviewModalOpen && request;
+    modalHost.innerHTML = shouldRenderModal ? renderReviewModal(request) : "";
 }
 
 function syncPortalRequestsGrid() {
@@ -457,21 +512,17 @@ export function renderPortalRequestsView() {
 
     ensureSelectedRequest();
     bindPortalRequestsRootEvents(root);
-    root.innerHTML = `
-        <div class="section-stack">
-            ${renderSummaryCards()}
-            ${renderWorkspace()}
-            ${featureState.reviewModalOpen && getSelectedRequest() ? renderReviewModal(getSelectedRequest()) : ""}
-        </div>
-    `;
+    if (root.dataset.portalRequestsShellMounted !== "true") {
+        root.innerHTML = renderPortalRequestsShell();
+        root.dataset.portalRequestsShellMounted = "true";
+    }
+
+    syncPortalRequestsSummaryAndMeta(root);
+    syncPortalRequestReviewModal(root);
+    bindPortalRequestsPersistentEvents(root);
 
     syncPortalRequestsGrid();
     syncPortalRequestItemsGrid();
-
-    root.querySelector("#portal-requests-search")?.addEventListener("input", event => {
-        featureState.searchTerm = event.target.value || "";
-        updatePortalRequestsGridSearch(featureState.searchTerm);
-    });
 
     root.querySelector("#portal-request-form")?.addEventListener("submit", handlePortalRequestSubmit);
     root.querySelector("#portal-request-prepare-button")?.addEventListener("click", () => {
