@@ -1227,18 +1227,36 @@ async function submitPickupRequest() {
 }
 
 function buildIntakeSubmission(formData, cartEntries, total) {
-  const lineItems = cartEntries.map(({ item, quantity, total: lineTotal }) => ({
-    catalogueItemId: item.id,
-    sourceCatalogueItemId: item.sourceCatalogueItemId || item.id,
-    productId: item.productId || "",
-    name: item.name,
-    quantity,
-    price: Number(item.price || 0),
-    lineTotal,
-    categoryId: item.categoryId || "",
-    categoryName: item.categoryName || "",
-    unitLabel: item.unitLabel || "each"
-  }));
+  const sourceCatalogueIds = new Set();
+  const sourceCatalogueNames = new Set();
+  const lineItems = cartEntries.map(({ item, quantity, total: lineTotal }) => {
+    const compositeItemId = String(item.id || "");
+    const [derivedSourceCatalogueId, derivedSourceCatalogueItemId] = compositeItemId.includes("__")
+      ? compositeItemId.split("__")
+      : ["", ""];
+
+    return {
+      catalogueItemId: item.id,
+      sourceCatalogueId: item.sourceCatalogueId || derivedSourceCatalogueId || "",
+      sourceCatalogueName: item.sourceCatalogueName || "",
+      sourceCatalogueItemId: item.sourceCatalogueItemId || derivedSourceCatalogueItemId || item.id,
+      productId: item.productId || "",
+      name: item.name,
+      quantity,
+      price: Number(item.price || 0),
+      lineTotal,
+      categoryId: item.categoryId || "",
+      categoryName: item.categoryName || "",
+      unitLabel: item.unitLabel || "each"
+    };
+  }).map((lineItem) => {
+    if (lineItem.sourceCatalogueId) sourceCatalogueIds.add(lineItem.sourceCatalogueId);
+    if (lineItem.sourceCatalogueName) sourceCatalogueNames.add(lineItem.sourceCatalogueName);
+    return lineItem;
+  });
+
+  const sourceCatalogueId = sourceCatalogueIds.size === 1 ? Array.from(sourceCatalogueIds)[0] : "";
+  const sourceCatalogueName = sourceCatalogueNames.size === 1 ? Array.from(sourceCatalogueNames)[0] : "";
 
   return new URLSearchParams({
     customerName: String(formData.get("customerName") || ""),
@@ -1255,6 +1273,8 @@ function buildIntakeSubmission(formData, cartEntries, total) {
     currency: String(state.catalogue?.currency || "INR"),
     catalogueId: String(state.catalogue?.catalogueId || ""),
     catalogueName: String(state.catalogue?.catalogueName || ""),
+    sourceCatalogueId,
+    sourceCatalogueName,
     cataloguePublishedAt: String(state.catalogue?.publishedAt || ""),
     pickupLocation: String(state.catalogue?.pickupLocation || ""),
     source: "moneta-pickup-portal"
