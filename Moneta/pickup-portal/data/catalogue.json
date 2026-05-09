@@ -2,9 +2,9 @@
   "catalogueId": "pickupPortal",
   "catalogueName": "Church Pickup Requests",
   "currency": "INR",
-  "publishedAt": "2026-05-09T23:36:01.535Z",
-  "generatedAt": "2026-05-09T23:36:01.535Z",
-  "version": 3,
+  "publishedAt": "2026-05-09T23:39:55.324Z",
+  "generatedAt": "2026-05-09T23:39:55.324Z",
+  "version": 4,
   "pickupNotice": "Submit a pickup request and wait for confirmation from the church store team before collection.",
   "pickupLocation": "Church Resource Centre",
   "contactPhone": "24242334",
@@ -13,6 +13,10 @@
     {
       "id": "XmPVxsnTU3TxbMxd4jbd",
       "name": "Dates & Carrot - Cake"
+    },
+    {
+      "id": "jKeYcdSjBzyaAjtVc2OD",
+      "name": "Rich Plum Eggless - Cake"
     },
     {
       "id": "sUcXZfwFY0VeHYIEWgHQ",
@@ -34,6 +38,22 @@
       "price": 1268.56,
       "unitLabel": "each",
       "imageLabel": "D&",
+      "isAvailable": true
+    },
+    {
+      "id": "TVcy8QbGMQOxLmGUTP0n__Tg4teYgBEHGFjjv960Yn",
+      "sourceCatalogueId": "TVcy8QbGMQOxLmGUTP0n",
+      "sourceCatalogueName": "2026 Christmas - Sales",
+      "sourceCatalogueItemId": "Tg4teYgBEHGFjjv960Yn",
+      "productId": "GtWfFWpg8n5NOpbn94LG",
+      "itemId": "ITEM-1778369929380",
+      "name": "Rich Plum Eggless (500 grams)",
+      "categoryId": "jKeYcdSjBzyaAjtVc2OD",
+      "categoryName": "Rich Plum Eggless - Cake",
+      "description": "",
+      "price": 2775,
+      "unitLabel": "each",
+      "imageLabel": "RP",
       "isAvailable": true
     },
     {
