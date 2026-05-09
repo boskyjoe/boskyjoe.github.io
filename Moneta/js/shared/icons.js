@@ -161,6 +161,15 @@ export const icons = {
             <path d="M14.5 13v7"></path>
         </svg>
     `,
+    portalRequests: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 4.5h9l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 19V6A1.5 1.5 0 0 1 6.5 4.5z"></path>
+            <path d="M15 4.5V8h3"></path>
+            <path d="M8 11h8"></path>
+            <path d="M8 14h8"></path>
+            <path d="M8 17h5"></path>
+        </svg>
+    `,
     consignment: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 7.5 12 3l9 4.5-9 4.5z"></path>
