@@ -2,9 +2,9 @@
   "catalogueId": "pickupPortal",
   "catalogueName": "Church Pickup Requests",
   "currency": "INR",
-  "publishedAt": "2026-05-04T23:28:18.851Z",
-  "generatedAt": "2026-05-04T23:28:18.851Z",
-  "version": 2,
+  "publishedAt": "2026-05-09T23:36:01.535Z",
+  "generatedAt": "2026-05-09T23:36:01.535Z",
+  "version": 3,
   "pickupNotice": "Submit a pickup request and wait for confirmation from the church store team before collection.",
   "pickupLocation": "Church Resource Centre",
   "contactPhone": "24242334",
@@ -13,6 +13,10 @@
     {
       "id": "XmPVxsnTU3TxbMxd4jbd",
       "name": "Dates & Carrot - Cake"
+    },
+    {
+      "id": "sUcXZfwFY0VeHYIEWgHQ",
+      "name": "Tin (800 Gms)"
     }
   ],
   "items": [
@@ -30,6 +34,22 @@
       "price": 1268.56,
       "unitLabel": "each",
       "imageLabel": "D&",
+      "isAvailable": true
+    },
+    {
+      "id": "TVcy8QbGMQOxLmGUTP0n__khxVhMFPILmqJae0uqrF",
+      "sourceCatalogueId": "TVcy8QbGMQOxLmGUTP0n",
+      "sourceCatalogueName": "2026 Christmas - Sales",
+      "sourceCatalogueItemId": "khxVhMFPILmqJae0uqrF",
+      "productId": "ikrNfn2vxejtjI4yOhc6",
+      "itemId": "ITEM-1778354690078",
+      "name": "Tin Plum Cake (800 grams)",
+      "categoryId": "sUcXZfwFY0VeHYIEWgHQ",
+      "categoryName": "Tin (800 Gms)",
+      "description": "",
+      "price": 4625,
+      "unitLabel": "each",
+      "imageLabel": "TP",
       "isAvailable": true
     }
   ]
