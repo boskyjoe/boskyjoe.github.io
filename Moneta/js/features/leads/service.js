@@ -416,6 +416,7 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
     }, {
         existingCustomerId: payload.customerId || "",
         sourceType: "lead",
+        sourceId: docId || "",
         userEmail: user.email,
         activityDate: leadData.enquiryDate || null
     });
@@ -426,7 +427,20 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
         return { mode: "update", leadData };
     }
 
-    await createLeadRecord(leadData, user);
+    const leadRef = await createLeadRecord(leadData, user);
+    await ensureCustomerMasterRecord({
+        customerId: customerResult.customerId,
+        customerName: leadData.customerName,
+        customerPhone: leadData.customerPhone,
+        customerEmail: leadData.customerEmail,
+        customerAddress: leadData.customerAddress
+    }, {
+        existingCustomerId: customerResult.customerId,
+        sourceType: "lead",
+        sourceId: leadRef.id,
+        userEmail: user.email,
+        activityDate: leadData.enquiryDate || null
+    });
     return { mode: "create", leadData };
 }
 
@@ -527,6 +541,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
             }, {
                 existingCustomerId: lead.customerId || "",
                 sourceType: "lead",
+                sourceId: lead.id || "",
                 userEmail: user.email,
                 activityDate: lead.enquiryDate || null
             });
@@ -557,6 +572,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
         }, {
             existingCustomerId: lead.customerId || "",
             sourceType: "lead",
+            sourceId: lead.id || "",
             userEmail: user.email,
             activityDate: lead.enquiryDate || null
         });

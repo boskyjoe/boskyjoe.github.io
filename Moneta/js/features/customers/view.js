@@ -110,6 +110,18 @@ function formatCustomerStatus(value) {
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function getCustomerAddressHistory(customer = {}) {
+    return Array.isArray(customer.addressHistory)
+        ? customer.addressHistory.filter(entry => normalizeText(entry?.address))
+        : [];
+}
+
+function formatCustomerSourceReference(sourceType, sourceId) {
+    const sourceLabel = formatSourceChannelLabel(sourceType) || normalizeText(sourceType) || "-";
+    const referenceId = normalizeText(sourceId);
+    return referenceId ? `${sourceLabel} • ${referenceId}` : sourceLabel;
+}
+
 function renderCustomerDisplayField(label, value, options = {}) {
     const resolvedValue = normalizeText(value) || (options.fallback || "-");
     const fieldClass = options.full ? "customer-master-display-field field-full" : "customer-master-display-field";
@@ -421,6 +433,24 @@ function renderRetailSaleActivityItem(sale) {
     `;
 }
 
+function renderAddressHistoryItem(entry) {
+    return `
+        <article class="customer-master-activity-item">
+            <div class="customer-master-activity-item-head">
+                <div>
+                    <h4>${escapeHtml(normalizeText(entry.address) || "-")}</h4>
+                    <p>${escapeHtml(formatDateTime(entry.archivedOn))}</p>
+                </div>
+                <span class="status-pill">${escapeHtml(formatSourceChannelLabel(entry.sourceType) || normalizeText(entry.sourceType) || "-")}</span>
+            </div>
+            <div class="customer-master-activity-item-grid">
+                <div><span class="customer-master-activity-label">Source Record</span><strong>${escapeHtml(normalizeText(entry.sourceId) || "-")}</strong></div>
+                <div><span class="customer-master-activity-label">Archived On</span><strong>${escapeHtml(formatDateTime(entry.archivedOn))}</strong></div>
+            </div>
+        </article>
+    `;
+}
+
 function renderRelatedActivitySection(config) {
     const count = Array.isArray(config.rows) ? config.rows.length : 0;
     const bodyMarkup = config.loading
@@ -458,6 +488,7 @@ function renderProfileModal(customer) {
     const channelLabels = getCustomerChannelLabels(customer);
     const activity = featureState.profileActivity;
     const sourceChannelsLabel = channelLabels.length ? channelLabels.join(", ") : "-";
+    const addressHistory = getCustomerAddressHistory(customer);
 
     return `
         <div id="customer-master-profile-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="customer-master-profile-title">
@@ -503,10 +534,23 @@ function renderProfileModal(customer) {
                                 ${renderCustomerDisplayField("Last Purchase", formatDate(customer.lastPurchaseOn))}
                                 ${renderCustomerDisplayField("First Seen Source", formatSourceChannelLabel(customer.firstSeenSource) || "-")}
                                 ${renderCustomerDisplayField("Last Activity Source", formatSourceChannelLabel(customer.lastActivitySource) || "-")}
+                                ${renderCustomerDisplayField("Primary Address Source", formatSourceChannelLabel(customer.primaryAddressSourceType) || "-")}
+                                ${renderCustomerDisplayField("Source Record", formatCustomerSourceReference(customer.primaryAddressSourceType, customer.primaryAddressSourceId))}
+                                ${renderCustomerDisplayField("Address History Count", String(addressHistory.length))}
                                 ${renderCustomerDisplayField("Linked Channels", sourceChannelsLabel, { full: true, multiline: true })}
                             </div>
                         </section>
                     </div>
+
+                    ${renderRelatedActivitySection({
+                        title: "Address History",
+                        copy: "Older customer addresses archived as newer transactions become the active primary address.",
+                        icon: icons.users,
+                        rows: addressHistory,
+                        loading: false,
+                        emptyMessage: "No older customer addresses have been archived yet.",
+                        renderItem: renderAddressHistoryItem
+                    })}
 
                     <div class="customer-master-activity-summary-grid">
                         <section class="summary-card">

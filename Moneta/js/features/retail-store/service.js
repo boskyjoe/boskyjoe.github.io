@@ -425,11 +425,25 @@ export async function saveRetailSale(payload, user, catalogueHeaders = [], catal
     }, {
         existingCustomerId: salePayload.customerId || "",
         sourceType: "retail-sale",
+        sourceId: "",
         userEmail: user.email,
         activityDate: salePayload.saleDate || null
     });
     salePayload.customerId = customerResult.customerId;
     const docRef = await createRetailSaleRecord(salePayload, user);
+    await ensureCustomerMasterRecord({
+        customerId: salePayload.customerId || "",
+        customerName: salePayload.customerInfo?.name || "",
+        customerPhone: salePayload.customerInfo?.phone || "",
+        customerEmail: salePayload.customerInfo?.email || "",
+        customerAddress: salePayload.customerInfo?.address || ""
+    }, {
+        existingCustomerId: salePayload.customerId || "",
+        sourceType: "retail-sale",
+        sourceId: docRef.id,
+        userEmail: user.email,
+        activityDate: salePayload.saleDate || null
+    });
 
     return {
         docRef,
@@ -616,6 +630,7 @@ export async function saveRetailSaleUpdate(sale, payload, user, catalogueItems =
     }, {
         existingCustomerId: updatePayload.customerId || sale.customerId || "",
         sourceType: "retail-sale",
+        sourceId: sale.id || "",
         userEmail: user.email,
         activityDate: updatePayload.saleDate || sale.saleDate || null
     });
