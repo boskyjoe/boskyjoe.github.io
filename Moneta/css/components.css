@@ -2906,6 +2906,193 @@ select {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.customer-master-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.customer-master-grid-shell {
+    min-height: 0;
+}
+
+.customer-master-profile-modal-card {
+    width: min(1380px, 100%);
+}
+
+.customer-master-profile-body {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.customer-master-profile-layout {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.95fr);
+    align-items: start;
+}
+
+.customer-master-profile-section {
+    min-width: 0;
+}
+
+.customer-master-display-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+}
+
+.customer-master-display-field {
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+    min-width: 0;
+}
+
+.customer-master-display-label {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.customer-master-display-value {
+    min-height: 2.85rem;
+    padding: 0.72rem 0.9rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, var(--bg-panel-subtle) 0%, var(--bg-panel-muted) 100%);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.customer-master-display-value-multiline {
+    min-height: 5.25rem;
+    white-space: pre-wrap;
+}
+
+.customer-master-activity-summary-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customer-master-related-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customer-master-related-panel {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.customer-master-activity-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.customer-master-activity-item {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--border-soft);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, var(--bg-panel-subtle) 0%, var(--bg-panel-muted) 100%);
+}
+
+.customer-master-activity-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.customer-master-activity-item-head h4 {
+    margin: 0;
+    font-size: 0.98rem;
+}
+
+.customer-master-activity-item-head p {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-support);
+    line-height: var(--line-height-support);
+}
+
+.customer-master-activity-item-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customer-master-activity-item-grid div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.customer-master-activity-item-grid strong {
+    font-size: 0.95rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.customer-master-activity-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.customer-master-activity-pill-stack {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: end;
+}
+
+.customer-master-empty-state {
+    padding: 1rem;
+    border: 1px dashed var(--border-soft);
+    border-radius: 1rem;
+    color: var(--text-muted);
+    background: var(--bg-panel-subtle);
+}
+
+.customer-master-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.32rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.customer-master-status-active {
+    background: rgba(42, 145, 106, 0.12);
+    color: #1d7a57;
+    border-color: rgba(42, 145, 106, 0.25);
+}
+
+.customer-master-status-inactive {
+    background: rgba(214, 92, 92, 0.1);
+    color: #b14242;
+    border-color: rgba(214, 92, 92, 0.24);
+}
+
 .portal-request-form-sections {
     display: grid;
     gap: 1rem;
@@ -3189,6 +3376,12 @@ select {
     .purchase-payment-preview,
     .purchase-payment-void-summary,
     .portal-request-summary-grid,
+    .customer-master-summary-grid,
+    .customer-master-profile-layout,
+    .customer-master-activity-summary-grid,
+    .customer-master-related-grid,
+    .customer-master-display-grid,
+    .customer-master-activity-item-grid,
     .portal-request-review-layout,
     .portal-request-overview-grid,
     .portal-request-form-sections,
