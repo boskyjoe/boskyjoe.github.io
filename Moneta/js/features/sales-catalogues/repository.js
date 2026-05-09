@@ -17,6 +17,54 @@ function buildCatalogueCode() {
     return `SC-${year}-${Date.now().toString().slice(-6)}`;
 }
 
+function buildOnlinePublishPendingKey(entry = {}) {
+    const sourceCatalogueId = String(entry.sourceCatalogueId || entry.catalogueId || "").trim();
+    const sourceCatalogueItemId = String(entry.sourceCatalogueItemId || entry.itemId || entry.id || "").trim();
+    return sourceCatalogueId && sourceCatalogueItemId
+        ? `${sourceCatalogueId}::${sourceCatalogueItemId}`
+        : "";
+}
+
+function normalizeOnlinePublishPendingItem(entry = {}) {
+    const sourceCatalogueId = String(entry.sourceCatalogueId || entry.catalogueId || "").trim();
+    const sourceCatalogueItemId = String(entry.sourceCatalogueItemId || entry.itemId || entry.id || "").trim();
+    const key = buildOnlinePublishPendingKey({ sourceCatalogueId, sourceCatalogueItemId });
+
+    if (!key) {
+        return null;
+    }
+
+    return {
+        sourceCatalogueId,
+        sourceCatalogueName: String(entry.sourceCatalogueName || "").trim(),
+        sourceCatalogueItemId,
+        productId: String(entry.productId || "").trim(),
+        productName: String(entry.productName || "Untitled Product").trim(),
+        categoryName: String(entry.categoryName || "Uncategorized").trim(),
+        detectedOn: entry.detectedOn || nowLocalDate()
+    };
+}
+
+function dedupeOnlinePublishPendingItems(entries = []) {
+    const seenKeys = new Set();
+
+    return (entries || [])
+        .map(normalizeOnlinePublishPendingItem)
+        .filter(entry => {
+            const key = buildOnlinePublishPendingKey(entry);
+            if (!entry || !key || seenKeys.has(key)) {
+                return false;
+            }
+
+            seenKeys.add(key);
+            return true;
+        });
+}
+
+function nowLocalDate() {
+    return new Date();
+}
+
 export async function createSalesCatalogueRecord(catalogueData, itemsData, user) {
     const db = getDb();
     const now = firebase.firestore.FieldValue.serverTimestamp();
@@ -81,6 +129,91 @@ export async function updateSalesCatalogueRecord(docId, updatedData, user) {
 
 export async function setSalesCatalogueStatus(docId, isActive, user) {
     return updateSalesCatalogueRecord(docId, { isActive }, user);
+}
+
+export async function appendSalesCatalogueOnlinePublishPendingItems(catalogueId, entries = [], user) {
+    const normalizedCatalogueId = String(catalogueId || "").trim();
+    const normalizedEntries = dedupeOnlinePublishPendingItems(entries);
+    if (!normalizedCatalogueId || !normalizedEntries.length || !user?.email) {
+        return [];
+    }
+
+    const docRef = getDb().collection(COLLECTIONS.salesCatalogues).doc(normalizedCatalogueId);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) {
+        return [];
+    }
+
+    const currentEntries = Array.isArray(snapshot.data()?.onlinePublishPendingItems)
+        ? snapshot.data().onlinePublishPendingItems
+        : [];
+    const mergedEntries = dedupeOnlinePublishPendingItems([...currentEntries, ...normalizedEntries]);
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    await docRef.set({
+        onlinePublishPendingItems: mergedEntries,
+        onlinePublishPendingUpdatedOn: now,
+        audit: {
+            ...(snapshot.data()?.audit || {}),
+            updatedBy: user.email,
+            updatedOn: now
+        }
+    }, { merge: true });
+
+    return mergedEntries;
+}
+
+export async function removeSalesCatalogueOnlinePublishPendingItems(catalogueId, entries = [], user) {
+    const normalizedCatalogueId = String(catalogueId || "").trim();
+    const removeKeys = new Set((entries || []).map(entry => buildOnlinePublishPendingKey(entry)).filter(Boolean));
+    if (!normalizedCatalogueId || !removeKeys.size || !user?.email) {
+        return [];
+    }
+
+    const docRef = getDb().collection(COLLECTIONS.salesCatalogues).doc(normalizedCatalogueId);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) {
+        return [];
+    }
+
+    const currentEntries = dedupeOnlinePublishPendingItems(snapshot.data()?.onlinePublishPendingItems || []);
+    const remainingEntries = currentEntries.filter(entry => !removeKeys.has(buildOnlinePublishPendingKey(entry)));
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    await docRef.set({
+        onlinePublishPendingItems: remainingEntries,
+        onlinePublishPendingUpdatedOn: now,
+        audit: {
+            ...(snapshot.data()?.audit || {}),
+            updatedBy: user.email,
+            updatedOn: now
+        }
+    }, { merge: true });
+
+    return remainingEntries;
+}
+
+export async function clearSalesCatalogueOnlinePublishPendingItems(catalogueIds = [], user) {
+    const normalizedCatalogueIds = [...new Set((catalogueIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+    if (!normalizedCatalogueIds.length || !user?.email) {
+        return;
+    }
+
+    const db = getDb();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+
+    normalizedCatalogueIds.forEach(catalogueId => {
+        const docRef = db.collection(COLLECTIONS.salesCatalogues).doc(catalogueId);
+        batch.update(docRef, {
+            onlinePublishPendingItems: [],
+            onlinePublishPendingUpdatedOn: now,
+            "audit.updatedBy": user.email,
+            "audit.updatedOn": now
+        });
+    });
+
+    await batch.commit();
 }
 
 export async function addSalesCatalogueItem(catalogueId, itemData, user) {

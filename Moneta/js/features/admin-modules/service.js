@@ -25,6 +25,7 @@ import {
     updateStoreConfigRecord
 } from "./repository.js";
 import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
+import { clearSalesCatalogueOnlinePublishPendingItems } from "../sales-catalogues/repository.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
@@ -156,6 +157,52 @@ function normalizeOnlineCatalogueSelectionEntries(items = []) {
         .sort((left, right) => left.sortOrder - right.sortOrder || buildOnlineCatalogueItemKey(left).localeCompare(buildOnlineCatalogueItemKey(right)));
 }
 
+function buildOnlineCataloguePendingReviewKey(entry = {}) {
+    const sourceCatalogueId = normalizeText(entry.sourceCatalogueId || entry.catalogueId);
+    const sourceCatalogueItemId = normalizeText(entry.sourceCatalogueItemId || entry.itemId || entry.id);
+    return sourceCatalogueId && sourceCatalogueItemId
+        ? `${sourceCatalogueId}::${sourceCatalogueItemId}`
+        : "";
+}
+
+function getOnlineCatalogueTrackedCatalogueIds(config = {}) {
+    return [...new Set(
+        (normalizeOnlineCatalogueConfig(config).selectedItems || [])
+            .map(item => normalizeText(item.sourceCatalogueId || item.catalogueId))
+            .filter(Boolean)
+    )];
+}
+
+function getOnlineCataloguePendingPublishReviewItems(config = {}, salesCatalogueHeaders = []) {
+    const trackedCatalogueIds = new Set(getOnlineCatalogueTrackedCatalogueIds(config));
+    const seenKeys = new Set();
+
+    return (salesCatalogueHeaders || []).flatMap(header => {
+        const catalogueId = normalizeText(header?.id);
+        if (!catalogueId || !trackedCatalogueIds.has(catalogueId)) {
+            return [];
+        }
+
+        return (header.onlinePublishPendingItems || []).map(entry => ({
+            sourceCatalogueId: normalizeText(entry.sourceCatalogueId || catalogueId),
+            sourceCatalogueName: normalizeText(entry.sourceCatalogueName || header.catalogueName || header.catalogueId || "Sales Catalogue"),
+            sourceCatalogueItemId: normalizeText(entry.sourceCatalogueItemId || entry.itemId || entry.id),
+            productId: normalizeText(entry.productId),
+            productName: normalizeText(entry.productName || "Untitled Product"),
+            categoryName: normalizeText(entry.categoryName || "Uncategorized"),
+            detectedOn: entry.detectedOn || null
+        }));
+    }).filter(entry => {
+        const key = buildOnlineCataloguePendingReviewKey(entry);
+        if (!key || seenKeys.has(key)) {
+            return false;
+        }
+
+        seenKeys.add(key);
+        return true;
+    });
+}
+
 function normalizeOnlineCatalogueComparableConfig(record = {}) {
     return {
         catalogueName: normalizeText(record.catalogueName),
@@ -247,8 +294,9 @@ export async function saveOnlineCatalogueWorkspace(payload, user, masterData = {
     const currentConfig = existingConfig ? normalizeOnlineCatalogueConfig(existingConfig) : normalizeOnlineCatalogueConfig(await getOnlineCatalogueRecord(ONLINE_CATALOGUE_DOC_ID) || {});
     const currentComparable = normalizeOnlineCatalogueComparableConfig(currentConfig);
     const hasChanges = JSON.stringify(normalized) !== JSON.stringify(currentComparable);
+    const hasPendingReviewItems = getOnlineCataloguePendingPublishReviewItems(currentConfig, masterData.salesCatalogues || []).length > 0;
 
-    if (!hasChanges && currentConfig?.updatedOn) {
+    if (!hasChanges && !hasPendingReviewItems && currentConfig?.updatedOn) {
         return {
             mode: "noop",
             config: currentConfig
@@ -268,6 +316,14 @@ export async function saveOnlineCatalogueWorkspace(payload, user, masterData = {
         user,
         currentConfig?.updatedOn ? currentConfig : null
     ));
+
+    const catalogueIdsToClear = [...new Set([
+        ...getOnlineCatalogueTrackedCatalogueIds(currentConfig),
+        ...getOnlineCatalogueTrackedCatalogueIds(savedConfig)
+    ])];
+    if (catalogueIdsToClear.length) {
+        await clearSalesCatalogueOnlinePublishPendingItems(catalogueIdsToClear, user);
+    }
 
     return {
         mode: currentConfig?.updatedOn ? "update" : "create",

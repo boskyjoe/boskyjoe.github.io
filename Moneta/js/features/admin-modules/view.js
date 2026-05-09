@@ -481,6 +481,56 @@ function buildOnlineCatalogueSelectedSummaryText(selectedRows = []) {
     return `${names.slice(0, 4).join(", ")} + ${names.length - 4} more`;
 }
 
+function buildOnlineCataloguePendingReviewSummaryText(items = []) {
+    const names = (items || [])
+        .map(item => normalizeText(item.productName))
+        .filter(Boolean);
+
+    if (!names.length) {
+        return "New Sales Catalogue products were added after the last pickup-portal review. Save and regenerate the JSON snapshot after reviewing them.";
+    }
+
+    if (names.length <= 4) {
+        return `${names.join(", ")} were added after the last pickup-portal review. Save and regenerate the JSON snapshot after reviewing them.`;
+    }
+
+    return `${names.slice(0, 4).join(", ")} + ${names.length - 4} more were added after the last pickup-portal review. Save and regenerate the JSON snapshot after reviewing them.`;
+}
+
+function getOnlineCataloguePendingReviewItems(snapshot, draft = getOnlineCatalogueDraft()) {
+    const trackedCatalogueIds = new Set(
+        (draft.selectedItems || [])
+            .map(item => normalizeText(item.sourceCatalogueId || item.catalogueId))
+            .filter(Boolean)
+    );
+    const seenKeys = new Set();
+
+    return (snapshot.masterData?.salesCatalogues || []).flatMap(catalogue => {
+        const catalogueId = normalizeText(catalogue?.id);
+        if (!catalogueId || !trackedCatalogueIds.has(catalogueId)) {
+            return [];
+        }
+
+        return (catalogue.onlinePublishPendingItems || []).map(entry => ({
+            sourceCatalogueId: normalizeText(entry.sourceCatalogueId || catalogueId),
+            sourceCatalogueName: normalizeText(entry.sourceCatalogueName || catalogue.catalogueName || catalogue.catalogueId || "Sales Catalogue"),
+            sourceCatalogueItemId: normalizeText(entry.sourceCatalogueItemId || entry.itemId || entry.id),
+            productId: normalizeText(entry.productId),
+            productName: normalizeText(entry.productName || "Untitled Product"),
+            categoryName: normalizeText(entry.categoryName || "Uncategorized"),
+            detectedOn: entry.detectedOn || null
+        }));
+    }).filter(entry => {
+        const key = `${entry.sourceCatalogueId}::${entry.sourceCatalogueItemId}`;
+        if (!entry.sourceCatalogueId || !entry.sourceCatalogueItemId || seenKeys.has(key)) {
+            return false;
+        }
+
+        seenKeys.add(key);
+        return true;
+    });
+}
+
 function refreshOnlineCatalogueSourceWorkspace() {
     const draft = collectOnlineCatalogueDraftFromDom();
     const visibleItems = getOnlineCatalogueVisibleSourceItems(draft).map(item => ({
@@ -1260,6 +1310,7 @@ function renderOnlineCatalogueForm(snapshot) {
     const selectedCount = draft.selectedItems.length;
     const selectedRows = getOnlineCatalogueSelectedSourceRows(draft);
     const missingSelections = getOnlineCatalogueMissingSelections(draft);
+    const pendingReviewItems = getOnlineCataloguePendingReviewItems(snapshot, draft);
     const lastUpdatedLabel = draft.updatedOn ? formatDateTime(draft.updatedOn) : "Not saved yet";
     const hasSelectedCatalogue = Boolean(normalizeText(onlineCatalogueState.catalogueFilterId));
 
@@ -1357,6 +1408,15 @@ function renderOnlineCatalogueForm(snapshot) {
                                     <span class="modal-note-copy">
                                         <span class="modal-note-title">Selection Needs Review</span>
                                         <span>${missingSelections.length} previously selected item${missingSelections.length === 1 ? "" : "s"} can no longer be resolved from the current Sales Catalogue data. Save the curation again before generating JSON.</span>
+                                    </span>
+                                </div>
+                            ` : ""}
+                            ${pendingReviewItems.length ? `
+                                <div class="modal-note tone-warning">
+                                    <span class="modal-note-icon">${icons.warning}</span>
+                                    <span class="modal-note-copy">
+                                        <span class="modal-note-title">Online Publish Review Needed</span>
+                                        <span>${escapeHtml(buildOnlineCataloguePendingReviewSummaryText(pendingReviewItems))}</span>
                                     </span>
                                 </div>
                             ` : ""}

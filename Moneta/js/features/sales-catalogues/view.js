@@ -549,7 +549,7 @@ async function handleCatalogueItemRemoval(button) {
         if (!confirmed) return;
 
         try {
-            await removeSalesCatalogueItemRecord(featureState.editingCatalogueId, itemId);
+            await removeSalesCatalogueItemRecord(featureState.editingCatalogueId, itemId, snapshot.currentUser);
             showToast("Catalogue item removed.", "success");
             await showSummaryModal({
                 title: "Catalogue Item Removed",

@@ -1,5 +1,7 @@
 import {
     addSalesCatalogueItem,
+    appendSalesCatalogueOnlinePublishPendingItems,
+    removeSalesCatalogueOnlinePublishPendingItems,
     createSalesCatalogueRecord,
     deleteSalesCatalogueItem,
     getSalesCatalogueItemsByProduct,
@@ -8,6 +10,11 @@ import {
     updateSalesCatalogueItemsBatch,
     updateSalesCatalogueRecord
 } from "./repository.js";
+import {
+    getOnlineCatalogueRecord
+} from "../admin-modules/repository.js";
+
+const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -176,6 +183,37 @@ function buildSalesCataloguePriceHistoryEntry({
     };
 }
 
+function buildOnlineCataloguePendingReviewEntry(catalogueId, itemId, itemData = {}) {
+    return {
+        sourceCatalogueId: normalizeText(catalogueId),
+        sourceCatalogueItemId: normalizeText(itemId),
+        productId: normalizeText(itemData.productId),
+        productName: normalizeText(itemData.productName || "Untitled Product"),
+        categoryName: normalizeText(itemData.categoryName || "Uncategorized"),
+        detectedOn: new Date()
+    };
+}
+
+async function shouldFlagOnlinePublishReview(catalogueId) {
+    const normalizedCatalogueId = normalizeText(catalogueId);
+    if (!normalizedCatalogueId) {
+        return false;
+    }
+
+    const onlineCatalogue = await getOnlineCatalogueRecord(ONLINE_CATALOGUE_DOC_ID);
+    if (!onlineCatalogue) {
+        return false;
+    }
+
+    const trackedCatalogueIds = new Set(
+        (onlineCatalogue.selectedItems || [])
+            .map(item => normalizeText(item.sourceCatalogueId || item.catalogueId))
+            .filter(Boolean)
+    );
+
+    return trackedCatalogueIds.has(normalizedCatalogueId);
+}
+
 function validateCatalogueHeader(payload) {
     const catalogueName = normalizeText(payload.catalogueName);
     const seasonId = normalizeText(payload.seasonId);
@@ -279,7 +317,14 @@ export async function addProductToSalesCatalogue(catalogueId, product, existingI
     }
 
     const { tempId, ...persistedItem } = itemData;
-    await addSalesCatalogueItem(catalogueId, persistedItem, user);
+    const createdItemRef = await addSalesCatalogueItem(catalogueId, persistedItem, user);
+    if (await shouldFlagOnlinePublishReview(catalogueId)) {
+        await appendSalesCatalogueOnlinePublishPendingItems(
+            catalogueId,
+            [buildOnlineCataloguePendingReviewEntry(catalogueId, createdItemRef.id, persistedItem)],
+            user
+        );
+    }
     return persistedItem;
 }
 
@@ -465,10 +510,18 @@ export async function syncSalesCatalogueItemsForApprovedProduct(product, salesCa
     };
 }
 
-export async function removeSalesCatalogueItemRecord(catalogueId, itemId) {
+export async function removeSalesCatalogueItemRecord(catalogueId, itemId, user) {
     if (!catalogueId || !itemId) {
         throw new Error("Catalogue item could not be found.");
     }
 
+    if (!user) {
+        throw new Error("You must be logged in to remove catalogue items.");
+    }
+
     await deleteSalesCatalogueItem(catalogueId, itemId);
+    await removeSalesCatalogueOnlinePublishPendingItems(catalogueId, [{
+        sourceCatalogueId: catalogueId,
+        sourceCatalogueItemId: itemId
+    }], user);
 }
