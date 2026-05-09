@@ -32,6 +32,10 @@ const SHELL_SEARCH_TARGETS = {
         selector: "#portal-requests-search",
         placeholder: "Search portal requests in this workspace"
     },
+    "#/customers": {
+        selector: "#customer-master-search",
+        placeholder: "Search customers in this workspace"
+    },
     "#/retail-store": {
         selector: "#retail-sales-search",
         placeholder: "Search retail sales in this workspace"

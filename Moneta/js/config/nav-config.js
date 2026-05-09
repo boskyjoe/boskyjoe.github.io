@@ -89,6 +89,20 @@ export const navConfig = [
     },
     {
         type: "heading",
+        label: "Customers",
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"]
+    },
+    {
+        type: "link",
+        route: "#/customers",
+        label: "Customer Master",
+        icon: icons.users,
+        iconClass: "nav-icon-cyan",
+        roles: ["admin", "inventory_manager", "sales_staff", "finance", "team_lead"],
+        enabled: true
+    },
+    {
+        type: "heading",
         label: "Inventory",
         roles: ["admin", "inventory_manager"]
     },
