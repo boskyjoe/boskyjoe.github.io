@@ -2,6 +2,8 @@ import { findNavRouteItem } from "../config/nav-config.js";
 
 export const PRICE_REVIEW_ROUTE = "#/admin-modules?section=productPriceChangeReviews";
 export const ONLINE_CATALOGUE_ROUTE = "#/admin-modules?section=onlineCatalogues";
+export const PRODUCT_CATALOGUE_ROUTE = "#/products";
+const LOW_STOCK_THRESHOLD = 5;
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -44,11 +46,19 @@ export function getPendingOnlineCatalogueReviews(rows = []) {
     return pendingItems;
 }
 
+export function getLowStockProducts(rows = []) {
+    return (rows || []).filter(product => {
+        const inventoryCount = Math.max(0, Math.floor(Number(product?.inventoryCount) || 0));
+        return inventoryCount <= LOW_STOCK_THRESHOLD;
+    });
+}
+
 export function buildImmediateActionItems(user, masterData = {}) {
     const role = user?.role || "guest";
     const items = [];
     const pendingPriceReviews = getPendingPriceReviews(masterData.productPriceChangeReviews || []);
     const pendingOnlineCatalogueReviews = getPendingOnlineCatalogueReviews(masterData.salesCatalogues || []);
+    const lowStockProducts = getLowStockProducts(masterData.products || []);
 
     if (pendingPriceReviews.length > 0 && roleCanAccess(PRICE_REVIEW_ROUTE, role)) {
         const previewNames = pendingPriceReviews
@@ -86,6 +96,26 @@ export function buildImmediateActionItems(user, masterData = {}) {
             copy: previewLabel,
             actionLabel: "Review Online Catalogue",
             route: ONLINE_CATALOGUE_ROUTE,
+            tone: "warning"
+        });
+    }
+
+    if (lowStockProducts.length > 0 && roleCanAccess(PRODUCT_CATALOGUE_ROUTE, role)) {
+        const previewNames = lowStockProducts
+            .map(product => normalizeText(product.itemName || product.productName))
+            .filter(Boolean)
+            .slice(0, 3);
+        const previewLabel = previewNames.length
+            ? `These products are at or below the stock threshold: ${previewNames.join(", ")}${lowStockProducts.length > previewNames.length ? ", and more." : "."}`
+            : "Some products are at or below the low-stock threshold. Review stock levels and reorder plans.";
+
+        items.push({
+            key: "low-stock-products",
+            title: "Low Stock Review Needed",
+            count: lowStockProducts.length,
+            copy: previewLabel,
+            actionLabel: "Open Product Catalogue",
+            route: PRODUCT_CATALOGUE_ROUTE,
             tone: "warning"
         });
     }
