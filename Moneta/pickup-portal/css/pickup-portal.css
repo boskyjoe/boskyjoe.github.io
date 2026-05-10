@@ -655,11 +655,20 @@ button:disabled {
 
 .featured-card {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   padding: 14px;
   border-radius: var(--portal-radius-md);
   border: 1px solid var(--portal-border);
   background: linear-gradient(180deg, #fffdf7 0%, #ffffff 100%);
+}
+
+.featured-card-media {
+  position: relative;
+  min-height: 172px;
+  overflow: hidden;
+  border-radius: var(--portal-radius-sm);
+  border: 1px solid rgba(15, 17, 17, 0.08);
+  background: #f7f8fa;
 }
 
 .featured-card-copy {
@@ -837,18 +846,51 @@ button:disabled {
 }
 
 .product-media {
+  position: relative;
   min-height: 170px;
-  display: grid;
-  place-items: center;
+  overflow: hidden;
   border-radius: var(--portal-radius-sm);
   border: 1px solid var(--portal-border);
   background:
     radial-gradient(circle at top left, rgba(255, 153, 0, 0.12), transparent 44%),
     linear-gradient(180deg, #fffdf9 0%, #f7f8fa 100%);
-  color: #37475a;
-  font-family: var(--portal-font-heading);
-  font-size: 1.4rem;
-  font-weight: 700;
+}
+
+.product-generated-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.product-generated-image-card,
+.product-generated-image-featured {
+  min-height: 170px;
+}
+
+.product-generated-image-modal {
+  min-height: 280px;
+}
+
+.product-generated-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #22303f;
+  border: 1px solid rgba(15, 17, 17, 0.08);
+  box-shadow: 0 6px 18px rgba(15, 17, 17, 0.12);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .product-copy {
@@ -1275,18 +1317,14 @@ button:disabled {
 }
 
 .product-modal-media {
+  position: relative;
   min-height: 280px;
-  display: grid;
-  place-items: center;
+  overflow: hidden;
   border-radius: var(--portal-radius-md);
   border: 1px solid var(--portal-border);
   background:
     radial-gradient(circle at top left, rgba(255, 153, 0, 0.14), transparent 48%),
     linear-gradient(180deg, #fffdf9 0%, #f3f4f6 100%);
-  color: #37475a;
-  font-family: var(--portal-font-heading);
-  font-size: 2rem;
-  font-weight: 700;
 }
 
 .product-modal-copy {
@@ -1374,6 +1412,22 @@ button:disabled {
 
   .catalogue-sidebar {
     order: 2;
+  }
+}
+
+@media (min-width: 860px) {
+  .featured-card {
+    grid-template-columns: minmax(150px, 170px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .featured-card-copy {
+    align-content: start;
+  }
+
+  .featured-card-actions {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 }
 

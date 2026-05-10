@@ -109,6 +109,45 @@ const canUseSamplePreview =
 const googleClientId = String(window.pickupPortalConfig?.googleClientId || "").trim();
 const intakeEndpointUrl = String(window.pickupPortalConfig?.intakeEndpointUrl || "").trim();
 const portalUserStorageKey = "monetaPickupPortalGoogleUser";
+const generatedImageCache = new Map();
+const productImageThemes = [
+  {
+    from: "#fff0bf",
+    to: "#f7c95c",
+    accent: "#8f5f00",
+    accentSoft: "rgba(143, 95, 0, 0.18)"
+  },
+  {
+    from: "#d8eefc",
+    to: "#7ec4f4",
+    accent: "#0c4a74",
+    accentSoft: "rgba(12, 74, 116, 0.18)"
+  },
+  {
+    from: "#e4f7ed",
+    to: "#8fd8b1",
+    accent: "#15543a",
+    accentSoft: "rgba(21, 84, 58, 0.18)"
+  },
+  {
+    from: "#f8e3ef",
+    to: "#e6a7ca",
+    accent: "#7c2d59",
+    accentSoft: "rgba(124, 45, 89, 0.18)"
+  },
+  {
+    from: "#ece7ff",
+    to: "#b8a9ff",
+    accent: "#44338f",
+    accentSoft: "rgba(68, 51, 143, 0.18)"
+  },
+  {
+    from: "#ffe5d4",
+    to: "#ffb88f",
+    accent: "#8a3f00",
+    accentSoft: "rgba(138, 63, 0, 0.18)"
+  }
+];
 
 const state = {
   catalogue: null,
@@ -668,6 +707,9 @@ function renderFeatured() {
   elements.featuredStrip.innerHTML = featuredItems
     .map((item) => `
       <article class="featured-card">
+        <div class="featured-card-media">
+          ${renderProductVisual(item, "featured")}
+        </div>
         <div class="featured-card-copy">
           <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
           <div class="featured-card-name">${escapeHtml(item.name)}</div>
@@ -796,7 +838,7 @@ function renderCatalogue() {
             <span class="status-badge">${escapeHtml(item.badge || "Pickup Request")}</span>
             <span class="request-note-badge">Manual confirmation</span>
           </div>
-          <div class="product-media">${escapeHtml(item.imageLabel || item.name.slice(0, 1))}</div>
+          <div class="product-media">${renderProductVisual(item, "card")}</div>
           <div class="product-copy">
             <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
             <h4>${escapeHtml(item.name)}</h4>
@@ -1034,7 +1076,7 @@ function openProductModal(itemId) {
   state.activeItemId = itemId;
   elements.productModalBody.innerHTML = `
     <div class="product-modal-layout">
-      <div class="product-modal-media">${escapeHtml(item.imageLabel || item.name.slice(0, 1))}</div>
+      <div class="product-modal-media">${renderProductVisual(item, "modal")}</div>
       <div class="product-modal-copy">
         <div class="product-category">${escapeHtml(getCategoryName(item.categoryId))}</div>
         <h4>${escapeHtml(item.name)}</h4>
@@ -1402,6 +1444,265 @@ function formatDateTime(value) {
     hour: "numeric",
     minute: "2-digit"
   });
+}
+
+function renderProductVisual(item, variant = "card") {
+  const imageUrl = String(item?.imageUrl || "").trim();
+  const imageLabel = escapeHtml(item?.imageLabel || deriveProductMonogram(item));
+  const alt = escapeHtml(item?.name || "Product");
+
+  if (imageUrl) {
+    return `
+      <img
+        class="product-generated-image product-generated-image-${variant}"
+        src="${escapeHtml(imageUrl)}"
+        alt="${alt}"
+        loading="lazy">
+    `;
+  }
+
+  return `
+    <img
+      class="product-generated-image product-generated-image-${variant}"
+      src="${buildGeneratedProductImageDataUrl(item, variant)}"
+      alt="${alt}"
+      loading="lazy">
+    <span class="product-generated-badge">${imageLabel}</span>
+  `;
+}
+
+function buildGeneratedProductImageDataUrl(item, variant = "card") {
+  const cacheKey = `${variant}::${String(item?.id || item?.productId || item?.name || "item")}`;
+  if (generatedImageCache.has(cacheKey)) {
+    return generatedImageCache.get(cacheKey);
+  }
+
+  const dimensions = resolveProductImageDimensions(variant);
+  const theme = resolveProductImageTheme(item);
+  const category = escapeHtml(getCategoryName(item?.categoryId));
+  const nameLines = splitProductNameForImage(item?.name || "Untitled Product", dimensions.maxCharsPerLine, dimensions.maxLines);
+  const unitLabel = escapeHtml(item?.unitLabel || "each");
+  const badgeLabel = escapeHtml(item?.imageLabel || deriveProductMonogram(item));
+  const monogram = escapeHtml(deriveProductMonogram(item));
+  const footer = escapeHtml(`${unitLabel} · Pickup request`);
+  const nameMarkup = nameLines
+    .map((line, index) => {
+      const y = dimensions.nameStartY + index * dimensions.nameLineHeight;
+      return `<text x="${dimensions.nameX}" y="${y}" fill="${theme.accent}" font-family="Arial, sans-serif" font-size="${dimensions.nameFontSize}" font-weight="700">${escapeHtml(line)}</text>`;
+    })
+    .join("");
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}" role="img" aria-label="${escapeHtml(item?.name || "Product")}">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${theme.from}" />
+          <stop offset="100%" stop-color="${theme.to}" />
+        </linearGradient>
+        <linearGradient id="panel" x1="0" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.94)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0.78)" />
+        </linearGradient>
+      </defs>
+      <rect width="${dimensions.width}" height="${dimensions.height}" rx="${dimensions.radius}" fill="url(#bg)" />
+      <circle cx="${dimensions.circleX}" cy="${dimensions.circleY}" r="${dimensions.circleRadius}" fill="${theme.accentSoft}" />
+      <circle cx="${dimensions.circleX + 18}" cy="${dimensions.circleY - 18}" r="${Math.max(16, Math.floor(dimensions.circleRadius * 0.32))}" fill="rgba(255,255,255,0.32)" />
+      <rect x="${dimensions.panelX}" y="${dimensions.panelY}" width="${dimensions.panelWidth}" height="${dimensions.panelHeight}" rx="${dimensions.panelRadius}" fill="url(#panel)" />
+      <rect x="${dimensions.categoryX}" y="${dimensions.categoryY}" width="${dimensions.categoryWidth}" height="${dimensions.categoryHeight}" rx="${dimensions.categoryRadius}" fill="rgba(255,255,255,0.8)" stroke="rgba(15,17,17,0.08)" />
+      <text x="${dimensions.categoryTextX}" y="${dimensions.categoryTextY}" fill="${theme.accent}" font-family="Arial, sans-serif" font-size="${dimensions.categoryFontSize}" font-weight="700" letter-spacing="1">${category.toUpperCase()}</text>
+      ${nameMarkup}
+      <text x="${dimensions.footerX}" y="${dimensions.footerY}" fill="rgba(15,17,17,0.68)" font-family="Arial, sans-serif" font-size="${dimensions.footerFontSize}" font-weight="600">${footer}</text>
+      <text x="${dimensions.monogramX}" y="${dimensions.monogramY}" fill="${theme.accent}" fill-opacity="0.9" font-family="Georgia, serif" font-size="${dimensions.monogramFontSize}" font-weight="700" text-anchor="middle">${monogram}</text>
+      <text x="${dimensions.badgeX}" y="${dimensions.badgeY}" fill="rgba(15,17,17,0.4)" font-family="Arial, sans-serif" font-size="${dimensions.badgeFontSize}" font-weight="700" text-anchor="middle">${badgeLabel}</text>
+    </svg>
+  `.trim();
+
+  const dataUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  generatedImageCache.set(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+function resolveProductImageDimensions(variant = "card") {
+  if (variant === "featured") {
+    return {
+      width: 360,
+      height: 260,
+      radius: 24,
+      circleX: 276,
+      circleY: 90,
+      circleRadius: 74,
+      panelX: 16,
+      panelY: 18,
+      panelWidth: 328,
+      panelHeight: 224,
+      panelRadius: 22,
+      categoryX: 30,
+      categoryY: 34,
+      categoryWidth: 170,
+      categoryHeight: 26,
+      categoryRadius: 13,
+      categoryTextX: 44,
+      categoryTextY: 51,
+      categoryFontSize: 10,
+      nameX: 30,
+      nameStartY: 108,
+      nameFontSize: 24,
+      nameLineHeight: 28,
+      maxCharsPerLine: 15,
+      maxLines: 3,
+      footerX: 30,
+      footerY: 210,
+      footerFontSize: 13,
+      monogramX: 276,
+      monogramY: 108,
+      monogramFontSize: 54,
+      badgeX: 276,
+      badgeY: 162,
+      badgeFontSize: 13
+    };
+  }
+
+  if (variant === "modal") {
+    return {
+      width: 640,
+      height: 520,
+      radius: 34,
+      circleX: 492,
+      circleY: 162,
+      circleRadius: 124,
+      panelX: 22,
+      panelY: 22,
+      panelWidth: 596,
+      panelHeight: 476,
+      panelRadius: 28,
+      categoryX: 42,
+      categoryY: 44,
+      categoryWidth: 220,
+      categoryHeight: 34,
+      categoryRadius: 17,
+      categoryTextX: 58,
+      categoryTextY: 66,
+      categoryFontSize: 13,
+      nameX: 44,
+      nameStartY: 176,
+      nameFontSize: 38,
+      nameLineHeight: 44,
+      maxCharsPerLine: 18,
+      maxLines: 3,
+      footerX: 44,
+      footerY: 418,
+      footerFontSize: 18,
+      monogramX: 492,
+      monogramY: 188,
+      monogramFontSize: 92,
+      badgeX: 492,
+      badgeY: 276,
+      badgeFontSize: 20
+    };
+  }
+
+  return {
+    width: 420,
+    height: 300,
+    radius: 28,
+    circleX: 322,
+    circleY: 108,
+    circleRadius: 88,
+    panelX: 18,
+    panelY: 18,
+    panelWidth: 384,
+    panelHeight: 264,
+    panelRadius: 24,
+    categoryX: 32,
+    categoryY: 34,
+    categoryWidth: 184,
+    categoryHeight: 28,
+    categoryRadius: 14,
+    categoryTextX: 46,
+    categoryTextY: 52,
+    categoryFontSize: 11,
+    nameX: 34,
+    nameStartY: 122,
+    nameFontSize: 28,
+    nameLineHeight: 32,
+    maxCharsPerLine: 16,
+    maxLines: 3,
+    footerX: 34,
+    footerY: 244,
+    footerFontSize: 14,
+    monogramX: 322,
+    monogramY: 126,
+    monogramFontSize: 64,
+    badgeX: 322,
+    badgeY: 188,
+    badgeFontSize: 14
+  };
+}
+
+function resolveProductImageTheme(item) {
+  const seed = String(item?.categoryId || item?.name || item?.productId || "default");
+  let hash = 0;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return productImageThemes[hash % productImageThemes.length];
+}
+
+function deriveProductMonogram(item) {
+  const preferred = String(item?.imageLabel || "").trim();
+  if (preferred) {
+    return preferred.slice(0, 3).toUpperCase();
+  }
+
+  const words = String(item?.name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) {
+    return "MP";
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join("");
+}
+
+function splitProductNameForImage(name, maxCharsPerLine, maxLines) {
+  const words = String(name || "Untitled Product").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) {
+    return ["Untitled Product"];
+  }
+
+  const lines = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (candidate.length <= maxCharsPerLine || !currentLine) {
+      currentLine = candidate;
+      return;
+    }
+
+    lines.push(currentLine);
+    currentLine = word;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  if (lines.length <= maxLines) {
+    return lines;
+  }
+
+  const truncated = lines.slice(0, maxLines);
+  truncated[maxLines - 1] = `${truncated[maxLines - 1].slice(0, Math.max(0, maxCharsPerLine - 2)).trimEnd()}…`;
+  return truncated;
 }
 
 function escapeHtml(value) {
