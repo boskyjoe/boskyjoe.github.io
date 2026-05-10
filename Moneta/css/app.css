@@ -461,15 +461,16 @@
 .shell-action-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    min-height: 2.72rem;
-    padding: 0 0.78rem;
+    gap: 0.72rem;
+    min-height: 2.85rem;
+    padding: 0.3rem 0.88rem 0.3rem 0.58rem;
     border: 1px solid var(--shell-search-border);
-    border-radius: 999px;
+    border-radius: 1rem;
     background: var(--shell-search-bg);
     color: var(--text-main);
     cursor: pointer;
     box-shadow: none;
+    text-align: left;
 }
 
 .shell-action-trigger:hover,
@@ -489,41 +490,107 @@
     color: var(--warning);
 }
 
+.shell-action-trigger-icon-shell {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--warning-rgb), 0.12);
+    flex: 0 0 auto;
+}
+
+.shell-action-trigger-copy {
+    display: grid;
+    gap: 0.08rem;
+    min-width: 0;
+}
+
+.shell-action-trigger-kicker {
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
 .shell-action-trigger-label {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    white-space: nowrap;
+    color: var(--text-main);
+    line-height: 1.2;
 }
 
 .shell-action-trigger-count {
-    min-width: 1.6rem;
-    padding: 0.18rem 0.45rem;
+    position: absolute;
+    top: -0.32rem;
+    right: -0.36rem;
+    min-width: 1.35rem;
+    min-height: 1.35rem;
+    padding: 0.12rem 0.35rem;
     border-radius: 999px;
-    background: rgba(var(--warning-rgb), 0.14);
-    color: var(--warning);
-    font-size: 0.74rem;
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.96) 0%, rgba(var(--warning-rgb), 0.82) 100%);
+    color: #fff;
+    font-size: 0.7rem;
     font-weight: 800;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(var(--warning-rgb), 0.28);
+}
+
+.shell-action-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: grid;
+    justify-items: end;
+}
+
+.shell-action-overlay[hidden] {
+    display: none;
+}
+
+.shell-action-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(10, 18, 25, 0.34);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
 }
 
 .shell-action-panel {
-    position: absolute;
-    top: calc(100% + 0.7rem);
-    right: 0;
-    width: min(360px, calc(100vw - 2rem));
+    position: relative;
+    width: min(430px, calc(100vw - 1rem));
+    height: calc(100vh - 1rem);
+    margin: 0.5rem;
     display: grid;
-    gap: 0.8rem;
-    padding: 0.92rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.95rem;
+    padding: 1rem;
     border: 1px solid var(--shell-toolbar-border);
-    border-radius: 1rem;
+    border-radius: 1.2rem;
     background: var(--bg-overlay-soft);
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    box-shadow: 0 28px 56px rgba(15, 23, 42, 0.2);
     backdrop-filter: blur(16px);
-    z-index: 40;
+    overflow: hidden;
+    animation: shell-action-drawer-in 220ms ease forwards;
 }
 
-.shell-action-panel[hidden] {
-    display: none;
+@keyframes shell-action-drawer-in {
+    from {
+        opacity: 0;
+        transform: translateX(1.15rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .shell-action-panel-head {
@@ -531,6 +598,13 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.8rem;
+}
+
+.shell-action-panel-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 0 0 auto;
 }
 
 .shell-action-panel-kicker {
@@ -549,29 +623,87 @@
     font-weight: 800;
 }
 
+.shell-action-panel-copy {
+    margin: 0.28rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    max-width: 26rem;
+}
+
+.shell-action-panel-close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--shell-toolbar-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.shell-action-panel-close:hover,
+.shell-action-panel-close:focus-visible {
+    background: rgba(var(--accent-rgb), 0.1);
+    border-color: rgba(var(--accent-rgb), 0.24);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.shell-action-panel-close svg {
+    width: 1rem;
+    height: 1rem;
+}
+
 .shell-action-panel-list {
     display: grid;
     gap: 0.65rem;
+    align-content: start;
+    overflow: auto;
+    padding-right: 0.1rem;
 }
 
 .shell-action-item {
+    position: relative;
     display: grid;
-    gap: 0.4rem;
+    gap: 0.45rem;
     width: 100%;
-    padding: 0.82rem 0.86rem;
+    padding: 0.95rem 0.95rem 0.92rem 1rem;
     border: 1px solid var(--dashboard-list-warning-border);
-    border-radius: 0.9rem;
+    border-radius: 1rem;
     background: var(--dashboard-list-warning-bg);
     text-align: left;
     cursor: pointer;
     color: var(--text-main);
+    overflow: hidden;
+    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.shell-action-item::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: rgba(var(--warning-rgb), 0.72);
 }
 
 .shell-action-item:hover,
 .shell-action-item:focus-visible {
+    transform: translateY(-1px);
     border-color: var(--dashboard-kpi-warning-border);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
     outline: none;
+}
+
+.shell-action-item.tone-danger::before {
+    background: rgba(var(--danger-rgb), 0.84);
+}
+
+.shell-action-item.tone-primary::before {
+    background: rgba(var(--accent-rgb), 0.84);
 }
 
 .shell-action-item-head {
@@ -977,9 +1109,17 @@
     }
 
     .shell-action-panel {
-        left: 0;
-        right: 0;
-        width: 100%;
+        width: calc(100vw - 0.9rem);
+        height: calc(100vh - 0.9rem);
+        margin: 0.45rem;
+    }
+
+    .shell-action-trigger-copy {
+        gap: 0;
+    }
+
+    .shell-action-trigger-label {
+        font-size: 0.76rem;
     }
 
     .auth-slot {

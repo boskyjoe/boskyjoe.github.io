@@ -367,7 +367,8 @@
 }
 
 .dashboard-financial-layout-cash {
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+    grid-template-columns: minmax(0, 1.22fr) minmax(340px, 0.95fr);
+    align-items: stretch;
 }
 
 .dashboard-financial-grid-compact {
@@ -378,6 +379,28 @@
 .dashboard-financial-grid-cash {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 0;
+}
+
+.dashboard-cash-overview {
+    display: grid;
+    gap: 0.72rem;
+    grid-template-columns: minmax(0, 1.18fr) minmax(240px, 0.92fr);
+    grid-template-areas:
+        "hero purchases"
+        "hero leads";
+    align-items: stretch;
+}
+
+.dashboard-cash-hero {
+    grid-area: hero;
+}
+
+.dashboard-cash-overview > .dashboard-cash-support:first-of-type {
+    grid-area: purchases;
+}
+
+.dashboard-cash-overview > .dashboard-cash-support:last-of-type {
+    grid-area: leads;
 }
 
 .dashboard-financial-card {
@@ -466,6 +489,96 @@
 .dashboard-financial-charts {
     display: grid;
     gap: 0.6rem;
+}
+
+.dashboard-chart-card-cash-focus {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100%;
+}
+
+.dashboard-chart-head-split {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-chart-switcher {
+    display: inline-grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.34rem;
+    border: 1px solid var(--border);
+    border-radius: 0.95rem;
+    background: linear-gradient(180deg, var(--bg-panel-subtle) 0%, var(--bg-panel-muted) 100%);
+}
+
+.dashboard-chart-switcher-button {
+    border: 1px solid transparent;
+    border-radius: 0.78rem;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.77rem;
+    font-weight: 700;
+    line-height: 1.15;
+    padding: 0.56rem 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-chart-switcher-button:hover,
+.dashboard-chart-switcher-button:focus-visible {
+    border-color: rgba(var(--accent-alt-rgb), 0.24);
+    background: rgba(var(--accent-alt-rgb), 0.08);
+    color: var(--text-main);
+    outline: none;
+}
+
+.dashboard-chart-switcher-button.is-active {
+    border-color: rgba(var(--accent-alt-rgb), 0.3);
+    background: var(--bg-panel);
+    color: var(--accent-alt);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.dashboard-chart-tab-stage {
+    position: relative;
+    min-height: 348px;
+}
+
+.dashboard-chart-tab-pane {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.55rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(0.4rem);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+}
+
+.dashboard-chart-tab-pane.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.dashboard-chart-pane-copy {
+    display: grid;
+    gap: 0.16rem;
+}
+
+.dashboard-chart-canvas-wrap-tall {
+    margin-top: 0;
+    height: 100%;
+    min-height: 280px;
 }
 
 .dashboard-chart-card-compact {
@@ -580,13 +693,14 @@
 .dashboard-inventory-layout {
     display: grid;
     gap: 0.75rem;
-    grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.45fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1.48fr) minmax(320px, 0.92fr);
+    align-items: stretch;
 }
 
 .dashboard-inventory-charts {
     display: grid;
     gap: 0.75rem;
+    align-content: start;
 }
 
 .dashboard-chart-card {
@@ -919,7 +1033,10 @@
     border-radius: 0.85rem;
     padding: 0.6rem 0.65rem;
     background: var(--dashboard-chart-card-bg);
-    height: fit-content;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    height: 100%;
 }
 
 .dashboard-inventory-grid-toolbar {
@@ -927,7 +1044,11 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.65rem;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0;
+}
+
+.dashboard-inventory-grid-card .ag-shell {
+    height: 100%;
 }
 
 .dashboard-inventory-status-pill {
@@ -1007,6 +1128,13 @@
         grid-template-columns: 1fr;
     }
 
+    .dashboard-cash-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "hero hero"
+            "purchases leads";
+    }
+
     .dashboard-financial-charts {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1041,6 +1169,22 @@
 
     .dashboard-financial-charts {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-cash-overview {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "hero"
+            "purchases"
+            "leads";
+    }
+
+    .dashboard-chart-head-split {
+        align-items: stretch;
+    }
+
+    .dashboard-chart-switcher {
+        width: 100%;
     }
 
     .reports-group-head {
