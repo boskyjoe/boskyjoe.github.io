@@ -876,45 +876,12 @@ function buildPrimaryMetricCards(profile, metrics) {
         });
     }
 
-    if (profile.canLeads) {
-        cards.push({
-            title: "Open Leads",
-            value: String(metrics.leads.open),
-            meta: `${metrics.leads.qualified} qualified`,
-            tone: "primary"
-        });
-        cards.push({
-            title: "Ready To Convert",
-            value: String(metrics.leads.readyToConvert),
-            meta: `${metrics.leads.agingOpen} aging open leads`,
-            tone: metrics.leads.readyToConvert > 0 ? "warning" : "neutral"
-        });
-    }
-
     if (profile.canPurchases || profile.canFinance) {
         cards.push({
             title: "Supplier Payables",
             value: formatCurrency(metrics.purchases.balanceDue),
             meta: `${metrics.purchases.activeInvoices} invoices`,
             tone: metrics.purchases.balanceDue > 0 ? "danger" : "success"
-        });
-    }
-
-    if (profile.canProducts) {
-        cards.push({
-            title: "Low Stock SKUs",
-            value: String(metrics.stock.lowStockCount),
-            meta: `Threshold <= ${metrics.stock.threshold}`,
-            tone: metrics.stock.lowStockCount > 0 ? "warning" : "success"
-        });
-    }
-
-    if (profile.canCashFlow) {
-        cards.push({
-            title: "Net Cash Position",
-            value: formatSignedCurrency(metrics.cash.netCash),
-            meta: "Inflow - Outflow",
-            tone: metrics.cash.netCash >= 0 ? "success" : "danger"
         });
     }
 
@@ -1151,7 +1118,7 @@ function renderDashboardMarkup(user) {
                 ` : ""}
             </section>
 
-            <section class="dashboard-kpi-grid">
+            <section class="dashboard-kpi-grid dashboard-kpi-grid-primary">
                 ${renderPrimaryCards(primaryCards)}
             </section>
 
