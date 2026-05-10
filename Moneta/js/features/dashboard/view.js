@@ -1017,32 +1017,6 @@ function renderPrimaryCards(cards = []) {
     `).join("");
 }
 
-function renderLowStockList(stock = {}) {
-    if (!stock.lowStockRows || stock.lowStockRows.length === 0) {
-        return `
-            <div class="dashboard-list-empty">
-                No low-stock products at or below ${stock.threshold || LOW_STOCK_THRESHOLD}.
-            </div>
-        `;
-    }
-
-    return `
-        <ul class="dashboard-list">
-            ${stock.lowStockRows.map(product => `
-                <li class="dashboard-list-item tone-warning">
-                    <div class="dashboard-list-item-main">
-                        <p class="dashboard-list-item-title">${product.itemName || product.productName || "Untitled Product"}</p>
-                        <p class="dashboard-list-item-copy">${product.resolvedCategoryName || product.productCategoryName || product.categoryName || "Uncategorized"}</p>
-                    </div>
-                    <div class="dashboard-list-item-meta">
-                        <span class="status-pill">Stock: ${Math.max(0, Math.floor(toNumber(product.inventoryCount)))}</span>
-                    </div>
-                </li>
-            `).join("")}
-        </ul>
-    `;
-}
-
 function renderInventorySummary(inventory = {}) {
     const counts = inventory.counts || { out: 0, low: 0, medium: 0, healthy: 0 };
 
@@ -1289,20 +1263,6 @@ function renderDashboardMarkup(user) {
                     </div>
                 </section>
             ` : ""}
-
-            <section class="panel-card dashboard-section-card">
-                <div class="dashboard-section-head">
-                    <div class="panel-title-wrap">
-                        <span class="panel-icon panel-icon-alt">${icons.products}</span>
-                        <div>
-                            <h3>Low Stock Watch</h3>
-                            <p class="panel-copy">Products at or below the low-stock threshold.</p>
-                        </div>
-                    </div>
-                    <span class="dashboard-section-badge">${metrics.stock.lowStockCount} alerts</span>
-                </div>
-                ${renderLowStockList(metrics.stock)}
-            </section>
 
             <section class="panel-card dashboard-section-card">
                 <div class="dashboard-section-head">
