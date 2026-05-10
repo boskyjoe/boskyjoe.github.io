@@ -1,10 +1,8 @@
 import { getState } from "../../app/store.js";
-import { navigateTo } from "../../app/router.js";
 import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import { findNavRouteItem } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
-import { buildImmediateActionItems } from "../../shared/action-center.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
@@ -41,6 +39,7 @@ const featureState = {
     salesStoreChart: null,
     cashPositionChart: null,
     leadPipelineChart: null,
+    activeCashVisual: "cash",
     inventoryChartSyncToken: 0,
     financialChartSyncToken: 0
 };
@@ -378,40 +377,6 @@ function getDashboardProfile(user) {
         canCashFlow: canFinance || role === "inventory_manager",
         scopeToOwnData
     };
-}
-
-function renderImmediateActionSection(items = []) {
-    if (!items.length) return "";
-
-    return `
-        <section class="panel-card dashboard-section-card dashboard-action-section">
-            <div class="dashboard-section-head">
-                <div class="panel-title-wrap">
-                    <span class="panel-icon panel-icon-alt">${icons.warning}</span>
-                    <div>
-                        <h3>Immediate Action Required</h3>
-                        <p class="panel-copy">These items need attention now based on your current Moneta role.</p>
-                    </div>
-                </div>
-                <span class="dashboard-section-badge">${items.length} open</span>
-            </div>
-            <div class="dashboard-action-grid">
-                ${items.map(item => `
-                    <button
-                        class="dashboard-action-tile tone-${item.tone || "warning"}"
-                        type="button"
-                        data-dashboard-action-route="${item.route}">
-                        <div class="dashboard-action-head">
-                            <p class="dashboard-action-title">${escapeHtml(item.title)}</p>
-                            <span class="dashboard-action-count">${item.count}</span>
-                        </div>
-                        <p class="dashboard-action-copy">${escapeHtml(item.copy)}</p>
-                        <span class="dashboard-action-link">${escapeHtml(item.actionLabel)}</span>
-                    </button>
-                `).join("")}
-            </div>
-        </section>
-    `;
 }
 
 function sortRowsByDateDesc(rows = [], dateField) {
@@ -1132,7 +1097,6 @@ function renderDashboardMarkup(user) {
     const profile = dashboard?.profile || getDashboardProfile(user);
     const categories = getState().masterData.categories || [];
     const products = getState().masterData.products || [];
-    const actionItems = buildImmediateActionItems(user, getState().masterData);
     const metrics = dashboard?.metrics || {
         leads: computeLeadSummary([]),
         retail: computeRetailSummary([]),
@@ -1186,8 +1150,6 @@ function renderDashboardMarkup(user) {
                     </div>
                 ` : ""}
             </section>
-
-            ${renderImmediateActionSection(actionItems)}
 
             <section class="dashboard-kpi-grid">
                 ${renderPrimaryCards(primaryCards)}
@@ -1285,8 +1247,8 @@ function renderDashboardMarkup(user) {
                         <span class="dashboard-section-badge">Cash Flow</span>
                     </div>
                     <div class="dashboard-financial-layout dashboard-financial-layout-cash">
-                        <div class="dashboard-financial-grid dashboard-financial-grid-cash is-compact">
-                            <article class="dashboard-financial-card dashboard-financial-card-hero dashboard-financial-card-cash">
+                        <div class="dashboard-cash-overview">
+                            <article class="dashboard-financial-card dashboard-financial-card-hero dashboard-financial-card-cash dashboard-cash-hero">
                                 <p class="dashboard-financial-title">Net Cash In Hand</p>
                                 <p class="dashboard-financial-value ${metrics.cash.netCash >= 0 ? "dashboard-tone-success" : "dashboard-tone-danger"}">${formatSignedCurrency(metrics.cash.netCash)}</p>
                                 <div class="dashboard-financial-lines">
@@ -1296,7 +1258,7 @@ function renderDashboardMarkup(user) {
                                     <p><span>Supplier Outflow</span><strong>${formatCurrency(metrics.cash.supplierOutflow)}</strong></p>
                                 </div>
                             </article>
-                            <article class="dashboard-financial-card">
+                            <article class="dashboard-financial-card dashboard-cash-support">
                                 <p class="dashboard-financial-title">Purchases</p>
                                 <div class="dashboard-financial-lines">
                                     <p><span>Invoice Total</span><strong>${formatCurrency(metrics.purchases.invoiceTotal)}</strong></p>
@@ -1304,7 +1266,7 @@ function renderDashboardMarkup(user) {
                                     <p><span>Balance Due</span><strong class="${metrics.purchases.balanceDue > 0 ? "dashboard-tone-danger" : "dashboard-tone-success"}">${formatCurrency(metrics.purchases.balanceDue)}</strong></p>
                                 </div>
                             </article>
-                            <article class="dashboard-financial-card">
+                            <article class="dashboard-financial-card dashboard-cash-support">
                                 <p class="dashboard-financial-title">Leads Pipeline</p>
                                 <div class="dashboard-financial-lines">
                                     <p><span>Open Leads</span><strong>${metrics.leads.open}</strong></p>
@@ -1313,26 +1275,50 @@ function renderDashboardMarkup(user) {
                                 </div>
                             </article>
                         </div>
-                        <div class="dashboard-financial-charts dashboard-financial-charts-cash">
-                            <article class="dashboard-chart-card dashboard-chart-card-compact">
-                                <div class="dashboard-chart-head">
-                                    <h4>Cash Flow Mix</h4>
+                        <article class="dashboard-chart-card dashboard-chart-card-cash-focus">
+                            <div class="dashboard-chart-head dashboard-chart-head-split">
+                                <div>
+                                    <p class="section-kicker" style="margin-bottom: 0.25rem;">Interactive View</p>
+                                    <h4>Operational Mix</h4>
                                 </div>
-                                <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
-                                    <canvas id="dashboard-cash-position-chart"></canvas>
-                                    <div id="dashboard-cash-position-empty" class="dashboard-chart-empty" hidden></div>
+                                <div class="dashboard-chart-switcher" role="tablist" aria-label="Cash dashboard chart view">
+                                    <button
+                                        class="dashboard-chart-switcher-button ${featureState.activeCashVisual === "cash" ? "is-active" : ""}"
+                                        type="button"
+                                        data-dashboard-cash-view="cash">
+                                        Cash Flow
+                                    </button>
+                                    <button
+                                        class="dashboard-chart-switcher-button ${featureState.activeCashVisual === "leads" ? "is-active" : ""}"
+                                        type="button"
+                                        data-dashboard-cash-view="leads">
+                                        Leads
+                                    </button>
                                 </div>
-                            </article>
-                            <article class="dashboard-chart-card dashboard-chart-card-compact">
-                                <div class="dashboard-chart-head">
-                                    <h4>Lead Pipeline Mix</h4>
+                            </div>
+                            <div class="dashboard-chart-tab-stage">
+                                <div class="dashboard-chart-tab-pane ${featureState.activeCashVisual === "cash" ? "is-active" : ""}" data-dashboard-cash-pane="cash">
+                                    <div class="dashboard-chart-pane-copy">
+                                        <p class="section-kicker">Cash Flow Mix</p>
+                                        <p class="panel-copy">Track inflow versus supplier outflow for the selected window.</p>
+                                    </div>
+                                    <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-tall">
+                                        <canvas id="dashboard-cash-position-chart"></canvas>
+                                        <div id="dashboard-cash-position-empty" class="dashboard-chart-empty" hidden></div>
+                                    </div>
                                 </div>
-                                <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-compact">
-                                    <canvas id="dashboard-lead-pipeline-chart"></canvas>
-                                    <div id="dashboard-lead-pipeline-empty" class="dashboard-chart-empty" hidden></div>
+                                <div class="dashboard-chart-tab-pane ${featureState.activeCashVisual === "leads" ? "is-active" : ""}" data-dashboard-cash-pane="leads">
+                                    <div class="dashboard-chart-pane-copy">
+                                        <p class="section-kicker">Lead Pipeline Mix</p>
+                                        <p class="panel-copy">See how many enquiries are open, qualified, and ready for sale conversion.</p>
+                                    </div>
+                                    <div class="dashboard-chart-canvas-wrap dashboard-chart-canvas-wrap-tall">
+                                        <canvas id="dashboard-lead-pipeline-chart"></canvas>
+                                        <div id="dashboard-lead-pipeline-empty" class="dashboard-chart-empty" hidden></div>
+                                    </div>
                                 </div>
-                            </article>
-                        </div>
+                            </div>
+                        </article>
                     </div>
                 </section>
             ` : ""}
@@ -1364,26 +1350,6 @@ function renderDashboardMarkup(user) {
                 </div>
                 ${renderInventorySummary(inventory)}
                 <div class="dashboard-inventory-layout">
-                    <div class="dashboard-inventory-charts">
-                        <article class="dashboard-chart-card">
-                            <div class="dashboard-chart-head">
-                                <h4>Stock Status Mix</h4>
-                            </div>
-                            <div class="dashboard-chart-canvas-wrap">
-                                <canvas id="dashboard-inventory-status-chart"></canvas>
-                                <div id="dashboard-inventory-status-empty" class="dashboard-chart-empty" hidden></div>
-                            </div>
-                        </article>
-                        <article class="dashboard-chart-card">
-                            <div class="dashboard-chart-head">
-                                <h4>Low Stock By Category</h4>
-                            </div>
-                            <div class="dashboard-chart-canvas-wrap">
-                                <canvas id="dashboard-inventory-category-chart"></canvas>
-                                <div id="dashboard-inventory-category-empty" class="dashboard-chart-empty" hidden></div>
-                            </div>
-                        </article>
-                    </div>
                     <div class="dashboard-inventory-grid-card">
                         <div class="dashboard-inventory-grid-toolbar">
                             <div>
@@ -1404,10 +1370,46 @@ function renderDashboardMarkup(user) {
                             <div id="dashboard-inventory-grid" class="ag-theme-alpine moneta-grid dashboard-inventory-grid" style="width: 100%;"></div>
                         </div>
                     </div>
+                    <div class="dashboard-inventory-charts">
+                        <article class="dashboard-chart-card">
+                            <div class="dashboard-chart-head">
+                                <h4>Stock Status Mix</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap">
+                                <canvas id="dashboard-inventory-status-chart"></canvas>
+                                <div id="dashboard-inventory-status-empty" class="dashboard-chart-empty" hidden></div>
+                            </div>
+                        </article>
+                        <article class="dashboard-chart-card">
+                            <div class="dashboard-chart-head">
+                                <h4>Low Stock By Category</h4>
+                            </div>
+                            <div class="dashboard-chart-canvas-wrap">
+                                <canvas id="dashboard-inventory-category-chart"></canvas>
+                                <div id="dashboard-inventory-category-empty" class="dashboard-chart-empty" hidden></div>
+                            </div>
+                        </article>
+                    </div>
                 </div>
             </section>
         </div>
     `;
+}
+
+function syncCashVisualPanels(root = document) {
+    const activeView = featureState.activeCashVisual === "leads" ? "leads" : "cash";
+
+    root.querySelectorAll("[data-dashboard-cash-view]").forEach(button => {
+        const isActive = button.getAttribute("data-dashboard-cash-view") === activeView;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    root.querySelectorAll("[data-dashboard-cash-pane]").forEach(pane => {
+        const isActive = pane.getAttribute("data-dashboard-cash-pane") === activeView;
+        pane.classList.toggle("is-active", isActive);
+        pane.setAttribute("aria-hidden", isActive ? "false" : "true");
+    });
 }
 
 function destroyInventoryGrid() {
@@ -2051,14 +2053,6 @@ function bindDashboardEvents(user) {
     const root = document.getElementById("dashboard-root");
     if (!root) return;
 
-    root.querySelectorAll("[data-dashboard-action-route]").forEach(button => {
-        button.addEventListener("click", () => {
-            const route = button.getAttribute("data-dashboard-action-route");
-            if (!route) return;
-            navigateTo(route);
-        });
-    });
-
     root.querySelectorAll("[data-dashboard-window]").forEach(button => {
         button.addEventListener("click", () => {
             const nextWindow = button.getAttribute("data-dashboard-window");
@@ -2102,6 +2096,15 @@ function bindDashboardEvents(user) {
     root.querySelector("#dashboard-refresh-button")?.addEventListener("click", () => {
         void loadDashboardData(user, { forceRefresh: true });
     });
+
+    root.querySelectorAll("[data-dashboard-cash-view]").forEach(button => {
+        button.addEventListener("click", () => {
+            const nextView = button.getAttribute("data-dashboard-cash-view");
+            if (!nextView || nextView === featureState.activeCashVisual) return;
+            featureState.activeCashVisual = nextView === "leads" ? "leads" : "cash";
+            syncCashVisualPanels(root);
+        });
+    });
 }
 
 function resetDashboardStateForUser(user) {
@@ -2122,6 +2125,7 @@ function resetDashboardStateForUser(user) {
     featureState.data = null;
     featureState.errorMessage = "";
     featureState.requestToken = 0;
+    featureState.activeCashVisual = "cash";
 }
 
 async function loadDashboardData(user, { forceRefresh = false } = {}) {
@@ -2211,6 +2215,7 @@ export function renderDashboardView(user) {
     cleanupDashboardVisuals();
     root.innerHTML = renderDashboardMarkup(user);
     bindDashboardEvents(user);
+    syncCashVisualPanels(root);
     syncDashboardInventoryVisuals();
     syncDashboardFinancialVisuals();
 
