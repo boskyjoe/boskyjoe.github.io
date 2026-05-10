@@ -290,32 +290,54 @@ function renderHeaderUtilities(user) {
                     aria-label="${actionCount} action${actionCount === 1 ? "" : "s"} required"
                     aria-expanded="${shellUiState.actionPanelOpen ? "true" : "false"}"
                     aria-controls="shell-action-panel">
-                    <span class="shell-action-trigger-icon">${icons.bell}</span>
-                    <span class="shell-action-trigger-label">Action Required</span>
-                    <span class="shell-action-trigger-count">${actionCount}</span>
+                    <span class="shell-action-trigger-icon-shell">
+                        <span class="shell-action-trigger-icon">${icons.bell}</span>
+                        <span class="shell-action-trigger-count">${actionCount}</span>
+                    </span>
+                    <span class="shell-action-trigger-copy">
+                        <span class="shell-action-trigger-kicker">Alerts</span>
+                        <span class="shell-action-trigger-label">${actionCount} item${actionCount === 1 ? "" : "s"} need attention</span>
+                    </span>
                 </button>
-                <div id="shell-action-panel" class="shell-action-panel" ${shellUiState.actionPanelOpen ? "" : "hidden"}>
-                    <div class="shell-action-panel-head">
-                        <div>
-                            <p class="shell-action-panel-kicker">Pending Work</p>
-                            <p class="shell-action-panel-title">Action Required</p>
+                <div class="shell-action-overlay" ${shellUiState.actionPanelOpen ? "" : "hidden"}>
+                    <button
+                        id="shell-action-backdrop"
+                        class="shell-action-backdrop"
+                        type="button"
+                        aria-label="Close alerts drawer"></button>
+                    <div id="shell-action-panel" class="shell-action-panel" role="dialog" aria-labelledby="shell-action-panel-title">
+                        <div class="shell-action-panel-head">
+                            <div>
+                                <p class="shell-action-panel-kicker">Pending Work</p>
+                                <p id="shell-action-panel-title" class="shell-action-panel-title">Immediate Action Required</p>
+                                <p class="shell-action-panel-copy">Stay on top of price reviews, catalogue publishing, and other operational tasks without losing your place.</p>
+                            </div>
+                            <div class="shell-action-panel-controls">
+                                <span class="status-pill">${actionCount} open</span>
+                                <button
+                                    id="shell-action-close"
+                                    class="shell-action-panel-close"
+                                    type="button"
+                                    aria-label="Close alerts drawer">
+                                    ${icons.close}
+                                </button>
+                            </div>
                         </div>
-                        <span class="status-pill">${actionCount} open</span>
-                    </div>
-                    <div class="shell-action-panel-list">
-                        ${actionItems.slice(0, 5).map(item => `
-                            <button
-                                class="shell-action-item tone-${item.tone || "warning"}"
-                                type="button"
-                                data-shell-action-route="${item.route}">
-                                <div class="shell-action-item-head">
-                                    <span class="shell-action-item-title">${escapeHtml(item.title)}</span>
-                                    <span class="shell-action-item-count">${item.count}</span>
-                                </div>
-                                <span class="shell-action-item-copy">${escapeHtml(item.copy)}</span>
-                                <span class="shell-action-item-link">${escapeHtml(item.actionLabel)}</span>
-                            </button>
-                        `).join("")}
+                        <div class="shell-action-panel-list">
+                            ${actionItems.map(item => `
+                                <button
+                                    class="shell-action-item tone-${item.tone || "warning"}"
+                                    type="button"
+                                    data-shell-action-route="${item.route}">
+                                    <div class="shell-action-item-head">
+                                        <span class="shell-action-item-title">${escapeHtml(item.title)}</span>
+                                        <span class="shell-action-item-count">${item.count}</span>
+                                    </div>
+                                    <span class="shell-action-item-copy">${escapeHtml(item.copy)}</span>
+                                    <span class="shell-action-item-link">${escapeHtml(item.actionLabel)}</span>
+                                </button>
+                            `).join("")}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -360,6 +382,18 @@ function renderHeaderUtilities(user) {
     wrapper.querySelector("#shell-action-trigger")?.addEventListener("click", event => {
         event.preventDefault();
         shellUiState.actionPanelOpen = !shellUiState.actionPanelOpen;
+        renderHeaderUtilities(user);
+    });
+
+    wrapper.querySelector("#shell-action-close")?.addEventListener("click", event => {
+        event.preventDefault();
+        shellUiState.actionPanelOpen = false;
+        renderHeaderUtilities(user);
+    });
+
+    wrapper.querySelector("#shell-action-backdrop")?.addEventListener("click", event => {
+        event.preventDefault();
+        shellUiState.actionPanelOpen = false;
         renderHeaderUtilities(user);
     });
 
@@ -525,6 +559,13 @@ export function initializeShell() {
     document.addEventListener("click", event => {
         if (!shellUiState.actionPanelOpen) return;
         if (event.target.closest(".shell-action-wrap")) return;
+        shellUiState.actionPanelOpen = false;
+        renderHeaderUtilities(getState().currentUser);
+    });
+
+    document.addEventListener("keydown", event => {
+        if (!shellUiState.actionPanelOpen) return;
+        if (event.key !== "Escape") return;
         shellUiState.actionPanelOpen = false;
         renderHeaderUtilities(getState().currentUser);
     });
