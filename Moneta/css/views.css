@@ -183,6 +183,26 @@
     background: var(--dashboard-cache-secondary-bg);
 }
 
+.dashboard-cache-strip.source-refreshing {
+    border-color: rgba(var(--accent-alt-rgb), 0.28);
+    background: linear-gradient(180deg, rgba(var(--accent-alt-rgb), 0.08) 0%, rgba(var(--accent-alt-rgb), 0.14) 100%);
+}
+
+.dashboard-cache-strip.source-stale {
+    border-color: rgba(var(--danger-rgb), 0.28);
+    background: linear-gradient(180deg, rgba(var(--danger-rgb), 0.08) 0%, rgba(var(--danger-rgb), 0.14) 100%);
+}
+
+.dashboard-cache-state-note {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-alt);
+}
+
+.dashboard-cache-state-note.tone-danger {
+    color: var(--dashboard-tone-danger);
+}
+
 .dashboard-error-strip {
     margin-top: 0.7rem;
     display: inline-flex;
