@@ -7,6 +7,7 @@ import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const AUTO_REFRESH_RETRY_COOLDOWN_MS = 60 * 1000;
 const MAX_DOCS_PER_COLLECTION = 240;
 const LOW_STOCK_THRESHOLD = 5;
 const MEDIUM_STOCK_THRESHOLD = 20;
@@ -30,6 +31,7 @@ const featureState = {
     expiresAt: 0,
     data: null,
     errorMessage: "",
+    lastRefreshFailureAt: 0,
     requestToken: 0,
     inventoryGridApi: null,
     inventoryGridElement: null,
@@ -40,11 +42,13 @@ const featureState = {
     cashPositionChart: null,
     leadPipelineChart: null,
     activeCashVisual: "cash",
+    cacheRefreshTimerId: 0,
     inventoryChartSyncToken: 0,
     financialChartSyncToken: 0
 };
 
 let themeSyncBound = false;
+let dashboardLifecycleBound = false;
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -346,6 +350,66 @@ function writeDashboardCache(user, rangeKey, data, loadedAt) {
     }
 
     return expiresAt;
+}
+
+function clearDashboardCacheRefreshTimer() {
+    if (!featureState.cacheRefreshTimerId) return;
+    window.clearTimeout(featureState.cacheRefreshTimerId);
+    featureState.cacheRefreshTimerId = 0;
+}
+
+function isDashboardCacheExpired() {
+    return Boolean(featureState.expiresAt) && Date.now() > featureState.expiresAt;
+}
+
+function canAttemptExpiredDashboardRefresh() {
+    if (!isDashboardCacheExpired()) return false;
+    if (!featureState.errorMessage) return true;
+    if (!featureState.lastRefreshFailureAt) return true;
+
+    return (Date.now() - featureState.lastRefreshFailureAt) >= AUTO_REFRESH_RETRY_COOLDOWN_MS;
+}
+
+function scheduleDashboardCacheRefresh(user) {
+    clearDashboardCacheRefreshTimer();
+
+    if (!user || !featureState.expiresAt) return;
+    if (getState().currentRoute !== "#/dashboard") return;
+
+    const delayMs = featureState.expiresAt - Date.now();
+    if (delayMs <= 0) return;
+
+    featureState.cacheRefreshTimerId = window.setTimeout(() => {
+        featureState.cacheRefreshTimerId = 0;
+
+        if (getState().currentRoute !== "#/dashboard") return;
+        if (document.visibilityState !== "visible") return;
+
+        void loadDashboardData(user, { forceRefresh: false });
+    }, delayMs + 25);
+}
+
+function ensureDashboardLifecycleSync() {
+    if (dashboardLifecycleBound) return;
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        if (getState().currentRoute !== "#/dashboard") return;
+        if (!featureState.data || featureState.isLoading) return;
+        if (!canAttemptExpiredDashboardRefresh()) return;
+
+        renderDashboardView(getState().currentUser);
+    });
+
+    window.addEventListener("focus", () => {
+        if (getState().currentRoute !== "#/dashboard") return;
+        if (!featureState.data || featureState.isLoading) return;
+        if (!canAttemptExpiredDashboardRefresh()) return;
+
+        renderDashboardView(getState().currentUser);
+    });
+
+    dashboardLifecycleBound = true;
 }
 
 function roleCanAccess(route, role) {
@@ -1049,7 +1113,19 @@ function renderDashboardMarkup(user) {
     };
     const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 };
     const storeChurch = metrics.retail.byStore?.["Church Store"] || { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 };
-    const sourceLabel = featureState.source === "cache" ? "Cached Snapshot" : "Live Data";
+    const isExpired = isDashboardCacheExpired();
+    const sourceLabel = featureState.isLoading
+        ? "Refreshing"
+        : isExpired
+            ? "Refresh Needed"
+            : featureState.source === "cache"
+                ? "Cached Snapshot"
+                : "Live Data";
+    const cacheStripTone = featureState.isLoading
+        ? "source-refreshing"
+        : isExpired
+            ? "source-stale"
+            : `source-${featureState.source}`;
     const expiryLabel = featureState.expiresAt ? formatDateTime(featureState.expiresAt) : "-";
     const loadedLabel = featureState.loadedAt ? formatDateTime(featureState.loadedAt) : "-";
     const activeRangeSpec = resolveActiveRangeSpec();
@@ -1078,11 +1154,13 @@ function renderDashboardMarkup(user) {
                         </button>
                     </div>
                 </div>
-                <div class="dashboard-cache-strip source-${featureState.source}">
+                <div class="dashboard-cache-strip ${cacheStripTone}">
                     <span class="status-pill">${sourceLabel}</span>
                     <span>Loaded: <strong>${loadedLabel}</strong></span>
                     <span>Duration: <strong>${durationLabel}</strong></span>
                     <span>Cache Expires: <strong>${expiryLabel}</strong></span>
+                    ${featureState.isLoading ? `<span class="dashboard-cache-state-note">Refreshing the dashboard snapshot now.</span>` : ""}
+                    ${isExpired && !featureState.isLoading ? `<span class="dashboard-cache-state-note tone-danger">Dashboard data is stale. Refresh to get the latest live snapshot.</span>` : ""}
                 </div>
                 ${featureState.errorMessage ? `
                     <div class="dashboard-error-strip">
@@ -2038,6 +2116,7 @@ function resetDashboardStateForUser(user) {
     const nextUserKey = normalizeText(user?.uid || user?.email || "");
     if (featureState.userKey === nextUserKey) return;
     const defaults = getDefaultCustomRange();
+    clearDashboardCacheRefreshTimer();
     cleanupDashboardVisuals();
 
     featureState.userKey = nextUserKey;
@@ -2051,6 +2130,7 @@ function resetDashboardStateForUser(user) {
     featureState.expiresAt = 0;
     featureState.data = null;
     featureState.errorMessage = "";
+    featureState.lastRefreshFailureAt = 0;
     featureState.requestToken = 0;
     featureState.activeCashVisual = "cash";
 }
@@ -2086,12 +2166,14 @@ async function loadDashboardData(user, { forceRefresh = false } = {}) {
             featureState.loadedAt = Number(cached.loadedAt) || Date.now();
             featureState.expiresAt = Number(cached.expiresAt) || (Date.now() + CACHE_TTL_MS);
             featureState.errorMessage = "";
+            featureState.lastRefreshFailureAt = 0;
             renderDashboardView(user);
             return;
         }
     }
 
     const token = ++featureState.requestToken;
+    clearDashboardCacheRefreshTimer();
     featureState.isLoading = true;
     featureState.errorMessage = "";
     renderDashboardView(user);
@@ -2108,10 +2190,12 @@ async function loadDashboardData(user, { forceRefresh = false } = {}) {
         featureState.loadedAt = Date.now();
         featureState.expiresAt = writeDashboardCache(user, rangeSpec.rangeKey, data, featureState.loadedAt);
         featureState.errorMessage = "";
+        featureState.lastRefreshFailureAt = 0;
     } catch (error) {
         if (token !== featureState.requestToken) return;
         console.error("[Moneta] Dashboard load failed:", error);
         featureState.errorMessage = "Could not refresh all dashboard widgets. Showing the latest available snapshot.";
+        featureState.lastRefreshFailureAt = Date.now();
     } finally {
         if (token === featureState.requestToken) {
             featureState.isLoading = false;
@@ -2126,8 +2210,10 @@ export function renderDashboardView(user) {
     const root = document.getElementById("dashboard-root");
     if (!root) return;
     ensureDashboardThemeSync();
+    ensureDashboardLifecycleSync();
 
     if (!user) {
+        clearDashboardCacheRefreshTimer();
         cleanupDashboardVisuals();
         root.innerHTML = `
             <div class="panel-card">
@@ -2145,9 +2231,10 @@ export function renderDashboardView(user) {
     syncCashVisualPanels(root);
     syncDashboardInventoryVisuals();
     syncDashboardFinancialVisuals();
+    scheduleDashboardCacheRefresh(user);
 
     const rangeSpec = resolveActiveRangeSpec();
-    if (rangeSpec.isValid && !featureState.isLoading && (!featureState.data || Date.now() > featureState.expiresAt)) {
+    if (rangeSpec.isValid && !featureState.isLoading && (!featureState.data || canAttemptExpiredDashboardRefresh())) {
         void loadDashboardData(user, { forceRefresh: false });
     }
 }
