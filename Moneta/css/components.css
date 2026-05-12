@@ -1745,6 +1745,40 @@ select {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.simple-consignment-payment-fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.purchase-payment-form.is-locked .simple-consignment-payment-fieldset {
+    opacity: 0.78;
+}
+
+.simple-consignment-payment-lock-notice {
+    display: none;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(var(--warning-rgb), 0.26);
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.14) 0%, rgba(var(--warning-rgb), 0.08) 100%);
+}
+
+.simple-consignment-payment-lock-notice.is-visible {
+    display: flex;
+}
+
+.simple-consignment-payment-lock-notice .section-kicker {
+    margin-bottom: 0.2rem;
+}
+
+.simple-consignment-payment-lock-notice .panel-copy {
+    margin-bottom: 0;
+}
+
 .simple-consignment-amount-label-row {
     display: flex;
     align-items: center;
