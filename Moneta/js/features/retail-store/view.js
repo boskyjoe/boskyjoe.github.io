@@ -4,6 +4,7 @@ import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
+    getRetailSalesHistorySourceLegendItems,
     initializeRetailExpenseHistoryGrid,
     initializeRetailPaymentHistoryGrid,
     initializeRetailReturnHistoryGrid,
@@ -570,6 +571,19 @@ function getSalesHistoryRows() {
         sourceQuoteId: sale.sourceQuoteId || "",
         sourceQuoteNumber: sale.sourceQuoteNumber || ""
     }));
+}
+
+function renderRetailSalesSourceLegend() {
+    return getRetailSalesHistorySourceLegendItems()
+        .map(item => `
+            <span class="retail-sales-source-legend-item">
+                <span class="retail-sale-source-indicator tone-${item.tone}" aria-hidden="true">
+                    <span class="retail-sale-source-indicator-icon">${item.icon}</span>
+                </span>
+                <span>${item.label}</span>
+            </span>
+        `)
+        .join("");
 }
 
 function renderStoreOptions(currentValue) {
@@ -1925,6 +1939,10 @@ function renderRetailStoreViewShell(snapshot) {
                     <div>
                         <p class="section-kicker" style="margin-bottom: 0.25rem;">History</p>
                         <p class="panel-copy">Use Edit, Return, Payments, Expense, and More Actions to manage each sale safely.</p>
+                        <div class="retail-sales-source-legend" aria-label="Sales history source legend">
+                            <span class="retail-sales-source-legend-label">Source Legend</span>
+                            ${renderRetailSalesSourceLegend()}
+                        </div>
                     </div>
                     <div class="search-wrap">
                         <span class="search-icon">${icons.search}</span>

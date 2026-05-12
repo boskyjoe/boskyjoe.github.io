@@ -127,6 +127,15 @@ function retailSalesSourceMarkup(data = {}) {
     `;
 }
 
+export function getRetailSalesHistorySourceLegendItems() {
+    return [
+        getRetailSalesHistorySourceMeta({ sourceType: "direct-store" }),
+        getRetailSalesHistorySourceMeta({ sourceType: "lead" }),
+        getRetailSalesHistorySourceMeta({ sourceType: "quote" }),
+        getRetailSalesHistorySourceMeta({ sourceType: "portal-request" })
+    ];
+}
+
 function retailPaymentActionMarkup(payment = {}) {
     const status = String(payment.paymentStatus || payment.status || "Verified").trim().toLowerCase();
     const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
