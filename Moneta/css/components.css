@@ -3011,6 +3011,50 @@ select {
     margin-top: 1rem;
 }
 
+.simple-consignment-save-state {
+    margin-top: 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+}
+
+.simple-consignment-save-state.is-sticky {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 4;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.simple-consignment-save-state.is-clean {
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(var(--accent-rgb), 0.04) 100%);
+    border-color: rgba(var(--accent-rgb), 0.14);
+}
+
+.simple-consignment-save-state.is-dirty {
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.16) 0%, rgba(var(--warning-rgb), 0.08) 100%);
+    border-color: rgba(var(--warning-rgb), 0.24);
+}
+
+.simple-consignment-save-state-copy {
+    min-width: 0;
+    display: grid;
+    gap: 0.28rem;
+}
+
+.simple-consignment-save-state .section-kicker {
+    margin-bottom: 0;
+}
+
+.simple-consignment-save-progress-attention {
+    box-shadow: 0 0 0 4px rgba(var(--warning-rgb), 0.14), 0 14px 28px rgba(var(--warning-rgb), 0.12);
+}
+
 .simple-consignment-shell .purchase-payments-layout {
     margin-top: 0.5rem;
 }
