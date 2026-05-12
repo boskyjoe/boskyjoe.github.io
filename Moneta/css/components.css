@@ -1049,6 +1049,56 @@ select {
     border-color: rgba(177, 44, 44, 0.14);
 }
 
+.retail-sale-source-indicator {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, var(--bg-panel-subtle) 0%, var(--bg-panel-muted) 100%);
+    color: var(--text-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.retail-sale-source-indicator-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.retail-sale-source-indicator-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.retail-sale-source-indicator.tone-direct {
+    color: var(--accent-alt);
+    border-color: rgba(var(--accent-alt-rgb), 0.2);
+    background: linear-gradient(180deg, rgba(var(--accent-alt-rgb), 0.1) 0%, rgba(var(--accent-alt-rgb), 0.16) 100%);
+}
+
+.retail-sale-source-indicator.tone-lead {
+    color: #7b35b1;
+    border-color: rgba(123, 53, 177, 0.2);
+    background: linear-gradient(180deg, rgba(123, 53, 177, 0.1) 0%, rgba(123, 53, 177, 0.16) 100%);
+}
+
+.retail-sale-source-indicator.tone-quote {
+    color: #9a5a0a;
+    border-color: rgba(154, 90, 10, 0.2);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.16) 100%);
+}
+
+.retail-sale-source-indicator.tone-portal {
+    color: #0f766e;
+    border-color: rgba(15, 118, 110, 0.2);
+    background: linear-gradient(180deg, rgba(15, 118, 110, 0.1) 0%, rgba(15, 118, 110, 0.16) 100%);
+}
+
 .grid-action-muted {
     color: var(--text-muted);
     font-size: var(--font-size-support-compact);
