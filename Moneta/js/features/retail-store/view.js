@@ -561,7 +561,14 @@ function getSalesHistoryRows() {
         totalDonation: Number(sale.totalDonation) || 0,
         totalExpenses: Number(sale.financials?.totalExpenses) || 0,
         balanceDue: Number(sale.balanceDue) || 0,
-        paymentStatus: sale.paymentStatus || "Unpaid"
+        paymentStatus: sale.paymentStatus || "Unpaid",
+        sourceType: sale.sourceType || "",
+        sourcePortalRequestId: sale.sourcePortalRequestId || "",
+        sourcePortalRequestNumber: sale.sourcePortalRequestNumber || "",
+        sourceLeadId: sale.sourceLeadId || "",
+        sourceLeadBusinessId: sale.sourceLeadBusinessId || "",
+        sourceQuoteId: sale.sourceQuoteId || "",
+        sourceQuoteNumber: sale.sourceQuoteNumber || ""
     }));
 }
 

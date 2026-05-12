@@ -53,6 +53,80 @@ function escapeHtmlAttr(value) {
         .replaceAll(">", "&gt;");
 }
 
+function normalizeText(value) {
+    return (value || "").trim();
+}
+
+function normalizeRetailSourceType(value) {
+    return normalizeText(value).toLowerCase();
+}
+
+function deriveRetailSourceType(data = {}) {
+    const normalized = normalizeRetailSourceType(data.sourceType);
+    if (normalized) return normalized;
+    if (normalizeText(data.sourcePortalRequestId)) return "portal-request";
+    if (normalizeText(data.sourceQuoteId)) return "quote";
+    if (normalizeText(data.sourceLeadId)) return "lead";
+    return "direct-store";
+}
+
+function getRetailSalesHistorySourceMeta(data = {}) {
+    const sourceType = deriveRetailSourceType(data);
+
+    if (sourceType === "portal-request") {
+        const reference = normalizeText(data.sourcePortalRequestNumber || data.sourcePortalRequestId);
+        return {
+            type: sourceType,
+            label: "Portal Request",
+            tone: "portal",
+            icon: icons.portalRequests,
+            tooltip: reference ? `Portal Request · ${reference}` : "Portal Request"
+        };
+    }
+
+    if (sourceType === "quote") {
+        const reference = normalizeText(data.sourceQuoteNumber || data.sourceQuoteId || data.sourceLeadBusinessId || data.sourceLeadId);
+        return {
+            type: sourceType,
+            label: "Quote",
+            tone: "quote",
+            icon: icons.catalogue,
+            tooltip: reference ? `Quote · ${reference}` : "Quote"
+        };
+    }
+
+    if (sourceType === "lead") {
+        const reference = normalizeText(data.sourceLeadBusinessId || data.sourceLeadId);
+        return {
+            type: sourceType,
+            label: "Enquiry",
+            tone: "lead",
+            icon: icons.leads,
+            tooltip: reference ? `Enquiry · ${reference}` : "Enquiry"
+        };
+    }
+
+    return {
+        type: "direct-store",
+        label: "Direct Order",
+        tone: "direct",
+        icon: icons.retail,
+        tooltip: "Direct Order"
+    };
+}
+
+function retailSalesSourceMarkup(data = {}) {
+    const meta = getRetailSalesHistorySourceMeta(data);
+    return `
+        <div
+            class="retail-sale-source-indicator tone-${meta.tone}"
+            title="${escapeHtmlAttr(meta.tooltip)}"
+            aria-label="${escapeHtmlAttr(meta.tooltip)}">
+            <span class="retail-sale-source-indicator-icon">${meta.icon}</span>
+        </div>
+    `;
+}
+
 function retailPaymentActionMarkup(payment = {}) {
     const status = String(payment.paymentStatus || payment.status || "Verified").trim().toLowerCase();
     const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
@@ -259,6 +333,20 @@ function buildWorksheetColumnDefs() {
 
 function buildSalesColumnDefs() {
     return [
+        {
+            headerName: "",
+            colId: "sourceIndicator",
+            minWidth: 64,
+            maxWidth: 72,
+            sortable: false,
+            filter: false,
+            suppressHeaderMenuButton: true,
+            suppressColumnsToolPanel: true,
+            pinned: null,
+            cellStyle: { justifyContent: "center" },
+            headerTooltip: "Retail order source",
+            cellRenderer: params => (params.node?.rowPinned ? "" : retailSalesSourceMarkup(params.data || {}))
+        },
         { field: "manualVoucherNumber", headerName: "Voucher #", minWidth: 170, flex: 0.95 },
         { field: "saleId", headerName: "Sale ID", minWidth: 165, flex: 0.95 },
         {
