@@ -104,6 +104,14 @@ function formatSignedCurrency(value) {
 
 function buildAvailableProductsColumnDefs(categories, selectedProductIds) {
     return [
+        {
+            headerName: "Add",
+            minWidth: 120,
+            flex: 0.75,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => addProductActionMarkup(params.data, selectedProductIds)
+        },
         { field: "itemName", headerName: "Product", minWidth: 220, flex: 1.35 },
         {
             field: "categoryId",
@@ -134,14 +142,6 @@ function buildAvailableProductsColumnDefs(categories, selectedProductIds) {
             flex: 0.9,
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatCurrency(params.value || 0)
-        },
-        {
-            headerName: "Add",
-            minWidth: 120,
-            flex: 0.75,
-            sortable: false,
-            filter: false,
-            cellRenderer: params => addProductActionMarkup(params.data, selectedProductIds)
         }
     ];
 }
