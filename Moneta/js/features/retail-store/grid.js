@@ -136,6 +136,16 @@ export function getRetailSalesHistorySourceLegendItems() {
     ];
 }
 
+export function normalizeRetailSalesHistorySourceFilter(value) {
+    const normalized = normalizeRetailSourceType(value);
+    return normalized === "direct-store"
+        || normalized === "lead"
+        || normalized === "quote"
+        || normalized === "portal-request"
+        ? normalized
+        : "";
+}
+
 function retailPaymentActionMarkup(payment = {}) {
     const status = String(payment.paymentStatus || payment.status || "Verified").trim().toLowerCase();
     const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
@@ -342,6 +352,13 @@ function buildWorksheetColumnDefs() {
 
 function buildSalesColumnDefs() {
     return [
+        {
+            colId: "sourceTypeFilter",
+            headerName: "Source Filter",
+            hide: true,
+            valueGetter: params => deriveRetailSourceType(params.data || {}),
+            filter: "agTextColumnFilter"
+        },
         {
             headerName: "",
             colId: "sourceIndicator",
@@ -920,6 +937,27 @@ export function refreshRetailSalesGrid(rows) {
 
 export function updateRetailSalesGridSearch(searchTerm) {
     retailSalesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function updateRetailSalesGridSourceFilter(sourceType) {
+    if (!retailSalesGridApi) return;
+
+    const normalized = normalizeRetailSalesHistorySourceFilter(sourceType);
+    const nextModel = {
+        ...(retailSalesGridApi.getFilterModel() || {})
+    };
+
+    if (normalized) {
+        nextModel.sourceTypeFilter = {
+            filterType: "text",
+            type: "equals",
+            filter: normalized
+        };
+    } else {
+        delete nextModel.sourceTypeFilter;
+    }
+
+    retailSalesGridApi.setFilterModel(nextModel);
 }
 
 export function initializeRetailExpenseHistoryGrid(gridElement) {

@@ -10,11 +10,13 @@ import {
     initializeRetailReturnHistoryGrid,
     initializeRetailSalesGrid,
     initializeRetailWorksheetGrid,
+    normalizeRetailSalesHistorySourceFilter,
     refreshRetailExpenseHistoryGrid,
     refreshRetailPaymentHistoryGrid,
     refreshRetailReturnHistoryGrid,
     refreshRetailSalesGrid,
     refreshRetailWorksheetGrid,
+    updateRetailSalesGridSourceFilter,
     setRetailWorksheetMode,
     setRetailWorksheetReadOnly,
     updateRetailSalesGridSearch,
@@ -85,7 +87,8 @@ const featureState = {
     expenseDraft: createDefaultExpenseDraft(),
     saleDraft: createDefaultSaleDraft(),
     lineItemDrafts: {},
-    pendingLeadFocus: false
+    pendingLeadFocus: false,
+    salesSourceFilter: ""
 };
 
 const LEAD_TO_RETAIL_CONVERSION_STORAGE_KEY = "moneta.pendingLeadRetailConversion";
@@ -574,16 +577,44 @@ function getSalesHistoryRows() {
 }
 
 function renderRetailSalesSourceLegend() {
-    return getRetailSalesHistorySourceLegendItems()
-        .map(item => `
-            <span class="retail-sales-source-legend-item">
-                <span class="retail-sale-source-indicator tone-${item.tone}" aria-hidden="true">
-                    <span class="retail-sale-source-indicator-icon">${item.icon}</span>
-                </span>
-                <span>${item.label}</span>
-            </span>
-        `)
+    const currentFilter = normalizeRetailSalesHistorySourceFilter(featureState.salesSourceFilter);
+    const allActiveClass = currentFilter ? "" : " is-active";
+    const allPressed = currentFilter ? "false" : "true";
+
+    return [
+        `
+            <button
+                class="retail-sales-source-legend-button${allActiveClass}"
+                type="button"
+                data-source-filter=""
+                aria-pressed="${allPressed}">
+                <span>All</span>
+            </button>
+        `,
+        ...getRetailSalesHistorySourceLegendItems().map(item => {
+            const isActive = currentFilter === item.type;
+            return `
+                <button
+                    class="retail-sales-source-legend-button${isActive ? " is-active" : ""}"
+                    type="button"
+                    data-source-filter="${item.type}"
+                    aria-pressed="${isActive ? "true" : "false"}"
+                    title="Filter Sales History to ${item.label}">
+                    <span class="retail-sale-source-indicator tone-${item.tone}" aria-hidden="true">
+                        <span class="retail-sale-source-indicator-icon">${item.icon}</span>
+                    </span>
+                    <span>${item.label}</span>
+                </button>
+            `;
+        })
+    ]
         .join("");
+}
+
+function applyRetailSalesSourceFilter(nextFilter = "") {
+    featureState.salesSourceFilter = normalizeRetailSalesHistorySourceFilter(nextFilter);
+    updateRetailSalesGridSourceFilter(featureState.salesSourceFilter);
+    renderRetailStoreView();
 }
 
 function renderStoreOptions(currentValue) {
@@ -2001,6 +2032,7 @@ function syncRetailSalesGrid() {
     });
     refreshRetailSalesGrid(getSalesHistoryRows());
     updateRetailSalesGridSearch(featureState.searchTerm);
+    updateRetailSalesGridSourceFilter(featureState.salesSourceFilter);
 }
 
 function syncRetailExpenseHistoryGrid() {
@@ -3491,6 +3523,12 @@ function bindRetailStoreDomEvents() {
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
+        const salesSourceLegendButton = targetElement.closest(".retail-sales-source-legend-button");
+
+        if (salesSourceLegendButton) {
+            applyRetailSalesSourceFilter(salesSourceLegendButton.dataset.sourceFilter || "");
+            return;
+        }
 
         if (resetButton) {
             handleRetailReset();
