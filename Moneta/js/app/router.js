@@ -38,6 +38,29 @@ const ROUTE_TO_VIEW = {
     "#/user-management": "user-management-view"
 };
 
+function canLeaveCurrentRoute(nextRoute) {
+    const registry = window.__monetaRouteLeaveGuards;
+    if (registry && typeof registry === "object") {
+        const currentRoute = getState().currentRoute;
+        const guards = Object.values(registry).filter(guard => typeof guard === "function");
+        for (const guard of guards) {
+            if (guard({ currentRoute, nextRoute }) === false) {
+                return false;
+            }
+        }
+    }
+
+    const singleGuard = window.__monetaRouteLeaveGuard;
+    if (typeof singleGuard === "function") {
+        return singleGuard({
+            currentRoute: getState().currentRoute,
+            nextRoute
+        }) !== false;
+    }
+
+    return true;
+}
+
 function normalizeRoute(route) {
     if (!route || route === "#") return DEFAULT_AUTH_ROUTE;
     const baseRoute = String(route).split("?")[0];
@@ -101,7 +124,12 @@ function getViewTitle(route) {
 }
 
 export function navigateTo(route) {
-    window.location.hash = route;
+    const normalizedRoute = normalizeRoute(route);
+    if (normalizedRoute !== getState().currentRoute && !canLeaveCurrentRoute(normalizedRoute)) {
+        return;
+    }
+
+    window.location.hash = normalizedRoute;
 }
 
 export function resolveRoute() {
@@ -118,6 +146,13 @@ export function resolveRoute() {
 
     if (!hasRouteAccess(requestedHash, user)) {
         route = DEFAULT_AUTH_ROUTE;
+    }
+
+    if (route !== snapshot.currentRoute && !canLeaveCurrentRoute(route)) {
+        if ((window.location.hash || "") !== snapshot.currentRoute) {
+            window.location.hash = snapshot.currentRoute;
+        }
+        return;
     }
 
     setState({ currentRoute: route });
