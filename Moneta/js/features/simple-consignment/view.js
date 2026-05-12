@@ -58,6 +58,7 @@ const featureState = {
     unsubscribeTransactions: null,
     transactionsOrderId: null,
     cancelReason: "",
+    settlementBaseline: null,
     checkoutDraft: createDefaultCheckoutDraft(),
     transactionDraft: createDefaultTransactionDraft()
 };
@@ -136,6 +137,8 @@ const SETTLEMENT_TRACKED_FIELDS = [
 ];
 
 const ADD_PRODUCTS_MODAL_ROOT_ID = "simple-consignment-add-products-modal-root";
+const SIMPLE_CONSIGNMENT_ROUTE = "#/simple-consignment";
+const SIMPLE_CONSIGNMENT_UNSAVED_LEAVE_MESSAGE = "You have unsaved Simple Consignment settlement changes. Click Save Progress before leaving or those updates will be lost.";
 
 const ORDER_CONTEXT_TRACKED_FIELDS = [
     "manualVoucherNumber",
@@ -145,6 +148,35 @@ const ORDER_CONTEXT_TRACKED_FIELDS = [
     "memberEmail",
     "venue"
 ];
+
+function normalizeSettlementContextValues(source = {}) {
+    return ORDER_CONTEXT_TRACKED_FIELDS.reduce((normalized, field) => {
+        normalized[field] = normalizeText(source?.[field]);
+        return normalized;
+    }, {});
+}
+
+function normalizeSettlementBaselineRows(rows = []) {
+    return (rows || [])
+        .map(row => ({
+            productId: normalizeText(row.productId),
+            productName: row.productName || "Untitled Product",
+            categoryId: normalizeText(row.categoryId),
+            categoryName: row.categoryName || "-",
+            sellingPrice: Number(row.sellingPrice) || 0,
+            quantityCheckedOut: toWholeNumber(row.quantityCheckedOut),
+            quantitySold: toWholeNumber(row.quantitySold),
+            quantityReturned: toWholeNumber(row.quantityReturned),
+            quantityDamaged: toWholeNumber(row.quantityDamaged),
+            quantityGifted: toWholeNumber(row.quantityGifted)
+        }))
+        .filter(row => row.productId)
+        .sort((left, right) => left.productId.localeCompare(right.productId));
+}
+
+function clearSettlementBaseline() {
+    featureState.settlementBaseline = null;
+}
 
 function toWholeNumber(value) {
     return Math.max(0, Math.floor(Number(value) || 0));
@@ -311,6 +343,137 @@ function closeAddProductsModal(options = {}) {
     }
 }
 
+function captureSettlementBaseline(order, rows = [], contextPayload = null) {
+    if (!order?.id) {
+        clearSettlementBaseline();
+        return;
+    }
+
+    featureState.settlementBaseline = {
+        orderId: order.id,
+        rows: normalizeSettlementBaselineRows(rows),
+        context: normalizeSettlementContextValues(contextPayload || order)
+    };
+}
+
+function buildSettlementBaselineOrder(order) {
+    if (!order?.id) return null;
+
+    const baseline = featureState.settlementBaseline;
+    if (!baseline || baseline.orderId !== order.id) {
+        return order;
+    }
+
+    return {
+        ...order,
+        ...baseline.context,
+        items: baseline.rows
+    };
+}
+
+function getSettlementWorksheetRowsForDirtyState(order, snapshot = getState()) {
+    const rows = getSimpleConsignmentWorksheetRows();
+    if (rows.length > 0) return rows;
+    return getOrderWorksheetRows(order, snapshot);
+}
+
+function getSettlementUnsavedState(order = getActiveOrder(), snapshot = getState()) {
+    if (!order?.id || !isSettleMode()) {
+        return {
+            hasUnsavedChanges: false,
+            hasWorksheetChanges: false,
+            contextUpdated: false,
+            lineChangeCount: 0,
+            deltaSummary: buildSettlementDeltaSummary(null, [])
+        };
+    }
+
+    const baselineOrder = buildSettlementBaselineOrder(order) || order;
+    const currentRows = getSettlementWorksheetRowsForDirtyState(order, snapshot);
+    const contextPayload = getSettlementContextPayloadFromDom(order);
+    const contextUpdated = hasOrderContextUpdated(baselineOrder, contextPayload);
+    const deltaSummary = buildSettlementDeltaSummary(baselineOrder, currentRows);
+    const hasWorksheetChanges = deltaSummary.lineChangeCount > 0;
+
+    return {
+        hasUnsavedChanges: hasWorksheetChanges || contextUpdated,
+        hasWorksheetChanges,
+        contextUpdated,
+        lineChangeCount: deltaSummary.lineChangeCount,
+        deltaSummary
+    };
+}
+
+function buildSettlementUnsavedDetails(state) {
+    if (!state?.hasUnsavedChanges) return [];
+
+    return [
+        { label: "Worksheet Updates", value: String(state.lineChangeCount || 0) },
+        { label: "Order Context", value: state.contextUpdated ? "Changed" : "No Changes" },
+        { label: "Qty Out Delta", value: formatSignedInteger(state.deltaSummary?.impact?.checkedOutQuantityDelta || 0) },
+        { label: "Value Out Delta", value: formatSignedCurrency(state.deltaSummary?.impact?.checkedOutValueDelta || 0) },
+        { label: "Sold Value Delta", value: formatSignedCurrency(state.deltaSummary?.impact?.soldValueDelta || 0) },
+        { label: "Balance Delta", value: formatSignedCurrency(state.deltaSummary?.impact?.balanceDueDelta || 0) }
+    ];
+}
+
+function buildSettlementSaveStateModel(order = getActiveOrder(), snapshot = getState()) {
+    const state = getSettlementUnsavedState(order, snapshot);
+
+    if (!state.hasUnsavedChanges) {
+        return {
+            toneClass: "is-clean",
+            title: "All Changes Saved",
+            message: "Worksheet values and order context are in sync. If you make more changes, click Save Progress before leaving this order.",
+            badges: [
+                { label: "Ready", value: "Saved" }
+            ],
+            state
+        };
+    }
+
+    const badges = [];
+    if (state.hasWorksheetChanges) {
+        badges.push({
+            label: "Worksheet",
+            value: `${state.lineChangeCount} update${state.lineChangeCount === 1 ? "" : "s"}`
+        });
+    }
+    if (state.contextUpdated) {
+        badges.push({
+            label: "Order Context",
+            value: "Changed"
+        });
+    }
+
+    return {
+        toneClass: "is-dirty",
+        title: "Unsaved Changes",
+        message: "These worksheet and order-context changes are still local. Click Save Progress to commit qty, value, balance, and context updates.",
+        badges,
+        state
+    };
+}
+
+function renderSettlementSaveStateBanner(order = getActiveOrder(), snapshot = getState()) {
+    if (!isSettleMode()) return "";
+
+    const model = buildSettlementSaveStateModel(order, snapshot);
+    const stickyClass = model.state.hasUnsavedChanges ? " is-sticky" : "";
+
+    return `
+        <div id="simple-consignment-save-state" class="simple-consignment-save-state ${model.toneClass}${stickyClass}">
+            <div class="simple-consignment-save-state-copy">
+                <p class="section-kicker">${model.title}</p>
+                <p id="simple-consignment-save-state-message" class="panel-copy">${model.message}</p>
+            </div>
+            <div class="toolbar-meta">
+                ${model.badges.map(badge => `<span class="status-pill">${badge.label}: <strong>${badge.value}</strong></span>`).join("")}
+            </div>
+        </div>
+    `;
+}
+
 function syncAddProductsSummaryInPlace() {
     if (!featureState.addProductsModalOpen) return;
 
@@ -467,6 +630,7 @@ function isCancelMode() {
 
 function resetWorkspaceToCreate() {
     closeAddProductsModal();
+    clearSettlementBaseline();
     featureState.workspaceMode = "create";
     featureState.activeOrderId = null;
     featureState.cancelReason = "";
@@ -1032,7 +1196,7 @@ function renderSettlementWorkspace(snapshot) {
             ? "All worksheet values are locked in cancel mode. Review the order and confirm cancellation if all guard conditions pass."
             : isView
                 ? viewStateCopy
-                : "Update sold, returned, damaged, and gifted quantities. Save progress to reconcile quantities and values. Payments can be recorded later."}</p>
+                : "Update sold, returned, damaged, and gifted quantities. Changes stay local until Save Progress commits them to this order. Payments can be recorded later."}</p>
                         </div>
                         <div class="simple-consignment-toolbar-actions">
                             ${isView || isCancel ? "" : `
@@ -1047,6 +1211,7 @@ function renderSettlementWorkspace(snapshot) {
                             </div>
                         </div>
                     </div>
+                    ${renderSettlementSaveStateBanner(order, snapshot)}
                     <div class="ag-shell">
                         <div id="simple-consignment-worksheet-grid" class="ag-theme-alpine moneta-grid" style="height: 500px; width: 100%;"></div>
                     </div>
@@ -1234,6 +1399,38 @@ function updateSummaryCardsInPlace() {
     const transactionsCount = document.getElementById("simple-consignment-transactions-count");
     if (transactionsCount && summaryModel.transactionsCountCopy) {
         transactionsCount.textContent = summaryModel.transactionsCountCopy;
+    }
+
+    syncSettlementSaveStateInPlace();
+}
+
+function syncSettlementSaveStateInPlace() {
+    const banner = document.getElementById("simple-consignment-save-state");
+    const saveButton = document.getElementById("simple-consignment-save-progress-button");
+    if (!banner && !saveButton) return;
+
+    const snapshot = getState();
+    const order = getActiveOrder();
+    const model = buildSettlementSaveStateModel(order, snapshot);
+
+    if (banner) {
+        banner.className = `simple-consignment-save-state ${model.toneClass}${model.state.hasUnsavedChanges ? " is-sticky" : ""}`;
+        banner.innerHTML = `
+            <div class="simple-consignment-save-state-copy">
+                <p class="section-kicker">${model.title}</p>
+                <p id="simple-consignment-save-state-message" class="panel-copy">${model.message}</p>
+            </div>
+            <div class="toolbar-meta">
+                ${model.badges.map(badge => `<span class="status-pill">${badge.label}: <strong>${badge.value}</strong></span>`).join("")}
+            </div>
+        `;
+    }
+
+    if (saveButton) {
+        saveButton.classList.toggle("simple-consignment-save-progress-attention", model.state.hasUnsavedChanges);
+        saveButton.title = model.state.hasUnsavedChanges
+            ? "Unsaved worksheet changes are still local. Click Save Progress to commit them."
+            : "";
     }
 }
 
@@ -1428,6 +1625,7 @@ function openOrderWorkspace(order) {
     featureState.selectedCatalogueId = order.salesCatalogueId || "";
     featureState.transactionDraft = createDefaultTransactionDraft();
     featureState.cancelReason = "";
+    captureSettlementBaseline(order, getOrderWorksheetRows(order, getState()), order);
     ensureTransactionsListener(getState());
 
     renderSimpleConsignmentView();
@@ -1459,6 +1657,7 @@ function openOrderCancelWorkspace(order) {
     featureState.selectedCatalogueId = order.salesCatalogueId || "";
     featureState.transactionDraft = createDefaultTransactionDraft();
     featureState.cancelReason = "";
+    captureSettlementBaseline(order, getOrderWorksheetRows(order, getState()), order);
     ensureTransactionsListener(getState());
 
     renderSimpleConsignmentView();
@@ -1758,6 +1957,83 @@ function handleUndoWorksheetLineChange(button) {
     }
 }
 
+function focusSaveProgressButton() {
+    document.getElementById("simple-consignment-save-progress-button")?.focus();
+}
+
+async function showSaveProgressRequired(actionLabel) {
+    const unsavedState = getSettlementUnsavedState();
+    if (!unsavedState.hasUnsavedChanges) return true;
+
+    await showSummaryModal({
+        title: "Save Progress Required",
+        message: `Save Progress before ${actionLabel}. These worksheet changes are still local and have not been committed to this order yet.`,
+        details: buildSettlementUnsavedDetails(unsavedState),
+        note: "Use Save Progress first so qty, value, balance, and order-context updates stay aligned before you continue.",
+        noteTone: "warning",
+        noteIcon: icons.warning,
+        noteTitle: "Unsaved Settlement"
+    });
+
+    focusSaveProgressButton();
+    return false;
+}
+
+async function confirmDiscardUnsavedSettlementChanges(actionLabel) {
+    const unsavedState = getSettlementUnsavedState();
+    if (!unsavedState.hasUnsavedChanges) return true;
+
+    return showConfirmationModal({
+        title: "Unsaved Settlement Changes",
+        message: `${actionLabel} will discard worksheet changes that have not been saved yet.`,
+        details: buildSettlementUnsavedDetails(unsavedState),
+        note: "Click Save Progress first if you want to keep these qty, value, balance, and order-context updates.",
+        noteTone: "warning",
+        noteIcon: icons.warning,
+        noteTitle: "Leave Without Saving",
+        confirmText: "Leave Without Saving",
+        cancelText: "Stay Here",
+        tone: "danger"
+    });
+}
+
+function shouldWarnBeforeLeavingSimpleConsignment(nextRoute) {
+    const snapshot = getState();
+    if (snapshot.currentRoute !== SIMPLE_CONSIGNMENT_ROUTE) return false;
+    const hasUnsavedChanges = getSettlementUnsavedState().hasUnsavedChanges;
+    if (!nextRoute) return hasUnsavedChanges;
+    if (nextRoute === SIMPLE_CONSIGNMENT_ROUTE) return false;
+    return hasUnsavedChanges;
+}
+
+function handleSimpleConsignmentBeforeUnload(event) {
+    if (!shouldWarnBeforeLeavingSimpleConsignment()) return;
+
+    event.preventDefault();
+    event.returnValue = SIMPLE_CONSIGNMENT_UNSAVED_LEAVE_MESSAGE;
+    return SIMPLE_CONSIGNMENT_UNSAVED_LEAVE_MESSAGE;
+}
+
+function registerSimpleConsignmentLeaveGuards() {
+    if (!window.__monetaRouteLeaveGuards) {
+        window.__monetaRouteLeaveGuards = {};
+    }
+
+    if (!window.__monetaRouteLeaveGuards.simpleConsignment) {
+        window.__monetaRouteLeaveGuards.simpleConsignment = ({ currentRoute, nextRoute }) => {
+            if (currentRoute !== SIMPLE_CONSIGNMENT_ROUTE) return true;
+            if (!nextRoute || nextRoute === SIMPLE_CONSIGNMENT_ROUTE) return true;
+            if (!getSettlementUnsavedState().hasUnsavedChanges) return true;
+            return window.confirm(SIMPLE_CONSIGNMENT_UNSAVED_LEAVE_MESSAGE);
+        };
+    }
+
+    if (!window.__monetaSimpleConsignmentBeforeUnloadBound) {
+        window.addEventListener("beforeunload", handleSimpleConsignmentBeforeUnload);
+        window.__monetaSimpleConsignmentBeforeUnloadBound = true;
+    }
+}
+
 async function handleSaveSettlementProgress() {
     const snapshot = getState();
     const user = snapshot.currentUser;
@@ -1782,6 +2058,9 @@ async function handleSaveSettlementProgress() {
         update("Committing order context, settlement totals, and inventory deltas...", 78, "Step 3 of 4");
         return saveResult;
     });
+
+    captureSettlementBaseline(activeOrder, rows, settlementContextPayload);
+    syncSettlementSaveStateInPlace();
 
     showToast("Settlement progress saved.", "success", {
         title: "Simple Consignment"
@@ -1824,6 +2103,7 @@ async function handleRecordTransaction() {
     const user = snapshot.currentUser;
     const activeOrder = getActiveOrder();
     if (!activeOrder) return;
+    if (isSettleMode() && !await showSaveProgressRequired("recording a payment or expense")) return;
 
     const payload = getTransactionPayloadFromDom();
     const result = await runProgressToastFlow({
@@ -1879,6 +2159,7 @@ async function handleRecordTransaction() {
 async function handleVoidTransaction(button) {
     const activeOrder = getActiveOrder();
     if (!activeOrder) return;
+    if (isSettleMode() && !await showSaveProgressRequired("voiding a transaction")) return;
 
     const transactionId = button.dataset.transactionId || "";
     const transaction = featureState.transactions.find(entry => entry.id === transactionId) || null;
@@ -1943,6 +2224,7 @@ async function handleVoidTransaction(button) {
 async function handleCloseOrder() {
     const activeOrder = getActiveOrder();
     if (!activeOrder) return;
+    if (!await showSaveProgressRequired("closing this order")) return;
 
     const rows = getSimpleConsignmentWorksheetRows();
     const metrics = computeWorksheetMetrics(rows);
@@ -2123,6 +2405,10 @@ function handleCheckoutDraftInput(target) {
         ...featureState.checkoutDraft,
         [key]: target.value
     };
+
+    if (isSettleMode()) {
+        syncSettlementSaveStateInPlace();
+    }
 }
 
 function handleTransactionDraftInput(target) {
@@ -2255,6 +2541,9 @@ function bindSimpleConsignmentEvents() {
         const voidTransactionButton = target.closest(".simple-consignment-void-transaction-button");
 
         if (openOrderButton) {
+            if (!await confirmDiscardUnsavedSettlementChanges("Opening another order")) {
+                return;
+            }
             const orderId = openOrderButton.dataset.orderId || "";
             const order = featureState.orders.find(entry => entry.id === orderId) || null;
             if (!order) {
@@ -2268,6 +2557,9 @@ function bindSimpleConsignmentEvents() {
         }
 
         if (cancelModeButton || enterCancelModeButton) {
+            if (!await confirmDiscardUnsavedSettlementChanges("Entering cancel mode")) {
+                return;
+            }
             const sourceOrderId = cancelModeButton?.dataset.orderId || featureState.activeOrderId || "";
             const order = featureState.orders.find(entry => entry.id === sourceOrderId) || null;
             if (!order) {
@@ -2328,6 +2620,9 @@ function bindSimpleConsignmentEvents() {
         }
 
         if (resetButton || backButton) {
+            if (!await confirmDiscardUnsavedSettlementChanges("Leaving this settlement draft")) {
+                return;
+            }
             resetWorkspaceToCreate();
             renderSimpleConsignmentView();
             return;
@@ -2374,6 +2669,8 @@ export function renderSimpleConsignmentView() {
 }
 
 export function initializeSimpleConsignmentFeature() {
+    registerSimpleConsignmentLeaveGuards();
+
     subscribe(snapshot => {
         ensureOrdersListener(snapshot);
         ensureTransactionsListener(snapshot);
