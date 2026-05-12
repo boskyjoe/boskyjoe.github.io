@@ -455,6 +455,23 @@ function buildSettlementSaveStateModel(order = getActiveOrder(), snapshot = getS
     };
 }
 
+function buildSettlementPaymentLockModel(order = getActiveOrder(), snapshot = getState()) {
+    const state = getSettlementUnsavedState(order, snapshot);
+    if (!state.hasUnsavedChanges) {
+        return {
+            isLocked: false,
+            message: ""
+        };
+    }
+
+    return {
+        isLocked: true,
+        message: state.hasWorksheetChanges
+            ? "Payments are locked until Save Progress commits the latest worksheet changes."
+            : "Payments are locked until Save Progress commits the latest order-context changes."
+    };
+}
+
 function renderSettlementSaveStateBanner(order = getActiveOrder(), snapshot = getState()) {
     if (!isSettleMode()) return "";
 
@@ -469,6 +486,19 @@ function renderSettlementSaveStateBanner(order = getActiveOrder(), snapshot = ge
             </div>
             <div class="toolbar-meta">
                 ${model.badges.map(badge => `<span class="status-pill">${badge.label}: <strong>${badge.value}</strong></span>`).join("")}
+            </div>
+        </div>
+    `;
+}
+
+function renderSettlementPaymentLockNotice(order = getActiveOrder(), snapshot = getState()) {
+    const model = buildSettlementPaymentLockModel(order, snapshot);
+    return `
+        <div id="simple-consignment-payment-lock-notice" class="simple-consignment-payment-lock-notice${model.isLocked ? " is-visible" : ""}">
+            <span class="panel-icon panel-icon-alt">${icons.warning}</span>
+            <div>
+                <p class="section-kicker">Payments Locked</p>
+                <p id="simple-consignment-payment-lock-message" class="panel-copy">${model.isLocked ? model.message : ""}</p>
             </div>
         </div>
     `;
@@ -1121,6 +1151,8 @@ function renderSettlementWorkspace(snapshot) {
     const cancelOrderDisabledAttr = cancelGuard.disabled
         ? `disabled title="${cancelGuard.reason.replaceAll('"', "&quot;")}"`
         : "";
+    const paymentLockModel = buildSettlementPaymentLockModel(order, snapshot);
+    const paymentFieldsetDisabledAttr = paymentLockModel.isLocked ? 'disabled aria-disabled="true"' : "";
     const checkoutDateValue = toDateInputValue(order?.checkoutDate) || "";
     const viewStateCopy = normalizeText(order?.status) === "Cancelled"
         ? "This cancelled order is read-only. Values shown below are final."
@@ -1235,56 +1267,59 @@ function renderSettlementWorkspace(snapshot) {
                             ${isView || isCancel ? "" : `<p class="panel-copy">Payments and expenses are optional during quantity updates and can be posted any time before close.</p>`}
                         </div>
                         ${isView || isCancel ? "" : `
-                            <form id="simple-consignment-transaction-form" class="purchase-payment-form">
-                                <div class="form-grid">
-                                    <div class="field">
-                                        <label for="simple-consignment-transaction-date">Transaction Date <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="simple-consignment-transaction-date" class="input" type="date" value="${featureState.transactionDraft.transactionDate}" required>
-                                    </div>
-                                    <div class="field">
-                                        <label for="simple-consignment-transaction-type">Type <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="simple-consignment-transaction-type" class="select" required>
-                                            <option value="Payment" ${featureState.transactionDraft.paymentType === "Payment" ? "selected" : ""}>Payment</option>
-                                            <option value="Expense" ${featureState.transactionDraft.paymentType === "Expense" ? "selected" : ""}>Expense</option>
-                                        </select>
-                                    </div>
-                                    <div class="field">
-                                        <label for="simple-consignment-transaction-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="simple-consignment-transaction-mode" class="select" required>
-                                            <option value="">Select mode...</option>
-                                            ${resolvePaymentModeOptions(snapshot, featureState.transactionDraft.paymentMode)}
-                                        </select>
-                                    </div>
-                                    <div class="field">
-                                        <div class="simple-consignment-amount-label-row">
-                                            <label for="simple-consignment-transaction-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
-                                            <span class="simple-consignment-balance-pill" title="Current balance due before this transaction is posted.">
-                                                <span>Balance Due</span>
-                                                <strong>${formatCurrency(transactionBalanceDue)}</strong>
-                                            </span>
+                            <form id="simple-consignment-transaction-form" class="purchase-payment-form${paymentLockModel.isLocked ? " is-locked" : ""}">
+                                ${renderSettlementPaymentLockNotice(order, snapshot)}
+                                <fieldset id="simple-consignment-transaction-fieldset" class="simple-consignment-payment-fieldset" ${paymentFieldsetDisabledAttr}>
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label for="simple-consignment-transaction-date">Transaction Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <input id="simple-consignment-transaction-date" class="input" type="date" value="${featureState.transactionDraft.transactionDate}" required>
                                         </div>
-                                        <input id="simple-consignment-transaction-amount" class="input" type="number" min="0" step="0.01" value="${featureState.transactionDraft.amountApplied}" required>
+                                        <div class="field">
+                                            <label for="simple-consignment-transaction-type">Type <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <select id="simple-consignment-transaction-type" class="select" required>
+                                                <option value="Payment" ${featureState.transactionDraft.paymentType === "Payment" ? "selected" : ""}>Payment</option>
+                                                <option value="Expense" ${featureState.transactionDraft.paymentType === "Expense" ? "selected" : ""}>Expense</option>
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="simple-consignment-transaction-mode">Payment Mode <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <select id="simple-consignment-transaction-mode" class="select" required>
+                                                <option value="">Select mode...</option>
+                                                ${resolvePaymentModeOptions(snapshot, featureState.transactionDraft.paymentMode)}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <div class="simple-consignment-amount-label-row">
+                                                <label for="simple-consignment-transaction-amount">Amount Received <span class="required-mark" aria-hidden="true">*</span></label>
+                                                <span class="simple-consignment-balance-pill" title="Current balance due before this transaction is posted.">
+                                                    <span>Balance Due</span>
+                                                    <strong>${formatCurrency(transactionBalanceDue)}</strong>
+                                                </span>
+                                            </div>
+                                            <input id="simple-consignment-transaction-amount" class="input" type="number" min="0" step="0.01" value="${featureState.transactionDraft.amountApplied}" required>
+                                        </div>
+                                        <div class="field">
+                                            <label for="simple-consignment-transaction-reference">Reference <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <input id="simple-consignment-transaction-reference" class="input" type="text" value="${featureState.transactionDraft.reference}" required>
+                                        </div>
+                                        <div class="field">
+                                            <label for="simple-consignment-transaction-contact">Contact</label>
+                                            <input id="simple-consignment-transaction-contact" class="input" type="text" value="${featureState.transactionDraft.contact}">
+                                        </div>
+                                        <div class="field field-full">
+                                            <label for="simple-consignment-transaction-notes">Notes</label>
+                                            <textarea id="simple-consignment-transaction-notes" class="textarea">${featureState.transactionDraft.notes}</textarea>
+                                        </div>
                                     </div>
-                                    <div class="field">
-                                        <label for="simple-consignment-transaction-reference">Reference <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="simple-consignment-transaction-reference" class="input" type="text" value="${featureState.transactionDraft.reference}" required>
+                                    <p class="panel-copy panel-copy-tight">For <strong>Payment</strong> entries, any amount above current balance due is automatically tracked as donation.</p>
+                                    <div class="form-actions">
+                                        <button class="button button-primary-alt" type="submit" ${paymentLockModel.isLocked ? 'disabled title="Save Progress first to unlock payment posting."' : ""}>
+                                            <span class="button-icon">${icons.payment}</span>
+                                            Record Payments
+                                        </button>
                                     </div>
-                                    <div class="field">
-                                        <label for="simple-consignment-transaction-contact">Contact</label>
-                                        <input id="simple-consignment-transaction-contact" class="input" type="text" value="${featureState.transactionDraft.contact}">
-                                    </div>
-                                    <div class="field field-full">
-                                        <label for="simple-consignment-transaction-notes">Notes</label>
-                                        <textarea id="simple-consignment-transaction-notes" class="textarea">${featureState.transactionDraft.notes}</textarea>
-                                    </div>
-                                </div>
-                                <p class="panel-copy panel-copy-tight">For <strong>Payment</strong> entries, any amount above current balance due is automatically tracked as donation.</p>
-                                <div class="form-actions">
-                                    <button class="button button-primary-alt" type="submit">
-                                        <span class="button-icon">${icons.payment}</span>
-                                        Record Payments
-                                    </button>
-                                </div>
+                                </fieldset>
                             </form>
                         `}
                         <div class="toolbar">
@@ -1407,11 +1442,16 @@ function updateSummaryCardsInPlace() {
 function syncSettlementSaveStateInPlace() {
     const banner = document.getElementById("simple-consignment-save-state");
     const saveButton = document.getElementById("simple-consignment-save-progress-button");
-    if (!banner && !saveButton) return;
+    const paymentLockNotice = document.getElementById("simple-consignment-payment-lock-notice");
+    const paymentLockMessage = document.getElementById("simple-consignment-payment-lock-message");
+    const paymentFieldset = document.getElementById("simple-consignment-transaction-fieldset");
+    const paymentForm = document.getElementById("simple-consignment-transaction-form");
+    if (!banner && !saveButton && !paymentLockNotice && !paymentFieldset) return;
 
     const snapshot = getState();
     const order = getActiveOrder();
     const model = buildSettlementSaveStateModel(order, snapshot);
+    const paymentLockModel = buildSettlementPaymentLockModel(order, snapshot);
 
     if (banner) {
         banner.className = `simple-consignment-save-state ${model.toneClass}${model.state.hasUnsavedChanges ? " is-sticky" : ""}`;
@@ -1431,6 +1471,23 @@ function syncSettlementSaveStateInPlace() {
         saveButton.title = model.state.hasUnsavedChanges
             ? "Unsaved worksheet changes are still local. Click Save Progress to commit them."
             : "";
+    }
+
+    if (paymentLockNotice) {
+        paymentLockNotice.classList.toggle("is-visible", paymentLockModel.isLocked);
+    }
+
+    if (paymentLockMessage) {
+        paymentLockMessage.textContent = paymentLockModel.isLocked ? paymentLockModel.message : "";
+    }
+
+    if (paymentFieldset) {
+        paymentFieldset.disabled = paymentLockModel.isLocked;
+        paymentFieldset.setAttribute("aria-disabled", paymentLockModel.isLocked ? "true" : "false");
+    }
+
+    if (paymentForm) {
+        paymentForm.classList.toggle("is-locked", paymentLockModel.isLocked);
     }
 }
 
