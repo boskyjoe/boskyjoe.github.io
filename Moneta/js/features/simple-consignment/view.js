@@ -1289,7 +1289,7 @@ function renderSettlementWorkspace(snapshot) {
                                     </div>
                                     <p class="panel-copy panel-copy-tight">For <strong>Payment</strong> entries, any amount above current balance due is automatically tracked as donation.</p>
                                     <div class="form-actions">
-                                        <button class="button button-primary-alt" type="submit" ${paymentLockModel.isLocked ? 'disabled title="Save Progress first to unlock payment posting."' : ""}>
+                                        <button id="simple-consignment-record-payments-button" class="button button-primary-alt" type="submit" ${paymentLockModel.isLocked ? 'disabled title="Save Progress first to unlock payment posting."' : ""}>
                                             <span class="button-icon">${icons.payment}</span>
                                             Record Payments
                                         </button>
@@ -1414,7 +1414,8 @@ function syncSettlementSaveStateInPlace() {
     const paymentLockMessage = document.getElementById("simple-consignment-payment-lock-message");
     const paymentFieldset = document.getElementById("simple-consignment-transaction-fieldset");
     const paymentForm = document.getElementById("simple-consignment-transaction-form");
-    if (!banner && !saveButton && !paymentLockNotice && !paymentFieldset) return;
+    const paymentSubmitButton = document.getElementById("simple-consignment-record-payments-button");
+    if (!banner && !saveButton && !paymentLockNotice && !paymentFieldset && !paymentSubmitButton) return;
 
     const snapshot = getState();
     const order = getActiveOrder();
@@ -1456,6 +1457,13 @@ function syncSettlementSaveStateInPlace() {
 
     if (paymentForm) {
         paymentForm.classList.toggle("is-locked", paymentLockModel.isLocked);
+    }
+
+    if (paymentSubmitButton) {
+        paymentSubmitButton.disabled = paymentLockModel.isLocked;
+        paymentSubmitButton.title = paymentLockModel.isLocked
+            ? "Save Progress first to unlock payment posting."
+            : "";
     }
 }
 
