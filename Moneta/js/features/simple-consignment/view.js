@@ -57,6 +57,7 @@ const featureState = {
     unsubscribeOrders: null,
     unsubscribeTransactions: null,
     transactionsOrderId: null,
+    worksheetGridSourceKey: null,
     cancelReason: "",
     settlementBaseline: null,
     checkoutDraft: createDefaultCheckoutDraft(),
@@ -372,6 +373,10 @@ function buildSettlementBaselineOrder(order) {
 }
 
 function getSettlementWorksheetRowsForDirtyState(order, snapshot = getState()) {
+    if (featureState.worksheetGridSourceKey !== order?.id) {
+        return getOrderWorksheetRows(order, snapshot);
+    }
+
     const rows = getSimpleConsignmentWorksheetRows();
     if (rows.length > 0) return rows;
     return getOrderWorksheetRows(order, snapshot);
@@ -663,6 +668,7 @@ function resetWorkspaceToCreate() {
     clearSettlementBaseline();
     featureState.workspaceMode = "create";
     featureState.activeOrderId = null;
+    featureState.worksheetGridSourceKey = null;
     featureState.cancelReason = "";
     featureState.checkoutDraft = createDefaultCheckoutDraft();
     featureState.transactionDraft = createDefaultTransactionDraft();
@@ -1522,6 +1528,7 @@ function syncWorksheetGrid(snapshot) {
     const rows = isCreateMode()
         ? getCreateWorksheetRows()
         : getOrderWorksheetRows(activeOrder, snapshot);
+    const sourceKey = isCreateMode() ? "__create__" : activeOrder?.id || null;
 
     initializeSimpleConsignmentWorksheetGrid(document.getElementById("simple-consignment-worksheet-grid"), () => {
         updateSummaryCardsInPlace();
@@ -1529,6 +1536,7 @@ function syncWorksheetGrid(snapshot) {
     setSimpleConsignmentWorksheetMode(isCreateMode() ? "checkout" : "settlement");
     setSimpleConsignmentWorksheetReadOnly(isViewMode() || isCancelMode());
     refreshSimpleConsignmentWorksheetGrid(rows);
+    featureState.worksheetGridSourceKey = sourceKey;
     updateSimpleConsignmentWorksheetGridSearch(featureState.worksheetSearchTerm);
     updateSummaryCardsInPlace();
 }
