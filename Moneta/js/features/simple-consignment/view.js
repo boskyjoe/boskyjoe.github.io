@@ -973,20 +973,6 @@ function buildSummaryModel(snapshot) {
             { label: activeOrder?.status || "-" },
             { label: activeOrder?.teamName || "-" }
         ],
-        cardRows: [
-            { id: "simple-consignment-summary-quantity-out", label: "Qty Checked Out", value: String(metrics.totalQuantityCheckedOut) },
-            { id: "simple-consignment-summary-value-out", label: "Value Checked Out", value: formatCurrency(metrics.totalValueCheckedOut) },
-            { id: "simple-consignment-summary-sold", label: "Sold Value", value: formatCurrency(metrics.totalValueSold) },
-            { id: "simple-consignment-summary-returned-value", label: "Returned Value", value: formatCurrency(metrics.totalValueReturned) },
-            { id: "simple-consignment-summary-damaged-value", label: "Damaged Value", value: formatCurrency(metrics.totalValueDamaged) },
-            { id: "simple-consignment-summary-gifted-value", label: "Gifted Value", value: formatCurrency(metrics.totalValueGifted) },
-            { id: "simple-consignment-summary-on-hand-value", label: "On-Hand Value", value: formatCurrency(metrics.totalValueOnHand) },
-            { id: "simple-consignment-summary-paid", label: "Amount Paid", value: formatCurrency(paid) },
-            { id: "simple-consignment-summary-donation", label: "Donation", value: formatCurrency(donation) },
-            { id: "simple-consignment-summary-expenses", label: "Expenses", value: formatCurrency(expenses) },
-            { id: "simple-consignment-summary-balance", label: "Balance Due", value: formatCurrency(Math.max(liveBalanceDue, 0)) },
-            { id: "simple-consignment-summary-on-hand", label: "On Hand", value: String(metrics.totalOnHandQuantity) }
-        ],
         guard,
         transactionsTitle: `Order Payments (${featureState.transactions.length})`,
         transactionsCountCopy: `${featureState.transactions.length} record(s) linked to this order.`
@@ -1020,19 +1006,6 @@ function renderWorkspaceHeader(summaryModel, mode = "create") {
             <div class="toolbar-meta">
                 ${summaryModel.headerPills.map(pill => `<span class="status-pill">${pill.label}</span>`).join("")}
             </div>
-        </div>
-    `;
-}
-
-function renderSummaryCards(summaryModel) {
-    return `
-        <div class="simple-consignment-summary-grid">
-            ${summaryModel.cardRows.map(card => `
-                <article class="summary-card">
-                    <p class="summary-label">${card.label}</p>
-                    <p id="${card.id}" class="summary-value">${card.value}</p>
-                </article>
-            `).join("")}
         </div>
     `;
 }
@@ -1106,8 +1079,6 @@ function renderCheckoutForm(snapshot) {
                             </div>
                         </section>
                     </div>
-
-                    ${renderSummaryCards(summaryModel)}
 
                     <div class="simple-consignment-product-list-shell">
                         <div class="toolbar">
@@ -1223,8 +1194,6 @@ function renderSettlementWorkspace(snapshot) {
                         <textarea id="simple-consignment-venue" class="textarea" ${contextFieldDisabledAttr}>${draft.venue ?? order?.venue ?? ""}</textarea>
                     </div>
                 </div>
-
-                ${renderSummaryCards(summaryModel)}
 
                 <div class="simple-consignment-product-list-shell">
                     <div class="toolbar">
@@ -1429,13 +1398,6 @@ function renderSimpleConsignmentViewShell(snapshot) {
 function updateSummaryCardsInPlace() {
     const snapshot = getState();
     const summaryModel = buildSummaryModel(snapshot);
-
-    summaryModel.cardRows.forEach(card => {
-        const node = document.getElementById(card.id);
-        if (node) {
-            node.textContent = card.value;
-        }
-    });
 
     const transactionsCount = document.getElementById("simple-consignment-transactions-count");
     if (transactionsCount && summaryModel.transactionsCountCopy) {
