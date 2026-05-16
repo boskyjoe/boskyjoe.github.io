@@ -783,6 +783,11 @@ function getOrderWorksheetRows(order, snapshot) {
     const productMap = new Map((snapshot.masterData.products || []).map(product => [product.id, product]));
 
     return (order.items || []).map(item => {
+        const quantityCheckedOut = Math.max(0, Math.floor(Number(item.quantityCheckedOut) || 0));
+        const quantitySold = Math.max(0, Math.floor(Number(item.quantitySold) || 0));
+        const quantityReturned = Math.max(0, Math.floor(Number(item.quantityReturned) || 0));
+        const quantityDamaged = Math.max(0, Math.floor(Number(item.quantityDamaged) || 0));
+        const quantityGifted = Math.max(0, Math.floor(Number(item.quantityGifted) || 0));
         const product = productMap.get(item.productId);
         const resolvedCategory = resolveCategoryDisplay(snapshot, item, product);
         return {
@@ -792,11 +797,16 @@ function getOrderWorksheetRows(order, snapshot) {
             categoryName: resolvedCategory.categoryName,
             sellingPrice: Number(item.sellingPrice) || 0,
             inventoryCount: Math.max(0, Math.floor(Number(product?.inventoryCount) || 0)),
-            quantityCheckedOut: Math.max(0, Math.floor(Number(item.quantityCheckedOut) || 0)),
-            quantitySold: Math.max(0, Math.floor(Number(item.quantitySold) || 0)),
-            quantityReturned: Math.max(0, Math.floor(Number(item.quantityReturned) || 0)),
-            quantityDamaged: Math.max(0, Math.floor(Number(item.quantityDamaged) || 0)),
-            quantityGifted: Math.max(0, Math.floor(Number(item.quantityGifted) || 0)),
+            quantityCheckedOut,
+            quantitySold,
+            quantityReturned,
+            quantityDamaged,
+            quantityGifted,
+            baselineQuantityCheckedOut: quantityCheckedOut,
+            baselineQuantitySold: quantitySold,
+            baselineQuantityReturned: quantityReturned,
+            baselineQuantityDamaged: quantityDamaged,
+            baselineQuantityGifted: quantityGifted,
             lineChangeState: "",
             lineChangeOriginalQuantityCheckedOut: null
         };
@@ -1911,6 +1921,11 @@ function handleApplyAddProductsToWorksheet() {
             quantityReturned: 0,
             quantityDamaged: 0,
             quantityGifted: 0,
+            baselineQuantityCheckedOut: 0,
+            baselineQuantitySold: 0,
+            baselineQuantityReturned: 0,
+            baselineQuantityDamaged: 0,
+            baselineQuantityGifted: 0,
             lineChangeState: "added",
             lineChangeOriginalQuantityCheckedOut: 0
         };

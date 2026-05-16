@@ -116,14 +116,40 @@ function requestStateMarkup(quantity) {
         : `<span class="purchase-status-pill purchase-status-unpaid">Not Included</span>`;
 }
 
-function lineChangeStateMarkup(value) {
-    const normalized = normalizeText(value).toLowerCase();
+const SETTLEMENT_VISUAL_FIELDS = [
+    "quantityCheckedOut",
+    "quantitySold",
+    "quantityReturned",
+    "quantityDamaged",
+    "quantityGifted"
+];
+
+function getSettlementVisualState(data = {}) {
+    const explicitState = normalizeText(data?.lineChangeState).toLowerCase();
+    if (explicitState === "added" || explicitState === "updated") {
+        return explicitState;
+    }
+
+    const hasChangedField = SETTLEMENT_VISUAL_FIELDS.some(field => {
+        const baselineField = `baseline${field.charAt(0).toUpperCase()}${field.slice(1)}`;
+        return Number(data?.[field] || 0) !== Number(data?.[baselineField] || 0);
+    });
+
+    return hasChangedField ? "changed" : "";
+}
+
+function lineChangeStateMarkup(data) {
+    const normalized = getSettlementVisualState(data);
     if (normalized === "added") {
         return `<span class="consignment-line-change-pill consignment-line-change-pill-added" title="New line added in this settlement session">New</span>`;
     }
 
     if (normalized === "updated") {
         return `<span class="consignment-line-change-pill consignment-line-change-pill-updated" title="Existing line quantity checked out was updated in this settlement session">Upd</span>`;
+    }
+
+    if (normalized === "changed") {
+        return `<span class="consignment-line-change-pill consignment-line-change-pill-changed" title="Settlement quantities on this row were changed in this session">Chg</span>`;
     }
 
     return "";
@@ -421,7 +447,7 @@ function buildSettlementWorksheetColumnDefs() {
             filter: false,
             resizable: false,
             suppressHeaderMenuButton: true,
-            cellRenderer: params => (params.node?.rowPinned ? "" : lineChangeStateMarkup(params.value))
+            cellRenderer: params => (params.node?.rowPinned ? "" : lineChangeStateMarkup(params.data))
         },
         {
             headerName: "Action",
@@ -988,8 +1014,9 @@ export function initializeSimpleConsignmentWorksheetGrid(gridElement, onRowsChan
         onFilterChanged: () => refreshWorksheetPinnedBottomRow(simpleConsignmentWorksheetGridApi),
         rowClassRules: {
             "purchase-line-item-active": params => (Number(params.data?.quantityCheckedOut) || 0) > 0,
-            "consignment-line-added": params => normalizeText(params.data?.lineChangeState).toLowerCase() === "added",
-            "consignment-line-updated": params => normalizeText(params.data?.lineChangeState).toLowerCase() === "updated"
+            "consignment-line-added": params => getSettlementVisualState(params.data) === "added",
+            "consignment-line-updated": params => getSettlementVisualState(params.data) === "updated",
+            "consignment-line-changed": params => getSettlementVisualState(params.data) === "changed"
         }
     });
 
