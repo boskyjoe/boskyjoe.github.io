@@ -699,13 +699,13 @@ select {
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned {
-    background: var(--ag-pinned-background);
+    background: var(--ag-header-background);
     border-top: 1px solid var(--ag-pinned-border);
     font-weight: 700;
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell {
-    background: var(--ag-pinned-background);
+    background: var(--ag-header-background);
 }
 
 .ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
