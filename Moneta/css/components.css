@@ -699,13 +699,18 @@ select {
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned {
-    background: var(--ag-header-background);
+    background: var(--ag-header-background) !important;
     border-top: 1px solid var(--ag-pinned-border);
     font-weight: 700;
 }
 
 .ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell {
-    background: var(--ag-header-background);
+    background: var(--ag-header-background) !important;
+}
+
+.ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell-wrapper,
+.ag-theme-alpine.moneta-grid .ag-row-pinned .ag-cell-value {
+    background: var(--ag-header-background) !important;
 }
 
 .ag-theme-alpine.moneta-grid .purchase-line-item-active .ag-cell {
