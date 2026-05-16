@@ -3032,13 +3032,6 @@ select {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.simple-consignment-summary-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin-top: 1rem;
-}
-
 .simple-consignment-product-list-shell {
     display: grid;
     gap: 1rem;
@@ -3583,7 +3576,6 @@ select {
     .retail-return-preview-row,
     .retail-summary-grid,
     .simple-consignment-form-grid,
-    .simple-consignment-summary-grid,
     .simple-consignment-product-list-shell,
     .retail-product-list-shell,
     .bulk-product-list,
