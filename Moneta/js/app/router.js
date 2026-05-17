@@ -124,12 +124,18 @@ function getViewTitle(route) {
 }
 
 export function navigateTo(route) {
-    const normalizedRoute = normalizeRoute(route);
+    const requestedRoute = String(route || "");
+    const normalizedRoute = normalizeRoute(requestedRoute);
+    const baseRoute = requestedRoute.split("?")[0];
+    const resolvedHash = ROUTE_TO_VIEW[baseRoute]
+        ? requestedRoute
+        : normalizedRoute;
+
     if (normalizedRoute !== getState().currentRoute && !canLeaveCurrentRoute(normalizedRoute)) {
         return;
     }
 
-    window.location.hash = normalizedRoute;
+    window.location.hash = resolvedHash;
 }
 
 export function resolveRoute() {
