@@ -277,6 +277,8 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
                 leadStatus: normalizeText(lead.leadStatus || "New"),
                 enquiryDate: lead.enquiryDate || null,
                 expectedDeliveryDate: lead.expectedDeliveryDate || null,
+                assignedMemberId: normalizeText(lead.assignedMemberId),
+                assignedMemberName: normalizeText(lead.assignedMemberName),
                 assignedTo: normalizeText(lead.assignedTo),
                 leadSource: normalizeText(lead.leadSource),
                 leadNotes: normalizeText(lead.leadNotes)
@@ -334,6 +336,8 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [])
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
     const customerAddress = normalizeText(payload.customerAddress);
+    const assignedMemberId = normalizeText(payload.assignedMemberId);
+    const assignedMemberName = normalizeText(payload.assignedMemberName);
     const assignedTo = normalizeText(payload.assignedTo);
     const catalogueId = normalizeText(payload.catalogueId);
     const leadSource = LEAD_SOURCES.includes(normalizeText(payload.leadSource))
@@ -385,6 +389,8 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [])
             customerPhone,
             customerEmail,
             customerAddress,
+            assignedMemberId,
+            assignedMemberName,
             assignedTo,
             catalogueId,
             catalogueName: catalogue.catalogueName || "-",

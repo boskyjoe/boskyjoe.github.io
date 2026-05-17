@@ -20,6 +20,10 @@ function buildPaymentModeCode() {
     return `PM-${Date.now()}`;
 }
 
+function buildChurchMemberCode() {
+    return `CM-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+}
+
 function buildSeasonCode() {
     return `SEASON-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
 }
@@ -157,6 +161,34 @@ export async function updatePaymentModeRecord(docId, updatedData, user) {
 
 export async function setPaymentModeActiveStatus(docId, isActive, user) {
     return updatePaymentModeRecord(docId, { isActive }, user);
+}
+
+export async function createChurchMemberRecord(churchMemberData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.churchMembers).add({
+        ...churchMemberData,
+        memberCode: buildChurchMemberCode(),
+        isActive: true,
+        createdBy: user.email,
+        createdOn: now,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function updateChurchMemberRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.churchMembers).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function setChurchMemberActiveStatus(docId, isActive, user) {
+    return updateChurchMemberRecord(docId, { isActive }, user);
 }
 
 export async function getPaymentModeUsageStatus(paymentModeName) {

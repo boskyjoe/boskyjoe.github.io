@@ -5,6 +5,8 @@ let categoriesGridApi = null;
 let categoriesGridElement = null;
 let paymentModesGridApi = null;
 let paymentModesGridElement = null;
+let churchMembersGridApi = null;
+let churchMembersGridElement = null;
 let seasonsGridApi = null;
 let seasonsGridElement = null;
 let pricingPoliciesGridApi = null;
@@ -309,6 +311,46 @@ function buildPaymentModesColumnDefs() {
     ];
 }
 
+function buildChurchMembersColumnDefs() {
+    return [
+        { field: "memberCode", headerName: "Member ID", minWidth: 150, flex: 0.8 },
+        { field: "fullName", headerName: "Member Name", minWidth: 220, flex: 1.15 },
+        { field: "phone", headerName: "Phone", minWidth: 160, flex: 0.9 },
+        { field: "email", headerName: "Email", minWidth: 220, flex: 1.2 },
+        {
+            field: "canHandleEnquiries",
+            headerName: "Enquiry Assignment",
+            minWidth: 170,
+            flex: 0.95,
+            cellRenderer: params => params.value
+                ? `<span class="grid-status-cell grid-status-pill status-active"><span class="inline-icon">${icons.active}</span>Assignable</span>`
+                : `<span class="grid-status-cell grid-status-pill status-inactive"><span class="inline-icon">${icons.inactive}</span>Directory Only</span>`
+        },
+        {
+            field: "isActive",
+            headerName: "Status",
+            minWidth: 150,
+            flex: 0.85,
+            cellRenderer: params => statusMarkup(Boolean(params.value))
+        },
+        {
+            headerName: "Updated",
+            minWidth: 150,
+            flex: 0.9,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 280,
+            flex: 1.35,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("churchMembers", params.data)
+        }
+    ];
+}
+
 function buildSeasonsColumnDefs() {
     return [
         { field: "seasonId", headerName: "Season ID", minWidth: 170, flex: 0.95 },
@@ -520,6 +562,20 @@ export function refreshPaymentModesGrid(rows) {
 
 export function updatePaymentModesGridSearch(searchTerm) {
     paymentModesGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeChurchMembersGrid(gridElement) {
+    churchMembersGridApi = initializeGrid(gridElement, churchMembersGridApi, churchMembersGridElement, buildChurchMembersColumnDefs());
+    churchMembersGridElement = gridElement;
+    return churchMembersGridApi;
+}
+
+export function refreshChurchMembersGrid(rows) {
+    churchMembersGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateChurchMembersGridSearch(searchTerm) {
+    churchMembersGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }
 
 export function initializeSeasonsGrid(gridElement) {

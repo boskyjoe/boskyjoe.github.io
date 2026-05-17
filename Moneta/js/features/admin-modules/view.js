@@ -5,6 +5,7 @@ import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import {
     initializeCategoriesGrid,
+    initializeChurchMembersGrid,
     initializeOnlineCatalogueSourceGrid,
     initializePaymentModesGrid,
     initializePricingPoliciesGrid,
@@ -13,6 +14,7 @@ import {
     initializeSeasonsGrid,
     initializeStoreConfigsGrid,
     refreshCategoriesGrid,
+    refreshChurchMembersGrid,
     refreshOnlineCatalogueSourceGrid,
     refreshPaymentModesGrid,
     refreshPricingPoliciesGrid,
@@ -22,6 +24,7 @@ import {
     refreshStoreConfigsGrid,
     getOnlineCatalogueSelectedGridRows,
     updateCategoriesGridSearch,
+    updateChurchMembersGridSearch,
     updatePaymentModesGridSearch,
     updatePricingPoliciesGridSearch,
     updateProductPriceChangeReviewsGridSearch,
@@ -56,6 +59,7 @@ import {
     ONLINE_CATALOGUE_DOC_ID,
     rejectProductPriceChangeReview,
     saveCategory,
+    saveChurchMember,
     saveOnlineCatalogueWorkspace,
     savePaymentMode,
     savePricingPolicy,
@@ -63,6 +67,7 @@ import {
     saveSeason,
     saveStoreConfig,
     toggleCategoryStatus,
+    toggleChurchMemberStatus,
     togglePaymentModeStatus,
     toggleReorderPolicyStatus,
     toggleSeasonStatus
@@ -90,6 +95,12 @@ const ADMIN_SECTIONS = {
         entityLabel: "Payment Mode",
         icon: icons.payment,
         description: "Manage the transaction methods available across supplier and sales workflows."
+    },
+    churchMembers: {
+        label: "Church Members",
+        entityLabel: "Church Member",
+        icon: icons.users,
+        description: "Maintain the church-member directory used for enquiry assignment and future ownership workflows."
     },
     pricingPolicies: {
         label: "Pricing Policy",
@@ -132,6 +143,7 @@ const featureState = {
         categories: "",
         seasons: "",
         paymentModes: "",
+        churchMembers: "",
         pricingPolicies: "",
         productPriceChangeReviews: "",
         onlineCatalogues: "",
@@ -142,6 +154,7 @@ const featureState = {
         categories: null,
         seasons: null,
         paymentModes: null,
+        churchMembers: null,
         pricingPolicies: null,
         productPriceChangeReviews: null,
         onlineCatalogues: null,
@@ -175,6 +188,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     paymentModes: {
         formId: "admin-payment-mode-form",
         inputSelector: "#admin-payment-mode-name"
+    },
+    churchMembers: {
+        formId: "admin-church-member-form",
+        inputSelector: "#admin-church-member-name"
     },
     pricingPolicies: {
         formId: "admin-pricing-policy-form",
@@ -679,6 +696,10 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
         return (snapshot.masterData.categories || []).find(record => record.id === recordId) || null;
     }
 
+    if (section === "churchMembers") {
+        return (snapshot.masterData.churchMembers || []).find(record => record.id === recordId) || null;
+    }
+
     if (section === "seasons") {
         return (snapshot.masterData.seasons || []).find(record => record.id === recordId) || null;
     }
@@ -702,6 +723,10 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
 
     if (section === "categories") {
         return (snapshot.masterData.categories || []).slice().sort((left, right) => (left.categoryName || "").localeCompare(right.categoryName || ""));
+    }
+
+    if (section === "churchMembers") {
+        return (snapshot.masterData.churchMembers || []).slice().sort((left, right) => (left.fullName || "").localeCompare(right.fullName || ""));
     }
 
     if (section === "seasons") {
@@ -1652,6 +1677,65 @@ function renderPaymentModeForm(snapshot) {
     `;
 }
 
+function renderChurchMemberForm(snapshot) {
+    const editingRecord = getEditingRecord(snapshot, "churchMembers");
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.users}</span>
+                    <div>
+                        <h3>${editingRecord ? "Edit Church Member" : "Add Church Member"}</h3>
+                        <p class="panel-copy">Manage the assignment directory used by Enquiries so ownership stays consistent and searchable.</p>
+                    </div>
+                </div>
+                <span class="status-pill">${editingRecord ? "Editing" : "Create"}</span>
+            </div>
+            <div class="panel-body">
+                <form id="admin-church-member-form">
+                    <input id="admin-church-member-doc-id" type="hidden" value="${editingRecord?.id || ""}">
+                    <div class="form-grid">
+                        <div class="field field-wide">
+                            <label for="admin-church-member-name">Member Name <span class="required-mark" aria-hidden="true">*</span></label>
+                            <input id="admin-church-member-name" class="input" type="text" value="${escapeHtml(editingRecord?.fullName || "")}" placeholder="Maria Joseph, Thomas Antony" required>
+                        </div>
+                        <div class="field">
+                            <label for="admin-church-member-phone">Phone</label>
+                            <input id="admin-church-member-phone" class="input" type="tel" value="${escapeHtml(editingRecord?.phone || "")}" placeholder="+1 555 123 4567">
+                        </div>
+                        <div class="field">
+                            <label for="admin-church-member-email">Email</label>
+                            <input id="admin-church-member-email" class="input" type="email" value="${escapeHtml(editingRecord?.email || "")}" placeholder="member@example.com">
+                        </div>
+                        <div class="field field-wide">
+                            <label class="checkbox-field" for="admin-church-member-can-handle-enquiries">
+                                <input
+                                    id="admin-church-member-can-handle-enquiries"
+                                    type="checkbox"
+                                    ${editingRecord?.canHandleEnquiries === false ? "" : "checked"}>
+                                <span>Can be assigned to Enquiries</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        ${editingRecord ? `
+                            <button id="admin-church-member-cancel-button" class="button button-secondary" type="button">
+                                <span class="button-icon">${icons.inactive}</span>
+                                Cancel
+                            </button>
+                        ` : ""}
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${editingRecord ? icons.edit : icons.plus}</span>
+                            ${editingRecord ? "Update Church Member" : "Save Church Member"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
 function renderPricingPolicyForm(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "pricingPolicies");
 
@@ -2439,6 +2523,10 @@ function renderCurrentForm(snapshot) {
         return renderCategoryForm(snapshot);
     }
 
+    if (featureState.activeSection === "churchMembers") {
+        return renderChurchMemberForm(snapshot);
+    }
+
     if (featureState.activeSection === "seasons") {
         return renderSeasonForm(snapshot);
     }
@@ -2483,6 +2571,18 @@ function getGridMeta(snapshot) {
             count: rows.length,
             countLabel: "categories",
             directoryHelp: "Search records, open one for editing, or change active status without leaving the admin workspace."
+        };
+    }
+
+    if (featureState.activeSection === "churchMembers") {
+        const rows = snapshot.masterData.churchMembers || [];
+        const assignableCount = rows.filter(row => row.isActive && row.canHandleEnquiries !== false).length;
+        return {
+            title: "Church Member Directory",
+            copy: "Maintain the member directory that Enquiries uses for assignment and future ownership workflows.",
+            count: assignableCount,
+            countLabel: "assignable members",
+            directoryHelp: "Search church members, reopen one for editing, or activate and deactivate directory entries without leaving the admin workspace."
         };
     }
 
@@ -2631,6 +2731,13 @@ function syncCurrentGrid(snapshot) {
         initializeCategoriesGrid(gridElement);
         refreshCategoriesGrid(rows);
         updateCategoriesGridSearch(featureState.searchTerms.categories);
+        return;
+    }
+
+    if (featureState.activeSection === "churchMembers") {
+        initializeChurchMembersGrid(gridElement);
+        refreshChurchMembersGrid(rows);
+        updateChurchMembersGridSearch(featureState.searchTerms.churchMembers);
         return;
     }
 
@@ -2841,6 +2948,57 @@ async function handlePaymentModeSubmit(event) {
         });
     } catch (error) {
         console.error("[Moneta] Payment mode save failed:", error);
+    }
+}
+
+async function handleChurchMemberSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const docId = document.getElementById("admin-church-member-doc-id")?.value;
+        const memberName = document.getElementById("admin-church-member-name")?.value || "-";
+        const result = await runProgressToastFlow({
+            title: docId ? "Updating Church Member" : "Adding Church Member",
+            initialMessage: "Reading church member details...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: docId ? "Church Member Updated" : "Church Member Added",
+            successMessage: docId ? "The church member was updated successfully." : "The church member was added successfully."
+        }, async ({ update }) => {
+            update("Validating contact details and assignment settings...", 38, "Step 2 of 5");
+
+            update("Writing church member changes to the database...", 72, "Step 3 of 5");
+
+            const result = await saveChurchMember({
+                docId,
+                fullName: document.getElementById("admin-church-member-name")?.value,
+                phone: document.getElementById("admin-church-member-phone")?.value,
+                email: document.getElementById("admin-church-member-email")?.value,
+                canHandleEnquiries: document.getElementById("admin-church-member-can-handle-enquiries")?.checked
+            }, getState().currentUser, getState().masterData.churchMembers);
+
+            update("Refreshing the church member directory...", 88, "Step 4 of 5");
+            clearEditingState("churchMembers");
+            renderAdminModulesView();
+            update("Church member is ready for enquiry assignment.", 96, "Step 5 of 5");
+            return result;
+        });
+
+        showToast(result.mode === "create" ? "Church member created." : "Church member updated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: result.mode === "create" ? "Church Member Added" : "Church Member Updated",
+            message: "The church member record has been saved successfully.",
+            details: [
+                { label: "Action", value: result.mode === "create" ? "Create" : "Update" },
+                { label: "Member", value: memberName },
+                { label: "Module", value: "Church Members" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Church member save failed:", error);
     }
 }
 
@@ -3210,7 +3368,14 @@ async function handleOnlineCatalogueSubmit(event) {
 }
 
 function getRecordDisplayName(record = {}) {
-    return record.categoryName || record.seasonName || record.paymentMode || record.policyName || record.productName || record.storeName || "-";
+    return record.categoryName
+        || record.fullName
+        || record.seasonName
+        || record.paymentMode
+        || record.policyName
+        || record.productName
+        || record.storeName
+        || "-";
 }
 
 function handleSearchInput(target) {
@@ -3225,6 +3390,11 @@ function handleSearchInput(target) {
 
     if (featureState.activeSection === "categories") {
         updateCategoriesGridSearch(featureState.searchTerms.categories);
+        return;
+    }
+
+    if (featureState.activeSection === "churchMembers") {
+        updateChurchMembersGridSearch(featureState.searchTerms.churchMembers);
         return;
     }
 
@@ -3320,6 +3490,8 @@ async function handleStatusToggle(button) {
     try {
         if (entity === "categories") {
             await toggleCategoryStatus(recordId, nextValue, snapshot.currentUser);
+        } else if (entity === "churchMembers") {
+            await toggleChurchMemberStatus(recordId, nextValue, snapshot.currentUser);
         } else if (entity === "seasons") {
             await toggleSeasonStatus(recordId, nextValue, snapshot.currentUser);
         } else if (entity === "reorderPolicies") {
@@ -3475,6 +3647,11 @@ function bindAdminModulesDomEvents() {
             return;
         }
 
+        if (event.target.id === "admin-church-member-form") {
+            handleChurchMemberSubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-pricing-policy-form") {
             handlePricingPolicySubmit(event);
             return;
@@ -3525,6 +3702,7 @@ function bindAdminModulesDomEvents() {
         const categoryCancelButton = target.closest("#admin-category-cancel-button");
         const seasonCancelButton = target.closest("#admin-season-cancel-button");
         const paymentModeCancelButton = target.closest("#admin-payment-mode-cancel-button");
+        const churchMemberCancelButton = target.closest("#admin-church-member-cancel-button");
         const pricingPolicyCancelButton = target.closest("#admin-pricing-policy-cancel-button");
         const onlineCatalogueResetButton = target.closest("#admin-online-catalogue-reset-button");
         const onlineCatalogueDownloadButton = target.closest("#admin-online-catalogue-download-button");
@@ -3556,6 +3734,11 @@ function bindAdminModulesDomEvents() {
 
         if (paymentModeCancelButton) {
             handleCancelEdit("paymentModes");
+            return;
+        }
+
+        if (churchMemberCancelButton) {
+            handleCancelEdit("churchMembers");
             return;
         }
 

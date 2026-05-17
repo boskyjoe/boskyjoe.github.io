@@ -84,6 +84,105 @@ function normalizeText(value) {
     return (value || "").trim();
 }
 
+function getChurchMemberAssignmentOptions(snapshot, editingLead = null) {
+    const churchMembers = snapshot.masterData.churchMembers || [];
+    const currentAssignedMemberId = normalizeText(editingLead?.assignedMemberId);
+    const currentAssignedTo = normalizeText(editingLead?.assignedTo);
+    const rows = churchMembers
+        .filter(member => member?.isActive !== false && member?.canHandleEnquiries !== false)
+        .slice()
+        .sort((left, right) => (left.fullName || "").localeCompare(right.fullName || ""));
+
+    const currentMember = currentAssignedMemberId
+        ? (churchMembers.find(member => member.id === currentAssignedMemberId) || null)
+        : null;
+
+    if (currentMember && !rows.some(member => member.id === currentMember.id)) {
+        rows.unshift(currentMember);
+    }
+
+    return {
+        rows,
+        hasLegacyAssignment: Boolean(editingLead && !currentAssignedMemberId && currentAssignedTo),
+        hasMissingAssignedMember: Boolean(editingLead && currentAssignedMemberId && !currentMember && currentAssignedTo)
+    };
+}
+
+function renderChurchMemberAssignmentOptions(snapshot, editingLead = null) {
+    const { rows, hasLegacyAssignment, hasMissingAssignedMember } = getChurchMemberAssignmentOptions(snapshot, editingLead);
+    const selectedMemberId = normalizeText(editingLead?.assignedMemberId);
+    const legacyAssignedTo = normalizeText(editingLead?.assignedTo);
+
+    const options = [
+        `<option value="">Unassigned</option>`
+    ];
+
+    if (hasLegacyAssignment) {
+        options.push(
+            `<option value="__legacy__" selected>Legacy assignment: ${escapeAttribute(legacyAssignedTo)}</option>`
+        );
+    }
+
+    if (hasMissingAssignedMember) {
+        options.push(
+            `<option value="__missing__" selected>Previous member no longer in directory: ${escapeAttribute(legacyAssignedTo)}</option>`
+        );
+    }
+
+    rows.forEach(member => {
+        const isSelected = member.id === selectedMemberId;
+        const suffix = member.isActive === false
+            ? " (Inactive)"
+            : member.canHandleEnquiries === false
+                ? " (Directory Only)"
+                : "";
+        options.push(`
+            <option value="${escapeAttribute(member.id)}" ${isSelected ? "selected" : ""}>
+                ${escapeAttribute(member.fullName || "Untitled Member")}${suffix}
+            </option>
+        `);
+    });
+
+    return options.join("");
+}
+
+function getSelectedChurchMemberAssignment(editingLead = null, snapshot = getState()) {
+    const assignmentSelect = document.getElementById("lead-assigned-to");
+    const selectedMemberId = normalizeText(assignmentSelect?.value);
+    const churchMembers = snapshot.masterData.churchMembers || [];
+
+    if (selectedMemberId === "__legacy__") {
+        return {
+            assignedMemberId: "",
+            assignedMemberName: normalizeText(editingLead?.assignedTo),
+            assignedTo: normalizeText(editingLead?.assignedTo)
+        };
+    }
+
+    if (selectedMemberId === "__missing__") {
+        return {
+            assignedMemberId: normalizeText(editingLead?.assignedMemberId),
+            assignedMemberName: normalizeText(editingLead?.assignedTo),
+            assignedTo: normalizeText(editingLead?.assignedTo)
+        };
+    }
+
+    if (!selectedMemberId) {
+        return {
+            assignedMemberId: "",
+            assignedMemberName: "",
+            assignedTo: ""
+        };
+    }
+
+    const member = churchMembers.find(entry => entry.id === selectedMemberId) || null;
+    return {
+        assignedMemberId: selectedMemberId,
+        assignedMemberName: normalizeText(member?.fullName || assignmentSelect?.selectedOptions?.[0]?.textContent),
+        assignedTo: normalizeText(member?.fullName || assignmentSelect?.selectedOptions?.[0]?.textContent)
+    };
+}
+
 function escapeAttribute(value) {
     return String(value || "")
         .replaceAll("&", "&amp;")
@@ -1503,6 +1602,8 @@ function renderLeadForm(snapshot) {
         : "";
     const fieldDisabledAttr = isLeadLocked ? "disabled" : "";
     const workLogLabel = isLeadLocked ? "View Work Log" : "Work Log";
+    const churchMemberAssignmentOptions = renderChurchMemberAssignmentOptions(snapshot, editingLead);
+    const assignableChurchMemberCount = (snapshot.masterData.churchMembers || []).filter(member => member?.isActive !== false && member?.canHandleEnquiries !== false).length;
 
     return `
         <div class="panel-card">
@@ -1566,7 +1667,12 @@ function renderLeadForm(snapshot) {
                                     </div>
                                     <div class="field field-full">
                                         <label for="lead-assigned-to">Assigned To</label>
-                                        <input id="lead-assigned-to" class="input" type="text" value="${editingLead?.assignedTo || ""}" placeholder="Staff name or sales desk" ${fieldDisabledAttr}>
+                                        <select id="lead-assigned-to" class="select" ${fieldDisabledAttr}>
+                                            ${churchMemberAssignmentOptions}
+                                        </select>
+                                        <p class="field-help">${assignableChurchMemberCount > 0
+                                            ? `${assignableChurchMemberCount} active church member${assignableChurchMemberCount === 1 ? "" : "s"} available for enquiry assignment.`
+                                            : "No active church members are available yet. Add them in Admin Modules -> Church Members."}</p>
                                     </div>
                                     <div class="field">
                                         <label for="lead-source">Source <span class="required-mark" aria-hidden="true">*</span></label>
@@ -2243,6 +2349,8 @@ async function handleLeadSubmit(event) {
 
     try {
         const docId = document.getElementById("lead-doc-id")?.value || "";
+        const editingLead = getEditingLead();
+        const assignment = getSelectedChurchMemberAssignment(editingLead, getState());
         const customerName = document.getElementById("lead-customer-name")?.value || "-";
         const catalogueLabel = document.getElementById("lead-catalogue")?.selectedOptions?.[0]?.textContent || "-";
         const leadStatus = document.getElementById("lead-status")?.value || "New";
@@ -2260,12 +2368,14 @@ async function handleLeadSubmit(event) {
             update("Writing enquiry details to the database...", 72, "Step 3 of 5");
             const result = await saveLead({
                 docId,
-                customerId: getEditingLead()?.customerId || "",
+                customerId: editingLead?.customerId || "",
                 customerName: document.getElementById("lead-customer-name")?.value,
                 customerPhone: document.getElementById("lead-customer-phone")?.value,
                 customerEmail: document.getElementById("lead-customer-email")?.value,
                 customerAddress: document.getElementById("lead-customer-address")?.value,
-                assignedTo: document.getElementById("lead-assigned-to")?.value,
+                assignedMemberId: assignment.assignedMemberId,
+                assignedMemberName: assignment.assignedMemberName,
+                assignedTo: assignment.assignedTo,
                 enquiryDate: document.getElementById("lead-enquiry-date")?.value,
                 expectedDeliveryDate: document.getElementById("lead-expected-delivery-date")?.value,
                 leadSource: document.getElementById("lead-source")?.value,

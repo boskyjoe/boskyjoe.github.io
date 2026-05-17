@@ -1,5 +1,6 @@
 import {
     createCategoryRecord,
+    createChurchMemberRecord,
     createPaymentModeRecord,
     createReorderPolicyRecord,
     getOnlineCatalogueRecord,
@@ -13,10 +14,12 @@ import {
     getPaymentModeUsageStatus,
     getSeasonUsageStatus,
     setCategoryActiveStatus,
+    setChurchMemberActiveStatus,
     setPaymentModeActiveStatus,
     setReorderPolicyActiveStatus,
     setSeasonActiveStatus,
     updateCategoryRecord,
+    updateChurchMemberRecord,
     updatePaymentModeRecord,
     updateProductPriceChangeReviewRecord,
     updatePricingPolicyRecord,
@@ -571,6 +574,94 @@ export async function togglePaymentModeStatus(docId, nextValue, user, paymentMod
     }
 
     await setPaymentModeActiveStatus(docId, nextValue, user);
+}
+
+function findDuplicateChurchMember(existingChurchMembers = [], field, value, docId = "") {
+    const normalizedValue = normalizeText(value).toLowerCase();
+    if (!normalizedValue) return null;
+
+    return (existingChurchMembers || []).find(record =>
+        normalizeText(record[field]).toLowerCase() === normalizedValue
+        && record.id !== docId
+    ) || null;
+}
+
+export function validateChurchMemberPayload(payload, existingChurchMembers = []) {
+    const docId = normalizeText(payload.docId);
+    const fullName = normalizeText(payload.fullName);
+    const phone = normalizeText(payload.phone);
+    const email = normalizeText(payload.email).toLowerCase();
+    const canHandleEnquiries = normalizeBoolean(payload.canHandleEnquiries, true);
+
+    if (!fullName) {
+        throw new Error("Member name is required.");
+    }
+
+    if (fullName.length < 2) {
+        throw new Error("Member name must be at least 2 characters long.");
+    }
+
+    if (fullName.length > 80) {
+        throw new Error("Member name must be 80 characters or less.");
+    }
+
+    if (!phone && !email) {
+        throw new Error("Provide at least a phone number or email address.");
+    }
+
+    if (phone.length > 25) {
+        throw new Error("Phone number must be 25 characters or less.");
+    }
+
+    if (email.length > 120) {
+        throw new Error("Email address must be 120 characters or less.");
+    }
+
+    const duplicatePhone = phone ? findDuplicateChurchMember(existingChurchMembers, "phone", phone, docId) : null;
+    if (duplicatePhone) {
+        throw new Error(`Phone number is already assigned to ${duplicatePhone.fullName || "another church member"}.`);
+    }
+
+    const duplicateEmail = email ? findDuplicateChurchMember(existingChurchMembers, "email", email, docId) : null;
+    if (duplicateEmail) {
+        throw new Error(`Email address is already assigned to ${duplicateEmail.fullName || "another church member"}.`);
+    }
+
+    return {
+        docId,
+        fullName,
+        phone,
+        email,
+        canHandleEnquiries
+    };
+}
+
+export async function saveChurchMember(payload, user, existingChurchMembers = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save a church member.");
+    }
+
+    const { docId, ...churchMemberData } = validateChurchMemberPayload(payload, existingChurchMembers);
+
+    if (docId) {
+        await updateChurchMemberRecord(docId, churchMemberData, user);
+        return { mode: "update" };
+    }
+
+    await createChurchMemberRecord(churchMemberData, user);
+    return { mode: "create" };
+}
+
+export async function toggleChurchMemberStatus(docId, nextValue, user) {
+    if (!user) {
+        throw new Error("You must be logged in to update church member status.");
+    }
+
+    if (!docId) {
+        throw new Error("Church member record could not be found.");
+    }
+
+    await setChurchMemberActiveStatus(docId, nextValue, user);
 }
 
 export function validatePricingPolicyPayload(payload, existingPolicies = []) {
