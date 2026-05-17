@@ -1788,13 +1788,14 @@ function renderLeadWorkLogModal() {
                                 ${isLeadLocked ? `
                                     <div class="lead-conversion-lock-banner">
                                         <div>
-                                            <p class="section-kicker">Read Only Activity History</p>
-                                            <p class="panel-copy">This converted enquiry is locked. You can review past work-log activity, but no new entries can be added.</p>
+                                            <p class="section-kicker">Work Log Locked</p>
+                                            <p class="panel-copy">This enquiry has already been converted. You can review past work-log activity, but no new entries can be added.</p>
                                         </div>
                                     </div>
-                                ` : `
-                                    <form id="lead-worklog-entry-form">
-                                        <input id="lead-worklog-lead-id" type="hidden" value="${activeLead?.id || ""}">
+                                ` : ""}
+                                <form id="lead-worklog-entry-form" class="${isLeadLocked ? "lead-worklog-entry-form-locked" : ""}">
+                                    <input id="lead-worklog-lead-id" type="hidden" value="${activeLead?.id || ""}">
+                                    <fieldset class="lead-worklog-entry-fieldset" ${isLeadLocked ? 'disabled aria-disabled="true"' : ""}>
                                         <div class="lead-worklog-entry-grid">
                                             <div class="field">
                                                 <label for="lead-worklog-type">Log Type <span class="required-mark" aria-hidden="true">*</span></label>
@@ -1808,13 +1809,13 @@ function renderLeadWorkLogModal() {
                                             </div>
                                         </div>
                                         <div class="form-actions">
-                                            <button id="lead-worklog-save-button" class="button button-primary-alt" type="submit">
+                                            <button id="lead-worklog-save-button" class="button button-primary-alt" type="submit" ${isLeadLocked ? 'disabled title="Converted enquiries cannot accept new work-log entries."' : ""}>
                                                 <span class="button-icon">${icons.plus}</span>
                                                 Save Log Entry
                                             </button>
                                         </div>
-                                    </form>
-                                `}
+                                    </fieldset>
+                                </form>
                             </div>
                         </div>
 
