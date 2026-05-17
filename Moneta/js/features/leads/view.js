@@ -2383,7 +2383,7 @@ async function handleLeadSubmit(event) {
                 catalogueId: document.getElementById("lead-catalogue")?.value,
                 leadNotes: document.getElementById("lead-notes")?.value,
                 requestedProducts: getLeadRequestedProductsGridRows()
-            }, getState().currentUser, getState().masterData.salesCatalogues, getState().masterData.seasons);
+            }, getState().currentUser, getState().masterData.salesCatalogues, getState().masterData.seasons, getState().masterData.churchMembers);
 
             update("Refreshing enquiry history...", 88, "Step 4 of 5");
             resetLeadWorkspace();

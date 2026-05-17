@@ -330,15 +330,59 @@ function resolveSeasonName(seasonId, seasons = []) {
     return (seasons || []).find(season => season.id === seasonId)?.seasonName || "-";
 }
 
-export function validateLeadPayload(payload, salesCatalogues = [], seasons = []) {
+function resolveLeadAssignment(payload = {}, churchMembers = []) {
+    const rawAssignedMemberId = normalizeText(payload.assignedMemberId);
+    const rawAssignedMemberName = normalizeText(payload.assignedMemberName);
+    const rawAssignedTo = normalizeText(payload.assignedTo);
+    const rows = Array.isArray(churchMembers) ? churchMembers : [];
+
+    if (rawAssignedMemberId) {
+        const matchedMember = rows.find(member => normalizeText(member.id) === rawAssignedMemberId) || null;
+        const resolvedName = normalizeText(matchedMember?.fullName || rawAssignedMemberName || rawAssignedTo);
+
+        return {
+            assignedMemberId: rawAssignedMemberId,
+            assignedMemberName: resolvedName,
+            assignedTo: resolvedName
+        };
+    }
+
+    const candidateName = rawAssignedMemberName || rawAssignedTo;
+    if (candidateName) {
+        const matchedMember = rows.find(member => normalizeText(member.fullName).toLowerCase() === candidateName.toLowerCase()) || null;
+        if (matchedMember) {
+            const resolvedName = normalizeText(matchedMember.fullName);
+            return {
+                assignedMemberId: normalizeText(matchedMember.id),
+                assignedMemberName: resolvedName,
+                assignedTo: resolvedName
+            };
+        }
+    }
+
+    if (rawAssignedMemberName || rawAssignedTo) {
+        const fallbackName = rawAssignedMemberName || rawAssignedTo;
+        return {
+            assignedMemberId: "",
+            assignedMemberName: fallbackName,
+            assignedTo: fallbackName
+        };
+    }
+
+    return {
+        assignedMemberId: "",
+        assignedMemberName: "",
+        assignedTo: ""
+    };
+}
+
+export function validateLeadPayload(payload, salesCatalogues = [], seasons = [], churchMembers = []) {
     const docId = normalizeText(payload.docId);
     const customerName = normalizeText(payload.customerName);
     const customerPhone = normalizeText(payload.customerPhone);
     const customerEmail = normalizeText(payload.customerEmail);
     const customerAddress = normalizeText(payload.customerAddress);
-    const assignedMemberId = normalizeText(payload.assignedMemberId);
-    const assignedMemberName = normalizeText(payload.assignedMemberName);
-    const assignedTo = normalizeText(payload.assignedTo);
+    const assignment = resolveLeadAssignment(payload, churchMembers);
     const catalogueId = normalizeText(payload.catalogueId);
     const leadSource = LEAD_SOURCES.includes(normalizeText(payload.leadSource))
         ? normalizeText(payload.leadSource)
@@ -389,9 +433,9 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [])
             customerPhone,
             customerEmail,
             customerAddress,
-            assignedMemberId,
-            assignedMemberName,
-            assignedTo,
+            assignedMemberId: assignment.assignedMemberId,
+            assignedMemberName: assignment.assignedMemberName,
+            assignedTo: assignment.assignedTo,
             catalogueId,
             catalogueName: catalogue.catalogueName || "-",
             seasonId: catalogue.seasonId || "",
@@ -407,12 +451,12 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [])
     };
 }
 
-export async function saveLead(payload, user, salesCatalogues = [], seasons = []) {
+export async function saveLead(payload, user, salesCatalogues = [], seasons = [], churchMembers = []) {
     if (!user) {
         throw new Error("You must be logged in to save an enquiry.");
     }
 
-    const { docId, leadData } = validateLeadPayload(payload, salesCatalogues, seasons);
+    const { docId, leadData } = validateLeadPayload(payload, salesCatalogues, seasons, churchMembers);
     const customerResult = await ensureCustomerMasterRecord({
         customerId: payload.customerId || "",
         customerName: leadData.customerName,
