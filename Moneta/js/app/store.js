@@ -13,7 +13,8 @@ const state = {
         reorderPolicies: [],
         storeConfigs: [],
         salesCatalogues: [],
-        teams: []
+        teams: [],
+        churchMembers: []
     }
 };
 

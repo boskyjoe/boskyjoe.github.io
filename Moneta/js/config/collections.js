@@ -24,5 +24,6 @@ export const COLLECTIONS = {
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
     salesCatalogues: `${BASE_DOC_PATH}/salesCatalogues`,
     teams: `${BASE_DOC_PATH}/churchTeams`,
+    churchMembers: `${BASE_DOC_PATH}/churchMembers`,
     leads: `${BASE_DOC_PATH}/leads`
 };

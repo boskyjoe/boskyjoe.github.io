@@ -258,6 +258,20 @@ export const navConfig = [
                 ]
             },
             {
+                label: "Church Operations",
+                items: [
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=churchMembers",
+                        label: "Church Members",
+                        icon: icons.users,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
+                    }
+                ]
+            },
+            {
                 label: "Security & Access",
                 items: [
                     {
