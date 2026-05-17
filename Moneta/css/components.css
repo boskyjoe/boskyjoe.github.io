@@ -3039,6 +3039,17 @@ select {
     min-height: 96px;
 }
 
+.lead-worklog-entry-fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.lead-worklog-entry-form-locked .lead-worklog-entry-fieldset {
+    opacity: 0.72;
+}
+
 .simple-consignment-shell {
     display: grid;
     gap: 1rem;
