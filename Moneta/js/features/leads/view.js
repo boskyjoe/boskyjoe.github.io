@@ -470,15 +470,14 @@ function updateQuoteDraftMetricsDom() {
     });
 
     const totals = featureState.quoteDraft.totals || {};
-    const totalFieldMap = {
+    const metricFieldMap = {
         subtotal: totals.subtotal || 0,
         discount: totals.discountTotal || 0,
-        tax: totals.taxTotal || 0,
-        grandTotal: totals.grandTotal || 0
+        tax: totals.taxTotal || 0
     };
 
-    Object.entries(totalFieldMap).forEach(([field, value]) => {
-        const node = document.querySelector(`[data-quote-total-field="${field}"]`);
+    Object.entries(metricFieldMap).forEach(([field, value]) => {
+        const node = document.querySelector(`[data-quote-inline-metric="${field}"]`);
         if (node) {
             node.textContent = formatCurrency(value);
         }
@@ -984,7 +983,7 @@ function renderQuoteLineItemsGrid(quoteDraft, options = {}) {
     const lineItems = quoteDraft?.lineItems || [];
 
     return `
-        <div class="ag-shell lead-quote-line-items-shell ${!lineItems.length ? "lead-quote-line-items-shell-empty" : ""}">
+        <div class="ag-shell ag-shell-compact lead-quote-line-items-shell ${!lineItems.length ? "lead-quote-line-items-shell-empty" : ""}">
             <div
                 id="lead-quote-line-items-grid"
                 class="ag-theme-alpine moneta-grid lead-quote-line-items-grid"
@@ -1319,29 +1318,16 @@ function renderLeadQuotesEditorCard(editingLead) {
                             </div>
                             ${renderQuoteLineItemsGrid(quoteDraft, { readOnly: !isEditable })}
                         </div>
-                        <div class="lead-quote-totals-grid">
-                            <div class="metric-card">
-                                <span class="metric-label">Subtotal</span>
-                                <strong class="metric-value" data-quote-total-field="subtotal">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Discount</span>
-                                <strong class="metric-value" data-quote-total-field="discount">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Tax</span>
-                                <strong class="metric-value" data-quote-total-field="tax">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Grand Total</span>
-                                <strong class="metric-value" data-quote-total-field="grandTotal">${formatCurrency(quoteDraft.totals?.grandTotal || 0)}</strong>
-                            </div>
-                        </div>
                         ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: !canEditStatus })}
                         ${renderQuoteRejectionFields(quoteDraft, { readOnly: !canEditStatus })}
                         ${renderQuoteCancellationFields(quoteDraft, { readOnly: !canEditStatus })}
                         <div class="lead-quote-editor-footer">
                             <div class="lead-quote-editor-note">
+                                <div class="lead-quote-inline-metrics">
+                                    <span>Subtotal <strong data-quote-inline-metric="subtotal">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong></span>
+                                    <span>Discount <strong data-quote-inline-metric="discount">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong></span>
+                                    <span>Tax <strong data-quote-inline-metric="tax">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong></span>
+                                </div>
                                 ${isLeadLocked
             ? `This quote thread is locked because the linked enquiry was converted to retail sale ${resolveLeadLinkedSaleLabel(editingLead)}${isLeadConversionVoided(editingLead) ? ", and that sale was later voided." : "."}`
             : revisionDraft

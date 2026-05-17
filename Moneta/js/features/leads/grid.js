@@ -342,7 +342,7 @@ function buildLeadQuoteLineItemsColumnDefs() {
             headerName: "Qty",
             minWidth: 100,
             maxWidth: 120,
-            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            editable: params => !params.node?.rowPinned && !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("quotedQty", 0),
             ...rightAlignedNumberColumn
@@ -352,7 +352,7 @@ function buildLeadQuoteLineItemsColumnDefs() {
             headerName: "Unit Price",
             minWidth: 130,
             flex: 0.9,
-            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            editable: params => !params.node?.rowPinned && !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPrice", 2),
             ...rightAlignedNumberColumn,
@@ -363,33 +363,33 @@ function buildLeadQuoteLineItemsColumnDefs() {
             headerName: "Discount %",
             minWidth: 125,
             flex: 0.85,
-            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            editable: params => !params.node?.rowPinned && !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("lineDiscountPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`
         },
         {
             field: "cgstPercentage",
             headerName: "CGST %",
             minWidth: 110,
             flex: 0.8,
-            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            editable: params => !params.node?.rowPinned && !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("cgstPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`
         },
         {
             field: "sgstPercentage",
             headerName: "SGST %",
             minWidth: 110,
             flex: 0.8,
-            editable: params => !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
+            editable: params => !params.node?.rowPinned && !leadQuoteLineItemsReadOnly && !params.data?._readOnly,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("sgstPercentage", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => `${Number(params.value || 0).toFixed(2)}%`
+            valueFormatter: params => params.node?.rowPinned ? "" : `${Number(params.value || 0).toFixed(2)}%`
         },
         {
             field: "lineTotal",
@@ -400,6 +400,32 @@ function buildLeadQuoteLineItemsColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         }
     ];
+}
+
+function buildLeadQuoteLineItemsPinnedBottomRow(rows) {
+    if (!rows?.length) return [];
+
+    const totals = rows.reduce((summary, row) => {
+        summary.quotedQty += Number(row?.quotedQty) || 0;
+        summary.lineTotal += Number(row?.lineTotal) || 0;
+        return summary;
+    }, {
+        quotedQty: 0,
+        lineTotal: 0
+    });
+
+    return [{
+        productName: "Grand Total",
+        quotedQty: totals.quotedQty,
+        lineTotal: Number(totals.lineTotal.toFixed(2)),
+        _readOnly: true
+    }];
+}
+
+function refreshLeadQuoteLineItemsPinnedBottomRow(api) {
+    if (!api) return;
+
+    api.setGridOption("pinnedBottomRowData", buildLeadQuoteLineItemsPinnedBottomRow(getVisibleRows(api)));
 }
 
 function buildRequestedProductsColumnDefs(onRowsChanged) {
@@ -704,12 +730,17 @@ export function initializeLeadQuoteLineItemsGrid(gridElement, onRowsChanged) {
         getRowId: params => params.data.productId,
         singleClickEdit: true,
         stopEditingWhenCellsLoseFocus: true,
+        pinnedBottomRowData: [],
         pagination: true,
         paginationPageSize: 10,
         paginationPageSizeSelector: [10, 20, 50],
         onCellValueChanged: params => {
             params.api.refreshCells({ rowNodes: [params.node], force: true });
+            refreshLeadQuoteLineItemsPinnedBottomRow(params.api);
             onRowsChanged?.();
+        },
+        onModelUpdated: params => {
+            refreshLeadQuoteLineItemsPinnedBottomRow(params.api);
         }
     });
 
@@ -723,6 +754,7 @@ export function setLeadQuoteLineItemsReadOnly(value) {
 
 export function refreshLeadQuoteLineItemsGrid(rows) {
     leadQuoteLineItemsGridApi?.setGridOption("rowData", rows || []);
+    refreshLeadQuoteLineItemsPinnedBottomRow(leadQuoteLineItemsGridApi);
 }
 
 export function getLeadQuoteLineItemsGridRows() {
