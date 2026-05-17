@@ -3080,6 +3080,7 @@ function openLeadWorkLogModal(lead) {
     featureState.activeWorkLogLeadId = lead.id;
     featureState.workLogSearchTerm = "";
     featureState.workLogEntries = [];
+    renderLeadsView();
 
     const modal = document.getElementById("lead-worklog-modal");
     if (!modal) return;
@@ -3118,6 +3119,11 @@ function openLeadWorkLogModal(lead) {
     modal.hidden = false;
     syncLeadWorkLogGrid();
     ensureWorkLogListener(getState());
+
+    if (isLeadConversionLocked(lead)) {
+        document.getElementById("lead-worklog-close-button")?.focus();
+        return;
+    }
 
     focusFormField({
         formId: "lead-worklog-entry-form",
