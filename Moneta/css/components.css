@@ -2980,14 +2980,20 @@ select {
     color: var(--text-soft);
 }
 
-.lead-quote-totals-grid {
-    display: grid;
-    gap: 0.85rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .lead-quote-actions {
     justify-content: flex-end;
+}
+
+.lead-quote-inline-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem 1.5rem;
+    font-size: 0.92rem;
+    color: var(--text-soft);
+}
+
+.lead-quote-inline-metrics strong {
+    color: var(--text-strong);
 }
 
 .lead-quotes-drawer-overlay {
@@ -3611,8 +3617,7 @@ select {
     .lead-quote-editor-grid,
     .lead-editor-tabs,
     .lead-worklog-entry-grid,
-    .lead-quote-summary-grid,
-    .lead-quote-totals-grid {
+    .lead-quote-summary-grid {
         grid-template-columns: 1fr;
     }
 
