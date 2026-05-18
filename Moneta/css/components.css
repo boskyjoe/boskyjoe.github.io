@@ -2986,7 +2986,19 @@ select {
 }
 
 .lead-quote-actions {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 0;
+}
+
+.lead-quote-actions .button {
+    min-height: 3.15rem;
+    padding: 0.82rem 1.05rem;
+    border-radius: 1rem;
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 
 .lead-quote-finance-summary {
