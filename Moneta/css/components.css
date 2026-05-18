@@ -2904,6 +2904,11 @@ select {
     gap: 0.9rem;
 }
 
+.lead-quote-editor-footer {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    align-items: start;
+}
+
 .lead-quote-line-items-shell {
     border: 1px solid var(--border-soft);
     border-radius: 1rem;
@@ -2984,16 +2989,13 @@ select {
     justify-content: flex-end;
 }
 
-.lead-quote-inline-metrics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.85rem 1.5rem;
-    font-size: 0.92rem;
-    color: var(--text-soft);
+.lead-quote-finance-summary {
+    min-height: 100%;
 }
 
-.lead-quote-inline-metrics strong {
-    color: var(--text-strong);
+.lead-quote-footer-main {
+    display: grid;
+    gap: 0.9rem;
 }
 
 .lead-quotes-drawer-overlay {
@@ -3615,6 +3617,7 @@ select {
     .lead-form-sections,
     .lead-form-section-grid,
     .lead-quote-editor-grid,
+    .lead-quote-editor-footer,
     .lead-editor-tabs,
     .lead-worklog-entry-grid,
     .lead-quote-summary-grid {
