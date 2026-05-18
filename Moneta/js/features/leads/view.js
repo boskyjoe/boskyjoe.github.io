@@ -1265,7 +1265,7 @@ function renderLeadQuotesEditorCard(editingLead) {
         : (quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft");
     const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
     const displayQuoteStatus = selectedQuote ? resolveQuoteStatusLabel(selectedQuote) : quoteStatus;
-    const quotePdfButtonLabel = isEditable ? "Preview Quote PDF" : "Download Quote PDF";
+    const quotePdfButtonLabel = isEditable ? "Preview PDF" : "Download PDF";
     const metadataNote = revisionDraft
         ? `Based on ${sourceQuote?.businessQuoteId || "the selected quote"}${sourceQuote?.versionNo ? ` · Version ${sourceQuote.versionNo}` : ""} · Save draft or send to create the next version.`
         : (selectedQuote
@@ -1417,13 +1417,13 @@ function renderLeadQuotesEditorCard(editingLead) {
                                     ${canEditStatus ? `
                                         <button class="button button-primary-alt" type="button" data-action="quote-save-draft">
                                             <span class="button-icon">${icons.edit}</span>
-                                            Save Status Update
+                                            Save Status
                                         </button>
                                     ` : ""}
                                     ${isLeadLocked ? "" : `
                                         <button class="button button-secondary" type="button" data-action="quote-new-draft">
                                             <span class="button-icon">${icons.plus}</span>
-                                            Create New Draft Version
+                                            New Draft Version
                                         </button>
                                     `}
                                     ${selectedQuote ? `
@@ -1440,11 +1440,11 @@ function renderLeadQuotesEditorCard(editingLead) {
                                             </button>
                                             <button class="button button-secondary" type="button" data-action="quote-reject" data-quote-id="${selectedQuote.id}">
                                                 <span class="button-icon">${icons.warning}</span>
-                                                Reject
+                                                Mark Rejected
                                             </button>
                                             <button class="button button-secondary" type="button" data-action="quote-cancel" data-quote-id="${selectedQuote.id}">
                                                 <span class="button-icon">${icons.inactive}</span>
-                                                Cancel
+                                                Cancel Quote
                                             </button>
                                         ` : ""}
                                     ` : ""}
