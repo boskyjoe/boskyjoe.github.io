@@ -356,7 +356,7 @@ function buildLeadQuoteLineItemsColumnDefs() {
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPrice", 2),
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => params.node?.rowPinned ? "" : formatCurrency(params.value || 0)
         },
         {
             field: "lineDiscountPercentage",
@@ -415,7 +415,7 @@ function buildLeadQuoteLineItemsPinnedBottomRow(rows) {
     });
 
     return [{
-        productName: "Grand Total",
+        productName: "Total",
         quotedQty: totals.quotedQty,
         lineTotal: Number(totals.lineTotal.toFixed(2)),
         _readOnly: true

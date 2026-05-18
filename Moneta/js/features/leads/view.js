@@ -473,15 +473,64 @@ function updateQuoteDraftMetricsDom() {
     const metricFieldMap = {
         subtotal: totals.subtotal || 0,
         discount: totals.discountTotal || 0,
-        tax: totals.taxTotal || 0
+        afterDiscounts: totals.taxableAmount || 0,
+        tax: totals.taxTotal || 0,
+        grandTotal: totals.grandTotal || 0
     };
 
     Object.entries(metricFieldMap).forEach(([field, value]) => {
-        const node = document.querySelector(`[data-quote-inline-metric="${field}"]`);
+        const node = document.querySelector(`[data-quote-summary-field="${field}"]`);
         if (node) {
+            if (field === "discount") {
+                const normalizedValue = Math.abs(Number(value) || 0);
+                node.textContent = normalizedValue > 0
+                    ? `-${formatCurrency(normalizedValue)}`
+                    : formatCurrency(0);
+                return;
+            }
+
             node.textContent = formatCurrency(value);
         }
     });
+}
+
+function renderQuoteFinancialSummary(quoteDraft, displayQuoteStatus = "") {
+    const totals = quoteDraft?.totals || {};
+    const discountTotal = Math.abs(Number(totals.discountTotal) || 0);
+    return `
+        <aside class="retail-finance-totals lead-quote-finance-summary">
+            <div class="retail-finance-section-head">
+                <p class="workspace-form-section-kicker">Financial Summary</p>
+                <p class="panel-copy">Review the final quote picture before saving or sending.</p>
+            </div>
+            <div class="retail-finance-total-list">
+                <div class="retail-finance-total-row">
+                    <span>Subtotal</span>
+                    <strong data-quote-summary-field="subtotal">${formatCurrency(totals.subtotal || 0)}</strong>
+                </div>
+                <div class="retail-finance-total-row">
+                    <span>Discount</span>
+                    <strong data-quote-summary-field="discount">${discountTotal > 0 ? `-${formatCurrency(discountTotal)}` : formatCurrency(0)}</strong>
+                </div>
+                <div class="retail-finance-total-row">
+                    <span>After Discounts</span>
+                    <strong data-quote-summary-field="afterDiscounts">${formatCurrency(totals.taxableAmount || 0)}</strong>
+                </div>
+                <div class="retail-finance-total-row">
+                    <span>Total Tax</span>
+                    <strong data-quote-summary-field="tax">${formatCurrency(totals.taxTotal || 0)}</strong>
+                </div>
+                <div class="retail-finance-total-row retail-finance-total-row-strong">
+                    <span>Grand Total</span>
+                    <strong data-quote-summary-field="grandTotal">${formatCurrency(totals.grandTotal || 0)}</strong>
+                </div>
+            </div>
+            <div class="retail-finance-status-row">
+                <span class="summary-label">Quote Status</span>
+                <span class="summary-value retail-summary-status">${displayQuoteStatus || "Draft"}</span>
+            </div>
+        </aside>
+    `;
 }
 
 function handleQuoteLineItemsGridChanged() {
@@ -1322,21 +1371,18 @@ function renderLeadQuotesEditorCard(editingLead) {
                         ${renderQuoteRejectionFields(quoteDraft, { readOnly: !canEditStatus })}
                         ${renderQuoteCancellationFields(quoteDraft, { readOnly: !canEditStatus })}
                         <div class="lead-quote-editor-footer">
-                            <div class="lead-quote-editor-note">
-                                <div class="lead-quote-inline-metrics">
-                                    <span>Subtotal <strong data-quote-inline-metric="subtotal">${formatCurrency(quoteDraft.totals?.subtotal || 0)}</strong></span>
-                                    <span>Discount <strong data-quote-inline-metric="discount">${formatCurrency(quoteDraft.totals?.discountTotal || 0)}</strong></span>
-                                    <span>Tax <strong data-quote-inline-metric="tax">${formatCurrency(quoteDraft.totals?.taxTotal || 0)}</strong></span>
-                                </div>
-                                ${isLeadLocked
+                            ${renderQuoteFinancialSummary(quoteDraft, displayQuoteStatus)}
+                            <div class="lead-quote-footer-main">
+                                <div class="lead-quote-editor-note">
+                                    ${isLeadLocked
             ? `This quote thread is locked because the linked enquiry was converted to retail sale ${resolveLeadLinkedSaleLabel(editingLead)}${isLeadConversionVoided(editingLead) ? ", and that sale was later voided." : "."}`
             : revisionDraft
             ? `Revision mode is active. Review the changes, then save draft or send to create the next version from ${sourceQuote?.businessQuoteId || "the selected quote"}.`
             : (acceptedQuote
                 ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
                 : "Only one quote should be marked accepted for a lead. Sent quotes stay frozen for pricing, but their lifecycle status can still be updated here.")}
-                            </div>
-                            <div class="form-actions lead-quote-actions">
+                                </div>
+                                <div class="form-actions lead-quote-actions">
                                 ${isLeadLocked ? `
                                     <button class="button button-secondary" type="button" data-action="quote-download-pdf">
                                         <span class="button-icon">${icons.download}</span>
@@ -1403,6 +1449,7 @@ function renderLeadQuotesEditorCard(editingLead) {
                                         ` : ""}
                                     ` : ""}
                                 `}
+                                </div>
                             </div>
                         </div>
                     ` : `
