@@ -72,7 +72,13 @@ const featureState = {
     activeQuoteId: null,
     quoteDraft: null,
     pendingQuoteSelectionId: "",
-    isQuoteSaveInFlight: false
+    isQuoteSaveInFlight: false,
+    quoteStatusReasonModal: {
+        isOpen: false,
+        mode: "",
+        quoteId: "",
+        reason: ""
+    }
 };
 
 const RETAIL_ROUTE = "#/retail-store";
@@ -1827,6 +1833,7 @@ function renderLeadQuotesPageShell() {
                 </div>
                 ${renderLeadQuotesWorkspace(activeLead, { standalone: true })}
             </div>
+            ${renderQuoteStatusReasonModal()}
         `
         : `
             <div class="panel-card">
@@ -1852,6 +1859,7 @@ function renderLeadQuotesPageShell() {
                     </div>
                 </div>
             </div>
+            ${renderQuoteStatusReasonModal()}
         `;
 }
 
@@ -2002,6 +2010,78 @@ function renderLeadWorkLogModal() {
     `;
 }
 
+function getQuoteStatusReasonModalConfig() {
+    const mode = featureState.quoteStatusReasonModal.mode;
+    if (mode === "reject") {
+        return {
+            title: "Reject Quote",
+            subtitle: "Record why this quote is being marked rejected before saving the status update.",
+            label: "Rejection Reason",
+            placeholder: "Explain why the customer rejected this quote",
+            saveLabel: "Reject Quote",
+            icon: icons.warning
+        };
+    }
+
+    return {
+        title: "Cancel Quote",
+        subtitle: "Record why this quote is being cancelled before saving the status update.",
+        label: "Cancellation Reason",
+        placeholder: "Explain why this quote is being cancelled",
+        saveLabel: "Cancel Quote",
+        icon: icons.inactive
+    };
+}
+
+function renderQuoteStatusReasonModal() {
+    const modalState = featureState.quoteStatusReasonModal || {};
+    const isOpen = Boolean(modalState.isOpen);
+    const config = getQuoteStatusReasonModalConfig();
+
+    return `
+        <div id="lead-quote-reason-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-quote-reason-title" ${isOpen ? "" : "hidden"}>
+            <div class="purchase-payment-modal-card lead-quote-reason-modal-card">
+                <div class="panel-header panel-header-accent purchase-payment-modal-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <div class="panel-title-wrap">
+                            <span class="panel-icon panel-icon-alt">${config.icon}</span>
+                            <div>
+                                <h3 id="lead-quote-reason-title">${config.title}</h3>
+                                <p class="panel-copy">${config.subtitle}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <form id="lead-quote-reason-form" class="panel-body purchase-payment-modal-body lead-quote-reason-modal-form">
+                    <div class="purchase-void-mode-reason lead-quote-reason-modal-note">
+                        <p class="section-kicker">Status Update Required</p>
+                        <p class="panel-copy">This note will be stored on the quote so the team can understand why the lifecycle changed.</p>
+                    </div>
+                    <div class="field">
+                        <label for="lead-quote-status-reason-input">${config.label}</label>
+                        <textarea
+                            id="lead-quote-status-reason-input"
+                            class="textarea purchase-void-reason-textarea"
+                            rows="5"
+                            placeholder="${escapeAttribute(config.placeholder)}"
+                            required>${escapeAttribute(modalState.reason || "")}</textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="button button-secondary" type="button" data-action="quote-reason-close">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Cancel
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${config.icon}</span>
+                            ${config.saveLabel}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
 function renderLeadsViewShell(snapshot) {
     const root = document.getElementById("leads-root");
     if (!root) return;
@@ -2013,6 +2093,7 @@ function renderLeadsViewShell(snapshot) {
             ${shouldShowHistory ? renderLeadsHistoryPanel() : ""}
         </div>
         ${renderLeadWorkLogModal()}
+        ${renderQuoteStatusReasonModal()}
     `;
 }
 
@@ -2900,27 +2981,7 @@ async function handleQuoteReject(button) {
         return;
     }
 
-    const rejectionReason = window.prompt("Enter the rejection reason for this quote:", quote.rejectionReason || "") || "";
-    if (!rejectionReason.trim()) return;
-
-    try {
-        await rejectLeadQuote(lead, quote, rejectionReason, getState().currentUser);
-        const rejectedQuote = await getLeadQuote(lead.id, quote.id);
-        featureState.activeQuoteId = quote.id;
-        featureState.quoteDraft = rejectedQuote ? buildQuoteDraftFromRecord(rejectedQuote) : null;
-        if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-        }
-
-        showToast("Quote marked rejected.", "success", {
-            title: "Leads & Enquiries"
-        });
-    } catch (error) {
-        console.error("[Moneta] Quote rejection failed:", error);
-        showToast(error?.message || "Could not reject this quote.", "error", {
-            title: "Leads & Enquiries"
-        });
-    }
+    openQuoteStatusReasonModal("reject", quote);
 }
 
 async function handleQuoteCancel(button) {
@@ -2937,27 +2998,7 @@ async function handleQuoteCancel(button) {
         return;
     }
 
-    const cancellationReason = window.prompt("Enter the cancellation reason for this quote:", quote.cancellationReason || "") || "";
-    if (!cancellationReason.trim()) return;
-
-    try {
-        await cancelLeadQuote(lead, quote, cancellationReason, getState().currentUser);
-        const cancelledQuote = await getLeadQuote(lead.id, quote.id);
-        featureState.activeQuoteId = quote.id;
-        featureState.quoteDraft = cancelledQuote ? buildQuoteDraftFromRecord(cancelledQuote) : null;
-        if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-        }
-
-        showToast("Quote cancelled.", "success", {
-            title: "Leads & Enquiries"
-        });
-    } catch (error) {
-        console.error("[Moneta] Quote cancel failed:", error);
-        showToast(error?.message || "Could not cancel this quote.", "error", {
-            title: "Leads & Enquiries"
-        });
-    }
+    openQuoteStatusReasonModal("cancel", quote);
 }
 
 async function handleLeadConvert(button) {
@@ -3287,6 +3328,98 @@ function closeLeadWorkLogModal() {
     resetWorkLogWorkspace();
 }
 
+function openQuoteStatusReasonModal(mode, quote) {
+    featureState.quoteStatusReasonModal = {
+        isOpen: true,
+        mode,
+        quoteId: quote?.id || "",
+        reason: mode === "reject"
+            ? (quote?.rejectionReason || "")
+            : (quote?.cancellationReason || "")
+    };
+    renderActiveLeadSurface();
+
+    const input = document.getElementById("lead-quote-status-reason-input");
+    if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    }
+}
+
+function closeQuoteStatusReasonModal() {
+    featureState.quoteStatusReasonModal = {
+        isOpen: false,
+        mode: "",
+        quoteId: "",
+        reason: ""
+    };
+    renderActiveLeadSurface();
+}
+
+async function handleQuoteStatusReasonSubmit(event) {
+    event.preventDefault();
+
+    const lead = getEditingLead() || getQuoteContextLead();
+    const modalState = featureState.quoteStatusReasonModal || {};
+    const quote = featureState.quoteRows.find(entry => entry.id === modalState.quoteId) || null;
+    const reason = normalizeText(document.getElementById("lead-quote-status-reason-input")?.value || modalState.reason);
+
+    if (!lead?.id || !quote?.id) {
+        closeQuoteStatusReasonModal();
+        return;
+    }
+
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        closeQuoteStatusReasonModal();
+        return;
+    }
+
+    if (!reason) {
+        showToast("Please enter a clear reason before saving this quote status update.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        document.getElementById("lead-quote-status-reason-input")?.focus();
+        return;
+    }
+
+    try {
+        if (modalState.mode === "reject") {
+            await rejectLeadQuote(lead, quote, reason, getState().currentUser);
+        } else {
+            await cancelLeadQuote(lead, quote, reason, getState().currentUser);
+        }
+
+        const refreshedQuote = await getLeadQuote(lead.id, quote.id);
+        featureState.activeQuoteId = quote.id;
+        featureState.quoteDraft = refreshedQuote ? buildQuoteDraftFromRecord(refreshedQuote) : null;
+        featureState.quoteStatusReasonModal = {
+            isOpen: false,
+            mode: "",
+            quoteId: "",
+            reason: ""
+        };
+
+        if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
+            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
+        }
+
+        renderActiveLeadSurface();
+        showToast(modalState.mode === "reject" ? "Quote marked rejected." : "Quote cancelled.", "success", {
+            title: "Leads & Enquiries"
+        });
+    } catch (error) {
+        console.error(`[Moneta] Quote ${modalState.mode === "reject" ? "rejection" : "cancel"} failed:`, error);
+        showToast(
+            error?.message || (modalState.mode === "reject" ? "Could not reject this quote." : "Could not cancel this quote."),
+            "error",
+            { title: "Leads & Enquiries" }
+        );
+    }
+}
+
 function handleLeadWorkLogSearchInput(target) {
     featureState.workLogSearchTerm = target.value || "";
     updateLeadWorkLogGridSearch(featureState.workLogSearchTerm);
@@ -3515,6 +3648,11 @@ function bindLeadsDomEvents() {
 
         if (event.target.closest("#lead-worklog-entry-form")) {
             handleLeadWorkLogSubmit(event);
+            return;
+        }
+
+        if (event.target.closest("#lead-quote-reason-form")) {
+            handleQuoteStatusReasonSubmit(event);
         }
     });
 
@@ -3527,6 +3665,7 @@ function bindLeadsDomEvents() {
         const cancelButton = event.target.closest("#lead-cancel-button");
         const closeWorkLogButton = event.target.closest("#lead-worklog-close-button");
         const workLogModalBackdrop = event.target.closest("#lead-worklog-modal");
+        const quoteReasonModalBackdrop = event.target.id === "lead-quote-reason-modal" ? event.target : null;
         const quoteActionButton = event.target.closest("[data-action]");
         const quoteDrawerBackdrop = event.target.id === "lead-quotes-drawer" ? event.target : null;
 
@@ -3652,6 +3791,11 @@ function bindLeadsDomEvents() {
                 return;
             }
 
+            if (action === "quote-reason-close") {
+                closeQuoteStatusReasonModal();
+                return;
+            }
+
             if (action === "quote-close-view") {
                 featureState.activeLeadTab = "details";
                 renderLeadsView();
@@ -3668,6 +3812,11 @@ function bindLeadsDomEvents() {
 
         if (event.target.id === "lead-worklog-modal" && workLogModalBackdrop) {
             closeLeadWorkLogModal();
+            return;
+        }
+
+        if (quoteReasonModalBackdrop) {
+            closeQuoteStatusReasonModal();
             return;
         }
 
