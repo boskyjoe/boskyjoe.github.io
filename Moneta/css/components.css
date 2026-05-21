@@ -3044,6 +3044,19 @@ select {
     width: min(1080px, 100%);
 }
 
+.lead-quote-reason-modal-card {
+    width: min(680px, 100%);
+}
+
+.lead-quote-reason-modal-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.lead-quote-reason-modal-note {
+    margin-top: 0;
+}
+
 .lead-worklog-shell {
     display: grid;
     gap: 1rem;
