@@ -377,49 +377,48 @@ function renderReportsHub(user) {
 }
 
 function renderCashFlowSummaryCards(reportData = null) {
-    const summary = reportData?.summary || {
-        retailByStore: {
-            tastyTreats: 0,
-            churchStore: 0,
-            other: 0
-        },
-        retailNet: 0,
-        consignmentNet: 0,
-        donationNet: 0,
-        supplierNet: 0,
-        netCashMovement: 0
+    const summary = reportData?.summary || {};
+    const retailByStore = {
+        tastyTreats: Number(summary?.retailByStore?.tastyTreats) || 0,
+        churchStore: Number(summary?.retailByStore?.churchStore) || 0,
+        other: Number(summary?.retailByStore?.other) || 0
     };
+    const retailNet = Number(summary?.retailNet) || 0;
+    const consignmentNet = Number(summary?.consignmentNet) || 0;
+    const donationNet = Number(summary?.donationNet) || 0;
+    const supplierNet = Number(summary?.supplierNet) || 0;
+    const netCashMovement = Number(summary?.netCashMovement) || 0;
 
     return `
         <section class="dashboard-kpi-grid">
             <article class="dashboard-kpi-card tone-primary">
                 <p class="dashboard-kpi-title">Tasty Treats Net Cash</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.retailByStore.tastyTreats)}</p>
+                <p class="dashboard-kpi-value">${formatCurrency(retailByStore.tastyTreats)}</p>
                 <p class="dashboard-kpi-meta">Receipts less reversals for Tasty Treats</p>
             </article>
             <article class="dashboard-kpi-card tone-primary">
                 <p class="dashboard-kpi-title">Church Store Net Cash</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.retailByStore.churchStore)}</p>
+                <p class="dashboard-kpi-value">${formatCurrency(retailByStore.churchStore)}</p>
                 <p class="dashboard-kpi-meta">Receipts less reversals for Church Store</p>
             </article>
             <article class="dashboard-kpi-card tone-success">
                 <p class="dashboard-kpi-title">Consignment Net Cash</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.consignmentNet)}</p>
+                <p class="dashboard-kpi-value">${formatCurrency(consignmentNet)}</p>
                 <p class="dashboard-kpi-meta">Settlements collected less reversals</p>
             </article>
             <article class="dashboard-kpi-card tone-warning">
                 <p class="dashboard-kpi-title">Donation Net Cash</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.donationNet)}</p>
+                <p class="dashboard-kpi-value">${formatCurrency(donationNet)}</p>
                 <p class="dashboard-kpi-meta">Donation inflows after reversals</p>
             </article>
             <article class="dashboard-kpi-card tone-warning">
                 <p class="dashboard-kpi-title">Supplier Cash Outflow</p>
-                <p class="dashboard-kpi-value">${formatCurrency(summary.supplierNet)}</p>
+                <p class="dashboard-kpi-value">${formatCurrency(supplierNet)}</p>
                 <p class="dashboard-kpi-meta">Supplier payments net of reversals</p>
             </article>
-            <article class="dashboard-kpi-card ${summary.netCashMovement >= 0 ? "tone-success" : "tone-danger"}">
+            <article class="dashboard-kpi-card ${netCashMovement >= 0 ? "tone-success" : "tone-danger"}">
                 <p class="dashboard-kpi-title">Net Cash Movement</p>
-                <p class="dashboard-kpi-value">${formatSignedCurrency(summary.netCashMovement)}</p>
+                <p class="dashboard-kpi-value">${formatSignedCurrency(netCashMovement)}</p>
                 <p class="dashboard-kpi-meta">Net inflow for the selected period</p>
             </article>
         </section>
@@ -3156,6 +3155,11 @@ function bindReportsEvents(user) {
                 return;
             }
 
+            featureState.reportData = null;
+            featureState.isLoading = false;
+            featureState.source = "live";
+            featureState.loadedAt = 0;
+            featureState.expiresAt = 0;
             featureState.activeGroupKey = reportDef.groupKey;
             featureState.activeReportId = reportDef.id;
             featureState.errorMessage = "";
