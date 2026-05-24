@@ -2546,8 +2546,14 @@ select {
 .lead-form-sections {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: start;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    align-items: stretch;
+}
+
+.lead-form-section-stack {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
 }
 
 .lead-form-section {
@@ -2560,6 +2566,11 @@ select {
     background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-subtle) 100%);
     box-shadow: var(--shadow-soft);
     align-self: start;
+}
+
+.lead-form-section-context {
+    align-self: stretch;
+    min-height: 100%;
 }
 
 .lead-form-section-head {
