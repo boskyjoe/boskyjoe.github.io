@@ -3,6 +3,7 @@ import { THEME_CHANGE_EVENT } from "../../app/theme.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import { findNavRouteItem } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
+import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
@@ -639,7 +640,7 @@ function computeLeadSummary(leads = []) {
     const summary = {
         total: leads.length,
         open: 0,
-        qualified: 0,
+        working: 0,
         converted: 0,
         lost: 0,
         readyToConvert: 0,
@@ -647,7 +648,7 @@ function computeLeadSummary(leads = []) {
     };
 
     leads.forEach(lead => {
-        const status = normalizeText(lead.leadStatus || "New");
+        const status = normalizeLeadStatusValue(lead.leadStatus, "New");
         const statusLower = status.toLowerCase();
         const isOpen = statusLower !== "converted" && statusLower !== "lost";
 
@@ -662,8 +663,8 @@ function computeLeadSummary(leads = []) {
             }
         }
 
-        if (statusLower === "qualified") {
-            summary.qualified += 1;
+        if (statusLower === "working") {
+            summary.working += 1;
         }
         if (statusLower === "converted") {
             summary.converted += 1;
@@ -1289,7 +1290,7 @@ function renderDashboardMarkup(user) {
                                 <p class="dashboard-financial-title">Leads Pipeline</p>
                                 <div class="dashboard-financial-lines">
                                     <p><span>Open Leads</span><strong>${metrics.leads.open}</strong></p>
-                                    <p><span>Qualified</span><strong>${metrics.leads.qualified}</strong></p>
+                                    <p><span>Working</span><strong>${metrics.leads.working}</strong></p>
                                     <p><span>Ready To Convert</span><strong>${metrics.leads.readyToConvert}</strong></p>
                                 </div>
                             </article>
@@ -1787,10 +1788,10 @@ async function initializeFinancialCharts(metrics = {}, { canCashFlow = false } =
     ];
     const hasCashFlowData = cashFlowData.some(value => value > 0);
 
-    const leadPipelineLabels = ["Open", "Qualified", "Ready To Convert"];
+    const leadPipelineLabels = ["Open", "Working", "Ready To Convert"];
     const leadPipelineData = [
         Math.max(0, Math.floor(toNumber(leads.open))),
-        Math.max(0, Math.floor(toNumber(leads.qualified))),
+        Math.max(0, Math.floor(toNumber(leads.working))),
         Math.max(0, Math.floor(toNumber(leads.readyToConvert)))
     ];
     const hasLeadData = leadPipelineData.some(value => value > 0);
