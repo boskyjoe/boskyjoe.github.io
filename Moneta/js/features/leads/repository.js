@@ -3,6 +3,7 @@ import { COLLECTIONS } from "../../config/collections.js";
 const LEAD_ITEMS_SUBCOLLECTION = "items";
 const LEAD_WORK_LOG_SUBCOLLECTION = "workLog";
 const LEAD_QUOTES_SUBCOLLECTION = "quotes";
+const LEAD_STATUS_HISTORY_SUBCOLLECTION = "statusHistory";
 
 function getDb() {
     return firebase.firestore();
@@ -26,6 +27,49 @@ function normalizeText(value) {
 
 function toNumber(value) {
     return Number(value) || 0;
+}
+
+function buildLeadActivityPatch(activity = {}, user, now) {
+    const patch = {};
+    const lastActivityType = normalizeText(activity.lastActivityType);
+    const lastWorkLogType = normalizeText(activity.lastWorkLogType);
+
+    if (lastActivityType) {
+        patch.lastActivityOn = now;
+        patch.lastActivityBy = user.email;
+        patch.lastActivityType = lastActivityType;
+    }
+
+    if (lastWorkLogType) {
+        patch.lastWorkedOn = now;
+        patch.lastWorkedBy = user.email;
+        patch.lastWorkLogType = lastWorkLogType;
+    }
+
+    if (activity.quoteTouched) {
+        patch.lastQuoteActivityOn = now;
+    }
+
+    if (activity.statusChanged) {
+        patch.lastStatusChangedOn = now;
+        patch.lastStatusChangedBy = user.email;
+    }
+
+    return patch;
+}
+
+function buildLeadStatusHistoryPayload(statusHistoryEntry = {}, user, now) {
+    return {
+        fromStatus: normalizeText(statusHistoryEntry.fromStatus),
+        toStatus: normalizeText(statusHistoryEntry.toStatus),
+        triggerType: normalizeText(statusHistoryEntry.triggerType) || "manual",
+        triggerSource: normalizeText(statusHistoryEntry.triggerSource) || "lead-edit",
+        note: normalizeText(statusHistoryEntry.note),
+        changedBy: user.email,
+        changedOn: now,
+        createdBy: user.email,
+        createdOn: now
+    };
 }
 
 function resolveQuoteSummary(rows = []) {
@@ -170,10 +214,14 @@ export async function fetchSalesCatalogueItems(catalogueId) {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export async function createLeadRecord(leadData, user) {
+export async function createLeadRecord(leadData, user, options = {}) {
+    const { statusHistoryEntry = null } = options;
+    const db = getDb();
     const now = getNow();
+    const leadRef = db.collection(COLLECTIONS.leads).doc();
+    const batch = db.batch();
 
-    return getDb().collection(COLLECTIONS.leads).add({
+    batch.set(leadRef, {
         ...leadData,
         businessLeadId: buildBusinessLeadId(),
         quoteCount: 0,
@@ -185,11 +233,28 @@ export async function createLeadRecord(leadData, user) {
         acceptedQuoteNumber: "",
         acceptedQuoteOn: null,
         acceptedQuoteTotal: 0,
+        lastActivityOn: now,
+        lastActivityBy: user.email,
+        lastActivityType: "Enquiry Created",
+        lastQuoteActivityOn: null,
+        lastWorkedOn: null,
+        lastWorkedBy: "",
+        lastWorkLogType: "",
+        lastStatusChangedOn: now,
+        lastStatusChangedBy: user.email,
         createdBy: user.email,
         createdOn: now,
         updatedBy: user.email,
         updatedOn: now
     });
+
+    if (statusHistoryEntry) {
+        const statusHistoryRef = leadRef.collection(LEAD_STATUS_HISTORY_SUBCOLLECTION).doc();
+        batch.set(statusHistoryRef, buildLeadStatusHistoryPayload(statusHistoryEntry, user, now));
+    }
+
+    await batch.commit();
+    return leadRef;
 }
 
 export async function addLeadWorkLogRecord(leadId, logData, user) {
@@ -197,29 +262,53 @@ export async function addLeadWorkLogRecord(leadId, logData, user) {
         throw new Error("Lead id is required before adding a work log entry.");
     }
 
+    const db = getDb();
     const now = getNow();
+    const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
+    const workLogRef = leadRef.collection(LEAD_WORK_LOG_SUBCOLLECTION).doc();
+    const batch = db.batch();
 
-    return getDb()
-        .collection(COLLECTIONS.leads)
-        .doc(leadId)
-        .collection(LEAD_WORK_LOG_SUBCOLLECTION)
-        .add({
+    batch.set(workLogRef, {
             ...logData,
             logDate: now,
             loggedBy: user.email,
             createdBy: user.email,
             createdOn: now
         });
-}
 
-export async function updateLeadRecord(docId, leadData, user) {
-    const now = getNow();
-
-    return getDb().collection(COLLECTIONS.leads).doc(docId).update({
-        ...leadData,
+    batch.update(leadRef, {
+        ...buildLeadActivityPatch({
+            lastActivityType: normalizeText(logData.logType) || "Work Log Entry",
+            lastWorkLogType: normalizeText(logData.logType) || "General Note"
+        }, user, now),
         updatedBy: user.email,
         updatedOn: now
     });
+
+    await batch.commit();
+    return workLogRef;
+}
+
+export async function updateLeadRecord(docId, leadData, user, options = {}) {
+    const { statusHistoryEntry = null, leadActivity = null } = options;
+    const now = getNow();
+    const leadRef = getDb().collection(COLLECTIONS.leads).doc(docId);
+    const updatePayload = {
+        ...leadData,
+        ...buildLeadActivityPatch(leadActivity || {}, user, now),
+        updatedBy: user.email,
+        updatedOn: now
+    };
+
+    if (!statusHistoryEntry) {
+        return leadRef.update(updatePayload);
+    }
+
+    const statusHistoryRef = leadRef.collection(LEAD_STATUS_HISTORY_SUBCOLLECTION).doc();
+    const batch = getDb().batch();
+    batch.update(leadRef, updatePayload);
+    batch.set(statusHistoryRef, buildLeadStatusHistoryPayload(statusHistoryEntry, user, now));
+    await batch.commit();
 }
 
 export async function createLeadQuoteRecord(leadId, quoteData, user, options = {}) {
@@ -234,6 +323,8 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc();
     const batch = db.batch();
+    const quoteActivityType = normalizeText(workLogEntry?.logType)
+        || (normalizeText(quoteData.quoteStatus) === "Draft" ? "Quote Draft Saved" : `Quote ${normalizeText(quoteData.quoteStatus) || "Saved"}`);
 
     if (supersedeQuoteId) {
         batch.update(leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(supersedeQuoteId), {
@@ -270,6 +361,16 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
         updatedOn: now
     });
 
+    batch.update(leadRef, {
+        ...buildLeadActivityPatch({
+            lastActivityType: quoteActivityType,
+            lastWorkLogType: normalizeText(workLogEntry?.logType),
+            quoteTouched: true
+        }, user, now),
+        updatedBy: user.email,
+        updatedOn: now
+    });
+
     if (workLogEntry) {
         const workLogRef = leadRef.collection(LEAD_WORK_LOG_SUBCOLLECTION).doc();
         batch.set(workLogRef, {
@@ -301,6 +402,8 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(quoteId);
     const batch = db.batch();
+    const quoteActivityType = normalizeText(workLogEntry?.logType)
+        || (normalizeText(quoteData.quoteStatus) === "Draft" ? "Quote Draft Saved" : `Quote ${normalizeText(quoteData.quoteStatus) || "Updated"}`);
 
     if (supersedeOtherAccepted) {
         const snapshot = await leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).get();
@@ -319,6 +422,16 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
 
     batch.update(quoteRef, {
         ...quoteData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+
+    batch.update(leadRef, {
+        ...buildLeadActivityPatch({
+            lastActivityType: quoteActivityType,
+            lastWorkLogType: normalizeText(workLogEntry?.logType),
+            quoteTouched: true
+        }, user, now),
         updatedBy: user.email,
         updatedOn: now
     });
@@ -349,6 +462,8 @@ export async function updateLeadQuoteStatusRecord(leadId, quoteId, statusData, u
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quotesRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION);
     const batch = db.batch();
+    const quoteActivityType = normalizeText(workLogEntry?.logType)
+        || `Quote ${normalizeText(statusData.quoteStatus) || "Status Updated"}`;
 
     if (supersedeOtherAccepted) {
         const snapshot = await quotesRef.get();
@@ -367,6 +482,16 @@ export async function updateLeadQuoteStatusRecord(leadId, quoteId, statusData, u
 
     batch.update(quotesRef.doc(quoteId), {
         ...statusData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+
+    batch.update(leadRef, {
+        ...buildLeadActivityPatch({
+            lastActivityType: quoteActivityType,
+            lastWorkLogType: normalizeText(workLogEntry?.logType),
+            quoteTouched: true
+        }, user, now),
         updatedBy: user.email,
         updatedOn: now
     });

@@ -17,7 +17,7 @@ import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
-export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Revised", "General Note"];
+export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Rejected", "Quote Cancelled", "Quote Revised", "General Note"];
 export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled", "Converted"];
 export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Cancelled"];
 
@@ -391,6 +391,8 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [],
         ? normalizeText(payload.leadStatus)
         : "New";
     const leadNotes = normalizeText(payload.leadNotes);
+    const followUpOn = parseOptionalDate(payload.followUpOn, "Follow-up date");
+    const followUpNote = normalizeText(payload.followUpNote);
     const enquiryDate = parseRequiredDate(payload.enquiryDate, "Enquiry date");
     const expectedDeliveryDate = parseOptionalDate(payload.expectedDeliveryDate, "Expected delivery date");
     const requestedProducts = normalizeRequestedProducts(payload.requestedProducts);
@@ -413,6 +415,10 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [],
 
     if (expectedDeliveryDate && expectedDeliveryDate.getTime() < enquiryDate.getTime()) {
         throw new Error("Expected delivery date cannot be earlier than the enquiry date.");
+    }
+
+    if (followUpOn && followUpOn.getTime() < enquiryDate.getTime()) {
+        throw new Error("Follow-up date cannot be earlier than the enquiry date.");
     }
 
     if (requestedProducts.length === 0) {
@@ -443,6 +449,8 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [],
             leadSource,
             leadStatus,
             leadNotes,
+            followUpOn,
+            followUpNote,
             enquiryDate,
             expectedDeliveryDate,
             requestedProducts,
@@ -451,7 +459,7 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [],
     };
 }
 
-export async function saveLead(payload, user, salesCatalogues = [], seasons = [], churchMembers = []) {
+export async function saveLead(payload, user, salesCatalogues = [], seasons = [], churchMembers = [], existingLead = null) {
     if (!user) {
         throw new Error("You must be logged in to save an enquiry.");
     }
@@ -471,13 +479,35 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
         activityDate: leadData.enquiryDate || null
     });
     leadData.customerId = customerResult.customerId;
+    const previousStatus = normalizeText(existingLead?.leadStatus || "");
+    const nextStatus = normalizeText(leadData.leadStatus || "New");
+    const statusChanged = !docId || previousStatus !== nextStatus;
+    const statusHistoryEntry = statusChanged
+        ? {
+            fromStatus: docId ? previousStatus : "",
+            toStatus: nextStatus,
+            triggerType: docId ? "manual" : "auto",
+            triggerSource: docId ? "lead-edit" : "lead-create",
+            note: docId
+                ? `Status updated while saving enquiry ${payload.businessLeadId || docId || ""}.`
+                : "Initial enquiry status saved."
+        }
+        : null;
 
     if (docId) {
-        await updateLeadRecord(docId, leadData, user);
+        await updateLeadRecord(docId, leadData, user, {
+            statusHistoryEntry,
+            leadActivity: {
+                lastActivityType: statusChanged ? "Enquiry Status Updated" : "Enquiry Updated",
+                statusChanged
+            }
+        });
         return { mode: "update", leadData };
     }
 
-    const leadRef = await createLeadRecord(leadData, user);
+    const leadRef = await createLeadRecord(leadData, user, {
+        statusHistoryEntry
+    });
     await ensureCustomerMasterRecord({
         customerId: customerResult.customerId,
         customerName: leadData.customerName,
@@ -531,7 +561,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
 
         if (submitStatus === "Cancelled") {
             return {
-                logType: "General Note",
+                logType: "Quote Cancelled",
                 notes: docId
                     ? `Quote ${payload.businessQuoteId || docId} was saved with status Cancelled.`
                     : `A quote was saved with status Cancelled.`
@@ -540,7 +570,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
 
         if (submitStatus === "Rejected") {
             return {
-                logType: "General Note",
+                logType: "Quote Rejected",
                 notes: docId
                     ? `Quote ${payload.businessQuoteId || docId} was saved with status Rejected${quoteData.rejectionReason ? `. Reason: ${quoteData.rejectionReason}` : "."}`
                     : `A quote was saved with status Rejected${quoteData.rejectionReason ? `. Reason: ${quoteData.rejectionReason}` : "."}`
@@ -695,7 +725,7 @@ export async function rejectLeadQuote(lead, quote, reason, user) {
         rejectionReason
     }, user, {
         workLogEntry: {
-            logType: "General Note",
+            logType: "Quote Rejected",
             notes: `Quote ${quote.businessQuoteId || quote.id} was marked rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ""}`
         }
     });
@@ -722,7 +752,7 @@ export async function cancelLeadQuote(lead, quote, reason, user) {
         cancellationReason
     }, user, {
         workLogEntry: {
-            logType: "General Note",
+            logType: "Quote Cancelled",
             notes: `Quote ${quote.businessQuoteId || quote.id} was cancelled.${cancellationReason ? ` Reason: ${cancellationReason}` : ""}`
         }
     });

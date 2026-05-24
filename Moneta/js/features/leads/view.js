@@ -578,6 +578,120 @@ function sortLeads(rows = []) {
     });
 }
 
+function toComparableDate(value) {
+    if (!value) return null;
+
+    const date = value.toDate ? value.toDate() : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfLocalDay(value = new Date()) {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function getCalendarDayDelta(value, reference = new Date()) {
+    const date = toComparableDate(value);
+    if (!date) return null;
+
+    const diffMs = startOfLocalDay(date).getTime() - startOfLocalDay(reference).getTime();
+    return Math.round(diffMs / 86400000);
+}
+
+function getLeadLastActivityDate(lead = {}) {
+    return toComparableDate(lead.lastActivityOn)
+        || toComparableDate(lead.lastWorkedOn)
+        || toComparableDate(lead.lastQuoteActivityOn)
+        || toComparableDate(lead.updatedOn)
+        || toComparableDate(lead.createdOn)
+        || null;
+}
+
+function buildLeadAttentionSummary(items = []) {
+    if (!items.length) return "On Track";
+    return items.map(item => item.label).join(" • ");
+}
+
+function buildLeadAttentionItems(lead = {}) {
+    const leadStatus = normalizeText(lead.leadStatus || "New");
+    if (["Converted", "Lost"].includes(leadStatus)) {
+        return [];
+    }
+
+    const items = [];
+    const followUpDelta = getCalendarDayDelta(lead.followUpOn);
+    const hasAssignment = Boolean(normalizeText(lead.assignedMemberId || lead.assignedTo));
+    const acceptedQuoteId = normalizeText(lead.acceptedQuoteId);
+    const latestQuoteStatus = normalizeText(lead.latestQuoteStatus);
+    const lastActivityDate = getLeadLastActivityDate(lead);
+
+    if (!hasAssignment) {
+        items.push({
+            code: "unassigned",
+            label: "Unassigned",
+            tone: "warning",
+            priority: 1
+        });
+    }
+
+    if (followUpDelta !== null) {
+        if (followUpDelta < 0) {
+            items.push({
+                code: "follow-up-overdue",
+                label: "Follow Up Overdue",
+                tone: "danger",
+                priority: 0
+            });
+        } else if (followUpDelta === 0) {
+            items.push({
+                code: "follow-up-today",
+                label: "Follow Up Today",
+                tone: "info",
+                priority: 2
+            });
+        }
+    }
+
+    if (acceptedQuoteId) {
+        items.push({
+            code: "accepted-quote-pending-conversion",
+            label: "Accepted Quote Pending Conversion",
+            tone: "success",
+            priority: 2
+        });
+    } else if (latestQuoteStatus === "Sent") {
+        items.push({
+            code: "quote-awaiting-response",
+            label: "Quote Awaiting Response",
+            tone: "warning",
+            priority: 3
+        });
+    }
+
+    if (lastActivityDate) {
+        const staleDays = Math.floor((startOfLocalDay(new Date()).getTime() - startOfLocalDay(lastActivityDate).getTime()) / 86400000);
+
+        if (staleDays >= 7) {
+            items.push({
+                code: "no-activity-7-days",
+                label: "No Activity 7+ Days",
+                tone: "danger-soft",
+                priority: 4
+            });
+        } else if (staleDays >= 3) {
+            items.push({
+                code: "no-activity-3-days",
+                label: "No Activity 3+ Days",
+                tone: "muted",
+                priority: 5
+            });
+        }
+    }
+
+    return items.sort((left, right) => (left.priority || 0) - (right.priority || 0));
+}
+
 function resolveSeasonName(seasonId, snapshot) {
     return (snapshot.masterData.seasons || []).find(season => season.id === seasonId)?.seasonName || "-";
 }
@@ -871,40 +985,51 @@ function buildLeadGridRows() {
     const currentRole = getState().currentUser?.role || "";
     const hasRetailAccess = RETAIL_CONVERSION_ALLOWED_ROLES.has(currentRole);
 
-    return sortLeads(featureState.leads).map(lead => ({
-        ...lead,
-        displayLeadStatus: resolveLeadStatusLabel(lead),
-        canDeleteLead: normalizeText(lead.leadStatus) !== "Converted"
-            && (Number(lead.quoteCount) || 0) === 0
-            && !normalizeText(lead.convertedToSaleId || lead.linkedSaleId),
-        deleteDisabledReason: normalizeText(lead.leadStatus) === "Converted"
-            ? "Converted enquiries cannot be deleted."
-            : (Number(lead.quoteCount) || 0) > 0
-                ? "Enquiries with quote history cannot be deleted."
-                : normalizeText(lead.convertedToSaleId || lead.linkedSaleId)
-                    ? "Enquiries already linked to a sale cannot be deleted."
-                    : "",
-        requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
-        requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
-            return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
-        }, 0).toFixed(2)),
-        canConvertToRetail: hasRetailAccess
-            && normalizeText(lead.leadStatus) !== "Converted"
-            && normalizeText(lead.leadStatus) !== "Lost"
-            && Boolean(normalizeText(lead.catalogueId))
-            && (lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0),
-        convertDisabledReason: !hasRetailAccess
-            ? "Your role does not have access to the Retail Store conversion workspace."
-            : normalizeText(lead.leadStatus) === "Converted"
-                ? "This enquiry is already converted."
-                : normalizeText(lead.leadStatus) === "Lost"
-                    ? "Lost enquiries cannot be converted."
-                    : !normalizeText(lead.catalogueId)
-                        ? "Select a sales catalogue before converting this enquiry."
-                        : !(lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0)
-                            ? "Add at least one requested product before conversion."
-                            : ""
-    }));
+    return sortLeads(featureState.leads).map(lead => {
+        const attentionItems = buildLeadAttentionItems(lead);
+        const lastActivityDate = getLeadLastActivityDate(lead);
+        const followUpDate = toComparableDate(lead.followUpOn);
+
+        return {
+            ...lead,
+            displayLeadStatus: resolveLeadStatusLabel(lead),
+            attentionItems,
+            attentionText: buildLeadAttentionSummary(attentionItems),
+            lastActivityDate,
+            lastActivityLabel: formatDisplayDate(lastActivityDate),
+            followUpDate,
+            canDeleteLead: normalizeText(lead.leadStatus) !== "Converted"
+                && (Number(lead.quoteCount) || 0) === 0
+                && !normalizeText(lead.convertedToSaleId || lead.linkedSaleId),
+            deleteDisabledReason: normalizeText(lead.leadStatus) === "Converted"
+                ? "Converted enquiries cannot be deleted."
+                : (Number(lead.quoteCount) || 0) > 0
+                    ? "Enquiries with quote history cannot be deleted."
+                    : normalizeText(lead.convertedToSaleId || lead.linkedSaleId)
+                        ? "Enquiries already linked to a sale cannot be deleted."
+                        : "",
+            requestedItemCount: (lead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
+            requestedValue: Number(lead.requestedValue) || Number((lead.requestedProducts || []).reduce((sum, item) => {
+                return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
+            }, 0).toFixed(2)),
+            canConvertToRetail: hasRetailAccess
+                && normalizeText(lead.leadStatus) !== "Converted"
+                && normalizeText(lead.leadStatus) !== "Lost"
+                && Boolean(normalizeText(lead.catalogueId))
+                && (lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0),
+            convertDisabledReason: !hasRetailAccess
+                ? "Your role does not have access to the Retail Store conversion workspace."
+                : normalizeText(lead.leadStatus) === "Converted"
+                    ? "This enquiry is already converted."
+                    : normalizeText(lead.leadStatus) === "Lost"
+                        ? "Lost enquiries cannot be converted."
+                        : !normalizeText(lead.catalogueId)
+                            ? "Select a sales catalogue before converting this enquiry."
+                            : !(lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0)
+                                ? "Add at least one requested product before conversion."
+                                : ""
+        };
+    });
 }
 
 function getLeadConversionEligibility(lead, snapshot = getState()) {
@@ -1726,6 +1851,14 @@ function renderLeadForm(snapshot) {
                                             ${renderStatusOptions(editingLead?.leadStatus || "New")}
                                         </select>
                                     </div>
+                                    <div class="field">
+                                        <label for="lead-follow-up-on">Follow Up On</label>
+                                        <input id="lead-follow-up-on" class="input" type="date" value="${formatDateInputValue(editingLead?.followUpOn)}" ${fieldDisabledAttr}>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="lead-follow-up-note">Follow Up Note</label>
+                                        <textarea id="lead-follow-up-note" class="textarea" placeholder="Optional reminder for the next touchpoint or promise made to the customer" ${fieldDisabledAttr}>${editingLead?.followUpNote || ""}</textarea>
+                                    </div>
                                 </div>
                             </section>
 
@@ -2492,12 +2625,14 @@ async function handleLeadSubmit(event) {
                 assignedTo: assignment.assignedTo,
                 enquiryDate: document.getElementById("lead-enquiry-date")?.value,
                 expectedDeliveryDate: document.getElementById("lead-expected-delivery-date")?.value,
+                followUpOn: document.getElementById("lead-follow-up-on")?.value,
+                followUpNote: document.getElementById("lead-follow-up-note")?.value,
                 leadSource: document.getElementById("lead-source")?.value,
                 leadStatus: document.getElementById("lead-status")?.value,
                 catalogueId: document.getElementById("lead-catalogue")?.value,
                 leadNotes: document.getElementById("lead-notes")?.value,
                 requestedProducts: getLeadRequestedProductsGridRows()
-            }, getState().currentUser, getState().masterData.salesCatalogues, getState().masterData.seasons, getState().masterData.churchMembers);
+            }, getState().currentUser, getState().masterData.salesCatalogues, getState().masterData.seasons, getState().masterData.churchMembers, editingLead);
 
             update("Refreshing enquiry history...", 88, "Step 4 of 5");
             resetLeadWorkspace();
