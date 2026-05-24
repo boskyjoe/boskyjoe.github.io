@@ -14,9 +14,10 @@ import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/store-config.js";
 import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
+import { LEAD_STATUSES as SHARED_LEAD_STATUSES, normalizeLeadStatusValue } from "../../shared/lead-status.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
-export const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
+export const LEAD_STATUSES = SHARED_LEAD_STATUSES;
 export const LEAD_LOG_TYPES = ["Phone Call", "Email Sent", "Meeting", "Quote Sent", "Quote Accepted", "Quote Rejected", "Quote Cancelled", "Quote Revised", "General Note"];
 export const LEAD_QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Superseded", "Cancelled", "Converted"];
 export const LEAD_QUOTE_MANUAL_STATUSES = ["Draft", "Sent", "Accepted", "Rejected", "Expired", "Cancelled"];
@@ -387,9 +388,7 @@ export function validateLeadPayload(payload, salesCatalogues = [], seasons = [],
     const leadSource = LEAD_SOURCES.includes(normalizeText(payload.leadSource))
         ? normalizeText(payload.leadSource)
         : "";
-    const leadStatus = LEAD_STATUSES.includes(normalizeText(payload.leadStatus))
-        ? normalizeText(payload.leadStatus)
-        : "New";
+    const leadStatus = normalizeLeadStatusValue(payload.leadStatus, "New");
     const leadNotes = normalizeText(payload.leadNotes);
     const followUpOn = parseOptionalDate(payload.followUpOn, "Follow-up date");
     const followUpNote = normalizeText(payload.followUpNote);

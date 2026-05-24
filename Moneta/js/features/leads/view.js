@@ -48,6 +48,7 @@ import { getRetailStoreTaxDefaults } from "../retail-store/service.js";
 import { downloadLeadQuotePdf } from "./pdf.js";
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName } from "../../shared/store-config.js";
+import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 
 const featureState = {
     leads: [],
@@ -614,7 +615,7 @@ function buildLeadAttentionSummary(items = []) {
 }
 
 function buildLeadAttentionItems(lead = {}) {
-    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     if (["Converted", "Lost"].includes(leadStatus)) {
         return [];
     }
@@ -715,8 +716,9 @@ function renderSourceOptions(currentValue) {
 }
 
 function renderStatusOptions(currentValue) {
+    const selectedValue = normalizeLeadStatusValue(currentValue, "New");
     return LEAD_STATUSES.map(status => `
-        <option value="${status}" ${status === currentValue ? "selected" : ""}>
+        <option value="${status}" ${status === selectedValue ? "selected" : ""}>
             ${status}
         </option>
     `).join("");
@@ -909,7 +911,7 @@ function buildQuoteListMarkup(rows = [], options = {}) {
 }
 
 function resolveLeadStatusLabel(lead = {}) {
-    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     const conversionOutcomeStatus = normalizeText(
         lead.conversionOutcomeStatus || lead.conversionOutcome || lead.convertedSaleStatus
     ).toLowerCase();
@@ -923,7 +925,7 @@ function resolveLeadStatusLabel(lead = {}) {
 
 function isLeadConversionLocked(lead = null) {
     if (!lead?.id) return false;
-    return normalizeText(lead.leadStatus || "") === "Converted";
+    return normalizeLeadStatusValue(lead.leadStatus, "") === "Converted";
 }
 
 function isLeadConversionVoided(lead = null) {
@@ -998,10 +1000,10 @@ function buildLeadGridRows() {
             lastActivityDate,
             lastActivityLabel: formatDisplayDate(lastActivityDate),
             followUpDate,
-            canDeleteLead: normalizeText(lead.leadStatus) !== "Converted"
+            canDeleteLead: normalizeLeadStatusValue(lead.leadStatus, "New") !== "Converted"
                 && (Number(lead.quoteCount) || 0) === 0
                 && !normalizeText(lead.convertedToSaleId || lead.linkedSaleId),
-            deleteDisabledReason: normalizeText(lead.leadStatus) === "Converted"
+            deleteDisabledReason: normalizeLeadStatusValue(lead.leadStatus, "New") === "Converted"
                 ? "Converted enquiries cannot be deleted."
                 : (Number(lead.quoteCount) || 0) > 0
                     ? "Enquiries with quote history cannot be deleted."
@@ -1013,15 +1015,14 @@ function buildLeadGridRows() {
                 return sum + ((Number(item.requestedQty) || 0) * (Number(item.sellingPrice) || 0));
             }, 0).toFixed(2)),
             canConvertToRetail: hasRetailAccess
-                && normalizeText(lead.leadStatus) !== "Converted"
-                && normalizeText(lead.leadStatus) !== "Lost"
+                && !["Converted", "Lost"].includes(normalizeLeadStatusValue(lead.leadStatus, "New"))
                 && Boolean(normalizeText(lead.catalogueId))
                 && (lead.requestedProducts || []).some(item => (Number(item.requestedQty) || 0) > 0),
             convertDisabledReason: !hasRetailAccess
                 ? "Your role does not have access to the Retail Store conversion workspace."
-                : normalizeText(lead.leadStatus) === "Converted"
+                : normalizeLeadStatusValue(lead.leadStatus, "New") === "Converted"
                     ? "This enquiry is already converted."
-                    : normalizeText(lead.leadStatus) === "Lost"
+                    : normalizeLeadStatusValue(lead.leadStatus, "New") === "Lost"
                         ? "Lost enquiries cannot be converted."
                         : !normalizeText(lead.catalogueId)
                             ? "Select a sales catalogue before converting this enquiry."
@@ -1048,7 +1049,7 @@ function getLeadConversionEligibility(lead, snapshot = getState()) {
         };
     }
 
-    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     if (leadStatus === "Converted") {
         return {
             allowed: false,
@@ -1747,8 +1748,8 @@ function renderLeadForm(snapshot) {
     const activeLeadTab = getActiveLeadTab();
     const currentCatalogueId = featureState.selectedCatalogueId || editingLead?.catalogueId || "";
     const totalLeads = featureState.leads.length;
-    const qualifiedCount = featureState.leads.filter(lead => lead.leadStatus === "Qualified").length;
-    const convertedCount = featureState.leads.filter(lead => lead.leadStatus === "Converted").length;
+    const workingCount = featureState.leads.filter(lead => normalizeLeadStatusValue(lead.leadStatus, "New") === "Working").length;
+    const convertedCount = featureState.leads.filter(lead => normalizeLeadStatusValue(lead.leadStatus, "New") === "Converted").length;
     const requestedSummary = editingLead
         ? {
             requestedProductCount: (editingLead.requestedProducts || []).filter(item => (Number(item.requestedQty) || 0) > 0).length,
@@ -1781,7 +1782,7 @@ function renderLeadForm(snapshot) {
                 </div>
                 <div class="toolbar-meta">
                     <span class="status-pill">${totalLeads} leads</span>
-                    <span class="status-pill">${qualifiedCount} qualified</span>
+                    <span class="status-pill">${workingCount} working</span>
                     <span class="status-pill">${convertedCount} converted</span>
                 </div>
             </div>
