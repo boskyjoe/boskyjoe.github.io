@@ -2450,14 +2450,21 @@ select {
     color: #135ca8;
 }
 
-.lead-status-contacted {
+.lead-status-contacted,
+.lead-status-working {
     background: #f1e7ff;
     color: #7b35b1;
 }
 
-.lead-status-qualified {
+.lead-status-qualified,
+.lead-status-quote-sent {
     background: #e5f0ff;
     color: #2757be;
+}
+
+.lead-status-on-hold {
+    background: #fff4df;
+    color: #9a5a0a;
 }
 
 .lead-status-converted {
