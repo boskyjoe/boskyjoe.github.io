@@ -1,5 +1,6 @@
 import { getState, subscribe } from "../../app/store.js";
 import { icons } from "../../shared/icons.js";
+import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { showToast } from "../../shared/toast.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import {
@@ -364,7 +365,7 @@ function renderActivityLoadingState() {
 }
 
 function renderLeadActivityItem(lead) {
-    const leadStatus = normalizeText(lead.leadStatus) || "New";
+    const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     const leadSource = normalizeText(lead.leadSource) || "-";
 
     return `
