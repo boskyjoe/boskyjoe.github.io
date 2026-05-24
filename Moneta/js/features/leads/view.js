@@ -1792,31 +1792,7 @@ function renderLeadForm(snapshot) {
                         <input id="lead-doc-id" type="hidden" value="${editingLead?.id || ""}">
                         ${renderLeadConversionLockBanner(editingLead, { context: "details" })}
                         <div class="lead-form-sections">
-                            <section class="lead-form-section">
-                                <div class="lead-form-section-head">
-                                    <p class="lead-form-section-kicker">Customer Info</p>
-                                </div>
-                                <div class="lead-form-section-grid">
-                                    <div class="field field-full">
-                                        <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required ${fieldDisabledAttr}>
-                                    </div>
-                                    <div class="field">
-                                        <label for="lead-customer-phone">Phone</label>
-                                        <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567" ${fieldDisabledAttr}>
-                                    </div>
-                                    <div class="field">
-                                        <label for="lead-customer-email">Email</label>
-                                        <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com" ${fieldDisabledAttr}>
-                                    </div>
-                                    <div class="field field-full">
-                                        <label for="lead-customer-address">Customer Address</label>
-                                        <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes" ${fieldDisabledAttr}>${editingLead?.customerAddress || ""}</textarea>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section class="lead-form-section">
+                            <section class="lead-form-section lead-form-section-context">
                                 <div class="lead-form-section-head">
                                     <p class="lead-form-section-kicker">Lead Context</p>
                                 </div>
@@ -1861,25 +1837,50 @@ function renderLeadForm(snapshot) {
                                     </div>
                                 </div>
                             </section>
+                            <div class="lead-form-section-stack">
+                                <section class="lead-form-section">
+                                    <div class="lead-form-section-head">
+                                        <p class="lead-form-section-kicker">Customer Info</p>
+                                    </div>
+                                    <div class="lead-form-section-grid">
+                                        <div class="field field-full">
+                                            <label for="lead-customer-name">Full Name <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <input id="lead-customer-name" class="input" type="text" value="${editingLead?.customerName || ""}" required ${fieldDisabledAttr}>
+                                        </div>
+                                        <div class="field">
+                                            <label for="lead-customer-phone">Phone</label>
+                                            <input id="lead-customer-phone" class="input" type="tel" value="${editingLead?.customerPhone || ""}" placeholder="+1 555 123 4567" ${fieldDisabledAttr}>
+                                        </div>
+                                        <div class="field">
+                                            <label for="lead-customer-email">Email</label>
+                                            <input id="lead-customer-email" class="input" type="email" value="${editingLead?.customerEmail || ""}" placeholder="customer@example.com" ${fieldDisabledAttr}>
+                                        </div>
+                                        <div class="field field-full">
+                                            <label for="lead-customer-address">Customer Address</label>
+                                            <textarea id="lead-customer-address" class="textarea" placeholder="Street, city, zip, and delivery notes" ${fieldDisabledAttr}>${editingLead?.customerAddress || ""}</textarea>
+                                        </div>
+                                    </div>
+                                </section>
 
-                            <section class="lead-form-section">
-                                <div class="lead-form-section-head">
-                                    <p class="lead-form-section-kicker">Requirements</p>
-                                </div>
-                                <div class="lead-form-section-grid">
-                                    <div class="field field-full">
-                                        <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <select id="lead-catalogue" class="select" required ${fieldDisabledAttr}>
-                                            <option value="">Select a catalogue...</option>
-                                            ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
-                                        </select>
+                                <section class="lead-form-section">
+                                    <div class="lead-form-section-head">
+                                        <p class="lead-form-section-kicker">Requirements</p>
                                     </div>
-                                    <div class="field field-full">
-                                        <label for="lead-notes">General Notes</label>
-                                        <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details" ${fieldDisabledAttr}>${editingLead?.leadNotes || ""}</textarea>
+                                    <div class="lead-form-section-grid">
+                                        <div class="field field-full">
+                                            <label for="lead-catalogue">Select Sales Catalogue <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <select id="lead-catalogue" class="select" required ${fieldDisabledAttr}>
+                                                <option value="">Select a catalogue...</option>
+                                                ${resolveCatalogueOptions(snapshot, currentCatalogueId)}
+                                            </select>
+                                        </div>
+                                        <div class="field field-full">
+                                            <label for="lead-notes">General Notes</label>
+                                            <textarea id="lead-notes" class="textarea" placeholder="Special requests, pricing notes, event context, or follow-up details" ${fieldDisabledAttr}>${editingLead?.leadNotes || ""}</textarea>
+                                        </div>
                                     </div>
-                                </div>
-                            </section>
+                                </section>
+                            </div>
                         </div>
                     </form>
                     <div class="lead-product-list-shell">
