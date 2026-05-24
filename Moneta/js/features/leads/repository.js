@@ -278,7 +278,7 @@ export async function addLeadWorkLogRecord(leadId, logData, user) {
 
     batch.update(leadRef, {
         ...buildLeadActivityPatch({
-            lastActivityType: normalizeText(logData.logType) || "Work Log Entry",
+            lastActivityType: "Work Log",
             lastWorkLogType: normalizeText(logData.logType) || "General Note"
         }, user, now),
         updatedBy: user.email,
@@ -323,8 +323,7 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc();
     const batch = db.batch();
-    const quoteActivityType = normalizeText(workLogEntry?.logType)
-        || (normalizeText(quoteData.quoteStatus) === "Draft" ? "Quote Draft Saved" : `Quote ${normalizeText(quoteData.quoteStatus) || "Saved"}`);
+    const quoteActivityType = "Quote";
 
     if (supersedeQuoteId) {
         batch.update(leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(supersedeQuoteId), {
@@ -402,8 +401,7 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(quoteId);
     const batch = db.batch();
-    const quoteActivityType = normalizeText(workLogEntry?.logType)
-        || (normalizeText(quoteData.quoteStatus) === "Draft" ? "Quote Draft Saved" : `Quote ${normalizeText(quoteData.quoteStatus) || "Updated"}`);
+    const quoteActivityType = "Quote";
 
     if (supersedeOtherAccepted) {
         const snapshot = await leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).get();
@@ -462,8 +460,7 @@ export async function updateLeadQuoteStatusRecord(leadId, quoteId, statusData, u
     const leadRef = db.collection(COLLECTIONS.leads).doc(leadId);
     const quotesRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION);
     const batch = db.batch();
-    const quoteActivityType = normalizeText(workLogEntry?.logType)
-        || `Quote ${normalizeText(statusData.quoteStatus) || "Status Updated"}`;
+    const quoteActivityType = "Quote";
 
     if (supersedeOtherAccepted) {
         const snapshot = await quotesRef.get();

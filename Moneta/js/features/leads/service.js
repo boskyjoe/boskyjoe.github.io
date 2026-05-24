@@ -498,7 +498,7 @@ export async function saveLead(payload, user, salesCatalogues = [], seasons = []
         await updateLeadRecord(docId, leadData, user, {
             statusHistoryEntry,
             leadActivity: {
-                lastActivityType: statusChanged ? "Enquiry Status Updated" : "Enquiry Updated",
+                lastActivityType: statusChanged ? "Status Change" : "Enquiry Update",
                 statusChanged
             }
         });
