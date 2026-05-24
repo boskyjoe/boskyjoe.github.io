@@ -5,6 +5,7 @@ const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
 const RETAIL_SALE_EXPENSES_SUBCOLLECTION = "expenses";
 const RETAIL_SALE_RETURNS_SUBCOLLECTION = "returns";
 const LEAD_QUOTES_SUBCOLLECTION = "quotes";
+const LEAD_STATUS_HISTORY_SUBCOLLECTION = "statusHistory";
 
 function getDb() {
     return firebase.firestore();
@@ -37,6 +38,20 @@ function buildDonationBusinessId() {
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function buildLeadStatusHistoryPayload(entry = {}, user, now) {
+    return {
+        fromStatus: normalizeText(entry.fromStatus),
+        toStatus: normalizeText(entry.toStatus),
+        triggerType: normalizeText(entry.triggerType) || "auto",
+        triggerSource: normalizeText(entry.triggerSource) || "retail-conversion",
+        note: normalizeText(entry.note),
+        changedBy: user.email,
+        changedOn: now,
+        createdBy: user.email,
+        createdOn: now
+    };
 }
 
 function roundCurrency(value) {
@@ -537,6 +552,7 @@ export async function createRetailSaleRecord(payload, user) {
         });
 
         if (sourceLeadRef) {
+            const previousLeadStatus = normalizeText(sourceLeadDoc?.data()?.leadStatus || "New");
             transaction.update(sourceLeadRef, {
                 leadStatus: "Converted",
                 convertedToSaleId: saleRef.id,
@@ -544,9 +560,24 @@ export async function createRetailSaleRecord(payload, user) {
                 convertedStore: payload.store || "",
                 convertedOn: now,
                 convertedBy: user.email,
+                lastActivityOn: now,
+                lastActivityBy: user.email,
+                lastActivityType: "Converted To Retail Sale",
+                lastStatusChangedOn: now,
+                lastStatusChangedBy: user.email,
                 updatedBy: user.email,
                 updatedOn: now
             });
+
+            if (previousLeadStatus !== "Converted") {
+                const leadStatusHistoryRef = sourceLeadRef.collection(LEAD_STATUS_HISTORY_SUBCOLLECTION).doc();
+                transaction.set(leadStatusHistoryRef, buildLeadStatusHistoryPayload({
+                    fromStatus: previousLeadStatus,
+                    toStatus: "Converted",
+                    triggerSource: "retail-conversion",
+                    note: `Converted into retail sale ${payload.manualVoucherNumber || saleRef.id}.`
+                }, user, now));
+            }
         }
 
         if (sourcePortalRequestRef) {
@@ -1427,6 +1458,9 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 convertedSaleVoidedOn: now,
                 convertedSaleVoidedBy: user.email,
                 convertedSaleVoidReason: voidReason,
+                lastActivityOn: now,
+                lastActivityBy: user.email,
+                lastActivityType: "Converted Sale Voided",
                 updatedBy: user.email,
                 updatedOn: now
             });
