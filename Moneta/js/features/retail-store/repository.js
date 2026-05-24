@@ -562,7 +562,7 @@ export async function createRetailSaleRecord(payload, user) {
                 convertedBy: user.email,
                 lastActivityOn: now,
                 lastActivityBy: user.email,
-                lastActivityType: "Converted To Retail Sale",
+                lastActivityType: "Retail Conversion",
                 lastStatusChangedOn: now,
                 lastStatusChangedBy: user.email,
                 updatedBy: user.email,
@@ -1460,7 +1460,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 convertedSaleVoidReason: voidReason,
                 lastActivityOn: now,
                 lastActivityBy: user.email,
-                lastActivityType: "Converted Sale Voided",
+                lastActivityType: "Retail Conversion",
                 updatedBy: user.email,
                 updatedOn: now
             });
