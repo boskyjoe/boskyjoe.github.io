@@ -48,6 +48,14 @@ function formatDateTime(value) {
     });
 }
 
+function escapeHtml(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+}
+
 function statusMarkup(value) {
     const status = value || "New";
     const normalized = status.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -141,6 +149,49 @@ function leadQuotesMarkup(data) {
     `;
 }
 
+function leadFollowUpMarkup(data = {}) {
+    if (!data?.followUpOn) {
+        return `<span class="grid-action-muted">Not Set</span>`;
+    }
+
+    const followUpLabel = formatDate(data.followUpOn);
+    const attentionCodes = new Set((data.attentionItems || []).map(item => item.code));
+    const isOverdue = attentionCodes.has("follow-up-overdue");
+    const isDueToday = attentionCodes.has("follow-up-today");
+    const toneClass = isOverdue
+        ? "tone-danger"
+        : isDueToday
+            ? "tone-warning"
+            : "tone-neutral";
+    const title = [
+        isOverdue ? "This follow-up is overdue." : "",
+        isDueToday ? "This follow-up is due today." : "",
+        data.followUpNote ? `Note: ${data.followUpNote}` : ""
+    ].filter(Boolean).join(" ");
+
+    return `
+        <span class="lead-follow-up-pill ${toneClass}" title="${escapeHtml(title)}">
+            ${followUpLabel}${isOverdue ? " · Overdue" : isDueToday ? " · Today" : ""}
+        </span>
+    `;
+}
+
+function leadAttentionMarkup(items = [], summary = "") {
+    if (!items.length) {
+        return `<span class="lead-attention-pill tone-ok">On Track</span>`;
+    }
+
+    return `
+        <div class="lead-attention-stack" title="${escapeHtml(summary)}">
+            ${items.map(item => `
+                <span class="lead-attention-pill tone-${escapeHtml(item.tone || "muted")}">
+                    ${escapeHtml(item.label)}
+                </span>
+            `).join("")}
+        </div>
+    `;
+}
+
 function buildLeadColumnDefs() {
     return [
         { field: "businessLeadId", headerName: "Lead ID", minWidth: 150, flex: 0.9 },
@@ -153,6 +204,21 @@ function buildLeadColumnDefs() {
             minWidth: 150,
             flex: 0.85,
             cellRenderer: params => statusMarkup(params.data?.displayLeadStatus || params.value)
+        },
+        {
+            field: "followUpOn",
+            headerName: "Follow Up",
+            minWidth: 180,
+            flex: 1,
+            cellRenderer: params => leadFollowUpMarkup(params.data)
+        },
+        {
+            field: "attentionText",
+            headerName: "Attention",
+            minWidth: 280,
+            flex: 1.45,
+            sortable: false,
+            cellRenderer: params => leadAttentionMarkup(params.data?.attentionItems || [], params.data?.attentionText || "")
         },
         {
             field: "enquiryDate",
