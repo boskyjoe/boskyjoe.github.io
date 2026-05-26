@@ -15,6 +15,7 @@ import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/store-config.js";
 import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 import { LEAD_STATUSES as SHARED_LEAD_STATUSES, normalizeLeadStatusValue } from "../../shared/lead-status.js";
+import { getLeadWorkflowSettings } from "../../shared/system-settings.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = SHARED_LEAD_STATUSES;
@@ -159,6 +160,7 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         throw new Error("Converted leads are read-only. Create a new enquiry if a replacement quote is needed.");
     }
 
+    const leadWorkflowSettings = getLeadWorkflowSettings();
     const store = normalizeQuoteStore(sourceQuote?.store || getDefaultRetailStoreName());
     const seedItems = sourceQuote?.lineItems?.length
         ? sourceQuote.lineItems
@@ -171,7 +173,9 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         quoteStatus: "Draft",
         persistedQuoteStatus: "Draft",
         store,
-        validUntil: sourceQuote?.validUntil ? formatDateOutput(sourceQuote.validUntil) : formatDateOutput(addDays(new Date(), 14)),
+        validUntil: sourceQuote?.validUntil
+            ? formatDateOutput(sourceQuote.validUntil)
+            : formatDateOutput(addDays(new Date(), leadWorkflowSettings.quoteDraftValidityDays)),
         customerName: normalizeText(sourceQuote?.customerSnapshot?.customerName) || normalizeText(lead.customerName),
         customerPhone: normalizeText(sourceQuote?.customerSnapshot?.customerPhone) || normalizeText(lead.customerPhone),
         customerEmail: normalizeText(sourceQuote?.customerSnapshot?.customerEmail) || normalizeText(lead.customerEmail),
@@ -202,6 +206,118 @@ function formatDateOutput(value) {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+}
+
+function toComparableDate(value) {
+    if (!value) return null;
+    if (typeof value.toDate === "function") {
+        const date = value.toDate();
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfDay(value = new Date()) {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function formatWorkflowDateLabel(value) {
+    const date = toComparableDate(value);
+    if (!date) return "";
+
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+function hasSameCalendarDate(left, right) {
+    const leftDate = toComparableDate(left);
+    const rightDate = toComparableDate(right);
+    if (!leftDate || !rightDate) return false;
+    return formatDateOutput(leftDate) === formatDateOutput(rightDate);
+}
+
+function resolveFollowUpDate(existingValue, proposedValue) {
+    const proposedDate = toComparableDate(proposedValue);
+    if (!proposedDate) return null;
+
+    const existingDate = toComparableDate(existingValue);
+    if (!existingDate) return proposedDate;
+
+    if (startOfDay(existingDate).getTime() < startOfDay(new Date()).getTime()) {
+        return proposedDate;
+    }
+
+    return existingDate.getTime() <= proposedDate.getTime()
+        ? existingDate
+        : proposedDate;
+}
+
+function buildLeadPostQuoteWorkflowUpdate(lead = {}, submitStatus = "", eventDate = new Date()) {
+    const leadWorkflowSettings = getLeadWorkflowSettings();
+    const normalizedSubmitStatus = normalizeText(submitStatus);
+    const previousStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
+    const eventDay = startOfDay(eventDate);
+    let desiredLeadStatus = "";
+    let triggerSource = "";
+    let followUpOffsetDays = 0;
+    let noteBuilder = null;
+
+    if (normalizedSubmitStatus === "Sent") {
+        desiredLeadStatus = "Quote Sent";
+        triggerSource = "quote-send";
+        followUpOffsetDays = Math.max(0, Number(leadWorkflowSettings.quoteSentFollowUpDays) || 0);
+        noteBuilder = followUpDate => `Quote sent to customer on ${formatWorkflowDateLabel(eventDay)}. Please follow up by ${formatWorkflowDateLabel(followUpDate)}.`;
+    } else if (normalizedSubmitStatus === "Accepted") {
+        desiredLeadStatus = "Working";
+        triggerSource = "quote-accept";
+        followUpOffsetDays = Math.max(0, Number(leadWorkflowSettings.quoteAcceptedFollowUpDays) || 0);
+        noteBuilder = followUpDate => `Quote accepted by customer on ${formatWorkflowDateLabel(eventDay)}. Please follow up by ${formatWorkflowDateLabel(followUpDate)}.`;
+    } else {
+        return {
+            leadPatch: null,
+            statusHistoryEntry: null
+        };
+    }
+
+    const leadPatch = {};
+    if (!["Converted", "Lost"].includes(previousStatus) && desiredLeadStatus && previousStatus !== desiredLeadStatus) {
+        leadPatch.leadStatus = desiredLeadStatus;
+    }
+
+    const proposedFollowUpDate = addDays(eventDay, followUpOffsetDays);
+    const resolvedFollowUpDate = resolveFollowUpDate(lead.followUpOn, proposedFollowUpDate);
+
+    if (resolvedFollowUpDate && !hasSameCalendarDate(lead.followUpOn, resolvedFollowUpDate)) {
+        leadPatch.followUpOn = resolvedFollowUpDate;
+    }
+
+    if (!normalizeText(lead.followUpNote) && resolvedFollowUpDate && typeof noteBuilder === "function") {
+        leadPatch.followUpNote = noteBuilder(resolvedFollowUpDate);
+    }
+
+    const statusHistoryEntry = leadPatch.leadStatus
+        ? {
+            fromStatus: previousStatus,
+            toStatus: leadPatch.leadStatus,
+            triggerType: "auto",
+            triggerSource,
+            note: normalizedSubmitStatus === "Sent"
+                ? "Quote was sent to the customer."
+                : "Customer accepted the quote."
+        }
+        : null;
+
+    return {
+        leadPatch: Object.keys(leadPatch).length ? leadPatch : null,
+        statusHistoryEntry
+    };
 }
 
 function buildLeadQuotePayload(payload, lead, user, options = {}) {
@@ -542,10 +658,16 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
     const nextCustomerEmail = normalizeText(quoteData.customerSnapshot?.customerEmail);
     const nextCustomerAddress = normalizeText(quoteData.customerSnapshot?.customerAddress);
     const customerLabel = nextCustomerName || lead?.customerName || "the customer";
+    const quoteEventDate = submitStatus === "Sent"
+        ? (quoteData.sentOn || new Date())
+        : submitStatus === "Accepted"
+            ? (quoteData.acceptedOn || new Date())
+            : new Date();
     const shouldSyncLeadCustomer = nextCustomerName !== normalizeText(lead?.customerName)
         || nextCustomerPhone !== normalizeText(lead?.customerPhone)
         || nextCustomerEmail !== normalizeText(lead?.customerEmail)
         || nextCustomerAddress !== normalizeText(lead?.customerAddress);
+    const postQuoteWorkflow = buildLeadPostQuoteWorkflowUpdate(lead, submitStatus, quoteEventDate);
     const buildQuoteWorkLogEntry = () => {
         if (submitStatus === "Sent") {
             return {
@@ -610,6 +732,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
             supersedeOtherAccepted: submitStatus === "Accepted"
         });
 
+        let customerPatch = null;
         if (shouldSyncLeadCustomer) {
             const customerResult = await ensureCustomerMasterRecord({
                 customerId: lead.customerId || "",
@@ -624,13 +747,27 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
                 userEmail: user.email,
                 activityDate: lead.enquiryDate || null
             });
-            await updateLeadRecord(lead.id, {
+            customerPatch = {
                 customerId: customerResult.customerId,
                 customerName: nextCustomerName,
                 customerPhone: nextCustomerPhone,
                 customerEmail: nextCustomerEmail,
                 customerAddress: nextCustomerAddress
-            }, user);
+            };
+        }
+
+        const leadPatch = {
+            ...(customerPatch || {}),
+            ...(postQuoteWorkflow.leadPatch || {})
+        };
+
+        if (Object.keys(leadPatch).length || postQuoteWorkflow.statusHistoryEntry) {
+            await updateLeadRecord(lead.id, leadPatch, user, {
+                statusHistoryEntry: postQuoteWorkflow.statusHistoryEntry,
+                leadActivity: {
+                    statusChanged: Boolean(postQuoteWorkflow.statusHistoryEntry)
+                }
+            });
         }
         return { mode: "update", quoteId: docId, quoteData };
     }
@@ -641,6 +778,7 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
         supersedeOtherAccepted: submitStatus === "Accepted"
     });
 
+    let customerPatch = null;
     if (shouldSyncLeadCustomer) {
         const customerResult = await ensureCustomerMasterRecord({
             customerId: lead.customerId || "",
@@ -655,13 +793,27 @@ export async function saveLeadQuote(payload, lead, user, options = {}) {
             userEmail: user.email,
             activityDate: lead.enquiryDate || null
         });
-        await updateLeadRecord(lead.id, {
+        customerPatch = {
             customerId: customerResult.customerId,
             customerName: nextCustomerName,
             customerPhone: nextCustomerPhone,
             customerEmail: nextCustomerEmail,
             customerAddress: nextCustomerAddress
-        }, user);
+        };
+    }
+
+    const leadPatch = {
+        ...(customerPatch || {}),
+        ...(postQuoteWorkflow.leadPatch || {})
+    };
+
+    if (Object.keys(leadPatch).length || postQuoteWorkflow.statusHistoryEntry) {
+        await updateLeadRecord(lead.id, leadPatch, user, {
+            statusHistoryEntry: postQuoteWorkflow.statusHistoryEntry,
+            leadActivity: {
+                statusChanged: Boolean(postQuoteWorkflow.statusHistoryEntry)
+            }
+        });
     }
 
     return { mode: "create", quoteId: createdQuote?.id || "", quoteData };
@@ -688,9 +840,11 @@ export async function acceptLeadQuote(lead, quote, acceptancePayload, user) {
         throw new Error("Accepted by is required before marking a quote as accepted.");
     }
 
+    const acceptedOn = new Date();
+
     await updateLeadQuoteStatusRecord(lead.id, quote.id, {
         quoteStatus: "Accepted",
-        acceptedOn: new Date(),
+        acceptedOn,
         acceptedByCustomerName,
         acceptedVia,
         acceptanceNotes
@@ -701,6 +855,16 @@ export async function acceptLeadQuote(lead, quote, acceptancePayload, user) {
             notes: `Quote ${quote.businessQuoteId || quote.id} was accepted by ${acceptedByCustomerName}${acceptedVia ? ` via ${acceptedVia}` : ""}.`
         }
     });
+
+    const postQuoteWorkflow = buildLeadPostQuoteWorkflowUpdate(lead, "Accepted", acceptedOn);
+    if (postQuoteWorkflow.leadPatch || postQuoteWorkflow.statusHistoryEntry) {
+        await updateLeadRecord(lead.id, postQuoteWorkflow.leadPatch || {}, user, {
+            statusHistoryEntry: postQuoteWorkflow.statusHistoryEntry,
+            leadActivity: {
+                statusChanged: Boolean(postQuoteWorkflow.statusHistoryEntry)
+            }
+        });
+    }
 }
 
 export async function rejectLeadQuote(lead, quote, reason, user) {

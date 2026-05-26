@@ -17,6 +17,8 @@ let reorderPoliciesGridApi = null;
 let reorderPoliciesGridElement = null;
 let storeConfigsGridApi = null;
 let storeConfigsGridElement = null;
+let systemSettingsGridApi = null;
+let systemSettingsGridElement = null;
 let onlineCatalogueSourceGridApi = null;
 let onlineCatalogueSourceGridElement = null;
 let onlineCatalogueSelectionChangeHandler = null;
@@ -54,7 +56,7 @@ function actionMarkup(entity, data) {
         `;
     }
 
-    if (entity === "storeConfigs" || entity === "pricingPolicies") {
+    if (entity === "storeConfigs" || entity === "pricingPolicies" || entity === "systemSettings") {
         return `
             <div class="table-actions grid-actions-inline">
                 <button class="button grid-action-button grid-action-button-secondary admin-module-edit-button" type="button" data-entity="${entity}" data-record-id="${data.id}">
@@ -486,6 +488,37 @@ function buildStoreConfigsColumnDefs() {
     ];
 }
 
+function buildSystemSettingsColumnDefs() {
+    return [
+        { field: "settingName", headerName: "Setup", minWidth: 180, flex: 1 },
+        { field: "settingGroup", headerName: "Group", minWidth: 140, flex: 0.8 },
+        {
+            headerName: "Lead Workflow Summary",
+            minWidth: 360,
+            flex: 1.9,
+            valueGetter: params => {
+                const workflow = params.data?.leadWorkflow || {};
+                return `${Number(workflow.quoteSentFollowUpDays) || 0}d sent follow-up • ${Number(workflow.quoteAcceptedFollowUpDays) || 0}d accepted follow-up • ${Number(workflow.quoteDraftValidityDays) || 0}d quote validity • ${Number(workflow.staleWarningDays) || 0}/${Number(workflow.staleCriticalDays) || 0}d stale alerts`;
+            }
+        },
+        {
+            headerName: "Updated",
+            minWidth: 150,
+            flex: 0.9,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 150,
+            flex: 0.85,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("systemSettings", params.data)
+        }
+    ];
+}
+
 function buildOnlineCatalogueSourceColumnDefs() {
     return [
         {
@@ -651,6 +684,20 @@ export function refreshStoreConfigsGrid(rows) {
 
 export function updateStoreConfigsGridSearch(searchTerm) {
     storeConfigsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeSystemSettingsGrid(gridElement) {
+    systemSettingsGridApi = initializeGrid(gridElement, systemSettingsGridApi, systemSettingsGridElement, buildSystemSettingsColumnDefs());
+    systemSettingsGridElement = gridElement;
+    return systemSettingsGridApi;
+}
+
+export function refreshSystemSettingsGrid(rows) {
+    systemSettingsGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateSystemSettingsGridSearch(searchTerm) {
+    systemSettingsGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }
 
 export function initializeOnlineCatalogueSourceGrid(gridElement, onSelectionChanged) {

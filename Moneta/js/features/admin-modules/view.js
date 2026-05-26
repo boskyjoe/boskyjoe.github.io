@@ -13,6 +13,7 @@ import {
     initializeReorderPoliciesGrid,
     initializeSeasonsGrid,
     initializeStoreConfigsGrid,
+    initializeSystemSettingsGrid,
     refreshCategoriesGrid,
     refreshChurchMembersGrid,
     refreshOnlineCatalogueSourceGrid,
@@ -22,6 +23,7 @@ import {
     refreshReorderPoliciesGrid,
     refreshSeasonsGrid,
     refreshStoreConfigsGrid,
+    refreshSystemSettingsGrid,
     getOnlineCatalogueSelectedGridRows,
     updateCategoriesGridSearch,
     updateChurchMembersGridSearch,
@@ -30,7 +32,8 @@ import {
     updateProductPriceChangeReviewsGridSearch,
     updateReorderPoliciesGridSearch,
     updateSeasonsGridSearch,
-    updateStoreConfigsGridSearch
+    updateStoreConfigsGridSearch,
+    updateSystemSettingsGridSearch
 } from "./grid.js";
 import {
     buildPricingPolicyExplanation,
@@ -66,6 +69,7 @@ import {
     saveReorderPolicy,
     saveSeason,
     saveStoreConfig,
+    saveSystemSettings,
     toggleCategoryStatus,
     toggleChurchMemberStatus,
     togglePaymentModeStatus,
@@ -126,6 +130,12 @@ const ADMIN_SECTIONS = {
         icon: icons.retail,
         description: "Maintain the live business profile for each retail store, including invoice, tax, bank, and payment defaults."
     },
+    systemSettings: {
+        label: "System Setup",
+        entityLabel: "System Setup",
+        icon: icons.settings,
+        description: "Maintain global workflow defaults and platform-level behavior that should be editable without code changes."
+    },
     reorderPolicies: {
         label: "Reorder Policies",
         entityLabel: "Reorder Policy",
@@ -148,6 +158,7 @@ const featureState = {
         productPriceChangeReviews: "",
         onlineCatalogues: "",
         storeConfigs: "",
+        systemSettings: "",
         reorderPolicies: ""
     },
     editingIds: {
@@ -159,6 +170,7 @@ const featureState = {
         productPriceChangeReviews: null,
         onlineCatalogues: null,
         storeConfigs: null,
+        systemSettings: null,
         reorderPolicies: null
     }
 };
@@ -208,6 +220,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     storeConfigs: {
         formId: "admin-store-config-form",
         inputSelector: "#admin-store-config-company-name"
+    },
+    systemSettings: {
+        formId: "admin-system-settings-form",
+        inputSelector: "#admin-system-settings-quote-sent-follow-up-days"
     },
     reorderPolicies: {
         formId: "admin-reorder-policy-form",
@@ -672,6 +688,15 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
         return rows[0] || null;
     }
 
+    if (section === "systemSettings") {
+        const rows = (snapshot.masterData.systemSettings || []).slice().sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999));
+        if (recordId) {
+            return rows.find(record => record.id === recordId) || null;
+        }
+
+        return rows[0] || null;
+    }
+
     if (section === "productPriceChangeReviews") {
         const rows = getSectionRows(snapshot, section);
         if (recordId === NO_SELECTION) {
@@ -778,6 +803,13 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
             .slice()
             .sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999)
                 || (left.storeName || "").localeCompare(right.storeName || ""));
+    }
+
+    if (section === "systemSettings") {
+        return (snapshot.masterData.systemSettings || [])
+            .slice()
+            .sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999)
+                || (left.settingName || "").localeCompare(right.settingName || ""));
     }
 
     if (section === "productPriceChangeReviews") {
@@ -2106,6 +2138,130 @@ function renderStoreConfigForm(snapshot) {
     `;
 }
 
+function renderSystemSettingsForm(snapshot) {
+    const editingRecord = getEditingRecord(snapshot, "systemSettings");
+
+    if (!editingRecord) {
+        return `
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.settings}</span>
+                        <div>
+                            <h3>System Setup</h3>
+                            <p class="panel-copy">Moneta is waiting for the system setup seed to appear in Firestore.</p>
+                        </div>
+                    </div>
+                    <span class="status-pill">Waiting</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const leadWorkflow = editingRecord.leadWorkflow || {};
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.settings}</span>
+                    <div>
+                        <h3>Edit System Setup</h3>
+                        <p class="panel-copy">Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes.</p>
+                    </div>
+                </div>
+                <span class="status-pill">${escapeHtml(editingRecord.settingName || "System Setup")}</span>
+            </div>
+            <div class="panel-body">
+                <form id="admin-system-settings-form">
+                    <input id="admin-system-settings-doc-id" type="hidden" value="${editingRecord.id || editingRecord.docId || ""}">
+                    <div class="form-grid">
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-name",
+                                label: "Setup Name",
+                                tooltip: "This is the stable system-setup group label. It stays read-only so the workflow group remains easy to recognize in Moneta."
+                            })}
+                            <input id="admin-system-settings-name" class="input" type="text" value="${escapeHtml(editingRecord.settingName || "")}" readonly>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-group",
+                                label: "Group",
+                                tooltip: "This helps organize future platform-wide defaults into logical groups as Moneta grows."
+                            })}
+                            <input id="admin-system-settings-group" class="input" type="text" value="${escapeHtml(editingRecord.settingGroup || "")}" readonly>
+                        </div>
+                        <div class="field field-full">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-description",
+                                label: "Description",
+                                tooltip: "This explains what the selected system-setup group controls across the app."
+                            })}
+                            <textarea id="admin-system-settings-description" class="textarea" readonly>${escapeHtml(editingRecord.description || "")}</textarea>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-quote-sent-follow-up-days",
+                                label: "Quote Sent Follow-Up Days",
+                                required: true,
+                                tooltip: "When a quote is marked sent, Moneta seeds the enquiry follow-up date this many days ahead unless an earlier valid follow-up already exists."
+                            })}
+                            <input id="admin-system-settings-quote-sent-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteSentFollowUpDays ?? 3)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-quote-accepted-follow-up-days",
+                                label: "Quote Accepted Follow-Up Days",
+                                required: true,
+                                tooltip: "When a quote is accepted, Moneta seeds the next internal follow-up date this many days ahead unless an earlier valid follow-up already exists."
+                            })}
+                            <input id="admin-system-settings-quote-accepted-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteAcceptedFollowUpDays ?? 2)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-quote-draft-validity-days",
+                                label: "Default Quote Validity Days",
+                                required: true,
+                                tooltip: "New quote drafts will default their valid-until date this many days from today unless the user chooses a different date."
+                            })}
+                            <input id="admin-system-settings-quote-draft-validity-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.quoteDraftValidityDays ?? 14)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-stale-warning-days",
+                                label: "Stale Warning Days",
+                                required: true,
+                                tooltip: "Enquiries with no recent activity will show a softer stale warning when they reach this age."
+                            })}
+                            <input id="admin-system-settings-stale-warning-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleWarningDays ?? 3)}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-system-settings-stale-critical-days",
+                                label: "Stale Critical Days",
+                                required: true,
+                                tooltip: "Enquiries with no recent activity will escalate to the stronger stale warning once they reach this age."
+                            })}
+                            <input id="admin-system-settings-stale-critical-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleCriticalDays ?? 7)}" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="admin-system-settings-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reset View
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${icons.edit}</span>
+                            Update System Setup
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
 function renderReorderPolicyForm(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "reorderPolicies");
     const draft = getReorderPolicyDraft(snapshot);
@@ -2547,6 +2703,10 @@ function renderCurrentForm(snapshot) {
         return renderStoreConfigForm(snapshot);
     }
 
+    if (featureState.activeSection === "systemSettings") {
+        return renderSystemSettingsForm(snapshot);
+    }
+
     return renderPaymentModeForm(snapshot);
 }
 
@@ -2639,6 +2799,17 @@ function getGridMeta(snapshot) {
             count: rows.length,
             countLabel: "store profiles",
             directoryHelp: "Search store profiles and reopen one for editing without leaving the admin workspace."
+        };
+    }
+
+    if (featureState.activeSection === "systemSettings") {
+        const rows = snapshot.masterData.systemSettings || [];
+        return {
+            title: "System Setup Directory",
+            copy: "Review Moneta-wide workflow defaults and edit the operational rules that should not require a code deploy.",
+            count: rows.length,
+            countLabel: "setup groups",
+            directoryHelp: "Search setup groups, reopen one for editing, and keep platform-level workflow defaults centralized."
         };
     }
 
@@ -2773,6 +2944,13 @@ function syncCurrentGrid(snapshot) {
         initializeStoreConfigsGrid(gridElement);
         refreshStoreConfigsGrid(rows);
         updateStoreConfigsGridSearch(featureState.searchTerms.storeConfigs);
+        return;
+    }
+
+    if (featureState.activeSection === "systemSettings") {
+        initializeSystemSettingsGrid(gridElement);
+        refreshSystemSettingsGrid(rows);
+        updateSystemSettingsGridSearch(featureState.searchTerms.systemSettings);
         return;
     }
 
@@ -3117,6 +3295,56 @@ async function handleStoreConfigSubmit(event) {
     }
 }
 
+async function handleSystemSettingsSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const docId = document.getElementById("admin-system-settings-doc-id")?.value;
+        const setupName = document.getElementById("admin-system-settings-name")?.value || "System Setup";
+        await runProgressToastFlow({
+            title: "Updating System Setup",
+            initialMessage: "Reading the selected setup group...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "System Setup Updated",
+            successMessage: "The system setup was updated successfully."
+        }, async ({ update }) => {
+            update("Validating workflow defaults and stale-attention thresholds...", 40, "Step 2 of 5");
+
+            update("Writing system setup changes to Firestore...", 72, "Step 3 of 5");
+            await saveSystemSettings({
+                docId,
+                quoteSentFollowUpDays: document.getElementById("admin-system-settings-quote-sent-follow-up-days")?.value,
+                quoteAcceptedFollowUpDays: document.getElementById("admin-system-settings-quote-accepted-follow-up-days")?.value,
+                quoteDraftValidityDays: document.getElementById("admin-system-settings-quote-draft-validity-days")?.value,
+                staleWarningDays: document.getElementById("admin-system-settings-stale-warning-days")?.value,
+                staleCriticalDays: document.getElementById("admin-system-settings-stale-critical-days")?.value
+            }, getState().currentUser, getState().masterData.systemSettings);
+
+            update("Refreshing the system setup directory...", 88, "Step 4 of 5");
+            renderAdminModulesView();
+            update("Workflow defaults are ready across Enquiries and Quote Workspace.", 96, "Step 5 of 5");
+        });
+
+        showToast("System setup updated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "System Setup Updated",
+            message: "The workflow defaults were saved successfully.",
+            details: [
+                { label: "Setup", value: setupName },
+                { label: "Action", value: "Update" },
+                { label: "Module", value: "System Setup" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] System setup save failed:", error);
+        showToast(error.message || "Could not save the system setup.", "error");
+    }
+}
+
 function collectReorderPolicyFormDraft() {
     return {
         policyName: document.getElementById("admin-reorder-policy-name")?.value || "",
@@ -3375,6 +3603,7 @@ function getRecordDisplayName(record = {}) {
         || record.policyName
         || record.productName
         || record.storeName
+        || record.settingName
         || "-";
 }
 
@@ -3420,6 +3649,11 @@ function handleSearchInput(target) {
 
     if (featureState.activeSection === "storeConfigs") {
         updateStoreConfigsGridSearch(featureState.searchTerms.storeConfigs);
+        return;
+    }
+
+    if (featureState.activeSection === "systemSettings") {
+        updateSystemSettingsGridSearch(featureState.searchTerms.systemSettings);
         return;
     }
 
@@ -3662,6 +3896,11 @@ function bindAdminModulesDomEvents() {
             return;
         }
 
+        if (event.target.id === "admin-system-settings-form") {
+            handleSystemSettingsSubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-reorder-policy-form") {
             handleReorderPolicySubmit(event);
         }
@@ -3710,6 +3949,7 @@ function bindAdminModulesDomEvents() {
         const productPriceReviewRejectButton = target.closest("#admin-product-price-review-reject-button");
         const productPriceReviewCancelButton = target.closest("#admin-product-price-review-cancel-button");
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
+        const systemSettingsCancelButton = target.closest("#admin-system-settings-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
         if (editButton) {
@@ -3783,6 +4023,11 @@ function bindAdminModulesDomEvents() {
 
         if (storeConfigCancelButton) {
             handleCancelEdit("storeConfigs");
+            return;
+        }
+
+        if (systemSettingsCancelButton) {
+            handleCancelEdit("systemSettings");
             return;
         }
 

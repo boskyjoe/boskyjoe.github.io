@@ -10,6 +10,7 @@ import {
     createSeasonRecord,
     saveOnlineCatalogueRecord,
     seedStoreConfigRecords,
+    seedSystemSettingsRecords,
     getCategoryUsageStatus,
     getPaymentModeUsageStatus,
     getSeasonUsageStatus,
@@ -25,13 +26,15 @@ import {
     updatePricingPolicyRecord,
     updateReorderPolicyRecord,
     updateSeasonRecord,
-    updateStoreConfigRecord
+    updateStoreConfigRecord,
+    updateSystemSettingsRecord
 } from "./repository.js";
 import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
 import { clearSalesCatalogueOnlinePublishPendingItems } from "../sales-catalogues/repository.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
+import { MONETA_SYSTEM_SETTINGS_SEED } from "../../config/system-settings-config.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import {
     buildPricingPolicyExplanation,
@@ -52,6 +55,7 @@ import {
     ZERO_DEMAND_BEHAVIORS
 } from "../../shared/reorder-policy.js";
 import { getStoreConfigByDocId } from "../../shared/store-config.js";
+import { getLeadWorkflowSettings, getSystemSettingByDocId } from "../../shared/system-settings.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 export const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
@@ -1225,6 +1229,69 @@ export async function ensureStoreConfigSeed(user, existingStoreConfigs = []) {
     }
 
     await seedStoreConfigRecords(missingSeedRows, user);
+    return { mode: existingRows.length === 0 ? "create" : "repair" };
+}
+
+export function validateSystemSettingsPayload(payload, existingSystemSettings = []) {
+    const docId = normalizeText(payload.docId);
+    const existingRecord = getSystemSettingByDocId(docId, existingSystemSettings);
+
+    if (!docId || !existingRecord) {
+        throw new Error("System setup record could not be found.");
+    }
+
+    const existingWorkflow = getLeadWorkflowSettings([existingRecord]);
+    const quoteSentFollowUpDays = normalizeInteger(payload.quoteSentFollowUpDays, existingWorkflow.quoteSentFollowUpDays, 0);
+    const quoteAcceptedFollowUpDays = normalizeInteger(payload.quoteAcceptedFollowUpDays, existingWorkflow.quoteAcceptedFollowUpDays, 0);
+    const quoteDraftValidityDays = normalizeInteger(payload.quoteDraftValidityDays, existingWorkflow.quoteDraftValidityDays, 1);
+    const staleWarningDays = normalizeInteger(payload.staleWarningDays, existingWorkflow.staleWarningDays, 1);
+    const staleCriticalDays = normalizeInteger(payload.staleCriticalDays, existingWorkflow.staleCriticalDays, 1);
+
+    if (staleCriticalDays < staleWarningDays) {
+        throw new Error("Stale critical days must be greater than or equal to stale warning days.");
+    }
+
+    return {
+        docId,
+        settingName: existingRecord.settingName || "System Setup",
+        settingGroup: existingRecord.settingGroup || "General",
+        description: existingRecord.description || "",
+        isActive: existingRecord.isActive !== false,
+        sortOrder: normalizeInteger(existingRecord.sortOrder, 999, 0),
+        leadWorkflow: {
+            quoteSentFollowUpDays,
+            quoteAcceptedFollowUpDays,
+            quoteDraftValidityDays,
+            staleWarningDays,
+            staleCriticalDays
+        }
+    };
+}
+
+export async function saveSystemSettings(payload, user, existingSystemSettings = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save system setup.");
+    }
+
+    const { docId, ...systemSettingsData } = validateSystemSettingsPayload(payload, existingSystemSettings);
+    await updateSystemSettingsRecord(docId, systemSettingsData, user);
+    return { mode: "update" };
+}
+
+export async function ensureSystemSettingsSeed(user, existingSystemSettings = []) {
+    if (!user || user.role !== "admin") {
+        return { mode: "skip" };
+    }
+
+    const existingRows = Array.isArray(existingSystemSettings) ? existingSystemSettings : [];
+    const existingDocIds = new Set(existingRows.map(row => normalizeText(row.id || row.docId)).filter(Boolean));
+    const missingSeedRows = MONETA_SYSTEM_SETTINGS_SEED.filter(row => !existingDocIds.has(normalizeText(row.docId)));
+
+    if (missingSeedRows.length === 0) {
+        return { mode: "existing" };
+    }
+
+    await seedSystemSettingsRecords(missingSeedRows, user);
     return { mode: existingRows.length === 0 ? "create" : "repair" };
 }
 

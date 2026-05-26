@@ -477,3 +477,34 @@ export async function updateStoreConfigRecord(docId, updatedData, user) {
         updatedOn: now
     });
 }
+
+export async function seedSystemSettingsRecords(systemSettings = [], user) {
+    const now = getNow();
+    const batch = getDb().batch();
+
+    (systemSettings || []).forEach(setting => {
+        const docId = normalizeText(setting.docId);
+        if (!docId) return;
+
+        const docRef = getDb().collection(COLLECTIONS.systemSettings).doc(docId);
+        batch.set(docRef, {
+            ...setting,
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+    });
+
+    return batch.commit();
+}
+
+export async function updateSystemSettingsRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.systemSettings).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}

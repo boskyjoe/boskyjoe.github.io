@@ -49,6 +49,7 @@ import { downloadLeadQuotePdf } from "./pdf.js";
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName } from "../../shared/store-config.js";
 import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
+import { getLeadWorkflowSettings } from "../../shared/system-settings.js";
 
 const featureState = {
     leads: [],
@@ -615,6 +616,7 @@ function buildLeadAttentionSummary(items = []) {
 }
 
 function buildLeadAttentionItems(lead = {}) {
+    const leadWorkflowSettings = getLeadWorkflowSettings();
     const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     if (["Converted", "Lost"].includes(leadStatus)) {
         return [];
@@ -673,17 +675,17 @@ function buildLeadAttentionItems(lead = {}) {
     if (lastActivityDate) {
         const staleDays = Math.floor((startOfLocalDay(new Date()).getTime() - startOfLocalDay(lastActivityDate).getTime()) / 86400000);
 
-        if (staleDays >= 7) {
+        if (staleDays >= leadWorkflowSettings.staleCriticalDays) {
             items.push({
                 code: "no-activity-7-days",
-                label: "No Activity 7+ Days",
+                label: `No Activity ${leadWorkflowSettings.staleCriticalDays}+ Days`,
                 tone: "danger-soft",
                 priority: 4
             });
-        } else if (staleDays >= 3) {
+        } else if (staleDays >= leadWorkflowSettings.staleWarningDays) {
             items.push({
                 code: "no-activity-3-days",
-                label: "No Activity 3+ Days",
+                label: `No Activity ${leadWorkflowSettings.staleWarningDays}+ Days`,
                 tone: "muted",
                 priority: 5
             });
