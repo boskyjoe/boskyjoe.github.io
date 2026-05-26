@@ -254,6 +254,15 @@ export const navConfig = [
                         iconClass: "nav-icon-cyan",
                         roles: ["admin"],
                         enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=systemSettings",
+                        label: "System Setup",
+                        icon: icons.settings,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
                     }
                 ]
             },

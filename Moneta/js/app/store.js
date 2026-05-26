@@ -12,6 +12,7 @@ const state = {
         productPriceChangeReviews: [],
         reorderPolicies: [],
         storeConfigs: [],
+        systemSettings: [],
         salesCatalogues: [],
         teams: [],
         churchMembers: []

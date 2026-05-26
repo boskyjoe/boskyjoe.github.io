@@ -20,7 +20,7 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
-import { ensurePricingPolicySeed, ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy } from "../features/admin-modules/service.js";
+import { ensurePricingPolicySeed, ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy, ensureSystemSettingsSeed } from "../features/admin-modules/service.js";
 import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
 import { isSystemDefaultPricingPolicy } from "../shared/pricing-policy.js";
 
@@ -158,6 +158,33 @@ function initializeStoreConfigSeedLifecycle() {
     });
 }
 
+function initializeSystemSettingsSeedLifecycle() {
+    let isEnsuring = false;
+
+    subscribe(async snapshot => {
+        if (isEnsuring) return;
+
+        const user = snapshot.currentUser;
+        if (!user || user.role !== "admin" || !snapshot.isMasterDataReady) {
+            return;
+        }
+
+        if ((snapshot.masterData.systemSettings || []).length > 0) {
+            return;
+        }
+
+        isEnsuring = true;
+
+        try {
+            await ensureSystemSettingsSeed(user, snapshot.masterData.systemSettings);
+        } catch (error) {
+            console.error("[Moneta] Failed to ensure system settings seed:", error);
+        } finally {
+            isEnsuring = false;
+        }
+    });
+}
+
 function initializePricingPolicySeedLifecycle() {
     let isEnsuring = false;
 
@@ -212,5 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeDataLifecycle();
     initializePricingPolicySeedLifecycle();
     initializeStoreConfigSeedLifecycle();
+    initializeSystemSettingsSeedLifecycle();
     initializeReorderPolicySeedLifecycle();
 });
