@@ -160,6 +160,7 @@ function initializeStoreConfigSeedLifecycle() {
 
 function initializeSystemSettingsSeedLifecycle() {
     let isEnsuring = false;
+    let lastSeedSignature = "";
 
     subscribe(async snapshot => {
         if (isEnsuring) return;
@@ -169,14 +170,22 @@ function initializeSystemSettingsSeedLifecycle() {
             return;
         }
 
-        if ((snapshot.masterData.systemSettings || []).length > 0) {
+        const rows = snapshot.masterData.systemSettings || [];
+        const seedSignature = rows
+            .map(row => String(row.id || row.docId || "").trim())
+            .filter(Boolean)
+            .sort()
+            .join("|");
+
+        if (seedSignature === lastSeedSignature) {
             return;
         }
 
+        lastSeedSignature = seedSignature;
         isEnsuring = true;
 
         try {
-            await ensureSystemSettingsSeed(user, snapshot.masterData.systemSettings);
+            await ensureSystemSettingsSeed(user, rows);
         } catch (error) {
             console.error("[Moneta] Failed to ensure system settings seed:", error);
         } finally {
