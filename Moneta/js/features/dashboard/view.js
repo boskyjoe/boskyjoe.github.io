@@ -4,15 +4,13 @@ import { COLLECTIONS } from "../../config/collections.js";
 import { findNavRouteItem } from "../../config/nav-config.js";
 import { icons } from "../../shared/icons.js";
 import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
+import { getInventoryOperationsSettings } from "../../shared/system-settings.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const AUTO_REFRESH_RETRY_COOLDOWN_MS = 60 * 1000;
 const MAX_DOCS_PER_COLLECTION = 240;
-const LOW_STOCK_THRESHOLD = 5;
-const MEDIUM_STOCK_THRESHOLD = 20;
-const INVENTORY_TARGET_STOCK = 24;
 const WINDOW_OPTIONS = [
     { key: "today", label: "Today" },
     { key: "7d", label: "Last 7 Days" },
@@ -556,17 +554,18 @@ async function fetchWindowedRows(path, {
 }
 
 function resolveInventoryStatus(inventoryCount) {
+    const { lowStockThreshold, mediumStockThreshold } = getInventoryOperationsSettings();
     const quantity = Math.max(0, Math.floor(toNumber(inventoryCount)));
 
     if (quantity <= 0) {
         return { key: "out", label: "Out of Stock", tone: "danger", priority: 0 };
     }
 
-    if (quantity <= LOW_STOCK_THRESHOLD) {
+    if (quantity <= lowStockThreshold) {
         return { key: "low", label: "Low Stock", tone: "warning", priority: 1 };
     }
 
-    if (quantity <= MEDIUM_STOCK_THRESHOLD) {
+    if (quantity <= mediumStockThreshold) {
         return { key: "medium", label: "Medium", tone: "neutral", priority: 2 };
     }
 
@@ -574,6 +573,7 @@ function resolveInventoryStatus(inventoryCount) {
 }
 
 function buildInventoryInsights(products = [], categories = []) {
+    const { lowStockThreshold, mediumStockThreshold, inventoryTargetStock } = getInventoryOperationsSettings();
     const categoryNameMap = buildCategoryNameMap(categories);
     const rows = (products || []).map(product => {
         const inventoryCount = Math.max(0, Math.floor(toNumber(product.inventoryCount)));
@@ -581,7 +581,7 @@ function buildInventoryInsights(products = [], categories = []) {
         const productName = normalizeText(product.itemName || product.productName || "Untitled Product");
         const categoryName = resolveProductCategoryName(product, categoryNameMap);
         const reorderSuggestion = status.key === "out" || status.key === "low"
-            ? Math.max(INVENTORY_TARGET_STOCK - inventoryCount, 0)
+            ? Math.max(inventoryTargetStock - inventoryCount, 0)
             : 0;
 
         return {
@@ -626,9 +626,9 @@ function buildInventoryInsights(products = [], categories = []) {
     return {
         rows,
         counts,
-        threshold: LOW_STOCK_THRESHOLD,
-        mediumThreshold: MEDIUM_STOCK_THRESHOLD,
-        targetStock: INVENTORY_TARGET_STOCK,
+        threshold: lowStockThreshold,
+        mediumThreshold: mediumStockThreshold,
+        targetStock: inventoryTargetStock,
         totalSkus: rows.length,
         alertCount: counts.out + counts.low,
         topLowCategories
@@ -901,11 +901,13 @@ function computeCashSummary({
     };
 }
 
-function computeStockSummary(products = [], threshold = LOW_STOCK_THRESHOLD, categories = []) {
+function computeStockSummary(products = [], threshold = null, categories = []) {
+    const { lowStockThreshold } = getInventoryOperationsSettings();
+    const effectiveThreshold = Number.isFinite(Number(threshold)) ? Number(threshold) : lowStockThreshold;
     const categoryNameMap = buildCategoryNameMap(categories);
     const lowStockRows = (products || [])
         .filter(product => {
-            return Math.max(0, Math.floor(toNumber(product.inventoryCount))) <= threshold;
+            return Math.max(0, Math.floor(toNumber(product.inventoryCount))) <= effectiveThreshold;
         })
         .map(product => ({
             ...product,
@@ -916,7 +918,7 @@ function computeStockSummary(products = [], threshold = LOW_STOCK_THRESHOLD, cat
         });
 
     return {
-        threshold,
+        threshold: effectiveThreshold,
         totalProducts: (products || []).length,
         lowStockCount: lowStockRows.length,
         lowStockRows: lowStockRows.slice(0, 6)
@@ -1010,7 +1012,7 @@ async function buildDashboardData(user, rangeSpec) {
             consignmentPayments,
             donations
         }),
-        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
+        stock: computeStockSummary(products, null, categories),
         inventory
     };
 
@@ -1092,7 +1094,7 @@ function renderInventorySummary(inventory = {}) {
             <span class="status-pill inventory-pill-warning">Low Stock: ${counts.low || 0}</span>
             <span class="status-pill inventory-pill-neutral">Medium: ${counts.medium || 0}</span>
             <span class="status-pill inventory-pill-success">Healthy: ${counts.healthy || 0}</span>
-            <span class="status-pill">Target Stock: ${inventory.targetStock || INVENTORY_TARGET_STOCK}</span>
+            <span class="status-pill">Target Stock: ${inventory.targetStock || 0}</span>
         </div>
     `;
 }
@@ -1109,7 +1111,7 @@ function renderDashboardMarkup(user) {
         purchases: computePurchaseSummary([]),
         consignment: computeConsignmentSummary([]),
         cash: computeCashSummary({}),
-        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
+        stock: computeStockSummary(products, null, categories),
         inventory: buildInventoryInsights(products, categories)
     };
     const storeTasty = metrics.retail.byStore?.["Tasty Treats"] || { totalSales: 0, paymentReceived: 0, donations: 0, balanceDue: 0, expenses: 0, count: 0 };
@@ -2048,7 +2050,7 @@ function syncDashboardFinancialVisuals() {
         purchases: computePurchaseSummary([]),
         consignment: computeConsignmentSummary([]),
         cash: computeCashSummary({}),
-        stock: computeStockSummary(products, LOW_STOCK_THRESHOLD, categories),
+        stock: computeStockSummary(products, null, categories),
         inventory: buildInventoryInsights(products, categories)
     };
     const profile = featureState.data?.profile || getDashboardProfile(getState().currentUser);

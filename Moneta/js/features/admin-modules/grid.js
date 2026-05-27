@@ -493,10 +493,16 @@ function buildSystemSettingsColumnDefs() {
         { field: "settingName", headerName: "Setup", minWidth: 180, flex: 1 },
         { field: "settingGroup", headerName: "Group", minWidth: 140, flex: 0.8 },
         {
-            headerName: "Lead Workflow Summary",
+            headerName: "Setup Summary",
             minWidth: 360,
             flex: 1.9,
             valueGetter: params => {
+                const docId = params.data?.id || params.data?.docId;
+                if (docId === "inventoryOperations") {
+                    const inventory = params.data?.inventoryOperations || {};
+                    return `Low <= ${Number(inventory.lowStockThreshold) || 0} • Medium <= ${Number(inventory.mediumStockThreshold) || 0} • Target ${Number(inventory.inventoryTargetStock) || 0}`;
+                }
+
                 const workflow = params.data?.leadWorkflow || {};
                 return `${Number(workflow.quoteSentFollowUpDays) || 0}d sent follow-up • ${Number(workflow.quoteAcceptedFollowUpDays) || 0}d accepted follow-up • ${Number(workflow.quoteDraftValidityDays) || 0}d quote validity • ${Number(workflow.staleWarningDays) || 0}/${Number(workflow.staleCriticalDays) || 0}d stale alerts`;
             }

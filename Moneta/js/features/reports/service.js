@@ -7,7 +7,9 @@ import {
     resolvePolicyForProduct,
     resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
+import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { getRetailStoreNames } from "../../shared/store-config.js";
+import { getInventoryOperationsSettings } from "../../shared/system-settings.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -950,8 +952,6 @@ function buildPurchasePayablesReportData({
 }
 
 const RETAIL_STORES = getRetailStoreNames(null, { includeInactive: true });
-const LOW_STOCK_THRESHOLD = 5;
-const MEDIUM_STOCK_THRESHOLD = 20;
 
 function buildSalesInvoiceReportRows(rows = []) {
     return rows
@@ -1857,7 +1857,7 @@ function hasLeadReadyQuote(lead = {}) {
 }
 
 function resolveLeadConversionStage(lead = {}) {
-    const leadStatus = normalizeText(lead.leadStatus || "New");
+    const leadStatus = normalizeLeadStatusValue(lead.leadStatus, "New");
     const conversionOutcomeStatus = normalizeLeadConversionOutcomeStatus(lead);
 
     if (leadStatus === "Converted" && conversionOutcomeStatus === "voided") {
@@ -1876,8 +1876,8 @@ function resolveLeadConversionStage(lead = {}) {
         return "Ready To Convert";
     }
 
-    if (leadStatus === "Qualified") {
-        return "Qualified";
+    if (["Working", "Quote Sent", "On Hold"].includes(leadStatus)) {
+        return "Working";
     }
 
     return "Open";
@@ -1935,7 +1935,7 @@ function buildLeadConversionDetailRows({
                 enquiryDate: lead.enquiryDate || null,
                 expectedDeliveryDate: lead.expectedDeliveryDate || null,
                 stage,
-                leadStatus: normalizeText(lead.leadStatus || "New"),
+                leadStatus: normalizeLeadStatusValue(lead.leadStatus, "New"),
                 latestQuoteStatus,
                 latestQuoteLabel,
                 quoteCount: Number(lead.quoteCount) || 0,
@@ -1955,7 +1955,7 @@ function buildLeadConversionDetailRows({
 }
 
 function buildLeadConversionStageRows(detailRows = []) {
-    const stageOrder = ["Open", "Qualified", "Ready To Convert", "Converted", "Converted (Sale Voided)", "Lost"];
+    const stageOrder = ["Open", "Working", "Ready To Convert", "Converted", "Converted (Sale Voided)", "Lost"];
     const byStage = new Map(
         stageOrder.map(stage => [stage, {
             stage,
@@ -2100,7 +2100,7 @@ function buildLeadConversionReportData({
     const sourceRows = buildLeadConversionSourceRows(detailRows);
     const storeRows = buildLeadConversionStoreRows(salesInvoices);
     const openCount = stageRows.find(row => row.stage === "Open")?.count || 0;
-    const qualifiedCount = stageRows.find(row => row.stage === "Qualified")?.count || 0;
+    const workingCount = stageRows.find(row => row.stage === "Working")?.count || 0;
     const readyToConvertCount = stageRows.find(row => row.stage === "Ready To Convert")?.count || 0;
     const convertedActiveCount = stageRows.find(row => row.stage === "Converted")?.count || 0;
     const convertedVoidedCount = stageRows.find(row => row.stage === "Converted (Sale Voided)")?.count || 0;
@@ -2112,7 +2112,7 @@ function buildLeadConversionReportData({
         .filter(row => row.stage === "Ready To Convert")
         .reduce((sum, row) => sum + roundCurrency(row.requestedValue), 0);
     const acceptedQuotePipelineValue = detailRows
-        .filter(row => ["Ready To Convert", "Qualified", "Open"].includes(row.stage))
+        .filter(row => ["Ready To Convert", "Working", "Open"].includes(row.stage))
         .reduce((sum, row) => sum + roundCurrency(row.acceptedQuoteValue), 0);
     const topLeadSource = sourceRows[0] || null;
 
@@ -2126,7 +2126,7 @@ function buildLeadConversionReportData({
         summary: {
             leadCount,
             openCount,
-            qualifiedCount,
+            workingCount,
             readyToConvertCount,
             convertedActiveCount,
             convertedVoidedCount,
@@ -2491,9 +2491,10 @@ function resolveInventoryCategoryName(product = {}, categoryNameMap = new Map())
 }
 
 function resolveInventoryStatus(units = 0) {
+    const { lowStockThreshold, mediumStockThreshold } = getInventoryOperationsSettings();
     if (units <= 0) return "Out Of Stock";
-    if (units <= LOW_STOCK_THRESHOLD) return "Low Stock";
-    if (units <= MEDIUM_STOCK_THRESHOLD) return "Medium Stock";
+    if (units <= lowStockThreshold) return "Low Stock";
+    if (units <= mediumStockThreshold) return "Medium Stock";
     return "Healthy Stock";
 }
 

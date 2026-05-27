@@ -55,7 +55,7 @@ import {
     ZERO_DEMAND_BEHAVIORS
 } from "../../shared/reorder-policy.js";
 import { getStoreConfigByDocId } from "../../shared/store-config.js";
-import { getLeadWorkflowSettings, getSystemSettingByDocId } from "../../shared/system-settings.js";
+import { getInventoryOperationsSettings, getLeadWorkflowSettings, getSystemSettingByDocId } from "../../shared/system-settings.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 export const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
@@ -1240,31 +1240,67 @@ export function validateSystemSettingsPayload(payload, existingSystemSettings = 
         throw new Error("System setup record could not be found.");
     }
 
-    const existingWorkflow = getLeadWorkflowSettings([existingRecord]);
-    const quoteSentFollowUpDays = normalizeInteger(payload.quoteSentFollowUpDays, existingWorkflow.quoteSentFollowUpDays, 0);
-    const quoteAcceptedFollowUpDays = normalizeInteger(payload.quoteAcceptedFollowUpDays, existingWorkflow.quoteAcceptedFollowUpDays, 0);
-    const quoteDraftValidityDays = normalizeInteger(payload.quoteDraftValidityDays, existingWorkflow.quoteDraftValidityDays, 1);
-    const staleWarningDays = normalizeInteger(payload.staleWarningDays, existingWorkflow.staleWarningDays, 1);
-    const staleCriticalDays = normalizeInteger(payload.staleCriticalDays, existingWorkflow.staleCriticalDays, 1);
-
-    if (staleCriticalDays < staleWarningDays) {
-        throw new Error("Stale critical days must be greater than or equal to stale warning days.");
-    }
-
-    return {
+    const baseRecord = {
         docId,
         settingName: existingRecord.settingName || "System Setup",
         settingGroup: existingRecord.settingGroup || "General",
         description: existingRecord.description || "",
         isActive: existingRecord.isActive !== false,
-        sortOrder: normalizeInteger(existingRecord.sortOrder, 999, 0),
-        leadWorkflow: {
-            quoteSentFollowUpDays,
-            quoteAcceptedFollowUpDays,
-            quoteDraftValidityDays,
-            staleWarningDays,
-            staleCriticalDays
+        sortOrder: normalizeInteger(existingRecord.sortOrder, 999, 0)
+    };
+
+    if (docId === "leadWorkflow") {
+        const existingWorkflow = getLeadWorkflowSettings([existingRecord]);
+        const quoteSentFollowUpDays = normalizeInteger(payload.quoteSentFollowUpDays, existingWorkflow.quoteSentFollowUpDays, 0);
+        const quoteAcceptedFollowUpDays = normalizeInteger(payload.quoteAcceptedFollowUpDays, existingWorkflow.quoteAcceptedFollowUpDays, 0);
+        const quoteDraftValidityDays = normalizeInteger(payload.quoteDraftValidityDays, existingWorkflow.quoteDraftValidityDays, 1);
+        const staleWarningDays = normalizeInteger(payload.staleWarningDays, existingWorkflow.staleWarningDays, 1);
+        const staleCriticalDays = normalizeInteger(payload.staleCriticalDays, existingWorkflow.staleCriticalDays, 1);
+
+        if (staleCriticalDays < staleWarningDays) {
+            throw new Error("Stale critical days must be greater than or equal to stale warning days.");
         }
+
+        return {
+            ...baseRecord,
+            leadWorkflow: {
+                quoteSentFollowUpDays,
+                quoteAcceptedFollowUpDays,
+                quoteDraftValidityDays,
+                staleWarningDays,
+                staleCriticalDays
+            }
+        };
+    }
+
+    if (docId === "inventoryOperations") {
+        const existingInventorySettings = getInventoryOperationsSettings([existingRecord]);
+        const lowStockThreshold = normalizeInteger(payload.lowStockThreshold, existingInventorySettings.lowStockThreshold, 0);
+        const mediumStockThreshold = normalizeInteger(payload.mediumStockThreshold, existingInventorySettings.mediumStockThreshold, 0);
+        const inventoryTargetStock = normalizeInteger(payload.inventoryTargetStock, existingInventorySettings.inventoryTargetStock, 0);
+
+        if (mediumStockThreshold < lowStockThreshold) {
+            throw new Error("Medium stock threshold must be greater than or equal to low stock threshold.");
+        }
+
+        if (inventoryTargetStock < mediumStockThreshold) {
+            throw new Error("Inventory target stock must be greater than or equal to the medium stock threshold.");
+        }
+
+        return {
+            ...baseRecord,
+            inventoryOperations: {
+                lowStockThreshold,
+                mediumStockThreshold,
+                inventoryTargetStock
+            }
+        };
+    }
+
+    return {
+        ...baseRecord,
+        leadWorkflow: existingRecord.leadWorkflow || {},
+        inventoryOperations: existingRecord.inventoryOperations || {}
     };
 }
 

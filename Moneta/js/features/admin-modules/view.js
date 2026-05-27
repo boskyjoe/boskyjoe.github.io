@@ -2159,6 +2159,9 @@ function renderSystemSettingsForm(snapshot) {
     }
 
     const leadWorkflow = editingRecord.leadWorkflow || {};
+    const inventoryOperations = editingRecord.inventoryOperations || {};
+    const isLeadWorkflow = (editingRecord.id || editingRecord.docId) === "leadWorkflow";
+    const isInventoryOperations = (editingRecord.id || editingRecord.docId) === "inventoryOperations";
 
     return `
         <div class="panel-card">
@@ -2167,7 +2170,9 @@ function renderSystemSettingsForm(snapshot) {
                     <span class="panel-icon">${icons.settings}</span>
                     <div>
                         <h3>Edit System Setup</h3>
-                        <p class="panel-copy">Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes.</p>
+                        <p class="panel-copy">${isInventoryOperations
+                            ? "Manage Moneta-wide inventory thresholds here so alerts, dashboard health signals, and reporting stay aligned without code changes."
+                            : "Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes."}</p>
                     </div>
                 </div>
                 <span class="status-pill">${escapeHtml(editingRecord.settingName || "System Setup")}</span>
@@ -2200,51 +2205,82 @@ function renderSystemSettingsForm(snapshot) {
                             })}
                             <textarea id="admin-system-settings-description" class="textarea" readonly>${escapeHtml(editingRecord.description || "")}</textarea>
                         </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-system-settings-quote-sent-follow-up-days",
-                                label: "Quote Sent Follow-Up Days",
-                                required: true,
-                                tooltip: "When a quote is marked sent, Moneta seeds the enquiry follow-up date this many days ahead unless an earlier valid follow-up already exists."
-                            })}
-                            <input id="admin-system-settings-quote-sent-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteSentFollowUpDays ?? 3)}" required>
-                        </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-system-settings-quote-accepted-follow-up-days",
-                                label: "Quote Accepted Follow-Up Days",
-                                required: true,
-                                tooltip: "When a quote is accepted, Moneta seeds the next internal follow-up date this many days ahead unless an earlier valid follow-up already exists."
-                            })}
-                            <input id="admin-system-settings-quote-accepted-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteAcceptedFollowUpDays ?? 2)}" required>
-                        </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-system-settings-quote-draft-validity-days",
-                                label: "Default Quote Validity Days",
-                                required: true,
-                                tooltip: "New quote drafts will default their valid-until date this many days from today unless the user chooses a different date."
-                            })}
-                            <input id="admin-system-settings-quote-draft-validity-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.quoteDraftValidityDays ?? 14)}" required>
-                        </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-system-settings-stale-warning-days",
-                                label: "Stale Warning Days",
-                                required: true,
-                                tooltip: "Enquiries with no recent activity will show a softer stale warning when they reach this age."
-                            })}
-                            <input id="admin-system-settings-stale-warning-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleWarningDays ?? 3)}" required>
-                        </div>
-                        <div class="field">
-                            ${renderFieldLabel({
-                                forId: "admin-system-settings-stale-critical-days",
-                                label: "Stale Critical Days",
-                                required: true,
-                                tooltip: "Enquiries with no recent activity will escalate to the stronger stale warning once they reach this age."
-                            })}
-                            <input id="admin-system-settings-stale-critical-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleCriticalDays ?? 7)}" required>
-                        </div>
+                        ${isLeadWorkflow ? `
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-quote-sent-follow-up-days",
+                                    label: "Quote Sent Follow-Up Days",
+                                    required: true,
+                                    tooltip: "When a quote is marked sent, Moneta seeds the enquiry follow-up date this many days ahead unless an earlier valid follow-up already exists."
+                                })}
+                                <input id="admin-system-settings-quote-sent-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteSentFollowUpDays ?? 3)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-quote-accepted-follow-up-days",
+                                    label: "Quote Accepted Follow-Up Days",
+                                    required: true,
+                                    tooltip: "When a quote is accepted, Moneta seeds the next internal follow-up date this many days ahead unless an earlier valid follow-up already exists."
+                                })}
+                                <input id="admin-system-settings-quote-accepted-follow-up-days" class="input" type="number" min="0" step="1" value="${escapeHtml(leadWorkflow.quoteAcceptedFollowUpDays ?? 2)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-quote-draft-validity-days",
+                                    label: "Default Quote Validity Days",
+                                    required: true,
+                                    tooltip: "New quote drafts will default their valid-until date this many days from today unless the user chooses a different date."
+                                })}
+                                <input id="admin-system-settings-quote-draft-validity-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.quoteDraftValidityDays ?? 14)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-stale-warning-days",
+                                    label: "Stale Warning Days",
+                                    required: true,
+                                    tooltip: "Enquiries with no recent activity will show a softer stale warning when they reach this age."
+                                })}
+                                <input id="admin-system-settings-stale-warning-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleWarningDays ?? 3)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-stale-critical-days",
+                                    label: "Stale Critical Days",
+                                    required: true,
+                                    tooltip: "Enquiries with no recent activity will escalate to the stronger stale warning once they reach this age."
+                                })}
+                                <input id="admin-system-settings-stale-critical-days" class="input" type="number" min="1" step="1" value="${escapeHtml(leadWorkflow.staleCriticalDays ?? 7)}" required>
+                            </div>
+                        ` : ""}
+                        ${isInventoryOperations ? `
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-low-stock-threshold",
+                                    label: "Low Stock Threshold",
+                                    required: true,
+                                    tooltip: "Products at or below this quantity are treated as low stock in alerts, dashboard health, and inventory reports."
+                                })}
+                                <input id="admin-system-settings-low-stock-threshold" class="input" type="number" min="0" step="1" value="${escapeHtml(inventoryOperations.lowStockThreshold ?? 5)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-medium-stock-threshold",
+                                    label: "Medium Stock Threshold",
+                                    required: true,
+                                    tooltip: "Products above low stock but at or below this quantity will be treated as medium stock in inventory health views."
+                                })}
+                                <input id="admin-system-settings-medium-stock-threshold" class="input" type="number" min="0" step="1" value="${escapeHtml(inventoryOperations.mediumStockThreshold ?? 20)}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-inventory-target-stock",
+                                    label: "Inventory Target Stock",
+                                    required: true,
+                                    tooltip: "Dashboard reorder suggestions will try to top stock back up to this quantity for low and out-of-stock products."
+                                })}
+                                <input id="admin-system-settings-inventory-target-stock" class="input" type="number" min="0" step="1" value="${escapeHtml(inventoryOperations.inventoryTargetStock ?? 24)}" required>
+                            </div>
+                        ` : ""}
                     </div>
                     <div class="form-actions">
                         <button id="admin-system-settings-cancel-button" class="button button-secondary" type="button">
@@ -3301,6 +3337,7 @@ async function handleSystemSettingsSubmit(event) {
     try {
         const docId = document.getElementById("admin-system-settings-doc-id")?.value;
         const setupName = document.getElementById("admin-system-settings-name")?.value || "System Setup";
+        const isInventoryOperations = docId === "inventoryOperations";
         await runProgressToastFlow({
             title: "Updating System Setup",
             initialMessage: "Reading the selected setup group...",
@@ -3309,7 +3346,13 @@ async function handleSystemSettingsSubmit(event) {
             successTitle: "System Setup Updated",
             successMessage: "The system setup was updated successfully."
         }, async ({ update }) => {
-            update("Validating workflow defaults and stale-attention thresholds...", 40, "Step 2 of 5");
+            update(
+                isInventoryOperations
+                    ? "Validating inventory thresholds and target stock defaults..."
+                    : "Validating workflow defaults and stale-attention thresholds...",
+                40,
+                "Step 2 of 5"
+            );
 
             update("Writing system setup changes to Firestore...", 72, "Step 3 of 5");
             await saveSystemSettings({
@@ -3318,12 +3361,21 @@ async function handleSystemSettingsSubmit(event) {
                 quoteAcceptedFollowUpDays: document.getElementById("admin-system-settings-quote-accepted-follow-up-days")?.value,
                 quoteDraftValidityDays: document.getElementById("admin-system-settings-quote-draft-validity-days")?.value,
                 staleWarningDays: document.getElementById("admin-system-settings-stale-warning-days")?.value,
-                staleCriticalDays: document.getElementById("admin-system-settings-stale-critical-days")?.value
+                staleCriticalDays: document.getElementById("admin-system-settings-stale-critical-days")?.value,
+                lowStockThreshold: document.getElementById("admin-system-settings-low-stock-threshold")?.value,
+                mediumStockThreshold: document.getElementById("admin-system-settings-medium-stock-threshold")?.value,
+                inventoryTargetStock: document.getElementById("admin-system-settings-inventory-target-stock")?.value
             }, getState().currentUser, getState().masterData.systemSettings);
 
             update("Refreshing the system setup directory...", 88, "Step 4 of 5");
             renderAdminModulesView();
-            update("Workflow defaults are ready across Enquiries and Quote Workspace.", 96, "Step 5 of 5");
+            update(
+                isInventoryOperations
+                    ? "Inventory thresholds are ready across Alerts, Dashboard, and Reports."
+                    : "Workflow defaults are ready across Enquiries and Quote Workspace.",
+                96,
+                "Step 5 of 5"
+            );
         });
 
         showToast("System setup updated.", "success", {
@@ -3332,7 +3384,9 @@ async function handleSystemSettingsSubmit(event) {
         ProgressToast.hide(0);
         await showSummaryModal({
             title: "System Setup Updated",
-            message: "The workflow defaults were saved successfully.",
+            message: isInventoryOperations
+                ? "The inventory operations defaults were saved successfully."
+                : "The workflow defaults were saved successfully.",
             details: [
                 { label: "Setup", value: setupName },
                 { label: "Action", value: "Update" },
