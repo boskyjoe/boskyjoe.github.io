@@ -20,6 +20,9 @@ function cloneRow(row = {}) {
         ...row,
         leadWorkflow: {
             ...(row.leadWorkflow || {})
+        },
+        inventoryOperations: {
+            ...(row.inventoryOperations || {})
         }
     };
 }
@@ -75,5 +78,17 @@ export function getLeadWorkflowSettings(settings = null) {
         quoteDraftValidityDays: normalizeInteger(leadWorkflow.quoteDraftValidityDays, normalizeInteger(seedDefaults.quoteDraftValidityDays, 14, 1), 1),
         staleWarningDays: normalizeInteger(leadWorkflow.staleWarningDays, normalizeInteger(seedDefaults.staleWarningDays, 3, 1), 1),
         staleCriticalDays: normalizeInteger(leadWorkflow.staleCriticalDays, normalizeInteger(seedDefaults.staleCriticalDays, 7, 1), 1)
+    };
+}
+
+export function getInventoryOperationsSettings(settings = null) {
+    const seedDefaults = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.inventoryOperations, MONETA_SYSTEM_SETTINGS_SEED)?.inventoryOperations || {};
+    const row = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.inventoryOperations, settings) || {};
+    const inventoryOperations = row.inventoryOperations || {};
+
+    return {
+        lowStockThreshold: normalizeInteger(inventoryOperations.lowStockThreshold, normalizeInteger(seedDefaults.lowStockThreshold, 5, 0), 0),
+        mediumStockThreshold: normalizeInteger(inventoryOperations.mediumStockThreshold, normalizeInteger(seedDefaults.mediumStockThreshold, 20, 0), 0),
+        inventoryTargetStock: normalizeInteger(inventoryOperations.inventoryTargetStock, normalizeInteger(seedDefaults.inventoryTargetStock, 24, 0), 0)
     };
 }

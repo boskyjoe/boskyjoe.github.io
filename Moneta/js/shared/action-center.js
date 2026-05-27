@@ -1,9 +1,9 @@
 import { findNavRouteItem } from "../config/nav-config.js";
+import { getInventoryOperationsSettings } from "./system-settings.js";
 
 export const PRICE_REVIEW_ROUTE = "#/admin-modules?section=productPriceChangeReviews";
 export const ONLINE_CATALOGUE_ROUTE = "#/admin-modules?section=onlineCatalogues";
 export const PRODUCT_CATALOGUE_ROUTE = "#/products";
-const LOW_STOCK_THRESHOLD = 5;
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -47,9 +47,10 @@ export function getPendingOnlineCatalogueReviews(rows = []) {
 }
 
 export function getLowStockProducts(rows = []) {
+    const { lowStockThreshold } = getInventoryOperationsSettings();
     return (rows || []).filter(product => {
         const inventoryCount = Math.max(0, Math.floor(Number(product?.inventoryCount) || 0));
-        return inventoryCount <= LOW_STOCK_THRESHOLD;
+        return inventoryCount <= lowStockThreshold;
     });
 }
 
