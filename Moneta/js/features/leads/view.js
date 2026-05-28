@@ -75,11 +75,15 @@ const featureState = {
     quoteDraft: null,
     pendingQuoteSelectionId: "",
     isQuoteSaveInFlight: false,
-    quoteStatusReasonModal: {
+    quoteOutcomeModal: {
         isOpen: false,
-        mode: "",
+        outcome: "Accepted",
         quoteId: "",
-        reason: ""
+        acceptedByCustomerName: "",
+        acceptedVia: "",
+        acceptanceNotes: "",
+        rejectionReason: "",
+        cancellationReason: ""
     }
 };
 
@@ -364,6 +368,16 @@ function resetQuoteWorkspace(options = {}) {
     featureState.quoteDraft = null;
     featureState.pendingQuoteSelectionId = "";
     featureState.isQuoteSaveInFlight = false;
+    featureState.quoteOutcomeModal = {
+        isOpen: false,
+        outcome: "Accepted",
+        quoteId: "",
+        acceptedByCustomerName: "",
+        acceptedVia: "",
+        acceptanceNotes: "",
+        rejectionReason: "",
+        cancellationReason: ""
+    };
 
     if (closeDrawer) {
         featureState.quoteDrawerLeadId = null;
@@ -554,12 +568,6 @@ function isQuoteDraftEditable() {
     if (!featureState.quoteDraft) return false;
     const persistedQuoteStatus = normalizeText(featureState.quoteDraft.persistedQuoteStatus || featureState.quoteDraft.quoteStatus || "Draft");
     return persistedQuoteStatus === "Draft";
-}
-
-function canEditQuoteDraftStatus() {
-    if (!featureState.quoteDraft) return false;
-    const persistedQuoteStatus = normalizeText(featureState.quoteDraft.persistedQuoteStatus || featureState.quoteDraft.quoteStatus || "Draft");
-    return !["Superseded", "Converted"].includes(persistedQuoteStatus);
 }
 
 function getQuoteDraftSourceQuote() {
@@ -1394,7 +1402,6 @@ function renderLeadQuotesEditorCard(editingLead) {
     const acceptedQuote = featureState.quoteRows.find(quote => normalizeText(quote.quoteStatus) === "Accepted") || null;
     const isLeadLocked = isLeadConversionLocked(editingLead);
     const isEditable = isQuoteDraftEditable();
-    const canEditStatus = !isLeadLocked && canEditQuoteDraftStatus();
     const hasQuoteHistory = featureState.quoteRows.length > 0;
     const quoteTitle = revisionDraft
         ? `Revision Draft${sourceQuote?.businessQuoteId ? ` for ${sourceQuote.businessQuoteId}` : ""}`
@@ -1402,6 +1409,7 @@ function renderLeadQuotesEditorCard(editingLead) {
     const quoteStatus = quoteDraft?.quoteStatus || selectedQuote?.quoteStatus || "Draft";
     const displayQuoteStatus = selectedQuote ? resolveQuoteStatusLabel(selectedQuote) : quoteStatus;
     const quotePdfButtonLabel = isEditable ? "Preview PDF" : "Download PDF";
+    const isSentQuote = !isEditable && normalizeText(quoteStatus) === "Sent";
     const metadataNote = revisionDraft
         ? `Based on ${sourceQuote?.businessQuoteId || "the selected quote"}${sourceQuote?.versionNo ? ` · Version ${sourceQuote.versionNo}` : ""} · Save draft or send to create the next version.`
         : (selectedQuote
@@ -1428,7 +1436,7 @@ function renderLeadQuotesEditorCard(editingLead) {
                             </div>
                             <div class="field">
                                 <label for="lead-quote-status">Quote Status</label>
-                                <select id="lead-quote-status" class="select" ${canEditStatus ? "" : "disabled"}>
+                                <select id="lead-quote-status" class="select" disabled>
                                     ${renderQuoteStatusOptions(quoteDraft.quoteStatus || "Draft")}
                                 </select>
                             </div>
@@ -1503,9 +1511,9 @@ function renderLeadQuotesEditorCard(editingLead) {
                             </div>
                             ${renderQuoteLineItemsGrid(quoteDraft, { readOnly: !isEditable })}
                         </div>
-                        ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: !canEditStatus })}
-                        ${renderQuoteRejectionFields(quoteDraft, { readOnly: !canEditStatus })}
-                        ${renderQuoteCancellationFields(quoteDraft, { readOnly: !canEditStatus })}
+                        ${renderQuoteAcceptanceFields(quoteDraft, { readOnly: true })}
+                        ${renderQuoteRejectionFields(quoteDraft, { readOnly: true })}
+                        ${renderQuoteCancellationFields(quoteDraft, { readOnly: true })}
                         <div class="lead-quote-editor-footer">
                             ${renderQuoteFinancialSummary(quoteDraft, displayQuoteStatus)}
                             <div class="lead-quote-footer-main">
@@ -1533,54 +1541,30 @@ function renderLeadQuotesEditorCard(editingLead) {
                                         <span class="button-icon">${icons.download}</span>
                                         ${quotePdfButtonLabel}
                                     </button>
-                                    <button class="button button-secondary" type="button" data-action="quote-reset-selection">
-                                        <span class="button-icon">${icons.inactive}</span>
-                                        Discard Changes
-                                    </button>
                                     <button class="button button-secondary" type="button" data-action="quote-save-draft">
                                         <span class="button-icon">${icons.edit}</span>
-                                        ${revisionDraft ? "Save Revision Quote" : "Save Quote"}
+                                        Save Draft
                                     </button>
                                     <button class="button button-primary-alt" type="button" data-action="quote-send">
                                         <span class="button-icon">${icons.plus}</span>
-                                        ${revisionDraft ? "Send Revision Quote" : "Send Quote"}
+                                        Send Quote
                                     </button>
                                 ` : `
                                     <button class="button button-secondary" type="button" data-action="quote-download-pdf">
                                         <span class="button-icon">${icons.download}</span>
                                         ${quotePdfButtonLabel}
                                     </button>
-                                    ${canEditStatus ? `
-                                        <button class="button button-primary-alt" type="button" data-action="quote-save-draft">
-                                            <span class="button-icon">${icons.edit}</span>
-                                            Save Status
-                                        </button>
-                                    ` : ""}
-                                    ${isLeadLocked ? "" : `
-                                        <button class="button button-secondary" type="button" data-action="quote-new-draft">
-                                            <span class="button-icon">${icons.plus}</span>
-                                            New Draft Version
-                                        </button>
-                                    `}
                                     ${selectedQuote ? `
                                         ${isLeadLocked ? "" : `
                                             <button class="button button-secondary" type="button" data-action="quote-revise" data-quote-id="${selectedQuote.id}">
                                                 <span class="button-icon">${icons.edit}</span>
-                                                Revise
+                                                New Revision
                                             </button>
                                         `}
-                                        ${!isLeadLocked && normalizeText(quoteStatus) === "Sent" ? `
-                                            <button class="button button-primary-alt" type="button" data-action="quote-accept" data-quote-id="${selectedQuote.id}">
+                                        ${!isLeadLocked && isSentQuote ? `
+                                            <button class="button button-primary-alt" type="button" data-action="quote-update-outcome" data-quote-id="${selectedQuote.id}">
                                                 <span class="button-icon">${icons.active}</span>
-                                                Mark Accepted
-                                            </button>
-                                            <button class="button button-secondary" type="button" data-action="quote-reject" data-quote-id="${selectedQuote.id}">
-                                                <span class="button-icon">${icons.warning}</span>
-                                                Mark Rejected
-                                            </button>
-                                            <button class="button button-secondary" type="button" data-action="quote-cancel" data-quote-id="${selectedQuote.id}">
-                                                <span class="button-icon">${icons.inactive}</span>
-                                                Cancel Quote
+                                                Update Outcome
                                             </button>
                                         ` : ""}
                                     ` : ""}
@@ -1974,7 +1958,7 @@ function renderLeadQuotesPageShell() {
                 </div>
                 ${renderLeadQuotesWorkspace(activeLead, { standalone: true })}
             </div>
-            ${renderQuoteStatusReasonModal()}
+            ${renderQuoteOutcomeModal()}
         `
         : `
             <div class="panel-card">
@@ -2000,7 +1984,7 @@ function renderLeadQuotesPageShell() {
                     </div>
                 </div>
             </div>
-            ${renderQuoteStatusReasonModal()}
+            ${renderQuoteOutcomeModal()}
         `;
 }
 
@@ -2151,70 +2135,109 @@ function renderLeadWorkLogModal() {
     `;
 }
 
-function getQuoteStatusReasonModalConfig() {
-    const mode = featureState.quoteStatusReasonModal.mode;
-    if (mode === "reject") {
-        return {
-            title: "Reject Quote",
-            subtitle: "Record why this quote is being marked rejected before saving the status update.",
-            label: "Rejection Reason",
-            placeholder: "Explain why the customer rejected this quote",
-            saveLabel: "Reject Quote",
-            icon: icons.warning
-        };
+function normalizeQuoteOutcomeValue(value = "") {
+    const normalized = normalizeText(value);
+    if (["Accepted", "Rejected", "Cancelled"].includes(normalized)) {
+        return normalized;
     }
 
-    return {
-        title: "Cancel Quote",
-        subtitle: "Record why this quote is being cancelled before saving the status update.",
-        label: "Cancellation Reason",
-        placeholder: "Explain why this quote is being cancelled",
-        saveLabel: "Cancel Quote",
-        icon: icons.inactive
-    };
+    return "Accepted";
 }
 
-function renderQuoteStatusReasonModal() {
-    const modalState = featureState.quoteStatusReasonModal || {};
+function renderQuoteOutcomeModal() {
+    const modalState = featureState.quoteOutcomeModal || {};
     const isOpen = Boolean(modalState.isOpen);
-    const config = getQuoteStatusReasonModalConfig();
+    const outcome = normalizeQuoteOutcomeValue(modalState.outcome);
 
     return `
-        <div id="lead-quote-reason-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-quote-reason-title" ${isOpen ? "" : "hidden"}>
+        <div id="lead-quote-outcome-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-quote-outcome-title" ${isOpen ? "" : "hidden"}>
             <div class="purchase-payment-modal-card lead-quote-reason-modal-card">
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
                         <div class="panel-title-wrap">
-                            <span class="panel-icon panel-icon-alt">${config.icon}</span>
+                            <span class="panel-icon panel-icon-alt">${icons.active}</span>
                             <div>
-                                <h3 id="lead-quote-reason-title">${config.title}</h3>
-                                <p class="panel-copy">${config.subtitle}</p>
+                                <h3 id="lead-quote-outcome-title">Update Quote Outcome</h3>
+                                <p class="panel-copy">Record the customer outcome here so Moneta can update the quote lifecycle cleanly.</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <form id="lead-quote-reason-form" class="panel-body purchase-payment-modal-body lead-quote-reason-modal-form">
+                <form id="lead-quote-outcome-form" class="panel-body purchase-payment-modal-body lead-quote-reason-modal-form">
                     <div class="purchase-void-mode-reason lead-quote-reason-modal-note">
-                        <p class="section-kicker">Status Update Required</p>
-                        <p class="panel-copy">This note will be stored on the quote so the team can understand why the lifecycle changed.</p>
+                        <p class="section-kicker">Outcome Update</p>
+                        <p class="panel-copy">Accepted, rejected, and cancelled outcomes are recorded differently so the team can see the right customer context later.</p>
                     </div>
                     <div class="field">
-                        <label for="lead-quote-status-reason-input">${config.label}</label>
-                        <textarea
-                            id="lead-quote-status-reason-input"
-                            class="textarea purchase-void-reason-textarea"
-                            rows="5"
-                            placeholder="${escapeAttribute(config.placeholder)}"
-                            required>${escapeAttribute(modalState.reason || "")}</textarea>
+                        <label for="lead-quote-outcome-select">Outcome</label>
+                        <select id="lead-quote-outcome-select" class="select">
+                            <option value="Accepted" ${outcome === "Accepted" ? "selected" : ""}>Accepted</option>
+                            <option value="Rejected" ${outcome === "Rejected" ? "selected" : ""}>Rejected</option>
+                            <option value="Cancelled" ${outcome === "Cancelled" ? "selected" : ""}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div id="lead-quote-outcome-accepted-fields" class="lead-quote-acceptance-shell" ${outcome === "Accepted" ? "" : "hidden"}>
+                        <div class="lead-form-section-grid">
+                            <div class="field">
+                                <label for="lead-quote-outcome-accepted-by">Accepted By</label>
+                                <input
+                                    id="lead-quote-outcome-accepted-by"
+                                    class="input"
+                                    type="text"
+                                    value="${escapeAttribute(modalState.acceptedByCustomerName || "")}"
+                                    placeholder="Customer name or approver name">
+                            </div>
+                            <div class="field">
+                                <label for="lead-quote-outcome-accepted-via">Accepted Via</label>
+                                <input
+                                    id="lead-quote-outcome-accepted-via"
+                                    class="input"
+                                    type="text"
+                                    value="${escapeAttribute(modalState.acceptedVia || "")}"
+                                    placeholder="Phone, Email, WhatsApp, In Person">
+                            </div>
+                            <div class="field field-full">
+                                <label for="lead-quote-outcome-acceptance-notes">Acceptance Notes</label>
+                                <textarea
+                                    id="lead-quote-outcome-acceptance-notes"
+                                    class="textarea"
+                                    rows="4"
+                                    placeholder="Record approval details or customer instructions">${escapeAttribute(modalState.acceptanceNotes || "")}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="lead-quote-outcome-rejected-fields" class="lead-quote-acceptance-shell" ${outcome === "Rejected" ? "" : "hidden"}>
+                        <div class="lead-form-section-grid">
+                            <div class="field field-full">
+                                <label for="lead-quote-outcome-rejection-reason">Rejection Reason</label>
+                                <textarea
+                                    id="lead-quote-outcome-rejection-reason"
+                                    class="textarea purchase-void-reason-textarea"
+                                    rows="5"
+                                    placeholder="Explain why the customer rejected this quote">${escapeAttribute(modalState.rejectionReason || "")}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="lead-quote-outcome-cancelled-fields" class="lead-quote-acceptance-shell" ${outcome === "Cancelled" ? "" : "hidden"}>
+                        <div class="lead-form-section-grid">
+                            <div class="field field-full">
+                                <label for="lead-quote-outcome-cancellation-reason">Cancellation Reason</label>
+                                <textarea
+                                    id="lead-quote-outcome-cancellation-reason"
+                                    class="textarea purchase-void-reason-textarea"
+                                    rows="5"
+                                    placeholder="Explain why this quote is being cancelled">${escapeAttribute(modalState.cancellationReason || "")}</textarea>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-actions">
-                        <button class="button button-secondary" type="button" data-action="quote-reason-close">
+                        <button class="button button-secondary" type="button" data-action="quote-outcome-close">
                             <span class="button-icon">${icons.inactive}</span>
                             Cancel
                         </button>
                         <button class="button button-primary-alt" type="submit">
-                            <span class="button-icon">${config.icon}</span>
-                            ${config.saveLabel}
+                            <span class="button-icon">${icons.active}</span>
+                            Save Outcome
                         </button>
                     </div>
                 </form>
@@ -2234,7 +2257,7 @@ function renderLeadsViewShell(snapshot) {
             ${shouldShowHistory ? renderLeadsHistoryPanel() : ""}
         </div>
         ${renderLeadWorkLogModal()}
-        ${renderQuoteStatusReasonModal()}
+        ${renderQuoteOutcomeModal()}
     `;
 }
 
@@ -2796,11 +2819,31 @@ function updateQuoteDraftField(field, value) {
 function updateQuoteAcceptanceFieldsFromDom() {
     if (!featureState.quoteDraft) return;
 
-    featureState.quoteDraft.acceptedByCustomerName = document.getElementById("lead-quote-accepted-by")?.value || "";
-    featureState.quoteDraft.acceptedVia = document.getElementById("lead-quote-accepted-via")?.value || "";
-    featureState.quoteDraft.acceptanceNotes = document.getElementById("lead-quote-acceptance-notes")?.value || "";
-    featureState.quoteDraft.rejectionReason = document.getElementById("lead-quote-rejection-reason")?.value || featureState.quoteDraft.rejectionReason || "";
-    featureState.quoteDraft.cancellationReason = document.getElementById("lead-quote-cancellation-reason")?.value || featureState.quoteDraft.cancellationReason || "";
+    const acceptedByInput = document.getElementById("lead-quote-accepted-by");
+    const acceptedViaInput = document.getElementById("lead-quote-accepted-via");
+    const acceptanceNotesInput = document.getElementById("lead-quote-acceptance-notes");
+    const rejectionReasonInput = document.getElementById("lead-quote-rejection-reason");
+    const cancellationReasonInput = document.getElementById("lead-quote-cancellation-reason");
+
+    if (acceptedByInput) {
+        featureState.quoteDraft.acceptedByCustomerName = acceptedByInput.value || "";
+    }
+
+    if (acceptedViaInput) {
+        featureState.quoteDraft.acceptedVia = acceptedViaInput.value || "";
+    }
+
+    if (acceptanceNotesInput) {
+        featureState.quoteDraft.acceptanceNotes = acceptanceNotesInput.value || "";
+    }
+
+    if (rejectionReasonInput) {
+        featureState.quoteDraft.rejectionReason = rejectionReasonInput.value || featureState.quoteDraft.rejectionReason || "";
+    }
+
+    if (cancellationReasonInput) {
+        featureState.quoteDraft.cancellationReason = cancellationReasonInput.value || featureState.quoteDraft.cancellationReason || "";
+    }
 }
 
 function getQuoteDraftPayload() {
@@ -3084,30 +3127,7 @@ async function handleQuoteAccept(button) {
         return;
     }
 
-    try {
-        updateQuoteAcceptanceFieldsFromDom();
-        await acceptLeadQuote(lead, quote, {
-            acceptedByCustomerName: featureState.quoteDraft?.acceptedByCustomerName || "",
-            acceptedVia: featureState.quoteDraft?.acceptedVia || "",
-            acceptanceNotes: featureState.quoteDraft?.acceptanceNotes || ""
-        }, getState().currentUser);
-
-        const acceptedQuote = await getLeadQuote(lead.id, quote.id);
-        featureState.activeQuoteId = quote.id;
-        featureState.quoteDraft = acceptedQuote ? buildQuoteDraftFromRecord(acceptedQuote) : null;
-        if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
-            window.history.replaceState(null, "", buildLeadQuoteWorkspaceRoute(lead.id, { quoteId: quote.id }));
-        }
-
-        showToast("Quote marked accepted.", "success", {
-            title: "Leads & Enquiries"
-        });
-    } catch (error) {
-        console.error("[Moneta] Quote acceptance failed:", error);
-        showToast(error?.message || "Could not mark this quote as accepted.", "error", {
-            title: "Leads & Enquiries"
-        });
-    }
+    openQuoteOutcomeModal(quote, "Accepted");
 }
 
 async function handleQuoteReject(button) {
@@ -3124,7 +3144,7 @@ async function handleQuoteReject(button) {
         return;
     }
 
-    openQuoteStatusReasonModal("reject", quote);
+    openQuoteOutcomeModal(quote, "Rejected");
 }
 
 async function handleQuoteCancel(button) {
@@ -3141,7 +3161,24 @@ async function handleQuoteCancel(button) {
         return;
     }
 
-    openQuoteStatusReasonModal("cancel", quote);
+    openQuoteOutcomeModal(quote, "Cancelled");
+}
+
+async function handleQuoteUpdateOutcome(button) {
+    const lead = getEditingLead() || getQuoteContextLead();
+    const quoteId = button.dataset.quoteId || "";
+    const quote = featureState.quoteRows.find(entry => entry.id === quoteId) || null;
+
+    if (!lead?.id || !quote?.id) return;
+
+    if (isLeadConversionLocked(lead)) {
+        showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        return;
+    }
+
+    openQuoteOutcomeModal(quote, normalizeText(quote.quoteStatus) === "Sent" ? "Accepted" : quote.quoteStatus);
 }
 
 async function handleLeadConvert(button) {
@@ -3471,44 +3508,92 @@ function closeLeadWorkLogModal() {
     resetWorkLogWorkspace();
 }
 
-function openQuoteStatusReasonModal(mode, quote) {
-    featureState.quoteStatusReasonModal = {
-        isOpen: true,
-        mode,
-        quoteId: quote?.id || "",
-        reason: mode === "reject"
-            ? (quote?.rejectionReason || "")
-            : (quote?.cancellationReason || "")
-    };
-    renderActiveLeadSurface();
+function syncQuoteOutcomeModalFields() {
+    const outcome = normalizeQuoteOutcomeValue(document.getElementById("lead-quote-outcome-select")?.value);
+    const acceptedFields = document.getElementById("lead-quote-outcome-accepted-fields");
+    const rejectedFields = document.getElementById("lead-quote-outcome-rejected-fields");
+    const cancelledFields = document.getElementById("lead-quote-outcome-cancelled-fields");
 
-    const input = document.getElementById("lead-quote-status-reason-input");
-    if (input) {
-        input.focus();
+    if (acceptedFields) {
+        acceptedFields.hidden = outcome !== "Accepted";
+    }
+
+    if (rejectedFields) {
+        rejectedFields.hidden = outcome !== "Rejected";
+    }
+
+    if (cancelledFields) {
+        cancelledFields.hidden = outcome !== "Cancelled";
+    }
+}
+
+function focusQuoteOutcomeModalPrimaryField() {
+    const outcome = normalizeQuoteOutcomeValue(document.getElementById("lead-quote-outcome-select")?.value);
+    const preferredInputId = outcome === "Accepted"
+        ? "lead-quote-outcome-accepted-by"
+        : outcome === "Rejected"
+            ? "lead-quote-outcome-rejection-reason"
+            : "lead-quote-outcome-cancellation-reason";
+    const input = document.getElementById(preferredInputId);
+    if (!input) return;
+
+    input.focus();
+    if (typeof input.setSelectionRange === "function") {
         input.setSelectionRange(input.value.length, input.value.length);
     }
 }
 
-function closeQuoteStatusReasonModal() {
-    featureState.quoteStatusReasonModal = {
+function openQuoteOutcomeModal(quote, outcome = "") {
+    const initialOutcome = normalizeQuoteOutcomeValue(
+        outcome
+        || quote?.quoteStatus
+        || "Accepted"
+    );
+
+    featureState.quoteOutcomeModal = {
+        isOpen: true,
+        outcome: initialOutcome,
+        quoteId: quote?.id || "",
+        acceptedByCustomerName: quote?.acceptedByCustomerName || "",
+        acceptedVia: quote?.acceptedVia || "",
+        acceptanceNotes: quote?.acceptanceNotes || "",
+        rejectionReason: quote?.rejectionReason || "",
+        cancellationReason: quote?.cancellationReason || ""
+    };
+    renderActiveLeadSurface();
+    syncQuoteOutcomeModalFields();
+    focusQuoteOutcomeModalPrimaryField();
+}
+
+function closeQuoteOutcomeModal() {
+    featureState.quoteOutcomeModal = {
         isOpen: false,
-        mode: "",
+        outcome: "Accepted",
         quoteId: "",
-        reason: ""
+        acceptedByCustomerName: "",
+        acceptedVia: "",
+        acceptanceNotes: "",
+        rejectionReason: "",
+        cancellationReason: ""
     };
     renderActiveLeadSurface();
 }
 
-async function handleQuoteStatusReasonSubmit(event) {
+async function handleQuoteOutcomeSubmit(event) {
     event.preventDefault();
 
     const lead = getEditingLead() || getQuoteContextLead();
-    const modalState = featureState.quoteStatusReasonModal || {};
+    const modalState = featureState.quoteOutcomeModal || {};
     const quote = featureState.quoteRows.find(entry => entry.id === modalState.quoteId) || null;
-    const reason = normalizeText(document.getElementById("lead-quote-status-reason-input")?.value || modalState.reason);
+    const outcome = normalizeQuoteOutcomeValue(document.getElementById("lead-quote-outcome-select")?.value || modalState.outcome);
+    const acceptedByCustomerName = normalizeText(document.getElementById("lead-quote-outcome-accepted-by")?.value || modalState.acceptedByCustomerName);
+    const acceptedVia = normalizeText(document.getElementById("lead-quote-outcome-accepted-via")?.value || modalState.acceptedVia);
+    const acceptanceNotes = normalizeText(document.getElementById("lead-quote-outcome-acceptance-notes")?.value || modalState.acceptanceNotes);
+    const rejectionReason = normalizeText(document.getElementById("lead-quote-outcome-rejection-reason")?.value || modalState.rejectionReason);
+    const cancellationReason = normalizeText(document.getElementById("lead-quote-outcome-cancellation-reason")?.value || modalState.cancellationReason);
 
     if (!lead?.id || !quote?.id) {
-        closeQuoteStatusReasonModal();
+        closeQuoteOutcomeModal();
         return;
     }
 
@@ -3516,33 +3601,59 @@ async function handleQuoteStatusReasonSubmit(event) {
         showToast("Converted leads are read-only. Quote status can no longer be changed.", "warning", {
             title: "Leads & Enquiries"
         });
-        closeQuoteStatusReasonModal();
+        closeQuoteOutcomeModal();
         return;
     }
 
-    if (!reason) {
-        showToast("Please enter a clear reason before saving this quote status update.", "warning", {
+    if (outcome === "Accepted" && !acceptedByCustomerName) {
+        showToast("Please enter who accepted this quote before saving the outcome.", "warning", {
             title: "Leads & Enquiries"
         });
-        document.getElementById("lead-quote-status-reason-input")?.focus();
+        document.getElementById("lead-quote-outcome-accepted-by")?.focus();
+        return;
+    }
+
+    if (outcome === "Rejected" && !rejectionReason) {
+        showToast("Please enter a clear rejection reason before saving this quote outcome.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        document.getElementById("lead-quote-outcome-rejection-reason")?.focus();
+        return;
+    }
+
+    if (outcome === "Cancelled" && !cancellationReason) {
+        showToast("Please enter a clear cancellation reason before saving this quote outcome.", "warning", {
+            title: "Leads & Enquiries"
+        });
+        document.getElementById("lead-quote-outcome-cancellation-reason")?.focus();
         return;
     }
 
     try {
-        if (modalState.mode === "reject") {
-            await rejectLeadQuote(lead, quote, reason, getState().currentUser);
+        if (outcome === "Accepted") {
+            await acceptLeadQuote(lead, quote, {
+                acceptedByCustomerName,
+                acceptedVia,
+                acceptanceNotes
+            }, getState().currentUser);
+        } else if (outcome === "Rejected") {
+            await rejectLeadQuote(lead, quote, rejectionReason, getState().currentUser);
         } else {
-            await cancelLeadQuote(lead, quote, reason, getState().currentUser);
+            await cancelLeadQuote(lead, quote, cancellationReason, getState().currentUser);
         }
 
         const refreshedQuote = await getLeadQuote(lead.id, quote.id);
         featureState.activeQuoteId = quote.id;
         featureState.quoteDraft = refreshedQuote ? buildQuoteDraftFromRecord(refreshedQuote) : null;
-        featureState.quoteStatusReasonModal = {
+        featureState.quoteOutcomeModal = {
             isOpen: false,
-            mode: "",
+            outcome: "Accepted",
             quoteId: "",
-            reason: ""
+            acceptedByCustomerName: "",
+            acceptedVia: "",
+            acceptanceNotes: "",
+            rejectionReason: "",
+            cancellationReason: ""
         };
 
         if (getState().currentRoute === LEAD_QUOTES_ROUTE) {
@@ -3550,13 +3661,27 @@ async function handleQuoteStatusReasonSubmit(event) {
         }
 
         renderActiveLeadSurface();
-        showToast(modalState.mode === "reject" ? "Quote marked rejected." : "Quote cancelled.", "success", {
-            title: "Leads & Enquiries"
-        });
-    } catch (error) {
-        console.error(`[Moneta] Quote ${modalState.mode === "reject" ? "rejection" : "cancel"} failed:`, error);
         showToast(
-            error?.message || (modalState.mode === "reject" ? "Could not reject this quote." : "Could not cancel this quote."),
+            outcome === "Accepted"
+                ? "Quote marked accepted."
+                : outcome === "Rejected"
+                    ? "Quote marked rejected."
+                    : "Quote cancelled.",
+            "success",
+            {
+            title: "Leads & Enquiries"
+            }
+        );
+    } catch (error) {
+        console.error(`[Moneta] Quote ${outcome.toLowerCase()} failed:`, error);
+        showToast(
+            error?.message || (
+                outcome === "Accepted"
+                    ? "Could not mark this quote as accepted."
+                    : outcome === "Rejected"
+                        ? "Could not reject this quote."
+                        : "Could not cancel this quote."
+            ),
             "error",
             { title: "Leads & Enquiries" }
         );
@@ -3666,11 +3791,6 @@ function bindLeadsDomEvents() {
         const quoteCustomerAddressInput = event.target.closest("#lead-quote-customer-address");
         const quoteNotesInput = event.target.closest("#lead-quote-notes");
         const quoteInternalNotesInput = event.target.closest("#lead-quote-internal-notes");
-        const quoteAcceptedByInput = event.target.closest("#lead-quote-accepted-by");
-        const quoteAcceptedViaInput = event.target.closest("#lead-quote-accepted-via");
-        const quoteAcceptanceNotesInput = event.target.closest("#lead-quote-acceptance-notes");
-        const quoteRejectionReasonInput = event.target.closest("#lead-quote-rejection-reason");
-        const quoteCancellationReasonInput = event.target.closest("#lead-quote-cancellation-reason");
 
         if (leadsSearchInput) {
             handleLeadSearchInput(leadsSearchInput);
@@ -3719,31 +3839,6 @@ function bindLeadsDomEvents() {
 
         if (quoteInternalNotesInput) {
             updateQuoteDraftField("internalNotes", quoteInternalNotesInput.value || "");
-            return;
-        }
-
-        if (quoteAcceptedByInput) {
-            updateQuoteDraftField("acceptedByCustomerName", quoteAcceptedByInput.value || "");
-            return;
-        }
-
-        if (quoteAcceptedViaInput) {
-            updateQuoteDraftField("acceptedVia", quoteAcceptedViaInput.value || "");
-            return;
-        }
-
-        if (quoteAcceptanceNotesInput) {
-            updateQuoteDraftField("acceptanceNotes", quoteAcceptanceNotesInput.value || "");
-            return;
-        }
-
-        if (quoteRejectionReasonInput) {
-            updateQuoteDraftField("rejectionReason", quoteRejectionReasonInput.value || "");
-            return;
-        }
-
-        if (quoteCancellationReasonInput) {
-            updateQuoteDraftField("cancellationReason", quoteCancellationReasonInput.value || "");
         }
     });
 
@@ -3752,6 +3847,7 @@ function bindLeadsDomEvents() {
         const quoteStoreSelect = event.target.closest("#lead-quote-store");
         const quoteStatusSelect = event.target.closest("#lead-quote-status");
         const quoteValidUntilInput = event.target.closest("#lead-quote-valid-until");
+        const quoteOutcomeSelect = event.target.closest("#lead-quote-outcome-select");
 
         if (catalogueSelect) {
             handleCatalogueChange(catalogueSelect);
@@ -3778,6 +3874,12 @@ function bindLeadsDomEvents() {
             return;
         }
 
+        if (quoteOutcomeSelect) {
+            syncQuoteOutcomeModalFields();
+            focusQuoteOutcomeModalPrimaryField();
+            return;
+        }
+
         if (quoteValidUntilInput && featureState.quoteDraft) {
             updateQuoteDraftField("validUntil", quoteValidUntilInput.value || "");
         }
@@ -3794,8 +3896,8 @@ function bindLeadsDomEvents() {
             return;
         }
 
-        if (event.target.closest("#lead-quote-reason-form")) {
-            handleQuoteStatusReasonSubmit(event);
+        if (event.target.closest("#lead-quote-outcome-form")) {
+            handleQuoteOutcomeSubmit(event);
         }
     });
 
@@ -3808,7 +3910,7 @@ function bindLeadsDomEvents() {
         const cancelButton = event.target.closest("#lead-cancel-button");
         const closeWorkLogButton = event.target.closest("#lead-worklog-close-button");
         const workLogModalBackdrop = event.target.closest("#lead-worklog-modal");
-        const quoteReasonModalBackdrop = event.target.id === "lead-quote-reason-modal" ? event.target : null;
+        const quoteOutcomeModalBackdrop = event.target.id === "lead-quote-outcome-modal" ? event.target : null;
         const quoteActionButton = event.target.closest("[data-action]");
         const quoteDrawerBackdrop = event.target.id === "lead-quotes-drawer" ? event.target : null;
 
@@ -3934,8 +4036,13 @@ function bindLeadsDomEvents() {
                 return;
             }
 
-            if (action === "quote-reason-close") {
-                closeQuoteStatusReasonModal();
+            if (action === "quote-update-outcome") {
+                handleQuoteUpdateOutcome(quoteActionButton);
+                return;
+            }
+
+            if (action === "quote-outcome-close") {
+                closeQuoteOutcomeModal();
                 return;
             }
 
@@ -3958,8 +4065,8 @@ function bindLeadsDomEvents() {
             return;
         }
 
-        if (quoteReasonModalBackdrop) {
-            closeQuoteStatusReasonModal();
+        if (quoteOutcomeModalBackdrop) {
+            closeQuoteOutcomeModal();
             return;
         }
 

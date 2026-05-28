@@ -313,23 +313,19 @@ function quoteGridActionMarkup(data) {
             ${isLocked ? "" : `
                 <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-revise" data-quote-id="${data.id}">
                     <span class="button-icon">${icons.edit}</span>
-                    Revise
+                    New Revision
                 </button>
             `}
             ${!isLocked && status === "Sent" ? `
-                <button class="button grid-action-button grid-action-button-primary" type="button" data-action="quote-accept" data-quote-id="${data.id}">
+                <button class="button grid-action-button grid-action-button-primary" type="button" data-action="quote-update-outcome" data-quote-id="${data.id}">
                     <span class="button-icon">${icons.active}</span>
-                    Accept
-                </button>
-                <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-reject" data-quote-id="${data.id}">
-                    <span class="button-icon">${icons.warning}</span>
-                    Reject
+                    Update Outcome
                 </button>
             ` : ""}
-            ${!isLocked && ["Draft", "Sent"].includes(status) ? `
+            ${!isLocked && status === "Draft" ? `
                 <button class="button grid-action-button grid-action-button-secondary" type="button" data-action="quote-cancel" data-quote-id="${data.id}">
                     <span class="button-icon">${icons.inactive}</span>
-                    Cancel
+                    Cancel Draft
                 </button>
             ` : ""}
         </div>
