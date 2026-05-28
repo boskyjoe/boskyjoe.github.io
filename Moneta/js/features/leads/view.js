@@ -2144,10 +2144,46 @@ function normalizeQuoteOutcomeValue(value = "") {
     return "Accepted";
 }
 
+function getQuoteOutcomeModalConfig(outcome = "") {
+    const normalizedOutcome = normalizeQuoteOutcomeValue(outcome);
+
+    if (normalizedOutcome === "Rejected") {
+        return {
+            title: "Mark Quote Rejected",
+            subtitle: "Record why the customer declined this quote before saving the outcome.",
+            kicker: "Rejection Details",
+            note: "This note will be stored on the quote so the team can understand why the customer did not proceed.",
+            saveLabel: "Mark Rejected",
+            icon: icons.warning
+        };
+    }
+
+    if (normalizedOutcome === "Cancelled") {
+        return {
+            title: "Cancel Quote",
+            subtitle: "Record why this quote is being cancelled before saving the outcome.",
+            kicker: "Cancellation Details",
+            note: "This note will be stored on the quote so the team can understand why this quote is no longer active.",
+            saveLabel: "Cancel Quote",
+            icon: icons.inactive
+        };
+    }
+
+    return {
+        title: "Mark Quote Accepted",
+        subtitle: "Record who accepted this quote and how the approval was received before saving the outcome.",
+        kicker: "Customer Acceptance",
+        note: "These details will be stored on the quote so the team has a clean record of the customer approval.",
+        saveLabel: "Mark Accepted",
+        icon: icons.active
+    };
+}
+
 function renderQuoteOutcomeModal() {
     const modalState = featureState.quoteOutcomeModal || {};
     const isOpen = Boolean(modalState.isOpen);
     const outcome = normalizeQuoteOutcomeValue(modalState.outcome);
+    const config = getQuoteOutcomeModalConfig(outcome);
 
     return `
         <div id="lead-quote-outcome-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lead-quote-outcome-title" ${isOpen ? "" : "hidden"}>
@@ -2155,18 +2191,18 @@ function renderQuoteOutcomeModal() {
                 <div class="panel-header panel-header-accent purchase-payment-modal-header">
                     <div class="purchase-payment-modal-title-row">
                         <div class="panel-title-wrap">
-                            <span class="panel-icon panel-icon-alt">${icons.active}</span>
+                            <span id="lead-quote-outcome-icon" class="panel-icon panel-icon-alt">${config.icon}</span>
                             <div>
-                                <h3 id="lead-quote-outcome-title">Update Quote Outcome</h3>
-                                <p class="panel-copy">Record the customer outcome here so Moneta can update the quote lifecycle cleanly.</p>
+                                <h3 id="lead-quote-outcome-title">${config.title}</h3>
+                                <p id="lead-quote-outcome-subtitle" class="panel-copy">${config.subtitle}</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 <form id="lead-quote-outcome-form" class="panel-body purchase-payment-modal-body lead-quote-reason-modal-form">
                     <div class="purchase-void-mode-reason lead-quote-reason-modal-note">
-                        <p class="section-kicker">Outcome Update</p>
-                        <p class="panel-copy">Accepted, rejected, and cancelled outcomes are recorded differently so the team can see the right customer context later.</p>
+                        <p id="lead-quote-outcome-kicker" class="section-kicker">${config.kicker}</p>
+                        <p id="lead-quote-outcome-note" class="panel-copy">${config.note}</p>
                     </div>
                     <div class="field">
                         <label for="lead-quote-outcome-select">Outcome</label>
@@ -2236,8 +2272,8 @@ function renderQuoteOutcomeModal() {
                             Cancel
                         </button>
                         <button class="button button-primary-alt" type="submit">
-                            <span class="button-icon">${icons.active}</span>
-                            Save Outcome
+                            <span id="lead-quote-outcome-save-icon" class="button-icon">${config.icon}</span>
+                            <span id="lead-quote-outcome-save-label">${config.saveLabel}</span>
                         </button>
                     </div>
                 </form>
@@ -3510,9 +3546,21 @@ function closeLeadWorkLogModal() {
 
 function syncQuoteOutcomeModalFields() {
     const outcome = normalizeQuoteOutcomeValue(document.getElementById("lead-quote-outcome-select")?.value);
+    const config = getQuoteOutcomeModalConfig(outcome);
     const acceptedFields = document.getElementById("lead-quote-outcome-accepted-fields");
     const rejectedFields = document.getElementById("lead-quote-outcome-rejected-fields");
     const cancelledFields = document.getElementById("lead-quote-outcome-cancelled-fields");
+    const titleNode = document.getElementById("lead-quote-outcome-title");
+    const subtitleNode = document.getElementById("lead-quote-outcome-subtitle");
+    const kickerNode = document.getElementById("lead-quote-outcome-kicker");
+    const noteNode = document.getElementById("lead-quote-outcome-note");
+    const saveLabelNode = document.getElementById("lead-quote-outcome-save-label");
+    const iconNode = document.getElementById("lead-quote-outcome-icon");
+    const saveIconNode = document.getElementById("lead-quote-outcome-save-icon");
+
+    if (featureState.quoteOutcomeModal) {
+        featureState.quoteOutcomeModal.outcome = outcome;
+    }
 
     if (acceptedFields) {
         acceptedFields.hidden = outcome !== "Accepted";
@@ -3524,6 +3572,34 @@ function syncQuoteOutcomeModalFields() {
 
     if (cancelledFields) {
         cancelledFields.hidden = outcome !== "Cancelled";
+    }
+
+    if (titleNode) {
+        titleNode.textContent = config.title;
+    }
+
+    if (subtitleNode) {
+        subtitleNode.textContent = config.subtitle;
+    }
+
+    if (kickerNode) {
+        kickerNode.textContent = config.kicker;
+    }
+
+    if (noteNode) {
+        noteNode.textContent = config.note;
+    }
+
+    if (saveLabelNode) {
+        saveLabelNode.textContent = config.saveLabel;
+    }
+
+    if (iconNode) {
+        iconNode.innerHTML = config.icon;
+    }
+
+    if (saveIconNode) {
+        saveIconNode.innerHTML = config.icon;
     }
 }
 
