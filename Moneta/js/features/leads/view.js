@@ -839,9 +839,10 @@ function ensureQuoteSelection() {
         return;
     }
 
+    const quoteCount = featureState.quoteRows.length;
     const latestQuote = featureState.quoteRows[0] || null;
 
-    if (latestQuote) {
+    if (quoteCount === 1 && latestQuote) {
         featureState.activeQuoteId = latestQuote.id;
         featureState.quoteDraft = buildQuoteDraftFromRecord(latestQuote);
         return;
@@ -1394,6 +1395,7 @@ function renderLeadQuotesEditorCard(editingLead) {
     const isLeadLocked = isLeadConversionLocked(editingLead);
     const isEditable = isQuoteDraftEditable();
     const canEditStatus = !isLeadLocked && canEditQuoteDraftStatus();
+    const hasQuoteHistory = featureState.quoteRows.length > 0;
     const quoteTitle = revisionDraft
         ? `Revision Draft${sourceQuote?.businessQuoteId ? ` for ${sourceQuote.businessQuoteId}` : ""}`
         : (quoteDraft?.businessQuoteId || selectedQuote?.businessQuoteId || "New Quote Draft");
@@ -1588,15 +1590,17 @@ function renderLeadQuotesEditorCard(editingLead) {
                         </div>
                     ` : `
                         <div class="lead-quotes-empty lead-quotes-empty-large">
-                            <p class="lead-quotes-empty-title">Quote history will appear here</p>
+                            <p class="lead-quotes-empty-title">${hasQuoteHistory ? "Select a quote version" : "Quote history will appear here"}</p>
                             <p class="panel-copy">${isLeadLocked
             ? "This converted enquiry is read-only. No new quotes can be created in this thread."
-            : "Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer."}</p>
+            : hasQuoteHistory
+                ? "This enquiry has multiple quote versions. Choose the exact quote you want to review from the versions grid below, or create a new draft version."
+                : "Create the first quote draft to capture a frozen snapshot of products, pricing, tax, and terms for this customer."}</p>
                             ${isLeadLocked ? "" : `
                                 <div class="form-actions" style="justify-content: flex-start;">
                                     <button class="button button-primary-alt" type="button" data-action="quote-new-draft">
                                         <span class="button-icon">${icons.plus}</span>
-                                        Create Quote Draft
+                                        ${hasQuoteHistory ? "Create New Draft Version" : "Create Quote Draft"}
                                     </button>
                                 </div>
                             `}
