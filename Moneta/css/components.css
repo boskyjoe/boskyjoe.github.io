@@ -2995,6 +2995,10 @@ select {
     gap: 0.9rem;
 }
 
+.lead-quote-acceptance-shell[hidden] {
+    display: none !important;
+}
+
 .lead-quote-editor-footer {
     grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
     align-items: start;
