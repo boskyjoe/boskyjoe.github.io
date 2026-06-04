@@ -473,10 +473,38 @@ function getStoreDetails(storeName) {
     return getStoreConfigInvoiceDetails(storeName);
 }
 
-function buildPdfData(sale, paymentRecord = null) {
-    const storeDetails = getStoreDetails(sale.store);
-    const saleDate = toDate(sale.saleDate);
-    const items = (sale.lineItems || []).map(item => {
+function resolveInvoiceSourceSale(sale, useOriginalSnapshot = true) {
+    const snapshot = useOriginalSnapshot ? sale?.originalSaleSnapshot : null;
+    if (!snapshot) return sale;
+
+    return {
+        ...sale,
+        saleId: snapshot.saleId || sale.saleId,
+        manualVoucherNumber: snapshot.manualVoucherNumber || sale.manualVoucherNumber,
+        saleDate: snapshot.saleDate || sale.saleDate,
+        store: snapshot.store || sale.store,
+        saleType: snapshot.saleType || sale.saleType,
+        salesCatalogueName: snapshot.salesCatalogueName || sale.salesCatalogueName,
+        salesSeasonName: snapshot.salesSeasonName || sale.salesSeasonName,
+        customerInfo: snapshot.customerInfo || sale.customerInfo,
+        saleNotes: snapshot.saleNotes || sale.saleNotes,
+        saleStatus: snapshot.saleStatus || sale.saleStatus,
+        returnStatus: snapshot.returnStatus || sale.returnStatus,
+        paymentStatus: snapshot.paymentStatus || sale.paymentStatus,
+        lineItems: snapshot.lineItems || sale.lineItems,
+        financials: snapshot.financials || sale.financials,
+        totalAmountPaid: snapshot.totalAmountPaid ?? sale.totalAmountPaid,
+        totalDonation: snapshot.totalDonation ?? sale.totalDonation,
+        balanceDue: snapshot.balanceDue ?? sale.balanceDue,
+        creditBalance: snapshot.creditBalance ?? sale.creditBalance
+    };
+}
+
+function buildPdfData(sale, paymentRecord = null, { useOriginalSnapshot = true } = {}) {
+    const sourceSale = resolveInvoiceSourceSale(sale, useOriginalSnapshot);
+    const storeDetails = getStoreDetails(sourceSale.store);
+    const saleDate = toDate(sourceSale.saleDate);
+    const items = (sourceSale.lineItems || []).map(item => {
         const quantity = Number(item.quantity) || 0;
         const unitPrice = Number(item.unitPrice) || 0;
         const lineDiscountPercentage = Number(item.lineDiscountPercentage) || 0;
@@ -502,7 +530,7 @@ function buildPdfData(sale, paymentRecord = null) {
         };
     });
     const taxSummary = buildTaxSummary(items);
-    const isVoidedSale = String(sale.saleStatus || "").trim().toLowerCase() === "voided";
+    const isVoidedSale = String(sourceSale.saleStatus || "").trim().toLowerCase() === "voided";
 
     return {
         copyType: "ORIGINAL FOR RECEIPT",
@@ -511,42 +539,42 @@ function buildPdfData(sale, paymentRecord = null) {
         addressLine2: storeDetails.addressLine2,
         email: storeDetails.email,
         taxId: storeDetails.taxId,
-        storeName: sale.store || "-",
-        saleType: sale.saleType || "-",
-        invoiceNumber: sale.saleId || sale.manualVoucherNumber || "invoice",
-        voucherNumber: sale.manualVoucherNumber || "-",
+        storeName: sourceSale.store || "-",
+        saleType: sourceSale.saleType || "-",
+        invoiceNumber: sourceSale.saleId || sourceSale.manualVoucherNumber || "invoice",
+        voucherNumber: sourceSale.manualVoucherNumber || "-",
         invoiceDate: formatDate(saleDate),
         invoiceTime: formatTime(saleDate),
-        customerName: sale.customerInfo?.name || "Walk-in Customer",
-        customerPhone: sale.customerInfo?.phone || "-",
-        customerEmail: sale.customerInfo?.email || "-",
-        customerAddress: sale.customerInfo?.address || "-",
-        salesCatalogueName: sale.salesCatalogueName || "-",
-        salesSeasonName: sale.salesSeasonName || "-",
-        paymentStatus: sale.paymentStatus || "Unpaid",
-        saleStatus: sale.saleStatus || "Active",
+        customerName: sourceSale.customerInfo?.name || "Walk-in Customer",
+        customerPhone: sourceSale.customerInfo?.phone || "-",
+        customerEmail: sourceSale.customerInfo?.email || "-",
+        customerAddress: sourceSale.customerInfo?.address || "-",
+        salesCatalogueName: sourceSale.salesCatalogueName || "-",
+        salesSeasonName: sourceSale.salesSeasonName || "-",
+        paymentStatus: sourceSale.paymentStatus || "Unpaid",
+        saleStatus: sourceSale.saleStatus || "Active",
         isVoidedSale,
         transportMode: "-",
         vehicleNumber: "-",
         transportDate: formatDate(saleDate),
         paymentMode: paymentRecord?.paymentMode || "Not captured",
-        description: sale.saleNotes || paymentRecord?.notes || "-",
+        description: sourceSale.saleNotes || paymentRecord?.notes || "-",
         items,
         totalQty: items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
         totalTaxableAmount: items.reduce((sum, item) => sum + (Number(item.taxableAmount) || 0), 0),
         totalCGST: items.reduce((sum, item) => sum + (Number(item.cgstAmount) || 0), 0),
         totalSGST: items.reduce((sum, item) => sum + (Number(item.sgstAmount) || 0), 0),
-        totalAmount: Number(sale.financials?.grandTotal) || 0,
+        totalAmount: Number(sourceSale.financials?.grandTotal) || 0,
         taxSummary,
-        subTotal: Number(sale.financials?.itemsSubtotal) || 0,
-        totalLineDiscount: Number(sale.financials?.totalLineDiscount) || 0,
-        invoiceDiscount: Number(sale.financials?.orderDiscountAmount) || 0,
-        itemTax: Number(sale.financials?.totalItemLevelTax ?? sale.financials?.totalTax) || 0,
-        orderTax: Number(sale.financials?.orderLevelTaxAmount) || 0,
-        grandTotal: Number(sale.financials?.grandTotal) || 0,
-        receivedAmount: Number(sale.totalAmountPaid) || 0,
-        balanceAmount: Number(sale.balanceDue) || 0,
-        amountInWords: amountToWords(Number(sale.financials?.grandTotal) || 0, "INR"),
+        subTotal: Number(sourceSale.financials?.itemsSubtotal) || 0,
+        totalLineDiscount: Number(sourceSale.financials?.totalLineDiscount) || 0,
+        invoiceDiscount: Number(sourceSale.financials?.orderDiscountAmount) || 0,
+        itemTax: Number(sourceSale.financials?.totalItemLevelTax ?? sourceSale.financials?.totalTax) || 0,
+        orderTax: Number(sourceSale.financials?.orderLevelTaxAmount) || 0,
+        grandTotal: Number(sourceSale.financials?.grandTotal) || 0,
+        receivedAmount: Number(sourceSale.totalAmountPaid) || 0,
+        balanceAmount: Number(sourceSale.balanceDue) || 0,
+        amountInWords: amountToWords(Number(sourceSale.financials?.grandTotal) || 0, "INR"),
         bankName: storeDetails.paymentDetails?.bankName || "-",
         bankBranch: storeDetails.paymentDetails?.branch || "-",
         accountNumber: storeDetails.paymentDetails?.accountNumber || "-",
@@ -560,6 +588,9 @@ function buildPdfData(sale, paymentRecord = null) {
 function buildCreditNoteData(sale, returnRecord) {
     const storeDetails = getStoreDetails(sale.store);
     const returnDate = toDate(returnRecord.returnDate || returnRecord.createdOn);
+    const originalSaleSnapshot = returnRecord.originalSaleSnapshot || {};
+    const saleSnapshotBeforeReturn = returnRecord.saleSnapshotBeforeReturn || {};
+    const saleSnapshotAfterReturn = returnRecord.saleSnapshotAfterReturn || {};
     const items = (returnRecord.items || []).map(item => {
         const quantity = Number(item.quantity) || 0;
         const unitPrice = Number(item.unitPrice) || 0;
@@ -583,6 +614,17 @@ function buildCreditNoteData(sale, returnRecord) {
     });
     const taxSummary = buildTaxSummary(items);
     const returnedAmount = Number(returnRecord.totalReturnedAmount) || items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
+    const currentInvoiceGrandTotal = Number(saleSnapshotAfterReturn.invoiceGrandTotal ?? sale.financials?.grandTotal) || 0;
+    const currentBalanceDue = Number(saleSnapshotAfterReturn.balanceDue ?? sale.balanceDue) || 0;
+    const currentCreditBalance = Number(saleSnapshotAfterReturn.creditBalance ?? sale.creditBalance) || 0;
+    const originalInvoiceGrandTotal = Number(
+        originalSaleSnapshot.invoiceGrandTotal
+        ?? sale.originalSaleSnapshot?.financials?.grandTotal
+        ?? (currentInvoiceGrandTotal + returnedAmount)
+    ) || 0;
+    const invoiceGrandTotalBeforeReturn = Number(saleSnapshotBeforeReturn.invoiceGrandTotal ?? (currentInvoiceGrandTotal + returnedAmount)) || 0;
+    const orderStatusAfterReturn = String(saleSnapshotAfterReturn.returnStatus || returnRecord.returnStatus || sale.returnStatus || "Returned").trim() || "Returned";
+    const paymentStatusAfterReturn = String(saleSnapshotAfterReturn.paymentStatus || sale.paymentStatus || "Unpaid").trim() || "Unpaid";
 
     return {
         copyType: "CUSTOMER COPY",
@@ -608,10 +650,14 @@ function buildCreditNoteData(sale, returnRecord) {
         totalAmount: returnedAmount,
         taxSummary,
         amountInWords: amountToWords(returnedAmount, "INR"),
-        currentInvoiceGrandTotal: Number(sale.financials?.grandTotal) || 0,
-        currentBalanceDue: Number(sale.balanceDue) || 0,
-        currentCreditBalance: Number(sale.creditBalance) || 0,
-        payableToCustomer: Number(sale.creditBalance) || 0
+        originalInvoiceGrandTotal,
+        invoiceGrandTotalBeforeReturn,
+        currentInvoiceGrandTotal,
+        currentBalanceDue,
+        currentCreditBalance,
+        payableToCustomer: currentCreditBalance,
+        orderStatusAfterReturn,
+        paymentStatusAfterReturn
     };
 }
 
@@ -653,8 +699,9 @@ function buildCreditNoteHtml(data) {
                         <h3>Return Summary</h3>
                         <p><strong>Returned Qty:</strong> ${escapeHtml(String(data.totalQty || 0))}</p>
                         <p><strong>Returned Amount:</strong> ${escapeHtml(formatCurrency(data.totalAmount || 0))}</p>
-                        <p><strong>Current Balance Due:</strong> ${escapeHtml(formatCurrency(data.currentBalanceDue || 0))}</p>
-                        <p><strong>Current Credit Balance:</strong> ${escapeHtml(formatCurrency(data.currentCreditBalance || 0))}</p>
+                        <p><strong>Original Invoice Total:</strong> ${escapeHtml(formatCurrency(data.originalInvoiceGrandTotal || 0))}</p>
+                        <p><strong>Invoice Total Before Return:</strong> ${escapeHtml(formatCurrency(data.invoiceGrandTotalBeforeReturn || 0))}</p>
+                        <p><strong>Invoice Total After Return:</strong> ${escapeHtml(formatCurrency(data.currentInvoiceGrandTotal || 0))}</p>
                     </div>
                     <div class="retail-pdf-block">
                         <h3>Return Reason</h3>
@@ -712,6 +759,8 @@ function buildCreditNoteHtml(data) {
                         <table class="retail-pdf-summary-table">
                             <tr><td>Credit Note Amount</td><td>${escapeHtml(formatCurrency(data.totalAmount || 0))}</td></tr>
                             <tr><td>Current Invoice Total</td><td>${escapeHtml(formatCurrency(data.currentInvoiceGrandTotal || 0))}</td></tr>
+                            <tr><td>Status After Return</td><td>${escapeHtml(data.orderStatusAfterReturn || "-")}</td></tr>
+                            <tr><td>Payment Status After Return</td><td>${escapeHtml(data.paymentStatusAfterReturn || "-")}</td></tr>
                             <tr><td>Current Balance Due</td><td>${escapeHtml(formatCurrency(data.currentBalanceDue || 0))}</td></tr>
                             <tr><td>Current Credit Balance</td><td>${escapeHtml(formatCurrency(data.currentCreditBalance || 0))}</td></tr>
                             <tr class="total-row"><td>Amount Payable To Customer</td><td>${escapeHtml(formatCurrency(data.payableToCustomer || 0))}</td></tr>
@@ -726,7 +775,7 @@ function buildCreditNoteHtml(data) {
                     </div>
                     <div class="retail-pdf-note">
                         <h3>Note</h3>
-                        <p>This credit note documents returned items against the referenced invoice. Original invoice remains unchanged for audit integrity.</p>
+                        <p>This credit note documents the returned items and the invoice standing immediately after this return was posted. Read it together with the original invoice snapshot for the full audit trail.</p>
                     </div>
                 </section>
             </div>
@@ -743,7 +792,9 @@ export async function downloadRetailSalePdf(sale, paymentRecord = null) {
         throw new Error("Retail sale data is missing.");
     }
 
-    const data = buildPdfData(sale, paymentRecord);
+    const data = buildPdfData(sale, paymentRecord, {
+        useOriginalSnapshot: true
+    });
     const host = document.createElement("div");
     host.style.position = "fixed";
     host.style.left = "-10000px";

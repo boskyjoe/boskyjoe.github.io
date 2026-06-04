@@ -173,6 +173,57 @@ function sortByDateDesc(rows = []) {
     });
 }
 
+function cloneRetailLineItems(lineItems = []) {
+    return (lineItems || []).map(item => ({ ...item }));
+}
+
+function buildRetailSaleSnapshot(sale = {}) {
+    const lineItems = cloneRetailLineItems(sale.lineItems || []);
+    const financials = { ...(sale.financials || {}) };
+
+    return {
+        saleId: normalizeText(sale.saleId),
+        manualVoucherNumber: normalizeText(sale.manualVoucherNumber),
+        saleDate: sale.saleDate || "",
+        store: normalizeText(sale.store),
+        saleType: normalizeText(sale.saleType),
+        salesCatalogueName: normalizeText(sale.salesCatalogueName),
+        salesSeasonName: normalizeText(sale.salesSeasonName),
+        customerInfo: {
+            ...(sale.customerInfo || {})
+        },
+        saleNotes: normalizeText(sale.saleNotes),
+        saleStatus: normalizeText(sale.saleStatus || "Active") || "Active",
+        returnStatus: normalizeText(sale.returnStatus || "Not Returned") || "Not Returned",
+        paymentStatus: normalizeText(sale.paymentStatus || "Unpaid") || "Unpaid",
+        lineItems,
+        lineItemCount: Number(sale.lineItemCount) || lineItems.length,
+        totalQuantity: Number(sale.totalQuantity) || lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+        financials,
+        totalAmountPaid: roundCurrency(sale.totalAmountPaid),
+        totalDonation: roundCurrency(sale.totalDonation),
+        totalExpenses: roundCurrency(financials.totalExpenses),
+        balanceDue: roundCurrency(sale.balanceDue),
+        creditBalance: roundCurrency(sale.creditBalance)
+    };
+}
+
+function buildRetailReturnStateSnapshot(sale = {}) {
+    return {
+        saleStatus: normalizeText(sale.saleStatus || "Active") || "Active",
+        returnStatus: normalizeText(sale.returnStatus || "Not Returned") || "Not Returned",
+        paymentStatus: normalizeText(sale.paymentStatus || "Unpaid") || "Unpaid",
+        lineItemCount: Number(sale.lineItemCount) || 0,
+        totalQuantity: Number(sale.totalQuantity) || 0,
+        invoiceGrandTotal: roundCurrency(sale.financials?.grandTotal),
+        totalAmountPaid: roundCurrency(sale.totalAmountPaid),
+        totalDonation: roundCurrency(sale.totalDonation),
+        totalExpenses: roundCurrency(sale.financials?.totalExpenses),
+        balanceDue: roundCurrency(sale.balanceDue),
+        creditBalance: roundCurrency(sale.creditBalance)
+    };
+}
+
 export function subscribeToRetailSales(user, onData, onError) {
     if (!user) {
         onData([]);
@@ -325,6 +376,7 @@ export async function getRetailSaleReturns(saleId) {
 export async function createRetailSaleRecord(payload, user) {
     const db = getDb();
     const now = getNow();
+    const saleBusinessId = buildSaleBusinessId(payload.store);
     const saleRef = db.collection(COLLECTIONS.salesInvoices).doc();
     const productRefs = payload.lineItems.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
     const sourceType = normalizeText(payload.sourceType);
@@ -427,9 +479,53 @@ export async function createRetailSaleRecord(payload, user) {
             : totalAmountPaid > 0
                 ? "Partially Paid"
                 : "Unpaid";
+        const baseLineItems = cloneRetailLineItems(payload.lineItems);
+        const baseFinancials = {
+            itemsSubtotal: payload.financials.itemsSubtotal,
+            totalLineDiscount: payload.financials.totalLineDiscount,
+            subtotalAfterLineDiscounts: payload.financials.subtotalAfterLineDiscounts,
+            totalCGST: payload.financials.totalCGST,
+            totalSGST: payload.financials.totalSGST,
+            totalItemLevelTax: payload.financials.totalItemLevelTax,
+            orderDiscountType: payload.financials.orderDiscountType,
+            orderDiscountValue: payload.financials.orderDiscountValue,
+            orderDiscountAmount: payload.financials.orderDiscountAmount,
+            finalTaxableAmount: payload.financials.finalTaxableAmount,
+            orderTaxPercentage: payload.financials.orderTaxPercentage,
+            orderLevelTaxAmount: payload.financials.orderLevelTaxAmount,
+            totalTax: payload.financials.totalTax,
+            grandTotal: payload.financials.grandTotal,
+            totalExpenses: 0,
+            amountTendered: totalCollected,
+            paymentCount: payload.initialPayment ? 1 : 0
+        };
+        const baseLineItemCount = baseLineItems.length;
+        const baseTotalQuantity = baseLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const originalSaleSnapshot = buildRetailSaleSnapshot({
+            saleId: saleBusinessId,
+            manualVoucherNumber: payload.manualVoucherNumber,
+            saleDate: payload.saleDate,
+            store: payload.store,
+            saleType: payload.saleType,
+            salesCatalogueName: payload.salesCatalogueName,
+            salesSeasonName: payload.salesSeasonName,
+            customerInfo: payload.customerInfo,
+            saleNotes: payload.saleNotes || "",
+            saleStatus: "Active",
+            returnStatus: "Not Returned",
+            paymentStatus,
+            lineItems: baseLineItems,
+            lineItemCount: baseLineItemCount,
+            totalQuantity: baseTotalQuantity,
+            financials: baseFinancials,
+            totalAmountPaid,
+            totalDonation,
+            balanceDue,
+            creditBalance: 0
+        });
 
         transaction.set(saleRef, {
-            saleId: buildSaleBusinessId(payload.store),
+            saleId: saleBusinessId,
             saleStatus: "Active",
             returnStatus: "Not Returned",
             saleDate: payload.saleDate,
@@ -452,28 +548,11 @@ export async function createRetailSaleRecord(payload, user) {
             customerId: payload.customerId || "",
             customerInfo: payload.customerInfo,
             saleNotes: payload.saleNotes || "",
-            lineItems: payload.lineItems,
-            financials: {
-                itemsSubtotal: payload.financials.itemsSubtotal,
-                totalLineDiscount: payload.financials.totalLineDiscount,
-                subtotalAfterLineDiscounts: payload.financials.subtotalAfterLineDiscounts,
-                totalCGST: payload.financials.totalCGST,
-                totalSGST: payload.financials.totalSGST,
-                totalItemLevelTax: payload.financials.totalItemLevelTax,
-                orderDiscountType: payload.financials.orderDiscountType,
-                orderDiscountValue: payload.financials.orderDiscountValue,
-                orderDiscountAmount: payload.financials.orderDiscountAmount,
-                finalTaxableAmount: payload.financials.finalTaxableAmount,
-                orderTaxPercentage: payload.financials.orderTaxPercentage,
-                orderLevelTaxAmount: payload.financials.orderLevelTaxAmount,
-                totalTax: payload.financials.totalTax,
-                grandTotal: payload.financials.grandTotal,
-                totalExpenses: 0,
-                amountTendered: totalCollected,
-                paymentCount: payload.initialPayment ? 1 : 0
-            },
-            lineItemCount: payload.lineItems.length,
-            totalQuantity: payload.lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+            lineItems: baseLineItems,
+            financials: baseFinancials,
+            originalSaleSnapshot,
+            lineItemCount: baseLineItemCount,
+            totalQuantity: baseTotalQuantity,
             totalAmountPaid,
             totalDonation,
             balanceDue,
@@ -712,6 +791,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
         const returnedAmount = roundCurrency(returnedLineItems.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0));
         const nextFinancials = calculateRetailFinancialsFromLineItems(remainingLineItems, sale.financials || {});
         const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const totalDonation = roundCurrency(sale.totalDonation);
         const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
         const nextBalanceDue = roundCurrency(Math.max(nextFinancials.grandTotal - totalAmountPaid - totalExpenses, 0));
         // Customer credit should only reflect money actually collected from the customer.
@@ -725,6 +805,33 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
         const previousReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
         const previousReturnedAmount = roundCurrency(sale.totalReturnedAmount);
         const nextReturnStatus = remainingLineItems.length === 0 ? "Fully Returned" : "Partially Returned";
+        const existingOriginalSaleSnapshot = sale.originalSaleSnapshot || null;
+        const originalSaleSnapshot = existingOriginalSaleSnapshot
+            || (previousReturnCount === 0 ? buildRetailSaleSnapshot(sale) : null);
+        const originalInvoiceGrandTotal = roundCurrency(
+            originalSaleSnapshot?.financials?.grandTotal
+                ?? (roundCurrency(sale.financials?.grandTotal) + previousReturnedAmount)
+        );
+        const saleSnapshotBeforeReturn = buildRetailReturnStateSnapshot(sale);
+        const saleSnapshotAfterReturn = buildRetailReturnStateSnapshot({
+            ...sale,
+            lineItems: remainingLineItems,
+            lineItemCount: remainingLineItems.length,
+            totalQuantity: remainingLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+            financials: {
+                ...(sale.financials || {}),
+                ...nextFinancials,
+                totalExpenses,
+                amountTendered: roundCurrency(sale.financials?.amountTendered),
+                paymentCount: Number(sale.financials?.paymentCount) || 0
+            },
+            totalAmountPaid,
+            totalDonation,
+            balanceDue: nextBalanceDue,
+            creditBalance,
+            paymentStatus: nextPaymentStatus,
+            returnStatus: nextReturnStatus
+        });
 
         transaction.set(returnRef, {
             returnId: buildSalesReturnId(),
@@ -738,6 +845,15 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
             totalReturnedQuantity: returnedQuantity,
             totalReturnedAmount: returnedAmount,
             returnStatus: nextReturnStatus,
+            originalSaleSnapshot: {
+                saleId: normalizeText(originalSaleSnapshot?.saleId || sale.saleId),
+                manualVoucherNumber: normalizeText(originalSaleSnapshot?.manualVoucherNumber || sale.manualVoucherNumber),
+                invoiceGrandTotal: originalInvoiceGrandTotal,
+                lineItemCount: Number(originalSaleSnapshot?.lineItemCount) || Number(sale.lineItemCount) || currentLineItems.length,
+                totalQuantity: Number(originalSaleSnapshot?.totalQuantity) || Number(sale.totalQuantity) || currentLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+            },
+            saleSnapshotBeforeReturn,
+            saleSnapshotAfterReturn,
             createdBy: user.email,
             createdOn: now
         });
@@ -762,9 +878,16 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
             totalReturnedAmount: roundCurrency(previousReturnedAmount + returnedAmount),
             latestReturnReason: returnPayload.reason,
             latestReturnOn: now,
+            latestReturnId: returnRef.id,
             updatedBy: user.email,
             updatedOn: now
         });
+
+        if (!existingOriginalSaleSnapshot && originalSaleSnapshot) {
+            transaction.update(saleRef, {
+                originalSaleSnapshot
+            });
+        }
 
         requestedProductIds.forEach((productId, index) => {
             const returnQuantity = requestedQuantityMap.get(productId) || 0;
@@ -1647,18 +1770,36 @@ export async function updateRetailSaleRecord(saleId, updatePayload, user) {
             : totalAmountPaid > 0
                 ? "Partially Paid"
                 : "Unpaid";
+        const nextSaleDate = updatePayload.saleDate ?? sale.saleDate;
+        const nextManualVoucherNumber = updatePayload.manualVoucherNumber ?? sale.manualVoucherNumber ?? "";
+        const nextFinancials = {
+            ...(sale.financials || {}),
+            ...financials
+        };
+        const nextLineItemCount = newLineItems.length;
+        const nextTotalQuantity = newLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const refreshedOriginalSaleSnapshot = buildRetailSaleSnapshot({
+            ...sale,
+            ...baseUpdate,
+            saleDate: nextSaleDate,
+            manualVoucherNumber: nextManualVoucherNumber,
+            lineItems: newLineItems,
+            lineItemCount: nextLineItemCount,
+            totalQuantity: nextTotalQuantity,
+            financials: nextFinancials,
+            balanceDue,
+            paymentStatus
+        });
 
         transaction.update(saleRef, {
             ...baseUpdate,
-            saleDate: updatePayload.saleDate ?? sale.saleDate,
-            manualVoucherNumber: updatePayload.manualVoucherNumber ?? sale.manualVoucherNumber ?? "",
+            saleDate: nextSaleDate,
+            manualVoucherNumber: nextManualVoucherNumber,
             lineItems: newLineItems,
-            lineItemCount: newLineItems.length,
-            totalQuantity: newLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
-            financials: {
-                ...(sale.financials || {}),
-                ...financials
-            },
+            lineItemCount: nextLineItemCount,
+            totalQuantity: nextTotalQuantity,
+            financials: nextFinancials,
+            originalSaleSnapshot: refreshedOriginalSaleSnapshot,
             balanceDue,
             paymentStatus
         });

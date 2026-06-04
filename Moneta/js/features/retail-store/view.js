@@ -1207,7 +1207,7 @@ function renderRetailReturnHistoryModal() {
     const totalReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
     const totalReturnedAmount = Number(sale.totalReturnedAmount) || 0;
     const returnCount = Number(sale.returnCount) || 0;
-    const originalSaleTotal = currentSaleTotal + totalReturnedAmount;
+    const originalSaleTotal = Number(sale.originalSaleSnapshot?.financials?.grandTotal) || (currentSaleTotal + totalReturnedAmount);
     const amountPaid = Number(sale.totalAmountPaid) || 0;
     const balanceDue = Number(sale.balanceDue) || 0;
     const creditBalance = Number(sale.creditBalance) || 0;
@@ -1279,7 +1279,7 @@ function renderRetailReturnHistoryModal() {
                                     <p class="summary-value">${formatCurrency(creditBalance)}</p>
                                 </article>
                             </div>
-                            <p class="panel-copy">Current Sale Total reflects the remaining invoice value after posted returns. Original Sale Total shows the starting invoice before any return was applied.</p>
+                            <p class="panel-copy">Current Sale Total reflects the remaining invoice value after posted returns. Original Sale Total shows the starting invoice before any return was applied. Each return row also captures the invoice and credit position immediately after that return.</p>
                             <div class="form-actions">
                                 <button id="retail-return-history-close-button" class="button button-secondary" type="button">
                                     <span class="button-icon">${icons.inactive}</span>
@@ -1313,6 +1313,7 @@ function renderRetailSaleActionsModal() {
     const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
     const hasReturns = (Number(sale.returnCount) || 0) > 0;
     const canVoidSale = !isVoided && !hasReturns;
+    const invoiceButtonLabel = hasReturns ? "Download Original Invoice PDF" : "Download Invoice PDF";
     const editDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot edit a voided sale.");
     const returnDisabledAttrs = buildDisabledActionAttrs(
         isVoided || !hasReturnableItems,
@@ -1362,7 +1363,7 @@ function renderRetailSaleActionsModal() {
                         </button>
                         <button class="button grid-action-button grid-action-button-secondary retail-sale-action-pdf" type="button" data-sale-id="${sale.id}">
                             <span class="button-icon">${icons.download}</span>
-                            Download Invoice PDF
+                            ${invoiceButtonLabel}
                         </button>
                         <button class="button grid-action-button grid-action-button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
                             <span class="button-icon">${icons.download}</span>
@@ -3421,23 +3422,28 @@ async function handleRetailSalePdf(button) {
     closeRetailSaleActionsModalState();
     try {
         await runProgressToastFlow({
-            title: "Preparing PDF Invoice",
-            initialMessage: "Reading the sale record...",
+            title: sale.returnCount > 0 ? "Preparing Original Invoice PDF" : "Preparing PDF Invoice",
+            initialMessage: sale.returnCount > 0 ? "Reading the original invoice snapshot..." : "Reading the sale record...",
             initialProgress: 18,
             initialStep: "Step 1 of 4",
             successTitle: "PDF Ready",
-            successMessage: "The invoice PDF was generated successfully."
+            successMessage: sale.returnCount > 0
+                ? "The original invoice PDF was generated successfully."
+                : "The invoice PDF was generated successfully."
         }, async ({ update }) => {
             update("Loading linked payment details...", 42, "Step 2 of 4");
             const payments = await getRetailSalePayments(sale.id);
+            const invoicePaymentRecord = sale.returnCount > 0
+                ? (payments[payments.length - 1] || null)
+                : (payments[0] || null);
 
-            update("Rendering the invoice layout...", 74, "Step 3 of 4");
-            await downloadRetailSalePdf(sale, payments[0] || null);
+            update(sale.returnCount > 0 ? "Rendering the original invoice layout..." : "Rendering the invoice layout...", 74, "Step 3 of 4");
+            await downloadRetailSalePdf(sale, invoicePaymentRecord);
 
             update("Download started successfully.", 96, "Step 4 of 4");
         });
 
-        showToast("Invoice PDF download started.", "success", {
+        showToast(sale.returnCount > 0 ? "Original invoice PDF download started." : "Invoice PDF download started.", "success", {
             title: "Retail Store"
         });
         ProgressToast.hide(0);

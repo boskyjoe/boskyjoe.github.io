@@ -607,6 +607,28 @@ function buildReturnHistoryColumnDefs() {
             valueFormatter: params => formatCurrency(params.value || 0)
         },
         {
+            headerName: "Invoice After",
+            minWidth: 145,
+            flex: 0.85,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return 0;
+                return Number(params.data?.saleSnapshotAfterReturn?.invoiceGrandTotal) || 0;
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
+            headerName: "Credit After",
+            minWidth: 140,
+            flex: 0.82,
+            ...rightAlignedNumberColumn,
+            valueGetter: params => {
+                if (params.node?.rowPinned) return 0;
+                return Number(params.data?.saleSnapshotAfterReturn?.creditBalance) || 0;
+            },
+            valueFormatter: params => formatCurrency(params.value || 0)
+        },
+        {
             field: "reason",
             headerName: "Reason",
             minWidth: 260,
