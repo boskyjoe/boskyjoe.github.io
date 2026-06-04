@@ -586,9 +586,9 @@ function buildReturnHistoryColumnDefs() {
         },
         {
             field: "returnStatus",
-            headerName: "Status",
-            minWidth: 140,
-            flex: 0.8,
+            headerName: "Status After Return",
+            minWidth: 180,
+            flex: 0.95,
             cellRenderer: params => (params.node?.rowPinned ? "" : statusMarkup(params.value, "Returned"))
         },
         {

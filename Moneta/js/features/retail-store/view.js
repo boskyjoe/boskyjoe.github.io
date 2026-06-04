@@ -546,6 +546,32 @@ function getRetailSummary(snapshot = getState()) {
     });
 }
 
+function getRetailStatusClassName(status, defaultStatus = "Active") {
+    const resolvedStatus = normalizeText(status || defaultStatus) || defaultStatus;
+    return resolvedStatus.toLowerCase().replace(/\s+/g, "-");
+}
+
+function renderRetailStatusPill(status, defaultStatus = "Active") {
+    const resolvedStatus = normalizeText(status || defaultStatus) || defaultStatus;
+    return `<span class="purchase-status-pill purchase-status-${getRetailStatusClassName(resolvedStatus, defaultStatus)}">${resolvedStatus}</span>`;
+}
+
+function deriveRetailOrderStatus(sale = {}) {
+    const saleStatus = normalizeText(sale.saleStatus || "Active");
+    if (saleStatus.toLowerCase() === "voided") return "Voided";
+
+    const returnStatus = normalizeText(sale.returnStatus || "Not Returned");
+    if (returnStatus === "Fully Returned") return "Fully Returned";
+    if (returnStatus === "Partially Returned") return "Partially Returned";
+
+    if ((Number(sale.returnCount) || 0) > 0) {
+        const remainingLineItemCount = Number(sale.lineItemCount) || (Array.isArray(sale.lineItems) ? sale.lineItems.length : 0);
+        return remainingLineItemCount > 0 ? "Partially Returned" : "Fully Returned";
+    }
+
+    return saleStatus || "Active";
+}
+
 function getSalesHistoryRows() {
     return (featureState.sales || []).map(sale => ({
         id: sale.id,
@@ -558,7 +584,7 @@ function getSalesHistoryRows() {
         lineItemCount: Number(sale.lineItemCount) || (sale.lineItems || []).length || 0,
         returnCount: Number(sale.returnCount) || 0,
         returnStatus: sale.returnStatus || "Not Returned",
-        orderStatus: sale.saleStatus || "Active",
+        orderStatus: deriveRetailOrderStatus(sale),
         saleStatus: sale.saleStatus || "Active",
         invoiceTotal: Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0,
         amountPaid: Number(sale.totalAmountPaid) || 0,
@@ -1177,10 +1203,17 @@ function renderRetailReturnHistoryModal() {
     const sale = getReturnHistoryModalSale();
     if (!sale) return "";
 
-    const invoiceTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const currentSaleTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
     const totalReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
     const totalReturnedAmount = Number(sale.totalReturnedAmount) || 0;
     const returnCount = Number(sale.returnCount) || 0;
+    const originalSaleTotal = currentSaleTotal + totalReturnedAmount;
+    const amountPaid = Number(sale.totalAmountPaid) || 0;
+    const balanceDue = Number(sale.balanceDue) || 0;
+    const creditBalance = Number(sale.creditBalance) || 0;
+    const orderStatus = deriveRetailOrderStatus(sale);
+    const paymentStatus = sale.paymentStatus || "Unpaid";
+    const creditCardClass = creditBalance > 0 ? " retail-summary-card-strong" : "";
 
     return `
         <div id="retail-return-history-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-return-history-modal-title">
@@ -1196,6 +1229,8 @@ function renderRetailReturnHistoryModal() {
                     <div class="toolbar-meta purchase-payment-modal-meta">
                         <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
                         <span class="status-pill">${sale.store || "-"}</span>
+                        ${renderRetailStatusPill(orderStatus, "Active")}
+                        ${renderRetailStatusPill(paymentStatus, "Unpaid")}
                         <span class="status-pill">${returnCount} return(s)</span>
                     </div>
                 </div>
@@ -1208,8 +1243,24 @@ function renderRetailReturnHistoryModal() {
                                     <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
                                 </article>
                                 <article class="summary-card">
-                                    <p class="summary-label">Invoice Total</p>
-                                    <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
+                                    <p class="summary-label">Order Status</p>
+                                    <p class="summary-value">${renderRetailStatusPill(orderStatus, "Active")}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Payment Status</p>
+                                    <p class="summary-value">${renderRetailStatusPill(paymentStatus, "Unpaid")}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Original Sale Total</p>
+                                    <p class="summary-value">${formatCurrency(originalSaleTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Current Sale Total</p>
+                                    <p class="summary-value">${formatCurrency(currentSaleTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Amount Paid</p>
+                                    <p class="summary-value">${formatCurrency(amountPaid)}</p>
                                 </article>
                                 <article class="summary-card">
                                     <p class="summary-label">Returned Qty</p>
@@ -1219,7 +1270,16 @@ function renderRetailReturnHistoryModal() {
                                     <p class="summary-label">Returned Amount</p>
                                     <p class="summary-value">${formatCurrency(totalReturnedAmount)}</p>
                                 </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Balance Due</p>
+                                    <p class="summary-value">${formatCurrency(balanceDue)}</p>
+                                </article>
+                                <article class="summary-card${creditCardClass}">
+                                    <p class="summary-label">Credit Balance</p>
+                                    <p class="summary-value">${formatCurrency(creditBalance)}</p>
+                                </article>
                             </div>
+                            <p class="panel-copy">Current Sale Total reflects the remaining invoice value after posted returns. Original Sale Total shows the starting invoice before any return was applied.</p>
                             <div class="form-actions">
                                 <button id="retail-return-history-close-button" class="button button-secondary" type="button">
                                     <span class="button-icon">${icons.inactive}</span>
