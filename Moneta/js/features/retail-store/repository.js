@@ -714,7 +714,8 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
         const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
         const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
         const nextBalanceDue = roundCurrency(Math.max(nextFinancials.grandTotal - totalAmountPaid - totalExpenses, 0));
-        const creditBalance = roundCurrency(Math.max(totalAmountPaid + totalExpenses - nextFinancials.grandTotal, 0));
+        // Customer credit should only reflect money actually collected from the customer.
+        const creditBalance = roundCurrency(Math.max(totalAmountPaid - nextFinancials.grandTotal, 0));
         const nextPaymentStatus = nextBalanceDue <= 0
             ? "Paid"
             : totalAmountPaid > 0

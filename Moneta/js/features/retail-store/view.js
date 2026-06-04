@@ -1355,6 +1355,7 @@ function renderRetailStoreViewShell(snapshot) {
         ? getVoidWorkspaceSale()
         : null;
     const workspaceSale = viewingSale || editingSale || returningSale || voidingSale;
+    const workspaceTotalAmountPaid = Number(workspaceSale?.totalAmountPaid) || 0;
     const workspaceTotalExpenses = Number(workspaceSale?.financials?.totalExpenses) || 0;
     const workspaceTotalDonation = Number(workspaceSale?.totalDonation) || 0;
     const workspaceBalanceDue = Number(workspaceSale?.balanceDue) || 0;
@@ -1363,8 +1364,8 @@ function renderRetailStoreViewShell(snapshot) {
         ? calculateRetailReturnDraftSummary(returningSale)
         : { totalQuantity: 0, totalAmount: 0 };
     const projectedGrandTotal = Math.max(summary.grandTotal - returnDraftSummary.totalAmount, 0);
-    const projectedBalanceDue = Math.max(workspaceBalanceDue - returnDraftSummary.totalAmount, 0);
-    const projectedCreditBalance = Number((workspaceCreditBalance + Math.max(returnDraftSummary.totalAmount - workspaceBalanceDue, 0)).toFixed(2));
+    const projectedBalanceDue = Math.max(projectedGrandTotal - workspaceTotalAmountPaid - workspaceTotalExpenses, 0);
+    const projectedCreditBalance = Number(Math.max(workspaceTotalAmountPaid - projectedGrandTotal, 0).toFixed(2));
     const draftCreditBalance = featureState.saleDraft.paymentType === "Pay Now"
         ? Math.max((Number(featureState.saleDraft.amountReceived) || 0) - summary.grandTotal, 0)
         : 0;
