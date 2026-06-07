@@ -438,16 +438,25 @@ function buildRetailMovementRows(rows = []) {
                 storeKey = "churchStore";
             }
 
+            const entryType = normalizeText(row.entryType);
+            const isCustomerRefund = entryType === "Customer Refund";
+            const isReversal = amount < 0 && !isCustomerRefund;
+            const sourceLabel = isCustomerRefund
+                ? `Retail Refund${storeName ? ` - ${storeName}` : ""}`
+                : isReversal
+                    ? `Retail Reversal${storeName ? ` - ${storeName}` : ""}`
+                    : `Retail Receipt${storeName ? ` - ${storeName}` : ""}`;
+
             return {
                 id: row.id,
                 date: transactionDate,
                 transactionDate,
                 recordedAt,
                 sourceKey: "retail",
-                sourceLabel: `Retail Receipt${storeName ? ` - ${storeName}` : ""}`,
+                sourceLabel,
                 counterparty: normalizeText(row.customerName) || "Retail Customer",
                 reference: normalizeText(row.paymentId || row.transactionRef || row.invoiceId || row.relatedSaleId || row.id),
-                notes: normalizeText(row.notes || row.paymentNotes || row.modeOfPayment || ""),
+                notes: normalizeText(row.notes || row.refundReason || row.paymentNotes || row.modeOfPayment || ""),
                 amount,
                 storeKey,
                 storeName,
