@@ -58,6 +58,50 @@ function roundCurrency(value) {
     return Number((Number(value) || 0).toFixed(2));
 }
 
+function getRetailNetPaidAmount(sale = {}) {
+    return roundCurrency(sale.totalAmountPaid);
+}
+
+function getRetailTotalRefundedAmount(sale = {}) {
+    return roundCurrency(sale.totalRefunded);
+}
+
+function getRetailTotalCustomerPayments(sale = {}) {
+    const storedValue = Number(sale.totalCustomerPayments);
+    if (Number.isFinite(storedValue) && storedValue >= 0) {
+        return roundCurrency(storedValue);
+    }
+
+    return roundCurrency(getRetailNetPaidAmount(sale) + getRetailTotalRefundedAmount(sale));
+}
+
+function deriveRetailBalanceDue({ grandTotal = 0, netPaid = 0, totalExpenses = 0 } = {}) {
+    return roundCurrency(Math.max(roundCurrency(grandTotal) - roundCurrency(netPaid) - roundCurrency(totalExpenses), 0));
+}
+
+function deriveRetailCreditBalance({ grandTotal = 0, netPaid = 0 } = {}) {
+    return roundCurrency(Math.max(roundCurrency(netPaid) - roundCurrency(grandTotal), 0));
+}
+
+function deriveRetailPaymentStatus({ balanceDue = 0, netPaid = 0 } = {}) {
+    if (roundCurrency(balanceDue) <= 0) {
+        return "Paid";
+    }
+
+    return roundCurrency(netPaid) > 0 ? "Partially Paid" : "Unpaid";
+}
+
+function deriveRetailRefundStatus({ creditBalance = 0, totalRefunded = 0 } = {}) {
+    const normalizedCredit = roundCurrency(creditBalance);
+    const normalizedRefunded = roundCurrency(totalRefunded);
+
+    if (normalizedCredit > 0) {
+        return normalizedRefunded > 0 ? "Partially Refunded" : "Refund Due";
+    }
+
+    return normalizedRefunded > 0 ? "Refunded" : "No Refund";
+}
+
 function clampPercentage(value) {
     return Math.min(Math.max(Number(value) || 0, 0), 100);
 }
@@ -180,6 +224,9 @@ function cloneRetailLineItems(lineItems = []) {
 function buildRetailSaleSnapshot(sale = {}) {
     const lineItems = cloneRetailLineItems(sale.lineItems || []);
     const financials = { ...(sale.financials || {}) };
+    const totalAmountPaid = getRetailNetPaidAmount(sale);
+    const totalRefunded = getRetailTotalRefundedAmount(sale);
+    const totalCustomerPayments = getRetailTotalCustomerPayments(sale);
 
     return {
         saleId: normalizeText(sale.saleId),
@@ -200,7 +247,14 @@ function buildRetailSaleSnapshot(sale = {}) {
         lineItemCount: Number(sale.lineItemCount) || lineItems.length,
         totalQuantity: Number(sale.totalQuantity) || lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
         financials,
-        totalAmountPaid: roundCurrency(sale.totalAmountPaid),
+        totalAmountPaid,
+        totalCustomerPayments,
+        totalRefunded,
+        refundCount: Math.max(0, Number(sale.refundCount) || 0),
+        refundStatus: normalizeText(sale.refundStatus || deriveRetailRefundStatus({
+            creditBalance: sale.creditBalance,
+            totalRefunded
+        })) || "No Refund",
         totalDonation: roundCurrency(sale.totalDonation),
         totalExpenses: roundCurrency(financials.totalExpenses),
         balanceDue: roundCurrency(sale.balanceDue),
@@ -209,14 +263,24 @@ function buildRetailSaleSnapshot(sale = {}) {
 }
 
 function buildRetailReturnStateSnapshot(sale = {}) {
+    const totalAmountPaid = getRetailNetPaidAmount(sale);
+    const totalRefunded = getRetailTotalRefundedAmount(sale);
+
     return {
         saleStatus: normalizeText(sale.saleStatus || "Active") || "Active",
         returnStatus: normalizeText(sale.returnStatus || "Not Returned") || "Not Returned",
         paymentStatus: normalizeText(sale.paymentStatus || "Unpaid") || "Unpaid",
+        refundStatus: normalizeText(sale.refundStatus || deriveRetailRefundStatus({
+            creditBalance: sale.creditBalance,
+            totalRefunded
+        })) || "No Refund",
         lineItemCount: Number(sale.lineItemCount) || 0,
         totalQuantity: Number(sale.totalQuantity) || 0,
         invoiceGrandTotal: roundCurrency(sale.financials?.grandTotal),
-        totalAmountPaid: roundCurrency(sale.totalAmountPaid),
+        totalAmountPaid,
+        totalCustomerPayments: getRetailTotalCustomerPayments(sale),
+        totalRefunded,
+        refundCount: Math.max(0, Number(sale.refundCount) || 0),
         totalDonation: roundCurrency(sale.totalDonation),
         totalExpenses: roundCurrency(sale.financials?.totalExpenses),
         balanceDue: roundCurrency(sale.balanceDue),
@@ -473,12 +537,15 @@ export async function createRetailSaleRecord(payload, user) {
         const totalDonation = roundCurrency(
             payload.initialPayment?.donationAmount ?? Math.max(totalCollected - totalAmountPaid, 0)
         );
-        const balanceDue = Number((payload.financials.grandTotal - totalAmountPaid).toFixed(2));
-        const paymentStatus = balanceDue <= 0
-            ? "Paid"
-            : totalAmountPaid > 0
-                ? "Partially Paid"
-                : "Unpaid";
+        const balanceDue = deriveRetailBalanceDue({
+            grandTotal: payload.financials.grandTotal,
+            netPaid: totalAmountPaid
+        });
+        const paymentStatus = deriveRetailPaymentStatus({
+            balanceDue,
+            netPaid: totalAmountPaid
+        });
+        const refundStatus = "No Refund";
         const baseLineItems = cloneRetailLineItems(payload.lineItems);
         const baseFinancials = {
             itemsSubtotal: payload.financials.itemsSubtotal,
@@ -519,6 +586,10 @@ export async function createRetailSaleRecord(payload, user) {
             totalQuantity: baseTotalQuantity,
             financials: baseFinancials,
             totalAmountPaid,
+            totalCustomerPayments: totalAmountPaid,
+            totalRefunded: 0,
+            refundCount: 0,
+            refundStatus,
             totalDonation,
             balanceDue,
             creditBalance: 0
@@ -554,6 +625,10 @@ export async function createRetailSaleRecord(payload, user) {
             lineItemCount: baseLineItemCount,
             totalQuantity: baseTotalQuantity,
             totalAmountPaid,
+            totalCustomerPayments: totalAmountPaid,
+            totalRefunded: 0,
+            refundCount: 0,
+            refundStatus,
             totalDonation,
             balanceDue,
             creditBalance: 0,
@@ -576,6 +651,8 @@ export async function createRetailSaleRecord(payload, user) {
 
             transaction.set(paymentRef, {
                 paymentId: buildSalesPaymentId(),
+                entryType: "Customer Payment",
+                cashDirection: "Inflow",
                 invoiceId: saleRef.id,
                 relatedSaleId: saleRef.id,
                 relatedSaleNumber: payload.manualVoucherNumber,
@@ -790,17 +867,28 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
         const returnedQuantity = returnedLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
         const returnedAmount = roundCurrency(returnedLineItems.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0));
         const nextFinancials = calculateRetailFinancialsFromLineItems(remainingLineItems, sale.financials || {});
-        const totalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const totalAmountPaid = getRetailNetPaidAmount(sale);
+        const totalRefunded = getRetailTotalRefundedAmount(sale);
         const totalDonation = roundCurrency(sale.totalDonation);
         const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
-        const nextBalanceDue = roundCurrency(Math.max(nextFinancials.grandTotal - totalAmountPaid - totalExpenses, 0));
+        const nextBalanceDue = deriveRetailBalanceDue({
+            grandTotal: nextFinancials.grandTotal,
+            netPaid: totalAmountPaid,
+            totalExpenses
+        });
         // Customer credit should only reflect money actually collected from the customer.
-        const creditBalance = roundCurrency(Math.max(totalAmountPaid - nextFinancials.grandTotal, 0));
-        const nextPaymentStatus = nextBalanceDue <= 0
-            ? "Paid"
-            : totalAmountPaid > 0
-                ? "Partially Paid"
-                : "Unpaid";
+        const creditBalance = deriveRetailCreditBalance({
+            grandTotal: nextFinancials.grandTotal,
+            netPaid: totalAmountPaid
+        });
+        const nextPaymentStatus = deriveRetailPaymentStatus({
+            balanceDue: nextBalanceDue,
+            netPaid: totalAmountPaid
+        });
+        const nextRefundStatus = deriveRetailRefundStatus({
+            creditBalance,
+            totalRefunded
+        });
         const previousReturnCount = Number(sale.returnCount) || 0;
         const previousReturnedQuantity = Number(sale.totalReturnedQuantity) || 0;
         const previousReturnedAmount = roundCurrency(sale.totalReturnedAmount);
@@ -826,6 +914,10 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
                 paymentCount: Number(sale.financials?.paymentCount) || 0
             },
             totalAmountPaid,
+            totalCustomerPayments: getRetailTotalCustomerPayments(sale),
+            totalRefunded,
+            refundCount: Number(sale.refundCount) || 0,
+            refundStatus: nextRefundStatus,
             totalDonation,
             balanceDue: nextBalanceDue,
             creditBalance,
@@ -872,6 +964,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
             balanceDue: nextBalanceDue,
             paymentStatus: nextPaymentStatus,
             creditBalance,
+            refundStatus: nextRefundStatus,
             returnStatus: nextReturnStatus,
             returnCount: previousReturnCount + 1,
             totalReturnedQuantity: previousReturnedQuantity + returnedQuantity,
@@ -906,6 +999,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
                 nextReturnStatus,
                 nextBalanceDue,
                 nextPaymentStatus,
+                nextRefundStatus,
                 nextGrandTotal: nextFinancials.grandTotal,
                 creditBalance
             }
@@ -948,6 +1042,10 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
         const currentTotalExpenses = Number(saleData.financials?.totalExpenses) || 0;
         const nextBalanceDue = Number((currentBalanceDue - expenseAmount).toFixed(2));
         const nextTotalExpenses = Number((currentTotalExpenses + expenseAmount).toFixed(2));
+        const nextPaymentStatus = deriveRetailPaymentStatus({
+            balanceDue: nextBalanceDue,
+            netPaid: getRetailNetPaidAmount(saleData)
+        });
 
         transaction.set(expenseRef, {
             expenseId: buildSalesExpenseId(),
@@ -961,6 +1059,7 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
         transaction.update(saleRef, {
             "financials.totalExpenses": nextTotalExpenses,
             balanceDue: nextBalanceDue,
+            paymentStatus: nextPaymentStatus,
             updatedBy: user.email,
             updatedOn: now
         });
@@ -970,7 +1069,8 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
             summary: {
                 expenseAmount,
                 nextBalanceDue,
-                nextTotalExpenses
+                nextTotalExpenses,
+                nextPaymentStatus
             }
         };
     });
@@ -998,9 +1098,16 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
             throw new Error("Voided sales cannot accept payments.");
         }
 
-        const invoiceTotal = Number(sale.financials?.grandTotal) || 0;
-        const currentAmountPaid = Number(sale.totalAmountPaid) || 0;
-        const currentBalanceDue = Number(sale.balanceDue ?? Math.max(invoiceTotal - currentAmountPaid, 0)) || 0;
+        const invoiceTotal = roundCurrency(sale.financials?.grandTotal);
+        const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+        const currentAmountPaid = getRetailNetPaidAmount(sale);
+        const currentTotalCustomerPayments = getRetailTotalCustomerPayments(sale);
+        const currentTotalRefunded = getRetailTotalRefundedAmount(sale);
+        const currentBalanceDue = roundCurrency(sale.balanceDue ?? deriveRetailBalanceDue({
+            grandTotal: invoiceTotal,
+            netPaid: currentAmountPaid,
+            totalExpenses
+        }));
         const amountReceived = roundCurrency(paymentPayload.amountReceived ?? paymentPayload.amountPaid);
         const amountApplied = roundCurrency(Math.min(amountReceived, currentBalanceDue));
         const donationAmount = roundCurrency(Math.max(amountReceived - amountApplied, 0));
@@ -1017,22 +1124,37 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
             throw new Error("Payment amount must be greater than zero.");
         }
 
-        const nextTotalAmountPaid = Number((currentAmountPaid + amountApplied).toFixed(2));
-        const nextTotalDonation = Number((currentTotalDonation + donationAmount).toFixed(2));
-        const nextBalanceDue = Number(Math.max((invoiceTotal - nextTotalAmountPaid), 0).toFixed(2));
+        const nextTotalAmountPaid = roundCurrency(currentAmountPaid + amountApplied);
+        const nextTotalCustomerPayments = roundCurrency(currentTotalCustomerPayments + amountApplied);
+        const nextTotalDonation = roundCurrency(currentTotalDonation + donationAmount);
+        const nextBalanceDue = deriveRetailBalanceDue({
+            grandTotal: invoiceTotal,
+            netPaid: nextTotalAmountPaid,
+            totalExpenses
+        });
+        const nextCreditBalance = deriveRetailCreditBalance({
+            grandTotal: invoiceTotal,
+            netPaid: nextTotalAmountPaid
+        });
         const nextPaymentCount = (Number(sale.financials?.paymentCount) || 0) + 1;
         const nextAmountTendered = Number(((Number(sale.financials?.amountTendered) || 0) + amountReceived).toFixed(2));
-        const nextPaymentStatus = nextBalanceDue <= 0
-            ? "Paid"
-            : nextTotalAmountPaid > 0
-                ? "Partially Paid"
-                : "Unpaid";
+        const nextPaymentStatus = deriveRetailPaymentStatus({
+            balanceDue: nextBalanceDue,
+            netPaid: nextTotalAmountPaid
+        });
+        const nextRefundStatus = deriveRetailRefundStatus({
+            creditBalance: nextCreditBalance,
+            totalRefunded: currentTotalRefunded
+        });
 
         transaction.update(saleRef, {
             totalAmountPaid: nextTotalAmountPaid,
+            totalCustomerPayments: nextTotalCustomerPayments,
             totalDonation: nextTotalDonation,
             balanceDue: nextBalanceDue,
+            creditBalance: nextCreditBalance,
             paymentStatus: nextPaymentStatus,
+            refundStatus: nextRefundStatus,
             latestPaymentMode: paymentPayload.paymentMode,
             "financials.amountTendered": nextAmountTendered,
             "financials.paymentCount": nextPaymentCount,
@@ -1042,6 +1164,8 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
 
         transaction.set(paymentRef, {
             paymentId: buildSalesPaymentId(),
+            entryType: "Customer Payment",
+            cashDirection: "Inflow",
             invoiceId: saleId,
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || paymentPayload.relatedSaleNumber || "",
@@ -1094,9 +1218,138 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
                 appliedAmount: amountApplied,
                 donationAmount,
                 nextTotalAmountPaid,
+                nextTotalCustomerPayments,
                 nextTotalDonation,
                 nextBalanceDue,
+                nextCreditBalance,
+                nextRefundStatus,
                 nextPaymentStatus
+            }
+        };
+    });
+}
+
+export async function recordRetailSaleRefundRecord(saleId, refundPayload, user) {
+    if (!saleId) {
+        throw new Error("Select a retail sale before recording refund.");
+    }
+
+    const db = getDb();
+    const now = getNow();
+    const saleRef = db.collection(COLLECTIONS.salesInvoices).doc(saleId);
+    const refundRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
+
+    return db.runTransaction(async transaction => {
+        const saleDoc = await transaction.get(saleRef);
+
+        if (!saleDoc.exists) {
+            throw new Error("This sale could not be found.");
+        }
+
+        const sale = saleDoc.data() || {};
+        if (sale.saleStatus === "Voided") {
+            throw new Error("Voided sales cannot accept refunds.");
+        }
+
+        const invoiceTotal = roundCurrency(sale.financials?.grandTotal);
+        const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
+        const currentAmountPaid = getRetailNetPaidAmount(sale);
+        const currentTotalCustomerPayments = getRetailTotalCustomerPayments(sale);
+        const currentTotalRefunded = getRetailTotalRefundedAmount(sale);
+        const currentCreditBalance = roundCurrency(sale.creditBalance);
+        const refundAmount = roundCurrency(refundPayload.refundAmount ?? refundPayload.amountPaid);
+
+        if (currentCreditBalance <= 0) {
+            throw new Error("This sale does not have refundable customer credit.");
+        }
+
+        if (refundAmount <= 0) {
+            throw new Error("Refund amount must be greater than zero.");
+        }
+
+        if (refundAmount > currentCreditBalance) {
+            throw new Error(`Refund cannot exceed the outstanding credit of ${currentCreditBalance.toFixed(2)}.`);
+        }
+
+        const nextTotalAmountPaid = roundCurrency(Math.max(currentAmountPaid - refundAmount, 0));
+        const nextTotalRefunded = roundCurrency(currentTotalRefunded + refundAmount);
+        const nextBalanceDue = deriveRetailBalanceDue({
+            grandTotal: invoiceTotal,
+            netPaid: nextTotalAmountPaid,
+            totalExpenses
+        });
+        const nextCreditBalance = deriveRetailCreditBalance({
+            grandTotal: invoiceTotal,
+            netPaid: nextTotalAmountPaid
+        });
+        const nextPaymentStatus = deriveRetailPaymentStatus({
+            balanceDue: nextBalanceDue,
+            netPaid: nextTotalAmountPaid
+        });
+        const nextRefundStatus = deriveRetailRefundStatus({
+            creditBalance: nextCreditBalance,
+            totalRefunded: nextTotalRefunded
+        });
+
+        transaction.update(saleRef, {
+            totalAmountPaid: nextTotalAmountPaid,
+            totalCustomerPayments: currentTotalCustomerPayments,
+            totalRefunded: nextTotalRefunded,
+            refundCount: Math.max(0, Number(sale.refundCount) || 0) + 1,
+            refundStatus: nextRefundStatus,
+            balanceDue: nextBalanceDue,
+            creditBalance: nextCreditBalance,
+            paymentStatus: nextPaymentStatus,
+            latestRefundOn: now,
+            latestRefundBy: user.email,
+            latestRefundMode: refundPayload.refundMode,
+            latestRefundReason: refundPayload.refundReason,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+
+        transaction.set(refundRef, {
+            paymentId: buildSalesPaymentId(),
+            entryType: "Customer Refund",
+            cashDirection: "Outflow",
+            invoiceId: saleId,
+            relatedSaleId: saleId,
+            relatedSaleNumber: sale.manualVoucherNumber || refundPayload.relatedSaleNumber || "",
+            relatedReturnId: normalizeText(refundPayload.relatedReturnId || sale.latestReturnId),
+            paymentDate: refundPayload.refundDate,
+            amountPaid: -refundAmount,
+            amountApplied: -refundAmount,
+            amountReceived: -refundAmount,
+            donationAmount: 0,
+            totalCollected: -refundAmount,
+            refundAmount,
+            paymentMode: refundPayload.refundMode,
+            transactionRef: refundPayload.transactionRef || "",
+            notes: refundPayload.notes || "",
+            refundReason: refundPayload.refundReason || "",
+            status: "Refunded",
+            paymentStatus: "Refunded",
+            customerName: sale.customerInfo?.name || "",
+            store: sale.store || "",
+            availableCreditBeforeRefund: currentCreditBalance,
+            creditBalanceAfterRefund: nextCreditBalance,
+            recordedBy: user.email,
+            recordedOn: now,
+            createdBy: user.email,
+            createdOn: now
+        });
+
+        return {
+            refundRef,
+            summary: {
+                refundAmount,
+                nextTotalAmountPaid,
+                nextTotalCustomerPayments: currentTotalCustomerPayments,
+                nextTotalRefunded,
+                nextBalanceDue,
+                nextCreditBalance,
+                nextPaymentStatus,
+                nextRefundStatus
             }
         };
     });
@@ -1153,6 +1406,11 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
             throw new Error("Payments for a voided sale cannot be voided separately.");
         }
 
+        const currentTotalRefunded = getRetailTotalRefundedAmount(sale);
+        if (currentTotalRefunded > 0) {
+            throw new Error("Payments cannot be voided after customer refunds have been posted for this sale.");
+        }
+
         const donationEntryId = normalizeText(paymentData.donationEntryId);
         const donationEntryRef = donationAmount > 0 && donationEntryId
             ? db.collection(COLLECTIONS.donations).doc(donationEntryId)
@@ -1161,22 +1419,35 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
             ? await transaction.get(donationEntryRef)
             : null;
 
-        const currentTotalAmountPaid = roundCurrency(sale.totalAmountPaid);
+        const currentTotalAmountPaid = getRetailNetPaidAmount(sale);
+        const currentTotalCustomerPayments = getRetailTotalCustomerPayments(sale);
         const currentTotalDonation = roundCurrency(sale.totalDonation);
-        const currentBalanceDue = roundCurrency(sale.balanceDue);
+        const totalExpenses = roundCurrency(sale.financials?.totalExpenses);
         const currentPaymentCount = Math.max(0, Number(sale.financials?.paymentCount) || 0);
         const currentAmountTendered = roundCurrency(sale.financials?.amountTendered);
 
         const nextTotalAmountPaid = roundCurrency(Math.max(currentTotalAmountPaid - amountApplied, 0));
+        const nextTotalCustomerPayments = roundCurrency(Math.max(currentTotalCustomerPayments - amountApplied, 0));
         const nextTotalDonation = roundCurrency(Math.max(currentTotalDonation - donationAmount, 0));
-        const nextBalanceDue = roundCurrency(Math.max(currentBalanceDue + amountApplied, 0));
+        const nextBalanceDue = deriveRetailBalanceDue({
+            grandTotal: sale.financials?.grandTotal,
+            netPaid: nextTotalAmountPaid,
+            totalExpenses
+        });
+        const nextCreditBalance = deriveRetailCreditBalance({
+            grandTotal: sale.financials?.grandTotal,
+            netPaid: nextTotalAmountPaid
+        });
         const nextPaymentCount = Math.max(currentPaymentCount - 1, 0);
         const nextAmountTendered = roundCurrency(Math.max(currentAmountTendered - amountReceived, 0));
-        const nextPaymentStatus = nextBalanceDue <= 0
-            ? "Paid"
-            : nextTotalAmountPaid > 0
-                ? "Partially Paid"
-                : "Unpaid";
+        const nextPaymentStatus = deriveRetailPaymentStatus({
+            balanceDue: nextBalanceDue,
+            netPaid: nextTotalAmountPaid
+        });
+        const nextRefundStatus = deriveRetailRefundStatus({
+            creditBalance: nextCreditBalance,
+            totalRefunded: currentTotalRefunded
+        });
         const reversalRef = db.collection(COLLECTIONS.salesPaymentsLedger).doc();
         const donationReversalRef = donationAmount > 0
             ? db.collection(COLLECTIONS.donations).doc()
@@ -1196,6 +1467,8 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
 
         transaction.set(reversalRef, {
             paymentId: buildSalesPaymentId(),
+            entryType: "Payment Void Reversal",
+            cashDirection: "Outflow",
             invoiceId: saleId,
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
@@ -1258,9 +1531,12 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
 
         transaction.update(saleRef, {
             totalAmountPaid: nextTotalAmountPaid,
+            totalCustomerPayments: nextTotalCustomerPayments,
             totalDonation: nextTotalDonation,
             balanceDue: nextBalanceDue,
+            creditBalance: nextCreditBalance,
             paymentStatus: nextPaymentStatus,
+            refundStatus: nextRefundStatus,
             latestPaymentMode: nextPaymentCount > 0 ? (sale.latestPaymentMode || "") : "",
             "financials.amountTendered": nextAmountTendered,
             "financials.paymentCount": nextPaymentCount,
@@ -1543,7 +1819,11 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
             saleStatus: "Voided",
             paymentStatus: "Voided",
             totalAmountPaid: 0,
+            totalCustomerPayments: 0,
             totalDonation: 0,
+            totalRefunded: 0,
+            refundCount: 0,
+            refundStatus: "No Refund",
             balanceDue: 0,
             creditBalance: 0,
             latestPaymentMode: "",

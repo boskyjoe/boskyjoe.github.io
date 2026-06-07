@@ -10,6 +10,7 @@ import {
     addRetailSaleExpenseRecord,
     createRetailSaleRecord,
     releasePreparedPortalRequestDraft,
+    recordRetailSaleRefundRecord,
     recordRetailSalePayment,
     updateRetailSaleRecord,
     voidRetailSalePaymentRecord,
@@ -806,6 +807,10 @@ export function validateRetailSalePaymentVoidPayload(payment, reason, sale = nul
         throw new Error("Payments linked to a voided sale cannot be voided separately.");
     }
 
+    if ((Number(sale?.totalRefunded) || 0) > 0) {
+        throw new Error("Payments cannot be voided after customer refunds have been posted for this sale.");
+    }
+
     if (payment.isReversalEntry) {
         throw new Error("Reversal payment entries cannot be voided.");
     }
@@ -841,6 +846,67 @@ export async function voidRetailSalePayment(payment, reason, sale, user) {
         ...result,
         reason: validatedReason
     };
+}
+
+export function validateRetailSaleRefundPayload(payload = {}, sale, masterData = {}) {
+    if (!sale?.id) {
+        throw new Error("Select a retail sale before recording refund.");
+    }
+
+    if (normalizeText(sale.saleStatus || "Active").toLowerCase() === "voided") {
+        throw new Error("Voided sales cannot accept refunds.");
+    }
+
+    const refundDate = parseRequiredDate(payload.refundDate, "Refund date");
+    const refundMode = normalizeText(payload.refundMode);
+    const transactionRef = normalizeText(payload.transactionRef);
+    const notes = normalizeText(payload.notes);
+    const refundReason = normalizeText(payload.refundReason);
+    const refundAmount = parsePositiveAmount(payload.refundAmount, "Refund amount");
+    const creditBalance = roundCurrency(Number(sale.creditBalance) || 0);
+    const activePaymentModes = (masterData.paymentModes || []).filter(mode => mode.isActive);
+
+    if (creditBalance <= 0) {
+        throw new Error("This sale does not have refundable customer credit.");
+    }
+
+    if (refundAmount > creditBalance) {
+        throw new Error(`Refund cannot exceed the outstanding credit of ${creditBalance.toFixed(2)}.`);
+    }
+
+    if (!refundMode) {
+        throw new Error("Refund mode is required.");
+    }
+
+    if (activePaymentModes.length > 0 && !activePaymentModes.some(mode => normalizeText(mode.paymentMode) === refundMode)) {
+        throw new Error("The selected refund mode could not be found.");
+    }
+
+    if (!refundReason) {
+        throw new Error("Refund reason is required.");
+    }
+
+    if (refundReason.length < 8) {
+        throw new Error("Please enter a more descriptive refund reason.");
+    }
+
+    return {
+        refundDate,
+        refundAmount,
+        refundMode,
+        transactionRef,
+        refundReason,
+        notes
+    };
+}
+
+export async function saveRetailSaleRefund(payload, sale, masterData, user) {
+    if (!user) {
+        throw new Error("You must be logged in to record a retail refund.");
+    }
+
+    const validatedRefund = validateRetailSaleRefundPayload(payload, sale, masterData);
+    return recordRetailSaleRefundRecord(sale.id, validatedRefund, user);
 }
 
 export function validateRetailSaleVoidPayload(sale, payload = {}, user) {

@@ -146,13 +146,37 @@ export function normalizeRetailSalesHistorySourceFilter(value) {
         : "";
 }
 
+function deriveRetailPaymentEntryType(payment = {}) {
+    if (normalizeText(payment.entryType)) {
+        return normalizeText(payment.entryType);
+    }
+
+    if (payment.isReversalEntry) {
+        return "Payment Void Reversal";
+    }
+
+    const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
+    const amountReceived = Number(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid) || 0;
+    if (amountApplied < 0 || amountReceived < 0 || Number(payment.refundAmount) > 0) {
+        return "Customer Refund";
+    }
+
+    return "Customer Payment";
+}
+
 function retailPaymentActionMarkup(payment = {}) {
     const status = String(payment.paymentStatus || payment.status || "Verified").trim().toLowerCase();
     const amountApplied = Number(payment.amountApplied ?? payment.amountPaid) || 0;
     const amountReceived = Number(payment.amountReceived ?? payment.totalCollected ?? payment.amountPaid) || 0;
+    const entryType = deriveRetailPaymentEntryType(payment);
+    const isRefundEntry = entryType === "Customer Refund";
 
     let disabledReason = "";
-    if (payment.isReversalEntry) {
+    if (payment.uiVoidDisabled) {
+        disabledReason = "Void actions are disabled in the refund workspace.";
+    } else if (isRefundEntry) {
+        disabledReason = "Refund reversals are not available yet.";
+    } else if (payment.isReversalEntry) {
         disabledReason = "Reversal entries cannot be voided.";
     } else if (status === "voided" || status === "void reversal") {
         disabledReason = "This payment is already voided.";
@@ -163,11 +187,16 @@ function retailPaymentActionMarkup(payment = {}) {
     const disabledAttrs = disabledReason
         ? `disabled title="${escapeHtmlAttr(disabledReason)}"`
         : "";
+    const buttonClass = isRefundEntry
+        ? "button grid-action-button grid-action-button-secondary retail-payment-void-button"
+        : "button grid-action-button grid-action-button-danger retail-payment-void-button";
+    const actionLabel = isRefundEntry ? "Refund Posted" : "Void Payment";
+    const actionIcon = isRefundEntry ? icons.payment : icons.warning;
 
     return `
-        <button class="button grid-action-button grid-action-button-danger retail-payment-void-button" type="button" data-payment-id="${payment.id || ""}" ${disabledAttrs}>
-            <span class="button-icon">${icons.warning}</span>
-            Void Payment
+        <button class="${buttonClass}" type="button" data-payment-id="${payment.id || ""}" ${disabledAttrs}>
+            <span class="button-icon">${actionIcon}</span>
+            ${actionLabel}
         </button>
     `;
 }
@@ -409,7 +438,7 @@ function buildSalesColumnDefs() {
         },
         {
             field: "amountPaid",
-            headerName: "Amount Paid",
+            headerName: "Net Retained",
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
@@ -466,6 +495,14 @@ function buildSalesColumnDefs() {
 
 function buildPaymentHistoryColumnDefs() {
     return [
+        {
+            field: "entryType",
+            headerName: "Entry",
+            minWidth: 165,
+            flex: 1,
+            valueGetter: params => deriveRetailPaymentEntryType(params.data || {}),
+            valueFormatter: params => params.value || "-"
+        },
         {
             field: "paymentDate",
             headerName: "Date",

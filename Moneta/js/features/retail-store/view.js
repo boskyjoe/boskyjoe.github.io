@@ -44,6 +44,7 @@ import {
     getRetailStoreTaxDefaults,
     resolveRetailSaleEditScope,
     saveRetailSalePayment,
+    saveRetailSaleRefund,
     saveRetailSaleUpdate,
     saveRetailSale,
     voidRetailSalePayment,
@@ -74,6 +75,9 @@ const featureState = {
     paymentDraft: createDefaultRetailPaymentDraft(),
     paymentVoidReason: "",
     voidingPaymentId: null,
+    refundModalOpen: false,
+    refundSaleId: null,
+    refundDraft: createDefaultRetailRefundDraft(),
     returnHistoryModalOpen: false,
     returnHistorySaleId: null,
     returnHistoryRows: [],
@@ -144,6 +148,17 @@ function createDefaultRetailPaymentDraft(defaultDate = new Date()) {
         amountPaid: "",
         paymentMode: "",
         transactionRef: "",
+        notes: ""
+    };
+}
+
+function createDefaultRetailRefundDraft(defaultDate = new Date()) {
+    return {
+        refundDate: toDateInputValue(defaultDate),
+        refundAmount: "",
+        refundMode: "",
+        transactionRef: "",
+        refundReason: "",
         notes: ""
     };
 }
@@ -222,6 +237,7 @@ function resetRetailWorkspace() {
     clearCatalogueItemsSubscription();
     closeRetailSaleActionsModalState();
     closeRetailPaymentModalState();
+    closeRetailRefundModalState();
     closeRetailReturnHistoryModalState();
     closeRetailReturnModalState();
     closeRetailExpenseModalState();
@@ -261,6 +277,17 @@ function closeRetailReturnModalState() {
     featureState.returnDraft = createDefaultRetailReturnDraft();
 }
 
+function closeRetailRefundModalState() {
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.refundModalOpen = false;
+    featureState.refundSaleId = null;
+    featureState.payments = [];
+    featureState.refundDraft = createDefaultRetailRefundDraft();
+    featureState.voidingPaymentId = null;
+    featureState.paymentVoidReason = "";
+}
+
 function exitRetailReturnWorkspaceIfActive() {
     if (!isRetailReturnMode()) return;
 
@@ -290,6 +317,7 @@ function openRetailPaymentModal(sale) {
     if (!sale?.id) return;
 
     exitRetailReturnWorkspaceIfActive();
+    closeRetailRefundModalState();
     closeRetailReturnModalState();
     closeRetailReturnHistoryModalState();
     closeRetailExpenseModalState();
@@ -332,11 +360,57 @@ function closeRetailPaymentModal() {
     }
 }
 
+function openRetailRefundModal(sale) {
+    if (!sale?.id) return;
+
+    exitRetailReturnWorkspaceIfActive();
+    closeRetailPaymentModalState();
+    closeRetailReturnModalState();
+    closeRetailReturnHistoryModalState();
+    closeRetailExpenseModalState();
+    featureState.unsubscribePayments?.();
+    featureState.unsubscribePayments = null;
+    featureState.refundModalOpen = true;
+    featureState.refundSaleId = sale.id;
+    featureState.payments = [];
+    featureState.refundDraft = createDefaultRetailRefundDraft(sale.latestReturnOn?.toDate ? sale.latestReturnOn.toDate() : sale.latestReturnOn || new Date());
+    featureState.voidingPaymentId = null;
+    featureState.paymentVoidReason = "";
+
+    featureState.unsubscribePayments = subscribeToRetailSalePayments(
+        sale.id,
+        rows => {
+            featureState.payments = rows.map(entry => ({
+                ...entry,
+                uiVoidDisabled: true
+            }));
+            if (getState().currentRoute === "#/retail-store" && featureState.refundModalOpen) {
+                syncRetailRefundHistoryGrid();
+                syncRetailRefundDraftPreview();
+            }
+        },
+        error => {
+            console.error("[Moneta] Failed to load retail refund ledger:", error);
+            showToast("Could not load the refund ledger for this sale.", "error", {
+                title: "Retail Store"
+            });
+        }
+    );
+}
+
+function closeRetailRefundModal() {
+    closeRetailRefundModalState();
+    if (getState().currentRoute === "#/retail-store") {
+        renderRetailStoreView();
+    }
+}
+
 function openRetailExpenseModal(sale) {
     if (!sale?.id) return;
 
     exitRetailReturnWorkspaceIfActive();
     closeRetailPaymentModalState();
+    closeRetailRefundModalState();
     closeRetailReturnModalState();
     closeRetailReturnHistoryModalState();
     featureState.unsubscribeExpenseHistory?.();
@@ -404,6 +478,7 @@ function openRetailReturnHistoryModal(sale) {
     if (!sale?.id) return;
 
     closeRetailPaymentModalState();
+    closeRetailRefundModalState();
     closeRetailExpenseModalState();
     featureState.unsubscribeReturnHistory?.();
     featureState.unsubscribeReturnHistory = null;
@@ -692,6 +767,11 @@ function getPaymentModalSale() {
     return featureState.sales.find(entry => entry.id === featureState.paymentSaleId) || null;
 }
 
+function getRefundModalSale() {
+    if (!featureState.refundSaleId) return null;
+    return featureState.sales.find(entry => entry.id === featureState.refundSaleId) || null;
+}
+
 function getVoidingRetailPayment() {
     if (!featureState.voidingPaymentId) return null;
     return featureState.payments.find(entry => entry.id === featureState.voidingPaymentId) || null;
@@ -792,6 +872,13 @@ function getPaymentDraftAmount() {
     return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
 }
 
+function getRefundDraftAmount() {
+    const amountInput = document.getElementById("retail-refund-entry-amount");
+    const value = amountInput?.value ?? featureState.refundDraft.refundAmount;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+}
+
 function syncRetailPaymentDraftPreview() {
     if (!featureState.paymentModalOpen) return;
 
@@ -828,6 +915,30 @@ function syncRetailPaymentDraftPreview() {
 
     if (donationNode) {
         donationNode.textContent = formatCurrency(donationValue);
+    }
+}
+
+function syncRetailRefundDraftPreview() {
+    if (!featureState.refundModalOpen) return;
+
+    const sale = getRefundModalSale();
+    if (!sale) return;
+
+    const currentCreditBalance = Number(sale.creditBalance) || 0;
+    const currentNetPaid = Number(sale.totalAmountPaid) || 0;
+    const refundAmount = Math.min(getRefundDraftAmount(), currentCreditBalance);
+    const creditAfterRefund = Math.max(currentCreditBalance - refundAmount, 0);
+    const netRetainedAfterRefund = Math.max(currentNetPaid - refundAmount, 0);
+
+    const creditNode = document.getElementById("retail-refund-credit-after-draft");
+    const retainedNode = document.getElementById("retail-refund-retained-after-draft");
+
+    if (creditNode) {
+        creditNode.textContent = formatCurrency(creditAfterRefund);
+    }
+
+    if (retainedNode) {
+        retainedNode.textContent = formatCurrency(netRetainedAfterRefund);
     }
 }
 
@@ -922,7 +1033,7 @@ function renderRetailPaymentModal(snapshot) {
                     <div class="toolbar-meta purchase-payment-modal-meta">
                         <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
                         <span class="status-pill">${sale.store || "-"}</span>
-                        <span class="status-pill">${featureState.payments.length} payments</span>
+                        <span class="status-pill">${featureState.payments.length} ledger entries</span>
                         ${isPaymentVoidMode ? `
                             <span class="status-pill retail-void-mode-pill">Void Mode</span>
                         ` : ""}
@@ -941,7 +1052,7 @@ function renderRetailPaymentModal(snapshot) {
                                     <p class="summary-value">${formatCurrency(invoiceTotal)}</p>
                                 </article>
                                 <article class="summary-card">
-                                    <p class="summary-label">Applied Payment</p>
+                                    <p class="summary-label">Net Retained</p>
                                     <p class="summary-value">${formatCurrency(amountPaid)}</p>
                                 </article>
                                 <article class="summary-card retail-summary-card-strong">
@@ -1043,10 +1154,185 @@ function renderRetailPaymentModal(snapshot) {
                         <div class="payment-workspace-card">
                             <div class="purchase-payments-history-header">
                                 <p class="section-kicker">Payment History</p>
-                                <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} payment record(s) linked to this sale.</p>
+                                <p id="retail-payment-history-count" class="panel-copy">${featureState.payments.length} ledger record(s) linked to this sale.</p>
                             </div>
                             <div class="ag-shell purchase-payment-history-shell">
                                 <div id="retail-payment-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRetailRefundModal(snapshot) {
+    if (!featureState.refundModalOpen) return "";
+
+    const sale = getRefundModalSale();
+    if (!sale) return "";
+
+    const paymentModes = (snapshot.masterData.paymentModes || []).filter(mode => mode.isActive);
+    const currentSaleTotal = Number(sale.financials?.grandTotal ?? sale.financials?.totalAmount) || 0;
+    const netRetained = Number(sale.totalAmountPaid) || 0;
+    const totalRefunded = Number(sale.totalRefunded) || 0;
+    const totalCustomerPayments = Number(sale.totalCustomerPayments ?? (netRetained + totalRefunded)) || 0;
+    const creditBalance = Number(sale.creditBalance) || 0;
+    const paymentStatus = sale.paymentStatus || "Unpaid";
+    const refundStatus = sale.refundStatus
+        || (creditBalance > 0
+            ? (totalRefunded > 0 ? "Partially Refunded" : "Refund Due")
+            : (totalRefunded > 0 ? "Refunded" : "No Refund"));
+    const isVoidedSale = normalizeText(sale.saleStatus || "").toLowerCase() === "voided";
+    const refundDateValue = featureState.refundDraft.refundDate;
+    const refundAmountValue = featureState.refundDraft.refundAmount;
+    const refundModeValue = featureState.refundDraft.refundMode;
+    const refundReferenceValue = featureState.refundDraft.transactionRef;
+    const refundReasonValue = featureState.refundDraft.refundReason;
+    const refundNotesValue = featureState.refundDraft.notes;
+    const formDisabledAttrs = isVoidedSale || creditBalance <= 0
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const amountFieldDisabledAttrs = (isVoidedSale || creditBalance <= 0)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const modeFieldDisabledAttrs = (isVoidedSale || creditBalance <= 0 || paymentModes.length === 0)
+        ? 'disabled aria-disabled="true"'
+        : "";
+    const refundDraftAmount = Math.min(Number(featureState.refundDraft.refundAmount) || 0, creditBalance);
+    const creditAfterDraft = Math.max(creditBalance - refundDraftAmount, 0);
+    const retainedAfterDraft = Math.max(netRetained - refundDraftAmount, 0);
+    const recordRefundDisabledAttrs = buildDisabledActionAttrs(
+        isVoidedSale || creditBalance <= 0 || paymentModes.length === 0,
+        isVoidedSale
+            ? "Cannot record refunds on a voided sale."
+            : creditBalance <= 0
+                ? "No outstanding customer credit is available to refund."
+                : "Add at least one active payment mode before recording refunds."
+    );
+
+    return `
+        <div id="retail-refund-modal" class="purchase-payment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="retail-refund-modal-title">
+            <div class="purchase-payment-modal-card">
+                <div class="panel-header panel-header-danger-soft purchase-payment-modal-header retail-payment-void-header">
+                    <div class="purchase-payment-modal-title-row">
+                        <span class="panel-icon panel-icon-danger-soft">${icons.payment}</span>
+                        <div>
+                            <h3 id="retail-refund-modal-title">Record Retail Refund</h3>
+                            <p class="panel-copy">Post a verified customer refund against this sale's credit balance. Refund rows flow into the same retail cash ledger used by dashboard and finance reports.</p>
+                        </div>
+                    </div>
+                    <div class="toolbar-meta purchase-payment-modal-meta">
+                        <span class="status-pill">${sale.saleId || sale.manualVoucherNumber || "-"}</span>
+                        <span class="status-pill">${sale.store || "-"}</span>
+                        ${renderRetailStatusPill(paymentStatus, "Unpaid")}
+                        <span class="status-pill">${featureState.payments.length} ledger entries</span>
+                    </div>
+                </div>
+                <div class="panel-body purchase-payment-modal-body">
+                    <div class="purchase-payments-layout">
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payment-meta-grid">
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer</p>
+                                    <p class="summary-value payment-summary-copy">${sale.customerInfo?.name || "-"}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Current Sale Total</p>
+                                    <p class="summary-value">${formatCurrency(currentSaleTotal)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Net Retained</p>
+                                    <p class="summary-value">${formatCurrency(netRetained)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Customer Payments</p>
+                                    <p class="summary-value">${formatCurrency(totalCustomerPayments)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Refunded So Far</p>
+                                    <p class="summary-value">${formatCurrency(totalRefunded)}</p>
+                                </article>
+                                <article class="summary-card retail-summary-card-strong">
+                                    <p class="summary-label">Outstanding Credit</p>
+                                    <p class="summary-value">${formatCurrency(creditBalance)}</p>
+                                </article>
+                            </div>
+
+                            <form id="retail-refund-form" class="purchase-payment-form">
+                                <p class="panel-copy panel-copy-tight">
+                                    Recording a refund reduces retained collections on the sale and posts a negative outflow entry into <strong>Sales Payments Ledger</strong>.
+                                </p>
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="retail-refund-entry-date">Refund Date <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-refund-entry-date" class="input" type="date" value="${refundDateValue}" ${formDisabledAttrs} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-refund-entry-amount">Refund Amount <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="retail-refund-entry-amount" class="input" type="number" min="0" step="0.01" value="${refundAmountValue}" placeholder="0.00" ${amountFieldDisabledAttrs} required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="retail-refund-entry-mode">Refund Mode <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <select id="retail-refund-entry-mode" class="select" ${modeFieldDisabledAttrs} required>
+                                            <option value="">Select refund mode</option>
+                                            ${renderPaymentModeOptions(snapshot, refundModeValue)}
+                                        </select>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-refund-entry-reference">Refund Reference</label>
+                                        <input id="retail-refund-entry-reference" class="input" type="text" value="${refundReferenceValue}" placeholder="Optional bank / UPI / cash memo reference" ${formDisabledAttrs}>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-refund-entry-reason">Refund Reason <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <textarea id="retail-refund-entry-reason" class="textarea" placeholder="Why is this customer credit being refunded?" ${formDisabledAttrs}>${refundReasonValue}</textarea>
+                                    </div>
+                                    <div class="field field-full">
+                                        <label for="retail-refund-entry-notes">Refund Notes</label>
+                                        <textarea id="retail-refund-entry-notes" class="textarea" placeholder="Optional finance or audit notes" ${formDisabledAttrs}>${refundNotesValue}</textarea>
+                                    </div>
+                                </div>
+                                <div class="purchase-payment-preview">
+                                    <article class="summary-card">
+                                        <p class="summary-label">Refund Status</p>
+                                        <p class="summary-value">${refundStatus}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Credit After Draft</p>
+                                        <p id="retail-refund-credit-after-draft" class="summary-value">${formatCurrency(creditAfterDraft)}</p>
+                                    </article>
+                                    <article class="summary-card">
+                                        <p class="summary-label">Net Retained After Draft</p>
+                                        <p id="retail-refund-retained-after-draft" class="summary-value">${formatCurrency(retainedAfterDraft)}</p>
+                                    </article>
+                                </div>
+                                ${creditBalance <= 0 ? `
+                                    <p class="panel-copy panel-copy-tight">This sale has no outstanding customer credit to refund right now.</p>
+                                ` : ""}
+                                ${creditBalance > 0 && paymentModes.length === 0 ? `
+                                    <p class="panel-copy panel-copy-tight">Add at least one active payment mode before recording refunds.</p>
+                                ` : ""}
+                                <div class="form-actions">
+                                    <button id="retail-refund-cancel-button" class="button button-secondary retail-refund-close-trigger" type="button">
+                                        <span class="button-icon">${icons.inactive}</span>
+                                        Close
+                                    </button>
+                                    <button class="button button-danger-soft" type="submit" ${recordRefundDisabledAttrs}>
+                                        <span class="button-icon">${icons.payment}</span>
+                                        Record Refund
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="payment-workspace-card">
+                            <div class="purchase-payments-history-header">
+                                <p class="section-kicker">Sale Ledger</p>
+                                <p id="retail-refund-history-count" class="panel-copy">${featureState.payments.length} ledger record(s) linked to this sale.</p>
+                            </div>
+                            <div class="ag-shell purchase-payment-history-shell">
+                                <div id="retail-refund-history-grid" class="ag-theme-alpine moneta-grid" style="height: 400px; width: 100%;"></div>
                             </div>
                         </div>
                     </div>
@@ -1209,10 +1495,12 @@ function renderRetailReturnHistoryModal() {
     const returnCount = Number(sale.returnCount) || 0;
     const originalSaleTotal = Number(sale.originalSaleSnapshot?.financials?.grandTotal) || (currentSaleTotal + totalReturnedAmount);
     const amountPaid = Number(sale.totalAmountPaid) || 0;
+    const totalRefunded = Number(sale.totalRefunded) || 0;
     const balanceDue = Number(sale.balanceDue) || 0;
     const creditBalance = Number(sale.creditBalance) || 0;
     const orderStatus = deriveRetailOrderStatus(sale);
     const paymentStatus = sale.paymentStatus || "Unpaid";
+    const refundStatus = sale.refundStatus || (creditBalance > 0 ? (totalRefunded > 0 ? "Partially Refunded" : "Refund Due") : (totalRefunded > 0 ? "Refunded" : "No Refund"));
     const creditCardClass = creditBalance > 0 ? " retail-summary-card-strong" : "";
 
     return `
@@ -1259,7 +1547,7 @@ function renderRetailReturnHistoryModal() {
                                     <p class="summary-value">${formatCurrency(currentSaleTotal)}</p>
                                 </article>
                                 <article class="summary-card">
-                                    <p class="summary-label">Amount Paid</p>
+                                    <p class="summary-label">Net Retained</p>
                                     <p class="summary-value">${formatCurrency(amountPaid)}</p>
                                 </article>
                                 <article class="summary-card">
@@ -1277,6 +1565,14 @@ function renderRetailReturnHistoryModal() {
                                 <article class="summary-card${creditCardClass}">
                                     <p class="summary-label">Credit Balance</p>
                                     <p class="summary-value">${formatCurrency(creditBalance)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Refunded So Far</p>
+                                    <p class="summary-value">${formatCurrency(totalRefunded)}</p>
+                                </article>
+                                <article class="summary-card">
+                                    <p class="summary-label">Refund Status</p>
+                                    <p class="summary-value">${refundStatus}</p>
                                 </article>
                             </div>
                             <p class="panel-copy">Current Sale Total reflects the remaining invoice value after posted returns. Original Sale Total shows the starting invoice before any return was applied. Each return row also captures the invoice and credit position immediately after that return.</p>
@@ -1312,6 +1608,7 @@ function renderRetailSaleActionsModal() {
     const isVoided = (sale.saleStatus || "").toLowerCase() === "voided";
     const hasReturnableItems = (Number(sale.lineItemCount) || 0) > 0;
     const hasReturns = (Number(sale.returnCount) || 0) > 0;
+    const creditBalance = Number(sale.creditBalance) || 0;
     const canVoidSale = !isVoided && !hasReturns;
     const invoiceButtonLabel = hasReturns ? "Download Original Invoice PDF" : "Download Invoice PDF";
     const editDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot edit a voided sale.");
@@ -1321,6 +1618,10 @@ function renderRetailSaleActionsModal() {
     );
     const expenseDisabledAttrs = buildDisabledActionAttrs(isVoided, "Cannot add expense to a voided sale.");
     const creditNoteDisabledAttrs = buildDisabledActionAttrs(!hasReturns, "No return history found. Process a return first.");
+    const refundDisabledAttrs = buildDisabledActionAttrs(
+        isVoided || creditBalance <= 0,
+        isVoided ? "Cannot record refunds on a voided sale." : "No customer credit is available to refund."
+    );
     const voidDisabledAttrs = buildDisabledActionAttrs(
         !canVoidSale,
         isVoided ? "Sale is already voided." : "Sales with posted returns cannot be voided."
@@ -1368,6 +1669,10 @@ function renderRetailSaleActionsModal() {
                         <button class="button grid-action-button grid-action-button-secondary retail-sale-action-credit-note" type="button" data-sale-id="${sale.id}" ${creditNoteDisabledAttrs}>
                             <span class="button-icon">${icons.download}</span>
                             Download Credit Note
+                        </button>
+                        <button class="button grid-action-button grid-action-button-secondary retail-sale-action-refund" type="button" data-sale-id="${sale.id}" ${refundDisabledAttrs}>
+                            <span class="button-icon">${icons.payment}</span>
+                            Record Refund
                         </button>
                         <button class="button grid-action-button grid-action-button-danger retail-sale-action-void" type="button" data-sale-id="${sale.id}" ${voidDisabledAttrs}>
                             <span class="button-icon">${icons.warning}</span>
@@ -2055,6 +2360,7 @@ function renderRetailStoreViewShell(snapshot) {
         ${renderRetailSaleActionsModal()}
         ${renderRetailReturnHistoryModal()}
         ${renderRetailPaymentModal(snapshot)}
+        ${renderRetailRefundModal(snapshot)}
         ${renderRetailExpenseModal(expenseModalSale)}
     `;
 }
@@ -2123,7 +2429,22 @@ function syncRetailPaymentHistoryGrid() {
 
     const historyCount = document.getElementById("retail-payment-history-count");
     if (historyCount) {
-        historyCount.textContent = `${featureState.payments.length} payment record(s) linked to this sale.`;
+        historyCount.textContent = `${featureState.payments.length} ledger record(s) linked to this sale.`;
+    }
+}
+
+function syncRetailRefundHistoryGrid() {
+    if (!featureState.refundModalOpen) return;
+
+    const gridElement = document.getElementById("retail-refund-history-grid");
+    if (!gridElement) return;
+
+    initializeRetailPaymentHistoryGrid(gridElement);
+    refreshRetailPaymentHistoryGrid(featureState.payments);
+
+    const historyCount = document.getElementById("retail-refund-history-count");
+    if (historyCount) {
+        historyCount.textContent = `${featureState.payments.length} ledger record(s) linked to this sale.`;
     }
 }
 
@@ -2614,6 +2935,12 @@ function handleRetailInput(target) {
         "retail-payment-entry-mode": "paymentMode",
         "retail-payment-entry-reference": "transactionRef",
         "retail-payment-entry-notes": "notes",
+        "retail-refund-entry-date": "refundDate",
+        "retail-refund-entry-amount": "refundAmount",
+        "retail-refund-entry-mode": "refundMode",
+        "retail-refund-entry-reference": "transactionRef",
+        "retail-refund-entry-reason": "refundReason",
+        "retail-refund-entry-notes": "notes",
         "retail-return-date": "returnDate",
         "retail-return-reason": "reason",
         "retail-expense-date": "expenseDate",
@@ -2656,6 +2983,14 @@ function handleRetailInput(target) {
         featureState.paymentDraft[field] = target.value || "";
         if (target.id === "retail-payment-entry-amount") {
             syncRetailPaymentDraftPreview();
+        }
+        return;
+    }
+
+    if (target.id.startsWith("retail-refund-entry-")) {
+        featureState.refundDraft[field] = target.value || "";
+        if (target.id === "retail-refund-entry-amount") {
+            syncRetailRefundDraftPreview();
         }
         return;
     }
@@ -2744,6 +3079,25 @@ function handleRetailChange(target) {
         case "retail-payment-entry-amount":
             featureState.paymentDraft.amountPaid = target.value || "";
             syncRetailPaymentDraftPreview();
+            return;
+        case "retail-refund-entry-date":
+            featureState.refundDraft.refundDate = target.value || "";
+            return;
+        case "retail-refund-entry-mode":
+            featureState.refundDraft.refundMode = target.value || "";
+            return;
+        case "retail-refund-entry-reference":
+            featureState.refundDraft.transactionRef = target.value || "";
+            return;
+        case "retail-refund-entry-reason":
+            featureState.refundDraft.refundReason = target.value || "";
+            return;
+        case "retail-refund-entry-notes":
+            featureState.refundDraft.notes = target.value || "";
+            return;
+        case "retail-refund-entry-amount":
+            featureState.refundDraft.refundAmount = target.value || "";
+            syncRetailRefundDraftPreview();
             return;
         case "retail-payment-void-reason":
             featureState.paymentVoidReason = target.value || "";
@@ -3119,6 +3473,17 @@ function handleRetailSalePayments(button) {
     document.getElementById("retail-payment-entry-amount")?.focus();
 }
 
+function handleRetailSaleRefund(button) {
+    const saleId = button.dataset.saleId || "";
+    const sale = featureState.sales.find(entry => entry.id === saleId) || null;
+    if (!sale) return;
+
+    closeRetailSaleActionsModalState();
+    openRetailRefundModal(sale);
+    renderRetailStoreView();
+    document.getElementById("retail-refund-entry-amount")?.focus();
+}
+
 function handleRetailSaleReturn(button) {
     const saleId = button.dataset.saleId || "";
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
@@ -3456,6 +3821,92 @@ async function handleRetailSalePdf(button) {
     }
 }
 
+async function handleRetailRefundSubmit(event) {
+    event.preventDefault();
+
+    const snapshot = getState();
+    const sale = getRefundModalSale();
+
+    if (!sale) {
+        showToast("The selected sale could not be found. Reopen the refund modal and try again.", "error", {
+            title: "Retail Store"
+        });
+        closeRetailRefundModal();
+        return;
+    }
+
+    try {
+        const validatedRefundAmount = Math.min(Number(featureState.refundDraft.refundAmount) || 0, Number(sale.creditBalance) || 0);
+        if (validatedRefundAmount <= 0) {
+            showToast("Enter a refund amount greater than zero.", "warning", {
+                title: "Retail Store"
+            });
+            document.getElementById("retail-refund-entry-amount")?.focus();
+            return;
+        }
+
+        const creditAfterRefund = Math.max((Number(sale.creditBalance) || 0) - validatedRefundAmount, 0);
+        const netRetainedAfterRefund = Math.max((Number(sale.totalAmountPaid) || 0) - validatedRefundAmount, 0);
+        const confirmed = await showConfirmationModal({
+            title: "Record Retail Refund",
+            message: `Refund ${formatCurrency(validatedRefundAmount)} to ${sale.customerInfo?.name || "the customer"}?`,
+            details: [
+                { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+                { label: "Outstanding Credit", value: formatCurrency(sale.creditBalance || 0) },
+                { label: "Refund Amount", value: formatCurrency(validatedRefundAmount) },
+                { label: "Credit After Refund", value: formatCurrency(creditAfterRefund) },
+                { label: "Net Retained After Refund", value: formatCurrency(netRetainedAfterRefund) }
+            ],
+            note: "Moneta will post this as a negative retail ledger row so dashboard cash and cash-flow reports stay correct.",
+            confirmText: "Record Refund",
+            tone: "danger"
+        });
+
+        if (!confirmed) return;
+
+        const result = await runProgressToastFlow({
+            title: "Recording Retail Refund",
+            initialMessage: "Reading the sale credit position...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Refund Recorded",
+            successMessage: "The retail refund was recorded successfully."
+        }, async ({ update }) => {
+            update("Validating refund date, amount, mode, and reason...", 42, "Step 2 of 4");
+            update("Writing refund ledger entry and updating sale totals...", 76, "Step 3 of 4");
+            const result = await saveRetailSaleRefund(featureState.refundDraft, sale, snapshot.masterData, snapshot.currentUser);
+            update("Refreshing sales history and retail ledger view...", 95, "Step 4 of 4");
+            return result;
+        });
+
+        featureState.refundDraft = createDefaultRetailRefundDraft(sale.latestReturnOn?.toDate ? sale.latestReturnOn.toDate() : sale.latestReturnOn || new Date());
+        renderRetailStoreView();
+
+        showToast("Retail refund recorded.", "success", {
+            title: "Retail Store"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Retail Refund Recorded",
+            message: "The customer refund was posted and the retail cash ledger was updated.",
+            details: [
+                { label: "Sale", value: sale.saleId || sale.manualVoucherNumber || "-" },
+                { label: "Refund Amount", value: formatCurrency(result.summary.refundAmount || 0) },
+                { label: "Net Retained", value: formatCurrency(result.summary.nextTotalAmountPaid || 0) },
+                { label: "Refunded So Far", value: formatCurrency(result.summary.nextTotalRefunded || 0) },
+                { label: "Credit Balance", value: formatCurrency(result.summary.nextCreditBalance || 0) },
+                { label: "Refund Status", value: result.summary.nextRefundStatus || "-" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Retail refund save failed:", error);
+        ProgressToast.hide(0);
+        showToast(error?.message || "Could not record the retail refund.", "error", {
+            title: "Retail Store"
+        });
+    }
+}
+
 function handleRetailSaleExpense(button) {
     const saleId = button.dataset.saleId || "";
     const sale = featureState.sales.find(entry => entry.id === saleId) || null;
@@ -3548,6 +3999,11 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (event.target.closest("#retail-refund-form")) {
+            handleRetailRefundSubmit(event);
+            return;
+        }
+
         if (event.target.closest("#retail-expense-form")) {
             handleRetailExpenseSubmit(event);
         }
@@ -3575,6 +4031,7 @@ function bindRetailStoreDomEvents() {
         const saleActionExpenseButton = targetElement.closest(".retail-sale-action-expense");
         const saleActionPdfButton = targetElement.closest(".retail-sale-action-pdf");
         const saleActionCreditNoteButton = targetElement.closest(".retail-sale-action-credit-note");
+        const saleActionRefundButton = targetElement.closest(".retail-sale-action-refund");
         const saleActionVoidButton = targetElement.closest(".retail-sale-action-void");
         const saleActionsCloseButton = targetElement.closest("#retail-sale-actions-close-button");
         const saleActionsBackdrop = targetElement.closest("#retail-sale-actions-modal");
@@ -3588,6 +4045,8 @@ function bindRetailStoreDomEvents() {
         const paymentVoidConfirmButton = targetElement.closest("#retail-payment-void-confirm-button");
         const paymentVoidCancelButton = targetElement.closest("#retail-payment-void-cancel-button");
         const paymentModalBackdrop = targetElement.closest("#retail-payment-modal");
+        const refundCancelButton = targetElement.closest("#retail-refund-cancel-button") || targetElement.closest(".retail-refund-close-trigger");
+        const refundModalBackdrop = targetElement.closest("#retail-refund-modal");
         const expenseCancelButton = targetElement.closest("#retail-expense-cancel-button") || targetElement.closest(".retail-expense-close-trigger");
         const expenseModalBackdrop = targetElement.closest("#retail-expense-modal");
         const salesSourceLegendButton = targetElement.closest(".retail-sales-source-legend-button");
@@ -3703,6 +4162,12 @@ function bindRetailStoreDomEvents() {
             return;
         }
 
+        if (saleActionRefundButton) {
+            closeRetailSaleActionsModal();
+            handleRetailSaleRefund(saleActionRefundButton);
+            return;
+        }
+
         if (saleActionVoidButton) {
             closeRetailSaleActionsModal();
             handleRetailSaleVoid(saleActionVoidButton);
@@ -3751,6 +4216,16 @@ function bindRetailStoreDomEvents() {
 
         if (targetElement.id === "retail-payment-modal" && paymentModalBackdrop) {
             closeRetailPaymentModal();
+            return;
+        }
+
+        if (refundCancelButton) {
+            closeRetailRefundModal();
+            return;
+        }
+
+        if (targetElement.id === "retail-refund-modal" && refundModalBackdrop) {
+            closeRetailRefundModal();
             return;
         }
 
