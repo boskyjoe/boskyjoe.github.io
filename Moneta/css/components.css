@@ -1006,6 +1006,19 @@ select {
     border-color: rgba(var(--accent-rgb), 0.2);
 }
 
+.purchase-status-refunded {
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.18) 0%, rgba(var(--accent-rgb), 0.12) 100%);
+    color: var(--accent-strong);
+    border-color: rgba(var(--accent-rgb), 0.2);
+}
+
+.purchase-status-refund-due,
+.purchase-status-partially-refunded {
+    background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.18) 0%, rgba(var(--warning-rgb), 0.12) 100%);
+    color: var(--warning);
+    border-color: rgba(var(--warning-rgb), 0.2);
+}
+
 .purchase-status-voided,
 .purchase-status-void-reversal {
     background: linear-gradient(180deg, var(--bg-panel-muted) 0%, var(--bg-panel-soft) 100%);
