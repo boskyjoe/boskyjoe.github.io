@@ -642,11 +642,6 @@ select {
     border-color: var(--border);
 }
 
-.ag-theme-alpine.moneta-grid .ag-cell-wrapper {
-    align-items: center;
-    min-height: 100%;
-}
-
 .ag-theme-alpine.moneta-grid .ag-right-aligned-cell {
     text-align: right;
 }
@@ -670,7 +665,7 @@ select {
 }
 
 .ag-theme-alpine.moneta-grid .ag-header-cell-text,
-.ag-theme-alpine.moneta-grid .ag-cell-value {
+.ag-theme-alpine.moneta-grid .ag-cell-wrap-text .ag-cell-value {
     white-space: normal;
     line-height: 1.35;
 }
@@ -678,17 +673,6 @@ select {
 .ag-theme-alpine.moneta-grid .ag-cell-value,
 .ag-theme-alpine.moneta-grid .ag-cell {
     color: var(--text-main);
-}
-
-.ag-theme-alpine.moneta-grid .ag-cell-value {
-    display: flex;
-    align-items: center;
-    min-height: 100%;
-}
-
-.ag-theme-alpine.moneta-grid .ag-cell {
-    display: flex;
-    align-items: center;
 }
 
 .ag-theme-alpine.moneta-grid .ag-cell .table-actions,
