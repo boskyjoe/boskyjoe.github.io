@@ -603,11 +603,27 @@ select {
     color: var(--text-muted);
 }
 
+.ag-theme-alpine.moneta-grid .ag-paging-panel {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    min-height: var(--ag-header-height);
+    white-space: nowrap;
+}
+
 .ag-theme-alpine.moneta-grid .ag-header-cell,
 .ag-theme-alpine.moneta-grid .ag-header-group-cell,
 .ag-theme-alpine.moneta-grid .ag-paging-panel,
 .ag-theme-alpine.moneta-grid .ag-paging-panel * {
     color: var(--text-muted);
+}
+
+.ag-theme-alpine.moneta-grid .ag-paging-page-size,
+.ag-theme-alpine.moneta-grid .ag-paging-row-summary-panel,
+.ag-theme-alpine.moneta-grid .ag-paging-page-summary-panel {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .ag-theme-alpine.moneta-grid .ag-row {
