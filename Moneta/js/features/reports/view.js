@@ -2271,9 +2271,7 @@ function initializeActivityGrid(rows = []) {
                 filter: true,
                 resizable: true,
                 wrapHeaderText: true,
-                autoHeaderHeight: true,
-                wrapText: true,
-                autoHeight: true
+                autoHeaderHeight: true
             }
         });
         featureState.activityGridElement = gridElement;

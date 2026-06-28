@@ -589,9 +589,7 @@ function buildDefaultColDef() {
         filter: true,
         resizable: true,
         wrapHeaderText: true,
-        autoHeaderHeight: true,
-        wrapText: true,
-        autoHeight: true
+        autoHeaderHeight: true
     };
 }
 

@@ -76,9 +76,7 @@ export function initializeSuppliersGrid(gridElement) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         }
     });
 

@@ -450,9 +450,7 @@ export function initializePurchasesGrid(gridElement, onFilteredCountChange) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         },
         onFilterChanged: event => {
             refreshPurchasesPinnedBottomRow(event.api);
@@ -499,9 +497,7 @@ export function initializePurchaseLineItemsGrid(gridElement, onRowsChanged) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         },
         getRowId: params => params.data.masterProductId,
         singleClickEdit: true,
@@ -571,9 +567,7 @@ export function initializePurchasePaymentHistoryGrid(gridElement) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         }
     });
 

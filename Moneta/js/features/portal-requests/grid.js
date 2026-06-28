@@ -206,9 +206,7 @@ export function initializePortalRequestsGrid(gridElement, handlers = {}) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         }
     });
 
@@ -246,9 +244,7 @@ export function initializePortalRequestItemsGrid(gridElement) {
             filter: true,
             resizable: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         }
     });
 

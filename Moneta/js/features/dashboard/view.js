@@ -1508,9 +1508,7 @@ function initializeInventoryGrid(inventory = {}) {
             sortable: true,
             filter: true,
             wrapHeaderText: true,
-            autoHeaderHeight: true,
-            wrapText: true,
-            autoHeight: true
+            autoHeaderHeight: true
         },
         animateRows: true,
         domLayout: "autoHeight",
