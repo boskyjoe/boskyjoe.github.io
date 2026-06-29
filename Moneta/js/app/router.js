@@ -7,7 +7,7 @@ import { findNavRouteItem } from "../config/nav-config.js";
 import { showSuppliersPage } from "../features/suppliers/index.js";
 import { showProductsPage } from "../features/products/index.js";
 import { showSalesCataloguesPage } from "../features/sales-catalogues/index.js";
-import { showAdminModulesPage } from "../features/admin-modules/index.js";
+import { showAdminModulesPage } from "../features/admin-modules/index.js?v=20260629-country-currency-admin-2";
 import { showPurchasesPage } from "../features/purchases/index.js";
 import { showUserManagementPage } from "../features/user-management/index.js";
 import { showLeadsPage } from "../features/leads/index.js";

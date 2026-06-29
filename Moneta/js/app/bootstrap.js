@@ -1,14 +1,14 @@
 import { firebaseConfig } from "../config/firebase-config.js";
 import { initializeAuth, loginWithGoogle, logout } from "./auth.js";
-import { initializeRouter } from "./router.js";
+import { initializeRouter } from "./router.js?v=20260629-country-currency-admin-2";
 import { initializeShell } from "./shell.js";
 import { applyTheme, initializeTheme } from "./theme.js";
-import { detachMasterData, initializeMasterData } from "./master-data.js";
+import { detachMasterData, initializeMasterData } from "./master-data.js?v=20260629-country-currency-admin-2";
 import { subscribe } from "./store.js";
 import { initializeSuppliersModule } from "../features/suppliers/index.js";
 import { initializeProductsModule } from "../features/products/index.js";
 import { initializeSalesCataloguesModule } from "../features/sales-catalogues/index.js";
-import { initializeAdminModulesModule } from "../features/admin-modules/index.js";
+import { initializeAdminModulesModule } from "../features/admin-modules/index.js?v=20260629-country-currency-admin-2";
 import { initializePurchasesModule } from "../features/purchases/index.js";
 import { initializeUserManagementModule } from "../features/user-management/index.js";
 import { initializeLeadsModule } from "../features/leads/index.js";
@@ -26,7 +26,7 @@ import {
     ensureStoreConfigSeed,
     ensureSystemDefaultReorderPolicy,
     ensureSystemSettingsSeed
-} from "../features/admin-modules/service.js";
+} from "../features/admin-modules/service.js?v=20260629-country-currency-admin-2";
 import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
 import { isSystemDefaultPricingPolicy } from "../shared/pricing-policy.js";
 
