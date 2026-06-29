@@ -1,6 +1,7 @@
 export const SYSTEM_SETTINGS_DOC_IDS = {
     leadWorkflow: "leadWorkflow",
-    inventoryOperations: "inventoryOperations"
+    inventoryOperations: "inventoryOperations",
+    localization: "localization"
 };
 
 export const DEFAULT_SYSTEM_SETTINGS_DOC_ID = SYSTEM_SETTINGS_DOC_IDS.leadWorkflow;
@@ -32,6 +33,20 @@ export const MONETA_SYSTEM_SETTINGS_SEED = [
             lowStockThreshold: 5,
             mediumStockThreshold: 20,
             inventoryTargetStock: 24
+        }
+    },
+    {
+        docId: SYSTEM_SETTINGS_DOC_IDS.localization,
+        settingName: "Localization",
+        settingGroup: "Platform",
+        description: "Controls Moneta-wide country, currency, locale, and optional symbol override defaults used by currency formatting and document generation.",
+        isActive: true,
+        sortOrder: 3,
+        localization: {
+            defaultCountryCode: "IN",
+            defaultCurrencyCode: "INR",
+            defaultLocale: "en-IN",
+            currencySymbolOverride: ""
         }
     }
 ];

@@ -4,9 +4,18 @@ import {
     SYSTEM_SETTINGS_DOC_IDS
 } from "../config/system-settings-config.js";
 import { getState } from "../app/store.js";
+import {
+    findCountryCurrencyReferenceByCurrencyCode,
+    getCountryCurrencyReferenceByCountryCode
+} from "./country-currency-reference.js";
 
 function normalizeText(value) {
     return String(value || "").trim();
+}
+
+function normalizeUpperText(value, fallback = "") {
+    const normalized = normalizeText(value).toUpperCase();
+    return normalized || fallback;
 }
 
 function normalizeInteger(value, fallback = 0, minimum = 0) {
@@ -23,6 +32,9 @@ function cloneRow(row = {}) {
         },
         inventoryOperations: {
             ...(row.inventoryOperations || {})
+        },
+        localization: {
+            ...(row.localization || {})
         }
     };
 }
@@ -90,5 +102,32 @@ export function getInventoryOperationsSettings(settings = null) {
         lowStockThreshold: normalizeInteger(inventoryOperations.lowStockThreshold, normalizeInteger(seedDefaults.lowStockThreshold, 5, 0), 0),
         mediumStockThreshold: normalizeInteger(inventoryOperations.mediumStockThreshold, normalizeInteger(seedDefaults.mediumStockThreshold, 20, 0), 0),
         inventoryTargetStock: normalizeInteger(inventoryOperations.inventoryTargetStock, normalizeInteger(seedDefaults.inventoryTargetStock, 24, 0), 0)
+    };
+}
+
+export function getLocalizationSettings(settings = null, referenceRows = null) {
+    const seedDefaults = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, MONETA_SYSTEM_SETTINGS_SEED)?.localization || {};
+    const row = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, settings) || {};
+    const localization = row.localization || {};
+
+    const defaultCountryCode = normalizeUpperText(localization.defaultCountryCode, normalizeUpperText(seedDefaults.defaultCountryCode, "IN"));
+    const countryReference = getCountryCurrencyReferenceByCountryCode(defaultCountryCode, referenceRows) || null;
+    const defaultCurrencyCode = normalizeUpperText(
+        localization.defaultCurrencyCode,
+        normalizeUpperText(seedDefaults.defaultCurrencyCode, normalizeUpperText(countryReference?.primaryCurrencyCode, "INR"))
+    );
+    const currencyReference = findCountryCurrencyReferenceByCurrencyCode(defaultCurrencyCode, referenceRows, { includeInactive: true })
+        || countryReference
+        || null;
+
+    return {
+        defaultCountryCode,
+        defaultCountryName: normalizeText(countryReference?.countryName || ""),
+        defaultCurrencyCode,
+        defaultCurrencyName: normalizeText(currencyReference?.primaryCurrencyName || defaultCurrencyCode),
+        defaultCurrencySymbol: normalizeText(currencyReference?.primaryCurrencySymbol || defaultCurrencyCode),
+        defaultLocale: normalizeText(localization.defaultLocale || countryReference?.locale || seedDefaults.defaultLocale || "en-IN"),
+        currencySymbolOverride: normalizeText(localization.currencySymbolOverride || ""),
+        minorUnit: normalizeInteger(currencyReference?.minorUnit, 2, 0)
     };
 }

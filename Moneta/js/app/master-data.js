@@ -1,4 +1,4 @@
-import { COLLECTIONS } from "../config/collections.js?v=20260629-country-currency-admin-2";
+import { COLLECTIONS } from "../config/collections.js?v=20260629-country-currency-admin-3";
 import { setState, updateMasterData } from "./store.js";
 import { showToast } from "../shared/toast.js";
 

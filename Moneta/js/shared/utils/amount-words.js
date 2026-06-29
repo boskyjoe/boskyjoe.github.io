@@ -1,3 +1,5 @@
+import { getLocalizationSettings } from "../system-settings.js";
+
 function convertBelowHundred(num) {
     const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
     const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
@@ -37,22 +39,61 @@ function convertIndianNumber(num) {
     return parts.join(" ").trim();
 }
 
-export function amountToWords(amount, currency = "INR") {
+function convertWesternNumber(num) {
+    if (num === 0) return "Zero";
+
+    const scales = [
+        [1000000000000, "Trillion"],
+        [1000000000, "Billion"],
+        [1000000, "Million"],
+        [1000, "Thousand"]
+    ];
+
+    let remaining = num;
+    const parts = [];
+
+    scales.forEach(([divisor, label]) => {
+        const chunk = Math.floor(remaining / divisor);
+        if (chunk > 0) {
+            parts.push(`${convertBelowThousand(chunk)} ${label}`);
+            remaining %= divisor;
+        }
+    });
+
+    if (remaining > 0) {
+        parts.push(convertBelowThousand(remaining));
+    }
+
+    return parts.join(" ").trim();
+}
+
+export function amountToWords(amount, currency = "") {
     const normalizedAmount = Number(amount);
     if (!Number.isFinite(normalizedAmount) || normalizedAmount < 0) {
         return "Invalid amount";
     }
 
-    const [whole, fraction] = normalizedAmount.toFixed(2).split(".");
+    const localization = getLocalizationSettings();
+    const resolvedCurrency = String(currency || localization.defaultCurrencyCode || "INR").trim().toUpperCase();
+    const minorUnit = Math.max(0, Number(localization.minorUnit ?? 2) || 0);
+    const [whole, fraction = ""] = normalizedAmount.toFixed(minorUnit).split(".");
     const wholeNumber = Number(whole) || 0;
-    const fractionNumber = Number(fraction) || 0;
+    const fractionNumber = Number(fraction || 0) || 0;
 
-    if (currency !== "INR") {
-        return `${wholeNumber}`;
+    if (resolvedCurrency === "INR") {
+        const wholeWords = convertIndianNumber(wholeNumber);
+        const paisaWords = fractionNumber ? convertIndianNumber(fractionNumber) : "";
+
+        return `${wholeWords} Rupees${paisaWords ? ` and ${paisaWords} Paisa` : ""} Only`;
     }
 
-    const wholeWords = convertIndianNumber(wholeNumber);
-    const paisaWords = fractionNumber ? convertIndianNumber(fractionNumber) : "";
+    const wholeWords = convertWesternNumber(wholeNumber);
+    const defaultCurrencyCode = String(localization.defaultCurrencyCode || "").trim().toUpperCase();
+    const currencyLabel = resolvedCurrency === defaultCurrencyCode
+        ? (localization.defaultCurrencyName || resolvedCurrency)
+        : resolvedCurrency;
+    const fractionLabel = minorUnit === 0 ? "" : "Cents";
+    const fractionWords = fractionNumber ? convertWesternNumber(fractionNumber) : "";
 
-    return `${wholeWords} Rupees${paisaWords ? ` and ${paisaWords} Paisa` : ""} Only`;
+    return `${wholeWords} ${currencyLabel}${fractionWords && fractionLabel ? ` and ${fractionWords} ${fractionLabel}` : ""} Only`;
 }
