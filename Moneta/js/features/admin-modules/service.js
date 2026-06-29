@@ -9,6 +9,7 @@ import {
     seedPricingPolicyRecords,
     createSeasonRecord,
     saveOnlineCatalogueRecord,
+    seedCountryCurrencyReferenceRecords,
     seedStoreConfigRecords,
     seedSystemSettingsRecords,
     getCategoryUsageStatus,
@@ -16,11 +17,13 @@ import {
     getSeasonUsageStatus,
     setCategoryActiveStatus,
     setChurchMemberActiveStatus,
+    setCountryCurrencyReferenceActiveStatus,
     setPaymentModeActiveStatus,
     setReorderPolicyActiveStatus,
     setSeasonActiveStatus,
     updateCategoryRecord,
     updateChurchMemberRecord,
+    updateCountryCurrencyReferenceRecord,
     updatePaymentModeRecord,
     updateProductPriceChangeReviewRecord,
     updatePricingPolicyRecord,
@@ -33,9 +36,11 @@ import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/s
 import { clearSalesCatalogueOnlinePublishPendingItems } from "../sales-catalogues/repository.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
+import { MONETA_COUNTRY_CURRENCY_REFERENCE_SEED } from "../../config/country-currency-reference-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
 import { MONETA_SYSTEM_SETTINGS_SEED } from "../../config/system-settings-config.js";
 import { COLLECTIONS } from "../../config/collections.js";
+import { getCountryCurrencyReferenceByDocId } from "../../shared/country-currency-reference.js";
 import {
     buildPricingPolicyExplanation,
     COSTING_METHODS,
@@ -123,6 +128,13 @@ function normalizeDecimal(value, fallback = 0, minimum = 0) {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.max(minimum, Number(parsed.toFixed(2)));
+}
+
+function normalizeCodeList(value) {
+    return String(value || "")
+        .split(/[\n,]/)
+        .map(entry => normalizeUpperText(entry))
+        .filter(Boolean);
 }
 
 export function buildOnlineCatalogueItemKey(entry = {}) {
@@ -1331,6 +1343,90 @@ export async function ensureSystemSettingsSeed(user, existingSystemSettings = []
     return { mode: existingRows.length === 0 ? "create" : "repair" };
 }
 
+export function validateCountryCurrencyReferencePayload(payload, existingRows = []) {
+    const docId = normalizeUpperText(payload.docId);
+    const existingRecord = getCountryCurrencyReferenceByDocId(docId, existingRows);
+
+    if (!docId || !existingRecord) {
+        throw new Error("Country and currency reference record could not be found.");
+    }
+
+    const countryName = normalizeText(payload.countryName);
+    const countryCode = normalizeUpperText(existingRecord.countryCode || docId, docId);
+    const primaryCurrencyCode = normalizeUpperText(payload.primaryCurrencyCode, normalizeUpperText(existingRecord.primaryCurrencyCode));
+    const primaryCurrencyName = normalizeText(payload.primaryCurrencyName);
+    const primaryCurrencySymbol = normalizeText(payload.primaryCurrencySymbol);
+    const alternateCurrencyCodes = [...new Set(
+        normalizeCodeList(payload.alternateCurrencyCodes).filter(code => code !== primaryCurrencyCode)
+    )];
+    const minorUnit = normalizeInteger(payload.minorUnit, normalizeInteger(existingRecord.minorUnit, 2, 0), 0);
+    const locale = normalizeText(payload.locale) || `en-${countryCode}`;
+
+    if (!countryName) throw new Error("Country name is required.");
+    if (!countryCode || countryCode.length !== 2) throw new Error("Country code must be a 2-letter code.");
+    if (!primaryCurrencyCode || primaryCurrencyCode.length !== 3) throw new Error("Primary currency code must be a 3-letter code.");
+    if (!primaryCurrencyName) throw new Error("Primary currency name is required.");
+    if (!primaryCurrencySymbol) throw new Error("Primary currency symbol is required.");
+    if (minorUnit > 6) throw new Error("Minor unit must be 6 or less.");
+
+    return {
+        countryName,
+        countryCode,
+        primaryCurrencyCode,
+        primaryCurrencyName,
+        primaryCurrencySymbol,
+        alternateCurrencyCodes,
+        minorUnit,
+        locale,
+        isActive: existingRecord.isActive !== false,
+        sortOrder: normalizeInteger(existingRecord.sortOrder, 9999, 0),
+        sourceLabel: normalizeText(existingRecord.sourceLabel || "Unicode CLDR"),
+        sourceVersion: normalizeText(existingRecord.sourceVersion || ""),
+        sourceUrl: normalizeText(existingRecord.sourceUrl || "https://github.com/unicode-org/cldr-json")
+    };
+}
+
+export async function saveCountryCurrencyReference(payload, user, existingRows = []) {
+    if (!user) {
+        throw new Error("You must be logged in to save country and currency reference data.");
+    }
+
+    const docId = normalizeUpperText(payload.docId);
+    const referenceData = validateCountryCurrencyReferencePayload(payload, existingRows);
+    await updateCountryCurrencyReferenceRecord(docId, referenceData, user);
+    return { mode: "update" };
+}
+
+export async function ensureCountryCurrencyReferenceSeed(user, existingRows = []) {
+    if (!user || user.role !== "admin") {
+        return { mode: "skip" };
+    }
+
+    const currentRows = Array.isArray(existingRows) ? existingRows : [];
+    const existingDocIds = new Set(currentRows.map(row => normalizeUpperText(row.id || row.docId)).filter(Boolean));
+    const missingSeedRows = MONETA_COUNTRY_CURRENCY_REFERENCE_SEED.filter(row => !existingDocIds.has(normalizeUpperText(row.docId)));
+
+    if (missingSeedRows.length === 0) {
+        return { mode: "existing" };
+    }
+
+    await seedCountryCurrencyReferenceRecords(missingSeedRows, user);
+    return { mode: currentRows.length === 0 ? "create" : "repair" };
+}
+
+export async function toggleCountryCurrencyReferenceStatus(docId, nextValue, user) {
+    if (!user) {
+        throw new Error("You must be logged in to update country and currency reference status.");
+    }
+
+    if (!docId) {
+        throw new Error("Country and currency reference record could not be found.");
+    }
+
+    await setCountryCurrencyReferenceActiveStatus(docId, nextValue, user);
+    return { mode: "update" };
+}
+
 async function getProductRecord(productId, masterData = {}) {
     const fromState = (masterData.products || []).find(product => normalizeText(product.id) === normalizeText(productId)) || null;
     if (fromState) return fromState;
@@ -1511,6 +1607,13 @@ export async function getAdminEditRestriction(entity, record) {
     }
 
     if (entity === "storeConfigs") {
+        return {
+            isLocked: false,
+            message: ""
+        };
+    }
+
+    if (entity === "countryCurrencyReference") {
         return {
             isLocked: false,
             message: ""
