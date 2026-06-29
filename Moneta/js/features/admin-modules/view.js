@@ -55,10 +55,15 @@ import {
     resolveSystemDefaultPolicy
 } from "../../shared/reorder-policy.js";
 import {
+    COUNTRY_CURRENCY_REFERENCE_SOURCE,
+    MONETA_COUNTRY_CURRENCY_REFERENCE_SEED
+} from "../../config/country-currency-reference-config.js";
+import {
     approveProductPriceChangeReview,
     buildOnlineCatalogueItemKey,
     buildOnlineCatalogueJsonSnapshot,
     DEFAULT_ONLINE_CATALOGUE_CONFIG,
+    ensureCountryCurrencyReferenceSeed,
     getAdminEditRestriction,
     loadOnlineCatalogueWorkspace,
     normalizeOnlineCatalogueConfig,
@@ -2333,8 +2338,37 @@ function renderSystemSettingsForm(snapshot) {
 
 function renderCountryCurrencyReferenceForm(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "countryCurrencyReference");
+    const currentRows = snapshot.masterData.countryCurrencyReference || [];
 
     if (!editingRecord) {
+        if (currentRows.length === 0) {
+            return `
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div class="panel-title-wrap">
+                            <span class="panel-icon">${icons.globe}</span>
+                            <div>
+                                <h3>Country & Currency</h3>
+                                <p class="panel-copy">The shared reference directory has not been created in Firestore yet, so Moneta cannot show country and currency rows.</p>
+                            </div>
+                        </div>
+                        <span class="status-pill">Not Initialized</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="empty-state">
+                            Initialize the directory to seed ${MONETA_COUNTRY_CURRENCY_REFERENCE_SEED.length} reference rows from ${escapeHtml(COUNTRY_CURRENCY_REFERENCE_SOURCE.label)} v${escapeHtml(COUNTRY_CURRENCY_REFERENCE_SOURCE.version)}.
+                        </div>
+                        <div class="form-actions" style="margin-top: 1rem;">
+                            <button id="admin-country-currency-initialize-button" class="button button-primary-alt" type="button">
+                                <span class="button-icon">${icons.plus}</span>
+                                Initialize Directory
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div class="panel-card">
                 <div class="panel-header">
@@ -3658,6 +3692,55 @@ async function handleCountryCurrencyReferenceSubmit(event) {
     }
 }
 
+async function handleInitializeCountryCurrencyReference() {
+    try {
+        const user = getState().currentUser;
+        const existingRows = getState().masterData.countryCurrencyReference || [];
+        const result = await runProgressToastFlow({
+            title: "Initializing Country & Currency",
+            initialMessage: "Preparing the CLDR-backed reference seed...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 4",
+            successTitle: "Country & Currency Ready",
+            successMessage: "The country and currency directory was initialized successfully."
+        }, async ({ update }) => {
+            update("Checking which Firestore rows are still missing...", 42, "Step 2 of 4");
+            const seedResult = await ensureCountryCurrencyReferenceSeed(user, existingRows);
+
+            update("Refreshing the admin workspace...", 82, "Step 3 of 4");
+            renderAdminModulesView();
+
+            update("Country and currency reference data is ready for admin use.", 96, "Step 4 of 4");
+            return seedResult;
+        });
+
+        const modeLabel = result?.mode === "existing"
+            ? "Already initialized"
+            : result?.mode === "repair"
+                ? "Missing rows repaired"
+                : "Directory created";
+
+        showToast("Country and currency directory initialized.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Country & Currency Ready",
+            message: result?.mode === "existing"
+                ? "The directory already existed, so no new seed rows were required."
+                : "The directory seed was applied successfully.",
+            details: [
+                { label: "Action", value: modeLabel },
+                { label: "Seed Rows", value: String(MONETA_COUNTRY_CURRENCY_REFERENCE_SEED.length) },
+                { label: "Source", value: `${COUNTRY_CURRENCY_REFERENCE_SOURCE.label} v${COUNTRY_CURRENCY_REFERENCE_SOURCE.version}` }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Country and currency initialization failed:", error);
+        showToast(error.message || "Could not initialize the country and currency directory.", "error");
+    }
+}
+
 function collectReorderPolicyFormDraft() {
     return {
         policyName: document.getElementById("admin-reorder-policy-name")?.value || "",
@@ -4277,6 +4360,7 @@ function bindAdminModulesDomEvents() {
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const systemSettingsCancelButton = target.closest("#admin-system-settings-cancel-button");
         const countryCurrencyCancelButton = target.closest("#admin-country-currency-cancel-button");
+        const countryCurrencyInitializeButton = target.closest("#admin-country-currency-initialize-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
         if (editButton) {
@@ -4360,6 +4444,11 @@ function bindAdminModulesDomEvents() {
 
         if (countryCurrencyCancelButton) {
             handleCancelEdit("countryCurrencyReference");
+            return;
+        }
+
+        if (countryCurrencyInitializeButton) {
+            handleInitializeCountryCurrencyReference();
             return;
         }
 
