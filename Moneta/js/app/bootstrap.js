@@ -20,6 +20,7 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
+import { showToast } from "../shared/toast.js";
 import {
     ensureCountryCurrencyReferenceSeed,
     ensurePricingPolicySeed,
@@ -230,6 +231,9 @@ function initializeCountryCurrencyReferenceSeedLifecycle() {
             await ensureCountryCurrencyReferenceSeed(user, rows);
         } catch (error) {
             console.error("[Moneta] Failed to ensure country/currency reference seed:", error);
+            showToast(error.message || "Could not initialize Country & Currency reference data.", "error", {
+                title: "Country & Currency"
+            });
         } finally {
             isEnsuring = false;
         }
