@@ -20,7 +20,13 @@ import { initializeHomeModule } from "../features/home/index.js";
 import { initializeReportsModule } from "../features/reports/index.js";
 import { initializeAssistantModule } from "../features/assistant/index.js";
 import { initializeDisabledActionTooltips } from "../shared/disabled-actions.js";
-import { ensurePricingPolicySeed, ensureStoreConfigSeed, ensureSystemDefaultReorderPolicy, ensureSystemSettingsSeed } from "../features/admin-modules/service.js";
+import {
+    ensureCountryCurrencyReferenceSeed,
+    ensurePricingPolicySeed,
+    ensureStoreConfigSeed,
+    ensureSystemDefaultReorderPolicy,
+    ensureSystemSettingsSeed
+} from "../features/admin-modules/service.js";
 import { isSystemDefaultReorderPolicy } from "../shared/reorder-policy.js";
 import { isSystemDefaultPricingPolicy } from "../shared/pricing-policy.js";
 
@@ -194,6 +200,42 @@ function initializeSystemSettingsSeedLifecycle() {
     });
 }
 
+function initializeCountryCurrencyReferenceSeedLifecycle() {
+    let isEnsuring = false;
+    let lastSeedSignature = "";
+
+    subscribe(async snapshot => {
+        if (isEnsuring) return;
+
+        const user = snapshot.currentUser;
+        if (!user || user.role !== "admin" || !snapshot.isMasterDataReady) {
+            return;
+        }
+
+        const rows = snapshot.masterData.countryCurrencyReference || [];
+        const seedSignature = rows
+            .map(row => String(row.id || row.docId || "").trim())
+            .filter(Boolean)
+            .sort()
+            .join("|");
+
+        if (seedSignature === lastSeedSignature) {
+            return;
+        }
+
+        lastSeedSignature = seedSignature;
+        isEnsuring = true;
+
+        try {
+            await ensureCountryCurrencyReferenceSeed(user, rows);
+        } catch (error) {
+            console.error("[Moneta] Failed to ensure country/currency reference seed:", error);
+        } finally {
+            isEnsuring = false;
+        }
+    });
+}
+
 function initializePricingPolicySeedLifecycle() {
     let isEnsuring = false;
 
@@ -249,5 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initializePricingPolicySeedLifecycle();
     initializeStoreConfigSeedLifecycle();
     initializeSystemSettingsSeedLifecycle();
+    initializeCountryCurrencyReferenceSeedLifecycle();
     initializeReorderPolicySeedLifecycle();
 });

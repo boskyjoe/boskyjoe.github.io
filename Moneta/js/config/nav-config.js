@@ -263,6 +263,15 @@ export const navConfig = [
                         iconClass: "nav-icon-cyan",
                         roles: ["admin"],
                         enabled: true
+                    },
+                    {
+                        type: "link",
+                        route: "#/admin-modules?section=countryCurrencyReference",
+                        label: "Country & Currency",
+                        icon: icons.globe,
+                        iconClass: "nav-icon-cyan",
+                        roles: ["admin"],
+                        enabled: true
                     }
                 ]
             },

@@ -126,6 +126,14 @@ export const icons = {
             <circle cx="12" cy="12" r="2.8"></circle>
         </svg>
     `,
+    globe: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path d="M3.8 12h16.4"></path>
+            <path d="M12 3.5a13.2 13.2 0 0 1 0 17"></path>
+            <path d="M12 3.5a13.2 13.2 0 0 0 0 17"></path>
+        </svg>
+    `,
     sun: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>

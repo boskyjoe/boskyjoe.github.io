@@ -22,6 +22,7 @@ export const COLLECTIONS = {
     reorderPolicies: `${BASE_DOC_PATH}/reorderPolicies`,
     storeConfigs: `${BASE_DOC_PATH}/storeConfigs`,
     systemSettings: `${BASE_DOC_PATH}/systemSettings`,
+    countryCurrencyReference: `${BASE_DOC_PATH}/countryCurrencyReference`,
     seasons: `${BASE_DOC_PATH}/salesSeasons`,
     salesCatalogues: `${BASE_DOC_PATH}/salesCatalogues`,
     teams: `${BASE_DOC_PATH}/churchTeams`,

@@ -13,6 +13,7 @@ const state = {
         reorderPolicies: [],
         storeConfigs: [],
         systemSettings: [],
+        countryCurrencyReference: [],
         salesCatalogues: [],
         teams: [],
         churchMembers: []
