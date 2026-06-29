@@ -31,7 +31,7 @@ import {
     updateSeasonRecord,
     updateStoreConfigRecord,
     updateSystemSettingsRecord
-} from "./repository.js";
+} from "./repository.js?v=20260629-country-currency";
 import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
 import { clearSalesCatalogueOnlinePublishPendingItems } from "../sales-catalogues/repository.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
