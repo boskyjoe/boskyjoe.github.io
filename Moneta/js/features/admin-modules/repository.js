@@ -508,3 +508,43 @@ export async function updateSystemSettingsRecord(docId, updatedData, user) {
         updatedOn: now
     });
 }
+
+export async function seedCountryCurrencyReferenceRecords(countryCurrencyReference = [], user) {
+    const now = getNow();
+    const batch = getDb().batch();
+
+    (countryCurrencyReference || []).forEach(record => {
+        const docId = normalizeText(record.docId || record.countryCode).toUpperCase();
+        if (!docId) return;
+
+        const docRef = getDb().collection(COLLECTIONS.countryCurrencyReference).doc(docId);
+        batch.set(docRef, {
+            ...record,
+            countryCode: docId,
+            primaryCurrencyCode: normalizeText(record.primaryCurrencyCode).toUpperCase(),
+            alternateCurrencyCodes: Array.isArray(record.alternateCurrencyCodes)
+                ? record.alternateCurrencyCodes.map(code => normalizeText(code).toUpperCase()).filter(Boolean)
+                : [],
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+    });
+
+    return batch.commit();
+}
+
+export async function updateCountryCurrencyReferenceRecord(docId, updatedData, user) {
+    const now = getNow();
+
+    return getDb().collection(COLLECTIONS.countryCurrencyReference).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: now
+    });
+}
+
+export async function setCountryCurrencyReferenceActiveStatus(docId, isActive, user) {
+    return updateCountryCurrencyReferenceRecord(docId, { isActive }, user);
+}

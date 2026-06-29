@@ -19,6 +19,8 @@ let storeConfigsGridApi = null;
 let storeConfigsGridElement = null;
 let systemSettingsGridApi = null;
 let systemSettingsGridElement = null;
+let countryCurrencyReferenceGridApi = null;
+let countryCurrencyReferenceGridElement = null;
 let onlineCatalogueSourceGridApi = null;
 let onlineCatalogueSourceGridElement = null;
 let onlineCatalogueSelectionChangeHandler = null;
@@ -523,6 +525,53 @@ function buildSystemSettingsColumnDefs() {
     ];
 }
 
+function buildCountryCurrencyReferenceColumnDefs() {
+    return [
+        { field: "countryName", headerName: "Country", minWidth: 220, flex: 1.25 },
+        { field: "countryCode", headerName: "Code", minWidth: 100, flex: 0.55 },
+        { field: "primaryCurrencyCode", headerName: "Currency", minWidth: 120, flex: 0.65 },
+        { field: "primaryCurrencyName", headerName: "Currency Name", minWidth: 220, flex: 1.1 },
+        { field: "primaryCurrencySymbol", headerName: "Symbol", minWidth: 120, flex: 0.6 },
+        {
+            field: "alternateCurrencyCodes",
+            headerName: "Alternate",
+            minWidth: 180,
+            flex: 0.9,
+            valueGetter: params => (params.data?.alternateCurrencyCodes || []).join(", "),
+            valueFormatter: params => params.value || "-"
+        },
+        {
+            field: "minorUnit",
+            headerName: "Decimals",
+            minWidth: 110,
+            flex: 0.55,
+            ...rightAlignedNumberColumn
+        },
+        {
+            field: "isActive",
+            headerName: "Status",
+            minWidth: 130,
+            flex: 0.75,
+            cellRenderer: params => statusMarkup(Boolean(params.value))
+        },
+        {
+            headerName: "Updated",
+            minWidth: 150,
+            flex: 0.8,
+            valueGetter: params => getUpdatedDate(params.data),
+            valueFormatter: params => formatDate(params.value)
+        },
+        {
+            headerName: "Actions",
+            minWidth: 280,
+            flex: 1.2,
+            sortable: false,
+            filter: false,
+            cellRenderer: params => actionMarkup("countryCurrencyReference", params.data)
+        }
+    ];
+}
+
 function buildOnlineCatalogueSourceColumnDefs() {
     return [
         {
@@ -702,6 +751,25 @@ export function refreshSystemSettingsGrid(rows) {
 
 export function updateSystemSettingsGridSearch(searchTerm) {
     systemSettingsGridApi?.setGridOption("quickFilterText", searchTerm || "");
+}
+
+export function initializeCountryCurrencyReferenceGrid(gridElement) {
+    countryCurrencyReferenceGridApi = initializeGrid(
+        gridElement,
+        countryCurrencyReferenceGridApi,
+        countryCurrencyReferenceGridElement,
+        buildCountryCurrencyReferenceColumnDefs()
+    );
+    countryCurrencyReferenceGridElement = gridElement;
+    return countryCurrencyReferenceGridApi;
+}
+
+export function refreshCountryCurrencyReferenceGrid(rows) {
+    countryCurrencyReferenceGridApi?.setGridOption("rowData", rows);
+}
+
+export function updateCountryCurrencyReferenceGridSearch(searchTerm) {
+    countryCurrencyReferenceGridApi?.setGridOption("quickFilterText", searchTerm || "");
 }
 
 export function initializeOnlineCatalogueSourceGrid(gridElement, onSelectionChanged) {

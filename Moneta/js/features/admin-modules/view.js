@@ -6,6 +6,7 @@ import { focusFormField } from "../../shared/focus.js";
 import {
     initializeCategoriesGrid,
     initializeChurchMembersGrid,
+    initializeCountryCurrencyReferenceGrid,
     initializeOnlineCatalogueSourceGrid,
     initializePaymentModesGrid,
     initializePricingPoliciesGrid,
@@ -16,6 +17,7 @@ import {
     initializeSystemSettingsGrid,
     refreshCategoriesGrid,
     refreshChurchMembersGrid,
+    refreshCountryCurrencyReferenceGrid,
     refreshOnlineCatalogueSourceGrid,
     refreshPaymentModesGrid,
     refreshPricingPoliciesGrid,
@@ -27,6 +29,7 @@ import {
     getOnlineCatalogueSelectedGridRows,
     updateCategoriesGridSearch,
     updateChurchMembersGridSearch,
+    updateCountryCurrencyReferenceGridSearch,
     updatePaymentModesGridSearch,
     updatePricingPoliciesGridSearch,
     updateProductPriceChangeReviewsGridSearch,
@@ -34,7 +37,7 @@ import {
     updateSeasonsGridSearch,
     updateStoreConfigsGridSearch,
     updateSystemSettingsGridSearch
-} from "./grid.js";
+} from "./grid.js?v=20260629-country-currency-admin-2";
 import {
     buildPricingPolicyExplanation,
     COSTING_METHODS,
@@ -68,14 +71,16 @@ import {
     savePricingPolicy,
     saveReorderPolicy,
     saveSeason,
+    saveCountryCurrencyReference,
     saveStoreConfig,
     saveSystemSettings,
     toggleCategoryStatus,
     toggleChurchMemberStatus,
+    toggleCountryCurrencyReferenceStatus,
     togglePaymentModeStatus,
     toggleReorderPolicyStatus,
     toggleSeasonStatus
-} from "./service.js";
+} from "./service.js?v=20260629-country-currency-admin-2";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -136,6 +141,12 @@ const ADMIN_SECTIONS = {
         icon: icons.settings,
         description: "Maintain global workflow defaults and platform-level behavior that should be editable without code changes."
     },
+    countryCurrencyReference: {
+        label: "Country & Currency",
+        entityLabel: "Country & Currency",
+        icon: icons.globe,
+        description: "Maintain Moneta's shared country and currency directory so future global currency and localization setups can reuse one reference layer."
+    },
     reorderPolicies: {
         label: "Reorder Policies",
         entityLabel: "Reorder Policy",
@@ -159,6 +170,7 @@ const featureState = {
         onlineCatalogues: "",
         storeConfigs: "",
         systemSettings: "",
+        countryCurrencyReference: "",
         reorderPolicies: ""
     },
     editingIds: {
@@ -171,6 +183,7 @@ const featureState = {
         onlineCatalogues: null,
         storeConfigs: null,
         systemSettings: null,
+        countryCurrencyReference: null,
         reorderPolicies: null
     }
 };
@@ -224,6 +237,10 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     systemSettings: {
         formId: "admin-system-settings-form",
         inputSelector: "#admin-system-settings-quote-sent-follow-up-days"
+    },
+    countryCurrencyReference: {
+        formId: "admin-country-currency-form",
+        inputSelector: "#admin-country-currency-country-name"
     },
     reorderPolicies: {
         formId: "admin-reorder-policy-form",
@@ -697,6 +714,14 @@ function getEditingRecord(snapshot, section = featureState.activeSection) {
         return rows[0] || null;
     }
 
+    if (section === "countryCurrencyReference") {
+        if (!recordId) {
+            return null;
+        }
+
+        return (snapshot.masterData.countryCurrencyReference || []).find(record => record.id === recordId) || null;
+    }
+
     if (section === "productPriceChangeReviews") {
         const rows = getSectionRows(snapshot, section);
         if (recordId === NO_SELECTION) {
@@ -810,6 +835,14 @@ function getSectionRows(snapshot, section = featureState.activeSection) {
             .slice()
             .sort((left, right) => (Number(left.sortOrder) || 999) - (Number(right.sortOrder) || 999)
                 || (left.settingName || "").localeCompare(right.settingName || ""));
+    }
+
+    if (section === "countryCurrencyReference") {
+        return (snapshot.masterData.countryCurrencyReference || [])
+            .slice()
+            .sort((left, right) => (Number(left.sortOrder) || 9999) - (Number(right.sortOrder) || 9999)
+                || (left.countryName || "").localeCompare(right.countryName || "")
+                || (left.countryCode || "").localeCompare(right.countryCode || ""));
     }
 
     if (section === "productPriceChangeReviews") {
@@ -2298,6 +2331,158 @@ function renderSystemSettingsForm(snapshot) {
     `;
 }
 
+function renderCountryCurrencyReferenceForm(snapshot) {
+    const editingRecord = getEditingRecord(snapshot, "countryCurrencyReference");
+
+    if (!editingRecord) {
+        return `
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <span class="panel-icon">${icons.globe}</span>
+                        <div>
+                            <h3>Country & Currency</h3>
+                            <p class="panel-copy">Select a reference row from the directory to review or adjust how Moneta stores country and currency defaults.</p>
+                        </div>
+                    </div>
+                    <span class="status-pill">Directory</span>
+                </div>
+                <div class="panel-body">
+                    <div class="empty-state">
+                        Choose a country from the grid to edit its currency name, symbol, locale, or alternate tender codes.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="panel-card">
+            <div class="panel-header">
+                <div class="panel-title-wrap">
+                    <span class="panel-icon">${icons.globe}</span>
+                    <div>
+                        <h3>Edit Country & Currency Reference</h3>
+                        <p class="panel-copy">Maintain the shared reference Moneta can later use for global currency setup, country pickers, and localized formatting defaults.</p>
+                    </div>
+                </div>
+                <span class="status-pill">${escapeHtml(editingRecord.countryCode || editingRecord.id || "")}</span>
+            </div>
+            <div class="panel-body">
+                <form id="admin-country-currency-form">
+                    <input id="admin-country-currency-doc-id" type="hidden" value="${editingRecord.id || editingRecord.docId || ""}">
+                    <div class="form-grid">
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-country-name",
+                                label: "Country Name",
+                                required: true,
+                                tooltip: "This is the business-facing country or territory label Moneta can show in future customer, store, and setup pickers."
+                            })}
+                            <input id="admin-country-currency-country-name" class="input" type="text" value="${escapeHtml(editingRecord.countryName || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-country-code",
+                                label: "Country Code",
+                                tooltip: "This is the stable alpha-2 reference key used as the Firestore document ID, so it stays read-only."
+                            })}
+                            <input id="admin-country-currency-country-code" class="input" type="text" value="${escapeHtml(editingRecord.countryCode || "")}" readonly>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-primary-code",
+                                label: "Primary Currency Code",
+                                required: true,
+                                tooltip: "This is the main ISO-style currency code Moneta should use as the default for this country."
+                            })}
+                            <input id="admin-country-currency-primary-code" class="input" type="text" maxlength="3" value="${escapeHtml(editingRecord.primaryCurrencyCode || "")}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-primary-name",
+                                label: "Primary Currency Name",
+                                required: true,
+                                tooltip: "This is the full currency label Moneta can show in admin tools and future global currency setup screens."
+                            })}
+                            <input id="admin-country-currency-primary-name" class="input" type="text" value="${escapeHtml(editingRecord.primaryCurrencyName || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-primary-symbol",
+                                label: "Primary Currency Symbol",
+                                required: true,
+                                tooltip: "This is the preferred symbol or short marker Moneta can use when showing the currency."
+                            })}
+                            <input id="admin-country-currency-primary-symbol" class="input" type="text" value="${escapeHtml(editingRecord.primaryCurrencySymbol || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-minor-unit",
+                                label: "Minor Unit",
+                                required: true,
+                                tooltip: "This controls how many decimal places the currency normally uses, for example 2 for rupees or dollars."
+                            })}
+                            <input id="admin-country-currency-minor-unit" class="input" type="number" min="0" max="6" step="1" value="${escapeHtml(editingRecord.minorUnit ?? 2)}" required>
+                        </div>
+                        <div class="field field-wide">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-alternate-codes",
+                                label: "Alternate Currency Codes",
+                                tooltip: "Use a comma-separated list when the country also commonly operates with one or more secondary tender currencies."
+                            })}
+                            <input id="admin-country-currency-alternate-codes" class="input" type="text" value="${escapeHtml((editingRecord.alternateCurrencyCodes || []).join(", "))}" placeholder="USD, EUR">
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-locale",
+                                label: "Locale",
+                                required: true,
+                                tooltip: "This locale can later drive number and currency formatting defaults, for example en-IN or en-US."
+                            })}
+                            <input id="admin-country-currency-locale" class="input" type="text" value="${escapeHtml(editingRecord.locale || "")}" required>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-source-label",
+                                label: "Source",
+                                tooltip: "This shows the upstream reference source used when the baseline seed was generated."
+                            })}
+                            <input id="admin-country-currency-source-label" class="input" type="text" value="${escapeHtml(editingRecord.sourceLabel || "")}" readonly>
+                        </div>
+                        <div class="field">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-source-version",
+                                label: "Source Version",
+                                tooltip: "This helps Moneta track which CLDR release the checked-in seed came from."
+                            })}
+                            <input id="admin-country-currency-source-version" class="input" type="text" value="${escapeHtml(editingRecord.sourceVersion || "")}" readonly>
+                        </div>
+                        <div class="field field-full">
+                            ${renderFieldLabel({
+                                forId: "admin-country-currency-source-url",
+                                label: "Source URL",
+                                tooltip: "This is the upstream repository reference for the imported seed baseline."
+                            })}
+                            <input id="admin-country-currency-source-url" class="input" type="url" value="${escapeHtml(editingRecord.sourceUrl || "")}" readonly>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="admin-country-currency-cancel-button" class="button button-secondary" type="button">
+                            <span class="button-icon">${icons.inactive}</span>
+                            Reset View
+                        </button>
+                        <button class="button button-primary-alt" type="submit">
+                            <span class="button-icon">${icons.edit}</span>
+                            Update Country & Currency
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
 function renderReorderPolicyForm(snapshot) {
     const editingRecord = getEditingRecord(snapshot, "reorderPolicies");
     const draft = getReorderPolicyDraft(snapshot);
@@ -2743,6 +2928,10 @@ function renderCurrentForm(snapshot) {
         return renderSystemSettingsForm(snapshot);
     }
 
+    if (featureState.activeSection === "countryCurrencyReference") {
+        return renderCountryCurrencyReferenceForm(snapshot);
+    }
+
     return renderPaymentModeForm(snapshot);
 }
 
@@ -2846,6 +3035,17 @@ function getGridMeta(snapshot) {
             count: rows.length,
             countLabel: "setup groups",
             directoryHelp: "Search setup groups, reopen one for editing, and keep platform-level workflow defaults centralized."
+        };
+    }
+
+    if (featureState.activeSection === "countryCurrencyReference") {
+        const rows = snapshot.masterData.countryCurrencyReference || [];
+        return {
+            title: "Country & Currency Directory",
+            copy: "Review the shared country and currency reference that future localization, store defaults, and global currency setup can reuse.",
+            count: rows.length,
+            countLabel: "reference rows",
+            directoryHelp: "Search the directory, open any row for refinement, or deactivate entries Moneta should not expose in future pickers."
         };
     }
 
@@ -2987,6 +3187,13 @@ function syncCurrentGrid(snapshot) {
         initializeSystemSettingsGrid(gridElement);
         refreshSystemSettingsGrid(rows);
         updateSystemSettingsGridSearch(featureState.searchTerms.systemSettings);
+        return;
+    }
+
+    if (featureState.activeSection === "countryCurrencyReference") {
+        initializeCountryCurrencyReferenceGrid(gridElement);
+        refreshCountryCurrencyReferenceGrid(rows);
+        updateCountryCurrencyReferenceGridSearch(featureState.searchTerms.countryCurrencyReference);
         return;
     }
 
@@ -3399,6 +3606,58 @@ async function handleSystemSettingsSubmit(event) {
     }
 }
 
+async function handleCountryCurrencyReferenceSubmit(event) {
+    event.preventDefault();
+
+    try {
+        const docId = document.getElementById("admin-country-currency-doc-id")?.value;
+        const countryName = document.getElementById("admin-country-currency-country-name")?.value || "-";
+        await runProgressToastFlow({
+            title: "Updating Country & Currency",
+            initialMessage: "Reading the selected reference row...",
+            initialProgress: 18,
+            initialStep: "Step 1 of 5",
+            successTitle: "Country & Currency Updated",
+            successMessage: "The country and currency reference row was updated successfully."
+        }, async ({ update }) => {
+            update("Validating the currency code, symbol, locale, and alternate tender details...", 40, "Step 2 of 5");
+
+            update("Writing reference changes to Firestore...", 72, "Step 3 of 5");
+            await saveCountryCurrencyReference({
+                docId,
+                countryName: document.getElementById("admin-country-currency-country-name")?.value,
+                primaryCurrencyCode: document.getElementById("admin-country-currency-primary-code")?.value,
+                primaryCurrencyName: document.getElementById("admin-country-currency-primary-name")?.value,
+                primaryCurrencySymbol: document.getElementById("admin-country-currency-primary-symbol")?.value,
+                alternateCurrencyCodes: document.getElementById("admin-country-currency-alternate-codes")?.value,
+                minorUnit: document.getElementById("admin-country-currency-minor-unit")?.value,
+                locale: document.getElementById("admin-country-currency-locale")?.value
+            }, getState().currentUser, getState().masterData.countryCurrencyReference);
+
+            update("Refreshing the reference directory...", 88, "Step 4 of 5");
+            renderAdminModulesView();
+            update("Country and currency defaults are ready for future localization features.", 96, "Step 5 of 5");
+        });
+
+        showToast("Country and currency reference updated.", "success", {
+            title: "Admin Modules"
+        });
+        ProgressToast.hide(0);
+        await showSummaryModal({
+            title: "Country & Currency Updated",
+            message: "The reference row has been saved successfully.",
+            details: [
+                { label: "Country", value: countryName },
+                { label: "Action", value: "Update" },
+                { label: "Module", value: "Country & Currency" }
+            ]
+        });
+    } catch (error) {
+        console.error("[Moneta] Country and currency save failed:", error);
+        showToast(error.message || "Could not save the country and currency reference row.", "error");
+    }
+}
+
 function collectReorderPolicyFormDraft() {
     return {
         policyName: document.getElementById("admin-reorder-policy-name")?.value || "",
@@ -3651,6 +3910,7 @@ async function handleOnlineCatalogueSubmit(event) {
 
 function getRecordDisplayName(record = {}) {
     return record.categoryName
+        || record.countryName
         || record.fullName
         || record.seasonName
         || record.paymentMode
@@ -3708,6 +3968,11 @@ function handleSearchInput(target) {
 
     if (featureState.activeSection === "systemSettings") {
         updateSystemSettingsGridSearch(featureState.searchTerms.systemSettings);
+        return;
+    }
+
+    if (featureState.activeSection === "countryCurrencyReference") {
+        updateCountryCurrencyReferenceGridSearch(featureState.searchTerms.countryCurrencyReference);
         return;
     }
 
@@ -3784,6 +4049,8 @@ async function handleStatusToggle(button) {
             await toggleSeasonStatus(recordId, nextValue, snapshot.currentUser);
         } else if (entity === "reorderPolicies") {
             await toggleReorderPolicyStatus(recordId, nextValue, snapshot.currentUser, snapshot.masterData.reorderPolicies);
+        } else if (entity === "countryCurrencyReference") {
+            await toggleCountryCurrencyReferenceStatus(recordId, nextValue, snapshot.currentUser);
         } else {
             await togglePaymentModeStatus(recordId, nextValue, snapshot.currentUser, record.paymentMode || "");
         }
@@ -3955,6 +4222,11 @@ function bindAdminModulesDomEvents() {
             return;
         }
 
+        if (event.target.id === "admin-country-currency-form") {
+            handleCountryCurrencyReferenceSubmit(event);
+            return;
+        }
+
         if (event.target.id === "admin-reorder-policy-form") {
             handleReorderPolicySubmit(event);
         }
@@ -4004,6 +4276,7 @@ function bindAdminModulesDomEvents() {
         const productPriceReviewCancelButton = target.closest("#admin-product-price-review-cancel-button");
         const storeConfigCancelButton = target.closest("#admin-store-config-cancel-button");
         const systemSettingsCancelButton = target.closest("#admin-system-settings-cancel-button");
+        const countryCurrencyCancelButton = target.closest("#admin-country-currency-cancel-button");
         const reorderPolicyCancelButton = target.closest("#admin-reorder-policy-cancel-button");
 
         if (editButton) {
@@ -4082,6 +4355,11 @@ function bindAdminModulesDomEvents() {
 
         if (systemSettingsCancelButton) {
             handleCancelEdit("systemSettings");
+            return;
+        }
+
+        if (countryCurrencyCancelButton) {
+            handleCancelEdit("countryCurrencyReference");
             return;
         }
 
