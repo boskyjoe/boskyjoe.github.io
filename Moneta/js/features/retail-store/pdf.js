@@ -1,5 +1,6 @@
 import { amountToWords } from "../../shared/utils/amount-words.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate, formatLocalizedTime } from "../../shared/utils/locale.js";
 import { getStoreConfigInvoiceDetails } from "../../shared/store-config.js";
 
 function escapeHtml(value) {
@@ -18,13 +19,11 @@ function toDate(value) {
 }
 
 function formatDate(value) {
-    const date = toDate(value);
-    return date ? date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+    return formatLocalizedDate(toDate(value));
 }
 
 function formatTime(value) {
-    const date = toDate(value);
-    return date ? date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "-";
+    return formatLocalizedTime(toDate(value));
 }
 
 function buildTaxSummary(lineItems = []) {
@@ -574,7 +573,7 @@ function buildPdfData(sale, paymentRecord = null, { useOriginalSnapshot = true }
         grandTotal: Number(sourceSale.financials?.grandTotal) || 0,
         receivedAmount: Number(sourceSale.totalAmountPaid) || 0,
         balanceAmount: Number(sourceSale.balanceDue) || 0,
-        amountInWords: amountToWords(Number(sourceSale.financials?.grandTotal) || 0, "INR"),
+        amountInWords: amountToWords(Number(sourceSale.financials?.grandTotal) || 0),
         bankName: storeDetails.paymentDetails?.bankName || "-",
         bankBranch: storeDetails.paymentDetails?.branch || "-",
         accountNumber: storeDetails.paymentDetails?.accountNumber || "-",
@@ -649,7 +648,7 @@ function buildCreditNoteData(sale, returnRecord) {
         totalSGST: items.reduce((sum, item) => sum + (Number(item.sgstAmount) || 0), 0),
         totalAmount: returnedAmount,
         taxSummary,
-        amountInWords: amountToWords(returnedAmount, "INR"),
+        amountInWords: amountToWords(returnedAmount),
         originalInvoiceGrandTotal,
         invoiceGrandTotalBeforeReturn,
         currentInvoiceGrandTotal,

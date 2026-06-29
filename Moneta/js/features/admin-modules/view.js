@@ -3,6 +3,12 @@ import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
+import { getLocalizationSettings } from "../../shared/system-settings.js";
+import {
+    formatCurrency as formatLocalizedCurrency,
+    getResolvedCurrencyFormatContext
+} from "../../shared/utils/currency.js";
+import { formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import {
     initializeCategoriesGrid,
     initializeChurchMembersGrid,
@@ -37,7 +43,7 @@ import {
     updateSeasonsGridSearch,
     updateStoreConfigsGridSearch,
     updateSystemSettingsGridSearch
-} from "./grid.js?v=20260629-country-currency-admin-2";
+} from "./grid.js?v=20260629-country-currency-admin-3";
 import {
     buildPricingPolicyExplanation,
     COSTING_METHODS,
@@ -85,7 +91,7 @@ import {
     togglePaymentModeStatus,
     toggleReorderPolicyStatus,
     toggleSeasonStatus
-} from "./service.js?v=20260629-country-currency-admin-2";
+} from "./service.js?v=20260629-country-currency-admin-3";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -241,7 +247,7 @@ const ADMIN_FORM_FOCUS_TARGETS = {
     },
     systemSettings: {
         formId: "admin-system-settings-form",
-        inputSelector: "#admin-system-settings-quote-sent-follow-up-days"
+        inputSelector: "#admin-system-settings-quote-sent-follow-up-days, #admin-system-settings-low-stock-threshold, #admin-system-settings-localization-country-code"
     },
     countryCurrencyReference: {
         formId: "admin-country-currency-form",
@@ -285,22 +291,11 @@ function toDateInputValue(value) {
 }
 
 function formatCurrency(value) {
-    return `₹${Number(value || 0).toFixed(2)}`;
+    return formatLocalizedCurrency(value);
 }
 
 function formatDateTime(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(value);
 }
 
 function escapeHtml(value = "") {
@@ -355,19 +350,19 @@ function setActiveSection(section) {
     featureState.activeSection = section;
 }
 
-function formatOnlineCatalogueCurrency(value, currency = "INR") {
-    const normalizedCurrency = normalizeText(currency || "INR").toUpperCase();
+function formatOnlineCatalogueCurrency(value, currency = "") {
+    const normalizedCurrency = normalizeText(currency || "").toUpperCase();
     const numericValue = Number(value || 0);
-    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-US";
+    const context = getResolvedCurrencyFormatContext(normalizedCurrency);
 
     try {
-        return new Intl.NumberFormat(locale, {
+        return new Intl.NumberFormat(context.locale, {
             style: "currency",
-            currency: normalizedCurrency,
+            currency: context.currency,
             maximumFractionDigits: 0
         }).format(numericValue);
     } catch (error) {
-        return `${normalizedCurrency} ${numericValue.toFixed(2)}`;
+        return `${context.currency} ${numericValue.toFixed(2)}`;
     }
 }
 
@@ -951,6 +946,66 @@ function getReorderPolicyDraft(snapshot) {
         isActive: editingRecord?.isActive ?? DEFAULT_REORDER_POLICY.isActive,
         isSystemDefault: Boolean(editingRecord?.isSystemDefault)
     };
+}
+
+function findCountryCurrencyReferenceRow(snapshot, countryCode = "") {
+    const normalizedCountryCode = normalizeText(countryCode).toUpperCase();
+    if (!normalizedCountryCode) return null;
+
+    return (snapshot.masterData.countryCurrencyReference || [])
+        .find(row => normalizeText(row.countryCode || row.id || row.docId).toUpperCase() === normalizedCountryCode)
+        || null;
+}
+
+function renderCountryCurrencySelectOptions(snapshot, currentCountryCode = "") {
+    const normalizedCurrentCountryCode = normalizeText(currentCountryCode).toUpperCase();
+    const rows = (snapshot.masterData.countryCurrencyReference || [])
+        .filter(row => row.isActive !== false || normalizeText(row.countryCode || row.id || row.docId).toUpperCase() === normalizedCurrentCountryCode)
+        .slice()
+        .sort((left, right) => (left.countryName || "").localeCompare(right.countryName || ""));
+
+    if (!rows.length && normalizedCurrentCountryCode) {
+        return `<option value="${escapeHtml(normalizedCurrentCountryCode)}" selected>${escapeHtml(normalizedCurrentCountryCode)}</option>`;
+    }
+
+    return rows.map(row => {
+        const value = normalizeText(row.countryCode || row.id || row.docId).toUpperCase();
+        return `<option value="${escapeHtml(value)}" ${value === normalizedCurrentCountryCode ? "selected" : ""}>${escapeHtml(row.countryName || value)}</option>`;
+    }).join("");
+}
+
+function syncLocalizationSystemSettingsFields(snapshot = getState()) {
+    const countryCodeSelect = document.getElementById("admin-system-settings-localization-country-code");
+    if (!countryCodeSelect) return;
+
+    const row = findCountryCurrencyReferenceRow(snapshot, countryCodeSelect.value || "");
+    if (!row) return;
+
+    const currencyCodeInput = document.getElementById("admin-system-settings-localization-currency-code");
+    const localeInput = document.getElementById("admin-system-settings-localization-locale");
+    const currencyNameInput = document.getElementById("admin-system-settings-localization-currency-name");
+    const currencySymbolInput = document.getElementById("admin-system-settings-localization-standard-symbol");
+    const minorUnitInput = document.getElementById("admin-system-settings-localization-minor-unit");
+
+    if (currencyCodeInput) {
+        currencyCodeInput.value = row.primaryCurrencyCode || currencyCodeInput.value || "";
+    }
+
+    if (localeInput) {
+        localeInput.value = row.locale || localeInput.value || "";
+    }
+
+    if (currencyNameInput) {
+        currencyNameInput.value = row.primaryCurrencyName || "";
+    }
+
+    if (currencySymbolInput) {
+        currencySymbolInput.value = row.primaryCurrencySymbol || "";
+    }
+
+    if (minorUnitInput) {
+        minorUnitInput.value = String(row.minorUnit ?? "");
+    }
 }
 
 function buildReorderPolicyFallbackNotice(policyDraft = {}, fallbackChain = []) {
@@ -2198,8 +2253,11 @@ function renderSystemSettingsForm(snapshot) {
 
     const leadWorkflow = editingRecord.leadWorkflow || {};
     const inventoryOperations = editingRecord.inventoryOperations || {};
+    const localizationSettings = getLocalizationSettings([editingRecord], snapshot.masterData.countryCurrencyReference);
     const isLeadWorkflow = (editingRecord.id || editingRecord.docId) === "leadWorkflow";
     const isInventoryOperations = (editingRecord.id || editingRecord.docId) === "inventoryOperations";
+    const isLocalization = (editingRecord.id || editingRecord.docId) === "localization";
+    const selectedCountryReference = findCountryCurrencyReferenceRow(snapshot, localizationSettings.defaultCountryCode) || null;
 
     return `
         <div class="panel-card">
@@ -2210,7 +2268,9 @@ function renderSystemSettingsForm(snapshot) {
                         <h3>Edit System Setup</h3>
                         <p class="panel-copy">${isInventoryOperations
                             ? "Manage Moneta-wide inventory thresholds here so alerts, dashboard health signals, and reporting stay aligned without code changes."
-                            : "Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes."}</p>
+                            : isLocalization
+                                ? "Manage Moneta-wide country, currency, and locale defaults here so dashboards, reports, totals, and generated documents stay consistent without code changes."
+                                : "Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes."}</p>
                     </div>
                 </div>
                 <span class="status-pill">${escapeHtml(editingRecord.settingName || "System Setup")}</span>
@@ -2317,6 +2377,69 @@ function renderSystemSettingsForm(snapshot) {
                                     tooltip: "Dashboard reorder suggestions will try to top stock back up to this quantity for low and out-of-stock products."
                                 })}
                                 <input id="admin-system-settings-inventory-target-stock" class="input" type="number" min="0" step="1" value="${escapeHtml(inventoryOperations.inventoryTargetStock ?? 24)}" required>
+                            </div>
+                        ` : ""}
+                        ${isLocalization ? `
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-country-code",
+                                    label: "Default Country",
+                                    required: true,
+                                    tooltip: "Pick the default country Moneta should use as its base reference for currency, locale, and future country-aware setup screens."
+                                })}
+                                <select id="admin-system-settings-localization-country-code" class="select" required>
+                                    ${renderCountryCurrencySelectOptions(snapshot, localizationSettings.defaultCountryCode)}
+                                </select>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-currency-code",
+                                    label: "Default Currency Code",
+                                    required: true,
+                                    tooltip: "This is the ISO-style currency code Moneta will use by default for totals, dashboards, reports, and document output."
+                                })}
+                                <input id="admin-system-settings-localization-currency-code" class="input" type="text" maxlength="3" value="${escapeHtml(localizationSettings.defaultCurrencyCode || "")}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-locale",
+                                    label: "Default Locale",
+                                    required: true,
+                                    tooltip: "This locale controls how Moneta formats currency and localized dates in shared utilities, for example en-IN or en-US."
+                                })}
+                                <input id="admin-system-settings-localization-locale" class="input" type="text" value="${escapeHtml(localizationSettings.defaultLocale || "")}" required>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-symbol-override",
+                                    label: "Currency Symbol Override",
+                                    tooltip: "Use this only when you want Moneta to show a custom symbol instead of the standard one from the country and currency reference."
+                                })}
+                                <input id="admin-system-settings-localization-symbol-override" class="input" type="text" maxlength="8" value="${escapeHtml(localizationSettings.currencySymbolOverride || "")}" placeholder="${escapeHtml(selectedCountryReference?.primaryCurrencySymbol || "")}">
+                            </div>
+                            <div class="field field-wide">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-currency-name",
+                                    label: "Reference Currency Name",
+                                    tooltip: "This comes from the Country & Currency reference so the admin can see the standard currency mapped to the selected country."
+                                })}
+                                <input id="admin-system-settings-localization-currency-name" class="input" type="text" value="${escapeHtml(selectedCountryReference?.primaryCurrencyName || localizationSettings.defaultCurrencyName || "")}" readonly>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-standard-symbol",
+                                    label: "Reference Symbol",
+                                    tooltip: "This is the standard symbol from the Country & Currency reference before any optional override is applied."
+                                })}
+                                <input id="admin-system-settings-localization-standard-symbol" class="input" type="text" value="${escapeHtml(selectedCountryReference?.primaryCurrencySymbol || localizationSettings.defaultCurrencySymbol || "")}" readonly>
+                            </div>
+                            <div class="field">
+                                ${renderFieldLabel({
+                                    forId: "admin-system-settings-localization-minor-unit",
+                                    label: "Reference Minor Unit",
+                                    tooltip: "This tells Moneta how many decimal places the reference currency normally uses."
+                                })}
+                                <input id="admin-system-settings-localization-minor-unit" class="input" type="text" value="${escapeHtml(selectedCountryReference?.minorUnit ?? localizationSettings.minorUnit ?? "")}" readonly>
                             </div>
                         ` : ""}
                     </div>
@@ -3578,7 +3701,9 @@ async function handleSystemSettingsSubmit(event) {
     try {
         const docId = document.getElementById("admin-system-settings-doc-id")?.value;
         const setupName = document.getElementById("admin-system-settings-name")?.value || "System Setup";
+        const isLeadWorkflow = docId === "leadWorkflow";
         const isInventoryOperations = docId === "inventoryOperations";
+        const isLocalization = docId === "localization";
         await runProgressToastFlow({
             title: "Updating System Setup",
             initialMessage: "Reading the selected setup group...",
@@ -3590,7 +3715,9 @@ async function handleSystemSettingsSubmit(event) {
             update(
                 isInventoryOperations
                     ? "Validating inventory thresholds and target stock defaults..."
-                    : "Validating workflow defaults and stale-attention thresholds...",
+                    : isLocalization
+                        ? "Validating country, currency, locale, and symbol defaults..."
+                        : "Validating workflow defaults and stale-attention thresholds...",
                 40,
                 "Step 2 of 5"
             );
@@ -3605,7 +3732,11 @@ async function handleSystemSettingsSubmit(event) {
                 staleCriticalDays: document.getElementById("admin-system-settings-stale-critical-days")?.value,
                 lowStockThreshold: document.getElementById("admin-system-settings-low-stock-threshold")?.value,
                 mediumStockThreshold: document.getElementById("admin-system-settings-medium-stock-threshold")?.value,
-                inventoryTargetStock: document.getElementById("admin-system-settings-inventory-target-stock")?.value
+                inventoryTargetStock: document.getElementById("admin-system-settings-inventory-target-stock")?.value,
+                defaultCountryCode: document.getElementById("admin-system-settings-localization-country-code")?.value,
+                defaultCurrencyCode: document.getElementById("admin-system-settings-localization-currency-code")?.value,
+                defaultLocale: document.getElementById("admin-system-settings-localization-locale")?.value,
+                currencySymbolOverride: document.getElementById("admin-system-settings-localization-symbol-override")?.value
             }, getState().currentUser, getState().masterData.systemSettings);
 
             update("Refreshing the system setup directory...", 88, "Step 4 of 5");
@@ -3613,7 +3744,9 @@ async function handleSystemSettingsSubmit(event) {
             update(
                 isInventoryOperations
                     ? "Inventory thresholds are ready across Alerts, Dashboard, and Reports."
-                    : "Workflow defaults are ready across Enquiries and Quote Workspace.",
+                    : isLocalization
+                        ? "Localization defaults are ready across dashboards, reports, grids, and PDFs."
+                        : "Workflow defaults are ready across Enquiries and Quote Workspace.",
                 96,
                 "Step 5 of 5"
             );
@@ -3627,7 +3760,9 @@ async function handleSystemSettingsSubmit(event) {
             title: "System Setup Updated",
             message: isInventoryOperations
                 ? "The inventory operations defaults were saved successfully."
-                : "The workflow defaults were saved successfully.",
+                : isLocalization
+                    ? "The localization defaults were saved successfully."
+                    : "The workflow defaults were saved successfully.",
             details: [
                 { label: "Setup", value: setupName },
                 { label: "Action", value: "Update" },
@@ -4331,6 +4466,10 @@ function bindAdminModulesDomEvents() {
     root.addEventListener("change", event => {
         if (event.target.id === "admin-online-catalogue-source-catalogue-filter") {
             onlineCatalogueState.catalogueFilterId = event.target.value || "";
+        }
+
+        if (event.target.id === "admin-system-settings-localization-country-code") {
+            syncLocalizationSystemSettingsFields();
         }
 
         if (event.target.closest("#admin-online-catalogue-form")) {

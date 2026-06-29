@@ -4,6 +4,7 @@ import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toa
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import {
     getLeadQuoteLineItemsGridRows,
     initializeLeadQuotesGrid,
@@ -216,31 +217,11 @@ function formatDateInputValue(value) {
 }
 
 function formatDisplayDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
 function formatDisplayDateTime(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(value);
 }
 
 function parseLeadQuoteRouteParams() {

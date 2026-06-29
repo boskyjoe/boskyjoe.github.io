@@ -15,7 +15,8 @@ import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/store-config.js";
 import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 import { LEAD_STATUSES as SHARED_LEAD_STATUSES, normalizeLeadStatusValue } from "../../shared/lead-status.js";
-import { getLeadWorkflowSettings } from "../../shared/system-settings.js";
+import { getLeadWorkflowSettings, getLocalizationSettings } from "../../shared/system-settings.js";
+import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
 export const LEAD_STATUSES = SHARED_LEAD_STATUSES;
@@ -229,7 +230,7 @@ function formatWorkflowDateLabel(value) {
     const date = toComparableDate(value);
     if (!date) return "";
 
-    return date.toLocaleDateString("en-US", {
+    return formatLocalizedDate(date, {
         month: "short",
         day: "numeric",
         year: "numeric"
@@ -406,7 +407,7 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
                 seasonName: normalizeText(lead.seasonName) || "-"
             },
             pricingContext: {
-                currency: "INR",
+                currency: getLocalizationSettings().defaultCurrencyCode || "INR",
                 taxMode: store === "Consignment" ? "non-taxable" : "store-default-tax"
             },
             lineItems,

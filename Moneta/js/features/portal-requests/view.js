@@ -2,6 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import { icons } from "../../shared/icons.js";
 import {
     initializePortalRequestItemsGrid,
@@ -53,31 +54,11 @@ function escapeHtml(value = "") {
 }
 
 function formatDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
 function formatDateTime(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(value);
 }
 
 function getPortalRequestsIconMarkup() {

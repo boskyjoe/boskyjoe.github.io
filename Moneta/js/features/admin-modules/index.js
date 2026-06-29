@@ -1,4 +1,4 @@
-import { initializeAdminModulesFeature, renderAdminModulesView } from "./view.js?v=20260629-country-currency-admin-2";
+import { initializeAdminModulesFeature, renderAdminModulesView } from "./view.js?v=20260629-country-currency-admin-3";
 
 export function initializeAdminModulesModule() {
     initializeAdminModulesFeature();

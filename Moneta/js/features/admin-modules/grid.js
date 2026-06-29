@@ -1,5 +1,7 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
+import { getResolvedCurrencyFormatContext } from "../../shared/utils/currency.js";
+import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 let categoriesGridApi = null;
 let categoriesGridElement = null;
@@ -213,31 +215,22 @@ function buildProductPriceChangeReviewsColumnDefs() {
 }
 
 function formatDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
-function formatOnlineCatalogueCurrency(value, currency = "INR") {
-    const normalizedCurrency = String(currency || "INR").trim().toUpperCase() || "INR";
+function formatOnlineCatalogueCurrency(value, currency = "") {
+    const normalizedCurrency = String(currency || "").trim().toUpperCase();
     const numericValue = Number(value || 0);
-    const locale = normalizedCurrency === "INR" ? "en-IN" : "en-US";
+    const context = getResolvedCurrencyFormatContext(normalizedCurrency);
 
     try {
-        return new Intl.NumberFormat(locale, {
+        return new Intl.NumberFormat(context.locale, {
             style: "currency",
-            currency: normalizedCurrency,
+            currency: context.currency,
             maximumFractionDigits: 0
         }).format(numericValue);
     } catch (error) {
-        return `${normalizedCurrency} ${numericValue.toFixed(2)}`;
+        return `${context.currency} ${numericValue.toFixed(2)}`;
     }
 }
 
@@ -503,6 +496,15 @@ function buildSystemSettingsColumnDefs() {
                     return `Low <= ${Number(inventory.lowStockThreshold) || 0} • Medium <= ${Number(inventory.mediumStockThreshold) || 0} • Target ${Number(inventory.inventoryTargetStock) || 0}`;
                 }
 
+                if (docId === "localization") {
+                    const localization = params.data?.localization || {};
+                    const defaultCountryCode = String(localization.defaultCountryCode || "").trim().toUpperCase() || "-";
+                    const defaultCurrencyCode = String(localization.defaultCurrencyCode || "").trim().toUpperCase() || "-";
+                    const defaultLocale = String(localization.defaultLocale || "").trim() || "-";
+                    const symbolOverride = String(localization.currencySymbolOverride || "").trim();
+                    return `${defaultCountryCode} • ${defaultCurrencyCode} • ${defaultLocale}${symbolOverride ? ` • symbol ${symbolOverride}` : ""}`;
+                }
+
                 const workflow = params.data?.leadWorkflow || {};
                 return `${Number(workflow.quoteSentFollowUpDays) || 0}d sent follow-up • ${Number(workflow.quoteAcceptedFollowUpDays) || 0}d accepted follow-up • ${Number(workflow.quoteDraftValidityDays) || 0}d quote validity • ${Number(workflow.staleWarningDays) || 0}/${Number(workflow.staleCriticalDays) || 0}d stale alerts`;
             }
@@ -591,7 +593,7 @@ function buildOnlineCatalogueSourceColumnDefs() {
             ...rightAlignedNumberColumn,
             valueFormatter: params => formatOnlineCatalogueCurrency(
                 params.value,
-                params.data?.gridCurrency || "INR"
+                params.data?.gridCurrency || ""
             )
         }
     ];

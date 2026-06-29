@@ -1,6 +1,7 @@
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { amountToWords } from "../../shared/utils/amount-words.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import { getDefaultRetailStoreName, getStoreConfigInvoiceDetails, getStoreQuoteTheme } from "../../shared/store-config.js";
 
 function escapeHtml(value) {
@@ -19,19 +20,11 @@ function toDate(value) {
 }
 
 function formatDate(value) {
-    const date = toDate(value);
-    return date ? date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+    return formatLocalizedDate(toDate(value));
 }
 
 function formatDateTime(value) {
-    const date = toDate(value);
-    return date ? date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    }) : "-";
+    return formatLocalizedDateTime(toDate(value));
 }
 
 function normalizeText(value) {
@@ -423,7 +416,7 @@ function buildQuotePdfData(lead = null, quoteInput = null) {
         subTotal: Number(totals.subtotal) || 0,
         discountTotal: Number(totals.discountTotal) || 0,
         taxTotal: Number(totals.taxTotal) || 0,
-        amountInWords: amountToWords(Number(totals.grandTotal) || 0, "INR"),
+        amountInWords: amountToWords(Number(totals.grandTotal) || 0),
         taxSummary,
         notes: leadNotes,
         termsAndConditions: terms,

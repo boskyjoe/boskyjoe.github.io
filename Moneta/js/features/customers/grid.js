@@ -1,5 +1,6 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
+import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 
 let customersGridApi = null;
 let currentCustomersGridElement = null;
@@ -20,31 +21,11 @@ function escapeAttribute(value) {
 }
 
 function formatDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
 function formatDateTime(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(value);
 }
 
 function formatSourceChannelLabel(value) {

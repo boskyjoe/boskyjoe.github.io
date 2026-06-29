@@ -6,6 +6,7 @@ import { icons } from "../../shared/icons.js";
 import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { getInventoryOperationsSettings } from "../../shared/system-settings.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -99,29 +100,11 @@ function toDateValue(value) {
 }
 
 function formatDateTime(value) {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(value);
 }
 
 function formatDateLabel(value) {
-    if (!value) return "-";
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
 function toDateInputValue(value) {

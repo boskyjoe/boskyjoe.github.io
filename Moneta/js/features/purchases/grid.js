@@ -1,6 +1,7 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
 import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 let purchasesGridApi = null;
 let currentPurchasesGridElement = null;
@@ -16,16 +17,7 @@ const rightAlignedNumberColumn = {
 };
 
 function formatDate(value) {
-    if (!value) return "-";
-
-    const date = value.toDate ? value.toDate() : new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(value);
 }
 
 function paymentStatusMarkup(value) {

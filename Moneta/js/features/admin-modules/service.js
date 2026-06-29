@@ -38,7 +38,10 @@ import { MONETA_COUNTRY_CURRENCY_REFERENCE_SEED } from "../../config/country-cur
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
 import { MONETA_SYSTEM_SETTINGS_SEED } from "../../config/system-settings-config.js";
 import { COLLECTIONS } from "../../config/collections.js";
-import { getCountryCurrencyReferenceByDocId } from "../../shared/country-currency-reference.js";
+import {
+    getCountryCurrencyReferenceByCountryCode,
+    getCountryCurrencyReferenceByDocId
+} from "../../shared/country-currency-reference.js";
 import {
     buildPricingPolicyExplanation,
     COSTING_METHODS,
@@ -58,14 +61,19 @@ import {
     ZERO_DEMAND_BEHAVIORS
 } from "../../shared/reorder-policy.js";
 import { getStoreConfigByDocId } from "../../shared/store-config.js";
-import { getInventoryOperationsSettings, getLeadWorkflowSettings, getSystemSettingByDocId } from "../../shared/system-settings.js";
+import {
+    getInventoryOperationsSettings,
+    getLeadWorkflowSettings,
+    getLocalizationSettings,
+    getSystemSettingByDocId
+} from "../../shared/system-settings.js";
 
 const SEASON_STATUSES = ["Upcoming", "Active", "Archived"];
 export const ONLINE_CATALOGUE_DOC_ID = "pickupPortal";
 export const DEFAULT_ONLINE_CATALOGUE_CONFIG = {
     id: ONLINE_CATALOGUE_DOC_ID,
     catalogueName: "Church Pickup Requests",
-    currency: "INR",
+    currency: "",
     pickupNotice: "Submit a pickup request and wait for confirmation from the church store team before collection.",
     pickupLocation: "Church Resource Centre",
     contactPhone: "",
@@ -279,9 +287,11 @@ function getOnlineCataloguePendingPublishReviewItems(config = {}, salesCatalogue
 }
 
 function normalizeOnlineCatalogueComparableConfig(record = {}) {
+    const localization = getLocalizationSettings();
+
     return {
         catalogueName: normalizeText(record.catalogueName),
-        currency: normalizeUpperText(record.currency, DEFAULT_ONLINE_CATALOGUE_CONFIG.currency),
+        currency: normalizeUpperText(record.currency, localization.defaultCurrencyCode || "INR"),
         pickupNotice: normalizeText(record.pickupNotice),
         pickupLocation: normalizeText(record.pickupLocation),
         contactPhone: normalizeText(record.contactPhone),
@@ -1365,10 +1375,49 @@ export function validateSystemSettingsPayload(payload, existingSystemSettings = 
         };
     }
 
+    if (docId === "localization") {
+        const existingLocalizationSettings = getLocalizationSettings([existingRecord]);
+        const defaultCountryCode = normalizeUpperText(payload.defaultCountryCode, existingLocalizationSettings.defaultCountryCode || "IN");
+        const countryReference = getCountryCurrencyReferenceByCountryCode(defaultCountryCode) || null;
+        const defaultCurrencyCode = normalizeUpperText(
+            payload.defaultCurrencyCode,
+            normalizeUpperText(countryReference?.primaryCurrencyCode, existingLocalizationSettings.defaultCurrencyCode || "INR")
+        );
+        const defaultLocale = normalizeText(payload.defaultLocale || countryReference?.locale || existingLocalizationSettings.defaultLocale || "en-IN");
+        const currencySymbolOverride = normalizeText(payload.currencySymbolOverride);
+
+        if (!defaultCountryCode || defaultCountryCode.length !== 2) {
+            throw new Error("Default country code must be a valid 2-letter code.");
+        }
+
+        if (!defaultCurrencyCode || defaultCurrencyCode.length !== 3) {
+            throw new Error("Default currency code must be a valid 3-letter code.");
+        }
+
+        if (!defaultLocale) {
+            throw new Error("Default locale is required.");
+        }
+
+        if (currencySymbolOverride.length > 8) {
+            throw new Error("Currency symbol override must be 8 characters or less.");
+        }
+
+        return {
+            ...baseRecord,
+            localization: {
+                defaultCountryCode,
+                defaultCurrencyCode,
+                defaultLocale,
+                currencySymbolOverride
+            }
+        };
+    }
+
     return {
         ...baseRecord,
         leadWorkflow: existingRecord.leadWorkflow || {},
-        inventoryOperations: existingRecord.inventoryOperations || {}
+        inventoryOperations: existingRecord.inventoryOperations || {},
+        localization: existingRecord.localization || {}
     };
 }
 

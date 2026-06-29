@@ -10,6 +10,12 @@ import {
 import { normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { getRetailStoreNames } from "../../shared/store-config.js";
 import { getInventoryOperationsSettings } from "../../shared/system-settings.js";
+import { formatCurrency } from "../../shared/utils/currency.js";
+import {
+    formatLocalizedDate,
+    formatLocalizedDateTime,
+    getResolvedLocale
+} from "../../shared/utils/locale.js";
 import { fetchReportWindowedRows } from "./repository.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -158,11 +164,7 @@ export function formatDateLabel(value) {
         : (value instanceof Date ? value : new Date(value));
     if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "-";
 
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    });
+    return formatLocalizedDate(date);
 }
 
 export function formatDateTime(value) {
@@ -172,13 +174,7 @@ export function formatDateTime(value) {
         : (value instanceof Date ? value : new Date(value));
     if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "-";
 
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
+    return formatLocalizedDateTime(date);
 }
 
 export function formatUtcDateTime(value) {
@@ -200,34 +196,20 @@ export function formatUtcDateTime(value) {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`;
 }
 
-export function formatAccountingCurrency(value, currency = "INR", locale = "en-IN") {
+export function formatAccountingCurrency(value, currency = "", locale = "") {
     const amount = roundCurrency(value);
-    const formatter = new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-
     if (amount < 0) {
-        return `(${formatter.format(Math.abs(amount))})`;
+        return `(${formatCurrency(Math.abs(amount), currency, locale)})`;
     }
 
-    return formatter.format(amount);
+    return formatCurrency(amount, currency, locale);
 }
 
-export function formatSignedCurrency(value, currency = "INR", locale = "en-IN") {
+export function formatSignedCurrency(value, currency = "", locale = "") {
     const amount = roundCurrency(value);
-    const formatter = new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-
-    if (amount > 0) return `+${formatter.format(amount)}`;
-    if (amount < 0) return `-${formatter.format(Math.abs(amount))}`;
-    return formatter.format(0);
+    if (amount > 0) return `+${formatCurrency(amount, currency, locale)}`;
+    if (amount < 0) return `-${formatCurrency(Math.abs(amount), currency, locale)}`;
+    return formatCurrency(0, currency, locale);
 }
 
 export function toDateInputValue(value) {
@@ -1213,7 +1195,7 @@ function buildSalesTrendDailyRows(rows = []) {
                 dayKey,
                 date: dayDate,
                 label: formatDateLabel(dayDate),
-                dayName: dayDate.toLocaleDateString("en-IN", { weekday: "short" }),
+                dayName: dayDate.toLocaleDateString(getResolvedLocale(), { weekday: "short" }),
                 totalNetSales: 0,
                 directNetSales: 0,
                 consignmentNetSales: 0,
