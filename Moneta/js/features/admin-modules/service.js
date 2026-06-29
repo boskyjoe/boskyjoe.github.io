@@ -9,7 +9,6 @@ import {
     seedPricingPolicyRecords,
     createSeasonRecord,
     saveOnlineCatalogueRecord,
-    seedCountryCurrencyReferenceRecords,
     seedStoreConfigRecords,
     seedSystemSettingsRecords,
     getCategoryUsageStatus,
@@ -17,13 +16,11 @@ import {
     getSeasonUsageStatus,
     setCategoryActiveStatus,
     setChurchMemberActiveStatus,
-    setCountryCurrencyReferenceActiveStatus,
     setPaymentModeActiveStatus,
     setReorderPolicyActiveStatus,
     setSeasonActiveStatus,
     updateCategoryRecord,
     updateChurchMemberRecord,
-    updateCountryCurrencyReferenceRecord,
     updatePaymentModeRecord,
     updateProductPriceChangeReviewRecord,
     updatePricingPolicyRecord,
@@ -32,6 +29,7 @@ import {
     updateStoreConfigRecord,
     updateSystemSettingsRecord
 } from "./repository.js?v=20260629-country-currency";
+import * as adminRepository from "./repository.js?v=20260629-country-currency";
 import { syncSalesCatalogueItemsForApprovedProduct } from "../sales-catalogues/service.js";
 import { clearSalesCatalogueOnlinePublishPendingItems } from "../sales-catalogues/repository.js";
 import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.js";
@@ -87,6 +85,64 @@ function normalizeUpperText(value, fallback = "") {
 
 function getDb() {
     return firebase.firestore();
+}
+
+function getNow() {
+    return firebase.firestore.FieldValue.serverTimestamp();
+}
+
+function getCountryCurrencyReferenceCollectionPath() {
+    return COLLECTIONS.countryCurrencyReference || "artifacts/TrinityCart-default-app-id/countryCurrencyReference";
+}
+
+async function seedCountryCurrencyReferenceRecordsCompat(countryCurrencyReference = [], user) {
+    if (typeof adminRepository.seedCountryCurrencyReferenceRecords === "function") {
+        return adminRepository.seedCountryCurrencyReferenceRecords(countryCurrencyReference, user);
+    }
+
+    const now = getNow();
+    const batch = getDb().batch();
+
+    (countryCurrencyReference || []).forEach(record => {
+        const docId = normalizeUpperText(record.docId || record.countryCode);
+        if (!docId) return;
+
+        const docRef = getDb().collection(getCountryCurrencyReferenceCollectionPath()).doc(docId);
+        batch.set(docRef, {
+            ...record,
+            countryCode: docId,
+            primaryCurrencyCode: normalizeUpperText(record.primaryCurrencyCode),
+            alternateCurrencyCodes: Array.isArray(record.alternateCurrencyCodes)
+                ? record.alternateCurrencyCodes.map(code => normalizeUpperText(code)).filter(Boolean)
+                : [],
+            createdBy: user.email,
+            createdOn: now,
+            updatedBy: user.email,
+            updatedOn: now
+        });
+    });
+
+    return batch.commit();
+}
+
+async function updateCountryCurrencyReferenceRecordCompat(docId, updatedData, user) {
+    if (typeof adminRepository.updateCountryCurrencyReferenceRecord === "function") {
+        return adminRepository.updateCountryCurrencyReferenceRecord(docId, updatedData, user);
+    }
+
+    return getDb().collection(getCountryCurrencyReferenceCollectionPath()).doc(docId).update({
+        ...updatedData,
+        updatedBy: user.email,
+        updatedOn: getNow()
+    });
+}
+
+async function setCountryCurrencyReferenceActiveStatusCompat(docId, isActive, user) {
+    if (typeof adminRepository.setCountryCurrencyReferenceActiveStatus === "function") {
+        return adminRepository.setCountryCurrencyReferenceActiveStatus(docId, isActive, user);
+    }
+
+    return updateCountryCurrencyReferenceRecordCompat(docId, { isActive }, user);
 }
 
 function findDuplicate(records, field, value, docId) {
@@ -1393,7 +1449,7 @@ export async function saveCountryCurrencyReference(payload, user, existingRows =
 
     const docId = normalizeUpperText(payload.docId);
     const referenceData = validateCountryCurrencyReferencePayload(payload, existingRows);
-    await updateCountryCurrencyReferenceRecord(docId, referenceData, user);
+    await updateCountryCurrencyReferenceRecordCompat(docId, referenceData, user);
     return { mode: "update" };
 }
 
@@ -1410,7 +1466,7 @@ export async function ensureCountryCurrencyReferenceSeed(user, existingRows = []
         return { mode: "existing" };
     }
 
-    await seedCountryCurrencyReferenceRecords(missingSeedRows, user);
+    await seedCountryCurrencyReferenceRecordsCompat(missingSeedRows, user);
     return { mode: currentRows.length === 0 ? "create" : "repair" };
 }
 
@@ -1423,7 +1479,7 @@ export async function toggleCountryCurrencyReferenceStatus(docId, nextValue, use
         throw new Error("Country and currency reference record could not be found.");
     }
 
-    await setCountryCurrencyReferenceActiveStatus(docId, nextValue, user);
+    await setCountryCurrencyReferenceActiveStatusCompat(docId, nextValue, user);
     return { mode: "update" };
 }
 
