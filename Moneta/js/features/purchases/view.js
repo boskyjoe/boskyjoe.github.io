@@ -3,7 +3,7 @@ import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { navigateTo } from "../../app/router.js";
 import {
     subscribeToInvoicePayments,
@@ -258,6 +258,17 @@ function getVoidingPayment() {
 function getVoidingInvoice() {
     if (!featureState.voidingInvoiceId) return null;
     return featureState.invoices.find(invoice => invoice.id === featureState.voidingInvoiceId) || null;
+}
+
+function getPurchaseCurrencySnapshot() {
+    return getVoidingInvoice()?.currencySnapshot
+        || getPaymentInvoice()?.currencySnapshot
+        || getEditingInvoice()?.currencySnapshot
+        || null;
+}
+
+function formatCurrency(value, snapshot = getPurchaseCurrencySnapshot()) {
+    return formatLocalizedCurrency(value, snapshot);
 }
 
 function resetPaymentDraft(invoice = getPaymentInvoice(), options = {}) {

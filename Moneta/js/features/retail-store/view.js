@@ -2,7 +2,7 @@ import { getState, subscribe } from "../../app/store.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { icons } from "../../shared/icons.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import {
     getRetailSalesHistorySourceLegendItems,
     initializeRetailExpenseHistoryGrid,
@@ -130,7 +130,8 @@ function createDefaultSaleDraft() {
         sourceLeadCustomerName: "",
         sourceQuoteId: "",
         sourceQuoteNumber: "",
-        sourceQuoteStatus: ""
+        sourceQuoteStatus: "",
+        currencySnapshot: null
     };
 }
 
@@ -172,6 +173,31 @@ function createDefaultRetailReturnDraft(defaultDate = new Date()) {
 
 function normalizeText(value) {
     return (value || "").trim();
+}
+
+function findSaleById(saleId) {
+    if (!saleId) return null;
+    return featureState.sales.find(entry => entry.id === saleId) || null;
+}
+
+function getCurrentRetailCurrencySnapshot() {
+    const activeSaleId = featureState.voidingSaleId
+        || featureState.returningSaleId
+        || featureState.refundSaleId
+        || featureState.paymentSaleId
+        || featureState.saleActionsSaleId
+        || featureState.returnHistorySaleId
+        || featureState.editingSaleId
+        || featureState.viewingSaleId
+        || "";
+
+    return featureState.saleDraft?.currencySnapshot
+        || findSaleById(activeSaleId)?.currencySnapshot
+        || null;
+}
+
+function formatCurrency(value, snapshot = getCurrentRetailCurrencySnapshot()) {
+    return formatLocalizedCurrency(value, snapshot);
 }
 
 function normalizeRetailSourceType(value) {
@@ -667,6 +693,7 @@ function getSalesHistoryRows() {
         totalExpenses: Number(sale.financials?.totalExpenses) || 0,
         balanceDue: Number(sale.balanceDue) || 0,
         paymentStatus: sale.paymentStatus || "Unpaid",
+        currencySnapshot: sale.currencySnapshot || null,
         sourceType: sale.sourceType || "",
         sourcePortalRequestId: sale.sourcePortalRequestId || "",
         sourcePortalRequestNumber: sale.sourcePortalRequestNumber || "",
@@ -2672,7 +2699,8 @@ function applyPendingLeadConversionPackage() {
         sourceLeadCustomerName: conversionPackage.customerName || "",
         sourceQuoteId: conversionPackage.sourceQuoteId || "",
         sourceQuoteNumber: conversionPackage.sourceQuoteNumber || "",
-        sourceQuoteStatus: conversionPackage.sourceQuoteStatus || ""
+        sourceQuoteStatus: conversionPackage.sourceQuoteStatus || "",
+        currencySnapshot: conversionPackage.currencySnapshot || null
     };
     if (conversionPackage.preferredStore && getRetailStores().includes(conversionPackage.preferredStore)) {
         featureState.saleDraft.store = conversionPackage.preferredStore;
@@ -2777,6 +2805,7 @@ function buildSaleDraftFromSale(sale) {
         sourceQuoteId: sale.sourceQuoteId || "",
         sourceQuoteNumber: sale.sourceQuoteNumber || "",
         sourceQuoteStatus: sale.sourceQuoteStatus || "",
+        currencySnapshot: sale.currencySnapshot || null,
         editReason: "",
         voidReason: ""
     };

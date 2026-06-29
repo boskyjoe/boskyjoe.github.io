@@ -1,6 +1,6 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 let purchasesGridApi = null;
@@ -18,6 +18,14 @@ const rightAlignedNumberColumn = {
 
 function formatDate(value) {
     return formatLocalizedDate(value);
+}
+
+function resolvePurchaseRowCurrencySnapshot(row = {}) {
+    return row?.currencySnapshot || row?.invoiceCurrencySnapshot || null;
+}
+
+function formatGridCurrency(value, row = null) {
+    return formatLocalizedCurrency(value, resolvePurchaseRowCurrencySnapshot(row));
 }
 
 function paymentStatusMarkup(value) {
@@ -114,7 +122,7 @@ function buildInvoiceColumnDefs() {
             minWidth: 140,
             flex: 0.9,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "amountPaid",
@@ -122,7 +130,7 @@ function buildInvoiceColumnDefs() {
             minWidth: 140,
             flex: 0.9,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "balanceDue",
@@ -130,7 +138,7 @@ function buildInvoiceColumnDefs() {
             minWidth: 140,
             flex: 0.9,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value ?? params.data?.invoiceTotal ?? 0)
+            valueFormatter: params => formatGridCurrency(params.value ?? params.data?.invoiceTotal ?? 0, params.data)
         },
         {
             field: "paymentStatus",
@@ -165,7 +173,7 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 130,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "paymentMode",
@@ -358,7 +366,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
             editable: params => !purchaseLineItemsReadOnly && !params.node?.rowPinned,
             cellEditor: "agNumberCellEditor",
             valueSetter: buildNumberSetter("unitPurchasePrice", 2),
-            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatGridCurrency(params.value || 0, params.data))
         },
         {
             field: "discountType",
@@ -405,7 +413,7 @@ function buildLineItemColumnDefs(onRowsChanged) {
 
                 return getLineItemTotal(params.data || {});
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Status",

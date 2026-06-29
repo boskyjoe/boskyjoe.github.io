@@ -1,8 +1,11 @@
 import { CONSIGNMENT_STORE_NAME } from "../../config/store-config.js";
 import { amountToWords } from "../../shared/utils/amount-words.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import { getDefaultRetailStoreName, getStoreConfigInvoiceDetails, getStoreQuoteTheme } from "../../shared/store-config.js";
+
+let activeCurrencySnapshot = null;
+let activeLocale = "";
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -19,12 +22,21 @@ function toDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function setActiveQuoteCurrencySnapshot(snapshot = null) {
+    activeCurrencySnapshot = snapshot || null;
+    activeLocale = snapshot?.locale || "";
+}
+
 function formatDate(value) {
-    return formatLocalizedDate(toDate(value));
+    return formatLocalizedDate(toDate(value), {}, activeLocale);
 }
 
 function formatDateTime(value) {
-    return formatLocalizedDateTime(toDate(value));
+    return formatLocalizedDateTime(toDate(value), {}, activeLocale);
+}
+
+function formatCurrency(value, snapshot = activeCurrencySnapshot) {
+    return formatLocalizedCurrency(value, snapshot);
 }
 
 function normalizeText(value) {
@@ -345,6 +357,8 @@ function buildQuotePdfData(lead = null, quoteInput = null) {
         throw new Error("Quote data is missing.");
     }
 
+    setActiveQuoteCurrencySnapshot(quoteInput.currencySnapshot || null);
+
     const storeName = normalizeText(quoteInput.store || getDefaultRetailStoreName());
     const storeDetails = getStoreDetails(storeName);
     const theme = getQuoteTheme(storeName);
@@ -416,7 +430,7 @@ function buildQuotePdfData(lead = null, quoteInput = null) {
         subTotal: Number(totals.subtotal) || 0,
         discountTotal: Number(totals.discountTotal) || 0,
         taxTotal: Number(totals.taxTotal) || 0,
-        amountInWords: amountToWords(Number(totals.grandTotal) || 0),
+        amountInWords: amountToWords(Number(totals.grandTotal) || 0, activeCurrencySnapshot),
         taxSummary,
         notes: leadNotes,
         termsAndConditions: terms,

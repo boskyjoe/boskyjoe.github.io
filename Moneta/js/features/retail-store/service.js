@@ -16,6 +16,7 @@ import {
     voidRetailSalePaymentRecord,
     voidRetailSaleRecord
 } from "./repository.js";
+import { buildCurrencySnapshot } from "../../shared/utils/currency.js";
 
 export const RETAIL_SALE_TYPES = ["Revenue", "Sample"];
 export const RETAIL_PAYMENT_TYPES = ["Pay Later", "Pay Now"];
@@ -323,6 +324,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
     }, {
         amountReceived: payload.amountReceived
     });
+    const currencySnapshot = buildCurrencySnapshot(payload.currencySnapshot);
 
     if (saleType === "Sample" && summary.grandTotal > 0) {
         throw new Error("Sample sales must net to zero after discounts.");
@@ -354,7 +356,8 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
             donationAmount: summary.donationAmount,
             paymentMode,
             transactionRef,
-            notes
+            notes,
+            currencySnapshot
         };
     }
 
@@ -386,6 +389,7 @@ export function validateRetailSalePayload(payload, user, catalogueHeaders = [], 
                 email: customerEmail,
                 address: doesRetailStoreRequireCustomerAddress(store) ? customerAddress : ""
             },
+            currencySnapshot,
             saleNotes,
             lineItems: normalizedLineItems,
             financials: {
@@ -540,6 +544,7 @@ function validateRetailSaleEditPayload(sale, payload, user, catalogueItems = [])
             email: customerEmail,
             address: doesRetailStoreRequireCustomerAddress(sale.store) ? customerAddress : ""
         },
+        currencySnapshot: buildCurrencySnapshot(payload.currencySnapshot || sale.currencySnapshot),
         saleNotes
     };
 
@@ -680,7 +685,8 @@ export function validateRetailSaleExpensePayload(sale, payload, user) {
     return {
         expenseDate,
         justification,
-        amount
+        amount,
+        currencySnapshot: buildCurrencySnapshot(sale.currencySnapshot)
     };
 }
 
@@ -727,7 +733,8 @@ export function validateRetailSaleReturnPayload(sale, payload, user) {
     return {
         returnDate,
         reason,
-        items
+        items,
+        currencySnapshot: buildCurrencySnapshot(sale.currencySnapshot)
     };
 }
 
@@ -780,7 +787,8 @@ export function validateRetailSalePaymentPayload(payload, sale, masterData = {})
         donationAmount,
         paymentMode,
         transactionRef,
-        notes
+        notes,
+        currencySnapshot: buildCurrencySnapshot(sale.currencySnapshot)
     };
 }
 
@@ -896,7 +904,8 @@ export function validateRetailSaleRefundPayload(payload = {}, sale, masterData =
         refundMode,
         transactionRef,
         refundReason,
-        notes
+        notes,
+        currencySnapshot: buildCurrencySnapshot(sale.currencySnapshot)
     };
 }
 

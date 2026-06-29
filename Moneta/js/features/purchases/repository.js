@@ -150,6 +150,7 @@ export async function updatePurchaseInvoiceRecord(docId, invoiceData, user) {
 
         transaction.update(invoiceRef, {
             ...invoiceData,
+            currencySnapshot: existingInvoice.currencySnapshot || invoiceData.currencySnapshot || null,
             balanceDue,
             paymentStatus,
             "audit.updatedBy": user.email,
@@ -218,6 +219,7 @@ export async function recordPurchaseInvoicePayment(invoiceDocId, paymentData, us
             invoiceName: invoice.invoiceName || paymentData.invoiceName || "",
             supplierId: invoice.supplierId || paymentData.supplierId || "",
             supplierName: invoice.supplierName || paymentData.supplierName || "",
+            currencySnapshot: paymentData.currencySnapshot || invoice.currencySnapshot || null,
             paymentId: buildSupplierPaymentId(),
             paymentStatus: "Verified",
             status: "Verified",
@@ -302,6 +304,7 @@ export async function voidPurchaseInvoicePayment(paymentId, voidReason, user) {
             invoiceName: invoice.invoiceName || originalPayment.invoiceName || "",
             supplierId: originalPayment.supplierId || invoice.supplierId || "",
             supplierName: originalPayment.supplierName || invoice.supplierName || "",
+            currencySnapshot: originalPayment.currencySnapshot || invoice.currencySnapshot || null,
             amountPaid: -voidedAmount,
             paymentDate: now,
             paymentMode: "VOID_REVERSAL",
@@ -403,6 +406,7 @@ export async function voidPurchaseInvoiceRecord(invoiceDocId, voidReason, user) 
                 invoiceName: invoice.invoiceName || originalPayment.invoiceName || "",
                 supplierId: invoice.supplierId || originalPayment.supplierId || "",
                 supplierName: invoice.supplierName || originalPayment.supplierName || "",
+                currencySnapshot: originalPayment.currencySnapshot || invoice.currencySnapshot || null,
                 amountPaid: -voidedAmount,
                 paymentDate: now,
                 paymentMode: "VOID_REVERSAL",

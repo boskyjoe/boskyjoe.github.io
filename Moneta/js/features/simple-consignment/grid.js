@@ -1,6 +1,6 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 let simpleConsignmentOrdersGridApi = null;
@@ -38,6 +38,14 @@ function buildDisabledActionAttrs(disabled, reason) {
 
 function formatDate(value) {
     return formatLocalizedDate(value);
+}
+
+function resolveConsignmentRowCurrencySnapshot(row = {}) {
+    return row?.currencySnapshot || row?.orderCurrencySnapshot || null;
+}
+
+function formatGridCurrency(value, row = null) {
+    return formatLocalizedCurrency(value, resolveConsignmentRowCurrencySnapshot(row));
 }
 
 function statusMarkup(value = "Active") {
@@ -315,7 +323,7 @@ function buildOrdersColumnDefs() {
             minWidth: 145,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalValueSold",
@@ -323,7 +331,7 @@ function buildOrdersColumnDefs() {
             minWidth: 145,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalAmountPaid",
@@ -331,7 +339,7 @@ function buildOrdersColumnDefs() {
             minWidth: 120,
             flex: 0.75,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalDonation",
@@ -339,7 +347,7 @@ function buildOrdersColumnDefs() {
             minWidth: 130,
             flex: 0.78,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalExpenses",
@@ -347,7 +355,7 @@ function buildOrdersColumnDefs() {
             minWidth: 125,
             flex: 0.75,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "balanceDue",
@@ -355,7 +363,7 @@ function buildOrdersColumnDefs() {
             minWidth: 140,
             flex: 0.82,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalOnHandQuantity",
@@ -402,7 +410,7 @@ function buildCheckoutWorksheetColumnDefs() {
             minWidth: 140,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatGridCurrency(params.value || 0, params.data))
         },
         {
             headerName: "Value Out",
@@ -413,7 +421,7 @@ function buildCheckoutWorksheetColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueOut || 0;
                 return (Number(params.data?.quantityCheckedOut) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Request State",
@@ -520,7 +528,7 @@ function buildSettlementWorksheetColumnDefs() {
             minWidth: 120,
             flex: 0.72,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatGridCurrency(params.value || 0, params.data))
         },
         {
             headerName: "Sold Value",
@@ -531,7 +539,7 @@ function buildSettlementWorksheetColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueSold || 0;
                 return (Number(params.data?.quantitySold) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Returned Value",
@@ -542,7 +550,7 @@ function buildSettlementWorksheetColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueReturned || 0;
                 return (Number(params.data?.quantityReturned) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Damaged Value",
@@ -553,7 +561,7 @@ function buildSettlementWorksheetColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueDamaged || 0;
                 return (Number(params.data?.quantityDamaged) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Gifted Value",
@@ -564,7 +572,7 @@ function buildSettlementWorksheetColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueGifted || 0;
                 return (Number(params.data?.quantityGifted) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "On Hand Value",
@@ -581,7 +589,7 @@ function buildSettlementWorksheetColumnDefs() {
                 const onHand = quantityCheckedOut - (quantitySold + quantityReturned + quantityDamaged + quantityGifted);
                 return onHand * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         }
     ];
 }
@@ -620,7 +628,7 @@ function buildAddProductsColumnDefs() {
             minWidth: 120,
             flex: 0.72,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatGridCurrency(params.value || 0, params.data))
         },
         {
             headerName: "Added Value",
@@ -631,7 +639,7 @@ function buildAddProductsColumnDefs() {
                 if (params.node?.rowPinned) return params.data?.valueAdded || 0;
                 return (Number(params.data?.quantityToAdd) || 0) * (Number(params.data?.sellingPrice) || 0);
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Request State",
@@ -667,7 +675,7 @@ function buildTransactionsColumnDefs() {
             minWidth: 130,
             flex: 0.74,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "donationAmount",
@@ -675,7 +683,7 @@ function buildTransactionsColumnDefs() {
             minWidth: 130,
             flex: 0.74,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "amountReceived",
@@ -683,7 +691,7 @@ function buildTransactionsColumnDefs() {
             minWidth: 130,
             flex: 0.74,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || params.data?.totalCollected || params.data?.amountApplied || 0)
+            valueFormatter: params => formatGridCurrency(params.value || params.data?.totalCollected || params.data?.amountApplied || 0, params.data)
         },
         {
             field: "paymentMode",

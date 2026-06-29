@@ -221,6 +221,16 @@ function cloneRetailLineItems(lineItems = []) {
     return (lineItems || []).map(item => ({ ...item }));
 }
 
+function cloneCurrencySnapshot(snapshot = null) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+        return null;
+    }
+
+    return {
+        ...snapshot
+    };
+}
+
 function buildRetailSaleSnapshot(sale = {}) {
     const lineItems = cloneRetailLineItems(sale.lineItems || []);
     const financials = { ...(sale.financials || {}) };
@@ -236,6 +246,7 @@ function buildRetailSaleSnapshot(sale = {}) {
         saleType: normalizeText(sale.saleType),
         salesCatalogueName: normalizeText(sale.salesCatalogueName),
         salesSeasonName: normalizeText(sale.salesSeasonName),
+        currencySnapshot: cloneCurrencySnapshot(sale.currencySnapshot),
         customerInfo: {
             ...(sale.customerInfo || {})
         },
@@ -267,6 +278,7 @@ function buildRetailReturnStateSnapshot(sale = {}) {
     const totalRefunded = getRetailTotalRefundedAmount(sale);
 
     return {
+        currencySnapshot: cloneCurrencySnapshot(sale.currencySnapshot),
         saleStatus: normalizeText(sale.saleStatus || "Active") || "Active",
         returnStatus: normalizeText(sale.returnStatus || "Not Returned") || "Not Returned",
         paymentStatus: normalizeText(sale.paymentStatus || "Unpaid") || "Unpaid",
@@ -456,6 +468,7 @@ export async function createRetailSaleRecord(payload, user) {
     const sourceQuoteRef = sourceLeadRef && sourceQuoteId
         ? sourceLeadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(sourceQuoteId)
         : null;
+    const saleCurrencySnapshot = cloneCurrencySnapshot(payload.currencySnapshot);
 
     return db.runTransaction(async transaction => {
         const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
@@ -576,6 +589,7 @@ export async function createRetailSaleRecord(payload, user) {
             saleType: payload.saleType,
             salesCatalogueName: payload.salesCatalogueName,
             salesSeasonName: payload.salesSeasonName,
+            currencySnapshot: saleCurrencySnapshot,
             customerInfo: payload.customerInfo,
             saleNotes: payload.saleNotes || "",
             saleStatus: "Active",
@@ -617,6 +631,7 @@ export async function createRetailSaleRecord(payload, user) {
             sourceQuoteNumber: payload.sourceQuoteNumber || "",
             sourceQuoteStatus: payload.sourceQuoteStatus || "",
             customerId: payload.customerId || "",
+            currencySnapshot: saleCurrencySnapshot,
             customerInfo: payload.customerInfo,
             saleNotes: payload.saleNotes || "",
             lineItems: baseLineItems,
@@ -656,6 +671,7 @@ export async function createRetailSaleRecord(payload, user) {
                 invoiceId: saleRef.id,
                 relatedSaleId: saleRef.id,
                 relatedSaleNumber: payload.manualVoucherNumber,
+                currencySnapshot: cloneCurrencySnapshot(payload.initialPayment?.currencySnapshot || saleCurrencySnapshot),
                 paymentDate: payload.initialPayment.paymentDate,
                 amountPaid: totalAmountPaid,
                 amountApplied: totalAmountPaid,
@@ -682,6 +698,7 @@ export async function createRetailSaleRecord(payload, user) {
                     donationDate: payload.initialPayment.paymentDate,
                     amount: totalDonation,
                     status: "Active",
+                    currencySnapshot: cloneCurrencySnapshot(payload.initialPayment?.currencySnapshot || saleCurrencySnapshot),
                     moduleType: "Retail Store",
                     sourceCollection: COLLECTIONS.salesPaymentsLedger,
                     sourcePaymentDocId: paymentRef.id,
@@ -793,6 +810,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
         }
 
         const sale = saleDoc.data() || {};
+        const saleCurrencySnapshot = cloneCurrencySnapshot(returnPayload.currencySnapshot || sale.currencySnapshot);
         if (normalizeText(sale.saleStatus) === "Voided") {
             throw new Error("Voided sales cannot accept returns.");
         }
@@ -931,6 +949,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
             saleId: sale.saleId || "",
             manualVoucherNumber: sale.manualVoucherNumber || "",
             customerName: sale.customerInfo?.name || "",
+            currencySnapshot: saleCurrencySnapshot,
             returnDate: returnPayload.returnDate,
             reason: returnPayload.reason,
             items: returnedLineItems,
@@ -940,6 +959,7 @@ export async function addRetailSaleReturnRecord(saleId, returnPayload, user) {
             originalSaleSnapshot: {
                 saleId: normalizeText(originalSaleSnapshot?.saleId || sale.saleId),
                 manualVoucherNumber: normalizeText(originalSaleSnapshot?.manualVoucherNumber || sale.manualVoucherNumber),
+                currencySnapshot: cloneCurrencySnapshot(originalSaleSnapshot?.currencySnapshot || saleCurrencySnapshot),
                 invoiceGrandTotal: originalInvoiceGrandTotal,
                 lineItemCount: Number(originalSaleSnapshot?.lineItemCount) || Number(sale.lineItemCount) || currentLineItems.length,
                 totalQuantity: Number(originalSaleSnapshot?.totalQuantity) || Number(sale.totalQuantity) || currentLineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -1025,6 +1045,7 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
         }
 
         const saleData = saleDoc.data() || {};
+        const saleCurrencySnapshot = cloneCurrencySnapshot(expensePayload.currencySnapshot || saleData.currencySnapshot);
         if (saleData.saleStatus === "Voided") {
             throw new Error("Voided sales cannot accept expenses.");
         }
@@ -1052,6 +1073,7 @@ export async function addRetailSaleExpenseRecord(saleId, expensePayload, user) {
             expenseDate: expensePayload.expenseDate,
             justification: expensePayload.justification,
             amount: expenseAmount,
+            currencySnapshot: saleCurrencySnapshot,
             addedBy: user.email,
             addedOn: now
         });
@@ -1094,6 +1116,7 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
         }
 
         const sale = saleDoc.data() || {};
+        const saleCurrencySnapshot = cloneCurrencySnapshot(paymentPayload.currencySnapshot || sale.currencySnapshot);
         if (sale.saleStatus === "Voided") {
             throw new Error("Voided sales cannot accept payments.");
         }
@@ -1169,6 +1192,7 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
             invoiceId: saleId,
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || paymentPayload.relatedSaleNumber || "",
+            currencySnapshot: saleCurrencySnapshot,
             paymentDate: paymentPayload.paymentDate,
             amountPaid: amountApplied,
             amountApplied,
@@ -1195,6 +1219,7 @@ export async function recordRetailSalePayment(saleId, paymentPayload, user) {
                 donationDate: paymentPayload.paymentDate,
                 amount: donationAmount,
                 status: "Active",
+                currencySnapshot: saleCurrencySnapshot,
                 moduleType: "Retail Store",
                 sourceCollection: COLLECTIONS.salesPaymentsLedger,
                 sourcePaymentDocId: paymentRef.id,
@@ -1247,6 +1272,7 @@ export async function recordRetailSaleRefundRecord(saleId, refundPayload, user) 
         }
 
         const sale = saleDoc.data() || {};
+        const saleCurrencySnapshot = cloneCurrencySnapshot(refundPayload.currencySnapshot || sale.currencySnapshot);
         if (sale.saleStatus === "Voided") {
             throw new Error("Voided sales cannot accept refunds.");
         }
@@ -1316,6 +1342,7 @@ export async function recordRetailSaleRefundRecord(saleId, refundPayload, user) 
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || refundPayload.relatedSaleNumber || "",
             relatedReturnId: normalizeText(refundPayload.relatedReturnId || sale.latestReturnId),
+            currencySnapshot: saleCurrencySnapshot,
             paymentDate: refundPayload.refundDate,
             amountPaid: -refundAmount,
             amountApplied: -refundAmount,
@@ -1472,6 +1499,7 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
             invoiceId: saleId,
             relatedSaleId: saleId,
             relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+            currencySnapshot: cloneCurrencySnapshot(paymentData.currencySnapshot || sale.currencySnapshot),
             paymentDate: now,
             amountPaid: -amountApplied,
             amountApplied: -amountApplied,
@@ -1513,6 +1541,7 @@ export async function voidRetailSalePaymentRecord(paymentId, voidReason, user) {
                 donationDate: now,
                 amount: -donationAmount,
                 status: "Void Reversal",
+                currencySnapshot: cloneCurrencySnapshot(paymentData.currencySnapshot || sale.currencySnapshot),
                 moduleType: "Retail Store",
                 sourceCollection: COLLECTIONS.salesPaymentsLedger,
                 sourcePaymentDocId: reversalRef.id,
@@ -1686,6 +1715,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 invoiceId: saleId,
                 relatedSaleId: saleId,
                 relatedSaleNumber: sale.manualVoucherNumber || paymentData.relatedSaleNumber || "",
+                currencySnapshot: cloneCurrencySnapshot(paymentData.currencySnapshot || sale.currencySnapshot),
                 paymentDate: now,
                 amountPaid: -paymentAmount,
                 amountApplied: -paymentAmount,
@@ -1716,6 +1746,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                     donationDate: paymentData.paymentDate || now,
                     amount: donationAmount,
                     status: "Voided",
+                    currencySnapshot: cloneCurrencySnapshot(paymentData.currencySnapshot || sale.currencySnapshot),
                     moduleType: "Retail Store",
                     sourceCollection: COLLECTIONS.salesPaymentsLedger,
                     sourcePaymentDocId: paymentDoc.id,
@@ -1737,6 +1768,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                     donationDate: now,
                     amount: -donationAmount,
                     status: "Void Reversal",
+                    currencySnapshot: cloneCurrencySnapshot(paymentData.currencySnapshot || sale.currencySnapshot),
                     moduleType: "Retail Store",
                     sourceCollection: COLLECTIONS.salesPaymentsLedger,
                     sourcePaymentDocId: reversalRef.id,
@@ -1783,6 +1815,7 @@ export async function voidRetailSaleRecord(saleId, voidReason, user) {
                 expenseDate: now,
                 justification: `Void reversal of ${expenseData.expenseId || expenseDoc.id}. Reason: ${voidReason}`,
                 amount: -expenseAmount,
+                currencySnapshot: cloneCurrencySnapshot(expenseData.currencySnapshot || sale.currencySnapshot),
                 status: "Void Reversal",
                 isReversalEntry: true,
                 originalExpenseId: expenseDoc.id,
@@ -1974,6 +2007,7 @@ export async function updateRetailSaleRecord(saleId, updatePayload, user) {
 
         const baseUpdate = {
             customerId: normalizeText(updatePayload.customerId || sale.customerId),
+            currencySnapshot: cloneCurrencySnapshot(updatePayload.currencySnapshot || sale.currencySnapshot),
             customerInfo: {
                 ...(sale.customerInfo || {}),
                 ...(updatePayload.customerInfo || {})

@@ -1,6 +1,6 @@
 import { createGrid } from "https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/+esm";
 import { icons } from "../../shared/icons.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 let retailWorksheetGridApi = null;
@@ -23,6 +23,18 @@ const rightAlignedNumberColumn = {
 
 function formatDate(value) {
     return formatLocalizedDate(value);
+}
+
+function resolveRetailRowCurrencySnapshot(row = {}) {
+    return row?.currencySnapshot
+        || row?.saleSnapshotAfterReturn?.currencySnapshot
+        || row?.saleSnapshotBeforeReturn?.currencySnapshot
+        || row?.originalSaleSnapshot?.currencySnapshot
+        || null;
+}
+
+function formatGridCurrency(value, row = null) {
+    return formatLocalizedCurrency(value, resolveRetailRowCurrencySnapshot(row));
 }
 
 function statusMarkup(value, defaultStatus = "Unpaid") {
@@ -276,7 +288,7 @@ function buildWorksheetColumnDefs() {
             minWidth: 135,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => (params.node?.rowPinned ? "" : formatCurrency(params.value || 0))
+            valueFormatter: params => (params.node?.rowPinned ? "" : formatGridCurrency(params.value || 0, params.data))
         },
         {
             field: "lineDiscountPercentage",
@@ -333,7 +345,7 @@ function buildWorksheetColumnDefs() {
                 const sgstAmount = taxableAmount * (sgstPercentage / 100);
                 return Number((cgstAmount + sgstAmount).toFixed(2));
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Line Total",
@@ -357,7 +369,7 @@ function buildWorksheetColumnDefs() {
                 const sgstAmount = taxableAmount * (sgstPercentage / 100);
                 return Number((taxableAmount + cgstAmount + sgstAmount).toFixed(2));
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Request State",
@@ -426,7 +438,7 @@ function buildSalesColumnDefs() {
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "amountPaid",
@@ -434,7 +446,7 @@ function buildSalesColumnDefs() {
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalDonation",
@@ -442,7 +454,7 @@ function buildSalesColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "totalExpenses",
@@ -450,7 +462,7 @@ function buildSalesColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "balanceDue",
@@ -458,7 +470,7 @@ function buildSalesColumnDefs() {
             minWidth: 140,
             flex: 0.85,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "orderStatus",
@@ -508,7 +520,7 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "donationAmount",
@@ -516,7 +528,7 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "amountReceived",
@@ -524,7 +536,7 @@ function buildPaymentHistoryColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || params.data?.totalCollected || params.data?.amountPaid || 0)
+            valueFormatter: params => formatGridCurrency(params.value || params.data?.totalCollected || params.data?.amountPaid || 0, params.data)
         },
         {
             field: "paymentMode",
@@ -586,7 +598,7 @@ function buildExpenseHistoryColumnDefs() {
             minWidth: 140,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => (params.node?.rowPinned ? formatCurrency(params.value || 0) : formatCurrency(params.value || 0))
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "addedBy",
@@ -633,7 +645,7 @@ function buildReturnHistoryColumnDefs() {
             minWidth: 130,
             flex: 0.8,
             ...rightAlignedNumberColumn,
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Invoice After",
@@ -644,7 +656,7 @@ function buildReturnHistoryColumnDefs() {
                 if (params.node?.rowPinned) return 0;
                 return Number(params.data?.saleSnapshotAfterReturn?.invoiceGrandTotal) || 0;
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             headerName: "Credit After",
@@ -655,7 +667,7 @@ function buildReturnHistoryColumnDefs() {
                 if (params.node?.rowPinned) return 0;
                 return Number(params.data?.saleSnapshotAfterReturn?.creditBalance) || 0;
             },
-            valueFormatter: params => formatCurrency(params.value || 0)
+            valueFormatter: params => formatGridCurrency(params.value || 0, params.data)
         },
         {
             field: "reason",

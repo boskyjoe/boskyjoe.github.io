@@ -3,7 +3,7 @@ import { showChoiceModal, showConfirmationModal, showSummaryModal } from "../../
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate, formatLocalizedDateTime } from "../../shared/utils/locale.js";
 import {
     getLeadQuoteLineItemsGridRows,
@@ -314,6 +314,14 @@ function getSelectedQuote() {
     return featureState.quoteRows.find(quote => quote.id === featureState.activeQuoteId) || null;
 }
 
+function getActiveQuoteCurrencySnapshot() {
+    return featureState.quoteDraft?.currencySnapshot || getSelectedQuote()?.currencySnapshot || null;
+}
+
+function formatCurrency(value, snapshot = getActiveQuoteCurrencySnapshot()) {
+    return formatLocalizedCurrency(value, snapshot);
+}
+
 function getQuotePdfSource() {
     if (featureState.quoteDraft) {
         return featureState.quoteDraft;
@@ -416,6 +424,7 @@ function buildQuoteDraftFromRecord(quote = null) {
         convertedToSaleNumber: quote.convertedToSaleNumber || "",
         conversionOutcome: quote.conversionOutcome || "",
         convertedSaleStatus: quote.convertedSaleStatus || "",
+        currencySnapshot: quote.currencySnapshot || null,
         lineItems,
         totals: quote.totals || calculateLeadQuoteTotals(lineItems)
     };
@@ -893,7 +902,7 @@ function buildQuoteListMarkup(rows = [], options = {}) {
                 </div>
                 <div class="lead-quote-list-item-meta">
                     <span>${quote.store || "-"}</span>
-                    <span>${formatCurrency(quote.totals?.grandTotal || 0)}</span>
+                    <span>${formatCurrency(quote.totals?.grandTotal || 0, quote.currencySnapshot || null)}</span>
                 </div>
                 <p class="lead-quote-list-item-note">${acceptedMeta}</p>
                 ${compact ? "" : `<p class="lead-quote-list-item-note">Valid until ${formatDisplayDate(quote.validUntil)}</p>`}
@@ -1332,7 +1341,7 @@ function renderLeadQuoteSummaryPanel(editingLead) {
                     </div>
                     <div class="metric-card">
                         <span class="metric-label">Accepted Total</span>
-                        <strong class="metric-value">${formatCurrency(editingLead.acceptedQuoteTotal || acceptedQuote?.totals?.grandTotal || 0)}</strong>
+                        <strong class="metric-value">${formatCurrency(editingLead.acceptedQuoteTotal || acceptedQuote?.totals?.grandTotal || 0, acceptedQuote?.currencySnapshot || null)}</strong>
                     </div>
                     <div class="metric-card">
                         <span class="metric-label">Latest Sent</span>
@@ -1504,7 +1513,7 @@ function renderLeadQuotesEditorCard(editingLead) {
             : revisionDraft
             ? `Revision mode is active. Review the changes, then save draft or send to create the next version from ${sourceQuote?.businessQuoteId || "the selected quote"}.`
             : (acceptedQuote
-                ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0)}.`
+                ? `Accepted quote on file: ${acceptedQuote.businessQuoteId || acceptedQuote.id} for ${formatCurrency(acceptedQuote.totals?.grandTotal || 0, acceptedQuote.currencySnapshot || null)}.`
                 : "Only one quote should be marked accepted for a lead. Sent quotes stay frozen for pricing, but their lifecycle status can still be updated here.")}
                                 </div>
                                 <div class="form-actions lead-quote-actions">
@@ -2888,6 +2897,7 @@ function getQuoteDraftPayload() {
         acceptanceNotes: featureState.quoteDraft.acceptanceNotes || "",
         rejectionReason: featureState.quoteDraft.rejectionReason || "",
         cancellationReason: featureState.quoteDraft.cancellationReason || "",
+        currencySnapshot: featureState.quoteDraft.currencySnapshot || null,
         lineItems: featureState.quoteDraft.lineItems || []
     };
 }
@@ -3233,7 +3243,7 @@ async function handleLeadConvert(button) {
                 { label: "Customer", value: lead.customerName || "-" },
                 { label: "Quote", value: quoteSource.quote.businessQuoteId || "-" },
                 { label: "Quote Status", value: quoteSource.quote.quoteStatus || "-" },
-                { label: "Quote Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0) }
+                { label: "Quote Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0, quoteSource.quote.currencySnapshot || null) }
             ],
             note: "Quote conversion uses the quote snapshot for pricing, tax, and customer details. Lead conversion uses the enquiry requested products and current retail review flow.",
             choices: [
@@ -3260,7 +3270,7 @@ async function handleLeadConvert(button) {
             { label: "Source", value: `${quoteSource.label}: ${quoteSource.quote.businessQuoteId || "-"}` },
             { label: "Quote Status", value: quoteSource.quote.quoteStatus || "-" },
             { label: "No. Of Products", value: String((quoteSource.quote.lineItems || []).filter(item => (Number(item.quotedQty) || 0) > 0).length) },
-            { label: "Quoted Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0) }
+            { label: "Quoted Total", value: formatCurrency(quoteSource.quote.totals?.grandTotal || 0, quoteSource.quote.currencySnapshot || null) }
         ]
         : [
             { label: "Lead ID", value: lead.businessLeadId || "-" },
@@ -3365,6 +3375,7 @@ async function handleLeadConvert(button) {
             catalogueName: conversionDraft.catalogueName,
             preferredStore: conversionDraft.preferredStore || "",
             leadNotes: conversionDraft.leadNotes,
+            currencySnapshot: conversionDraft.currencySnapshot || null,
             items: conversionDraft.items,
             warnings: conversionDraft.warnings || [],
             createdAt: Date.now()

@@ -6,6 +6,7 @@ import {
     saveSimpleConsignmentSettlementRecord,
     voidSimpleConsignmentTransaction
 } from "./repository.js";
+import { buildCurrencySnapshot } from "../../shared/utils/currency.js";
 
 export const CONSIGNMENT_TRANSACTION_TYPES = ["Payment", "Expense"];
 export const CONSIGNMENT_STATUSES = ["Active", "Settled", "Cancelled"];
@@ -204,7 +205,8 @@ export function validateSimpleConsignmentCheckoutPayload(payload, user, salesCat
         venue,
         salesCatalogueId,
         salesCatalogueName: catalogue.catalogueName || "-",
-        items
+        items,
+        currencySnapshot: buildCurrencySnapshot(payload.currencySnapshot)
     };
 }
 
@@ -313,7 +315,8 @@ export function validateSimpleConsignmentTransactionPayload(order, payload, paym
         paymentMode,
         reference,
         contact,
-        notes
+        notes,
+        currencySnapshot: buildCurrencySnapshot(order.currencySnapshot)
     };
 }
 

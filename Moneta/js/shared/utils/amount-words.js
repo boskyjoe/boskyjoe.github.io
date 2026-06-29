@@ -1,4 +1,5 @@
 import { getLocalizationSettings } from "../system-settings.js";
+import { resolveCurrencySnapshot } from "./currency.js";
 
 function convertBelowHundred(num) {
     const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
@@ -74,8 +75,11 @@ export function amountToWords(amount, currency = "") {
     }
 
     const localization = getLocalizationSettings();
-    const resolvedCurrency = String(currency || localization.defaultCurrencyCode || "INR").trim().toUpperCase();
-    const minorUnit = Math.max(0, Number(localization.minorUnit ?? 2) || 0);
+    const snapshot = typeof currency === "object" && currency
+        ? resolveCurrencySnapshot(currency)
+        : null;
+    const resolvedCurrency = String(snapshot?.currencyCode || currency || localization.defaultCurrencyCode || "INR").trim().toUpperCase();
+    const minorUnit = Math.max(0, Number(snapshot?.minorUnit ?? localization.minorUnit ?? 2) || 0);
     const [whole, fraction = ""] = normalizedAmount.toFixed(minorUnit).split(".");
     const wholeNumber = Number(whole) || 0;
     const fractionNumber = Number(fraction || 0) || 0;
@@ -90,8 +94,8 @@ export function amountToWords(amount, currency = "") {
     const wholeWords = convertWesternNumber(wholeNumber);
     const defaultCurrencyCode = String(localization.defaultCurrencyCode || "").trim().toUpperCase();
     const currencyLabel = resolvedCurrency === defaultCurrencyCode
-        ? (localization.defaultCurrencyName || resolvedCurrency)
-        : resolvedCurrency;
+        ? (snapshot?.currencyName || localization.defaultCurrencyName || resolvedCurrency)
+        : (snapshot?.currencyName || resolvedCurrency);
     const fractionLabel = minorUnit === 0 ? "" : "Cents";
     const fractionWords = fractionNumber ? convertWesternNumber(fractionNumber) : "";
 

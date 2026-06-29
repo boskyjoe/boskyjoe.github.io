@@ -16,6 +16,7 @@ import { getDefaultRetailStoreName, getRetailStoreNames } from "../../shared/sto
 import { ensureCustomerMasterRecord } from "../../shared/customer-master.js";
 import { LEAD_STATUSES as SHARED_LEAD_STATUSES, normalizeLeadStatusValue } from "../../shared/lead-status.js";
 import { getLeadWorkflowSettings, getLocalizationSettings } from "../../shared/system-settings.js";
+import { buildCurrencySnapshot } from "../../shared/utils/currency.js";
 import { formatLocalizedDate } from "../../shared/utils/locale.js";
 
 export const LEAD_SOURCES = ["Walk-in", "Phone Call", "Website", "Referral", "Event", "Other"];
@@ -167,6 +168,7 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         ? sourceQuote.lineItems
         : normalizeRequestedProducts(lead.requestedProducts || []);
     const lineItems = normalizeQuoteLineItems(seedItems, store);
+    const currencySnapshot = buildCurrencySnapshot(sourceQuote?.currencySnapshot);
 
     return {
         docId: "",
@@ -189,7 +191,8 @@ export function buildLeadQuoteDraft(lead, sourceQuote = null) {
         rejectionReason: "",
         cancellationReason: "",
         lineItems,
-        totals: calculateLeadQuoteTotals(lineItems)
+        totals: calculateLeadQuoteTotals(lineItems),
+        currencySnapshot
     };
 }
 
@@ -336,6 +339,7 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
     const cancellationReason = normalizeText(payload.cancellationReason || "");
     const validUntil = parseOptionalDate(payload.validUntil, "Quote validity date");
     const lineItems = normalizeQuoteLineItems(payload.lineItems || [], store);
+    const currencySnapshot = buildCurrencySnapshot(payload.currencySnapshot || existingQuote?.currencySnapshot || sourceQuote?.currencySnapshot);
 
     if (!lead?.id) {
         throw new Error("Select and save a lead before creating quotes.");
@@ -407,9 +411,11 @@ function buildLeadQuotePayload(payload, lead, user, options = {}) {
                 seasonName: normalizeText(lead.seasonName) || "-"
             },
             pricingContext: {
-                currency: getLocalizationSettings().defaultCurrencyCode || "INR",
+                currency: currencySnapshot.currencyCode || getLocalizationSettings().defaultCurrencyCode || "INR",
+                locale: currencySnapshot.locale || "",
                 taxMode: store === "Consignment" ? "non-taxable" : "store-default-tax"
             },
+            currencySnapshot,
             lineItems,
             totals,
             sourceQuoteId: normalizeText(payload.sourceQuoteId || sourceQuote?.id),
@@ -1061,6 +1067,7 @@ export async function buildLeadToRetailConversionDraft(lead, masterData = {}) {
         catalogueId,
         catalogueName: selectedCatalogue?.catalogueName || lead.catalogueName || "-",
         leadNotes: normalizeText(lead.leadNotes),
+        currencySnapshot: buildCurrencySnapshot(),
         items,
         warnings
     };
@@ -1183,6 +1190,7 @@ export async function buildLeadQuoteToRetailConversionDraft(lead, quote, masterD
         catalogueName: selectedCatalogue?.catalogueName || quote.catalogueSnapshot?.catalogueName || lead.catalogueName || "-",
         leadNotes: normalizeText(quote.quoteNotes || lead.leadNotes),
         preferredStore: quoteStore,
+        currencySnapshot: buildCurrencySnapshot(quote.currencySnapshot),
         items,
         warnings
     };

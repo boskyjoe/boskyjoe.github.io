@@ -1,7 +1,10 @@
 import { amountToWords } from "../../shared/utils/amount-words.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import { formatLocalizedDate, formatLocalizedTime } from "../../shared/utils/locale.js";
 import { getStoreConfigInvoiceDetails } from "../../shared/store-config.js";
+
+let activeCurrencySnapshot = null;
+let activeLocale = "";
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -18,12 +21,21 @@ function toDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function setActiveRetailCurrencySnapshot(snapshot = null) {
+    activeCurrencySnapshot = snapshot || null;
+    activeLocale = snapshot?.locale || "";
+}
+
 function formatDate(value) {
-    return formatLocalizedDate(toDate(value));
+    return formatLocalizedDate(toDate(value), {}, activeLocale);
 }
 
 function formatTime(value) {
-    return formatLocalizedTime(toDate(value));
+    return formatLocalizedTime(toDate(value), {}, activeLocale);
+}
+
+function formatCurrency(value, snapshot = activeCurrencySnapshot) {
+    return formatLocalizedCurrency(value, snapshot);
 }
 
 function buildTaxSummary(lineItems = []) {
@@ -490,6 +502,7 @@ function resolveInvoiceSourceSale(sale, useOriginalSnapshot = true) {
         saleStatus: snapshot.saleStatus || sale.saleStatus,
         returnStatus: snapshot.returnStatus || sale.returnStatus,
         paymentStatus: snapshot.paymentStatus || sale.paymentStatus,
+        currencySnapshot: snapshot.currencySnapshot || sale.currencySnapshot || null,
         lineItems: snapshot.lineItems || sale.lineItems,
         financials: snapshot.financials || sale.financials,
         totalAmountPaid: snapshot.totalAmountPaid ?? sale.totalAmountPaid,
@@ -501,6 +514,7 @@ function resolveInvoiceSourceSale(sale, useOriginalSnapshot = true) {
 
 function buildPdfData(sale, paymentRecord = null, { useOriginalSnapshot = true } = {}) {
     const sourceSale = resolveInvoiceSourceSale(sale, useOriginalSnapshot);
+    setActiveRetailCurrencySnapshot(sourceSale.currencySnapshot || sale.currencySnapshot || null);
     const storeDetails = getStoreDetails(sourceSale.store);
     const saleDate = toDate(sourceSale.saleDate);
     const items = (sourceSale.lineItems || []).map(item => {
@@ -573,7 +587,7 @@ function buildPdfData(sale, paymentRecord = null, { useOriginalSnapshot = true }
         grandTotal: Number(sourceSale.financials?.grandTotal) || 0,
         receivedAmount: Number(sourceSale.totalAmountPaid) || 0,
         balanceAmount: Number(sourceSale.balanceDue) || 0,
-        amountInWords: amountToWords(Number(sourceSale.financials?.grandTotal) || 0),
+        amountInWords: amountToWords(Number(sourceSale.financials?.grandTotal) || 0, activeCurrencySnapshot),
         bankName: storeDetails.paymentDetails?.bankName || "-",
         bankBranch: storeDetails.paymentDetails?.branch || "-",
         accountNumber: storeDetails.paymentDetails?.accountNumber || "-",
@@ -590,6 +604,14 @@ function buildCreditNoteData(sale, returnRecord) {
     const originalSaleSnapshot = returnRecord.originalSaleSnapshot || {};
     const saleSnapshotBeforeReturn = returnRecord.saleSnapshotBeforeReturn || {};
     const saleSnapshotAfterReturn = returnRecord.saleSnapshotAfterReturn || {};
+    setActiveRetailCurrencySnapshot(
+        returnRecord.currencySnapshot
+        || saleSnapshotAfterReturn.currencySnapshot
+        || saleSnapshotBeforeReturn.currencySnapshot
+        || originalSaleSnapshot.currencySnapshot
+        || sale.currencySnapshot
+        || null
+    );
     const items = (returnRecord.items || []).map(item => {
         const quantity = Number(item.quantity) || 0;
         const unitPrice = Number(item.unitPrice) || 0;
@@ -648,7 +670,7 @@ function buildCreditNoteData(sale, returnRecord) {
         totalSGST: items.reduce((sum, item) => sum + (Number(item.sgstAmount) || 0), 0),
         totalAmount: returnedAmount,
         taxSummary,
-        amountInWords: amountToWords(returnedAmount),
+        amountInWords: amountToWords(returnedAmount, activeCurrencySnapshot),
         originalInvoiceGrandTotal,
         invoiceGrandTotalBeforeReturn,
         currentInvoiceGrandTotal,

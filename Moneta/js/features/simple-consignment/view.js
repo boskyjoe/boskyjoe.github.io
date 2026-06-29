@@ -3,7 +3,7 @@ import { showConfirmationModal, showSummaryModal } from "../../shared/modal.js";
 import { ProgressToast, runProgressToastFlow, showToast } from "../../shared/toast.js";
 import { icons } from "../../shared/icons.js";
 import { focusFormField } from "../../shared/focus.js";
-import { formatCurrency } from "../../shared/utils/currency.js";
+import { formatCurrency as formatLocalizedCurrency } from "../../shared/utils/currency.js";
 import {
     destroySimpleConsignmentAddProductsGrid,
     getSimpleConsignmentAddProductsRows,
@@ -645,6 +645,14 @@ function hasOrderContextUpdated(order, contextPayload = {}) {
 function getActiveOrder() {
     if (!featureState.activeOrderId) return null;
     return featureState.orders.find(order => order.id === featureState.activeOrderId) || null;
+}
+
+function getSimpleConsignmentCurrencySnapshot() {
+    return getActiveOrder()?.currencySnapshot || null;
+}
+
+function formatCurrency(value, snapshot = getSimpleConsignmentCurrencySnapshot()) {
+    return formatLocalizedCurrency(value, snapshot);
 }
 
 function isCreateMode() {

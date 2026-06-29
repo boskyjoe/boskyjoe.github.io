@@ -7,6 +7,7 @@ import {
 } from "./repository.js";
 import { getState } from "../../app/store.js";
 import { syncProductPricingFromPurchases } from "../products/pricing-service.js";
+import { buildCurrencySnapshot } from "../../shared/utils/currency.js";
 
 function normalizeText(value) {
     return (value || "").trim();
@@ -199,6 +200,7 @@ export function validatePurchaseInvoicePayload(payload, masterData) {
         supplierName: supplier.supplierName,
         supplierInvoiceNo,
         invoiceName,
+        currencySnapshot: buildCurrencySnapshot(payload.currencySnapshot),
         lineItems,
         itemsSubtotal: summary.itemsSubtotal,
         invoiceDiscountType: summary.invoiceDiscountType,
@@ -323,7 +325,8 @@ export function validatePurchasePaymentPayload(payload, invoice, masterData) {
         amountPaid,
         paymentMode,
         transactionRef,
-        notes
+        notes,
+        currencySnapshot: buildCurrencySnapshot(invoice.currencySnapshot)
     };
 }
 
