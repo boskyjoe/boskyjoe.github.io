@@ -67,8 +67,15 @@ export function findCountryCurrencyReferenceByCurrencyCode(currencyCode = "", ro
     const normalizedCurrencyCode = normalizeText(currencyCode).toUpperCase();
     if (!normalizedCurrencyCode) return null;
 
-    return getCountryCurrencyReferenceRows(rows, { includeInactive })
-        .find(row => normalizeText(row.primaryCurrencyCode).toUpperCase() === normalizedCurrencyCode
-            || (row.alternateCurrencyCodes || []).some(code => normalizeText(code).toUpperCase() === normalizedCurrencyCode))
-        || null;
+    const availableRows = getCountryCurrencyReferenceRows(rows, { includeInactive });
+    const primaryMatch = availableRows.find(row => (
+        normalizeText(row.primaryCurrencyCode).toUpperCase() === normalizedCurrencyCode
+    ));
+    if (primaryMatch) {
+        return primaryMatch;
+    }
+
+    return availableRows.find(row => (
+        (row.alternateCurrencyCodes || []).some(code => normalizeText(code).toUpperCase() === normalizedCurrencyCode)
+    )) || null;
 }

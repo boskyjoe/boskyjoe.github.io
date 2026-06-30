@@ -34,8 +34,27 @@ function cloneRow(row = {}) {
             ...(row.inventoryOperations || {})
         },
         localization: {
-            ...(row.localization || {})
+            ...(row.localization || {}),
+            currencyControl: normalizeCurrencyControl(row.localization?.currencyControl || {})
         }
+    };
+}
+
+function normalizeCurrencyControl(value = {}) {
+    return {
+        isLocked: Boolean(value.isLocked),
+        lockedOn: value.lockedOn || null,
+        lockedBy: normalizeText(value.lockedBy),
+        lockReason: normalizeText(value.lockReason),
+        firstDocumentType: normalizeText(value.firstDocumentType),
+        firstDocumentId: normalizeText(value.firstDocumentId),
+        firstBusinessId: normalizeText(value.firstBusinessId),
+        lockedCountryCode: normalizeUpperText(value.lockedCountryCode),
+        lockedCountryName: normalizeText(value.lockedCountryName),
+        lockedCurrencyCode: normalizeUpperText(value.lockedCurrencyCode),
+        lockedCurrencyName: normalizeText(value.lockedCurrencyName),
+        lockedCurrencySymbol: normalizeText(value.lockedCurrencySymbol),
+        lockedLocale: normalizeText(value.lockedLocale)
     };
 }
 
@@ -109,6 +128,7 @@ export function getLocalizationSettings(settings = null, referenceRows = null) {
     const seedDefaults = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, MONETA_SYSTEM_SETTINGS_SEED)?.localization || {};
     const row = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, settings) || {};
     const localization = row.localization || {};
+    const currencyControl = normalizeCurrencyControl(localization.currencyControl || seedDefaults.currencyControl || {});
 
     const defaultCountryCode = normalizeUpperText(localization.defaultCountryCode, normalizeUpperText(seedDefaults.defaultCountryCode, "IN"));
     const countryReference = getCountryCurrencyReferenceByCountryCode(defaultCountryCode, referenceRows) || null;
@@ -128,6 +148,104 @@ export function getLocalizationSettings(settings = null, referenceRows = null) {
         defaultCurrencySymbol: normalizeText(currencyReference?.primaryCurrencySymbol || defaultCurrencyCode),
         defaultLocale: normalizeText(localization.defaultLocale || countryReference?.locale || seedDefaults.defaultLocale || "en-IN"),
         currencySymbolOverride: normalizeText(localization.currencySymbolOverride || ""),
-        minorUnit: normalizeInteger(currencyReference?.minorUnit, 2, 0)
+        minorUnit: normalizeInteger(currencyReference?.minorUnit, 2, 0),
+        currencyControl,
+        isCurrencyLocked: currencyControl.isLocked
+    };
+}
+
+export function getLocalizationCurrencyControl(settings = null) {
+    const row = getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, settings) || {};
+    return normalizeCurrencyControl(row.localization?.currencyControl || {});
+}
+
+export function buildLocalizationSystemSettingRow(row = null) {
+    const seedRow = cloneRow(getSystemSettingByDocId(SYSTEM_SETTINGS_DOC_IDS.localization, MONETA_SYSTEM_SETTINGS_SEED) || {});
+    const normalizedRow = cloneRow({
+        ...(row || {}),
+        docId: normalizeText(row?.docId || row?.id || SYSTEM_SETTINGS_DOC_IDS.localization) || SYSTEM_SETTINGS_DOC_IDS.localization
+    });
+    const localizationSettings = getLocalizationSettings([normalizedRow]);
+
+    return {
+        ...seedRow,
+        ...normalizedRow,
+        docId: SYSTEM_SETTINGS_DOC_IDS.localization,
+        localization: {
+            ...(seedRow.localization || {}),
+            ...(normalizedRow.localization || {}),
+            defaultCountryCode: localizationSettings.defaultCountryCode,
+            defaultCurrencyCode: localizationSettings.defaultCurrencyCode,
+            defaultLocale: localizationSettings.defaultLocale,
+            currencySymbolOverride: normalizeText(normalizedRow.localization?.currencySymbolOverride || seedRow.localization?.currencySymbolOverride || ""),
+            currencyControl: normalizeCurrencyControl(normalizedRow.localization?.currencyControl || seedRow.localization?.currencyControl || {})
+        }
+    };
+}
+
+export function buildLocalizationCurrencyLock(row = null, options = {}) {
+    const {
+        currencySnapshot = null,
+        lockedOn = null,
+        lockedBy = "",
+        lockReason = "first-priced-document",
+        firstDocumentType = "",
+        firstDocumentId = "",
+        firstBusinessId = ""
+    } = options;
+    const normalizedRow = buildLocalizationSystemSettingRow(row);
+    const localizationSettings = getLocalizationSettings([normalizedRow]);
+    const snapshot = currencySnapshot && typeof currencySnapshot === "object" ? currencySnapshot : {};
+    const lockedCountryCode = normalizeUpperText(snapshot.countryCode, localizationSettings.defaultCountryCode || "IN");
+    const lockedCurrencyCode = normalizeUpperText(
+        snapshot.currencyCode || snapshot.currency || snapshot.defaultCurrencyCode,
+        localizationSettings.defaultCurrencyCode || "INR"
+    );
+    const lockedLocale = normalizeText(snapshot.locale || snapshot.defaultLocale || localizationSettings.defaultLocale || "en-IN");
+    const lockedCurrencySymbol = normalizeText(
+        snapshot.resolvedCurrencySymbol
+        || snapshot.currencySymbolOverride
+        || snapshot.currencySymbol
+        || snapshot.defaultCurrencySymbol
+        || localizationSettings.currencySymbolOverride
+        || localizationSettings.defaultCurrencySymbol
+        || lockedCurrencyCode
+    );
+
+    return normalizeCurrencyControl({
+        isLocked: true,
+        lockedOn,
+        lockedBy,
+        lockReason,
+        firstDocumentType,
+        firstDocumentId,
+        firstBusinessId,
+        lockedCountryCode,
+        lockedCountryName: normalizeText(snapshot.countryName || localizationSettings.defaultCountryName || ""),
+        lockedCurrencyCode,
+        lockedCurrencyName: normalizeText(snapshot.currencyName || snapshot.defaultCurrencyName || localizationSettings.defaultCurrencyName || lockedCurrencyCode),
+        lockedCurrencySymbol,
+        lockedLocale
+    });
+}
+
+export function buildLockedLocalizationSystemSettingRow(row = null, options = {}) {
+    const normalizedRow = buildLocalizationSystemSettingRow(row);
+    const nextCurrencyControl = buildLocalizationCurrencyLock(normalizedRow, options);
+    const snapshot = options.currencySnapshot && typeof options.currencySnapshot === "object"
+        ? options.currencySnapshot
+        : {};
+    const nextSymbolOverride = normalizeText(snapshot.currencySymbolOverride || normalizedRow.localization?.currencySymbolOverride || "");
+
+    return {
+        ...normalizedRow,
+        localization: {
+            ...normalizedRow.localization,
+            defaultCountryCode: nextCurrencyControl.lockedCountryCode || normalizedRow.localization.defaultCountryCode,
+            defaultCurrencyCode: nextCurrencyControl.lockedCurrencyCode || normalizedRow.localization.defaultCurrencyCode,
+            defaultLocale: nextCurrencyControl.lockedLocale || normalizedRow.localization.defaultLocale,
+            currencySymbolOverride: nextSymbolOverride,
+            currencyControl: nextCurrencyControl
+        }
     };
 }

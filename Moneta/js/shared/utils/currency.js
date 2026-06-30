@@ -1,4 +1,8 @@
 import { getLocalizationSettings } from "../system-settings.js";
+import {
+    findCountryCurrencyReferenceByCurrencyCode,
+    getCountryCurrencyReferenceByCountryCode
+} from "../country-currency-reference.js";
 
 function normalizeText(value) {
     return String(value || "").trim();
@@ -28,23 +32,39 @@ export function resolveCurrencySnapshot(snapshot = null) {
         || input.defaultCurrencyCode
     ) || defaultCurrencyCode;
     const countryCode = normalizeUpperText(input.countryCode || localization.defaultCountryCode || "IN");
+    const countryReference = getCountryCurrencyReferenceByCountryCode(countryCode) || null;
+    const currencyReference = countryReference && normalizeUpperText(countryReference.primaryCurrencyCode) === currencyCode
+        ? countryReference
+        : (findCountryCurrencyReferenceByCurrencyCode(currencyCode, null, { includeInactive: true }) || countryReference || null);
     const locale = normalizeText(input.locale || input.defaultLocale || localization.defaultLocale) || "en-IN";
     const minorUnit = normalizeMinorUnit(input.minorUnit, normalizeMinorUnit(localization.minorUnit, 2));
-    const currencySymbolOverride = normalizeText(input.currencySymbolOverride || "");
+    const currencySymbolOverride = normalizeText(
+        input.currencySymbolOverride
+        || (currencyCode === defaultCurrencyCode ? localization.currencySymbolOverride : "")
+    );
+    const useCountryPrimaryCurrencyPresentation = Boolean(
+        countryReference
+        && normalizeUpperText(countryReference.primaryCurrencyCode) === currencyCode
+        && !currencySymbolOverride
+    );
     const currencySymbol = normalizeText(
-        input.currencySymbol
+        (useCountryPrimaryCurrencyPresentation ? countryReference?.primaryCurrencySymbol : "")
+        || input.currencySymbol
         || input.defaultCurrencySymbol
+        || currencyReference?.primaryCurrencySymbol
         || (currencyCode === defaultCurrencyCode ? localization.defaultCurrencySymbol : "")
     );
     const resolvedCurrencySymbol = currencySymbolOverride || currencySymbol || currencyCode;
 
     return {
         countryCode,
-        countryName: normalizeText(input.countryName || localization.defaultCountryName || ""),
+        countryName: normalizeText(input.countryName || countryReference?.countryName || localization.defaultCountryName || ""),
         currencyCode,
         currencyName: normalizeText(
-            input.currencyName
+            (useCountryPrimaryCurrencyPresentation ? countryReference?.primaryCurrencyName : "")
+            || input.currencyName
             || input.defaultCurrencyName
+            || currencyReference?.primaryCurrencyName
             || (currencyCode === defaultCurrencyCode ? localization.defaultCurrencyName : "")
             || currencyCode
         ),

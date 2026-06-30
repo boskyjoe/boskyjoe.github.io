@@ -46,7 +46,22 @@ export const MONETA_SYSTEM_SETTINGS_SEED = [
             defaultCountryCode: "IN",
             defaultCurrencyCode: "INR",
             defaultLocale: "en-IN",
-            currencySymbolOverride: ""
+            currencySymbolOverride: "",
+            currencyControl: {
+                isLocked: false,
+                lockedOn: null,
+                lockedBy: "",
+                lockReason: "",
+                firstDocumentType: "",
+                firstDocumentId: "",
+                firstBusinessId: "",
+                lockedCountryCode: "",
+                lockedCountryName: "",
+                lockedCurrencyCode: "",
+                lockedCurrencyName: "",
+                lockedCurrencySymbol: "",
+                lockedLocale: ""
+            }
         }
     }
 ];
