@@ -974,6 +974,47 @@ function renderCountryCurrencySelectOptions(snapshot, currentCountryCode = "") {
     }).join("");
 }
 
+function renderLocalizationCurrencyLockNotice(localizationSettings = {}) {
+    const currencyControl = localizationSettings.currencyControl || {};
+    if (!currencyControl.isLocked) {
+        return `
+            <div class="modal-note tone-warning">
+                <span class="modal-note-icon">${icons.warning}</span>
+                <div>
+                    <strong>Currency will lock after the first priced document.</strong>
+                    <p>Once Moneta posts the first retail sale, simple consignment, purchase invoice, or non-draft quote, the operating country, currency, locale, and symbol override will become read-only.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    const lockedCurrencyLabel = [currencyControl.lockedCurrencySymbol, currencyControl.lockedCurrencyCode]
+        .filter(Boolean)
+        .join(" ")
+        || currencyControl.lockedCurrencyCode
+        || "Locked";
+    const sourceLabel = currencyControl.firstBusinessId || currencyControl.firstDocumentId
+        ? `${currencyControl.firstDocumentType || "Priced document"} · ${currencyControl.firstBusinessId || currencyControl.firstDocumentId}`
+        : (currencyControl.firstDocumentType || "Priced document");
+    const metadata = [
+        sourceLabel,
+        currencyControl.lockedLocale || "",
+        currencyControl.lockedOn ? formatDateTime(currencyControl.lockedOn) : "",
+        currencyControl.lockedBy || ""
+    ].filter(Boolean).join(" · ");
+
+    return `
+        <div class="modal-note tone-warning">
+            <span class="modal-note-icon">${icons.warning}</span>
+            <div>
+                <strong>Operating currency locked to ${escapeHtml(lockedCurrencyLabel)}.</strong>
+                <p>Moneta already contains priced business activity, so Country, Currency, Locale, and Symbol Override are now read-only to protect dashboard, report, and document consistency.</p>
+                ${metadata ? `<p>${escapeHtml(metadata)}</p>` : ""}
+            </div>
+        </div>
+    `;
+}
+
 function syncLocalizationSystemSettingsFields(snapshot = getState()) {
     const countryCodeSelect = document.getElementById("admin-system-settings-localization-country-code");
     if (!countryCodeSelect) return;
@@ -2257,6 +2298,7 @@ function renderSystemSettingsForm(snapshot) {
     const isLeadWorkflow = (editingRecord.id || editingRecord.docId) === "leadWorkflow";
     const isInventoryOperations = (editingRecord.id || editingRecord.docId) === "inventoryOperations";
     const isLocalization = (editingRecord.id || editingRecord.docId) === "localization";
+    const isLocalizationLocked = Boolean(isLocalization && localizationSettings.isCurrencyLocked);
     const selectedCountryReference = findCountryCurrencyReferenceRow(snapshot, localizationSettings.defaultCountryCode) || null;
 
     return `
@@ -2273,7 +2315,7 @@ function renderSystemSettingsForm(snapshot) {
                                 : "Manage Moneta-wide workflow defaults here so quote follow-up timing and enquiry attention behavior can be tuned without code changes."}</p>
                     </div>
                 </div>
-                <span class="status-pill">${escapeHtml(editingRecord.settingName || "System Setup")}</span>
+                <span class="status-pill">${escapeHtml(isLocalizationLocked ? "Localization Locked" : (editingRecord.settingName || "System Setup"))}</span>
             </div>
             <div class="panel-body">
                 <form id="admin-system-settings-form">
@@ -2380,6 +2422,9 @@ function renderSystemSettingsForm(snapshot) {
                             </div>
                         ` : ""}
                         ${isLocalization ? `
+                            <div class="field field-full">
+                                ${renderLocalizationCurrencyLockNotice(localizationSettings)}
+                            </div>
                             <div class="field">
                                 ${renderFieldLabel({
                                     forId: "admin-system-settings-localization-country-code",
@@ -2387,7 +2432,7 @@ function renderSystemSettingsForm(snapshot) {
                                     required: true,
                                     tooltip: "Pick the default country Moneta should use as its base reference for currency, locale, and future country-aware setup screens."
                                 })}
-                                <select id="admin-system-settings-localization-country-code" class="select" required>
+                                <select id="admin-system-settings-localization-country-code" class="select" required ${isLocalizationLocked ? "disabled" : ""}>
                                     ${renderCountryCurrencySelectOptions(snapshot, localizationSettings.defaultCountryCode)}
                                 </select>
                             </div>
@@ -2398,7 +2443,7 @@ function renderSystemSettingsForm(snapshot) {
                                     required: true,
                                     tooltip: "This is the ISO-style currency code Moneta will use by default for totals, dashboards, reports, and document output."
                                 })}
-                                <input id="admin-system-settings-localization-currency-code" class="input" type="text" maxlength="3" value="${escapeHtml(localizationSettings.defaultCurrencyCode || "")}" required>
+                                <input id="admin-system-settings-localization-currency-code" class="input" type="text" maxlength="3" value="${escapeHtml(localizationSettings.defaultCurrencyCode || "")}" required ${isLocalizationLocked ? "disabled" : ""}>
                             </div>
                             <div class="field">
                                 ${renderFieldLabel({
@@ -2407,7 +2452,7 @@ function renderSystemSettingsForm(snapshot) {
                                     required: true,
                                     tooltip: "This locale controls how Moneta formats currency and localized dates in shared utilities, for example en-IN or en-US."
                                 })}
-                                <input id="admin-system-settings-localization-locale" class="input" type="text" value="${escapeHtml(localizationSettings.defaultLocale || "")}" required>
+                                <input id="admin-system-settings-localization-locale" class="input" type="text" value="${escapeHtml(localizationSettings.defaultLocale || "")}" required ${isLocalizationLocked ? "disabled" : ""}>
                             </div>
                             <div class="field">
                                 ${renderFieldLabel({
@@ -2415,7 +2460,7 @@ function renderSystemSettingsForm(snapshot) {
                                     label: "Currency Symbol Override",
                                     tooltip: "Use this only when you want Moneta to show a custom symbol instead of the standard one from the country and currency reference."
                                 })}
-                                <input id="admin-system-settings-localization-symbol-override" class="input" type="text" maxlength="8" value="${escapeHtml(localizationSettings.currencySymbolOverride || "")}" placeholder="${escapeHtml(selectedCountryReference?.primaryCurrencySymbol || "")}">
+                                <input id="admin-system-settings-localization-symbol-override" class="input" type="text" maxlength="8" value="${escapeHtml(localizationSettings.currencySymbolOverride || "")}" placeholder="${escapeHtml(selectedCountryReference?.primaryCurrencySymbol || "")}" ${isLocalizationLocked ? "disabled" : ""}>
                             </div>
                             <div class="field field-wide">
                                 ${renderFieldLabel({
@@ -2448,9 +2493,9 @@ function renderSystemSettingsForm(snapshot) {
                             <span class="button-icon">${icons.inactive}</span>
                             Reset View
                         </button>
-                        <button class="button button-primary-alt" type="submit">
-                            <span class="button-icon">${icons.edit}</span>
-                            Update System Setup
+                        <button class="button button-primary-alt" type="submit" ${isLocalizationLocked ? "disabled" : ""}>
+                            <span class="button-icon">${isLocalizationLocked ? icons.warning : icons.edit}</span>
+                            ${isLocalizationLocked ? "Currency Locked" : "Update System Setup"}
                         </button>
                     </div>
                 </form>
@@ -3704,6 +3749,18 @@ async function handleSystemSettingsSubmit(event) {
         const isLeadWorkflow = docId === "leadWorkflow";
         const isInventoryOperations = docId === "inventoryOperations";
         const isLocalization = docId === "localization";
+        const activeSystemSetting = getState().masterData.systemSettings?.find(row => (row.id || row.docId) === docId) || null;
+        const activeLocalizationSettings = isLocalization
+            ? getLocalizationSettings(activeSystemSetting ? [activeSystemSetting] : [], getState().masterData.countryCurrencyReference)
+            : null;
+
+        if (isLocalization && activeLocalizationSettings?.isCurrencyLocked) {
+            showToast("Operating currency is locked because Moneta already contains priced business activity.", "warning", {
+                title: "Admin Modules"
+            });
+            return;
+        }
+
         await runProgressToastFlow({
             title: "Updating System Setup",
             initialMessage: "Reading the selected setup group...",

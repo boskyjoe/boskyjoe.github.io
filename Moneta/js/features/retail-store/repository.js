@@ -1,4 +1,5 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import { applyLocalizationCurrencyLockInTransaction } from "../../shared/localization-currency-lock.js";
 import { getRetailStoreSalePrefix } from "../../shared/store-config.js";
 
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
@@ -607,6 +608,16 @@ export async function createRetailSaleRecord(payload, user) {
             totalDonation,
             balanceDue,
             creditBalance: 0
+        });
+
+        await applyLocalizationCurrencyLockInTransaction({
+            db,
+            transaction,
+            userEmail: user.email,
+            documentType: "Retail Sale",
+            documentId: saleRef.id,
+            businessId: saleBusinessId,
+            currencySnapshot: saleCurrencySnapshot
         });
 
         transaction.set(saleRef, {

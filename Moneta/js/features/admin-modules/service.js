@@ -36,7 +36,10 @@ import { DEFAULT_PRICING_POLICY_SEED } from "../../config/pricing-policy-config.
 import { DEFAULT_REORDER_POLICY_SEED } from "../../config/reorder-policy-config.js";
 import { MONETA_COUNTRY_CURRENCY_REFERENCE_SEED } from "../../config/country-currency-reference-config.js";
 import { MONETA_STORE_CONFIG_SEED } from "../../config/store-config.js";
-import { MONETA_SYSTEM_SETTINGS_SEED } from "../../config/system-settings-config.js";
+import {
+    MONETA_SYSTEM_SETTINGS_SEED,
+    SYSTEM_SETTINGS_DOC_IDS
+} from "../../config/system-settings-config.js";
 import { COLLECTIONS } from "../../config/collections.js";
 import {
     getCountryCurrencyReferenceByCountryCode,
@@ -97,6 +100,18 @@ function getDb() {
 
 function getNow() {
     return firebase.firestore.FieldValue.serverTimestamp();
+}
+
+function buildLocalizationCurrencyLockErrorMessage(currencyControl = {}) {
+    const lockedCurrencyCode = normalizeUpperText(currencyControl.lockedCurrencyCode);
+    const lockedLocale = normalizeText(currencyControl.lockedLocale);
+    const documentType = normalizeText(currencyControl.firstDocumentType) || "priced document";
+    const businessId = normalizeText(currencyControl.firstBusinessId || currencyControl.firstDocumentId);
+    const currencyLabel = lockedCurrencyCode
+        ? `${lockedCurrencyCode}${lockedLocale ? ` / ${lockedLocale}` : ""}`
+        : "the operating currency";
+
+    return `The operating currency is locked by ${documentType}${businessId ? ` ${businessId}` : ""}. ${currencyLabel} can no longer be changed.`;
 }
 
 function getCountryCurrencyReferenceCollectionPath() {
@@ -1375,7 +1390,7 @@ export function validateSystemSettingsPayload(payload, existingSystemSettings = 
         };
     }
 
-    if (docId === "localization") {
+    if (docId === SYSTEM_SETTINGS_DOC_IDS.localization) {
         const existingLocalizationSettings = getLocalizationSettings([existingRecord]);
         const defaultCountryCode = normalizeUpperText(payload.defaultCountryCode, existingLocalizationSettings.defaultCountryCode || "IN");
         const countryReference = getCountryCurrencyReferenceByCountryCode(defaultCountryCode) || null;
@@ -1402,13 +1417,24 @@ export function validateSystemSettingsPayload(payload, existingSystemSettings = 
             throw new Error("Currency symbol override must be 8 characters or less.");
         }
 
+        const currencyControl = existingLocalizationSettings.currencyControl || {};
+        const hasProtectedLocalizationChange = defaultCountryCode !== existingLocalizationSettings.defaultCountryCode
+            || defaultCurrencyCode !== existingLocalizationSettings.defaultCurrencyCode
+            || defaultLocale !== existingLocalizationSettings.defaultLocale
+            || currencySymbolOverride !== normalizeText(existingLocalizationSettings.currencySymbolOverride);
+
+        if (currencyControl.isLocked && hasProtectedLocalizationChange) {
+            throw new Error(buildLocalizationCurrencyLockErrorMessage(currencyControl));
+        }
+
         return {
             ...baseRecord,
             localization: {
                 defaultCountryCode,
                 defaultCurrencyCode,
                 defaultLocale,
-                currencySymbolOverride
+                currencySymbolOverride,
+                currencyControl
             }
         };
     }

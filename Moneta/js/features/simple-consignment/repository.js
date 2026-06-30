@@ -1,4 +1,5 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import { applyLocalizationCurrencyLockInTransaction } from "../../shared/localization-currency-lock.js";
 
 const CONSIGNMENT_PAYMENTS_SUBCOLLECTION = "payments";
 const SALES_CATALOGUE_ITEMS_SUBCOLLECTION = "items";
@@ -178,6 +179,7 @@ export async function createSimpleConsignmentRecord(orderPayload, user) {
     const db = getDb();
     const now = getNow();
     const orderRef = db.collection(COLLECTIONS.simpleConsignments).doc();
+    const consignmentBusinessId = buildSimpleConsignmentId();
     const cleanItems = (orderPayload.items || []).map(sanitizeLineItem).filter(item => item.quantityCheckedOut > 0);
     const totals = computeConsignmentTotals(cleanItems, { totalAmountPaid: 0, totalExpenses: 0 });
     const productRefs = cleanItems.map(item => db.collection(COLLECTIONS.products).doc(item.productId));
@@ -197,8 +199,18 @@ export async function createSimpleConsignmentRecord(orderPayload, user) {
             }
         });
 
+        await applyLocalizationCurrencyLockInTransaction({
+            db,
+            transaction,
+            userEmail: user.email,
+            documentType: "Simple Consignment",
+            documentId: orderRef.id,
+            businessId: consignmentBusinessId,
+            currencySnapshot: orderPayload.currencySnapshot || null
+        });
+
         transaction.set(orderRef, {
-            consignmentId: buildSimpleConsignmentId(),
+            consignmentId: consignmentBusinessId,
             status: "Active",
             checkoutDate: orderPayload.checkoutDate,
             manualVoucherNumber: orderPayload.manualVoucherNumber,

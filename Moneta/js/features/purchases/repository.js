@@ -1,4 +1,5 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import { applyLocalizationCurrencyLockInTransaction } from "../../shared/localization-currency-lock.js";
 
 function getDb() {
     return firebase.firestore();
@@ -66,11 +67,22 @@ export async function createPurchaseInvoiceRecord(invoiceData, user) {
     const db = getDb();
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const invoiceRef = db.collection(COLLECTIONS.purchaseInvoices).doc();
+    const invoiceBusinessId = buildInvoiceId();
 
     return db.runTransaction(async transaction => {
+        await applyLocalizationCurrencyLockInTransaction({
+            db,
+            transaction,
+            userEmail: user.email,
+            documentType: "Purchase Invoice",
+            documentId: invoiceRef.id,
+            businessId: invoiceBusinessId,
+            currencySnapshot: invoiceData.currencySnapshot || null
+        });
+
         transaction.set(invoiceRef, {
             ...invoiceData,
-            invoiceId: buildInvoiceId(),
+            invoiceId: invoiceBusinessId,
             amountPaid: 0,
             balanceDue: invoiceData.invoiceTotal,
             paymentStatus: "Unpaid",

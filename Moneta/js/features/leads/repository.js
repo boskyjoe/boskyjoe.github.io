@@ -1,4 +1,5 @@
 import { COLLECTIONS } from "../../config/collections.js";
+import { ensureLocalizationCurrencyLock } from "../../shared/localization-currency-lock.js";
 
 const LEAD_ITEMS_SUBCOLLECTION = "items";
 const LEAD_WORK_LOG_SUBCOLLECTION = "workLog";
@@ -324,6 +325,7 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc();
     const batch = db.batch();
     const quoteActivityType = "Quote";
+    const businessQuoteId = buildBusinessQuoteId();
 
     if (supersedeQuoteId) {
         batch.update(leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(supersedeQuoteId), {
@@ -351,7 +353,7 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
 
     batch.set(quoteRef, {
         ...quoteData,
-        businessQuoteId: buildBusinessQuoteId(),
+        businessQuoteId,
         versionNo,
         supersedesQuoteId: supersedeQuoteId || quoteData.supersedesQuoteId || "",
         createdBy: user.email,
@@ -382,6 +384,18 @@ export async function createLeadQuoteRecord(leadId, quoteData, user, options = {
     }
 
     await batch.commit();
+
+    if (normalizeText(quoteData.quoteStatus) !== "Draft") {
+        await ensureLocalizationCurrencyLock({
+            db,
+            userEmail: user.email,
+            documentType: "Lead Quote",
+            documentId: quoteRef.id,
+            businessId: businessQuoteId,
+            currencySnapshot: quoteData.currencySnapshot || null
+        });
+    }
+
     await refreshLeadQuoteSummary(leadId);
 
     return {
@@ -402,6 +416,11 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
     const quoteRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).doc(quoteId);
     const batch = db.batch();
     const quoteActivityType = "Quote";
+    const existingQuoteDoc = await quoteRef.get();
+
+    if (!existingQuoteDoc.exists) {
+        throw new Error("The quote could not be found.");
+    }
 
     if (supersedeOtherAccepted) {
         const snapshot = await leadRef.collection(LEAD_QUOTES_SUBCOLLECTION).get();
@@ -446,6 +465,19 @@ export async function updateLeadQuoteRecord(leadId, quoteId, quoteData, user, op
     }
 
     await batch.commit();
+
+    if (normalizeText(quoteData.quoteStatus) !== "Draft") {
+        const existingQuote = existingQuoteDoc.data() || {};
+        await ensureLocalizationCurrencyLock({
+            db,
+            userEmail: user.email,
+            documentType: "Lead Quote",
+            documentId: quoteId,
+            businessId: normalizeText(existingQuote.businessQuoteId || quoteData.businessQuoteId || quoteId),
+            currencySnapshot: quoteData.currencySnapshot || existingQuote.currencySnapshot || null
+        });
+    }
+
     await refreshLeadQuoteSummary(leadId);
 }
 
@@ -461,6 +493,11 @@ export async function updateLeadQuoteStatusRecord(leadId, quoteId, statusData, u
     const quotesRef = leadRef.collection(LEAD_QUOTES_SUBCOLLECTION);
     const batch = db.batch();
     const quoteActivityType = "Quote";
+    const quoteDoc = await quotesRef.doc(quoteId).get();
+
+    if (!quoteDoc.exists) {
+        throw new Error("The quote could not be found.");
+    }
 
     if (supersedeOtherAccepted) {
         const snapshot = await quotesRef.get();
@@ -505,6 +542,19 @@ export async function updateLeadQuoteStatusRecord(leadId, quoteId, statusData, u
     }
 
     await batch.commit();
+
+    if (normalizeText(statusData.quoteStatus) !== "Draft") {
+        const quote = quoteDoc.data() || {};
+        await ensureLocalizationCurrencyLock({
+            db,
+            userEmail: user.email,
+            documentType: "Lead Quote",
+            documentId: quoteId,
+            businessId: normalizeText(quote.businessQuoteId || quoteId),
+            currencySnapshot: quote.currencySnapshot || null
+        });
+    }
+
     await refreshLeadQuoteSummary(leadId);
 }
 
